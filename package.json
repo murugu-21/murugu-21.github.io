@@ -1,9 +1,9 @@
 {
-  "name": "gatsby-starter-blog",
+  "name": "murugappan's blog",
   "private": true,
-  "description": "A starter for a blog powered by Gatsby and Markdown",
-  "version": "0.1.0",
-  "author": "Kyle Mathews <mathews.kyle@gmail.com>",
+  "description": "My technical blog on my experiences and opinions with current tech stacks",
+  "version": "1.0.0",
+  "author": "Murugappan <murugu2001@gmail.com>",
   "bugs": {
     "url": "https://github.com/gatsbyjs/gatsby/issues"
   },
@@ -35,7 +35,7 @@
   "devDependencies": {
     "prettier": "^2.5.1"
   },
-  "homepage": "https://github.com/gatsbyjs/gatsby-starter-blog#readme",
+  "homepage": "https://murugu-21.github.io",
   "keywords": [
     "gatsby"
   ],
@@ -43,10 +43,12 @@
   "main": "n/a",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/gatsbyjs/gatsby-starter-blog.git"
+    "url": "git+https://github.com/murugu-21/murugu-21.github.io.git"
   },
   "scripts": {
     "build": "gatsby build",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "develop": "gatsby develop",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
     "start": "gatsby develop",
