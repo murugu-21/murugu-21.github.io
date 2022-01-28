@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "gatsby": "^4.5.4",
+    "gatsby-plugin-dark-mode": "^1.1.2",
     "gatsby-plugin-feed": "^4.5.0",
     "gatsby-plugin-gatsby-cloud": "^4.5.2",
     "gatsby-plugin-google-analytics": "^4.5.0",
@@ -29,6 +30,8 @@
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-helmet": "^6.1.0",
+    "react-toggle": "^4.1.2",
+    "serve": "^13.0.2",
     "typeface-merriweather": "0.0.72",
     "typeface-montserrat": "0.0.75"
   },

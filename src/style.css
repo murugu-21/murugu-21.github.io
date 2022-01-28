@@ -54,14 +54,27 @@
   --fontSize-5: 2.074rem;
   --fontSize-6: 2.488rem;
   --fontSize-7: 2.986rem;
-  --color-primary: #005b99;
+  
+  --color-primary: #057b01;
+  --color-box: #2ccf27;
+  --color-accent: #aaaaaa;
+  --color-heading: #1a202c;
+  --color-heading-black: #000;
+  --color-background: #fff;
   --color-text: #2e353f;
   --color-text-light: #4f5969;
-  --color-heading: #1a202c;
-  --color-heading-black: black;
-  --color-accent: #d1dce5;
 }
 
+.dark {
+  --color-box: #19a514;
+  --color-primary: #0aee02;
+  --color-accent: #818cab;
+  --color-heading: #f4f4f4;
+  --color-heading-black: #fff;
+  --color-background: #282c35;
+  --color-text: #cbcdcf;
+  --color-text-light: #f5f5f5;
+}
 /* HTML elements */
 
 *,
@@ -81,6 +94,7 @@ body {
   font-family: var(--font-body);
   font-size: var(--fontSize-1);
   color: var(--color-text);
+  background-color: var(--color-background);
 }
 
 footer {
@@ -247,15 +261,19 @@ a:focus {
 }
 
 .global-wrapper[data-is-root-path="true"] .bio {
-  margin-bottom: var(--spacing-20);
+  margin-bottom: var(--spacing-5);
 }
 
 .global-header {
   margin-bottom: var(--spacing-12);
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .main-heading {
-  font-size: var(--fontSize-7);
+  font-size: var(--fontSize-6);
   margin: 0;
 }
 

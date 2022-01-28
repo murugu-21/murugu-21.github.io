@@ -1,0 +1,18 @@
+.tag + label {
+  cursor: pointer;
+}
+
+.tag:focus + label {
+  border-radius: .25em;
+}
+
+.tag:hover + label {
+  outline: none;
+  border-color: var(--color-box);
+  box-shadow: 0 0 10px var(--color-box);
+}
+
+.tag:checked + label {
+  background-color: var(--color-box);
+  color: white;
+}

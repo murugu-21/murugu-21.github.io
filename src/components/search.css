@@ -1,0 +1,5 @@
+.search:focus{
+    outline: none;
+    border: 0.1rem solid var(--color-box);
+    box-shadow: 0 0 5px var(--color-box);
+}

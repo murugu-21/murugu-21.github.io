@@ -30,28 +30,83 @@ const Bio = () => {
   const author = data.site.siteMetadata?.author
   const social = data.site.siteMetadata?.social
 
+  const [theme, onThemeChange] = React.useState(null)
+  
+  React.useEffect(() => {
+    onThemeChange(window.__theme)
+    window.__onThemeChange = () => {
+      onThemeChange(window.__theme)
+    }
+  }, [])
+
   return (
-    <div className="bio">
-      <StaticImage
-        className="bio-avatar"
-        layout="fixed"
-        formats={["auto", "webp", "avif"]}
-        src="../images/profile-pic.png"
-        width={50}
-        height={50}
-        quality={95}
-        alt="Profile picture"
-      />
-      {author?.name && (
-        <p>
-          Written by <strong>{author.name}</strong> {author?.summary || null}
-          {` `}
-          <a href={`https://twitter.com/${social?.twitter || ``}`}>
-            You should follow them on Twitter
-          </a>
-        </p>
-      )}
-    </div>
+    <>
+      <div className="bio">
+        <StaticImage
+          className="bio-avatar"
+          layout="fixed"
+          formats={["auto", "webp", "avif"]}
+          src="../images/profile-pic.png"
+          width={50}
+          height={50}
+          quality={95}
+          alt="Profile picture"
+        />
+        {author?.name && (
+          <p>
+            technical blog by{" "}
+            <a href={`https://twitter.com/${social?.twitter || ``}`}>
+              <strong>{author.name}</strong>
+            </a>
+            <br></br>
+            {author?.summary || null}
+          </p>
+        )}
+      </div>
+      <div style={{ display: "flex", flexDirection: "row", gap: "1rem" }}>
+        <a
+          href="https://github.com/murugu-21"
+          alt="link to author's github profile"
+        >
+          {theme === "light" && (
+            <StaticImage
+              layout="fixed"
+              formats={["auto", "webp", "avif"]}
+              src="../images/Github-dark.png"
+              width={32}
+              height={32}
+              quality={95}
+              alt="Github profile link"
+            />
+          )}
+          {theme === "dark" && (
+            <StaticImage
+              layout="fixed"
+              formats={["auto", "webp", "avif"]}
+              src="../images/Github-light.png"
+              width={32}
+              height={32}
+              quality={95}
+              alt="Github profile link"
+            />
+          )}
+        </a>
+        <a
+          href="https://stackoverflow.com/users/15790108/murugappan-m"
+          alt="link to author's stackoverflow profile"
+        >
+          <StaticImage
+            layout="fixed"
+            formats={["auto", "webp", "avif"]}
+            src="../images/stack-overflow.png"
+            width={32}
+            height={32}
+            quality={95}
+            alt="stackoverflow profile link"
+          />
+        </a>
+      </div>
+    </>
   )
 }
 
