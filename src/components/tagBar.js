@@ -6,7 +6,7 @@ const WRAPPER_STYLES = {
   flexWrap: "wrap",
 }
 
-const TagBar = ({ tags, onTagSelect, marginTop }) => {
+const TagBar = ({ tags, onTagSelect, selectedTags, marginTop }) => {
   return (
     <div style={WRAPPER_STYLES}>
       {tags.map(tag => {
@@ -16,6 +16,7 @@ const TagBar = ({ tags, onTagSelect, marginTop }) => {
             key={tag.name}
             tag={tag}
             onTagSelect={onTagSelect}
+            isSelected={selectedTags.includes(tag.name)}
           />
         )
       })}
@@ -23,4 +24,4 @@ const TagBar = ({ tags, onTagSelect, marginTop }) => {
   )
 }
 
-export default React.memo(TagBar);
+export default TagBar;

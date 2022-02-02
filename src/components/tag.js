@@ -31,16 +31,14 @@ const INPUT_STYLES = {
   left: "-99999px",
 }
 
-const Tag = ({ tag, onTagSelect, marginTop = ".875em" }) => {
-  var ref = React.useRef(-1)
-  ref.current += 1
+const Tag = ({ tag, onTagSelect, isSelected, marginTop = ".875em" }) => {
   return (
     <>
       {onTagSelect && (
         <input
           style={INPUT_STYLES}
           type="checkbox"
-          checked={tag.selected}
+          checked={isSelected}
           onChange={onTagSelect}
           className={onTagSelect && "tag"}
           id={`tag-${tag.name}`}
@@ -58,7 +56,6 @@ const Tag = ({ tag, onTagSelect, marginTop = ".875em" }) => {
           }}
         >
           {tag.name}
-          { " " + ref.current }
         </span>
         {tag.count && <div style={TAG_COUNT_STYLES}>{tag.count}</div>}
       </label>

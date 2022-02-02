@@ -24,9 +24,9 @@ const AllPosts = ({ data }) => {
           return a.count < b.count ? 1 : -1
         })
         .map(tag => {
-          return { ...tag, selected: selectedTags.includes(tag.name) }
+          return { ...tag, selected: false }
         }),
-    [posts, selectedTags]
+    [posts]
   )
   
   const [searchQuery, setSearchQuery] = useState("")
@@ -60,7 +60,7 @@ const AllPosts = ({ data }) => {
           query={searchQuery}
           onChange={React.useCallback(e => setSearchQuery(e.target.value), [])}
         />
-        <TagBar tags={tags} onTagSelect={handleTagSelect} />
+        <TagBar tags={tags} onTagSelect={handleTagSelect} selectedTags={selectedTags}/>
         <ol style={{ listStyle: `none` }}>
           {filteredPosts.map(post => {
             return <Post post={post} key={post.fields.slug} />
