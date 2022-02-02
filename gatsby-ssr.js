@@ -7,7 +7,8 @@ exports.onRenderBody = function ({ setPreBodyComponents }) {
       dangerouslySetInnerHTML: {
         __html: `
 void function() {
-  window.__onThemeChange = function() {}
+  window.__onThemeChange1 = function() {}
+  window.__onThemeChange2 = function() {}
   var preferredTheme
   try {
     preferredTheme = localStorage.getItem('theme')
@@ -20,7 +21,8 @@ void function() {
     }
     window.__theme = newTheme
     preferredTheme = newTheme
-    window.__onThemeChange(newTheme)
+    window.__onThemeChange1(newTheme)
+    window.__onThemeChange2(newTheme)
   }
   window.__setPreferredTheme = function(newTheme) {
     setTheme(newTheme)
@@ -29,8 +31,8 @@ void function() {
     } catch (err) {}
   }
   var darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  darkQuery.addListener(function(e) {
-    window.__setPreferredTheme(e.matches ? 'dark' : 'light')
+  darkQuery.addEventListener("change", function(e) {
+    window.__setPreferredTheme(preferredTheme || (e.matches ? 'dark' : 'light'))
   })
   setTheme(preferredTheme || (darkQuery.matches ? 'dark' : 'light'))
 }()

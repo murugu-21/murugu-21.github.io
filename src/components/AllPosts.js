@@ -80,14 +80,14 @@ const AllPosts = ({ data }) => {
                       style={{
                         display: "flex",
                         flexDirection: "row",
-                        gap: "2px",
+                        gap: "10px",
                       }}
                     >
                       {post.frontmatter.tags.map((tag, idx) => {
                         return (
                           <div
                             style={{
-                              fontSize: "var(--font-size-1)",
+                              fontSize: "var(--fontSize-0)",
                               border: "1px solid var(--color-box)",
                               padding: "2px",
                             }}

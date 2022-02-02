@@ -30,12 +30,12 @@ const Bio = () => {
   const author = data.site.siteMetadata?.author
   const social = data.site.siteMetadata?.social
 
-  const [theme, onThemeChange] = React.useState(null)
+  const [theme, setTheme] = React.useState(null)
   
   React.useEffect(() => {
-    onThemeChange(window.__theme)
-    window.__onThemeChange = () => {
-      onThemeChange(window.__theme)
+    setTheme(window.__theme)
+    window.__onThemeChange2 = () => {
+      setTheme(window.__theme)
     }
   }, [])
 
@@ -68,7 +68,7 @@ const Bio = () => {
           href="https://github.com/murugu-21"
           alt="link to author's github profile"
         >
-          {theme === "light" && (
+          {theme === "light" ? (
             <StaticImage
               layout="fixed"
               formats={["auto", "webp", "avif"]}
@@ -78,9 +78,8 @@ const Bio = () => {
               quality={95}
               alt="Github profile link"
             />
-          )}
-          {theme === "dark" && (
-            <StaticImage
+          ) : (
+              <StaticImage
               layout="fixed"
               formats={["auto", "webp", "avif"]}
               src="../images/Github-light.png"

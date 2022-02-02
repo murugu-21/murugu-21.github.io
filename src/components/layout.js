@@ -23,13 +23,20 @@ const Layout = ({ location, title, children }) => {
     )
   }
 
-  const isBrowser = typeof window !== "undefined"
+  const [theme, setTheme] = React.useState(null)
+
+  React.useEffect(() => {
+    setTheme(window.__theme)
+    window.__onThemeChange1 = () => {
+      setTheme(window.__theme)
+    }
+  }, [])
 
   return (
     <div className="global-wrapper" data-is-root-path={isRootPath}>
       <header className="global-header">
         {header}
-        {isBrowser && (
+        {theme && (
           <Toggle
             icons={{
               checked: (
@@ -51,10 +58,10 @@ const Layout = ({ location, title, children }) => {
                 />
               ),
             }}
-            defaultChecked={window.__theme === "dark"}
-            onChange={e =>
+            checked={theme === "dark"}
+            onChange={e => {
               window.__setPreferredTheme(e.target.checked ? "dark" : "light")
-            }
+            }}
           />
         )}
       </header>

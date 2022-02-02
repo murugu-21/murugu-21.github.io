@@ -1,5 +1,5 @@
 {
-  "name": "murugappan's blog",
+  "name": "blog",
   "private": true,
   "description": "My technical blog on my experiences and opinions with current tech stacks",
   "version": "1.0.0",
@@ -52,7 +52,7 @@
     "build": "gatsby build",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "develop": "gatsby develop",
+    "dev": "gatsby develop",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
     "start": "gatsby develop",
     "serve": "gatsby serve",
