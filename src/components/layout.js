@@ -62,6 +62,7 @@ const Layout = ({ location, title, children }) => {
             onChange={e => {
               window.__setPreferredTheme(e.target.checked ? "dark" : "light")
             }}
+            aria-label="theme toggler"
           />
         )}
       </header>

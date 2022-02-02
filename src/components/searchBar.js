@@ -16,6 +16,7 @@ export default function SearchBar({ query, onChange }) {
     <input
       id="search"
       type="search"
+      aria-label="search article by tag or title"
       className="search"
       style={SEARCH_STYLE}
       value={query}
