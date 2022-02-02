@@ -23,6 +23,7 @@ const ThemeToggler = () => {
                 src="../images/moon.png"
                 width={16}
                 height={16}
+                alt="moon image for dark mode"
             />
             ),
             unchecked: (
@@ -32,6 +33,7 @@ const ThemeToggler = () => {
                 src="../images/sun.png"
                 width={16}
                 height={16}
+                alt="sun image for light mode"
             />
             ),
         }}

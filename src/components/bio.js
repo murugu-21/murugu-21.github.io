@@ -76,7 +76,7 @@ const Bio = () => {
               width={32}
               height={32}
               quality={95}
-              alt="Github profile link"
+              alt="Github profile link dark"
             />
           ) : (
               <StaticImage
@@ -86,7 +86,7 @@ const Bio = () => {
               width={32}
               height={32}
               quality={95}
-              alt="Github profile link"
+              alt="Github profile link light"
             />
           )}
         </a>
