@@ -6,7 +6,7 @@ const WRAPPER_STYLES = {
   flexWrap: "wrap",
 }
 
-export default function TagBar({ tags, onTagSelect, marginTop }) {
+const TagBar = ({ tags, onTagSelect, marginTop }) => {
   return (
     <div style={WRAPPER_STYLES}>
       {tags.map(tag => {
@@ -22,3 +22,5 @@ export default function TagBar({ tags, onTagSelect, marginTop }) {
     </div>
   )
 }
+
+export default React.memo(TagBar);
