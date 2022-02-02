@@ -11,7 +11,7 @@ const SEARCH_STYLE = {
   color: "var(--color-text)"
 }
 
-export default function SearchBar({ query, onChange }) {
+const SearchBar = ({ query, onChange }) => {
   return (
     <input
       id="search"
@@ -24,3 +24,5 @@ export default function SearchBar({ query, onChange }) {
     />
   )
 }
+
+export default React.memo(SearchBar);

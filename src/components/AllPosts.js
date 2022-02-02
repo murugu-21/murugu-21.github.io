@@ -58,14 +58,12 @@ const AllPosts = ({ data }) => {
       <>
         <SearchBar
           query={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
+          onChange={React.useCallback(e => setSearchQuery(e.target.value), [])}
         />
         <TagBar tags={tags} onTagSelect={handleTagSelect} />
         <ol style={{ listStyle: `none` }}>
-          {filteredPosts.map(post => {            
-            return (
-              <Post post={post}/>
-            )
+          {filteredPosts.map(post => {
+            return <Post post={post} key={post.fields.slug} />
           })}
         </ol>
         {filteredPosts.length === 0 && (

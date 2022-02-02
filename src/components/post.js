@@ -8,7 +8,7 @@ const Post = ({ post }) => {
     const title = post.frontmatter.title || post.fields.slug
 
     return (
-        <li key={post.fields.slug}>
+        <li>
             <article
                 className="post-list-item"
                 itemScope

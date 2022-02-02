@@ -31,7 +31,9 @@ const INPUT_STYLES = {
   left: "-99999px",
 }
 
-export default function Tag({ tag, onTagSelect, marginTop = ".875em" }) {
+const Tag = ({ tag, onTagSelect, marginTop = ".875em" }) => {
+  var ref = React.useRef(-1)
+  ref.current += 1
   return (
     <>
       {onTagSelect && (
@@ -56,9 +58,12 @@ export default function Tag({ tag, onTagSelect, marginTop = ".875em" }) {
           }}
         >
           {tag.name}
+          { " " + ref.current }
         </span>
         {tag.count && <div style={TAG_COUNT_STYLES}>{tag.count}</div>}
       </label>
     </>
   )
 }
+
+export default React.memo(Tag);
