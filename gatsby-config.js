@@ -3,7 +3,8 @@ module.exports = {
     title: `SWE Journey`,
     author: {
       name: `Murugappan M`,
-      summary: `Learning react, django and cse fundamentals`,
+      summary: `Becoming a software developer, 
+      one step at a time`,
     },
     description: `A Technical blog on my experiences in the tech industry`,
     siteUrl: `https://murugu-21.github.io/`,
