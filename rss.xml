@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Gatsby Starter Blog RSS Feed]]></title><description><![CDATA[A Technical blog on my experiences in the tech industry]]></description><link>https://murugu-21.github.io</link><generator>GatsbyJS</generator><lastBuildDate>Sat, 05 Feb 2022 09:59:28 GMT</lastBuildDate><item><title><![CDATA[The developer toolbox]]></title><description><![CDATA[A Language The next tool is learning any mainstream language. This is covered well by most uni’s. I beleive learning python/js at first will…]]></description><link>https://murugu-21.github.io/toolbox/</link><guid isPermaLink="false">https://murugu-21.github.io/toolbox/</guid><pubDate>Sat, 05 Feb 2022 13:03:37 GMT</pubDate><content:encoded>&lt;h2&gt;A Language&lt;/h2&gt;
+<?xml version="1.0" encoding="UTF-8"?><rss xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" version="2.0"><channel><title><![CDATA[Gatsby Starter Blog RSS Feed]]></title><description><![CDATA[A Technical blog on my experiences in the tech industry]]></description><link>https://murugu-21.github.io</link><generator>GatsbyJS</generator><lastBuildDate>Sat, 05 Feb 2022 13:10:02 GMT</lastBuildDate><item><title><![CDATA[The developer toolbox]]></title><description><![CDATA[A Language The next tool is learning any mainstream language. This is covered well by most uni’s. I beleive learning python/js at first will…]]></description><link>https://murugu-21.github.io/toolbox/</link><guid isPermaLink="false">https://murugu-21.github.io/toolbox/</guid><pubDate>Sat, 05 Feb 2022 13:03:37 GMT</pubDate><content:encoded>&lt;h2&gt;A Language&lt;/h2&gt;
 &lt;p&gt;The next tool is learning any mainstream language. This is covered well by most uni’s. I beleive learning python/js at first will really hurt the Developer experience(Dx) for most people because eventually you will run into concepts like types, pointers, classes and compilation. Then, you will hate these because you know small projects can be done without them and start hating them when you accidentally chose java or c++ for your project. But ultimately, all real world projects are huge scale and relay on these concepts to be sure their system works and can be compartmentalized and reused. All though there is a lot of debate in the community around dynamic vs static typing, I prefer static for all projects and dynamic for any small(like really small) works. even then, It could become a liability quicker than you think. This ismple graph kind of nails it all.&lt;/p&gt;
 &lt;p&gt;&lt;span
       class=&quot;gatsby-resp-image-wrapper&quot;
@@ -33,7 +33,7 @@
   &lt;/a&gt;
     &lt;/span&gt;&lt;/p&gt;
 &lt;blockquote&gt;
-&lt;p&gt;I would recommend learn C first only the very basics of it with pointers and structs. Then learn any OOPS language (I prefer kotlin, but even typescript is great) and data structures in C (not OOPS). then learn python/js as a quick to prototype model.&lt;/p&gt;
+&lt;p&gt;I recommend learning C first(only the very basics of it with pointers and structs) . Then learn any OOPS language (I prefer kotlin, but even typescript is great) and data structures in C (not OOPS). then learn python/js as a quick to prototype model.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;h2&gt;&lt;/h2&gt;
 &lt;h2&gt;The world of huge codebases&lt;/h2&gt;
@@ -185,7 +185,7 @@
     &lt;/span&gt;&lt;/p&gt;
 &lt;h2&gt;Conclusion&lt;/h2&gt;
 &lt;p&gt;Overall, its a great time to become a developer and I beleive this guide helped you understand the path to become one. Its a wild world out there, with patience and years of hard work and a bit of money, you will be able to put together any task assigned to you/any tech startup you want to make.&lt;/p&gt;
-&lt;p&gt;Remember, non-technical people thinks its all possible in a day and will ask you do magic with a app. stay away!!!&lt;/p&gt;
+&lt;p&gt;Remember, non-technical people thinks its all possible in a day and will ask you do magic with your app. stay away!!!&lt;/p&gt;
 &lt;p&gt;&lt;span
       class=&quot;gatsby-resp-image-wrapper&quot;
       style=&quot;position: relative; display: block; margin-left: auto; margin-right: auto; max-width: 500px; &quot;
