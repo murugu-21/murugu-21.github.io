@@ -63,4 +63,4 @@ const Tag = ({ tag, onTagSelect, isSelected, marginTop = ".875em" }) => {
   )
 }
 
-export default React.memo(Tag);
+export default React.memo(Tag)

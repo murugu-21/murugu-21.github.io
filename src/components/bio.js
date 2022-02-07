@@ -31,7 +31,7 @@ const Bio = () => {
   const social = data.site.siteMetadata?.social
 
   const [theme, setTheme] = React.useState(null)
-  
+
   React.useEffect(() => {
     setTheme(window.__theme)
     window.__onThemeChange2 = () => {
@@ -79,7 +79,7 @@ const Bio = () => {
               alt="Github profile link dark"
             />
           ) : (
-              <StaticImage
+            <StaticImage
               layout="fixed"
               formats={["auto", "webp", "avif"]}
               src="../images/Github-light.png"

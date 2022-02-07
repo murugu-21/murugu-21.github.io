@@ -6,14 +6,13 @@ import Layout from "../components/layout"
 import Seo from "../components/seo"
 import AllPosts from "../components/AllPosts"
 
-
 const BlogIndex = ({ data, location }) => {
   const siteTitle = data.site.siteMetadata?.title || `Title`
-  
+
   return (
     <Layout location={location} title={siteTitle}>
       <Seo title="All posts" />
-      <AllPosts data={data}/>
+      <AllPosts data={data} />
       <Bio />
     </Layout>
   )

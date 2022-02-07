@@ -24,4 +24,4 @@ const TagBar = ({ tags, onTagSelect, selectedTags, marginTop }) => {
   )
 }
 
-export default TagBar;
+export default TagBar

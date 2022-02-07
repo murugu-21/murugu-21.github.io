@@ -6,7 +6,6 @@ date: "2022-02-05T13:03:37.121Z"
 tags: ["general"]
 
 description: A guide to becoming a developer from my experience becoming one.
-
 ---
 
 ## A Language
@@ -17,13 +16,13 @@ The next tool is learning any mainstream language. This is covered well by most 
 
 > I recommend learning C first(only the very basics of it with pointers and structs) . Then learn any OOPS language (I prefer kotlin, but even typescript is great) and data structures in C (not OOPS). then learn python/js as a quick to prototype model.
 
-## 
+##
 
 ## The world of huge codebases
 
 I believe a CS degree really lays a solid foundation to become a developer except in one huge area. All projects/lab software that we write in uni tend to be one file programs to at best a few hundred lines of code for an app and often are written individually or by a few people using one copy of the codebase.
 
-In the real world of software development, almost no project is like this. All projects have thousands of lines of code and are simultaneously worked on by teams of people. So, the first tool you need to be very familiar with is git. 
+In the real world of software development, almost no project is like this. All projects have thousands of lines of code and are simultaneously worked on by teams of people. So, the first tool you need to be very familiar with is git.
 
 ![git init I guess things are getting pretty serious - Things are getting  pretty serious | Make a Meme](git-init.jpg)
 
@@ -31,7 +30,7 @@ The best way to do this is by contributing to open-source projects. find a platf
 
 > I am also a undergrad in CS in my 3<sup>rd</sup> year and until very recently, I too hadn't worked with pr's. I feel this should be thought in uni alongside git during sophomore before we are asked to do projects (typically 3<sup>rd</sup> year).
 
-## 
+##
 
 ## Test Driven Development (TDD)
 
@@ -47,7 +46,7 @@ Unit tests do exactly what the name suggests, they ensure a unit (class, functio
 
 3. refactor for more readability/separation of concerns.
 
-![Red, green, and don&#39;t forget refactor | mokacoding](red-green-refactor.jpg)
+![Red, green, and don't forget refactor | mokacoding](red-green-refactor.jpg)
 
 This is great for the psychology of the developer also as seeing a green validation of their work increases morale.
 
@@ -69,7 +68,7 @@ Just know the basics of all and learn mongoDB and sql in depth.
 
 My suggestion here is learn basics of html/css/js and one declarative composable framework like react/vue/angular (I prefer React with functional components(Hooks)). These modern frameworks have moved away from the traditional imperative model and popularised ui as function of state (again for reducing bugs in large scale projects).
 
-The mobile world has also warmed up to the idea with jetpack compose(Android) and swift ui(ios). So it would be great if you learned these trends. checkout my guide on [React Hooks](https://murugu-21.github.io/react/). 
+The mobile world has also warmed up to the idea with jetpack compose(Android) and swift ui(ios). So it would be great if you learned these trends. checkout my guide on [React Hooks](https://murugu-21.github.io/react/).
 
 This will also make you learn about rest-api's and a bit of microservices as you write to implement the backend of your app and try to make it communicate with your frontend app.
 
@@ -95,4 +94,4 @@ Overall, its a great time to become a developer and I beleive this guide helped 
 
 Remember, non-technical people thinks its all possible in a day and will ask you do magic with your app. stay away!!!
 
-![you want the app to do what!!!](non-tech.png) 
+![you want the app to do what!!!](non-tech.png)

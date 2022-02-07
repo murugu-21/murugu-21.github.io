@@ -3,47 +3,48 @@ import Toggle from "react-toggle"
 import { StaticImage } from "gatsby-plugin-image"
 
 const ThemeToggler = () => {
-    const [theme, setTheme] = React.useState(null)
+  const [theme, setTheme] = React.useState(null)
 
-    React.useEffect(() => {
+  React.useEffect(() => {
+    setTheme(window.__theme)
+    window.__onThemeChange1 = () => {
       setTheme(window.__theme)
-      window.__onThemeChange1 = () => {
-        setTheme(window.__theme)
-      }
-    }, [])
+    }
+  }, [])
 
-    return (
-        theme &&
-        <Toggle
+  return (
+    theme && (
+      <Toggle
         icons={{
-            checked: (
+          checked: (
             <StaticImage
-                layout="fixed"
-                formats={["auto", "webp", "avif"]}
-                src="../images/moon.png"
-                width={16}
-                height={16}
-                alt="moon image for dark mode"
+              layout="fixed"
+              formats={["auto", "webp", "avif"]}
+              src="../images/moon.png"
+              width={16}
+              height={16}
+              alt="moon image for dark mode"
             />
-            ),
-            unchecked: (
+          ),
+          unchecked: (
             <StaticImage
-                layout="fixed"
-                formats={["auto", "webp", "avif"]}
-                src="../images/sun.png"
-                width={16}
-                height={16}
-                alt="sun image for light mode"
+              layout="fixed"
+              formats={["auto", "webp", "avif"]}
+              src="../images/sun.png"
+              width={16}
+              height={16}
+              alt="sun image for light mode"
             />
-            ),
+          ),
         }}
         checked={theme === "dark"}
         onChange={e => {
-            window.__setPreferredTheme(e.target.checked ? "dark" : "light")
+          window.__setPreferredTheme(e.target.checked ? "dark" : "light")
         }}
         aria-label="theme toggler"
-        />
+      />
     )
+  )
 }
 
 export default ThemeToggler

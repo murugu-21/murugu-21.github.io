@@ -4,6 +4,7 @@ date: "2021-09-26T23:46:37.121Z"
 tags: ["React"]
 description: My mental models about Different React Hooks and Redux pattern.
 ---
+
 ## History of the web
 
 The web was initially all about static documents meant to act as a sort of indexed library of the world. It still is, but the introduction of javascript by netscape and subsequent performance improvements by firefox(gecko) and chrome(V8) made it possible to build super interactive dynamic websites that for most people replaced the need to develop and support desktop apps for different OSes. This also meant that a lot of R&D money from internet companies like Facebook, Google went into making the web a better place. Today, even desktop apps are built using electron, which is basically a browser and server patched into a app. The development of nodejs (again thanks to V8) has resulted in js being used even in the backend/server part of applications.
@@ -23,18 +24,18 @@ Javascript is imperative in changing state of components. Below is a simple exam
 ```html
 <!DOCTYPE html>
 <html>
-<body>
+  <body>
     <div id="number"></div>
     <input type="button" onclick="incrementValue()" value="Increase" />
- <script>
-    var value = 0;
-    document.getElementById('number').innerHTML = value;     //imperative - you have to manually set initial state to ui
-    function incrementValue(){
-        value++;
-        document.getElementById('number').innerHTML = value;         //imperative - you have to manually update the ui on stateChange
-    }
-</script>
-</body>
+    <script>
+      var value = 0
+      document.getElementById("number").innerHTML = value //imperative - you have to manually set initial state to ui
+      function incrementValue() {
+        value++
+        document.getElementById("number").innerHTML = value //imperative - you have to manually update the ui on stateChange
+      }
+    </script>
+  </body>
 </html>
 ```
 
@@ -62,16 +63,15 @@ This syntax of combining js and html is called JSX, Babel compiles this template
 In 2019, React library was updated with hooks to make code more readable(less verbose) and minimise components size. Here’s the same example using hooks.
 
 ```jsx
-import {useState} from "react"
-export default function App(){
-    const [value, setValue] = useState(0)
-    return(
-        <div>
-            {value}
-            <button onClick={()=>setValue(value + 1)}>
-                increment            </button>
-        </div>
-    )
+import { useState } from "react"
+export default function App() {
+  const [value, setValue] = useState(0)
+  return (
+    <div>
+      {value}
+      <button onClick={() => setValue(value + 1)}>increment </button>
+    </div>
+  )
 }
 ```
 
@@ -84,31 +84,28 @@ This is all fine for one component. But in the real world apps are going to have
 App.js
 
 ```jsx
-import {createContext, useState} from "react"
+import { createContext, useState } from "react"
 import CustomButton from "./customButton"
 export const stateContext = createContext()
-export default function App(){
-    const [value, setValue] = useState(0)
-    return(
-        <StateContext.Provider value={{ value, setValue }}>
-            {value}
-            <CustomButton />
-        </StateContext.Provider>
-    )
+export default function App() {
+  const [value, setValue] = useState(0)
+  return (
+    <StateContext.Provider value={{ value, setValue }}>
+      {value}
+      <CustomButton />
+    </StateContext.Provider>
+  )
 }
 ```
 
 customButton.jsx
 
 ```jsx
-import {useContext} from "react"
-import {stateContext} from "./App"
-export default function CustomButton(){
-    const {setValue} = useContext(stateContext)
-    return(
-        <button onClick={()=>setValue(value + 1)}>
-            increment        </button>
-    )
+import { useContext } from "react"
+import { stateContext } from "./App"
+export default function CustomButton() {
+  const { setValue } = useContext(stateContext)
+  return <button onClick={() => setValue(value + 1)}>increment </button>
 }
 ```
 
@@ -117,21 +114,19 @@ export default function CustomButton(){
 The next problem comes when you have to fetch data from a database and load to UI. fetch is asynchoronous, which basically means that it might take a long time to execute and your UI will be frozen if done synchronously. Hence, you use useEffect with empty array as dependency (since fetch only occurs once after loading) to update UI. What fetch does is that it makes a request to a external api and lets the event loop run. When response is received, code inside then() is added and executed as a microtask (when event loop reaches end).
 
 ```jsx
-import {useState} from "react"
-export default function App(){
-    const [value, setValue] = useState(null)
-    useEffect(() => {
-        fetch("/api/getvalue")
-        .then((res) => setValue(res))
-    }, []) 
-    //empty dependency array ensures only one execution after initial render
-    return(
-        <div>
-            {value}
-            <button onClick={()=>setValue(value + 1)}>
-                increment            </button>
-        </div>
-    )
+import { useState } from "react"
+export default function App() {
+  const [value, setValue] = useState(null)
+  useEffect(() => {
+    fetch("/api/getvalue").then(res => setValue(res))
+  }, [])
+  //empty dependency array ensures only one execution after initial render
+  return (
+    <div>
+      {value}
+      <button onClick={() => setValue(value + 1)}>increment </button>
+    </div>
+  )
 }
 ```
 
@@ -156,10 +151,10 @@ App.js
 
 ```jsx
 import { createContext, useReducer } from "react"
-import CustomButton from "./customButton";
-export const stateContext = createContext();
+import CustomButton from "./customButton"
+export const stateContext = createContext()
 
-const initialState = {value: 0}; // store initial value
+const initialState = { value: 0 } // store initial value
 
 const reducer = (state, action) => {
   switch (action.type) {
@@ -167,34 +162,33 @@ const reducer = (state, action) => {
       return {
         ...state,
         value: state.value + 1,
-      };
+      }
     default:
-      throw new Error();
+      throw new Error()
   }
-};
+}
 
 export default function App() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState)
   return (
     <stateContext.Provider className="App" value={dispatch}>
       {state.value}
       <CustomButton />
     </stateContext.Provider>
-  );
+  )
 }
 ```
 
 customButton.js
 
 ```jsx
-import { useContext } from "react";
-import { stateContext } from "./App";
+import { useContext } from "react"
+import { stateContext } from "./App"
 export default function CustomButton() {
-  const dispatch = useContext(stateContext);
+  const dispatch = useContext(stateContext)
   return (
-      <button onClick={() => dispatch({ type: "increment" })}>
-        increment      </button>
-  );
+    <button onClick={() => dispatch({ type: "increment" })}>increment </button>
+  )
 }
 ```
 

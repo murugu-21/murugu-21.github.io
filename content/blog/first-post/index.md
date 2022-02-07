@@ -1,5 +1,4 @@
 ---
-
 title: 0.1+0.2 not equal to 0.3???😕
 
 date: "2021-08-21T23:46:37.121Z"
@@ -7,13 +6,12 @@ date: "2021-08-21T23:46:37.121Z"
 tags: ["DP", "recursion"]
 
 description: Find minimum number of coins that make a given value.
-
 ---
 
 Hey there, if you are reading this in a desktop, press ctrl + shift + i and open console and paste the below code.
 
 ```js
- 0.1 + 0.2 === 0.3
+0.1 + 0.2 === 0.3
 ```
 
 if you are new to programming, you might be surprised by the output false and is computer arithmetic broke or is this a secret plan by illuminati to control all our computers.

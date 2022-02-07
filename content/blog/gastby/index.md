@@ -1,10 +1,8 @@
 ---
-
 title: why i chose gatsby for my blog?
 date: "2021-08-15T23:46:37.121Z"
 tags: ["React", "gatsby"]
 description: TL;DR Static Site Generator using graphQl React stack.
-
 ---
 
 If you are learning web development, you might have come across libraries/frameworks like React, Angular and Vue. The reason these web technologies are so popular is because they allow you to write declarative code and not worry about the implementation details. At its core, if you want a button, you only describe what happens when the button is clicked and not how it happens. This paradigm was made famous by the React library from facebook in the past decade and competing technologies have adopted a similar strategy.
