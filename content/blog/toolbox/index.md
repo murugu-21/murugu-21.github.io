@@ -15,7 +15,7 @@ The next tool is learning any mainstream language. This is covered well by most 
 
 ![static vs dynamic typing productivity vs codebase](graph.png)
 
-> I would recommend learn C first only the very basics of it with pointers and structs. Then learn any OOPS language (I prefer kotlin, but even typescript is great) and data structures in C (not OOPS). then learn python/js as a quick to prototype model.
+> I recommend learning C first(only the very basics of it with pointers and structs) . Then learn any OOPS language (I prefer kotlin, but even typescript is great) and data structures in C (not OOPS). then learn python/js as a quick to prototype model.
 
 ## 
 
@@ -73,15 +73,11 @@ The mobile world has also warmed up to the idea with jetpack compose(Android) an
 
 This will also make you learn about rest-api's and a bit of microservices as you write to implement the backend of your app and try to make it communicate with your frontend app.
 
-
-
 ## Deployment
 
 signup for aws, add a credit card and deploy your project in a ec2 instance with s3 for assets like images and a database. This is the best way you can learn how deployment works.
 
 Docker is a way to package your application in a provider agnostic way. Kubernetes is used to scale your application up and down based on traffic. These are the new trends of cloud, learn the basics of them and play around with a linux distribution. you must be good to go.
-
-
 
 ## Machine Learning(ML)
 
@@ -97,6 +93,6 @@ Also, If you are interested, this is the most paid field in the industry because
 
 Overall, its a great time to become a developer and I beleive this guide helped you understand the path to become one. Its a wild world out there, with patience and years of hard work and a bit of money, you will be able to put together any task assigned to you/any tech startup you want to make.
 
-Remember, non-technical people thinks its all possible in a day and will ask you do magic with a app. stay away!!!
+Remember, non-technical people thinks its all possible in a day and will ask you do magic with your app. stay away!!!
 
 ![you want the app to do what!!!](non-tech.png) 
