@@ -349,3 +349,9 @@ a:focus {
     list-style-position: inside;
   }
 }
+
+/* for autolink header */
+
+a.anchor svg[aria-hidden="true"] {
+  stroke: var(--color-primary)
+}
