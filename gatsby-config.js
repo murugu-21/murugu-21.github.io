@@ -132,6 +132,7 @@ module.exports = {
             purpose: "any maskable",
           },
         ],
+        icon: `src/images/icon.png`,
       },
     },
     // `gatsby-plugin-react-helmet`,
