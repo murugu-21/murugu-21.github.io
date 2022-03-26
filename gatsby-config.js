@@ -124,10 +124,17 @@ module.exports = {
         // https://css-tricks.com/meta-theme-color-and-trickery/
         theme_color: `#057b01`,
         display: `minimal-ui`,
-        icon: `src/images/icon.png`, // This path is relative to the root of the site.
+        icons: [
+          {
+            src: `src/images/icon.png`, // This path is relative to the root of the site.
+            sizes: "640x640",
+            type: "image/png",
+            purpose: "any maskable",
+          },
+        ],
       },
     },
-    `gatsby-plugin-react-helmet`,
+    // `gatsby-plugin-react-helmet`,
     // this (optional) plugin enables Progressive Web App + Offline functionality
     // To learn more, visit: https://gatsby.dev/offline
     `gatsby-plugin-offline`,
