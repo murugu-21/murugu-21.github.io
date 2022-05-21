@@ -5,7 +5,7 @@ date: "2021-08-21T23:46:37.121Z"
 
 tags: ["DP", "recursion"]
 
-description: Find minimum number of coins that make a given value.
+description: The limitations of floating point math and weighing tradeoffs.
 ---
 
 Hey there, if you are reading this in a desktop, press ctrl + shift + i and open console and paste the below code.

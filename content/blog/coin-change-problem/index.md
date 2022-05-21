@@ -2,7 +2,7 @@
 title: Coin Change Problem
 date: "2021-08-09T23:46:37.121Z"
 tags: ["floating-point", "javascript"]
-description: The limitations of floating point math and weighing tradeoffs.
+description: Find minimum number of coins that make a given value.
 ---
 
 When I was a child, I used to run to grocery store nearby wondering how much change I should carry in order to pay the bill exactly as many shopkeepers use no change as classic excuse to push chocolates on you (effectively, increasing their sales numbers). I figured that if I carried one ₹5 coin, two ₹2 coins and one ₹1 coin I could pay any change from 1 to 10.
