@@ -1,6 +1,5 @@
 import * as React from "react"
-import { Link } from "gatsby"
-import "./customToggle.css"
+import Link from "next/link"
 import ThemeToggler from "./themeToggle"
 
 const Layout = ({ location, title, children }) => {
@@ -11,13 +10,15 @@ const Layout = ({ location, title, children }) => {
   if (isRootPath) {
     header = (
       <h1 className="main-heading">
-        <Link to="/">{title}</Link>
+        <Link href="/">
+          <a>{title}</a>
+        </Link>
       </h1>
     )
   } else {
     header = (
-      <Link className="header-link-home" to="/">
-        {title}
+      <Link href="/" className="header-link-home">
+        <a>{title}</a>
       </Link>
     )
   }

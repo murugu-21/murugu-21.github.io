@@ -1,5 +1,5 @@
 import React from "react"
-import "./search.css"
+import "./search.module.css"
 
 const SEARCH_STYLE = {
   width: "100%",

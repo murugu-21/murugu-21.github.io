@@ -1,11 +1,45 @@
 import * as React from "react"
-import { Link, graphql } from "gatsby"
+import Link from "next/link"
 
 import Bio from "../components/bio"
 import Layout from "../components/layout"
 import Seo from "../components/seo"
 
 import { formatReadingTime } from "../utils/helpers"
+
+import { remark } from "remark"
+import html from "remark-html"
+import { getPostBySlug, getAllPosts } from "../lib/blog"
+
+export async function getStaticProps({ params }) {
+  const post = getPostBySlug(params.slug)
+  const markdown = await remark()
+    .use(html)
+    .process(post.content || "")
+  const content = markdown.toString()
+
+  return {
+    props: {
+      ...post,
+      content,
+    },
+  }
+}
+
+export async function getStaticPaths() {
+  const posts = getAllPosts()
+
+  return {
+    paths: posts.map(post => {
+      return {
+        params: {
+          slug: post.slug,
+        },
+      }
+    }),
+    fallback: false,
+  }
+}
 
 const BlogPostTemplate = ({ data, location }) => {
   const post = data.markdownRemark
@@ -51,15 +85,15 @@ const BlogPostTemplate = ({ data, location }) => {
         >
           <li>
             {previous && (
-              <Link to={previous.fields.slug} rel="prev">
-                ← {previous.frontmatter.title}
+              <Link href={previous.fields.slug} rel="prev">
+                <a>← {previous.frontmatter.title}</a>
               </Link>
             )}
           </li>
           <li>
             {next && (
-              <Link to={next.fields.slug} rel="next">
-                {next.frontmatter.title} →
+              <Link href={next.fields.slug} rel="next">
+                <a>{next.frontmatter.title} →</a>
               </Link>
             )}
           </li>
@@ -70,44 +104,3 @@ const BlogPostTemplate = ({ data, location }) => {
 }
 
 export default BlogPostTemplate
-
-export const pageQuery = graphql`
-  query BlogPostBySlug(
-    $id: String!
-    $previousPostId: String
-    $nextPostId: String
-  ) {
-    site {
-      siteMetadata {
-        title
-      }
-    }
-    markdownRemark(id: { eq: $id }) {
-      id
-      excerpt(pruneLength: 160)
-      html
-      timeToRead
-      frontmatter {
-        title
-        date(formatString: "MMMM DD, YYYY")
-        description
-      }
-    }
-    previous: markdownRemark(id: { eq: $previousPostId }) {
-      fields {
-        slug
-      }
-      frontmatter {
-        title
-      }
-    }
-    next: markdownRemark(id: { eq: $nextPostId }) {
-      fields {
-        slug
-      }
-      frontmatter {
-        title
-      }
-    }
-  }
-`

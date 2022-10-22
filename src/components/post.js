@@ -1,6 +1,6 @@
 import React from "react"
 
-import { Link } from "gatsby"
+import Link from "next/link"
 
 import { formatReadingTime } from "../utils/helpers"
 
@@ -16,8 +16,10 @@ const Post = ({ post }) => {
       >
         <header>
           <h2>
-            <Link to={post.fields.slug} itemProp="url">
-              <span itemProp="headline">{title}</span>
+            <Link href={post.fields.slug} itemProp="url">
+              <a>
+                <span itemProp="headline">{title}</span>
+              </a>
             </Link>
           </h2>
           <small>

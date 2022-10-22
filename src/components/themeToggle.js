@@ -1,6 +1,7 @@
 import React from "react"
 import Toggle from "react-toggle"
 import { StaticImage } from "gatsby-plugin-image"
+import "./customToggle.module.css"
 
 const ThemeToggler = () => {
   const [theme, setTheme] = React.useState(null)

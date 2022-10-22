@@ -1,4 +1,4 @@
-import "./tag.css"
+import "./tag.module.css"
 import React from "react"
 
 const TAG_STYLES = {
