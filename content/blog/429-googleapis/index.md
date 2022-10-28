@@ -95,4 +95,4 @@ function rateLimit(fn: Function, delayMs: number, maxConcurrent = 1) {
 
 Now, we just need to replace `rateLimit1(axios.get, 1000)` with `rateLimit(axios.get, 1000, 49)`. I have left some leeway by using only 49 requests because a user opening Gmail app/website would also count as a request and shouldn't result in 429.
 
-I hope you can use this idea to solve your rate limit problems in external services!!!!!!
+I hope you can use this idea to solve your rate limit problems in external services!!!!!! Published this as an npm package to make it easy for others to use, [read more here](https://www.npmjs.com/package/rate-limit-concurrent)
