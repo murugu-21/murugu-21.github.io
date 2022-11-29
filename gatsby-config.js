@@ -1,10 +1,9 @@
 module.exports = {
   siteMetadata: {
-    title: `SWE Journey`,
+    title: `SDE Journey`,
     author: {
       name: `Murugappan M`,
-      summary: `Becoming a software developer, 
-      one step at a time`,
+      summary: `I write about MERN stack experience in real time work`,
     },
     description: `A Technical blog on my experiences in the tech industry`,
     siteUrl: `https://murugu-21.github.io/`,
