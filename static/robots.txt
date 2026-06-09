@@ -1,4 +1,0 @@
-User-agent: *
-Disallow:
-
-Sitemap: https://murugu-21.github.io/sitemap-index.xml
