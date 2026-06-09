@@ -1,64 +1,58 @@
 {
-  "name": "blog",
+  "homepage": "https://murugappan.dev",
+  "name": "developerfolio",
+  "version": "0.1.0",
   "private": true,
-  "description": "My technical blog on my experiences and opinions with current tech stacks",
-  "version": "1.0.0",
-  "author": "Murugappan <murugu2001@gmail.com>",
-  "bugs": {
-    "url": "https://github.com/gatsbyjs/gatsby/issues"
-  },
   "dependencies": {
-    "gatsby": "^4.17.2",
-    "gatsby-plugin-feed": "^4.17.0",
-    "gatsby-plugin-gatsby-cloud": "^4.17.0",
-    "gatsby-plugin-gtag": "^1.0.13",
-    "gatsby-plugin-image": "^2.17.0",
-    "gatsby-plugin-manifest": "^4.17.0",
-    "gatsby-plugin-offline": "^5.17.0",
-    "gatsby-plugin-react-helmet": "^5.17.0",
-    "gatsby-plugin-sharp": "^4.17.0",
-    "gatsby-plugin-sitemap": "^5",
-    "gatsby-remark-autolink-headers": "^5.17.0",
-    "gatsby-remark-copy-linked-files": "^5.17.0",
-    "gatsby-remark-images": "^6.17.0",
-    "gatsby-remark-prismjs": "^6.17.0",
-    "gatsby-remark-responsive-iframe": "^5.17.0",
-    "gatsby-remark-smartypants": "^5.17.0",
-    "gatsby-source-filesystem": "^4.17.0",
-    "gatsby-transformer-remark": "^5.17.0",
-    "gatsby-transformer-sharp": "^4.17.0",
-    "mermaid": "^11.15.0",
-    "prismjs": "^1.28.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-helmet": "^6.1.0",
-    "react-toggle": "^4.1.2",
-    "serve": "^13.0.2",
-    "typeface-merriweather": "1.1.13",
-    "typeface-montserrat": "1.1.13"
-  },
-  "devDependencies": {
-    "prettier": "^2.7.1"
-  },
-  "homepage": "https://murugu-21.github.io",
-  "keywords": [
-    "gatsby"
-  ],
-  "license": "0BSD",
-  "main": "n/a",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/murugu-21/murugu-21.github.io.git"
+    "colorthief": "^2.3.0",
+    "enzyme": "^3.11.0",
+    "enzyme-adapter-react-16": "^1.15.6",
+    "gh-pages": "^2.1.1",
+    "jest-canvas-mock": "^2.3.1",
+    "lottie-react": "^2.4.0",
+    "react": "^16.10.2",
+    "react-dom": "^16.10.2",
+    "react-easy-emoji": "^1.8.1",
+    "react-headroom": "^3.0.0",
+    "react-reveal": "^1.2.2",
+    "react-scripts": "^5.0.1",
+    "react-test-renderer": "^16.10.2",
+    "react-twitter-embed": "3.0.3",
+    "sass": "^1.32.8"
   },
   "scripts": {
-    "build": "gatsby build",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d public",
-    "dev": "gatsby develop",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
-    "start": "gatsby develop",
-    "serve": "gatsby serve",
-    "clean": "gatsby clean",
-    "test": "echo \"Write tests! -> https://gatsby.dev/unit-testing\" && exit 1"
+    "start": "node fetch.js && react-scripts start",
+    "build": "node fetch.js && react-scripts build",
+    "deploy": "gh-pages -b master -d build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "format": "prettier --write \"./**/*.{js,css,json,scss}\"",
+    "check-format": "prettier -c \"./**/*.{js,css,json,scss}\""
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": {
+    "production": [
+      ">0.3%",
+      "not ie 11",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      ">0.3%",
+      "not ie 11",
+      "not dead",
+      "not op_mini all",
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+    "dotenv": "^8.2.0",
+    "prettier": "^2.3.1"
   }
 }
