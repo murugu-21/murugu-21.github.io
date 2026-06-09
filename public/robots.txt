@@ -1,2 +1,7 @@
 # https://www.robotstxt.org/robotstxt.html
+# All crawlers (incl. AI/LLM bots: GPTBot, ClaudeBot, PerplexityBot, Google-Extended) welcome.
 User-agent: *
+Disallow:
+
+Sitemap: https://murugappan.dev/sitemap.xml
+Sitemap: https://murugappan.dev/blog/sitemap/sitemap-index.xml
