@@ -355,3 +355,14 @@ a:focus {
 a.anchor svg[aria-hidden="true"] {
   stroke: var(--color-primary)
 }
+/* Mermaid diagrams (rendered client-side from ```mermaid blocks) */
+
+.mermaid-diagram {
+  margin: var(--spacing-8) var(--spacing-0);
+  text-align: center;
+}
+
+.mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
