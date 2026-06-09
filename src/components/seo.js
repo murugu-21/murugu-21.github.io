@@ -9,6 +9,7 @@ import * as React from "react"
 import PropTypes from "prop-types"
 import { Helmet } from "react-helmet"
 import { useStaticQuery, graphql } from "gatsby"
+import { useLocation } from "@gatsbyjs/reach-router"
 
 const Seo = ({ description, lang, meta, title }) => {
   const { site } = useStaticQuery(
@@ -18,6 +19,7 @@ const Seo = ({ description, lang, meta, title }) => {
           siteMetadata {
             title
             description
+            siteUrl
             social {
               twitter
             }
@@ -30,6 +32,12 @@ const Seo = ({ description, lang, meta, title }) => {
   const metaDescription = description || site.siteMetadata.description
   const defaultTitle = site.siteMetadata?.title
 
+  // Self-referencing canonical: site origin + current path (no trailing-slash
+  // doubling, since siteUrl ends in "/" and pathname starts with "/").
+  const { pathname } = useLocation()
+  const siteUrl = (site.siteMetadata?.siteUrl || ``).replace(/\/$/, ``)
+  const canonical = pathname ? `${siteUrl}${pathname}` : siteUrl
+
   return (
     <Helmet
       htmlAttributes={{
@@ -37,6 +45,12 @@ const Seo = ({ description, lang, meta, title }) => {
       }}
       title={title}
       titleTemplate={defaultTitle ? `%s | ${defaultTitle}` : null}
+      link={[
+        {
+          rel: `canonical`,
+          href: canonical,
+        },
+      ]}
       meta={[
         {
           name: `description`,
