@@ -3,7 +3,7 @@ module.exports = {
     title: `SDE Journey`,
     author: {
       name: `Murugappan M`,
-      summary: `I write about MERN stack experience in real time work`,
+      summary: `Hard-won lessons from building software that actually runs in production`,
     },
     description: `A Technical blog on my experiences in the tech industry`,
     siteUrl: `https://murugu-21.github.io/`,
@@ -135,7 +135,12 @@ module.exports = {
         icon: `src/images/icon.png`,
       },
     },
-    // `gatsby-plugin-react-helmet`,
+    // Server-renders react-helmet tags (meta, canonical) into the static HTML
+    // so crawlers see them without executing JS.
+    `gatsby-plugin-react-helmet`,
+    // Generates /sitemap-index.xml (+ child sitemaps) from siteUrl; submit it
+    // in Google Search Console to improve discovery and indexing priority.
+    `gatsby-plugin-sitemap`,
     // this (optional) plugin enables Progressive Web App + Offline functionality
     // To learn more, visit: https://gatsby.dev/offline
     `gatsby-plugin-offline`,
