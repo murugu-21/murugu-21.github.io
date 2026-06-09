@@ -114,3 +114,72 @@ exports.createSchemaCustomization = ({ actions }) => {
     }
   `)
 }
+
+// Generate /llms.txt (https://llmstxt.org) — a curated, structured map of the
+// site so LLM crawlers and agents can discover and cite the content. Built from
+// the same post data as the site, so it stays current; production builds already
+// exclude drafts (see gatsby-config.js source-filesystem ignore).
+exports.onPostBuild = async ({ graphql, reporter }) => {
+  const fs = require(`fs`)
+
+  const result = await graphql(`
+    {
+      site {
+        siteMetadata {
+          title
+          description
+          siteUrl
+          author {
+            name
+          }
+        }
+      }
+      allMarkdownRemark(
+        sort: { fields: [frontmatter___date], order: DESC }
+        limit: 1000
+      ) {
+        nodes {
+          excerpt(pruneLength: 160)
+          fields {
+            slug
+          }
+          frontmatter {
+            title
+            description
+          }
+        }
+      }
+    }
+  `)
+
+  if (result.errors) {
+    reporter.panicOnBuild(`Error generating llms.txt`, result.errors)
+    return
+  }
+
+  const meta = result.data.site.siteMetadata
+  const nodes = result.data.allMarkdownRemark.nodes
+  const base = (meta.siteUrl || ``).replace(/\/$/, ``)
+
+  const lines = [
+    `# ${meta.title}`,
+    ``,
+    `> ${meta.description}${meta.author?.name ? ` — by ${meta.author.name}` : ``}.`,
+    ``,
+    `## Posts`,
+    ``,
+  ]
+
+  nodes.forEach(node => {
+    const title = node.frontmatter?.title || node.fields.slug
+    const url = `${base}${node.fields.slug}`
+    const desc = (node.frontmatter?.description || node.excerpt || ``)
+      .replace(/\s+/g, ` `)
+      .trim()
+    lines.push(desc ? `- [${title}](${url}): ${desc}` : `- [${title}](${url})`)
+  })
+  lines.push(``)
+
+  fs.writeFileSync(path.join(`public`, `llms.txt`), lines.join(`\n`))
+  reporter.info(`Wrote ${nodes.length} posts to /llms.txt`)
+}
