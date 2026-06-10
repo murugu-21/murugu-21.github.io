@@ -1,8 +1,10 @@
 # murugappan.dev
 
-Personal portfolio of Murugappan Sevugan Chetty, built with [Astro 5](https://astro.build) and deployed to GitHub Pages.
+Personal portfolio of Murugappan Sevugan Chetty, built with [Astro 5](https://astro.build) and deployed to Cloudflare Pages.
 
 **Live site:** https://murugappan.dev
+
+This is a monorepo: the portfolio lives at the root and the blog (served at `/blog`) lives in `blog/`. `npm run build:site` builds both into a single `dist/`. The light/dark theme is shared between the two apps via the `isDark` localStorage key.
 
 ## Development
 
@@ -28,4 +30,4 @@ npx astro check        # type-check .astro files
 
 ## Deployment
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds the site on Node 20 and publishes `dist/` to the `gh-pages` branch (served at murugappan.dev via `public/CNAME`). A weekly cron rebuild keeps the build-time GitHub data fresh.
+Cloudflare Pages (git-integrated) builds on every push to `main` with build command `npm ci --prefix blog && npm run build:site` and output directory `dist`. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, type-check, blog tests, and a build smoke test.

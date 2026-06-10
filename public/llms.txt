@@ -3,11 +3,11 @@
 > Full-Stack Engineer with 3+ years building cloud-native, event-driven B2B SaaS in regulated domains (LLM-powered CLM, healthcare). TypeScript across the stack — React frontends to event-driven Node.js services on AWS. Founding engineer on a product scaled to $300k ARR; strong focus on distributed systems, observability, and security/compliance (SOC 2, HIPAA).
 
 ## Profile
-- Portfolio: https://murugappan.dev/
-- Blog: https://murugappan.dev/blog
-- GitHub: https://github.com/murugu-21
-- LinkedIn: https://www.linkedin.com/in/murugappan-m-56920a192/
-- Stack Overflow: https://stackoverflow.com/users/15790108/murugappan-m
+- [Portfolio](https://murugappan.dev/)
+- [Blog](https://murugappan.dev/blog)
+- [GitHub](https://github.com/murugu-21)
+- [LinkedIn](https://www.linkedin.com/in/murugappan-m-56920a192/)
+- [Stack Overflow](https://stackoverflow.com/users/15790108/murugappan-m)
 
 ## Experience
 - MedMe Health — Intermediate Software Engineer (L4.5), Dec 2025–present (event-driven RPA platform; OpenTelemetry observability; HIPAA compliance; LLM-based extraction)
