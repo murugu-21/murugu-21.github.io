@@ -9,7 +9,14 @@ import {techStack} from "../data/portfolio";
       techStack.experience.map(exp => (
         <div class="skill">
           <p>{exp.stack}</p>
-          <div class="meter">
+          <div
+            class="meter"
+            role="meter"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow={parseInt(exp.progressPercentage)}
+            aria-label={exp.stack}
+          >
             <span style={`width: ${exp.progressPercentage}`} />
           </div>
         </div>

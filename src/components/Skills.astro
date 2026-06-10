@@ -18,7 +18,7 @@ import LottiePlayer from "./LottiePlayer.astro";
         {
           skillsSection.softwareSkills.map(skill => (
             <li class="software-skill-inline" title={skill.skillName}>
-              <i class={skill.fontAwesomeClassname} />
+              <i class={skill.fontAwesomeClassname} aria-hidden="true" />
               <p>{skill.skillName}</p>
             </li>
           ))
