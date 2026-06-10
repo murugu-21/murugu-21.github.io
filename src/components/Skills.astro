@@ -75,6 +75,10 @@ import LottiePlayer from "./LottiePlayer.astro";
     color: $textColorDark;
   }
 
+  :global(html.dark-mode) .software-skill-inline p {
+    color: #b0b8c1; /* $subTitle fails 4.5:1 on the dark bg; lightened for AA */
+  }
+
   /* software skills icon list (old SoftwareSkill.scss) */
   .dev-icons {
     padding-left: 0;

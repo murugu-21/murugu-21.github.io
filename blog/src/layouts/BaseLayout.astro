@@ -1,0 +1,135 @@
+---
+// Custom typefaces (replaces typeface-montserrat / typeface-merriweather)
+import "@fontsource/montserrat/400.css"
+import "@fontsource/montserrat/700.css"
+import "@fontsource/montserrat/900.css"
+import "@fontsource/merriweather/400.css"
+import "@fontsource/merriweather/400-italic.css"
+import "@fontsource/merriweather/700.css"
+import "@fontsource/merriweather/700-italic.css"
+import "@fontsource/merriweather/900.css"
+// normalize CSS across browsers
+import "../normalize.css"
+// custom CSS styles
+import "../style.css"
+// Highlighting for code blocks
+import "prismjs/themes/prism.css"
+// react-toggle styling for the theme switch
+import "../components/customToggle.css"
+
+import BaseHead from "../components/BaseHead.astro"
+import ThemeToggle from "../components/ThemeToggle.jsx"
+import { SITE_TITLE } from "../consts"
+
+// title/description plus SEO passthroughs for BaseHead (ogType,
+// publishedTime, tags, noindex, jsonLd).
+const { title, description, ...seo } = Astro.props
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "")
+const rootPath = `${base}/`
+const isRootPath = Astro.url.pathname === rootPath
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <BaseHead title={title} description={description} {...seo} />
+  </head>
+  <body>
+    <!-- Theme bootstrap, ported verbatim from gatsby-ssr.js. Runs before
+         first paint so there is no light/dark flash; exposes
+         window.__setPreferredTheme + two change hooks for the React islands. -->
+    <script is:inline>
+      window.__onThemeChange1 = function () {}
+      window.__onThemeChange2 = function () {}
+
+      // Shared persistence contract with the portfolio app: key "isDark",
+      // value is a JSON bool. Derive the blog's "dark"/"light" string from it.
+      var preferredTheme = null
+      try {
+        var stored = localStorage.getItem("isDark")
+        if (stored !== null)
+          preferredTheme = JSON.parse(stored) ? "dark" : "light"
+      } catch (err) {}
+
+      function setTheme(newTheme) {
+        if (
+          preferredTheme &&
+          document.body.classList.contains(preferredTheme)
+        ) {
+          document.body.classList.replace(preferredTheme, newTheme)
+        } else {
+          document.body.classList.add(newTheme)
+        }
+        window.__theme = newTheme
+        preferredTheme = newTheme
+        window.__onThemeChange1(newTheme)
+        window.__onThemeChange2(newTheme)
+      }
+
+      window.__setPreferredTheme = function (newTheme) {
+        setTheme(newTheme)
+        try {
+          localStorage.setItem("isDark", JSON.stringify(newTheme === "dark"))
+        } catch (err) {}
+      }
+      var darkQuery = window.matchMedia("(prefers-color-scheme: dark)")
+      darkQuery.onchange = function (e) {
+        window.__setPreferredTheme(e.matches ? "dark" : "light")
+      }
+      setTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"))
+    </script>
+    <div class="global-wrapper" data-is-root-path={isRootPath}>
+      <header class="global-header">
+        {
+          isRootPath ? (
+            <h1 class="main-heading">
+              <a href={rootPath}>{SITE_TITLE}</a>
+            </h1>
+          ) : (
+            <a class="header-link-home" href={rootPath}>
+              {SITE_TITLE}
+            </a>
+          )
+        }
+        <ThemeToggle client:load />
+      </header>
+      <main>
+        <slot />
+      </main>
+    </div>
+    <!-- Render any ```mermaid code blocks client-side (ported from
+         gatsby-browser.js; the webpack __name shim is unnecessary under Vite). -->
+    <script>
+      const blocks = document.querySelectorAll("code.language-mermaid")
+      if (blocks.length > 0) {
+        import("mermaid").then(({ default: mermaid }) => {
+          mermaid.initialize({
+            startOnLoad: false,
+            theme: "neutral",
+            securityLevel: "loose",
+            fontFamily: "Merriweather, Georgia, serif",
+          })
+          blocks.forEach((block, i) => {
+            const pre = block.closest("pre") || block
+            const source = block.textContent || ""
+            const id = `mermaid-svg-${i}`
+
+            mermaid
+              .render(id, source)
+              .then(({ svg }) => {
+                const figure = document.createElement("figure")
+                figure.className = "mermaid-diagram"
+                figure.innerHTML = svg
+                pre.replaceWith(figure)
+              })
+              .catch(err => {
+                // Leave the source block in place so the page still renders.
+                console.error("Mermaid render failed:", err)
+              })
+          })
+        })
+      }
+    </script>
+  </body>
+</html>

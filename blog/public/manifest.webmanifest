@@ -1,0 +1,16 @@
+{
+  "name": "SWE Journey",
+  "short_name": "SWE Journey",
+  "start_url": "/blog/",
+  "background_color": "#ffffff",
+  "theme_color": "#057b01",
+  "display": "minimal-ui",
+  "icons": [
+    {
+      "src": "/blog/icon.png",
+      "sizes": "640x640",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

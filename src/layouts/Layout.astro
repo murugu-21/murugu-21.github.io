@@ -4,11 +4,13 @@ import agustinaUrl from "../assets/fonts/Agustina.woff?url";
 
 interface Props {
   title?: string;
+  noindex?: boolean;
 }
 
 const description =
   "Murugappan M — Full-Stack Engineer building cloud-native, event-driven B2B SaaS on AWS. Experience, skills, and projects.";
-const {title = "Murugappan M | Full Stack Engineer"} = Astro.props;
+const {title = "Murugappan M | Full Stack Engineer", noindex = false} =
+  Astro.props;
 ---
 
 <!doctype html>
@@ -18,16 +20,17 @@ const {title = "Murugappan M | Full Stack Engineer"} = Astro.props;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href="https://murugappan.dev/" />
+    {noindex && <meta name="robots" content="noindex" />}
+    {!noindex && <link rel="canonical" href="https://murugappan.dev/" />}
 
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://murugappan.dev/" />
+    {!noindex && <meta property="og:url" content="https://murugappan.dev/" />}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content="https://murugappan.dev/og-image.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://murugappan.dev/" />
+    {!noindex && <meta name="twitter:url" content="https://murugappan.dev/" />}
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content="https://murugappan.dev/og-image.png" />

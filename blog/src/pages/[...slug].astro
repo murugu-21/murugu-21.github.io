@@ -1,0 +1,104 @@
+---
+import { render } from "astro:content"
+import BaseLayout from "../layouts/BaseLayout.astro"
+import Bio from "../components/Bio.jsx"
+import { AUTHOR, SOCIAL, SITE_TITLE, SITE_URL } from "../consts"
+import {
+  getPublishedPosts,
+  postPath,
+  formatDate,
+  timeToRead,
+  excerpt,
+} from "../utils/posts"
+import { formatReadingTime } from "../utils/helpers"
+
+// One page per post; prev/next wired in date-ASC order, exactly like the old
+// gatsby-node.js createPages loop.
+export async function getStaticPaths() {
+  const posts = await getPublishedPosts()
+  return posts.map((post, index) => ({
+    params: { slug: post.id },
+    props: {
+      post,
+      previous: index === 0 ? null : posts[index - 1],
+      next: index === posts.length - 1 ? null : posts[index + 1],
+    },
+  }))
+}
+
+const { post, previous, next } = Astro.props
+const { Content } = await render(post)
+
+const description = post.data.description || excerpt(post.body)
+
+const postUrl = `${SITE_URL}/${post.id}/`
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: post.data.title,
+  description,
+  url: postUrl,
+  mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+  datePublished: post.data.date.toISOString(),
+  dateModified: post.data.date.toISOString(),
+  keywords: post.data.tags.join(", "),
+  image: `${SITE_URL}/og-image.png`,
+  author: {
+    "@type": "Person",
+    name: AUTHOR.name,
+    url: `https://twitter.com/${SOCIAL.twitter}`,
+  },
+  publisher: { "@type": "Person", name: AUTHOR.name },
+  isPartOf: { "@type": "Blog", name: SITE_TITLE, url: `${SITE_URL}/` },
+}
+---
+
+<BaseLayout
+  title={post.data.title}
+  description={description}
+  ogType="article"
+  publishedTime={post.data.date}
+  tags={post.data.tags}
+  jsonLd={jsonLd}
+>
+  <article class="blog-post" itemscope itemtype="http://schema.org/Article">
+    <header>
+      <h1 itemprop="headline">{post.data.title}</h1>
+      <p>
+        {formatDate(post.data.date)}
+        {` • ${formatReadingTime(timeToRead(post.body))}`}
+      </p>
+    </header>
+    <section itemprop="articleBody">
+      <Content />
+    </section>
+    <hr />
+    <footer>
+      <Bio client:load author={AUTHOR} social={SOCIAL} />
+    </footer>
+  </article>
+  <nav class="blog-post-nav">
+    <ul
+      style="display: flex; flex-wrap: wrap; justify-content: space-between; list-style: none; padding: 0;"
+    >
+      <li>
+        {
+          previous && (
+            <a href={postPath(previous.id)} rel="prev">
+              ← {previous.data.title}
+            </a>
+          )
+        }
+      </li>
+      <li>
+        {
+          next && (
+            <a href={postPath(next.id)} rel="next">
+              {next.data.title} →
+            </a>
+          )
+        }
+      </li>
+    </ul>
+  </nav>
+</BaseLayout>
