@@ -1,0 +1,29 @@
+<div class="footer-div section-animate">
+  <p class="footer-text">Made with ❤️ by DeveloperFolio Team</p>
+  <p class="footer-text">
+    Theme by <a
+      href="https://github.com/saadpasta/developerFolio"
+      target="_blank"
+      rel="noreferrer">developerFolio</a
+    >
+  </p>
+</div>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  .footer-text {
+    text-align: center;
+    color: $subTitle !important;
+  }
+
+  /* old conditional `dark-mode footer-text` class */
+  :global(html.dark-mode) .footer-text {
+    color: $textColorDark !important;
+  }
+
+  .footer-div {
+    margin-top: 2rem;
+    padding-bottom: 1rem;
+  }
+</style>
