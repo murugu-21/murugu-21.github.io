@@ -17,18 +17,25 @@ const links = [
     <span class="logo-name">Murugappan M</span>
     <span class="grey-color">/&gt;</span>
   </a>
-  <input class="menu-btn" type="checkbox" id="menu-btn" />
+  <input
+    class="menu-btn"
+    type="checkbox"
+    id="menu-btn"
+    aria-label="Open menu"
+  />
   <label class="menu-icon" for="menu-btn"><span class="navicon"></span></label>
-  <ul class="menu">
-    {
-      links.map(l => (
-        <li>
-          <a href={l.href}>{l.label}</a>
-        </li>
-      ))
-    }
-    <li><ThemeToggle /></li>
-  </ul>
+  <nav aria-label="Main">
+    <ul class="menu">
+      {
+        links.map(l => (
+          <li>
+            <a href={l.href}>{l.label}</a>
+          </li>
+        ))
+      }
+      <li><ThemeToggle /></li>
+    </ul>
+  </nav>
 </header>
 
 <style lang="scss">
@@ -64,8 +71,7 @@ const links = [
     text-decoration: none;
   }
 
-  .header li a:hover,
-  .header .menu-btn:hover {
+  .header li a:hover {
     background-color: $headerHoverBG;
   }
 
@@ -121,7 +127,10 @@ const links = [
   .header .menu {
     clear: both;
     max-height: 0;
-    transition: max-height 0.2s ease-out;
+    visibility: hidden; /* keep collapsed menu links out of the tab order */
+    transition:
+      max-height 0.2s ease-out,
+      visibility 0.2s;
   }
 
   /* menu icon */
@@ -176,11 +185,26 @@ const links = [
   /* menu btn */
 
   .header .menu-btn {
-    display: none;
+    position: absolute;
+    opacity: 0;
+    /* keep it over the icon for hit-area + focus order */
+    width: 48px;
+    height: 48px;
+    right: 8px;
+    top: 8px;
+    margin: 0;
+    cursor: pointer;
+    z-index: 1;
   }
 
-  .header .menu-btn:checked ~ .menu {
+  .header .menu-btn:focus-visible ~ .menu-icon {
+    outline: 2px solid $buttonColor;
+    outline-offset: 2px;
+  }
+
+  .header .menu-btn:checked ~ nav .menu {
     max-height: 486px;
+    visibility: visible;
   }
 
   .header .menu-btn:checked ~ .menu-icon .navicon {
@@ -213,8 +237,12 @@ const links = [
     }
     .header .menu {
       max-height: none;
+      visibility: visible;
     }
     .header .menu-icon {
+      display: none;
+    }
+    .header .menu-btn {
       display: none;
     }
   }

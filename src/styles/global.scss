@@ -22,6 +22,7 @@ code {
 html,
 body {
   scroll-behavior: smooth;
+  scroll-padding-top: 80px; /* anchor jumps clear the ~70px sticky header */
 }
 body {
   margin: 0;

@@ -4,9 +4,9 @@
 ---
 
 <label class="switch">
-  <input type="checkbox" id="theme-toggle" aria-label="theme toggler" />
+  <input type="checkbox" id="theme-toggle" aria-label="Dark mode" />
   <span class="slider round">
-    <span class="emoji">
+    <span class="emoji" aria-hidden="true">
       <span class="sun">☀️</span>
       <span class="moon">🌜</span>
     </span>
@@ -68,8 +68,8 @@
     background-color: $toggleCheck;
   }
 
-  input:focus + .slider {
-    box-shadow: $toggleCheck;
+  input:focus-visible + .slider {
+    box-shadow: 0 0 0 3px $toggleCheck;
   }
 
   input:checked + .slider::before,
