@@ -9,6 +9,11 @@
 - [LinkedIn](https://www.linkedin.com/in/murugappan-m-56920a192/)
 - [Stack Overflow](https://stackoverflow.com/users/15790108/murugappan-m)
 
+## Machine-readable feeds
+- [Blog RSS](https://murugappan.dev/blog/rss.xml)
+- [Sitemap](https://murugappan.dev/sitemap.xml)
+- [Full blog content for LLMs](https://murugappan.dev/blog/llms-full.txt)
+
 ## Experience
 - MedMe Health — Intermediate Software Engineer (L4.5), Dec 2025–present (event-driven RPA platform; OpenTelemetry observability; HIPAA compliance; LLM-based extraction)
 - HyperVerge — SDE 2 / SDE 1 / SDE Intern, 2022–2025 (founding engineer on HyperStart CLM, scaled to $300k ARR; AWS SQS/EventBridge job system; LLM contract-metadata pipeline; VAPT/SOC 2)
