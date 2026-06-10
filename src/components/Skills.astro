@@ -1,0 +1,141 @@
+---
+import {skillsSection} from "../data/portfolio";
+import LottiePlayer from "./LottiePlayer.astro";
+---
+
+<div id="skills" class="skills-main-div section-animate">
+  <div class="skills-image-div">
+    <LottiePlayer
+      src="/lottie-coding.json"
+      label="Illustration of a developer at a desk writing code"
+    />
+  </div>
+  <div class="skills-text-div">
+    <h1 class="skills-heading">{skillsSection.title}</h1>
+    <p class="subTitle skills-text-subtitle">{skillsSection.subTitle}</p>
+    <div class="software-skills-main-div">
+      <ul class="dev-icons">
+        {
+          skillsSection.softwareSkills.map(skill => (
+            <li class="software-skill-inline" title={skill.skillName}>
+              <i class={skill.fontAwesomeClassname} />
+              <p>{skill.skillName}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+    <div>
+      {skillsSection.skills.map(s => <p class="subTitle skills-text">{s}</p>)}
+    </div>
+  </div>
+</div>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  /* old `.main` wrapper (width/padding/margins) folded into the section root */
+  .skills-main-div {
+    display: flex;
+    width: 90%;
+    padding: 20px 10px;
+    margin: 0px auto;
+    margin-top: 4rem;
+    overflow: hidden;
+  }
+
+  .skills-text-div {
+    margin-left: 50px;
+  }
+
+  .skills-main-div > * {
+    flex: 1;
+    margin-bottom: 30px;
+  }
+
+  /* sizing for the lazy lottie holder (old `.skills-image-div > img` equivalent);
+     aspect-ratio reserves the animation's box (1600x1200) before load to avoid CLS */
+  .skills-image-div :global(.lottie-holder) {
+    width: 100%;
+    max-width: 100%;
+    aspect-ratio: 1600 / 1200;
+  }
+
+  .skills-heading {
+    font-size: 56px;
+    font-weight: 400;
+  }
+
+  /* old conditional `dark-mode` classes on heading/subtitle/skills lines */
+  :global(html.dark-mode) .skills-heading,
+  :global(html.dark-mode) .skills-text-subtitle,
+  :global(html.dark-mode) .skills-text {
+    color: $textColorDark;
+  }
+
+  /* software skills icon list (old SoftwareSkill.scss) */
+  .dev-icons {
+    padding-left: 0;
+    list-style: none;
+    font-size: 3rem;
+    margin-bottom: 0px;
+    margin-top: 0px;
+    text-align: center;
+  }
+
+  .software-skill-inline {
+    display: inline-block;
+    margin-right: 20px;
+    margin-bottom: 20px;
+  }
+
+  .software-skill-inline > i {
+    color: $subTitle;
+  }
+
+  .software-skill-inline > i:hover {
+    color: $skillsColor;
+  }
+  .software-skill-inline > p {
+    color: $subTitle;
+    font-size: 10px;
+  }
+  .software-skill-inline > i:hover ~ p {
+    color: $skillsColor;
+  }
+
+  /* Media Query */
+  @media (max-width: 1380px) {
+    .skills-heading {
+      font-size: 40px;
+    }
+  }
+  @media (max-width: 768px) {
+    .skills-heading {
+      font-size: 30px;
+      text-align: center;
+    }
+    .skills-main-div {
+      flex-direction: column;
+    }
+    .skills-text-div {
+      margin-left: 0px;
+      margin: 20px;
+    }
+    .skills-text {
+      font-size: 16px;
+    }
+    .skills-text-subtitle {
+      font-size: 16px;
+      text-align: center;
+    }
+    .skills-image-div {
+      order: 2;
+    }
+  }
+  @media (max-width: 320px) {
+    .skills-main-div {
+      width: auto;
+    }
+  }
+</style>
