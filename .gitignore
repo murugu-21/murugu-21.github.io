@@ -9,6 +9,10 @@
 /coverage
 /build
 
+# astro
+dist/
+.astro/
+
 
 # misc
 .DS_Store
