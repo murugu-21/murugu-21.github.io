@@ -1,6 +1,7 @@
 ---
 import {skillsSection} from "../data/portfolio";
 import LottiePlayer from "./LottiePlayer.astro";
+import Icon from "./Icon.astro";
 ---
 
 <div id="skills" class="skills-main-div section-animate">
@@ -18,7 +19,7 @@ import LottiePlayer from "./LottiePlayer.astro";
         {
           skillsSection.softwareSkills.map(skill => (
             <li class="software-skill-inline" title={skill.skillName}>
-              <i class={skill.fontAwesomeClassname} aria-hidden="true" />
+              <Icon name={skill.iconName} />
               <p>{skill.skillName}</p>
             </li>
           ))
@@ -95,18 +96,24 @@ import LottiePlayer from "./LottiePlayer.astro";
     margin-bottom: 20px;
   }
 
-  .software-skill-inline > i {
+  /* the FA <i> glyphs were sized by the inherited 3rem font-size (.dev-icons)
+     with FA's line-height 1; the inline svgs get the same 3rem box, and
+     vertical-align -0.125em matches FA's baseline offset */
+  .software-skill-inline > :global(svg) {
     color: $subTitle;
+    width: 3rem;
+    height: 3rem;
+    vertical-align: -0.125em;
   }
 
-  .software-skill-inline > i:hover {
+  .software-skill-inline > :global(svg:hover) {
     color: $skillsColor;
   }
   .software-skill-inline > p {
     color: $subTitle;
     font-size: 10px;
   }
-  .software-skill-inline > i:hover ~ p {
+  .software-skill-inline > :global(svg:hover) ~ p {
     color: $skillsColor;
   }
 

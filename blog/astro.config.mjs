@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { defineConfig } from "astro/config"
+import { FontaineTransform } from "fontaine"
 import react from "@astrojs/react"
 import sitemap from "@astrojs/sitemap"
 import rehypeSlug from "rehype-slug"
@@ -28,6 +29,18 @@ const NEWEST_POST = Object.values(POST_DATES).sort().pop()
 export default defineConfig({
   site: "https://murugappan.dev",
   base: "/blog",
+  vite: {
+    plugins: [
+      // Generates metric-tuned fallback @font-face rules (size-adjust /
+      // ascent-override etc.) for the @fontsource fonts so the swap from
+      // the system fallback to Merriweather/Montserrat causes no layout
+      // shift (fixes the ~0.2 CLS from font swap).
+      FontaineTransform.vite({
+        fallbacks: ["Georgia", "Times New Roman"],
+        resolvePath: id => new URL("./node_modules/" + id, import.meta.url),
+      }),
+    ],
+  },
   integrations: [
     react(),
     sitemap({

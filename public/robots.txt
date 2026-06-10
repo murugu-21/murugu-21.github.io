@@ -4,4 +4,3 @@ User-agent: *
 Disallow:
 
 Sitemap: https://murugappan.dev/sitemap.xml
-Sitemap: https://murugappan.dev/blog/sitemap-index.xml
