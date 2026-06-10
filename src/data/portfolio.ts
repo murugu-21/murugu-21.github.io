@@ -1,3 +1,5 @@
+import type {ImageMetadata} from "astro";
+
 import medmeLogo from "../assets/images/medmeLogo.png";
 import hypervergeLogo from "../assets/images/hypervergeLogo.png";
 import samsungLogo from "../assets/images/samsungLogo.png";
@@ -114,7 +116,7 @@ export const techStack: {
 export interface WorkExperience {
   role: string;
   company: string;
-  companylogo: ImageMetadata;
+  companyLogo: ImageMetadata;
   date: string;
   desc: string;
   descBullets?: string[];
@@ -124,7 +126,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "Intermediate Software Engineer (L4.5)",
     company: "MedMe Health",
-    companylogo: medmeLogo,
+    companyLogo: medmeLogo,
     date: "December 2025 – Present",
     desc: "Leading the design of an event-driven RPA platform that automates pharmacy administrative workflows, for this Y Combinator-backed startup.",
     descBullets: [
@@ -136,7 +138,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "SDE 2",
     company: "HyperVerge",
-    companylogo: hypervergeLogo,
+    companyLogo: hypervergeLogo,
     date: "April 2025 – December 2025",
     desc: "Owned core platform architecture for HyperStart, the company's contract lifecycle management (CLM) product.",
     descBullets: [
@@ -149,7 +151,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "SDE 1",
     company: "HyperVerge",
-    companylogo: hypervergeLogo,
+    companyLogo: hypervergeLogo,
     date: "July 2023 – March 2025",
     desc: "Founding engineer on HyperStart CLM, owning features from design through to customer outcome as the product scaled to $300k ARR.",
     descBullets: [
@@ -162,7 +164,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "SDE Intern",
     company: "HyperVerge",
-    companylogo: hypervergeLogo,
+    companyLogo: hypervergeLogo,
     date: "August 2022 – June 2023",
     desc: "Built core ingestion and access-control foundations for the CLM platform.",
     descBullets: [
@@ -173,7 +175,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "R&D Intern",
     company: "Samsung R&D Institute India",
-    companylogo: samsungLogo,
+    companyLogo: samsungLogo,
     date: "December 2021 – August 2022",
     desc: "Applied machine learning to anomaly detection for security use cases.",
     descBullets: [
@@ -285,7 +287,7 @@ export const contactInfo = {
   subtitle:
     "Open to relocation & visa sponsorship. Want to discuss a project, a role, or just say hi? My inbox is open.",
   number: "+91-9095298712",
-  email_address: "murugu2001@gmail.com"
+  emailAddress: "murugu2001@gmail.com"
 };
 
 export const isHireable = true;
