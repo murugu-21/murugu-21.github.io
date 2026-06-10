@@ -1,0 +1,55 @@
+{
+  "name": "blog",
+  "private": true,
+  "description": "My technical blog on my experiences and opinions with current tech stacks",
+  "version": "1.0.0",
+  "author": "Murugappan <murugu2001@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/murugu-21/murugu-21.github.io/issues"
+  },
+  "dependencies": {
+    "@astrojs/react": "^4.2.0",
+    "@astrojs/rss": "^4.0.0",
+    "@astrojs/sitemap": "^3.2.0",
+    "@fontsource/merriweather": "^5.1.0",
+    "@fontsource/montserrat": "^5.1.0",
+    "astro": "^5.8.0",
+    "markdown-it": "^14.1.0",
+    "mermaid": "^11.15.0",
+    "prismjs": "^1.28.0",
+    "prop-types": "^15",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-toggle": "^4.1.2",
+    "reading-time": "^1.5.0",
+    "rehype-autolink-headings": "^7.1.0",
+    "rehype-slug": "^6.0.0",
+    "sanitize-html": "^2.13.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "prettier": "^3.3.0",
+    "prettier-plugin-astro": "^0.14.1",
+    "typescript": "^6.0.3"
+  },
+  "homepage": "https://murugappan.dev/blog",
+  "keywords": [
+    "astro",
+    "blog"
+  ],
+  "license": "0BSD",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/murugu-21/murugu-21.github.io.git"
+  },
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,astro,json,md,css}\"",
+    "start": "astro dev",
+    "serve": "astro preview",
+    "test": "astro check"
+  }
+}
