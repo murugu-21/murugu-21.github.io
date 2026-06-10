@@ -106,3 +106,22 @@ Live (murugappan.dev), after domain attach:
 - Same checks against the domain + true-301 proof, TTFB compare vs GitHub Pages
   baseline (recorded before cutover), Lighthouse ≥ current (100/100/100), blog
   deep links, www → apex 301
+
+## Amendment (2026-06-10, user decision): CF git integration instead of wrangler upload
+
+- The Pages project is **git-connected**, not direct-upload: Cloudflare's CI builds on
+  every push (production = `main`, previews = other branches/PRs automatically).
+  Dashboard build config: build command `npm ci --prefix blog && npm run build:site`,
+  output directory `dist`, root directory `/`. Node version pinned via root `.nvmrc` (20).
+- CF build environment variables (user sets in dashboard): `GITHUB_TOKEN` = a no-scope
+  fine-grained/classic PAT (public-profile GraphQL read only), and
+  `REQUIRE_GITHUB_PROFILE=1` (any CF build that can't fetch the profile fails, keeping
+  the last good deploy live — CF builds can't distinguish cron from push, and failing
+  loudly is preferred).
+- GitHub Actions: `deploy.yml` becomes `ci.yml` — checks (format, astro check ×2) +
+  build smoke + gh-pages dual-publish on main (transition only) + a weekly cron job
+  that POSTs to a CF **deploy hook** URL (GitHub secret `CF_DEPLOY_HOOK_URL`) to
+  refresh the build-time GitHub data.
+- No `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` secrets needed anywhere.
+- User-gate steps change accordingly: connect repo in dashboard, set build config +
+  env vars, create deploy hook; previews come from CF automatically per branch.
