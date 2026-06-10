@@ -8,7 +8,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "format": "prettier --write \"src/**/*.{astro,ts,scss}\"",
-    "check-format": "prettier --check \"src/**/*.{astro,ts,scss}\""
+    "check-format": "prettier --check \"src/**/*.{astro,ts,scss}\"",
+    "build:blog": "npm --prefix blog run build",
+    "build:site": "npm run build && npm run build:blog && rm -rf dist/blog && cp -R blog/dist/. dist/blog/"
   },
   "dependencies": {
     "astro": "^5.0.0",
