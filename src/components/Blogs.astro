@@ -4,7 +4,7 @@ import {blogSection} from "../data/portfolio";
 
 <div class="blog-section section-animate" id="blogs">
   <div class="blog-header">
-    <h1 class="blog-header-text">{blogSection.title}</h1>
+    <h2 class="blog-header-text">{blogSection.title}</h2>
     <p class="subTitle blog-subtitle">{blogSection.subtitle}</p>
   </div>
   <div class="blog-main-div">
@@ -44,6 +44,8 @@ import {blogSection} from "../data/portfolio";
   .blog-header-text {
     font-size: 56px;
     font-weight: 400;
+    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
+    margin: 0.67em 0;
   }
 
   .blog-subtitle {

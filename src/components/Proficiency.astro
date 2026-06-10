@@ -4,7 +4,7 @@ import {techStack} from "../data/portfolio";
 
 <div class="skills-container section-animate">
   <div class="skills-bar">
-    <h1 class="skills-heading">Proficiency</h1>
+    <h2 class="skills-heading">Proficiency</h2>
     {
       techStack.experience.map(exp => (
         <div class="skill">
@@ -74,6 +74,8 @@ import {techStack} from "../data/portfolio";
   .skills-heading {
     font-size: 56px;
     font-weight: 400;
+    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
+    margin: 0.67em 0;
   }
 
   /* Media Query */

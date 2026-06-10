@@ -3,7 +3,7 @@ import {educationInfo} from "../data/portfolio";
 ---
 
 <div class="education-section section-animate" id="education">
-  <h1 class="education-heading">Education</h1>
+  <h2 class="education-heading">Education</h2>
   <div class="education-card-container">
     {
       educationInfo.map(school => (
@@ -20,10 +20,10 @@ import {educationInfo} from "../data/portfolio";
               />
             </div>
             <div class="education-card-right">
-              <h5 class="education-text-school">{school.schoolName}</h5>
+              <h3 class="education-text-school">{school.schoolName}</h3>
 
               <div class="education-text-details">
-                <h5 class="education-text-subHeader">{school.subHeader}</h5>
+                <h4 class="education-text-subHeader">{school.subHeader}</h4>
                 <p class="education-text-duration">{school.duration}</p>
                 <p class="education-text-desc">{school.desc}</p>
                 <div class="education-text-bullets">
@@ -50,6 +50,8 @@ import {educationInfo} from "../data/portfolio";
   .education-heading {
     font-size: 56px;
     font-weight: 400;
+    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
+    margin: 0.67em 0;
   }
 
   .education-section {

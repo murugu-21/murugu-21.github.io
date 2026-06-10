@@ -15,7 +15,7 @@ const cards = await Promise.all(
 <div id="experience">
   <div class="experience-container section-animate" id="workExperience">
     <div>
-      <h1 class="experience-heading">Experiences</h1>
+      <h2 class="experience-heading">Experiences</h2>
       <div class="experience-cards-div">
         {
           cards.map(card => (
@@ -26,7 +26,7 @@ const cards = await Promise.all(
               >
                 <div class="experience-blurred_div" />
                 <div class="experience-div-company">
-                  <h5 class="experience-text-company">{card.company}</h5>
+                  <h3 class="experience-text-company">{card.company}</h3>
                 </div>
 
                 <img
@@ -39,8 +39,8 @@ const cards = await Promise.all(
                 />
               </div>
               <div class="experience-text-details">
-                <h5 class="experience-text-role">{card.role}</h5>
-                <h5 class="experience-text-date">{card.date}</h5>
+                <h4 class="experience-text-role">{card.role}</h4>
+                <h4 class="experience-text-date">{card.date}</h4>
                 <p class="subTitle experience-text-desc">{card.desc}</p>
                 <ul>
                   {card.descBullets?.map(item => (
@@ -69,6 +69,8 @@ const cards = await Promise.all(
   .experience-heading {
     font-size: 56px;
     font-weight: 400;
+    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
+    margin: 0.67em 0;
   }
 
   .experience-container {

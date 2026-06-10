@@ -9,7 +9,7 @@ const prof = await fetchGithubProfile();
 {
   prof ? (
     <div class="main section-animate" id="contact">
-      <h1 class="prof-title">Reach Out to me!</h1>
+      <h2 class="prof-title">Reach Out to me!</h2>
       <div class="row">
         <div class="main-content-profile">
           <div class="blog-header">
@@ -60,7 +60,7 @@ const prof = await fetchGithubProfile();
     <div class="main contact-margin-top section-animate" id="contact">
       <div class="contact-div-main">
         <div class="contact-header">
-          <h1 class="heading contact-title">{contactInfo.title}</h1>
+          <h2 class="heading contact-title">{contactInfo.title}</h2>
           <p class="subTitle contact-subtitle">{contactInfo.subtitle}</p>
           <div class="contact-text-div">
             {contactInfo.number && (
@@ -229,6 +229,8 @@ const prof = await fetchGithubProfile();
   .contact-title {
     font-size: 65px;
     font-weight: 400;
+    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
+    margin: 0.67em 0;
   }
 
   .contact-detail,

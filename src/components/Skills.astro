@@ -11,7 +11,7 @@ import LottiePlayer from "./LottiePlayer.astro";
     />
   </div>
   <div class="skills-text-div">
-    <h1 class="skills-heading">{skillsSection.title}</h1>
+    <h2 class="skills-heading">{skillsSection.title}</h2>
     <p class="subTitle skills-text-subtitle">{skillsSection.subTitle}</p>
     <div class="software-skills-main-div">
       <ul class="dev-icons">
@@ -64,6 +64,8 @@ import LottiePlayer from "./LottiePlayer.astro";
   .skills-heading {
     font-size: 56px;
     font-weight: 400;
+    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
+    margin: 0.67em 0;
   }
 
   /* old conditional `dark-mode` classes on heading/subtitle/skills lines */
