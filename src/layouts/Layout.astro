@@ -1,5 +1,6 @@
 ---
 import "../styles/global.scss";
+import agustinaUrl from "../assets/fonts/Agustina.woff?url";
 
 interface Props {
   title?: string;
@@ -16,7 +17,6 @@ const {title = "Murugappan M | Full Stack Engineer"} = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <meta name="title" content={title} />
     <meta name="description" content={description} />
     <link rel="canonical" href="https://murugappan.dev/" />
 
@@ -26,17 +26,19 @@ const {title = "Murugappan M | Full Stack Engineer"} = Astro.props;
     <meta property="og:description" content={description} />
     <meta property="og:image" content="https://murugappan.dev/og-image.png" />
 
-    <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:url" content="https://murugappan.dev/" />
-    <meta property="twitter:title" content={title} />
-    <meta property="twitter:description" content={description} />
-    <meta
-      property="twitter:image"
-      content="https://murugappan.dev/og-image.png"
-    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://murugappan.dev/" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content="https://murugappan.dev/og-image.png" />
 
     <meta name="msapplication-TileColor" content="#057b01" />
     <meta name="theme-color" content="#057b01" />
+    <meta
+      name="theme-color"
+      content="#282c35"
+      media="(prefers-color-scheme: dark)"
+    />
 
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -45,16 +47,25 @@ const {title = "Murugappan M | Full Stack Engineer"} = Astro.props;
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
 
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff"
+      crossorigin
+      href={agustinaUrl}
+    />
+
     <script is:inline>
       (function () {
+        var dark = false;
+        try {
+          dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        } catch (e) {}
         try {
           var stored = localStorage.getItem("isDark");
-          var dark =
-            stored !== null
-              ? JSON.parse(stored)
-              : window.matchMedia("(prefers-color-scheme: dark)").matches;
-          if (dark) document.documentElement.classList.add("dark-mode");
+          if (stored !== null) dark = JSON.parse(stored);
         } catch (e) {}
+        if (dark) document.documentElement.classList.add("dark-mode");
       })();
     </script>
 
@@ -113,6 +124,12 @@ const {title = "Murugappan M | Full Stack Engineer"} = Astro.props;
       media="print"
       onload="this.media='all'"
     />
+    <noscript>
+      <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/FortAwesome/Font-Awesome@5.15.4/css/all.min.css"
+      />
+    </noscript>
   </head>
   <body>
     <slot />
