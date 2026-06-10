@@ -260,19 +260,19 @@ export const blogSection: {
     "I write about real-world software engineering — distributed systems, cloud architecture, and lessons from production.",
   blogs: [
     {
-      url: "https://murugu-21.github.io/429-googleapis/",
+      url: "https://murugappan.dev/blog/429-googleapis/",
       title: "Rate limiting API requests in Node.js",
       description:
         "How to query external APIs without hitting the 429 rate limit in single-threaded Node.js, using time-and-concurrency-aware throttling."
     },
     {
-      url: "https://murugu-21.github.io/toolbox/",
+      url: "https://murugappan.dev/blog/toolbox/",
       title: "The developer toolbox",
       description:
         "A guide to the tools and habits that helped me become a more effective software engineer."
     },
     {
-      url: "https://murugu-21.github.io/",
+      url: "https://murugappan.dev/blog/",
       title: "SDE Journey — my technical blog",
       description:
         "Hard-won lessons from building software that actually runs in production."
