@@ -1,0 +1,208 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Modern distributed rate limiting in the cloud | SDE Journey</title><link rel="canonical" href="https://murugappan.dev/blog/cloud-agnostic-rate-limiting/"><link rel="icon" type="image/png" href="/blog/icon.png"><link rel="manifest" href="/blog/manifest.webmanifest"><meta name="theme-color" content="#057b01"><meta name="description" content="Why LLM agents make per-user rate limiting essential, and a two-tier IP and per-user pattern that protects your compute budget while staying portable across clouds"><link rel="preload" as="font" type="font/woff2" crossorigin href="/blog/_astro/montserrat-latin-900-normal.B0TD3Qnu.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="/blog/_astro/merriweather-latin-400-normal.G4kZaoXi.woff2"><meta property="og:title" content="Modern distributed rate limiting in the cloud"><meta property="og:description" content="Why LLM agents make per-user rate limiting essential, and a two-tier IP and per-user pattern that protects your compute budget while staying portable across clouds"><meta property="og:type" content="article"><meta property="og:url" content="https://murugappan.dev/blog/cloud-agnostic-rate-limiting/"><meta property="og:site_name" content="SDE Journey"><meta property="og:image" content="https://murugappan.dev/blog/og-image.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="SDE Journey"><meta property="article:published_time" content="2026-06-09T10:30:00.121Z"><meta property="article:tag" content="rate-limiting"><meta property="article:tag" content="architecture"><meta property="article:tag" content="cloud-agnostic"><meta property="article:tag" content="llm-agents"><meta property="article:tag" content="startups"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:creator" content="murugu21"><meta name="twitter:title" content="Modern distributed rate limiting in the cloud"><meta name="twitter:description" content="Why LLM agents make per-user rate limiting essential, and a two-tier IP and per-user pattern that protects your compute budget while staying portable across clouds"><meta name="twitter:image" content="https://murugappan.dev/blog/og-image.png"><link rel="sitemap" href="/blog/sitemap-index.xml"><link rel="alternate" type="application/rss+xml" title="SDE Journey RSS Feed" href="/blog/rss.xml"><script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting","headline":"Modern distributed rate limiting in the cloud","description":"Why LLM agents make per-user rate limiting essential, and a two-tier IP and per-user pattern that protects your compute budget while staying portable across clouds","url":"https://murugappan.dev/blog/cloud-agnostic-rate-limiting/","mainEntityOfPage":{"@type":"WebPage","@id":"https://murugappan.dev/blog/cloud-agnostic-rate-limiting/"},"datePublished":"2026-06-09T10:30:00.121Z","dateModified":"2026-06-09T10:30:00.121Z","keywords":"rate-limiting, architecture, cloud-agnostic, llm-agents, startups","image":"https://murugappan.dev/blog/og-image.png","author":{"@type":"Person","name":"Murugappan M","url":"https://twitter.com/murugu21"},"publisher":{"@type":"Person","name":"Murugappan M"},"isPartOf":{"@type":"Blog","name":"SDE Journey","url":"https://murugappan.dev/blog/"}}</script><!-- Google Analytics (ported from gatsby-plugin-gtag, head: true) --><script async src="https://www.googletagmanager.com/gtag/js?id=G-EGG005JECM"></script><script>(function(){const GA_TRACKING_ID = "G-EGG005JECM";
+
+  window.dataLayer = window.dataLayer || []
+  function gtag() {
+    window.dataLayer.push(arguments)
+  }
+  gtag("js", new Date())
+  gtag("config", GA_TRACKING_ID)
+})();</script><link rel="stylesheet" href="/blog/_astro/_slug_.DSQK76dj.css"></head> <body> <!-- Theme bootstrap, ported verbatim from gatsby-ssr.js. Runs before
+         first paint so there is no light/dark flash; exposes
+         window.__setPreferredTheme + two change hooks for the React islands. --> <script>
+      window.__onThemeChange1 = function () {}
+      window.__onThemeChange2 = function () {}
+
+      // Shared persistence contract with the portfolio app: key "isDark",
+      // value is a JSON bool. Derive the blog's "dark"/"light" string from it.
+      var preferredTheme = null
+      try {
+        var stored = localStorage.getItem("isDark")
+        if (stored !== null)
+          preferredTheme = JSON.parse(stored) ? "dark" : "light"
+      } catch (err) {}
+
+      function setTheme(newTheme) {
+        if (
+          preferredTheme &&
+          document.body.classList.contains(preferredTheme)
+        ) {
+          document.body.classList.replace(preferredTheme, newTheme)
+        } else {
+          document.body.classList.add(newTheme)
+        }
+        window.__theme = newTheme
+        preferredTheme = newTheme
+        window.__onThemeChange1(newTheme)
+        window.__onThemeChange2(newTheme)
+      }
+
+      window.__setPreferredTheme = function (newTheme) {
+        setTheme(newTheme)
+        try {
+          localStorage.setItem("isDark", JSON.stringify(newTheme === "dark"))
+        } catch (err) {}
+      }
+      var darkQuery = window.matchMedia("(prefers-color-scheme: dark)")
+      darkQuery.onchange = function (e) {
+        window.__setPreferredTheme(e.matches ? "dark" : "light")
+      }
+      setTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"))
+    </script> <div class="global-wrapper" data-is-root-path="false"> <header class="global-header"> <a class="header-link-home" href="/blog/"> SDE Journey </a> <style>astro-island,astro-slot,astro-static-slot{display:contents}</style><script>(()=>{var e=async t=>{await(await t())()};(self.Astro||(self.Astro={})).load=e;window.dispatchEvent(new Event("astro:load"));})();</script><script>(()=>{var A=Object.defineProperty;var g=(i,o,a)=>o in i?A(i,o,{enumerable:!0,configurable:!0,writable:!0,value:a}):i[o]=a;var d=(i,o,a)=>g(i,typeof o!="symbol"?o+"":o,a);{let i={0:t=>m(t),1:t=>a(t),2:t=>new RegExp(t),3:t=>new Date(t),4:t=>new Map(a(t)),5:t=>new Set(a(t)),6:t=>BigInt(t),7:t=>new URL(t),8:t=>new Uint8Array(t),9:t=>new Uint16Array(t),10:t=>new Uint32Array(t),11:t=>1/0*t},o=t=>{let[l,e]=t;return l in i?i[l](e):void 0},a=t=>t.map(o),m=t=>typeof t!="object"||t===null?t:Object.fromEntries(Object.entries(t).map(([l,e])=>[l,o(e)]));class y extends HTMLElement{constructor(){super(...arguments);d(this,"Component");d(this,"hydrator");d(this,"hydrate",async()=>{var b;if(!this.hydrator||!this.isConnected)return;let e=(b=this.parentElement)==null?void 0:b.closest("astro-island[ssr]");if(e){e.addEventListener("astro:hydrate",this.hydrate,{once:!0});return}let c=this.querySelectorAll("astro-slot"),n={},h=this.querySelectorAll("template[data-astro-template]");for(let r of h){let s=r.closest(this.tagName);s!=null&&s.isSameNode(this)&&(n[r.getAttribute("data-astro-template")||"default"]=r.innerHTML,r.remove())}for(let r of c){let s=r.closest(this.tagName);s!=null&&s.isSameNode(this)&&(n[r.getAttribute("name")||"default"]=r.innerHTML)}let p;try{p=this.hasAttribute("props")?m(JSON.parse(this.getAttribute("props"))):{}}catch(r){let s=this.getAttribute("component-url")||"<unknown>",v=this.getAttribute("component-export");throw v&&(s+=` (export ${v})`),console.error(`[hydrate] Error parsing props for component ${s}`,this.getAttribute("props"),r),r}let u;await this.hydrator(this)(this.Component,p,n,{client:this.getAttribute("client")}),this.removeAttribute("ssr"),this.dispatchEvent(new CustomEvent("astro:hydrate"))});d(this,"unmount",()=>{this.isConnected||this.dispatchEvent(new CustomEvent("astro:unmount"))})}disconnectedCallback(){document.removeEventListener("astro:after-swap",this.unmount),document.addEventListener("astro:after-swap",this.unmount,{once:!0})}connectedCallback(){if(!this.hasAttribute("await-children")||document.readyState==="interactive"||document.readyState==="complete")this.childrenConnectedCallback();else{let e=()=>{document.removeEventListener("DOMContentLoaded",e),c.disconnect(),this.childrenConnectedCallback()},c=new MutationObserver(()=>{var n;((n=this.lastChild)==null?void 0:n.nodeType)===Node.COMMENT_NODE&&this.lastChild.nodeValue==="astro:end"&&(this.lastChild.remove(),e())});c.observe(this,{childList:!0}),document.addEventListener("DOMContentLoaded",e)}}async childrenConnectedCallback(){let e=this.getAttribute("before-hydration-url");e&&await import(e),this.start()}async start(){let e=JSON.parse(this.getAttribute("opts")),c=this.getAttribute("client");if(Astro[c]===void 0){window.addEventListener(`astro:${c}`,()=>this.start(),{once:!0});return}try{await Astro[c](async()=>{let n=this.getAttribute("renderer-url"),[h,{default:p}]=await Promise.all([import(this.getAttribute("component-url")),n?import(n):()=>()=>{}]),u=this.getAttribute("component-export")||"default";if(!u.includes("."))this.Component=h[u];else{this.Component=h;for(let f of u.split("."))this.Component=this.Component[f]}return this.hydrator=p,this.hydrate},e,this)}catch(n){console.error(`[astro-island] Error hydrating ${this.getAttribute("component-url")}`,n)}}attributeChangedCallback(){this.hydrate()}}d(y,"observedAttributes",["props"]),customElements.get("astro-island")||customElements.define("astro-island",y)}})();</script><astro-island uid="Z1NQaMh" prefix="r3" component-url="/blog/_astro/ThemeToggle.BqDVsv-q.js" component-export="default" renderer-url="/blog/_astro/client.2wqoLpJ_.js" props="{}" ssr client="load" opts="{&quot;name&quot;:&quot;ThemeToggle&quot;,&quot;value&quot;:true}"></astro-island> </header> <main>  <article class="blog-post" itemscope itemtype="http://schema.org/Article"> <header> <h1 itemprop="headline">Modern distributed rate limiting in the cloud</h1> <p> June 09, 2026  • ☕️☕️ 11 min read </p> </header> <section itemprop="articleBody"> <p>A while back I wrote about getting rate limited <em>by</em> an external API. This post is the other side of that coin: how we, a scaling startup, rate limit the traffic hitting <strong>our own</strong> API — and how we built it so that switching cloud providers later would be a change of <em>implementation</em>, not a redesign.</p>
+<p>When you are small you don’t think about rate limiting at all. Then one of three things happens. A misbehaving client gets stuck in a retry loop and hammers an endpoint thousands of times a minute. A scraper discovers your public search endpoint and decides to mirror your catalogue. Or someone points a credential-stuffing script at your login route. The symptom is always the same: a flood your autoscaler dutifully tries to serve, a bill that creeps up, and real users getting a degraded experience.</p>
+<p>Here’s what changed recently, and why I think this moved from a nice-to-have to table stakes: <strong>the traffic isn’t human anymore.</strong> For most of the web’s history a single user generated sporadic, bursty, fundamentally <em>slow</em> load — someone clicks, reads, thinks, clicks again. A human simply can’t issue more than a handful of requests a minute by hand. LLM-based agents broke that assumption overnight. One user now points an agent at your API that calls it in a tight programmatic loop, retries aggressively on every hiccup, fans out into parallel sub-tasks, and runs unattended for hours. Per-user load jumped from a few requests a minute to hundreds, sustained, around the clock — and a single over-eager or buggy agent is indistinguishable from an attack.</p>
+<p>That matters more than it used to because of where the cost lands. Every request an agent makes can cascade into <em>metered</em> spend downstream: more compute, more database load, and increasingly your own LLM/inference bill if the endpoint itself calls a model. An unbounded agent isn’t just a latency problem anymore — it’s a <strong>budget</strong> problem that can quietly run up a five-figure cloud bill overnight, on legitimate credentials, with nobody doing anything malicious. In the agent era, per-user rate limiting is the ceiling you put on that blast radius. It’s no longer about stopping bad actors; it’s about keeping a well-meaning automated client from accidentally bankrupting a feature.</p>
+<p>The naive fix is to add a middleware in the app: check a counter, return a <code>429</code>. It works, but it has two problems I learned the hard way. First, by the time your app counts the request, <strong>you have already paid for it</strong> — the connection was accepted, routed, a container woke up, auth ran. Second, and worse: your app containers are a <em>fixed, slow-to-scale</em> resource. During a real flood, the existing containers get bombarded and fall over their health checks long before new ones finish spinning up. The layer doing the rejecting is the layer that dies.</p>
+<p>So we don’t reject in the app. We reject in two tiers <em>in front</em> of it.</p>
+<h2 id="the-principle-fix-the-architecture-swap-the-implementation"><a class="anchor" aria-hidden="true" tabindex="-1" href="#the-principle-fix-the-architecture-swap-the-implementation"><svg aria-hidden="true" focusable="false" height="16" width="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 010-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 01-2.83 0z" fill="currentColor"></path></svg></a>The principle: fix the architecture, swap the implementation</h2>
+<p>The trick to staying cloud-agnostic isn’t finding one magic tool that runs everywhere. It’s keeping the <strong>layers and their responsibilities constant</strong>, and letting only the <em>implementation</em> of each layer vary per cloud. Anything that speaks a standard protocol travels with you; anything that’s a proprietary cloud API is a chain to that vendor.</p>
+<p>There are two tiers, and they exist for a non-obvious reason explained below:</p>
+<ol>
+<li><strong>Edge tier</strong> — coarse, per-IP, pre-authentication. Sheds floods cheaply before they reach your stack.</li>
+<li><strong>Per-user tier</strong> — precise, keyed on a stable user id, post-authentication. Runs in an elastic gate <em>in front of</em> your app so the app fleet never absorbs the surge.</li>
+</ol>
+<pre class="language-mermaid" data-language="mermaid"><code is:raw="" class="language-mermaid"><span class="token keyword">flowchart</span> TD
+    C<span class="token text string">[Clients]</span> <span class="token arrow operator">--></span><span class="token label property">|JWT from OIDC provider|</span> E<span class="token text string">[Edge tier: Cloudflare or a cloud WAF]</span>
+    E <span class="token arrow operator">--></span><span class="token label property">|over per-IP limit|</span> EB<span class="token text string">[429 blocked at edge]</span>
+    E <span class="token arrow operator">--></span><span class="token label property">|under limit|</span> G<span class="token text string">[Gateway: Envoy or Kong]</span>
+    <span class="token keyword">subgraph</span> CLUSTER<span class="token text string">["Your Kubernetes cluster — portable"]</span>
+        <span class="token keyword">direction</span> TB
+        G <span class="token arrow operator">--></span><span class="token label property">|validate JWT, key on sub|</span> UCHK<span class="token text string">{Per-user over limit?}</span>
+        UCHK <span class="token arrow operator">--></span><span class="token label property">|yes|</span> GB<span class="token text string">[429 blocked at gateway]</span>
+        UCHK <span class="token arrow operator">--></span><span class="token label property">|no|</span> APP<span class="token text string">[App pods]</span>
+        G <span class="token arrow operator">&#x3C;--></span> R<span class="token text string">[(Redis / Valkey)]</span>
+    <span class="token keyword">end</span>
+    <span class="token keyword">style</span> E <span class="token style"><span class="token property">fill</span><span class="token operator">:</span>#fff3d6<span class="token punctuation">,</span><span class="token property">stroke</span><span class="token operator">:</span>#d4a017</span>
+    <span class="token keyword">style</span> EB <span class="token style"><span class="token property">fill</span><span class="token operator">:</span>#ffe0e0<span class="token punctuation">,</span><span class="token property">stroke</span><span class="token operator">:</span>#c0392b</span>
+    <span class="token keyword">style</span> GB <span class="token style"><span class="token property">fill</span><span class="token operator">:</span>#ffe0e0<span class="token punctuation">,</span><span class="token property">stroke</span><span class="token operator">:</span>#c0392b</span>
+    <span class="token keyword">style</span> APP <span class="token style"><span class="token property">fill</span><span class="token operator">:</span>#e0f5e0<span class="token punctuation">,</span><span class="token property">stroke</span><span class="token operator">:</span>#27ae60</span>
+</code></pre>
+<h2 id="why-per-user-cant-live-at-the-edge"><a class="anchor" aria-hidden="true" tabindex="-1" href="#why-per-user-cant-live-at-the-edge"><svg aria-hidden="true" focusable="false" height="16" width="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 010-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 01-2.83 0z" fill="currentColor"></path></svg></a>Why per-user can’t live at the edge</h2>
+<p>This is the insight that shaped the whole design. Your first instinct (it was mine) is: authenticate the user, figure out who they are, and rate-limit per user right there at the edge. You can’t — and the reason is ordering.</p>
+<p><strong>The edge security layer always runs before authentication.</strong> On AWS, “WAF rules are evaluated before other access control features, such as resource policies, IAM policies, Lambda authorizers, and Amazon Cognito authorizers.” The same is true of edge WAFs generally and of CloudFront’s own functions. So at the moment the edge evaluates a request, <strong>the user’s identity does not exist yet</strong> — auth happens later, downstream. The edge can only key on what the <em>client</em> sends unprompted: the source IP, and raw headers/cookies/query values it has no way to validate.</p>
+<pre class="language-mermaid" data-language="mermaid"><code is:raw="" class="language-mermaid"><span class="token keyword">flowchart</span> LR
+    REQ<span class="token text string">[Incoming request]</span> <span class="token arrow operator">--></span> EDGE<span class="token text string">[Edge / WAF]</span>
+    EDGE <span class="token arrow operator">--></span> IPCHK<span class="token text string">{Per-IP limit}</span>
+    IPCHK <span class="token arrow operator">--></span><span class="token label property">|sees IP + raw headers|</span> OK1<span class="token text string">[OK, forward]</span>
+    OK1 <span class="token arrow operator">--></span> AUTHN<span class="token text string">[Auth: validate JWT]</span>
+    AUTHN <span class="token arrow operator">--></span> IDN<span class="token text string">[Identity known: sub]</span>
+    IDN <span class="token arrow operator">--></span> USRCHK<span class="token text string">{Per-user limit on sub}</span>
+    EDGE <span class="token inter-arrow-label"><span class="token arrow-head arrow operator">-.</span> <span class="token label property">cannot see sub yet</span> <span class="token arrow operator">.-</span></span> IDN
+    <span class="token keyword">style</span> EDGE <span class="token style"><span class="token property">fill</span><span class="token operator">:</span>#fff3d6<span class="token punctuation">,</span><span class="token property">stroke</span><span class="token operator">:</span>#d4a017</span>
+    <span class="token keyword">style</span> AUTHN <span class="token style"><span class="token property">fill</span><span class="token operator">:</span>#dbe9ff<span class="token punctuation">,</span><span class="token property">stroke</span><span class="token operator">:</span>#2c6fbb</span>
+    <span class="token keyword">style</span> USRCHK <span class="token style"><span class="token property">fill</span><span class="token operator">:</span>#e0f5e0<span class="token punctuation">,</span><span class="token property">stroke</span><span class="token operator">:</span>#27ae60</span>
+</code></pre>
+<p>So the edge tier does what it <em>can</em> do well — limit by IP — and the per-user tier lives after auth, where the identity is actually known.</p>
+<h2 id="tier-1-the-edge-per-ip-pre-auth"><a class="anchor" aria-hidden="true" tabindex="-1" href="#tier-1-the-edge-per-ip-pre-auth"><svg aria-hidden="true" focusable="false" height="16" width="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 010-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 01-2.83 0z" fill="currentColor"></path></svg></a>Tier 1: the edge (per-IP, pre-auth)</h2>
+<p>This is the layer that sheds dumb floods. Every cloud has a managed WAF (AWS WAF, GCP Cloud Armor, Azure Front Door) and they’re all roughly equivalent in capability — which also makes them the easiest lock-in to fall into. To keep this tier independent of your <em>compute</em> cloud, the cleanest move is an edge provider that sits in front of any origin: <strong>Cloudflare</strong>, Fastly, or Akamai. Your origin can be on AWS today and GCP next year; the edge config doesn’t move.</p>
+<p>A per-IP rate limit on Cloudflare, in Terraform:</p>
+<pre class="language-hcl" data-language="hcl"><code is:raw="" class="language-hcl"><span class="token keyword">resource <span class="token type variable">"cloudflare_ruleset"</span></span> <span class="token string">"edge_rate_limit"</span> <span class="token punctuation">{</span>
+  <span class="token property">zone_id</span> <span class="token punctuation">=</span> var.zone_id
+  <span class="token property">name</span>    <span class="token punctuation">=</span> <span class="token string">"edge-ip-rate-limit"</span>
+  <span class="token property">kind</span>    <span class="token punctuation">=</span> <span class="token string">"zone"</span>
+  <span class="token property">phase</span>   <span class="token punctuation">=</span> <span class="token string">"http_ratelimit"</span>
+
+  <span class="token keyword">rules</span> <span class="token punctuation">{</span>
+    <span class="token property">action</span>      <span class="token punctuation">=</span> <span class="token string">"block"</span>
+    <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"Per-IP limit on the API"</span>
+    <span class="token property">expression</span>  <span class="token punctuation">=</span> <span class="token string">"(http.request.uri.path contains \"/api/\")"</span>
+
+    <span class="token keyword">ratelimit</span> <span class="token punctuation">{</span>
+      <span class="token property">characteristics</span>     <span class="token punctuation">=</span> <span class="token punctuation">[</span><span class="token string">"ip.src"</span>, <span class="token string">"cf.colo.id"</span><span class="token punctuation">]</span>
+      <span class="token property">period</span>              <span class="token punctuation">=</span> <span class="token number">60</span>
+      <span class="token property">requests_per_period</span> <span class="token punctuation">=</span> <span class="token number">2000</span>
+      <span class="token property">mitigation_timeout</span>  <span class="token punctuation">=</span> <span class="token number">60</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Two things worth knowing regardless of provider: roll new limits out in <strong>count/log mode</strong> first and watch the metrics for a few days — your legitimate power users get closer to the threshold than you’d guess — and <strong>scope the rule down</strong> to the paths that need it instead of one global limit. Volumetric L3/L4 DDoS is the one thing you genuinely can’t self-host economically, which is the honest reason this tier stays a vendor: just pick one independent of your compute.</p>
+<h2 id="tier-2-per-user-keyed-on-sub-post-auth-in-front-of-the-app"><a class="anchor" aria-hidden="true" tabindex="-1" href="#tier-2-per-user-keyed-on-sub-post-auth-in-front-of-the-app"><svg aria-hidden="true" focusable="false" height="16" width="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 010-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 01-2.83 0z" fill="currentColor"></path></svg></a>Tier 2: per-user (keyed on <code>sub</code>, post-auth, in front of the app)</h2>
+<p>After authentication you finally have a stable identifier for the user. Use the <strong><code>sub</code> claim</strong> from the JWT your identity provider issues — not the raw token, which rotates on every refresh and would hand each user a fresh bucket. The identity provider itself is portable as long as it speaks OIDC: self-host <strong>Keycloak</strong> or <strong>Zitadel</strong>, or use a managed-but-neutral issuer. Your gateway only ever reads a standard claim.</p>
+<p>The enforcement point is a gateway that runs as containers in your own cluster — <strong>Envoy</strong> or <strong>Kong</strong> — sitting in front of your app pods. This is what solves the bombardment problem: the gateway scales horizontally as its own deployment (HPA), so <em>it</em> absorbs a surge, not your fixed app fleet. The app pods only ever see traffic that already passed the limit.</p>
+<p>Kong is the low-ops option — its JWT and rate-limiting plugins do this out of the box, with shared state in Redis/Valkey so the limit is correct across all gateway replicas:</p>
+<pre class="language-yaml" data-language="yaml"><code is:raw="" class="language-yaml"><span class="token key atrule">services</span><span class="token punctuation">:</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> api
+    <span class="token key atrule">url</span><span class="token punctuation">:</span> http<span class="token punctuation">:</span>//app.default.svc<span class="token punctuation">:</span><span class="token number">8080</span>
+    <span class="token key atrule">routes</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> api<span class="token punctuation">-</span>route
+        <span class="token key atrule">paths</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">"/api"</span><span class="token punctuation">]</span>
+    <span class="token key atrule">plugins</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> jwt <span class="token comment"># validates the JWT, resolves the consumer from it</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> rate<span class="token punctuation">-</span>limiting
+        <span class="token key atrule">config</span><span class="token punctuation">:</span>
+          <span class="token key atrule">minute</span><span class="token punctuation">:</span> <span class="token number">300</span> <span class="token comment"># per authenticated user</span>
+          <span class="token key atrule">limit_by</span><span class="token punctuation">:</span> consumer <span class="token comment"># the consumer is the authenticated identity (sub)</span>
+          <span class="token key atrule">policy</span><span class="token punctuation">:</span> redis <span class="token comment"># shared state → correct across all gateway replicas</span>
+          <span class="token key atrule">redis</span><span class="token punctuation">:</span>
+            <span class="token key atrule">host</span><span class="token punctuation">:</span> redis.default.svc
+            <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">6379</span>
+          <span class="token key atrule">fault_tolerant</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+</code></pre>
+<p>Envoy is the more powerful option: its <code>jwt_authn</code> filter validates the token and extracts the <code>sub</code> claim, and its rate-limit filter sends a descriptor keyed on that claim to the open-source <code>ratelimit</code> service, which holds the token buckets in Redis. More wiring, but it’s the gold standard for distributed rate limiting at scale. Either way, <strong>the state lives in Redis/Valkey</strong>, which speaks the same protocol on every cloud — swapping ElastiCache → MemoryStore → Azure Cache is a connection-string change, not an architecture change.</p>
+<blockquote>
+<p><strong>Landing this on AWS specifically:</strong> the same shape maps to AWS WAF (tier 1) + a Lambda authorizer that validates the JWT and does a token-bucket check in DynamoDB before the request reaches your integration (tier 2). It works and it’s fully serverless — just know that API Gateway caches authorizer results, so you must set <code>authorizerResultTtlInSeconds = 0</code> or the counter won’t increment on cached requests. The catch is it’s the <em>most</em> locked-in version: Lambda authorizer + DynamoDB don’t travel to another cloud. The Envoy/Kong + Redis version is the same architecture without the chain.</p>
+</blockquote>
+<p><img alt="AWS architecture: per-IP rate limiting at CloudFront with AWS WAF, per-user limiting in a Lambda authorizer backed by a DynamoDB token bucket, all in front of the ECS Fargate app; Cognito issues the JWTs and CloudWatch collects metrics from both tiers" loading="lazy" decoding="async" fetchpriority="auto" width="2336" height="948" src="/blog/_astro/aws-architecture.BawHv2Wv_Z1ceNN1.webp" ></p>
+<p>The two tiers map straight onto AWS services: CloudFront + WAF shed per-IP floods at the edge, and the Lambda authorizer — keyed on the Cognito <code>sub</code> and backed by a DynamoDB token bucket — does the per-user limiting before a request ever reaches Fargate. Notice the authorizer scales per-request, so it absorbs a surge instead of your app fleet.</p>
+<h2 id="the-portability-map"><a class="anchor" aria-hidden="true" tabindex="-1" href="#the-portability-map"><svg aria-hidden="true" focusable="false" height="16" width="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 010-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 01-2.83 0z" fill="currentColor"></path></svg></a>The portability map</h2>
+<p>The whole point is that switching clouds touches the right-hand column, never the architecture:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Layer</th><th>Responsibility</th><th>Portable choice</th><th>The lock-in version</th></tr></thead><tbody><tr><td>Edge</td><td>Per-IP, flood/DDoS, pre-auth</td><td>Cloudflare / Fastly</td><td>AWS WAF, Cloud Armor</td></tr><tr><td>Identity</td><td>Issue JWT with stable <code>sub</code></td><td>Keycloak / Zitadel (OIDC)</td><td>Cognito</td></tr><tr><td>Per-user gate</td><td>Limit on <code>sub</code>, in front of app</td><td>Envoy / Kong (in k8s)</td><td>Lambda authorizer</td></tr><tr><td>Rate-limit state</td><td>Shared counters</td><td>Redis / Valkey</td><td>DynamoDB</td></tr><tr><td>Compute</td><td>Run the stack</td><td>Kubernetes</td><td>ECS/Fargate</td></tr><tr><td>Observability</td><td>Metrics on both tiers</td><td>OpenTelemetry</td><td>CloudWatch</td></tr><tr><td>Infra-as-code</td><td>Provision it all</td><td>Terraform/OpenTofu</td><td>CDK</td></tr></tbody></table>
+<h2 id="the-trade-off-stated-honestly"><a class="anchor" aria-hidden="true" tabindex="-1" href="#the-trade-off-stated-honestly"><svg aria-hidden="true" focusable="false" height="16" width="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7.775 3.275a.75.75 0 001.06 1.06l1.25-1.25a2 2 0 112.83 2.83l-2.5 2.5a2 2 0 01-2.83 0 .75.75 0 00-1.06 1.06 3.5 3.5 0 004.95 0l2.5-2.5a3.5 3.5 0 00-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 010-2.83l2.5-2.5a2 2 0 012.83 0 .75.75 0 001.06-1.06 3.5 3.5 0 00-4.95 0l-2.5 2.5a3.5 3.5 0 004.95 4.95l1.25-1.25a.75.75 0 00-1.06-1.06l-1.25 1.25a2 2 0 01-2.83 0z" fill="currentColor"></path></svg></a>The trade-off, stated honestly</h2>
+<p>Portability is not free — you pay for it in operations. Managed WAF, Cognito, Lambda, and DynamoDB are close to zero-ops; Envoy, Redis, and Keycloak are yours to run, patch, and scale. For a three-person team that is a real cost, and “use the managed AWS version and abstract it behind Terraform modules” is a perfectly defensible choice if you don’t actually expect to move. What you should <em>not</em> do is bury cloud-specific assumptions in your request-handling logic, because that’s the thing that turns a cloud migration from a config change into a rewrite.</p>
+<p>The way I think about it: the edge is the bouncer that keeps the stampede out, the gateway is the doorman who checks each guest’s pass, and the app is the host inside — free to focus on guests who actually made it in. Keep those three roles fixed and well-separated, let each one be played by whatever the current cloud offers, and you get a disproportionate amount of resilience <em>and</em> the freedom to move — for not much more than a couple of config files and the discipline to keep the layers honest.</p>
+<p>And in a world where your “guests” are increasingly tireless automated agents rather than humans who pause to think, that doorman checking each pass is no longer a luxury. It’s the difference between an agent-driven feature that scales and one that wakes you up to a budget alert at 3am.</p> </section> <hr> <footer> <astro-island uid="ZdD4jv" prefix="r2" component-url="/blog/_astro/Bio.yGCjNeKU.js" component-export="default" renderer-url="/blog/_astro/client.2wqoLpJ_.js" props="{&quot;author&quot;:[0,{&quot;name&quot;:[0,&quot;Murugappan M&quot;],&quot;summary&quot;:[0,&quot;Hard-won lessons from building software that actually runs in production&quot;]}],&quot;social&quot;:[0,{&quot;twitter&quot;:[0,&quot;murugu21&quot;]}]}" ssr client="load" opts="{&quot;name&quot;:&quot;Bio&quot;,&quot;value&quot;:true}" await-children><div class="bio"><img class="bio-avatar" src="/blog/_astro/profile-pic.LsMGSCF_.png" width="50" height="50" alt="Profile picture"/><p>technical blog by<!-- --> <a href="https://twitter.com/murugu21"><strong>Murugappan M</strong></a><br/>Hard-won lessons from building software that actually runs in production</p></div><div style="display:flex;flex-direction:row;gap:1rem"><a href="https://github.com/murugu-21" alt="link to author&#x27;s github profile"><img src="/blog/_astro/Github-light.BOrrlvDh.png" width="32" height="32" alt="Github profile link light"/></a><a href="https://stackoverflow.com/users/15790108/murugappan-m" alt="link to author&#x27;s stackoverflow profile"><img src="/blog/_astro/stack-overflow.DpIG-KDl.png" width="32" height="32" alt="stackoverflow profile link"/></a></div><!--astro:end--></astro-island> </footer> </article> <nav class="blog-post-nav"> <ul style="display: flex; flex-wrap: wrap; justify-content: space-between; list-style: none; padding: 0;"> <li> <a href="/blog/429-googleapis/" rel="prev">
+← Rate limit api requests in nodejs </a> </li> <li>  </li> </ul> </nav>  </main> </div> <!-- Render any ```mermaid code blocks client-side (ported from
+         gatsby-browser.js; the webpack __name shim is unnecessary under Vite). --> <script type="module" src="/blog/_astro/BaseLayout.astro_astro_type_script_index_0_lang.CuWPLNM3.js"></script> </body> </html>

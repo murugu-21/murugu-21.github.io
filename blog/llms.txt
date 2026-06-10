@@ -1,0 +1,13 @@
+# SDE Journey
+
+> A Technical blog on my experiences in the tech industry — by Murugappan M.
+
+## Posts
+
+- [Modern distributed rate limiting in the cloud](https://murugappan.dev/blog/cloud-agnostic-rate-limiting/): Why LLM agents make per-user rate limiting essential, and a two-tier IP and per-user pattern that protects your compute budget while staying portable across clouds
+- [Rate limit api requests in nodejs](https://murugappan.dev/blog/429-googleapis/): How to query external apis without hitting 429 rate limit in nodejs
+- [The developer toolbox](https://murugappan.dev/blog/toolbox/): A guide to becoming a developer from my experience becoming one.
+- [React Hooks](https://murugappan.dev/blog/react/): My mental models about Different React Hooks and Redux pattern.
+- [0.1+0.2 not equal to 0.3???😕](https://murugappan.dev/blog/first-post/): The limitations of floating point math and weighing tradeoffs.
+- [why i chose gatsby for my blog?](https://murugappan.dev/blog/gastby/): TL;DR Static Site Generator using graphQl React stack.
+- [Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/): Find minimum number of coins that make a given value.
