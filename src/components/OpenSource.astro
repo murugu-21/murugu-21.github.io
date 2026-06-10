@@ -1,0 +1,198 @@
+---
+import {openSourceSection, openSourceCard} from "../data/portfolio";
+---
+
+<div class="achievement-section section-animate" id="achievements">
+  <div class="achievement-header">
+    <h1 class="heading achievement-heading">{openSourceSection.title}</h1>
+    <p class="subTitle achievement-subtitle">{openSourceSection.subtitle}</p>
+  </div>
+  <div class="achievement-cards-div">
+    <div class="certificate-card">
+      <div class="certificate-image-div">
+        <img
+          src={openSourceCard.image}
+          alt={openSourceCard.imageAlt}
+          class="card-image"
+          width="250"
+          height="250"
+          loading="lazy"
+        />
+      </div>
+      <div class="certificate-detail-div">
+        <h5 class="card-title">{openSourceCard.title}</h5>
+        <p class="card-subtitle">{openSourceCard.subtitle}</p>
+      </div>
+      <div class="certificate-card-footer">
+        {
+          openSourceCard.footerLink.map(f => (
+            <a
+              class="certificate-tag"
+              href={f.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {f.name}
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  /* old `.main` wrapper (width/padding/margins) folded into the section root */
+  .achievement-section {
+    width: 90%;
+    padding: 20px 10px;
+    margin: 0px auto;
+    margin-top: 4rem;
+  }
+
+  /* from old containers/achievement/Achievement.scss */
+  .achievement-heading {
+    font-size: 56px;
+    font-weight: 400;
+    line-height: normal;
+    margin: 0px;
+  }
+
+  .achievement-subtitle {
+    text-transform: uppercase;
+    margin: 0px;
+    margin-bottom: 50px;
+  }
+
+  .achievement-cards-div {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem 1rem;
+  }
+
+  /* from old components/achievementCard/AchievementCard.scss */
+  .card-image {
+    max-width: 100%;
+    height: auto;
+    width: 250px;
+  }
+
+  .card-title {
+    color: $titleColor;
+    font-size: 1.375rem;
+    line-height: 24px;
+    font-weight: 700;
+    margin: 15px 0 0 0;
+  }
+
+  .card-subtitle {
+    color: $cardSubtitle;
+    font-size: 1.063rem;
+    line-height: 1.5rem;
+  }
+
+  .certificate-card {
+    background-color: $lightBackground2;
+    box-shadow: $lightBoxShadowDark 0px 10px 30px -15px;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid $lightBorder1;
+    -webkit-transition: all 0.3s ease;
+    -o-transition: all 0.3s ease;
+    transition: all 0.3s ease;
+  }
+
+  .certificate-card:hover {
+    box-shadow: $lightBoxShadowDark 0px 20px 30px -10px;
+  }
+
+  .certificate-detail-div {
+    text-align: center;
+  }
+
+  .certificate-image-div {
+    position: relative;
+    height: 250px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .certificate-card-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  /* the old footer "tags" were spans opened via JS window.open; they are real
+     anchors now, so the selectors target `a` and reset link decoration */
+  .certificate-card-footer a.certificate-tag {
+    background: $buttonColor;
+    color: $lightBackground3;
+    vertical-align: middle;
+    align-items: center;
+    border-radius: 4px;
+    display: inline-flex;
+    font-size: 0.75rem;
+    height: 2em;
+    justify-content: center;
+    white-space: nowrap;
+    line-height: 1.5;
+    margin: 0 0.5rem 0.5rem 0;
+    padding: 0 0.75em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: 0.2s ease-in;
+  }
+
+  a.certificate-tag:hover {
+    background: $buttonHover;
+  }
+
+  /* old conditional `dark-mode` classes on heading/subtitle */
+  :global(html.dark-mode) .achievement-heading,
+  :global(html.dark-mode) .achievement-subtitle,
+  :global(html.dark-mode) .card-title,
+  :global(html.dark-mode) .card-subtitle {
+    color: $textColorDark;
+  }
+
+  /* old `dark-mode certificate-card` surface came from the global bare
+     `.dark-mode` rule; recreated explicitly here */
+  :global(html.dark-mode) .certificate-card {
+    @include dark-surface;
+  }
+
+  :global(html.dark-mode) .certificate-card:hover {
+    box-shadow: $achievementCertificateCardHoverDark 0px 20px 30px -10px;
+  }
+
+  /* Media Query */
+  @media (max-width: 1380px) {
+    .achievement-heading {
+      font-size: 40px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .achievement-heading {
+      font-size: 30px;
+      text-align: center;
+    }
+    .achievement-subtitle {
+      font-size: 16px;
+      line-height: normal;
+      text-align: center;
+    }
+  }
+
+  @media (max-width: 320px) {
+    .achievement-section {
+      width: auto;
+    }
+  }
+</style>
