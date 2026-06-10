@@ -1,0 +1,254 @@
+---
+import ThemeToggle from "./ThemeToggle.astro";
+
+const links = [
+  {href: "#skills", label: "Skills"},
+  {href: "#experience", label: "Work Experiences"},
+  {href: "#achievements", label: "Achievements"},
+  {href: "#blogs", label: "Blogs"},
+  {href: "#resume", label: "Resume"},
+  {href: "#contact", label: "Contact Me"}
+];
+---
+
+<header class="header">
+  <a href="/" class="logo">
+    <span class="grey-color">&lt;</span>
+    <span class="logo-name">Murugappan M</span>
+    <span class="grey-color">/&gt;</span>
+  </a>
+  <input
+    class="menu-btn"
+    type="checkbox"
+    id="menu-btn"
+    aria-label="Open menu"
+  />
+  <label class="menu-icon" for="menu-btn"><span class="navicon"></span></label>
+  <nav aria-label="Main">
+    <ul class="menu">
+      {
+        links.map(l => (
+          <li>
+            <a href={l.href}>{l.label}</a>
+          </li>
+        ))
+      }
+      <li><ThemeToggle /></li>
+    </ul>
+  </nav>
+</header>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  /* header (sticky replaces the old react-headroom wrapper) */
+
+  .header {
+    background-color: $lightBackground1;
+    max-width: 100%;
+    padding: 15px 20px;
+    margin: 0px auto;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+  }
+
+  .header ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow: hidden;
+  }
+
+  .grey-color {
+    color: $subTitle;
+  }
+
+  .header li a {
+    display: block;
+    padding: 15px 20px;
+    color: $textColor;
+    text-decoration: none;
+  }
+
+  .header li a:hover {
+    background-color: $headerHoverBG;
+  }
+
+  .header .logo {
+    display: block;
+    flex: none;
+    float: left;
+    font-size: 1.5em;
+    text-decoration: none;
+    margin-top: 10px;
+    line-height: normal;
+  }
+
+  .header .logo-name {
+    font-family: "Agustina Regular";
+    font-weight: bold;
+    font-variant-ligatures: no-common-ligatures;
+    -webkit-font-variant-ligatures: no-common-ligatures;
+    padding: 0 10px;
+    color: $buttonColor; // theme green (was inheriting the browser's violet visited-link color)
+  }
+
+  /* keep the toggle aligned like the old <li><a> wrapper */
+  .header li :global(.switch) {
+    margin: 15px 20px;
+  }
+
+  /* dark mode (old `.dark-menu` conditional classes, now driven by html.dark-mode) */
+
+  :global(html.dark-mode) .header,
+  :global(html.dark-mode) .header .menu {
+    background-color: $darkBackground !important;
+    color: $textColorDark;
+  }
+
+  :global(html.dark-mode) .header li a {
+    color: $textColorDark !important;
+  }
+
+  :global(html.dark-mode) .header li a:hover {
+    background-color: lighten(
+      $darkBackground,
+      10%
+    ) !important; // subtle highlight; was a heavy solid-green block that matched the toggle
+  }
+
+  :global(html.dark-mode) .header .logo-name {
+    color: $textColorDark; // keep the name readable (white) on the dark header
+  }
+
+  /* menu */
+
+  .header .menu {
+    clear: both;
+    max-height: 0;
+    visibility: hidden; /* keep collapsed menu links out of the tab order */
+    transition:
+      max-height 0.2s ease-out,
+      visibility 0.2s;
+  }
+
+  /* menu icon */
+
+  .header .menu-icon {
+    cursor: pointer;
+    display: inline-block;
+    float: right;
+    padding: 28px 20px;
+    position: relative;
+    user-select: none;
+  }
+
+  .header .menu-icon .navicon {
+    background: $iconBackground;
+    display: block;
+    height: 2px;
+    position: relative;
+    transition: background 0.2s ease-out;
+    width: 18px;
+  }
+
+  .header .menu-icon .navicon:before,
+  .header .menu-icon .navicon:after {
+    background: $iconBackground;
+    content: "";
+    display: block;
+    height: 100%;
+    position: absolute;
+    transition: all 0.2s ease-out;
+    width: 100%;
+  }
+
+  /* old `.navicon-dark` conditional class */
+  :global(html.dark-mode) .header .menu-icon .navicon {
+    background: $textColorDark;
+  }
+
+  :global(html.dark-mode) .header .menu-icon .navicon:before,
+  :global(html.dark-mode) .header .menu-icon .navicon:after {
+    background: $textColorDark !important;
+  }
+
+  .header .menu-icon .navicon:before {
+    top: 5px;
+  }
+
+  .header .menu-icon .navicon:after {
+    top: -5px;
+  }
+
+  /* menu btn */
+
+  .header .menu-btn {
+    position: absolute;
+    opacity: 0;
+    /* keep it over the icon for hit-area + focus order */
+    width: 48px;
+    height: 48px;
+    right: 8px;
+    top: 8px;
+    margin: 0;
+    cursor: pointer;
+    z-index: 1;
+  }
+
+  .header .menu-btn:focus-visible ~ .menu-icon {
+    outline: 2px solid $buttonColor;
+    outline-offset: 2px;
+  }
+
+  .header .menu-btn:checked ~ nav .menu {
+    max-height: 486px;
+    visibility: visible;
+  }
+
+  .header .menu-btn:checked ~ .menu-icon .navicon {
+    background: transparent !important;
+  }
+
+  .header .menu-btn:checked ~ .menu-icon .navicon:before {
+    transform: rotate(-45deg);
+  }
+
+  .header .menu-btn:checked ~ .menu-icon .navicon:after {
+    transform: rotate(45deg);
+  }
+
+  .header .menu-btn:checked ~ .menu-icon:not(.steps) .navicon:before,
+  .header .menu-btn:checked ~ .menu-icon:not(.steps) .navicon:after {
+    top: 0;
+  }
+
+  /* 48em = 768px */
+
+  @media (min-width: 48em) {
+    .header li {
+      float: left;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header .menu {
+      max-height: none;
+      visibility: visible;
+    }
+    .header .menu-icon {
+      display: none;
+    }
+    .header .menu-btn {
+      display: none;
+    }
+  }
+  @media (max-width: 960px) and (min-width: 768px) {
+    .header {
+      font-size: 12px;
+    }
+  }
+</style>

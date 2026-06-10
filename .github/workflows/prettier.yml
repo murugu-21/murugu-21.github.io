@@ -1,27 +1,17 @@
 name: Check Format
 on:
-  push:
   pull_request:
-      branches:
-        - master
+  push:
+    branches-ignore:
+      - main # main pushes are format-checked by the deploy workflow
 jobs:
   check-format:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@v3.8.1
-        with:
-          node-version: 18.x
-      
-      - name: Install 🔧 # Install dependencies
-        run: |
-          npm install
-      
-      - name: Check Format
-        run: |
-          npm run check-format
-
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check-format

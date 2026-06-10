@@ -1,0 +1,255 @@
+---
+import {workExperiences} from "../data/portfolio";
+import {bannerColor} from "../lib/logoColor";
+
+// The old app sampled each logo's color client-side (color-thief) once the
+// image loaded; here the average color is computed at build time with sharp.
+const cards = await Promise.all(
+  workExperiences.map(async w => ({
+    ...w,
+    banner: await bannerColor(w.company)
+  }))
+);
+---
+
+<div id="experience">
+  <div class="experience-container section-animate" id="workExperience">
+    <div>
+      <h2 class="experience-heading">Experiences</h2>
+      <div class="experience-cards-div">
+        {
+          cards.map(card => (
+            <div class="experience-card">
+              <div
+                style={`background: ${card.banner}`}
+                class="experience-banner"
+              >
+                <div class="experience-blurred_div" />
+                <div class="experience-div-company">
+                  <h3 class="experience-text-company">{card.company}</h3>
+                </div>
+
+                <img
+                  class="experience-roundedimg"
+                  src={card.companyLogo.src}
+                  width={card.companyLogo.width}
+                  height={card.companyLogo.height}
+                  alt={card.company + " logo"}
+                  loading="lazy"
+                />
+              </div>
+              <div class="experience-text-details">
+                <h4 class="experience-text-role">{card.role}</h4>
+                <h4 class="experience-text-date">{card.date}</h4>
+                <p class="subTitle experience-text-desc">{card.desc}</p>
+                <ul>
+                  {card.descBullets?.map(item => (
+                    <li class="subTitle">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </div>
+</div>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  /* from old containers/workExperience/WorkExperience.scss */
+  .experience-cards-div {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 1rem 1rem;
+  }
+
+  .experience-heading {
+    font-size: 56px;
+    font-weight: 400;
+    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
+    margin: 0.67em 0;
+  }
+
+  .experience-container {
+    display: flex;
+    width: 90%;
+    padding: 20px 10px;
+    margin: 0px auto;
+    margin-top: 2rem;
+  }
+
+  .experience-container > * {
+    flex: 1;
+  }
+
+  /* from old components/experienceCard/ExperienceCard.scss */
+  .experience-card {
+    position: relative;
+    background-color: $lightBackground2;
+    box-shadow: $lightBoxShadowDark 0px 10px 30px -15px;
+    border-radius: 10px;
+    border: 1px solid $lightBorder1;
+  }
+
+  .experience-card:hover {
+    box-shadow: $lightBoxShadowDark 0px 20px 30px -10px;
+  }
+
+  .experience-banner {
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 150%;
+    background: $experienceCardBannerLG;
+    border-radius: 10px 10px 0px 0px;
+    -webkit-filter: blur(0px);
+    -moz-filter: blur(0px);
+    -o-filter: blur(0px);
+    -ms-filter: blur(0px);
+    filter: blur(0px);
+    height: 11rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .experience-blurred_div {
+    position: absolute;
+    background: $experienceCardBlurredDivLG;
+    -webkit-filter: blur(5px);
+    -moz-filter: blur(5px);
+    -o-filter: blur(5px);
+    -ms-filter: blur(5px);
+    filter: blur(5px);
+    height: 11rem;
+    top: 0;
+    left: 0;
+    width: 100%;
+    border-radius: 10px 10px 0px 0px;
+  }
+
+  .experience-div-company {
+    position: absolute;
+    background: transparent;
+    height: 9rem;
+    top: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .experience-text-company {
+    text-align: center;
+    padding: 1.5rem;
+    margin: 0;
+    color: $lightBackground1;
+    font-size: 25px;
+    text-align: center;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .experience-roundedimg {
+    position: absolute;
+    object-fit: cover;
+    left: 0;
+    right: 0;
+    top: 7rem;
+    margin-left: auto;
+    margin-right: auto;
+    width: 8rem;
+    height: 8rem;
+    box-shadow: 0 0.5rem 1rem $lightBoxShadowDarker;
+    border-radius: 50%;
+  }
+
+  .experience-text-role {
+    text-align: center;
+    color: $textColor;
+    font-weight: 700;
+    font-size: 25px;
+    margin: 0px;
+    padding-top: 1.5rem;
+    line-height: normal;
+  }
+
+  .experience-text-date {
+    text-align: center;
+    color: $textColor;
+    font-size: 20px;
+    margin: 0px;
+    padding-top: 1rem;
+    font-weight: 600;
+  }
+
+  .experience-text-desc {
+    text-align: center;
+  }
+
+  .experience-text-details {
+    padding: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  /* old `.experience-card-dark` variant + `dark-mode-text` conditional classes */
+  :global(html.dark-mode) .experience-card {
+    background-color: $darkBackground;
+  }
+  /* the old dark variant had no hover elevation; keep the resting shadow */
+  :global(html.dark-mode) .experience-card:hover {
+    box-shadow: $lightBoxShadowDark 0px 10px 30px -15px;
+  }
+  :global(html.dark-mode) .experience-text-role,
+  :global(html.dark-mode) .experience-text-date,
+  :global(html.dark-mode) .experience-text-desc,
+  :global(html.dark-mode) .experience-text-details li {
+    color: $textColorDark;
+  }
+
+  /* Media Query */
+
+  @media (max-width: 1380px) {
+    .experience-heading {
+      font-size: 40px;
+    }
+    .experience-text-role {
+      padding-top: 0.5rem;
+      font-size: 22px;
+    }
+    .experience-text-company {
+      font-size: 22px;
+    }
+    .experience-text-date {
+      font-size: 18px;
+    }
+    .experience-roundedimg {
+      width: 6.5rem;
+      height: 6.5rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .experience-heading {
+      font-size: 30px;
+      text-align: center;
+    }
+    .experience-text-role {
+      font-size: 22px;
+    }
+    .experience-text-company {
+      font-size: 22px;
+    }
+    .experience-text-date {
+      font-size: 18px;
+    }
+    .experience-text-desc {
+      font-size: 16px;
+    }
+  }
+</style>

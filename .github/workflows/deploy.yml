@@ -1,40 +1,34 @@
 name: Build and Deploy
-env:
-  CI: false
-  GITHUB_USERNAME: ${{ github.repository_owner }}
-  REACT_APP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This is automatically set by Github Actions
-  USE_GITHUB_DATA: "true"
-  MEDIUM_USERNAME: "saadpasta" # Change this to your medium username
 on:
   workflow_dispatch:
   push:
     branches:
       - main
   schedule:
-    - cron: "0 12 * * 1" # see https://docs.github.com/en/actions/reference/events-that-trigger-workflows#scheduled-events
+    - cron: "0 12 * * 1" # weekly refresh of build-time GitHub data
 permissions:
-  contents: write # allow the GITHUB_TOKEN to push the built site to the gh-pages branch
+  contents: write # allow the deploy bot to push to gh-pages
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout 🛎️
-        uses: actions/checkout@v3 # If you're using actions/checkout@v3 you must set persist-credentials to false in most cases for the deployment to work correctly.
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
-
-      - name: Setup Node.js 🔧
-        uses: actions/setup-node@v3.8.1
+      - uses: actions/setup-node@v4
         with:
-          node-version: 18.x
-
-      - name: Install and Build 🔧 # Build the Project
-        run: |
-          npm install
-          npm run build
-      - name: Deploy 🚀
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check-format
+      - run: npx astro check
+      - run: npm run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUIRE_GITHUB_PROFILE: ${{ github.event_name == 'schedule' && '1' || '' }}
+      - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          GITHUB_TOKEN : ${{ secrets.GITHUB_TOKEN }} # This is provided by GitHub.
-          BRANCH: gh-pages # The branch the action should deploy to.
-          FOLDER: build # The folder the action should deploy.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          folder: dist
