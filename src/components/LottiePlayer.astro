@@ -11,23 +11,36 @@ const {src, label} = Astro.props;
 
 <script>
   // Astro deduplicates this script: it runs once and initializes every holder.
+  const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const holders = document.querySelectorAll<HTMLElement>(".lottie-holder");
   const io = new IntersectionObserver(
     entries => {
       entries.forEach(async e => {
         if (!e.isIntersecting) return;
-        io.unobserve(e.target);
         const el = e.target as HTMLElement;
-        const lottie = (await import("lottie-web/build/player/lottie_light"))
-          .default;
-        const data = await fetch(el.dataset.lottieSrc!).then(r => r.json());
-        lottie.loadAnimation({
-          container: el,
-          renderer: "svg",
-          loop: true,
-          autoplay: true,
-          animationData: data
-        });
+        if (el.dataset.loaded) return;
+        el.dataset.loaded = "true";
+        io.unobserve(el);
+        try {
+          const lottie = (await import("lottie-web/build/player/lottie_light"))
+            .default;
+          const res = await fetch(el.dataset.lottieSrc!);
+          if (!res.ok) throw new Error(`lottie fetch ${res.status}`);
+          const data = await res.json();
+          lottie.loadAnimation({
+            container: el,
+            renderer: "svg",
+            loop: !REDUCED,
+            autoplay: !REDUCED,
+            animationData: data
+          });
+          // reduced motion: render the first frame as a static illustration
+        } catch {
+          // failed to load: stop announcing an image that isn't there
+          el.removeAttribute("role");
+          el.removeAttribute("aria-label");
+          el.setAttribute("aria-hidden", "true");
+        }
       });
     },
     {rootMargin: "120px"}

@@ -13,7 +13,7 @@ const {text, href, download, newTab} = Astro.props;
   href={href}
   download={download}
   target={newTab ? "_blank" : undefined}
-  rel={newTab ? "noopener" : undefined}>{text}</a
+  rel={newTab ? "noopener noreferrer" : undefined}>{text}</a
 >
 
 <style lang="scss">
