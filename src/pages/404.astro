@@ -1,0 +1,35 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="404 — Page not found | Murugappan M" noindex>
+  <main class="notfound-main">
+    <h1 aria-label="Page not found">404</h1>
+    <p>
+      This page doesn't exist. Try the <a href="/">portfolio</a> or the
+      <a href="/blog/">blog</a>.
+    </p>
+  </main>
+</Layout>
+<style lang="scss">
+  @import "../styles/variables";
+  .notfound-main {
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    h1 {
+      font-size: 72px;
+      color: $buttonColor;
+      margin: 0;
+    }
+    a {
+      color: $buttonColor;
+    }
+  }
+  :global(html.dark-mode) .notfound-main p {
+    color: $textColorDark;
+  }
+</style>
