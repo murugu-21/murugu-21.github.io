@@ -1,5 +1,5 @@
 import React from "react"
-import profilePic from "../images/profile-pic.png"
+import profilePic from "../images/profile-pic.webp"
 import githubDark from "../images/Github-dark.png"
 import githubLight from "../images/Github-light.png"
 import stackOverflow from "../images/stack-overflow.png"

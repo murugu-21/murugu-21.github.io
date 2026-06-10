@@ -99,36 +99,54 @@ const isRootPath = Astro.url.pathname === rootPath
       </main>
     </div>
     <!-- Render any ```mermaid code blocks client-side (ported from
-         gatsby-browser.js; the webpack __name shim is unnecessary under Vite). -->
+         gatsby-browser.js; the webpack __name shim is unnecessary under Vite).
+         The ~140KB mermaid chunk is only fetched once the first diagram
+         scrolls near the viewport (IntersectionObserver, 300px margin), so it
+         never competes with the initial page load. -->
     <script>
       const blocks = document.querySelectorAll("code.language-mermaid")
       if (blocks.length > 0) {
-        import("mermaid").then(({ default: mermaid }) => {
-          mermaid.initialize({
-            startOnLoad: false,
-            theme: "neutral",
-            securityLevel: "loose",
-            fontFamily: "Merriweather, Georgia, serif",
-          })
-          blocks.forEach((block, i) => {
-            const pre = block.closest("pre") || block
-            const source = block.textContent || ""
-            const id = `mermaid-svg-${i}`
+        let loaded = false
+        const renderAll = () => {
+          if (loaded) return
+          loaded = true
+          import("mermaid").then(({ default: mermaid }) => {
+            mermaid.initialize({
+              startOnLoad: false,
+              theme: "neutral",
+              securityLevel: "loose",
+              fontFamily: "Merriweather, Georgia, serif",
+            })
+            blocks.forEach((block, i) => {
+              const pre = block.closest("pre") || block
+              const source = block.textContent || ""
+              const id = `mermaid-svg-${i}`
 
-            mermaid
-              .render(id, source)
-              .then(({ svg }) => {
-                const figure = document.createElement("figure")
-                figure.className = "mermaid-diagram"
-                figure.innerHTML = svg
-                pre.replaceWith(figure)
-              })
-              .catch(err => {
-                // Leave the source block in place so the page still renders.
-                console.error("Mermaid render failed:", err)
-              })
+              mermaid
+                .render(id, source)
+                .then(({ svg }) => {
+                  const figure = document.createElement("figure")
+                  figure.className = "mermaid-diagram"
+                  figure.innerHTML = svg
+                  pre.replaceWith(figure)
+                })
+                .catch(err => {
+                  // Leave the source block in place so the page still renders.
+                  console.error("Mermaid render failed:", err)
+                })
+            })
           })
-        })
+        }
+
+        const io = new IntersectionObserver(
+          (entries, obs) => {
+            if (!entries.some(e => e.isIntersecting)) return
+            obs.disconnect()
+            renderAll()
+          },
+          { rootMargin: "300px" },
+        )
+        blocks.forEach(b => io.observe(b.closest("pre") || b))
       }
     </script>
   </body>
