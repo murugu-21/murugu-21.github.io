@@ -43,9 +43,13 @@ const isRootPath = Astro.url.pathname === rootPath
       window.__onThemeChange1 = function () {}
       window.__onThemeChange2 = function () {}
 
-      var preferredTheme
+      // Shared persistence contract with the portfolio app: key "isDark",
+      // value is a JSON bool. Derive the blog's "dark"/"light" string from it.
+      var preferredTheme = null
       try {
-        preferredTheme = localStorage.getItem("theme")
+        var stored = localStorage.getItem("isDark")
+        if (stored !== null)
+          preferredTheme = JSON.parse(stored) ? "dark" : "light"
       } catch (err) {}
 
       function setTheme(newTheme) {
@@ -66,7 +70,7 @@ const isRootPath = Astro.url.pathname === rootPath
       window.__setPreferredTheme = function (newTheme) {
         setTheme(newTheme)
         try {
-          localStorage.setItem("theme", newTheme)
+          localStorage.setItem("isDark", JSON.stringify(newTheme === "dark"))
         } catch (err) {}
       }
       var darkQuery = window.matchMedia("(prefers-color-scheme: dark)")
