@@ -1,0 +1,114 @@
+---
+import {socialMediaLinks} from "../data/portfolio";
+---
+
+<div class="social-media-div">
+  <a
+    href={socialMediaLinks.github}
+    class="icon-button github"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="GitHub profile"
+  >
+    <i class="fab fa-github"></i>
+  </a>
+  <a
+    href={socialMediaLinks.linkedin}
+    class="icon-button linkedin"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="LinkedIn profile"
+  >
+    <i class="fab fa-linkedin-in"></i>
+  </a>
+  <a
+    href={`mailto:${socialMediaLinks.gmail}`}
+    class="icon-button google"
+    aria-label="Send an email"
+  >
+    <i class="fas fa-envelope"></i>
+  </a>
+  <a
+    href={socialMediaLinks.twitter}
+    class="icon-button twitter"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Twitter profile"
+  >
+    <i class="fab fa-twitter"></i>
+  </a>
+  <a
+    href={socialMediaLinks.stackoverflow}
+    class="icon-button stack-overflow"
+    target="_blank"
+    rel="noopener noreferrer"
+    aria-label="Stack Overflow profile"
+  >
+    <i class="fab fa-stack-overflow"></i>
+  </a>
+</div>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  .social-media-div {
+    font-size: 2em;
+  }
+
+  .icon-button {
+    margin-bottom: 10px;
+  }
+
+  .icon-button i {
+    color: $textColorDark;
+    border-radius: 2.6rem;
+    cursor: pointer;
+    display: inline-block;
+    font-size: 1.3rem;
+    height: 2.6rem;
+    line-height: 2.6rem;
+    margin: 0 5px;
+    position: relative;
+    text-align: center;
+    user-select: none;
+    width: 2.6rem;
+    margin-bottom: 10px;
+    transition: 0.2s ease-in;
+  }
+
+  .linkedin i {
+    background-color: $linkedin;
+  }
+
+  .github i {
+    background-color: $github;
+  }
+
+  .google i {
+    background-color: $google;
+  }
+
+  .twitter i {
+    background-color: $twitter;
+  }
+
+  .stack-overflow i {
+    background-color: $stackoverflow;
+  }
+
+  /* Hover Transition */
+  .twitter i:hover,
+  .google i:hover,
+  .github i:hover,
+  .linkedin i:hover,
+  .stack-overflow i:hover {
+    background-color: $buttonColor; // theme green; was $textColor (#2e353f) which blended into the dark background
+  }
+
+  /* Media Query */
+  @media (max-width: 768px) {
+    .social-media-div {
+      text-align: center;
+    }
+  }
+</style>

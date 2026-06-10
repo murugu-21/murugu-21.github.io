@@ -1,0 +1,153 @@
+---
+import {greeting} from "../data/portfolio";
+import SocialMedia from "./SocialMedia.astro";
+import Button from "./Button.astro";
+import LottiePlayer from "./LottiePlayer.astro";
+---
+
+<div class="greet-main section-animate" id="greeting">
+  <div class="greeting-main">
+    <div class="greeting-text-div">
+      <div>
+        <h1 class="greeting-text">
+          {greeting.title}
+          <span class="wave-emoji">👋</span>
+        </h1>
+        <p class="greeting-text-p subTitle">{greeting.subTitle}</p>
+        <div id="resume" class="empty-div"></div>
+        <SocialMedia />
+        <div class="button-greeting-div">
+          <Button text="Contact me" href="#contact" />
+          <Button
+            text="Download my resume"
+            href={greeting.resumePath}
+            download="Murugappan-M-Resume.pdf"
+          />
+        </div>
+      </div>
+    </div>
+    <div class="greeting-image-div">
+      <LottiePlayer
+        src="/lottie-landing.json"
+        label="Illustration of a developer waving next to a dartboard"
+      />
+    </div>
+  </div>
+</div>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  .greet-main {
+    width: 90%;
+    padding: 20px 10px;
+    margin: 0px auto;
+    margin-top: 2rem;
+  }
+
+  .greeting-main {
+    display: flex;
+  }
+
+  .greeting-main > * {
+    flex: 1;
+    margin-bottom: 30px;
+  }
+
+  .empty-div {
+    margin-bottom: 40px;
+  }
+
+  .button-greeting-div {
+    display: flex;
+    margin-top: 40px;
+  }
+
+  .greeting-text {
+    font-size: 70px;
+    line-height: 1.1;
+    color: $textColor;
+  }
+
+  .greeting-text-p {
+    font-size: 30px;
+    line-height: 40px;
+  }
+
+  /* old conditional `dark-mode greeting-text` classes, now driven by html.dark-mode */
+  :global(html.dark-mode) .greeting-text,
+  :global(html.dark-mode) .greeting-text-p {
+    color: $textColorDark;
+  }
+
+  /* sizing for the lazy lottie holder (old `.greeting-image-div > img` equivalent);
+     aspect-ratio reserves the animation's box (1600x1200) before load to avoid CLS */
+  .greeting-image-div :global(.lottie-holder) {
+    width: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    aspect-ratio: 1600 / 1200;
+  }
+
+  .wave-emoji {
+    animation-duration: 1.8s;
+    animation-iteration-count: infinite;
+    animation-name: wave;
+    display: inline-block;
+    transform-origin: 70% 70%;
+  }
+
+  @keyframes wave {
+    0% {
+      transform: rotate(0deg);
+    }
+    10% {
+      transform: rotate(-10deg);
+    }
+    20% {
+      transform: rotate(12deg);
+    }
+    30% {
+      transform: rotate(-10deg);
+    }
+    40% {
+      transform: rotate(9deg);
+    }
+    50% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
+
+  /* Media Query */
+  @media (max-width: 1380px) {
+    .greeting-text {
+      font-size: 50px;
+    }
+    .greeting-text-p {
+      font-size: 20px;
+    }
+  }
+  @media (max-width: 768px) {
+    .button-greeting-div {
+      justify-content: space-around;
+    }
+    .greeting-text {
+      font-size: 30px;
+      text-align: center;
+    }
+    .greeting-text-p {
+      font-size: 16px;
+      line-height: normal;
+      text-align: center;
+    }
+    .greeting-main {
+      display: block;
+    }
+    .greeting-image-div {
+      height: 256px;
+    }
+  }
+</style>

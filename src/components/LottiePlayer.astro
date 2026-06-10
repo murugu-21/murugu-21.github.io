@@ -1,0 +1,36 @@
+---
+interface Props {
+  src: string;
+  label: string;
+}
+const {src, label} = Astro.props;
+---
+
+<div class="lottie-holder" data-lottie-src={src} role="img" aria-label={label}>
+</div>
+
+<script>
+  // Astro deduplicates this script: it runs once and initializes every holder.
+  const holders = document.querySelectorAll<HTMLElement>(".lottie-holder");
+  const io = new IntersectionObserver(
+    entries => {
+      entries.forEach(async e => {
+        if (!e.isIntersecting) return;
+        io.unobserve(e.target);
+        const el = e.target as HTMLElement;
+        const lottie = (await import("lottie-web/build/player/lottie_light"))
+          .default;
+        const data = await fetch(el.dataset.lottieSrc!).then(r => r.json());
+        lottie.loadAnimation({
+          container: el,
+          renderer: "svg",
+          loop: true,
+          autoplay: true,
+          animationData: data
+        });
+      });
+    },
+    {rootMargin: "120px"}
+  );
+  holders.forEach(h => io.observe(h));
+</script>
