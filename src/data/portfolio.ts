@@ -29,7 +29,7 @@ export const socialMediaLinks = {
 
 export interface SoftwareSkill {
   skillName: string;
-  fontAwesomeClassname: string;
+  iconName: string; // key into components/Icon.astro path map
 }
 
 export const skillsSection: {
@@ -49,43 +49,43 @@ export const skillsSection: {
   softwareSkills: [
     {
       skillName: "TypeScript / JavaScript",
-      fontAwesomeClassname: "fab fa-js"
+      iconName: "js"
     },
     {
       skillName: "reactjs",
-      fontAwesomeClassname: "fab fa-react"
+      iconName: "react"
     },
     {
       skillName: "nodejs",
-      fontAwesomeClassname: "fab fa-node"
+      iconName: "node"
     },
     {
       skillName: "python",
-      fontAwesomeClassname: "fab fa-python"
+      iconName: "python"
     },
     {
       skillName: "aws",
-      fontAwesomeClassname: "fab fa-aws"
+      iconName: "aws"
     },
     {
       skillName: "docker",
-      fontAwesomeClassname: "fab fa-docker"
+      iconName: "docker"
     },
     {
       skillName: "sql-database",
-      fontAwesomeClassname: "fas fa-database"
+      iconName: "database"
     },
     {
       skillName: "git",
-      fontAwesomeClassname: "fab fa-git-alt"
+      iconName: "git-alt"
     },
     {
       skillName: "linux / bash",
-      fontAwesomeClassname: "fab fa-linux"
+      iconName: "linux"
     },
     {
       skillName: "npm",
-      fontAwesomeClassname: "fab fa-npm"
+      iconName: "npm"
     }
   ]
 };

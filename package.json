@@ -19,6 +19,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@types/node": "^25.9.2",
+    "fontaine": "^0.8.0",
     "prettier": "^3.0.0",
     "prettier-plugin-astro": "^0.14.0",
     "sass": "^1.69.0",

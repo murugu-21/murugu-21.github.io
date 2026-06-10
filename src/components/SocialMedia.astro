@@ -1,5 +1,6 @@
 ---
 import {socialMediaLinks} from "../data/portfolio";
+import Icon from "./Icon.astro";
 ---
 
 <div class="social-media-div">
@@ -10,7 +11,7 @@ import {socialMediaLinks} from "../data/portfolio";
     rel="noopener noreferrer"
     aria-label="GitHub profile"
   >
-    <i class="fab fa-github"></i>
+    <Icon name="github" />
   </a>
   <a
     href={socialMediaLinks.linkedin}
@@ -19,14 +20,14 @@ import {socialMediaLinks} from "../data/portfolio";
     rel="noopener noreferrer"
     aria-label="LinkedIn profile"
   >
-    <i class="fab fa-linkedin-in"></i>
+    <Icon name="linkedin-in" />
   </a>
   <a
     href={`mailto:${socialMediaLinks.gmail}`}
     class="icon-button google"
     aria-label="Send an email"
   >
-    <i class="fas fa-envelope"></i>
+    <Icon name="envelope" />
   </a>
   <a
     href={socialMediaLinks.twitter}
@@ -35,7 +36,7 @@ import {socialMediaLinks} from "../data/portfolio";
     rel="noopener noreferrer"
     aria-label="Twitter profile"
   >
-    <i class="fab fa-twitter"></i>
+    <Icon name="twitter" />
   </a>
   <a
     href={socialMediaLinks.stackoverflow}
@@ -44,7 +45,7 @@ import {socialMediaLinks} from "../data/portfolio";
     rel="noopener noreferrer"
     aria-label="Stack Overflow profile"
   >
-    <i class="fab fa-stack-overflow"></i>
+    <Icon name="stack-overflow" />
   </a>
 </div>
 
@@ -61,49 +62,52 @@ import {socialMediaLinks} from "../data/portfolio";
     font-size: 0; // collapse stray whitespace text nodes inside the anchor (JSX used to strip them)
   }
 
-  .icon-button i {
+  /* the FA <i> was a 2.6rem circle with a 1.3rem glyph (font-size) centered
+     via line-height; the inline svg reproduces it with a 1.3rem content box
+     (2.6rem outer minus 0.65rem padding on each side) */
+  .icon-button :global(svg) {
     color: $textColorDark;
     border-radius: 2.6rem;
     cursor: pointer;
     display: inline-block;
-    font-size: 1.3rem;
+    box-sizing: border-box;
     height: 2.6rem;
-    line-height: 2.6rem;
+    width: 2.6rem;
+    padding: 0.65rem;
     margin: 0 5px;
     position: relative;
-    text-align: center;
     user-select: none;
-    width: 2.6rem;
     margin-bottom: 10px;
+    vertical-align: middle;
     transition: 0.2s ease-in;
   }
 
-  .linkedin i {
+  .linkedin :global(svg) {
     background-color: $linkedin;
   }
 
-  .github i {
+  .github :global(svg) {
     background-color: $github;
   }
 
-  .google i {
+  .google :global(svg) {
     background-color: $google;
   }
 
-  .twitter i {
+  .twitter :global(svg) {
     background-color: $twitter;
   }
 
-  .stack-overflow i {
+  .stack-overflow :global(svg) {
     background-color: $stackoverflow;
   }
 
   /* Hover Transition */
-  .twitter i:hover,
-  .google i:hover,
-  .github i:hover,
-  .linkedin i:hover,
-  .stack-overflow i:hover {
+  .twitter :global(svg:hover),
+  .google :global(svg:hover),
+  .github :global(svg:hover),
+  .linkedin :global(svg:hover),
+  .stack-overflow :global(svg:hover) {
     background-color: $buttonColor; // theme green; was $textColor (#2e353f) which blended into the dark background
   }
 

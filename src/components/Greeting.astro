@@ -27,9 +27,16 @@ import LottiePlayer from "./LottiePlayer.astro";
       </div>
     </div>
     <div class="greeting-image-div">
+      <link
+        rel="preload"
+        as="fetch"
+        href="/lottie-landing.json"
+        crossorigin="anonymous"
+      />
       <LottiePlayer
         src="/lottie-landing.json"
         label="Illustration of a developer waving next to a dartboard"
+        eager
       />
     </div>
   </div>
