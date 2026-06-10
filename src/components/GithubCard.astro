@@ -161,6 +161,11 @@ const prof = await fetchGithubProfile();
     color: $subTitle;
   }
 
+  /* .blog-subtitle leaked globally from Blog.scss in the old app; recreated here */
+  .blog-subtitle {
+    text-transform: uppercase;
+  }
+
   @media (max-width: 768px) {
     .row {
       display: flex;
@@ -203,6 +208,11 @@ const prof = await fetchGithubProfile();
     .prof-title {
       padding-bottom: 1rem;
       font-size: 32px;
+      text-align: center;
+    }
+
+    .blog-subtitle {
+      font-size: 16px;
       text-align: center;
     }
   }
