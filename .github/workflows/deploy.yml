@@ -1,6 +1,4 @@
 name: Build and Deploy
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # build-time GitHub profile fetch
 on:
   workflow_dispatch:
   push:
@@ -25,9 +23,12 @@ jobs:
       - run: npm run check-format
       - run: npx astro check
       - run: npm run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REQUIRE_GITHUB_PROFILE: ${{ github.event_name == 'schedule' && '1' || '' }}
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: dist
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          folder: dist
