@@ -1,0 +1,52 @@
+name: CI
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    - cron: "0 12 * * 1" # weekly: trigger a CF rebuild to refresh build-time GitHub data
+permissions:
+  contents: write # gh-pages dual-publish during the Cloudflare transition only
+jobs:
+  checks:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            blog/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix blog
+      - run: npm run check-format
+      - run: npm --prefix blog run check-format
+      - run: npx astro check
+      - run: npm --prefix blog run test
+      - run: npm run build:site
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Dual-publish to gh-pages (transition rollback path)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: gh-pages
+          folder: dist
+  refresh-github-data:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloudflare Pages rebuild (deploy hook)
+        run: |
+          if [ -z "$HOOK" ]; then echo "CF_DEPLOY_HOOK_URL secret not set"; exit 1; fi
+          curl -fsS -X POST "$HOOK"
+        env:
+          HOOK: ${{ secrets.CF_DEPLOY_HOOK_URL }}

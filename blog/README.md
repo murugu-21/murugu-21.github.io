@@ -5,11 +5,11 @@ My technical blog on my experiences and opinions with current tech stacks, serve
 ## 🚀 Quick start
 
 ```shell
-yarn          # install dependencies
-yarn dev      # start the dev server at http://localhost:4321/blog
-yarn build    # build the production site to ./dist
-yarn serve    # preview the production build locally
-yarn format   # format the codebase with prettier
+npm install      # install dependencies
+npm run dev      # start the dev server at http://localhost:4321/blog
+npm run build    # build the production site to ./dist
+npm run serve    # preview the production build locally
+npm run format   # format the codebase with prettier
 ```
 
 ## 🧐 What's inside?
@@ -44,4 +44,4 @@ Images placed next to `index.md` can be referenced relatively (`![alt](image.png
 
 ## 💫 Deploy
 
-Pushes to `main` trigger `.github/workflows/publish.yml`, which builds the site and publishes `./dist` to the `gh-pages` branch (served by GitHub Pages under `murugappan.dev/blog`).
+Deploys happen from the monorepo root — Cloudflare Pages builds on every push (see the repo root README).

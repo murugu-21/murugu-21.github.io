@@ -46,6 +46,7 @@
   },
   "scripts": {
     "build": "astro build",
+    "check-format": "prettier --check \"**/*.{js,jsx,ts,tsx,astro,json,md,css}\"",
     "dev": "astro dev",
     "format": "prettier --write \"**/*.{js,jsx,ts,tsx,astro,json,md,css}\"",
     "start": "astro dev",
