@@ -15,9 +15,11 @@
     "lottie-web": "^5.12.2"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "prettier": "^3.0.0",
     "prettier-plugin-astro": "^0.14.0",
     "sass": "^1.69.0",
-    "sharp": "^0.33.0"
+    "sharp": "^0.33.0",
+    "typescript": "^5.9.3"
   }
 }
