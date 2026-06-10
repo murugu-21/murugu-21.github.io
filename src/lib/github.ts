@@ -27,6 +27,13 @@ export async function fetchGithubProfile(): Promise<GithubProfile | null> {
       return null;
     }
     const json = await res.json();
+    if (json.errors) {
+      console.warn(
+        "[github] GraphQL errors — rendering contact fallback",
+        json.errors.map((e: {message: string}) => e.message)
+      );
+      return null;
+    }
     return json?.data?.user ?? null;
   } catch (e) {
     console.warn("[github] fetch failed — rendering contact fallback", e);

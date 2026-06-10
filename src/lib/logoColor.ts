@@ -16,14 +16,23 @@ const FALLBACK = "rgb(255, 255, 255)";
 /** Average color of a company's logo as "rgb(r, g, b)"; white on unknown/failure. */
 export async function bannerColor(company: string): Promise<string> {
   const file = logoFiles[company];
-  if (!file) return FALLBACK;
+  if (!file) {
+    console.warn(
+      `[logoColor] no logo entry for "${company}" — using white banner`
+    );
+    return FALLBACK;
+  }
   try {
     const {data} = await sharp(path.resolve(file))
       .resize(1, 1, {fit: "cover"})
       .raw()
       .toBuffer({resolveWithObject: true});
     return `rgb(${data[0]}, ${data[1]}, ${data[2]})`;
-  } catch {
+  } catch (e) {
+    console.warn(
+      `[logoColor] failed to read logo for "${company}" — using white banner`,
+      e
+    );
     return FALLBACK;
   }
 }

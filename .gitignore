@@ -5,14 +5,9 @@
 /.pnp
 .pnp.js
 
-# testing
-/coverage
-/build
-
 # astro
 dist/
 .astro/
-
 
 # misc
 .DS_Store
@@ -25,7 +20,3 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-#user generated content
-public/profile.json
-public/blogs.json
