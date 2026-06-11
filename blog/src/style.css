@@ -343,6 +343,29 @@ article.blog-post img {
   cursor: zoom-in;
 }
 
+/* Post-body tables: restores the Gatsby-era styling lost in the Astro port
+   (cell padding approximates the old typography.js defaults); colors come
+   from the theme variables so dark mode is covered automatically. Wide
+   tables scroll horizontally instead of blowing out the column. */
+article.blog-post table {
+  width: 100%;
+  margin-bottom: var(--spacing-8);
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+article.blog-post th,
+article.blog-post td {
+  text-align: left;
+  padding: var(--spacing-2) var(--spacing-4) var(--spacing-2) var(--spacing-0);
+  border-bottom: 1px solid var(--color-accent);
+}
+
+article.blog-post thead th {
+  color: var(--color-heading);
+}
+
 .blog-post-nav ul {
   margin: var(--spacing-0);
 }
