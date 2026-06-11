@@ -335,6 +335,14 @@ a:focus {
   font-family: var(--font-heading);
 }
 
+/* Post-body images: constrain to the column (width/height attrs keep aspect
+   ratio, so no CLS) and hint that they're click-to-zoomable. */
+article.blog-post img {
+  max-width: 100%;
+  height: auto;
+  cursor: zoom-in;
+}
+
 .blog-post-nav ul {
   margin: var(--spacing-0);
 }

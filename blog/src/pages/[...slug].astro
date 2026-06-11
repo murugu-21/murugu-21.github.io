@@ -102,3 +102,37 @@ const jsonLd = {
     </ul>
   </nav>
 </BaseLayout>
+
+<script>
+  // Notion-style image zoom, loaded lazily: zero zoom JS ships unless the
+  // reader shows intent (hover or click on a post image).
+  const imgs = document.querySelectorAll<HTMLImageElement>(
+    "article.blog-post img",
+  )
+  if (imgs.length > 0) {
+    let zoomPromise: Promise<
+      ReturnType<typeof import("medium-zoom").default>
+    > | null = null
+    const loadZoom = () =>
+      (zoomPromise ??= import("medium-zoom").then(({ default: mediumZoom }) =>
+        mediumZoom(imgs, { margin: 24, background: "rgba(0, 0, 0, 0.85)" }),
+      ))
+    imgs.forEach(img => {
+      img.addEventListener("pointerenter", () => void loadZoom(), {
+        once: true,
+      })
+      img.addEventListener(
+        "click",
+        async () => {
+          const zoom = await loadZoom()
+          // If the library's own click handler already opened it (it attaches
+          // on init after a hover preload), don't double-open.
+          if (!document.querySelector(".medium-zoom-image--opened")) {
+            zoom.open({ target: img })
+          }
+        },
+        { once: true },
+      )
+    })
+  }
+</script>
