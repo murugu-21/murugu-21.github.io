@@ -106,6 +106,39 @@ const isRootPath = Astro.url.pathname === rootPath
     <script>
       const blocks = document.querySelectorAll("code.language-mermaid")
       if (blocks.length > 0) {
+        // Same lazy medium-zoom wiring as post images ([...slug].astro), for
+        // the diagram <img>s created below. Separate memoized instance since
+        // these elements don't exist at page load.
+        let zoomPromise: Promise<any> | null = null
+        const ensureZoom = () =>
+          (zoomPromise ??= import("medium-zoom").then(
+            ({ default: mediumZoom }) =>
+              mediumZoom({ margin: 24, background: "rgba(0, 0, 0, 0.85)" }),
+          ))
+        const wireZoom = (img: HTMLImageElement) => {
+          const attach = () =>
+            ensureZoom().then(zoom => {
+              if (!img.dataset.zoomWired) {
+                img.dataset.zoomWired = "1"
+                zoom.attach(img)
+              }
+              return zoom
+            })
+          img.addEventListener("pointerenter", () => void attach(), {
+            once: true,
+          })
+          img.addEventListener(
+            "click",
+            async () => {
+              const zoom = await attach()
+              if (!document.querySelector(".medium-zoom-image--opened")) {
+                zoom.open({ target: img })
+              }
+            },
+            { once: true },
+          )
+        }
+
         let loaded = false
         const renderAll = () => {
           if (loaded) return
@@ -127,8 +160,32 @@ const isRootPath = Astro.url.pathname === rootPath
                 .then(({ svg }) => {
                   const figure = document.createElement("figure")
                   figure.className = "mermaid-diagram"
-                  figure.innerHTML = svg
+                  // Serve the SVG through an <img> (blob URL) so medium-zoom
+                  // can attach — it only supports IMG elements. Inside an
+                  // SVG-image the page's webfont is unavailable, but Georgia
+                  // (the metric-matched fallback already in the diagram font
+                  // stack) renders instead — visually near-identical. The blob
+                  // URL is intentionally never revoked: medium-zoom keeps
+                  // using the src for the zoomed view.
+                  const img = document.createElement("img")
+                  const viewBox = svg.match(/viewBox="([^"]+)"/)
+                  if (viewBox) {
+                    const [, , width, height] = viewBox[1]
+                      .trim()
+                      .split(/\s+/)
+                      .map(Number)
+                    if (width && height) {
+                      img.width = Math.round(width)
+                      img.height = Math.round(height)
+                    }
+                  }
+                  img.src = URL.createObjectURL(
+                    new Blob([svg], { type: "image/svg+xml" }),
+                  )
+                  img.alt = `Diagram ${i + 1}`
+                  figure.appendChild(img)
                   pre.replaceWith(figure)
+                  wireZoom(img)
                 })
                 .catch(err => {
                   // Leave the source block in place so the page still renders.
