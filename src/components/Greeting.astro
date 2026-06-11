@@ -146,6 +146,10 @@ import LottiePlayer from "./LottiePlayer.astro";
   @media (max-width: 768px) {
     .button-greeting-div {
       justify-content: space-around;
+      /* the buttons' desktop margin-right is zeroed at this width (legacy
+         developerFolio rule); without a gap they touch when the row is full */
+      gap: 12px;
+      flex-wrap: wrap;
     }
     .greeting-text {
       font-size: 30px;
