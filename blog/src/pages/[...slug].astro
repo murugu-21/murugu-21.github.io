@@ -106,8 +106,10 @@ const jsonLd = {
 <script>
   // Notion-style image zoom, loaded lazily: zero zoom JS ships unless the
   // reader shows intent (hover or click on a post image).
+  // Scoped to the articleBody <section>: the Bio avatar / social icon images
+  // in the article footer are links, not zoomable content.
   const imgs = document.querySelectorAll<HTMLImageElement>(
-    "article.blog-post img",
+    "article.blog-post section img",
   )
   if (imgs.length > 0) {
     let zoomPromise: Promise<
