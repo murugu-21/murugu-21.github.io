@@ -1,6 +1,6 @@
 # murugappan.dev
 
-Personal portfolio of Murugappan Sevugan Chetty, built with [Astro 5](https://astro.build) and deployed to Cloudflare Pages.
+Personal portfolio of Murugappan, built with [Astro 5](https://astro.build) and deployed to Cloudflare Pages.
 
 **Live site:** https://murugappan.dev
 
