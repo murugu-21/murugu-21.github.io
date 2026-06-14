@@ -214,7 +214,11 @@ export const educationInfo: Education[] = [
 // section renders only if there are pinned repos to show (so pinning a repo on
 // GitHub is what makes it appear in production).
 
-export const projectsSection: {title: string; subtitle: string; display: boolean} = {
+export const projectsSection: {
+  title: string;
+  subtitle: string;
+  display: boolean;
+} = {
   title: "Projects 🛠️",
   subtitle: "A few things I've built — pinned from my GitHub.",
   display: true
