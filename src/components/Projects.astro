@@ -1,0 +1,303 @@
+---
+import Button from "./Button.astro";
+import {projectsSection, socialMediaLinks} from "../data/portfolio";
+import {fetchPinnedRepos, formatRepoSize, type GithubRepo} from "../lib/github";
+
+let repos = await fetchPinnedRepos();
+
+// Dev-only preview. Until a repo is pinned on GitHub (and a token is present)
+// the live fetch is empty, so `astro dev` shows one sample card to make the
+// layout reviewable. Production renders only real pinned repos — and nothing
+// at all if none are pinned — so this sample never ships.
+const SAMPLE_REPO: GithubRepo = {
+  id: "sample-eventform",
+  name: "eventform",
+  description:
+    "Event-driven form builder — transactional outbox → Debezium CDC → Redpanda → idempotent webhook delivery. NestJS, Postgres (Neon), Cognito, AWS.",
+  url: "https://github.com/murugu-21/eventform",
+  forkCount: 0,
+  diskUsage: 23456,
+  primaryLanguage: {name: "TypeScript", color: "#3178c6"},
+  stargazers: {totalCount: 0},
+  topics: ["event-driven", "kafka", "debezium-server", "nestjs", "reactjs", "aws-cdk"]
+};
+if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
+
+const show = projectsSection.display && repos.length > 0;
+---
+
+{
+  show && (
+    <div class="projects-section section-animate" id="projects">
+      <div class="projects-header">
+        <h2 class="heading projects-heading">{projectsSection.title}</h2>
+        <p class="subTitle projects-subtitle">{projectsSection.subtitle}</p>
+      </div>
+      <div class="repo-cards-div-main">
+        {repos.map(repo => (
+          <a
+            class="repo-card-div"
+            href={repo.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <div class="repo-name-div">
+              <svg
+                class="repo-svg"
+                aria-hidden="true"
+                height="20"
+                viewBox="0 0 12 16"
+                width="14"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4 9H3V8h1v1zm0-3H3v1h1V6zm0-2H3v1h1V4zm0-2H3v1h1V2zm8-1v12c0 .55-.45 1-1 1H6v2l-1.5-1.5L3 16v-2H1c-.55 0-1-.45-1-1V1c0-.55.45-1 1-1h10c.55 0 1 .45 1 1zm-1 10H1v2h2v-1h3v1h5v-2zm0-10H2v9h9V1z"
+                />
+              </svg>
+              <p class="repo-name">{repo.name}</p>
+            </div>
+            <p class="repo-description">{repo.description}</p>
+            {repo.topics.length > 0 && (
+              <div class="repo-topics">
+                {repo.topics.map(t => (
+                  <span class="repo-topic">{t}</span>
+                ))}
+              </div>
+            )}
+            <div class="repo-stats">
+              <div class="repo-left-stat">
+                {repo.primaryLanguage && (
+                  <span>
+                    <div
+                      class="language-color"
+                      style={`background-color:${repo.primaryLanguage.color}`}
+                    />
+                    <p>{repo.primaryLanguage.name}</p>
+                  </span>
+                )}
+                <span>
+                  <svg
+                    class="repo-star-svg"
+                    aria-hidden="true"
+                    height="20"
+                    viewBox="0 0 10 16"
+                    width="12"
+                    fill="rgb(106, 115, 125)"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M8 1a1.993 1.993 0 0 0-1 3.72V6L5 8 3 6V4.72A1.993 1.993 0 0 0 2 1a1.993 1.993 0 0 0-1 3.72V6.5l3 3v1.78A1.993 1.993 0 0 0 5 15a1.993 1.993 0 0 0 1-3.72V9.5l3-3V4.72A1.993 1.993 0 0 0 8 1zM2 4.2C1.34 4.2.8 3.65.8 3c0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3 10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3-10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2z"
+                    />
+                  </svg>
+                  <p>{repo.forkCount}</p>
+                </span>
+                <span>
+                  <svg
+                    class="repo-star-svg"
+                    aria-hidden="true"
+                    height="20"
+                    viewBox="0 0 14 16"
+                    width="14"
+                    fill="rgb(106, 115, 125)"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M14 6l-4.9-.64L7 1 4.9 5.36 0 6l3.6 3.26L2.67 14 7 11.67 11.33 14l-.93-4.74L14 6z"
+                    />
+                  </svg>
+                  <p>{repo.stargazers.totalCount}</p>
+                </span>
+              </div>
+              <div class="repo-right-stat">
+                <p>{formatRepoSize(repo.diskUsage)}</p>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+      <Button text="More Projects" href={socialMediaLinks.github} newTab={true} />
+    </div>
+  )
+}
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  /* section wrapper mirrors OpenSource.astro (old `.main`) */
+  .projects-section {
+    width: 90%;
+    padding: 20px 10px;
+    margin: 0px auto;
+    margin-top: 4rem;
+  }
+
+  .projects-heading {
+    font-size: 56px;
+    font-weight: 400;
+    line-height: normal;
+    margin: 0px;
+  }
+
+  .projects-subtitle {
+    text-transform: uppercase;
+    margin: 0px;
+    margin-bottom: 50px;
+  }
+
+  /* from old containers/projects/Project.scss */
+  .repo-cards-div-main {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1rem 1rem;
+  }
+
+  /* from old components/githubRepoCard/GithubRepoCard.scss — card is now an
+     anchor instead of a div with an onClick handler */
+  .repo-card-div {
+    display: block;
+    text-decoration: none;
+    color: $githubRepoCardColor;
+    background-color: $lightBackground2;
+    box-shadow: $lightBoxShadowDark 0px 10px 30px -15px;
+    padding: 2rem;
+    border-radius: 10px;
+    border: 1px solid $lightBorder1;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .repo-card-div:hover {
+    box-shadow: $lightBoxShadowDark 0px 20px 30px -10px;
+  }
+
+  .repo-name-div {
+    display: flex;
+    align-items: center;
+  }
+
+  .repo-svg {
+    margin-right: 0.5rem;
+    min-width: 16px;
+  }
+
+  .repo-name {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: $githubRepoCardRepoNameColor;
+    font-size: 25px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    overflow: hidden;
+    margin: 0px;
+    height: 30px;
+  }
+
+  .repo-description {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    margin: 0.75rem 0;
+  }
+
+  /* GitHub repo topics as subtle pill chips (non-interactive — the whole card
+     is already an anchor, so nesting links would be invalid) */
+  .repo-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0 0 1rem;
+  }
+
+  .repo-topic {
+    font-size: 0.72rem;
+    line-height: 1.6;
+    padding: 0.1rem 0.6rem;
+    border-radius: 999px;
+    background-color: rgba(5, 123, 1, 0.1);
+    color: $buttonColor;
+    white-space: nowrap;
+  }
+
+  .repo-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: $githubRepoCardRepoCardStatsColor;
+  }
+
+  .repo-left-stat {
+    flex-grow: 1;
+    display: flex;
+  }
+
+  .repo-left-stat span {
+    display: flex;
+    align-items: center;
+    margin-right: 0.75rem;
+  }
+
+  .repo-left-stat p,
+  .repo-right-stat p {
+    margin: 0;
+  }
+
+  .language-color {
+    width: 10px;
+    height: 10px;
+    background-color: $githubRepoCardLanguageColorBG;
+    margin-right: 0.25rem;
+    border-radius: 100%;
+  }
+
+  .repo-star-svg {
+    margin-right: 0.3rem;
+  }
+
+  /* dark mode — heading/subtitle like OpenSource.astro; card from the old
+     `.dark-card-mode` rules */
+  :global(html.dark-mode) .projects-heading,
+  :global(html.dark-mode) .projects-subtitle {
+    color: $textColorDark;
+  }
+
+  :global(html.dark-mode) .repo-card-div {
+    background-color: $darkBackground;
+    color: $textColorDark;
+  }
+  :global(html.dark-mode) .repo-card-div p {
+    color: $textColorDark;
+  }
+  :global(html.dark-mode) .repo-card-div .repo-svg {
+    fill: $textColorDark;
+  }
+  :global(html.dark-mode) .repo-card-div:hover {
+    background-color: $buttonColor;
+    box-shadow: 0px 0px 16px $darkBoxShadow;
+  }
+  :global(html.dark-mode) .repo-topic {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: $textColorDark;
+  }
+
+  /* Media Query */
+  @media (max-width: 1380px) {
+    .projects-heading {
+      font-size: 40px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .projects-heading {
+      font-size: 30px;
+      text-align: center;
+    }
+    .projects-subtitle {
+      font-size: 16px;
+      line-height: normal;
+      text-align: center;
+    }
+    .repo-cards-div-main {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+  }
+</style>

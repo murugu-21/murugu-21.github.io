@@ -36,11 +36,14 @@ const prof = await fetchGithubProfile();
               </span>
             </div>
           )}
-          <div class="opp-div">
+          {/* "Open for opportunities" intentionally hidden — avoids signalling
+              job-seeking to visitors landing here from LinkedIn/X. Uncomment to
+              restore (`isHireable` still drives the Yes/No). */}
+          {/* <div class="opp-div">
             <span class="desc-prof">
               Open for opportunities: {isHireable ? "Yes" : "No"}
             </span>
-          </div>
+          </div> */}
           <SocialMedia />
         </div>
         <div class="image-content-profile">

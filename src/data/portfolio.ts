@@ -11,7 +11,7 @@ export const greeting = {
   username: "Murugappan M",
   title: "Hi all, I'm Murugappan",
   subTitle:
-    "Full-Stack Engineer with 3+ years building cloud-native B2B SaaS in regulated domains (LLM-powered CLM, healthcare) 🚀. TypeScript across the stack — from React frontends to event-driven Node.js services on AWS. Founding engineer on a product scaled to $300k ARR, with a strong focus on distributed systems, observability, and security/compliance (SOC 2, HIPAA).",
+    "Full stack engineer focused on cloud-native B2B SaaS — TypeScript across the stack, from React frontends to event-driven Node.js services on AWS. Currently at MedMe Health, reducing manual pharmacist effort through UI Automation and LLMs. Previously founding engineer at HyperStart CLM, where I scaled the product from 0 to $300k ARR, owning features end-to-end across regulated domains including SOC 2 and HIPAA.",
   resumePath: "/resume.pdf"
 };
 
@@ -209,6 +209,17 @@ export const educationInfo: Education[] = [
   }
 ];
 
+// Projects Section — pinned GitHub repositories, fetched at build time.
+// Set display:false to hide the section entirely. When display is true the
+// section renders only if there are pinned repos to show (so pinning a repo on
+// GitHub is what makes it appear in production).
+
+export const projectsSection: {title: string; subtitle: string; display: boolean} = {
+  title: "Projects 🛠️",
+  subtitle: "A few things I've built — pinned from my GitHub.",
+  display: true
+};
+
 // Open Source Contributions Section (formerly achievementSection)
 
 export const openSourceSection: {title: string; subtitle: string} = {
@@ -285,7 +296,7 @@ export const blogSection: {
 export const contactInfo = {
   title: "Contact Me ☎️",
   subtitle:
-    "Open to relocation & visa sponsorship. Want to discuss a project, a role, or just say hi? My inbox is open.",
+    "Want to discuss a project, a role, or just say hi? My inbox is open.",
   number: "+91-9095298712",
   emailAddress: "murugu2001@gmail.com"
 };
