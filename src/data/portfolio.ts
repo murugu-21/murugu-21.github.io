@@ -275,16 +275,16 @@ export const blogSection: {
     "I write about real-world software engineering — distributed systems, cloud architecture, and lessons from production.",
   blogs: [
     {
-      url: "https://murugappan.dev/blog/429-googleapis/",
-      title: "Rate limiting API requests in Node.js",
+      url: "https://murugappan.dev/blog/eventform-outbox-pipeline-claude/",
+      title: "Forms in, webhooks out: an event-driven pipeline",
       description:
-        "How to query external APIs without hitting the 429 rate limit in single-threaded Node.js, using time-and-concurrency-aware throttling."
+        "Building a multi-tenant form builder with a transactional outbox, Debezium CDC, idempotent webhook delivery, and OAuth handed off to Cognito — and what it taught me about event-driven design."
     },
     {
-      url: "https://murugappan.dev/blog/toolbox/",
-      title: "The developer toolbox",
+      url: "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/",
+      title: "Modern distributed rate limiting in the cloud",
       description:
-        "A guide to the tools and habits that helped me become a more effective software engineer."
+        "A portable two-tier IP and per-user rate-limiting pattern that protects your compute budget as LLM agents make per-user limits essential — without locking you to one cloud."
     },
     {
       url: "https://murugappan.dev/blog/",
