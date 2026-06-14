@@ -11,7 +11,7 @@ export const greeting = {
   username: "Murugappan M",
   title: "Hi all, I'm Murugappan",
   subTitle:
-    "Full-Stack Engineer with 3+ years building cloud-native B2B SaaS in regulated domains (LLM-powered CLM, healthcare) 🚀. TypeScript across the stack — from React frontends to event-driven Node.js services on AWS. Founding engineer on a product scaled to $300k ARR, with a strong focus on distributed systems, observability, and security/compliance (SOC 2, HIPAA).",
+    "Full stack engineer focused on cloud-native B2B SaaS — TypeScript across the stack, from React frontends to event-driven Node.js services on AWS. Currently at MedMe Health, reducing manual pharmacist effort through UI Automation and LLMs. Previously founding engineer at HyperStart CLM, where I scaled the product from 0 to $300k ARR, owning features end-to-end across regulated domains including SOC 2 and HIPAA.",
   resumePath: "/resume.pdf"
 };
 
@@ -209,6 +209,21 @@ export const educationInfo: Education[] = [
   }
 ];
 
+// Projects Section — pinned GitHub repositories, fetched at build time.
+// Set display:false to hide the section entirely. When display is true the
+// section renders only if there are pinned repos to show (so pinning a repo on
+// GitHub is what makes it appear in production).
+
+export const projectsSection: {
+  title: string;
+  subtitle: string;
+  display: boolean;
+} = {
+  title: "Projects 🛠️",
+  subtitle: "A few things I've built — pinned from my GitHub.",
+  display: true
+};
+
 // Open Source Contributions Section (formerly achievementSection)
 
 export const openSourceSection: {title: string; subtitle: string} = {
@@ -260,16 +275,16 @@ export const blogSection: {
     "I write about real-world software engineering — distributed systems, cloud architecture, and lessons from production.",
   blogs: [
     {
-      url: "https://murugappan.dev/blog/429-googleapis/",
-      title: "Rate limiting API requests in Node.js",
+      url: "https://murugappan.dev/blog/eventform-outbox-pipeline-claude/",
+      title: "Forms in, webhooks out: an event-driven pipeline",
       description:
-        "How to query external APIs without hitting the 429 rate limit in single-threaded Node.js, using time-and-concurrency-aware throttling."
+        "Building a multi-tenant form builder with a transactional outbox, Debezium CDC, idempotent webhook delivery, and OAuth handed off to Cognito — and what it taught me about event-driven design."
     },
     {
-      url: "https://murugappan.dev/blog/toolbox/",
-      title: "The developer toolbox",
+      url: "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/",
+      title: "Modern distributed rate limiting in the cloud",
       description:
-        "A guide to the tools and habits that helped me become a more effective software engineer."
+        "A portable two-tier IP and per-user rate-limiting pattern that protects your compute budget as LLM agents make per-user limits essential — without locking you to one cloud."
     },
     {
       url: "https://murugappan.dev/blog/",
@@ -285,7 +300,7 @@ export const blogSection: {
 export const contactInfo = {
   title: "Contact Me ☎️",
   subtitle:
-    "Open to relocation & visa sponsorship. Want to discuss a project, a role, or just say hi? My inbox is open.",
+    "Want to discuss a project, a role, or just say hi? My inbox is open.",
   number: "+91-9095298712",
   emailAddress: "murugu2001@gmail.com"
 };
