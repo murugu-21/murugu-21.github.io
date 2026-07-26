@@ -13,15 +13,15 @@ light/dark toggle shared with the blog.
 
 ## Decisions
 
-| Decision       | Choice                                                             |
-| -------------- | ------------------------------------------------------------------ |
-| Structure      | Single page (no new routes); reference styling only                |
-| Effects        | Typewriter hero + wave emoji, canvas particle starfield, tilt avatar, glow cards. **No preloader.** |
-| Themes         | Keep both. Dark = faithful reference look (green-tinted); light = adapted equivalent |
-| Fonts          | Keep Montserrat + Agustina (no PT Mono)                            |
-| Additions      | Tech chip grid, "Find Me On" social circles, Download CV button (`public/resume.pdf`). **No GitHub contribution calendar.** |
-| Approach       | Restyle in place — existing component tree and data untouched; SCSS + small markup tweaks; vanilla islands only (no React) |
-| Delivery       | All work on `feat/reference-portfolio-look`; user reviews visually before anything merges to `main`/prod |
+| Decision  | Choice                                                                                                                      |
+| --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Structure | Single page (no new routes); reference styling only                                                                         |
+| Effects   | Typewriter hero + wave emoji, canvas particle starfield, tilt avatar, glow cards. **No preloader.**                         |
+| Themes    | Keep both. Dark = faithful reference look (green-tinted); light = adapted equivalent                                        |
+| Fonts     | Keep Montserrat + Agustina (no PT Mono)                                                                                     |
+| Additions | Tech chip grid, "Find Me On" social circles, Download CV button (`public/resume.pdf`). **No GitHub contribution calendar.** |
+| Approach  | Restyle in place — existing component tree and data untouched; SCSS + small markup tweaks; vanilla islands only (no React)  |
+| Delivery  | All work on `feat/reference-portfolio-look`; user reviews visually before anything merges to `main`/prod                    |
 
 ## Design
 

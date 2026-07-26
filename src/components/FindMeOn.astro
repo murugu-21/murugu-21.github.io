@@ -1,0 +1,138 @@
+---
+// Reference "Find Me On" section: centered heading + row of circular social
+// buttons that glow and fill with the accent color on hover.
+import {socialMediaLinks} from "../data/portfolio";
+import Icon from "./Icon.astro";
+import {accentTitle} from "../lib/accent";
+
+const items = [
+  {href: socialMediaLinks.github, icon: "github", label: "GitHub profile"},
+  {
+    href: socialMediaLinks.linkedin,
+    icon: "linkedin-in",
+    label: "LinkedIn profile"
+  },
+  {
+    href: `mailto:${socialMediaLinks.gmail}`,
+    icon: "envelope",
+    label: "Send an email"
+  },
+  {
+    href: socialMediaLinks.twitter,
+    icon: "twitter",
+    label: "X (formerly Twitter) profile"
+  },
+  {
+    href: socialMediaLinks.stackoverflow,
+    icon: "stack-overflow",
+    label: "Stack Overflow profile"
+  }
+];
+---
+
+<div class="find-me section-animate">
+  <h2 class="find-me-heading" set:html={accentTitle("Find Me On")} />
+  <p class="find-me-sub">
+    Feel free to <span class="accent">connect</span> with me
+  </p>
+  <ul class="find-me-list">
+    {
+      items.map(item => (
+        <li>
+          <a
+            class="find-me-circle"
+            href={item.href}
+            aria-label={item.label}
+            target={item.href.startsWith("mailto:") ? undefined : "_blank"}
+            rel={
+              item.href.startsWith("mailto:")
+                ? undefined
+                : "noopener noreferrer"
+            }
+          >
+            <Icon name={item.icon} />
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  .find-me {
+    width: 90%;
+    margin: 0 auto;
+    padding: 40px 10px 20px;
+    text-align: center;
+  }
+
+  .find-me-heading {
+    font-size: 40px;
+    font-weight: 400;
+    margin: 0 0 8px;
+  }
+
+  .find-me-sub {
+    margin: 0 0 24px;
+    color: $subTitle;
+  }
+
+  :global(html.dark-mode) .find-me-heading,
+  :global(html.dark-mode) .find-me-sub {
+    color: $textColorDark;
+  }
+
+  .find-me-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  .find-me-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background-color: $lightBackground1;
+    border: 1px solid $chipOutlineLight;
+    transition:
+      transform 0.3s ease,
+      background-color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  .find-me-circle :global(svg) {
+    width: 1.4rem;
+    height: 1.4rem;
+    color: $buttonColor;
+    transition: color 0.3s ease;
+  }
+
+  .find-me-circle:hover,
+  .find-me-circle:focus-visible {
+    background-color: $buttonColor;
+    transform: scale(1.15);
+    box-shadow: 0 0 15px rgba(44, 207, 39, 0.75);
+  }
+
+  .find-me-circle:hover :global(svg),
+  .find-me-circle:focus-visible :global(svg) {
+    color: $textColorDark;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .find-me-circle,
+    .find-me-circle:hover {
+      transition: none;
+      transform: none;
+    }
+  }
+</style>

@@ -1,8 +1,9 @@
 ---
-import {greeting} from "../data/portfolio";
+import {greeting, typewriterRoles} from "../data/portfolio";
 import SocialMedia from "./SocialMedia.astro";
 import Button from "./Button.astro";
 import LottiePlayer from "./LottiePlayer.astro";
+import Typewriter from "./Typewriter.astro";
 ---
 
 <div class="greet-main section-animate" id="greeting">
@@ -10,16 +11,22 @@ import LottiePlayer from "./LottiePlayer.astro";
     <div class="greeting-text-div">
       <div>
         <h1 class="greeting-text">
-          {greeting.title}
-          <span class="wave-emoji">👋</span>
+          <span class="greeting-hi">
+            Hi There!
+            <span class="wave-emoji">👋</span>
+          </span>
+          <span class="greeting-name">
+            I'm <span class="accent">{greeting.username}</span>
+          </span>
         </h1>
+        <p class="greeting-roles"><Typewriter roles={typewriterRoles} /></p>
         <p class="greeting-text-p subTitle">{greeting.subTitle}</p>
         <div id="resume" class="empty-div"></div>
         <SocialMedia />
         <div class="button-greeting-div">
           <Button text="Contact me" href="#contact" />
           <Button
-            text="Download my resume"
+            text="Download CV"
             href={greeting.resumePath}
             download="Murugappan-M-Resume.pdf"
           />
@@ -74,6 +81,25 @@ import LottiePlayer from "./LottiePlayer.astro";
     font-size: 70px;
     line-height: 1.1;
     color: $textColor;
+  }
+
+  /* reference hero: "Hi There! 👋" on its own line, then the name line with
+     the accent highlight */
+  .greeting-hi,
+  .greeting-name {
+    display: block;
+  }
+
+  .greeting-hi {
+    font-size: 0.55em;
+    margin-bottom: 12px;
+  }
+
+  .greeting-roles {
+    font-size: 34px;
+    line-height: 1.3;
+    margin-top: 12px;
+    min-height: 1.3em; /* reserve the line while roles type/delete */
   }
 
   .greeting-text-p {
@@ -139,11 +165,18 @@ import LottiePlayer from "./LottiePlayer.astro";
     .greeting-text {
       font-size: 50px;
     }
+    .greeting-roles {
+      font-size: 26px;
+    }
     .greeting-text-p {
       font-size: 20px;
     }
   }
   @media (max-width: 768px) {
+    .greeting-roles {
+      font-size: 20px;
+      text-align: center;
+    }
     .button-greeting-div {
       justify-content: space-around;
       /* the buttons' desktop margin-right is zeroed at this width (legacy

@@ -1,10 +1,14 @@
 ---
 import {openSourceSection, openSourceCard} from "../data/portfolio";
+import {accentTitle} from "../lib/accent";
 ---
 
 <div class="achievement-section section-animate" id="achievements">
   <div class="achievement-header">
-    <h2 class="heading achievement-heading">{openSourceSection.title}</h2>
+    <h2
+      class="heading achievement-heading"
+      set:html={accentTitle(openSourceSection.title)}
+    />
     <p class="subTitle achievement-subtitle">{openSourceSection.subtitle}</p>
   </div>
   <div class="achievement-cards-div">
@@ -94,18 +98,21 @@ import {openSourceSection, openSourceCard} from "../data/portfolio";
   }
 
   .certificate-card {
-    background-color: $lightBackground2;
-    box-shadow: $lightBoxShadowDark 0px 10px 30px -15px;
     padding: 1.5rem;
-    border-radius: 10px;
-    border: 1px solid $lightBorder1;
-    -webkit-transition: all 0.3s ease;
-    -o-transition: all 0.3s ease;
-    transition: all 0.3s ease;
+    @include glow-card-light;
   }
 
   .certificate-card:hover {
-    box-shadow: $lightBoxShadowDark 0px 20px 30px -10px;
+    @include glow-card-light-hover;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .certificate-card,
+    .certificate-card:hover,
+    :global(html.dark-mode) .certificate-card:hover {
+      transition: none;
+      transform: none;
+    }
   }
 
   .certificate-detail-div {
@@ -161,14 +168,13 @@ import {openSourceSection, openSourceCard} from "../data/portfolio";
     color: $textColorDark;
   }
 
-  /* old `dark-mode certificate-card` surface came from the global bare
-     `.dark-mode` rule; recreated explicitly here */
+  /* old `dark-mode certificate-card` surface, now the reference glow-card */
   :global(html.dark-mode) .certificate-card {
-    @include dark-surface;
+    @include glow-card-dark;
   }
 
   :global(html.dark-mode) .certificate-card:hover {
-    box-shadow: $achievementCertificateCardHoverDark 0px 20px 30px -10px;
+    @include glow-card-dark-hover;
   }
 
   /* Media Query */

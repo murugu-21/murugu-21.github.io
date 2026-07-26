@@ -50,10 +50,42 @@ body {
   color: $subTitle;
 }
 
+/* Reference-look page background: subtle horizontal gradient (both modes) */
+body {
+  background: $lightPageGradient;
+}
+
 /* Dark mode (from old containers/Main.scss; applied via html.dark-mode) */
 html.dark-mode body {
-  background-color: $darkBackground;
+  background: $darkPageGradient;
   color: white;
+}
+
+/* Inline highlight for key words in headings/paragraphs (reference `.purple`) */
+.accent {
+  color: $accentLight;
+  font-weight: 700;
+}
+html.dark-mode .accent {
+  color: $accentDark;
+}
+
+/* Themed scrollbar in dark mode (reference themes track + rounded thumb) */
+html.dark-mode ::-webkit-scrollbar {
+  width: 10px;
+}
+html.dark-mode ::-webkit-scrollbar-track {
+  background: $darkPageBase;
+}
+html.dark-mode ::-webkit-scrollbar-thumb {
+  background: rgba(5, 123, 1, 0.85);
+  border-radius: 12px;
+}
+html.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(44, 207, 39, 0.85);
+}
+html.dark-mode {
+  scrollbar-color: rgba(5, 123, 1, 0.85) $darkPageBase;
 }
 
 /* Entrance animation utility */

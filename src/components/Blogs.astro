@@ -1,10 +1,11 @@
 ---
 import {blogSection} from "../data/portfolio";
+import {accentTitle} from "../lib/accent";
 ---
 
 <div class="blog-section section-animate" id="blogs">
   <div class="blog-header">
-    <h2 class="blog-header-text">{blogSection.title}</h2>
+    <h2 class="blog-header-text" set:html={accentTitle(blogSection.title)} />
     <p class="subTitle blog-subtitle">{blogSection.subtitle}</p>
   </div>
   <div class="blog-main-div">
@@ -67,14 +68,25 @@ import {blogSection} from "../data/portfolio";
     gap: 32px;
   }
 
-  /* from old components/blogCard/BlogCard.scss */
+  /* from old components/blogCard/BlogCard.scss, reference glow-card */
   .blog-container {
-    border-radius: 10px;
     color: $blogCardContainerColor;
-    background-color: $lightBackground1;
-    box-shadow: 0 0 36px $lightBoxShadow;
     cursor: pointer;
     height: 200px;
+    @include glow-card-light;
+  }
+
+  .blog-container:hover {
+    @include glow-card-light-hover;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blog-container,
+    .blog-container:hover,
+    :global(html.dark-mode) .blog-container:hover {
+      transition: none;
+      transform: none;
+    }
   }
 
   .blog-title {
@@ -172,15 +184,13 @@ import {blogSection} from "../data/portfolio";
     color: $textColorDark;
   }
 
-  /* old `blog-container dark-mode` surface came from the global bare
-     `.dark-mode` rule; recreated explicitly here */
+  /* old `blog-container dark-mode` surface, now the reference glow-card */
   :global(html.dark-mode) .blog-container {
-    @include dark-surface;
+    @include glow-card-dark;
   }
 
-  /* old `.blog-card-shadow` class, applied only in dark mode */
-  :global(html.dark-mode) .blog-card {
-    box-shadow: 1px 0px 20px $darkBoxShadow2;
+  :global(html.dark-mode) .blog-container:hover {
+    @include glow-card-dark-hover;
   }
 
   /* old `.small-dark` (color: $textColorDark !important) applied to title and

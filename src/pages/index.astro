@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
+import Particles from "../components/Particles.astro";
 import Greeting from "../components/Greeting.astro";
 import Skills from "../components/Skills.astro";
 import Proficiency from "../components/Proficiency.astro";
@@ -10,11 +11,13 @@ import Projects from "../components/Projects.astro";
 import OpenSource from "../components/OpenSource.astro";
 import Blogs from "../components/Blogs.astro";
 import GithubCard from "../components/GithubCard.astro";
+import FindMeOn from "../components/FindMeOn.astro";
 import Footer from "../components/Footer.astro";
 import ScrollTop from "../components/ScrollTop.astro";
 ---
 
 <Layout>
+  <Particles />
   <Header />
   <main>
     <Greeting />
@@ -26,7 +29,16 @@ import ScrollTop from "../components/ScrollTop.astro";
     <OpenSource />
     <Blogs />
     <GithubCard />
+    <FindMeOn />
   </main>
   <Footer />
   <ScrollTop />
 </Layout>
+
+<style>
+  /* the reference navbar is fixed (not sticky), so the page starts under it;
+     this clears the ~70px bar before the hero */
+  main {
+    padding-top: 80px;
+  }
+</style>
