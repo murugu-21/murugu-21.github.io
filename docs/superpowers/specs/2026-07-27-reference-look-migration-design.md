@@ -72,11 +72,9 @@ morph into an X. ThemeToggle island stays.
   GithubCard:** keep structure; apply glow-card style + accent headings.
   Project cards adopt reference anatomy: padded screenshot, title,
   description, GitHub/Demo icon buttons; hover scale + glow intensify.
-- **New FindMeOn.astro** as the final section: "Find Me On" heading, row of
-  circular social buttons (existing `socialMediaLinks`), glow-on-hover
-  circle-scale effect.
-- **Footer:** removed entirely (user review feedback 2026-07-27); FindMeOn
-  closes the page.
+- **FindMeOn and Footer:** both removed (user review feedback 2026-07-27) —
+  FindMeOn duplicated the existing SocialMedia icon rows in the hero and
+  contact sections. The GithubCard contact section closes the page.
 - **Illustrations (user review feedback 2026-07-27):** hero shows the
   developer-at-desk lottie (like the reference's hero) and Skills shows the
   waving/dartboard lottie — swapped from the original assignment. The hero
