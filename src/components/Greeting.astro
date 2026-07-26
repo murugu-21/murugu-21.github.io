@@ -2,8 +2,12 @@
 import {greeting, typewriterRoles} from "../data/portfolio";
 import SocialMedia from "./SocialMedia.astro";
 import Button from "./Button.astro";
-import LottiePlayer from "./LottiePlayer.astro";
 import Typewriter from "./Typewriter.astro";
+// Developer-at-desk illustration from soumyajit4419/Portfolio (home-main.svg),
+// used with the credit its README asks for — see the Credits section in this
+// repo's README. Recolored purple → theme green at pixel level (selective hue
+// rotate that preserves the skin tones); source art embedded a 775×817 PNG.
+import heroDesk from "../assets/images/heroDesk.png";
 ---
 
 <div class="greet-main section-animate" id="greeting">
@@ -34,16 +38,12 @@ import Typewriter from "./Typewriter.astro";
       </div>
     </div>
     <div class="greeting-image-div">
-      <link
-        rel="preload"
-        as="fetch"
-        href="/lottie-coding.json"
-        crossorigin="anonymous"
-      />
-      <LottiePlayer
-        src="/lottie-coding.json"
-        label="Illustration of a developer at a desk writing code"
-        eager
+      <img
+        src={heroDesk.src}
+        width={heroDesk.width}
+        height={heroDesk.height}
+        alt="Illustration of a developer coding at a desk with a laptop, coffee, and a plant"
+        fetchpriority="high"
       />
     </div>
   </div>
@@ -113,13 +113,18 @@ import Typewriter from "./Typewriter.astro";
     color: $textColorDark;
   }
 
-  /* sizing for the lazy lottie holder (old `.greeting-image-div > img` equivalent);
-     aspect-ratio reserves the animation's box (1600x1200) before load to avoid CLS */
-  .greeting-image-div :global(.lottie-holder) {
+  /* hero illustration (static img, the page's LCP element; width/height
+     attributes reserve the box before load to avoid CLS) */
+  .greeting-image-div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .greeting-image-div img {
     width: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    aspect-ratio: 1600 / 1200;
+    max-width: 520px;
+    height: auto;
   }
 
   .wave-emoji {
@@ -196,8 +201,8 @@ import Typewriter from "./Typewriter.astro";
     .greeting-main {
       display: block;
     }
-    .greeting-image-div {
-      height: 256px;
+    .greeting-image-div img {
+      max-width: 300px;
     }
   }
 </style>
