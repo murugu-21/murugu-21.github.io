@@ -2,6 +2,7 @@
 import Button from "./Button.astro";
 import {projectsSection, socialMediaLinks} from "../data/portfolio";
 import {fetchPinnedRepos, formatRepoSize, type GithubRepo} from "../lib/github";
+import {accentTitle} from "../lib/accent";
 
 let repos = await fetchPinnedRepos();
 
@@ -37,7 +38,10 @@ const show = projectsSection.display && repos.length > 0;
   show && (
     <div class="projects-section section-animate" id="projects">
       <div class="projects-header">
-        <h2 class="heading projects-heading">{projectsSection.title}</h2>
+        <h2
+          class="heading projects-heading"
+          set:html={accentTitle(projectsSection.title)}
+        />
         <p class="subTitle projects-subtitle">{projectsSection.subtitle}</p>
       </div>
       <div class="repo-cards-div-main">
@@ -168,16 +172,20 @@ const show = projectsSection.display && repos.length > 0;
     display: block;
     text-decoration: none;
     color: $githubRepoCardColor;
-    background-color: $lightBackground2;
-    box-shadow: $lightBoxShadowDark 0px 10px 30px -15px;
     padding: 2rem;
-    border-radius: 10px;
-    border: 1px solid $lightBorder1;
     cursor: pointer;
-    transition: all 0.3s ease;
+    @include glow-card-light;
   }
   .repo-card-div:hover {
-    box-shadow: $lightBoxShadowDark 0px 20px 30px -10px;
+    @include glow-card-light-hover;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .repo-card-div,
+    .repo-card-div:hover,
+    :global(html.dark-mode) .repo-card-div:hover {
+      transition: none;
+      transform: none;
+    }
   }
 
   .repo-name-div {
@@ -272,22 +280,21 @@ const show = projectsSection.display && repos.length > 0;
   }
 
   :global(html.dark-mode) .repo-card-div {
-    background-color: $darkBackground;
-    color: $textColorDark;
+    @include glow-card-dark;
   }
-  :global(html.dark-mode) .repo-card-div p {
+  :global(html.dark-mode) .repo-card-div p,
+  :global(html.dark-mode) .repo-card-div .repo-name {
     color: $textColorDark;
   }
   :global(html.dark-mode) .repo-card-div .repo-svg {
     fill: $textColorDark;
   }
   :global(html.dark-mode) .repo-card-div:hover {
-    background-color: $buttonColor;
-    box-shadow: 0px 0px 16px $darkBoxShadow;
+    @include glow-card-dark-hover;
   }
   :global(html.dark-mode) .repo-topic {
-    background-color: rgba(255, 255, 255, 0.12);
-    color: $textColorDark;
+    background-color: rgba(44, 207, 39, 0.14);
+    color: $accentDark;
   }
 
   /* Media Query */

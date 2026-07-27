@@ -101,3 +101,65 @@ $kaggle: #20beff;
   background-color: $darkBackground;
   color: white;
 }
+
+/* ---------------------------------------------------------------------------
+   Reference-look layer (soumyajit4419/Portfolio visual language, green theme).
+   Dark mode: gradient page background + transparent cards with green glows.
+   Light mode: same shapes with solid surfaces and soft green-tinted shadows.
+--------------------------------------------------------------------------- */
+
+// accent used for inline highlights and effects (bright green pops on dark,
+// primary green holds AA contrast on white)
+$accentDark: #2ccf27;
+$accentLight: #057b01;
+
+// page background gradients (reference: linear-gradient(to left, rgb(27,20,41), rgb(20,15,35)))
+$darkPageGradient: linear-gradient(to left, rgb(32, 40, 34), rgb(22, 28, 24));
+$lightPageGradient: linear-gradient(to left, #ffffff, #f3f8f3);
+
+// solid endpoints for fixed chrome (navbar/footer) that must match the gradient
+$darkPageBase: rgb(22, 28, 24);
+$darkFooterBG: rgb(12, 17, 13); // reference footer: rgb(10,4,22)
+
+// glow shadows (reference card glow: 0 4px 5px 3px rgba(119,53,136,.46))
+$glowShadowDark: 0 4px 5px 3px rgba(5, 123, 1, 0.28);
+$glowShadowDarkHover: 0 4px 4px 5px rgba(44, 207, 39, 0.42);
+$glowShadowLight: 0 4px 12px 2px rgba(5, 123, 1, 0.14);
+$glowShadowLightHover: 0 6px 16px 4px rgba(5, 123, 1, 0.28);
+
+// chip outlines (reference: 1px solid rgba(200,137,230,.637))
+$chipOutlineDark: rgba(44, 207, 39, 0.55);
+$chipOutlineLight: rgba(5, 123, 1, 0.45);
+
+// navbar (transparent at top -> translucent + blur when scrolled)
+$navScrolledDark: rgba(18, 24, 20, 0.72);
+$navScrolledLight: rgba(255, 255, 255, 0.72);
+
+// glowing card, light-mode variant (solid surface, soft green shadow)
+@mixin glow-card-light {
+  background-color: $lightBackground2;
+  border: 1px solid rgba(5, 123, 1, 0.18);
+  border-radius: 10px;
+  box-shadow: $glowShadowLight;
+  transition:
+    transform 0.5s ease,
+    box-shadow 0.5s ease;
+}
+
+@mixin glow-card-light-hover {
+  transform: scale(1.02);
+  box-shadow: $glowShadowLightHover;
+}
+
+// glowing card, dark-mode variant (transparent over the page gradient, green glow)
+@mixin glow-card-dark {
+  background-color: transparent;
+  border: 1px solid rgba(44, 207, 39, 0.25);
+  box-shadow: $glowShadowDark;
+  color: $textColorDark;
+}
+
+@mixin glow-card-dark-hover {
+  transform: scale(1.02);
+  box-shadow: $glowShadowDarkHover;
+}

@@ -2,6 +2,7 @@
 import SocialMedia from "./SocialMedia.astro";
 import {contactInfo, isHireable} from "../data/portfolio";
 import {fetchGithubProfile} from "../lib/github";
+import {accentTitle} from "../lib/accent";
 
 const prof = await fetchGithubProfile();
 ---
@@ -9,7 +10,7 @@ const prof = await fetchGithubProfile();
 {
   prof ? (
     <div class="main section-animate" id="contact">
-      <h2 class="prof-title">Reach Out to me!</h2>
+      <h2 class="prof-title" set:html={accentTitle("Reach Out to me!")} />
       <div class="row">
         <div class="main-content-profile">
           <div class="blog-header">
@@ -63,7 +64,10 @@ const prof = await fetchGithubProfile();
     <div class="main contact-margin-top section-animate" id="contact">
       <div class="contact-div-main">
         <div class="contact-header">
-          <h2 class="heading contact-title">{contactInfo.title}</h2>
+          <h2
+            class="heading contact-title"
+            set:html={accentTitle(contactInfo.title)}
+          />
           <p class="subTitle contact-subtitle">{contactInfo.subtitle}</p>
           <div class="contact-text-div">
             {contactInfo.number && (

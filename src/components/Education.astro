@@ -1,9 +1,10 @@
 ---
 import {educationInfo} from "../data/portfolio";
+import {accentTitle} from "../lib/accent";
 ---
 
 <div class="education-section section-animate" id="education">
-  <h2 class="education-heading">Education</h2>
+  <h2 class="education-heading" set:html={accentTitle("Education")} />
   <div class="education-card-container">
     {
       educationInfo.map(school => (

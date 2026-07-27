@@ -12,7 +12,7 @@ const links = [
 ];
 ---
 
-<header class="header">
+<header class="header" id="site-header">
   <a href="/" class="logo">
     <span class="grey-color">&lt;</span>
     <span class="logo-name">Murugappan M</span>
@@ -39,19 +39,44 @@ const links = [
   </nav>
 </header>
 
+<script>
+  // Reference navbar behavior: transparent over the hero, translucent +
+  // blurred once the page is scrolled (threshold 20px, like the original).
+  const header = document.getElementById("site-header");
+  const onScroll = () =>
+    header?.classList.toggle("scrolled", window.scrollY >= 20);
+  onScroll();
+  window.addEventListener("scroll", onScroll, {passive: true});
+</script>
+
 <style lang="scss">
   @import "../styles/variables";
 
-  /* header (sticky replaces the old react-headroom wrapper) */
+  /* reference navbar: fixed on top, transparent at rest, translucent + blur
+     once scrolled (`.scrolled` added by the script above) */
 
   .header {
-    background-color: $lightBackground1;
     max-width: 100%;
-    padding: 15px 20px;
+    padding: 10px 20px;
     margin: 0px auto;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 999;
+    background-color: transparent;
+    transition: all 0.3s ease-out;
+  }
+
+  .header.scrolled {
+    background-color: $navScrolledLight;
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    box-shadow: 0 10px 10px 0 rgba(5, 30, 10, 0.12);
+  }
+
+  :global(html.dark-mode) .header.scrolled {
+    background-color: $navScrolledDark;
   }
 
   .header ul {
@@ -65,15 +90,37 @@ const links = [
     color: $subTitle;
   }
 
+  /* nav links: grow-in accent underline on hover (reference ::after bar) */
   .header li a {
     display: block;
+    position: relative;
     padding: 15px 20px;
     color: $textColor;
     text-decoration: none;
   }
 
-  .header li a:hover {
-    background-color: $headerHoverBG;
+  .header li a::after {
+    content: "";
+    position: absolute;
+    left: 20px;
+    bottom: 8px;
+    height: 3px;
+    width: 0;
+    border-radius: 3px;
+    background: $accentLight;
+    transition: width 0.3s ease-out;
+  }
+
+  .header li a:hover::after,
+  .header li a:focus-visible::after {
+    width: calc(100% - 40px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .header,
+    .header li a::after {
+      transition: none;
+    }
   }
 
   .header .logo {
@@ -100,23 +147,14 @@ const links = [
     margin: 15px 20px;
   }
 
-  /* dark mode (old `.dark-menu` conditional classes, now driven by html.dark-mode) */
-
-  :global(html.dark-mode) .header,
-  :global(html.dark-mode) .header .menu {
-    background-color: $darkBackground !important;
-    color: $textColorDark;
-  }
+  /* dark mode */
 
   :global(html.dark-mode) .header li a {
     color: $textColorDark !important;
   }
 
-  :global(html.dark-mode) .header li a:hover {
-    background-color: lighten(
-      $darkBackground,
-      10%
-    ) !important; // subtle highlight; was a heavy solid-green block that matched the toggle
+  :global(html.dark-mode) .header li a::after {
+    background: $accentDark;
   }
 
   :global(html.dark-mode) .header .logo-name {
@@ -134,7 +172,7 @@ const links = [
       visibility 0.2s;
   }
 
-  /* menu icon */
+  /* menu icon (hamburger bars in accent green, reference-style) */
 
   .header .menu-icon {
     cursor: pointer;
@@ -146,17 +184,19 @@ const links = [
   }
 
   .header .menu-icon .navicon {
-    background: $iconBackground;
+    background: $accentLight;
     display: block;
-    height: 2px;
+    height: 3px;
+    border-radius: 3px;
     position: relative;
     transition: background 0.2s ease-out;
-    width: 18px;
+    width: 22px;
   }
 
   .header .menu-icon .navicon:before,
   .header .menu-icon .navicon:after {
-    background: $iconBackground;
+    background: $accentLight;
+    border-radius: 3px;
     content: "";
     display: block;
     height: 100%;
@@ -165,22 +205,21 @@ const links = [
     width: 100%;
   }
 
-  /* old `.navicon-dark` conditional class */
   :global(html.dark-mode) .header .menu-icon .navicon {
-    background: $textColorDark;
+    background: $accentDark;
   }
 
   :global(html.dark-mode) .header .menu-icon .navicon:before,
   :global(html.dark-mode) .header .menu-icon .navicon:after {
-    background: $textColorDark !important;
+    background: $accentDark !important;
   }
 
   .header .menu-icon .navicon:before {
-    top: 5px;
+    top: 7px;
   }
 
   .header .menu-icon .navicon:after {
-    top: -5px;
+    top: -7px;
   }
 
   /* menu btn */
@@ -225,6 +264,20 @@ const links = [
     top: 0;
   }
 
+  /* below 48em (768px) the bar is always solid (reference behavior on mobile) —
+     the dropdown menu needs an opaque surface regardless of scroll position */
+  @media (max-width: 47.99em) {
+    .header,
+    .header.scrolled {
+      background-color: $lightBackground1;
+      box-shadow: 0 4px 10px 0 rgba(5, 30, 10, 0.12);
+    }
+    :global(html.dark-mode) .header,
+    :global(html.dark-mode) .header.scrolled {
+      background-color: $darkPageBase;
+    }
+  }
+
   /* 48em = 768px */
 
   @media (min-width: 48em) {
@@ -239,6 +292,7 @@ const links = [
     .header .menu {
       max-height: none;
       visibility: visible;
+      overflow: visible; /* underline sits near the link box edge */
     }
     .header .menu-icon {
       display: none;

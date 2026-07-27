@@ -1,6 +1,7 @@
 ---
 import {workExperiences} from "../data/portfolio";
 import {bannerColor} from "../lib/logoColor";
+import {accentTitle} from "../lib/accent";
 
 // The old app sampled each logo's color client-side (color-thief) once the
 // image loaded; here the average color is computed at build time with sharp.
@@ -15,7 +16,7 @@ const cards = await Promise.all(
 <div id="experience">
   <div class="experience-container section-animate" id="workExperience">
     <div>
-      <h2 class="experience-heading">Experiences</h2>
+      <h2 class="experience-heading" set:html={accentTitle("Experiences")} />
       <div class="experience-cards-div">
         {
           cards.map(card => (
@@ -85,17 +86,23 @@ const cards = await Promise.all(
     flex: 1;
   }
 
-  /* from old components/experienceCard/ExperienceCard.scss */
+  /* from old components/experienceCard/ExperienceCard.scss, reference glow-card */
   .experience-card {
     position: relative;
-    background-color: $lightBackground2;
-    box-shadow: $lightBoxShadowDark 0px 10px 30px -15px;
-    border-radius: 10px;
-    border: 1px solid $lightBorder1;
+    @include glow-card-light;
   }
 
   .experience-card:hover {
-    box-shadow: $lightBoxShadowDark 0px 20px 30px -10px;
+    @include glow-card-light-hover;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .experience-card,
+    .experience-card:hover,
+    :global(html.dark-mode) .experience-card:hover {
+      transition: none;
+      transform: none;
+    }
   }
 
   .experience-banner {
@@ -199,11 +206,10 @@ const cards = await Promise.all(
 
   /* old `.experience-card-dark` variant + `dark-mode-text` conditional classes */
   :global(html.dark-mode) .experience-card {
-    background-color: $darkBackground;
+    @include glow-card-dark;
   }
-  /* the old dark variant had no hover elevation; keep the resting shadow */
   :global(html.dark-mode) .experience-card:hover {
-    box-shadow: $lightBoxShadowDark 0px 10px 30px -15px;
+    @include glow-card-dark-hover;
   }
   :global(html.dark-mode) .experience-text-role,
   :global(html.dark-mode) .experience-text-date,
