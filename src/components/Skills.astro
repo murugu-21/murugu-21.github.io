@@ -2,25 +2,29 @@
 import {skillsSection} from "../data/portfolio";
 import LottiePlayer from "./LottiePlayer.astro";
 import Icon from "./Icon.astro";
+import Tilt from "./Tilt.astro";
+import {accentTitle} from "../lib/accent";
 ---
 
 <div id="skills" class="skills-main-div section-animate">
   <div class="skills-image-div">
-    <LottiePlayer
-      src="/lottie-coding.json"
-      label="Illustration of a developer at a desk writing code"
-    />
+    <Tilt>
+      <LottiePlayer
+        src="/lottie-coding.json"
+        label="Illustration of a developer at a desk writing code"
+      />
+    </Tilt>
   </div>
   <div class="skills-text-div">
-    <h2 class="skills-heading">{skillsSection.title}</h2>
+    <h2 class="skills-heading" set:html={accentTitle(skillsSection.title)} />
     <p class="subTitle skills-text-subtitle">{skillsSection.subTitle}</p>
     <div class="software-skills-main-div">
       <ul class="dev-icons">
         {
           skillsSection.softwareSkills.map(skill => (
-            <li class="software-skill-inline" title={skill.skillName}>
+            <li class="software-skill-chip">
               <Icon name={skill.iconName} />
-              <p>{skill.skillName}</p>
+              <span>{skill.skillName}</span>
             </li>
           ))
         }
@@ -76,45 +80,74 @@ import Icon from "./Icon.astro";
     color: $textColorDark;
   }
 
-  :global(html.dark-mode) .software-skill-inline p {
-    color: #b0b8c1; /* $subTitle fails 4.5:1 on the dark bg; lightened for AA */
-  }
-
-  /* software skills icon list (old SoftwareSkill.scss) */
+  /* tech-stack chips (reference "Professional Skillset" grid: rounded outline
+     pills with logo + label, hover scale + brighter outline) */
   .dev-icons {
     padding-left: 0;
     list-style: none;
-    font-size: 3rem;
-    margin-bottom: 0px;
-    margin-top: 0px;
-    text-align: center;
+    margin: 0 0 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
-  .software-skill-inline {
-    display: inline-block;
-    margin-right: 20px;
-    margin-bottom: 20px;
+  .software-skill-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border: 1px solid $chipOutlineLight;
+    border-radius: 24px;
+    box-shadow: $glowShadowLight;
+    transition:
+      transform 0.3s ease,
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
   }
 
-  /* the FA <i> glyphs were sized by the inherited 3rem font-size (.dev-icons)
-     with FA's line-height 1; the inline svgs get the same 3rem box, and
-     vertical-align -0.125em matches FA's baseline offset */
-  .software-skill-inline > :global(svg) {
-    color: $subTitle;
-    width: 3rem;
-    height: 3rem;
-    vertical-align: -0.125em;
+  .software-skill-chip:hover {
+    transform: scale(1.05);
+    border-color: $accentLight;
+    box-shadow: $glowShadowLightHover;
   }
 
-  .software-skill-inline > :global(svg:hover) {
+  .software-skill-chip > :global(svg) {
     color: $skillsColor;
+    width: 1.6rem;
+    height: 1.6rem;
+    flex: none;
   }
-  .software-skill-inline > p {
-    color: $subTitle;
-    font-size: 10px;
+
+  .software-skill-chip > span {
+    color: $textColor;
+    font-size: 15px;
+    white-space: nowrap;
   }
-  .software-skill-inline > :global(svg:hover) ~ p {
-    color: $skillsColor;
+
+  :global(html.dark-mode) .software-skill-chip {
+    border-color: $chipOutlineDark;
+    box-shadow: $glowShadowDark;
+  }
+
+  :global(html.dark-mode) .software-skill-chip:hover {
+    border-color: $accentDark;
+    box-shadow: $glowShadowDarkHover;
+  }
+
+  :global(html.dark-mode) .software-skill-chip > :global(svg) {
+    color: $accentDark;
+  }
+
+  :global(html.dark-mode) .software-skill-chip > span {
+    color: $textColorDark;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .software-skill-chip,
+    .software-skill-chip:hover {
+      transition: none;
+      transform: none;
+    }
   }
 
   /* Media Query */

@@ -1,10 +1,11 @@
 ---
 import {techStack} from "../data/portfolio";
+import {accentTitle} from "../lib/accent";
 ---
 
 <div class="skills-container section-animate">
   <div class="skills-bar">
-    <h2 class="skills-heading">Proficiency</h2>
+    <h2 class="skills-heading" set:html={accentTitle("Proficiency")} />
     {
       techStack.experience.map(exp => (
         <div class="skill">

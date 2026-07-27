@@ -31,3 +31,8 @@ npx astro check        # type-check .astro files
 ## Deployment
 
 Cloudflare Pages (git-integrated) builds on every push to `main` with build command `npm ci --prefix blog && npm run build:site` and output directory `dist`. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, type-check, blog tests, and a build smoke test.
+
+## Credits
+
+- Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio); the hero desk illustration is adapted from that project (recolored to this site's green theme).
+- Originally based on [developerFolio](https://github.com/saadpasta/developerFolio) before the Astro migration.

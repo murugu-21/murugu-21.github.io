@@ -15,6 +15,15 @@ export const greeting = {
   resumePath: "/resume.pdf"
 };
 
+// Roles looped by the hero typewriter (reference-look migration)
+
+export const typewriterRoles = [
+  "Full Stack Engineer",
+  "TypeScript · Node.js · React",
+  "Event-Driven Systems on AWS",
+  "Tech Blogger"
+];
+
 // Social Media Links
 
 export const socialMediaLinks = {

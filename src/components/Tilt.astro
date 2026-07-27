@@ -1,0 +1,36 @@
+---
+// Vanilla stand-in for the reference's react-parallax-tilt: the wrapped
+// content tilts in 3D following the pointer. Mouse-only (pointer: fine) and
+// disabled under prefers-reduced-motion.
+---
+
+<div class="tilt">
+  <slot />
+</div>
+
+<script>
+  const fine = window.matchMedia("(pointer: fine)").matches;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (fine && !reduced) {
+    const MAX_DEG = 10;
+    document.querySelectorAll<HTMLElement>(".tilt").forEach(el => {
+      el.addEventListener("mousemove", e => {
+        const rect = el.getBoundingClientRect();
+        const rx = ((e.clientY - rect.top) / rect.height - 0.5) * -2 * MAX_DEG;
+        const ry = ((e.clientX - rect.left) / rect.width - 0.5) * 2 * MAX_DEG;
+        el.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      });
+      el.addEventListener("mouseleave", () => {
+        el.style.transform = "";
+      });
+    });
+  }
+</script>
+
+<style>
+  .tilt {
+    transition: transform 0.15s ease-out;
+    transform-style: preserve-3d;
+  }
+</style>

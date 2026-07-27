@@ -1,0 +1,98 @@
+---
+// Vanilla replacement for the reference's typewriter-effect library.
+// The first role is server-rendered so no-JS visitors (and
+// prefers-reduced-motion users, for whom the loop never starts) still see it.
+interface Props {
+  roles: string[];
+}
+const {roles} = Astro.props;
+---
+
+<span class="typewriter" data-roles={JSON.stringify(roles)}>
+  <span class="typewriter-text">{roles[0]}</span><span
+    class="typewriter-cursor"
+    aria-hidden="true">|</span
+  >
+</span>
+
+<script>
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  document.querySelectorAll<HTMLElement>(".typewriter").forEach(el => {
+    if (reduced) return;
+    const roles: string[] = JSON.parse(el.dataset.roles || "[]");
+    const text = el.querySelector<HTMLElement>(".typewriter-text");
+    if (!text || roles.length < 2) return;
+
+    let index = 0;
+    let pos = roles[0].length;
+    let deleting = true; // the SSR'd role is fully typed; pause, then delete
+
+    const tick = () => {
+      const current = roles[index % roles.length];
+      if (deleting) {
+        pos--;
+        text.textContent = current.slice(0, pos);
+        if (pos === 0) {
+          deleting = false;
+          index++;
+          setTimeout(tick, 400);
+        } else {
+          setTimeout(tick, 40);
+        }
+      } else {
+        pos++;
+        text.textContent = roles[index % roles.length].slice(0, pos);
+        if (pos === roles[index % roles.length].length) {
+          deleting = true;
+          setTimeout(tick, 1700);
+        } else {
+          setTimeout(tick, 85);
+        }
+      }
+    };
+    setTimeout(tick, 1700);
+  });
+</script>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  .typewriter {
+    color: $accentLight;
+    font-weight: 600;
+  }
+
+  :global(html.dark-mode) .typewriter {
+    color: $accentDark;
+  }
+
+  .typewriter-cursor {
+    font-weight: 400;
+    margin-left: 2px;
+    animation: typewriter-blink 1s step-end infinite;
+  }
+
+  @keyframes typewriter-blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .typewriter-cursor {
+      animation: none;
+    }
+  }
+
+  /* reference hides the blinking cursor on small screens */
+  @media (max-width: 767px) {
+    .typewriter-cursor {
+      display: none;
+    }
+  }
+</style>
