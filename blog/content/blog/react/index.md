@@ -17,7 +17,7 @@ Since adding new features to js is a painful process as it has to be accepted as
 
 ## React
 
-[![React Home Page](react.jpg "React Home Page")](react.jpg)
+![React Home Page](react.jpg "React Home Page")
 
 Javascript is imperative in changing state of components. Below is a simple example of incrementing counter value on button click.
 
@@ -134,11 +134,11 @@ useEffect is also very useful when you have state or UI changes or cleanup depen
 
 ### useReducer
 
-[![Redux features](redux.jpg "Redux features")](redux.jpg)
+![Redux features](redux.jpg "Redux features")
 
 This hook can be used with useContext to follow the redux pattern.
 
-[![redux-pattern-image](redux-pattern.png "redux-pattern-image")](redux-pattern.png)
+![redux-pattern-image](redux-pattern.png "redux-pattern-image")
 
 - **store** - global state variable containing state of whole application.
 - **action** - state can be changed only by despatching a action.
