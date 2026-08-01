@@ -125,7 +125,12 @@ const jsonLd = {
       })
       img.addEventListener(
         "click",
-        async () => {
+        async event => {
+          // An image wrapped in a markdown link ([![alt](x.jpg)](x.jpg)) would
+          // navigate away before the zoom opens. Those hrefs point at the
+          // source file next to index.md, which is never emitted as a public
+          // asset, so following them 404s. Zoom is the click-to-view path.
+          if (img.closest("a")) event.preventDefault()
           const zoom = await loadZoom()
           // If the library's own click handler already opened it (it attaches
           // on init after a hover preload), don't double-open.
