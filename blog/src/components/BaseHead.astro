@@ -100,12 +100,9 @@ const ogImage = `${origin}${base}/og-image.png`
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   )
 }
-<!-- Google Analytics (ported from gatsby-plugin-gtag, head: true) -->
-<script
-  is:inline
-  async
-  src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
-></script>
+<!-- Google Analytics (ported from gatsby-plugin-gtag, head: true) — tag is
+     injected on idle so it stays out of the initial load waterfall.
+     dataLayer buffers the pageview until then. -->
 <script is:inline define:vars={{ GA_TRACKING_ID }}>
   window.dataLayer = window.dataLayer || []
   function gtag() {
@@ -113,4 +110,16 @@ const ogImage = `${origin}${base}/og-image.png`
   }
   gtag("js", new Date())
   gtag("config", GA_TRACKING_ID)
+
+  const loadGtag = () => {
+    const s = document.createElement("script")
+    s.async = true
+    s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`
+    document.head.appendChild(s)
+  }
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(loadGtag, { timeout: 3000 })
+  } else {
+    setTimeout(loadGtag, 2000)
+  }
 </script>

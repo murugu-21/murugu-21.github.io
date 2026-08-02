@@ -127,10 +127,8 @@ const {
       })}
     />
 
-    <script
-      is:inline
-      defer
-      src="https://www.googletagmanager.com/gtag/js?id=G-EGG005JECM"></script>
+    <!-- Google Analytics — tag is injected on idle so it stays out of the
+         initial load waterfall. dataLayer buffers the pageview until then. -->
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag() {
@@ -138,6 +136,18 @@ const {
       }
       gtag("js", new Date());
       gtag("config", "G-EGG005JECM");
+
+      const loadGtag = () => {
+        const s = document.createElement("script");
+        s.async = true;
+        s.src = "https://www.googletagmanager.com/gtag/js?id=G-EGG005JECM";
+        document.head.appendChild(s);
+      };
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(loadGtag, {timeout: 3000});
+      } else {
+        setTimeout(loadGtag, 2000);
+      }
     </script>
   </head>
   <body>
