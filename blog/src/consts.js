@@ -12,4 +12,3 @@ export const AUTHOR = {
 export const SOCIAL = {
   twitter: "murugu21",
 }
-export const GA_TRACKING_ID = "G-EGG005JECM"
