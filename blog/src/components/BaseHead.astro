@@ -1,5 +1,5 @@
 ---
-import { SITE_TITLE, SITE_DESCRIPTION, SOCIAL, GA_TRACKING_ID } from "../consts"
+import { SITE_TITLE, SITE_DESCRIPTION, SOCIAL } from "../consts"
 
 // Above-the-fold fonts, preloaded to shrink the font-swap window (CLS).
 // ?url resolves to the same hashed asset the @fontsource CSS references.
@@ -100,17 +100,3 @@ const ogImage = `${origin}${base}/og-image.png`
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   )
 }
-<!-- Google Analytics (ported from gatsby-plugin-gtag, head: true) -->
-<script
-  is:inline
-  async
-  src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
-></script>
-<script is:inline define:vars={{ GA_TRACKING_ID }}>
-  window.dataLayer = window.dataLayer || []
-  function gtag() {
-    window.dataLayer.push(arguments)
-  }
-  gtag("js", new Date())
-  gtag("config", GA_TRACKING_ID)
-</script>
