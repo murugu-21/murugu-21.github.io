@@ -21,6 +21,8 @@ The GitHub profile card is fetched at **build time** from the GitHub GraphQL API
 GITHUB_TOKEN=ghp_xxx npm run build
 ```
 
+Microsoft Clarity analytics is injected at **build time** when a `PUBLIC_CLARITY_PROJECT_ID` environment variable is set (configured in the Cloudflare Pages build env vars for production). Without it the tag is omitted entirely, so local dev and CI builds stay analytics-free.
+
 ## Checks
 
 ```bash
