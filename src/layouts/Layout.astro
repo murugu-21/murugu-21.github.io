@@ -13,6 +13,35 @@ const {
   title = "Murugappan M | Full Stack Engineer — TypeScript, Node.js, React & AWS",
   noindex = false
 } = Astro.props;
+
+// Microsoft Clarity project id, set per-environment in Cloudflare Pages build
+// env vars. PUBLIC_ because the value is inlined into the served HTML anyway.
+// Unset (local dev, CI) → the tag is omitted entirely. The snippet is built
+// here and injected via set:html — a <script> nested inside a template
+// expression can't hold braces (they parse as expressions). The tag itself is
+// injected on idle so it stays out of the initial load waterfall; the queue
+// stub buffers clarity() calls until then.
+const PUBLIC_CLARITY_PROJECT_ID = import.meta.env.PUBLIC_CLARITY_PROJECT_ID;
+const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
+  ? `(function () {
+  window.clarity =
+    window.clarity ||
+    function () {
+      (window.clarity.q = window.clarity.q || []).push(arguments);
+    };
+  var loadClarity = function () {
+    var s = document.createElement("script");
+    s.async = true;
+    s.src = "https://www.clarity.ms/tag/" + ${JSON.stringify(PUBLIC_CLARITY_PROJECT_ID)};
+    document.head.appendChild(s);
+  };
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(loadClarity, {timeout: 3000});
+  } else {
+    setTimeout(loadClarity, 2000);
+  }
+})();`
+  : null;
 ---
 
 <!doctype html>
@@ -126,6 +155,8 @@ const {
         ]
       })}
     />
+
+    {claritySnippet && <script is:inline set:html={claritySnippet} />}
   </head>
   <body>
     <slot />
