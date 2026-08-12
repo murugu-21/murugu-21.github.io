@@ -32,7 +32,7 @@ npx astro check        # type-check .astro files
 
 ## Deployment
 
-Cloudflare Pages (git-integrated) builds on every push to `main` with build command `npm ci --prefix blog && npm run build:site` and output directory `dist`. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, type-check, blog tests, and a build smoke test.
+Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `npm ci --prefix blog && npm run build:site` and deploy command `npx wrangler deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, type-check, worker tests, blog tests, and a build smoke test including resume generation.
 
 ## Resume generation
 
