@@ -41,8 +41,7 @@ Cloudflare Pages (git-integrated) builds on every push to `main` with build comm
 
 ## AI chat widget
 
-Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog). Design spec:
-`docs/superpowers/specs/2026-08-12-ai-chat-widget-design.md`.
+Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
 
 - **Server:** `worker/` — Cloudflare Worker serving `dist/` as static assets +
   `ChatRoom` Durable Object (partyserver, SQLite) streaming
