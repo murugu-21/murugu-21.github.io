@@ -84,15 +84,35 @@ export function initChatWidget(root: HTMLElement): void {
     }
   };
 
+  // Until the first history frame arrives the panel shows the typing dots as
+  // a loading state instead of an optimistic greeting — rendering the greeting
+  // early meant returning visitors saw it flash and get wiped by the replay.
+  let historyLoaded = false;
+  let offlineGreetTimer: ReturnType<typeof setTimeout> | null = null;
+
   const handleServerMessage = (msg: ServerMessage) => {
     switch (msg.type) {
-      case "history":
-        messagesEl.innerHTML = "";
+      case "history": {
+        historyLoaded = true;
+        if (offlineGreetTimer) {
+          clearTimeout(offlineGreetTimer);
+          offlineGreetTimer = null;
+        }
         typingEl = null;
         streamEl = null;
-        for (const m of msg.messages) addBubble(m.role, m.content);
+        // Build off-DOM and swap in one paint — no clear-then-grow jank.
+        const frag = document.createDocumentFragment();
+        for (const m of msg.messages) {
+          const el = document.createElement("div");
+          el.className = `chat-bubble ${m.role}`;
+          el.textContent = m.content;
+          frag.appendChild(el);
+        }
+        messagesEl.replaceChildren(frag);
         greetIfEmpty();
+        messagesEl.scrollTop = messagesEl.scrollHeight;
         break;
+      }
       case "delta":
         hideTyping();
         if (!streamEl) streamEl = addBubble("assistant", "");
@@ -141,7 +161,18 @@ export function initChatWidget(root: HTMLElement): void {
     tooltip?.remove();
     if (open) {
       connect();
-      greetIfEmpty();
+      if (!historyLoaded && !typingEl) {
+        showTyping();
+        // Offline/failure fallback: if no history frame lands, settle into
+        // the greeting rather than dots forever (sends still buffer).
+        offlineGreetTimer ??= setTimeout(() => {
+          offlineGreetTimer = null;
+          if (!historyLoaded) {
+            hideTyping();
+            greetIfEmpty();
+          }
+        }, 4000);
+      }
       input.focus();
     }
   });
