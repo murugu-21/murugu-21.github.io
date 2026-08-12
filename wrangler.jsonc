@@ -2,10 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "murugappan-dev",
   "main": "worker/server.ts",
-  // Cutover step: uncomment AFTER removing the custom domain from the Pages
-  // project — wrangler attaches it on the next deploy. Deploying with this
-  // active while Pages still holds the domain fails.
-  // "routes": [{"pattern": "murugappan.dev", "custom_domain": true}],
+  "routes": [{"pattern": "murugappan.dev", "custom_domain": true}],
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
