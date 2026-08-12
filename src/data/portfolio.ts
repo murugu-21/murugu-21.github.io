@@ -11,7 +11,7 @@ export const greeting = {
   username: "Murugappan M",
   title: "Hi all, I'm Murugappan",
   subTitle:
-    "Full stack engineer focused on cloud-native B2B SaaS — TypeScript across the stack, from React frontends to event-driven Node.js services on AWS. Currently at MedMe Health, reducing manual pharmacist effort through UI Automation and LLMs. Previously founding engineer at HyperStart CLM, where I scaled the product from 0 to $300k ARR, owning features end-to-end across regulated domains including SOC 2 and HIPAA.",
+    "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.",
   resumePath: "/resume.pdf"
 };
 
