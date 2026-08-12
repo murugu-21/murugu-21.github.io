@@ -35,7 +35,7 @@ export function formatOpportunityEmail(
   lead: Lead,
   transcript: ChatHistoryEntry[]
 ): {subject: string; text: string} {
-  const who = lead.name || lead.contact;
+  const who = (lead.name || lead.contact).replace(/\s+/g, " ").slice(0, 80);
   const lines = transcript.map(
     m => `${m.role === "user" ? "visitor" : "assistant"}: ${m.content}`
   );

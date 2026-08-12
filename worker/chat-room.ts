@@ -86,6 +86,7 @@ export class ChatRoom extends Server<Env> {
         t => t.name === "capture_opportunity"
       );
       if (capture) {
+        if (reply) this.send(connection, {type: "delta", text: "\n"});
         const followUp = await this.handleCapture(
           capture.arguments,
           connection

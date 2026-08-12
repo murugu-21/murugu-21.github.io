@@ -10,6 +10,7 @@
     "not_found_handling": "404-page",
     "run_worker_first": ["/parties/*"]
   },
+  // keep DO bindings + migrations in sync with worker/test/wrangler.jsonc
   "durable_objects": {
     "bindings": [
       {"name": "ChatRoom", "class_name": "ChatRoom"},

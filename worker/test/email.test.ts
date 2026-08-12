@@ -41,6 +41,18 @@ describe("formatOpportunityEmail", () => {
     expect(text).toContain("visitor: hiring you!");
     expect(text).toContain("assistant: great, what's your email?");
   });
+
+  it("sanitizes a newline-bearing name out of the subject header", () => {
+    const {subject} = formatOpportunityEmail(
+      {
+        name: "line1\nline2",
+        contact: "ada@lovelace.dev",
+        summary: "CTO role"
+      },
+      []
+    );
+    expect(subject).not.toMatch(/[\r\n]/);
+  });
 });
 
 describe("sendOpportunityEmail", () => {
