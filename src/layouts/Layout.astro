@@ -54,7 +54,9 @@ const knowsAbout = [...handWrittenKnowsAbout, ...extraKnowsAbout];
 // expression can't hold braces (they parse as expressions). The tag itself is
 // injected on idle so it stays out of the initial load waterfall; the queue
 // stub buffers clarity() calls until then.
-const PUBLIC_CLARITY_PROJECT_ID = import.meta.env.PUBLIC_CLARITY_PROJECT_ID;
+// trim(): a stray space pasted into the build env var otherwise 400s the tag URL
+const PUBLIC_CLARITY_PROJECT_ID =
+  import.meta.env.PUBLIC_CLARITY_PROJECT_ID?.trim();
 const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
   ? `(function () {
   window.clarity =
