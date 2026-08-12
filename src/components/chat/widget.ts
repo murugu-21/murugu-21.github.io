@@ -50,7 +50,6 @@ export function initChatWidget(root: HTMLElement): void {
 
   let socket: PartySocket | null = null;
   let streamEl: HTMLDivElement | null = null;
-  let greeted = false;
 
   const addBubble = (kind: "user" | "assistant" | "system", text: string) => {
     const el = document.createElement("div");
@@ -62,8 +61,7 @@ export function initChatWidget(root: HTMLElement): void {
   };
 
   const greetIfEmpty = () => {
-    if (!greeted && messagesEl.childElementCount === 0) {
-      greeted = true;
+    if (messagesEl.childElementCount === 0) {
       addBubble(
         "assistant",
         "Hi! I'm Murugappan's AI assistant. Ask me about his experience, projects, or blog posts — or tell me about an opportunity for him."
