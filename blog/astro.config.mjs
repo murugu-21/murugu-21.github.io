@@ -3,6 +3,7 @@ import path from "node:path"
 import { defineConfig } from "astro/config"
 import { FontaineTransform } from "fontaine"
 import react from "@astrojs/react"
+import tailwindcss from "@tailwindcss/vite"
 import sitemap from "@astrojs/sitemap"
 import rehypeSlug from "rehype-slug"
 import rehypeAutolinkHeadings from "rehype-autolink-headings"
@@ -31,6 +32,9 @@ export default defineConfig({
   base: "/blog",
   vite: {
     plugins: [
+      // Tailwind is scoped to the shared chat widget island (theme +
+      // utilities only, no preflight — see ../src/components/chat/chat.css).
+      tailwindcss(),
       // Generates metric-tuned fallback @font-face rules (size-adjust /
       // ascent-override etc.) for the @fontsource fonts so the swap from
       // the system fallback to Merriweather/Montserrat causes no layout
@@ -41,6 +45,19 @@ export default defineConfig({
       }),
     ],
     server: { fs: { allow: [".."] } },
+    // The shared chat widget lives in ../src and would otherwise resolve the
+    // ROOT node_modules copy of React while the blog renderer uses its own —
+    // two React instances = invalid hook call. Dedupe pins one copy, and the
+    // react-consuming widget deps (root-installed) must be bundled rather
+    // than SSR-externalized or they'd node-resolve root React again.
+    resolve: { dedupe: ["react", "react-dom"] },
+    ssr: {
+      noExternal: [
+        "lucide-react",
+        "@radix-ui/react-slot",
+        "@radix-ui/react-scroll-area",
+      ],
+    },
   },
   integrations: [
     react(),

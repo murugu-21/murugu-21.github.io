@@ -1,11 +1,10 @@
-<div id="chat-widget-root"></div>
+---
+// Shared React chat widget from the portfolio app (see ../../../src/components
+// /chat/ChatWidget.tsx). client:idle defers hydration to browser idle; the
+// wrapper div carries the id the chat.css design tokens are scoped under.
+import { ChatWidget } from "../../../src/components/chat/ChatWidget"
+---
 
-<script>
-  // Shared widget module from the portfolio app (framework-free; self-mounts).
-  const start = () => void import("../../../src/components/chat/widget")
-  if ("requestIdleCallback" in window) {
-    requestIdleCallback(start, { timeout: 4000 })
-  } else {
-    setTimeout(start, 2500)
-  }
-</script>
+<div id="chat-widget-root">
+  <ChatWidget client:idle />
+</div>
