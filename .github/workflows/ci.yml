@@ -22,10 +22,13 @@ jobs:
             package-lock.json
             blog/package-lock.json
       - run: npm ci
+      - run: npx wrangler types
       - run: npm ci --prefix blog
       - run: npm run check-format
       - run: npm --prefix blog run check-format
       - run: npx astro check
+      - run: npm run check:worker
+      - run: npm test
       - run: npm --prefix blog run test
       - run: npm run build:site
         env:
