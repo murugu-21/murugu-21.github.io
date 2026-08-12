@@ -149,7 +149,11 @@ export function initChatWidget(root: HTMLElement): void {
   form.addEventListener("submit", e => {
     e.preventDefault();
     const text = input.value.trim();
-    if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!text) return;
+    // PartySocket buffers sends while CONNECTING/reconnecting and flushes on
+    // open — don't gate on readyState or messages get silently dropped
+    // during the (re)connect window.
+    if (!socket) connect();
     addBubble("user", text);
     showTyping();
     socket.send(JSON.stringify({type: "chat", text}));
