@@ -28,15 +28,15 @@ function roomId(): string {
 
 export function initChatWidget(root: HTMLElement): void {
   root.innerHTML = `
-    <button class="chat-launcher" aria-label="Chat with Murugappan's AI assistant" aria-expanded="false">${CHAT_ICON}</button>
-    <div class="chat-panel" role="dialog" aria-label="Chat with Murugappan's AI assistant">
+    <button class="chat-launcher" aria-label="Chat with Jarvis, Murugappan's AI assistant" aria-expanded="false">${CHAT_ICON}</button>
+    <div class="chat-panel" role="dialog" aria-label="Chat with Jarvis, Murugappan's AI assistant">
       <div class="chat-header">
-        <h2>Ask me about Murugappan</h2>
-        <p>AI assistant — answers from this site's content</p>
+        <h2>Chat with Jarvis</h2>
+        <p>Murugappan's AI assistant — answers from this site</p>
       </div>
       <div class="chat-messages" aria-live="polite"></div>
       <form class="chat-form">
-        <input type="text" maxlength="${MAX_LENGTH}" placeholder="Ask a question…" aria-label="Your message" />
+        <input type="text" id="chat-input" name="message" maxlength="${MAX_LENGTH}" placeholder="Ask a question…" aria-label="Your message" />
         <button type="submit">Send</button>
       </form>
     </div>`;
@@ -64,7 +64,7 @@ export function initChatWidget(root: HTMLElement): void {
     if (messagesEl.childElementCount === 0) {
       addBubble(
         "assistant",
-        "Hi! I'm Murugappan's AI assistant. Ask me about his experience, projects, or blog posts — or tell me about an opportunity for him."
+        "Hi, I'm Jarvis — Murugappan's AI assistant. Ask me about his experience, projects, or blog posts — or tell me about an opportunity for him."
       );
     }
   };
@@ -141,7 +141,7 @@ export function initChatWidget(root: HTMLElement): void {
     localStorage.setItem(TOOLTIP_KEY, "1");
     tooltip = document.createElement("div");
     tooltip.className = "chat-tooltip";
-    tooltip.textContent = "Ask me anything about Murugappan";
+    tooltip.textContent = "Ask Jarvis anything about Murugappan";
     root.appendChild(tooltip);
     setTimeout(() => tooltip?.classList.add("fade"), 5000);
     setTimeout(() => tooltip?.remove(), 5700);
