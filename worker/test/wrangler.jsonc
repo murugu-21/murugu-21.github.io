@@ -1,0 +1,15 @@
+{
+  "name": "murugappan-dev-test",
+  "main": "../server.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      { "name": "ChatRoom", "class_name": "ChatRoom" },
+      { "name": "RateLimiter", "class_name": "RateLimiter" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }
+  ]
+}

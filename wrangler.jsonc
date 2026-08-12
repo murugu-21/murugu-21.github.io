@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "murugappan-dev",
+  "main": "worker/server.ts",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/parties/*"]
+  },
+  "durable_objects": {
+    "bindings": [
+      {"name": "ChatRoom", "class_name": "ChatRoom"},
+      {"name": "RateLimiter", "class_name": "RateLimiter"}
+    ]
+  },
+  "migrations": [
+    {"tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"]}
+  ],
+  "ai": {"binding": "AI"},
+  "send_email": [{"name": "EMAIL"}],
+  "observability": {"enabled": true}
+}
