@@ -4,6 +4,7 @@
 
 ## Profile
 - [Portfolio](https://murugappan.dev/)
+- [Resume](https://murugappan.dev/resume/)
 - [Blog](https://murugappan.dev/blog)
 - [GitHub](https://github.com/murugu-21)
 - [LinkedIn](https://www.linkedin.com/in/murugappan-m-56920a192/)
@@ -20,7 +21,10 @@
 - Samsung R&D Institute India — R&D Intern (Isolation Forest anomaly detection)
 
 ## Skills
-TypeScript, Python, SQL; React.js, Node.js, Nest.js, Express.js; event-driven architecture (AWS SQS, EventBridge), microservices, REST APIs; AWS (Lambda, API Gateway, EC2, S3, VPC), Terraform, Docker, GitHub Actions; OpenTelemetry, Grafana, Playwright; SOC 2, VAPT, PHI/PII scrubbing.
+- Languages: TypeScript, Python, SQL, Bash, YAML
+- Full Stack: TypeScript end-to-end — React.js, Node.js, Nest.js, Express.js; event-driven architecture (AWS SQS, EventBridge), microservices, REST APIs
+- Observability & Security: OpenTelemetry, Grafana (LGTM stack), Playwright; SOC 2, VAPT, PHI/PII scrubbing, server-side encryption
+- Cloud & Infra: AWS (Lambda, API Gateway, EC2, S3, VPC, SQS, EventBridge), Terraform, Docker, GitLab CI/CD, GitHub Actions
 
 ## Education
 Kumaraguru College of Technology — B.E. Computer Science (2019–2023)

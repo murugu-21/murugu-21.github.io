@@ -126,6 +126,7 @@ export interface WorkExperience {
   role: string;
   company: string;
   companyLogo: ImageMetadata;
+  location: string;
   date: string;
   desc: string;
   descBullets?: string[];
@@ -136,6 +137,7 @@ export const workExperiences: WorkExperience[] = [
     role: "Software Engineer II",
     company: "MedMe Health",
     companyLogo: medmeLogo,
+    location: "Canada (remote)",
     date: "December 2025 – Present",
     desc: "Leading design of the event-driven RPA platform that automates pharmacy admin work at this YC-backed healthtech startup.",
     descBullets: [
@@ -148,6 +150,7 @@ export const workExperiences: WorkExperience[] = [
     role: "SDE 2",
     company: "HyperVerge",
     companyLogo: hypervergeLogo,
+    location: "Bangalore",
     date: "April 2025 – December 2025",
     desc: "Owned core platform architecture for HyperStart, the company's contract lifecycle management (CLM) product.",
     descBullets: [
@@ -161,19 +164,23 @@ export const workExperiences: WorkExperience[] = [
     role: "SDE 1",
     company: "HyperVerge",
     companyLogo: hypervergeLogo,
+    location: "Bangalore",
     date: "July 2023 – March 2025",
     desc: "Founding engineer on HyperStart CLM, owning features from design through to customer outcome as the product scaled to $300k ARR.",
     descBullets: [
       "Architected an LLM-based pipeline that extracts metadata from signed contracts — a core driver of the product's value proposition.",
       "Cut contract-listing latency to under 5 seconds across 15,000+ records by restructuring responses and tuning queries.",
       "Spearheaded VAPT and static code analysis for SOC 2 compliance, hardening API Gateways and Auto Scaling Groups.",
-      "Built an end-to-end testing pipeline in GitLab CI using Playwright and Docker to ensure stability before deployments."
+      "Built an end-to-end testing pipeline in GitLab CI using Playwright and Docker to ensure stability before deployments.",
+      "Designed and deployed a PDF-conversion microservice, benchmarking and operationalizing an open-source tool for production use.",
+      "Built a config-driven UI for stamp-paper procurement, reducing the effort to add new Article codes to a single JSON change."
     ]
   },
   {
     role: "SDE Intern",
     company: "HyperVerge",
     companyLogo: hypervergeLogo,
+    location: "Bangalore",
     date: "August 2022 – June 2023",
     desc: "Built core ingestion and access-control foundations for the CLM platform.",
     descBullets: [
@@ -185,12 +192,36 @@ export const workExperiences: WorkExperience[] = [
     role: "R&D Intern",
     company: "Samsung R&D Institute India",
     companyLogo: samsungLogo,
+    location: "Bangalore",
     date: "December 2021 – August 2022",
     desc: "Applied machine learning to anomaly detection for security use cases.",
     descBullets: [
       "Built an unsupervised Isolation Forest model to detect anomalous user activity from IP, API URL, and MAC-address signals — applicable to fraud detection.",
       "Generated synthetic training datasets and deployed the inference endpoint with Python/Django on Heroku."
     ]
+  }
+];
+
+// Resume-only skills taxonomy — categorized for the printed resume's SKILLS
+// section (see src/data/resume.ts) and folded into Layout.astro's JSON-LD
+// knowsAbout. The portfolio's own Skills section keeps its own curated list.
+
+export const skillsCategories: {category: string; items: string}[] = [
+  {category: "Languages", items: "TypeScript, Python, SQL, Bash, YAML"},
+  {
+    category: "Full Stack",
+    items:
+      "TypeScript end-to-end — React.js, Node.js, Nest.js, Express.js; event-driven architecture (AWS SQS, EventBridge), microservices, REST APIs"
+  },
+  {
+    category: "Observability & Security",
+    items:
+      "OpenTelemetry, Grafana (LGTM stack), Playwright; SOC 2, VAPT, PHI/PII scrubbing, server-side encryption"
+  },
+  {
+    category: "Cloud & Infra",
+    items:
+      "AWS (Lambda, API Gateway, EC2, S3, VPC, SQS, EventBridge), Terraform, Docker, GitLab CI/CD, GitHub Actions"
   }
 ];
 
@@ -310,7 +341,9 @@ export const contactInfo = {
   title: "Contact Me ☎️",
   subtitle:
     "Want to discuss a project, a role, or just say hi? My inbox is open.",
-  number: "+91-9095298712",
+  // No phone number is hardcoded in source — set RESUME_PHONE (build env /
+  // local .env) to show it. Empty string renders nothing (see GithubCard.astro).
+  number: import.meta.env.RESUME_PHONE ?? "",
   emailAddress: "murugu2001@gmail.com"
 };
 

@@ -2,6 +2,7 @@
 import "../styles/global.scss";
 import agustinaUrl from "../assets/fonts/Agustina.woff?url";
 import ChatWidget from "../components/chat/ChatWidget.astro";
+import {skillsCategories} from "../data/portfolio";
 
 interface Props {
   title?: string;
@@ -14,6 +15,34 @@ const {
   title = "Murugappan M | Full Stack Engineer — TypeScript, Node.js, React & AWS",
   noindex = false
 } = Astro.props;
+
+// Extend the hand-written knowsAbout list below with the resume's skills
+// taxonomy — split each category's "items" string on commas/semicolons/em
+// dashes, trim, drop empties and anything already present (case-insensitive).
+const handWrittenKnowsAbout = [
+  "TypeScript",
+  "Node.js",
+  "React",
+  "AWS",
+  "Distributed systems",
+  "Event-driven architecture",
+  "Observability",
+  "SOC 2",
+  "HIPAA"
+];
+const seenKnowsAbout = new Set(handWrittenKnowsAbout.map(s => s.toLowerCase()));
+const extraKnowsAbout: string[] = [];
+for (const {items} of skillsCategories) {
+  for (const raw of items.split(/[,;]|—/)) {
+    const term = raw.trim();
+    if (!term) continue;
+    const key = term.toLowerCase();
+    if (seenKnowsAbout.has(key)) continue;
+    seenKnowsAbout.add(key);
+    extraKnowsAbout.push(term);
+  }
+}
+const knowsAbout = [...handWrittenKnowsAbout, ...extraKnowsAbout];
 
 // Microsoft Clarity project id, set per-environment in Cloudflare Pages build
 // env vars. PUBLIC_ because the value is inlined into the served HTML anyway.
@@ -137,17 +166,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
             url: "https://kct.ac.in"
           }
         ],
-        knowsAbout: [
-          "TypeScript",
-          "Node.js",
-          "React",
-          "AWS",
-          "Distributed systems",
-          "Event-driven architecture",
-          "Observability",
-          "SOC 2",
-          "HIPAA"
-        ],
+        knowsAbout,
         sameAs: [
           "https://github.com/murugu-21",
           "https://www.linkedin.com/in/murugappan-m-56920a192/",
