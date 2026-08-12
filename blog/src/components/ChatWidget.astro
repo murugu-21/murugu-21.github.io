@@ -1,0 +1,11 @@
+<div id="chat-widget-root"></div>
+
+<script>
+  // Shared widget module from the portfolio app (framework-free; self-mounts).
+  const start = () => void import("../../../src/components/chat/widget")
+  if ("requestIdleCallback" in window) {
+    requestIdleCallback(start, { timeout: 4000 })
+  } else {
+    setTimeout(start, 2500)
+  }
+</script>
