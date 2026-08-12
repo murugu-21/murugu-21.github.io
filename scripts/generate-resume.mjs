@@ -90,7 +90,12 @@ try {
   const {port} = server.address();
   const url = `http://127.0.0.1:${port}/resume/`;
 
-  browser = await puppeteer.launch({headless: true});
+  // --no-sandbox: CI runners (GitHub ubuntu-24.04 AppArmor, container builds)
+  // block Chrome's sandbox; safe here since we only render our own local page.
+  browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  });
   const page = await browser.newPage();
   await page.goto(url, {waitUntil: "networkidle0"});
   await page.pdf({
