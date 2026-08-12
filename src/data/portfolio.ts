@@ -11,7 +11,7 @@ export const greeting = {
   username: "Murugappan M",
   title: "Hi all, I'm Murugappan",
   subTitle:
-    "Full stack engineer focused on cloud-native B2B SaaS — TypeScript across the stack, from React frontends to event-driven Node.js services on AWS. Currently at MedMe Health, reducing manual pharmacist effort through UI Automation and LLMs. Previously founding engineer at HyperStart CLM, where I scaled the product from 0 to $300k ARR, owning features end-to-end across regulated domains including SOC 2 and HIPAA.",
+    "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.",
   resumePath: "/resume.pdf"
 };
 
@@ -126,6 +126,7 @@ export interface WorkExperience {
   role: string;
   company: string;
   companyLogo: ImageMetadata;
+  location: string;
   date: string;
   desc: string;
   descBullets?: string[];
@@ -133,27 +134,29 @@ export interface WorkExperience {
 
 export const workExperiences: WorkExperience[] = [
   {
-    role: "Intermediate Software Engineer (L4.5)",
+    role: "Software Engineer II",
     company: "MedMe Health",
     companyLogo: medmeLogo,
+    location: "Canada (remote)",
     date: "December 2025 – Present",
-    desc: "Leading the design of an event-driven RPA platform that automates pharmacy administrative workflows, for this Y Combinator-backed startup.",
+    desc: "Leading design of the event-driven RPA platform that automates pharmacy admin work at this YC-backed healthtech startup.",
     descBullets: [
-      "Built vendor-agnostic observability across services with OpenTelemetry, shipping traces and metrics into the Grafana LGTM stack.",
+      "Led development of an LLM-based extractor that turns unstructured patient questionnaire answers into structured medication data — solving a long tail of edge cases to lift fax-to-entry accuracy from ~60-65% to 95%+.",
       "Drove HIPAA compliance: access-logged S3 buckets, PHI/PII scrubbing from logs, and server-side encryption of data at rest.",
-      "Led development of an LLM-based extractor that converts unstructured patient questionnaire answers into structured medication data."
+      "Made every service debuggable from one Grafana view — vendor-agnostic OpenTelemetry traces and metrics across the platform."
     ]
   },
   {
     role: "SDE 2",
     company: "HyperVerge",
     companyLogo: hypervergeLogo,
+    location: "Bangalore",
     date: "April 2025 – December 2025",
     desc: "Owned core platform architecture for HyperStart, the company's contract lifecycle management (CLM) product.",
     descBullets: [
-      "Designed a scalable, event-driven background-job system on AWS SQS and EventBridge — the foundation for cron and async task scheduling across the platform.",
-      "Led the architecture for CRM integrations (Salesforce, HubSpot), automating data prefilling to streamline the client deal-closure pipeline.",
       "Cut infrastructure spend to a 10% MRR-to-server-cost ratio by profiling usage and reallocating resources over 3 months.",
+      "Built the platform's backbone for all async and scheduled work — an event-driven job system on AWS SQS and EventBridge.",
+      "Led the architecture for CRM integrations (Salesforce, HubSpot), automating data prefilling to streamline the client deal-closure pipeline.",
       "Mentored junior engineers and established standardized code-review protocols to raise code quality."
     ]
   },
@@ -161,19 +164,23 @@ export const workExperiences: WorkExperience[] = [
     role: "SDE 1",
     company: "HyperVerge",
     companyLogo: hypervergeLogo,
+    location: "Bangalore",
     date: "July 2023 – March 2025",
     desc: "Founding engineer on HyperStart CLM, owning features from design through to customer outcome as the product scaled to $300k ARR.",
     descBullets: [
-      "Optimized contract-listing APIs to respond in under 5 seconds across 15,000+ records by restructuring responses and tuning queries.",
       "Architected an LLM-based pipeline that extracts metadata from signed contracts — a core driver of the product's value proposition.",
+      "Cut contract-listing latency to under 5 seconds across 15,000+ records by restructuring responses and tuning queries.",
       "Spearheaded VAPT and static code analysis for SOC 2 compliance, hardening API Gateways and Auto Scaling Groups.",
-      "Built an end-to-end testing pipeline in GitLab CI using Playwright and Docker to ensure stability before deployments."
+      "Built an end-to-end testing pipeline in GitLab CI using Playwright and Docker to ensure stability before deployments.",
+      "Designed and deployed a PDF-conversion microservice, benchmarking and operationalizing an open-source tool for production use.",
+      "Built a config-driven UI for stamp-paper procurement, reducing the effort to add new Article codes to a single JSON change."
     ]
   },
   {
     role: "SDE Intern",
     company: "HyperVerge",
     companyLogo: hypervergeLogo,
+    location: "Bangalore",
     date: "August 2022 – June 2023",
     desc: "Built core ingestion and access-control foundations for the CLM platform.",
     descBullets: [
@@ -185,12 +192,36 @@ export const workExperiences: WorkExperience[] = [
     role: "R&D Intern",
     company: "Samsung R&D Institute India",
     companyLogo: samsungLogo,
+    location: "Bangalore",
     date: "December 2021 – August 2022",
     desc: "Applied machine learning to anomaly detection for security use cases.",
     descBullets: [
       "Built an unsupervised Isolation Forest model to detect anomalous user activity from IP, API URL, and MAC-address signals — applicable to fraud detection.",
       "Generated synthetic training datasets and deployed the inference endpoint with Python/Django on Heroku."
     ]
+  }
+];
+
+// Resume-only skills taxonomy — categorized for the printed resume's SKILLS
+// section (see src/data/resume.ts) and folded into Layout.astro's JSON-LD
+// knowsAbout. The portfolio's own Skills section keeps its own curated list.
+
+export const skillsCategories: {category: string; items: string}[] = [
+  {category: "Languages", items: "TypeScript, Python, SQL, Bash, YAML"},
+  {
+    category: "Full Stack",
+    items:
+      "TypeScript end-to-end — React.js, Node.js, Nest.js, Express.js; event-driven architecture (AWS SQS, EventBridge), microservices, REST APIs"
+  },
+  {
+    category: "Observability & Security",
+    items:
+      "OpenTelemetry, Grafana (LGTM stack), Playwright; SOC 2, VAPT, PHI/PII scrubbing, server-side encryption"
+  },
+  {
+    category: "Cloud & Infra",
+    items:
+      "AWS (Lambda, API Gateway, EC2, S3, VPC, SQS, EventBridge), Terraform, Docker, GitLab CI/CD, GitHub Actions"
   }
 ];
 
@@ -310,7 +341,13 @@ export const contactInfo = {
   title: "Contact Me ☎️",
   subtitle:
     "Want to discuss a project, a role, or just say hi? My inbox is open.",
-  number: "+91-9095298712",
+  // No phone number is hardcoded in source — set RESUME_PHONE (build env /
+  // local .env) to populate it. This value only ever renders in
+  // GithubCard.astro's no-GitHub-profile fallback contact view (production
+  // renders the profile branch instead, which never reads contactInfo.number
+  // — see GithubCard.astro). The resume page (src/data/resume.ts) reads the
+  // same env var independently for its contact line.
+  number: import.meta.env.RESUME_PHONE ?? "",
   emailAddress: "murugu2001@gmail.com"
 };
 

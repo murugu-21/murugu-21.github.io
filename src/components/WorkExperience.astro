@@ -41,7 +41,12 @@ const cards = await Promise.all(
               </div>
               <div class="experience-text-details">
                 <h4 class="experience-text-role">{card.role}</h4>
-                <h4 class="experience-text-date">{card.date}</h4>
+                <h4 class="experience-text-date">
+                  {card.date}{" "}
+                  <span class="experience-text-location">
+                    · {card.location}
+                  </span>
+                </h4>
                 <p class="subTitle experience-text-desc">{card.desc}</p>
                 <ul>
                   {card.descBullets?.map(item => (
@@ -193,6 +198,12 @@ const cards = await Promise.all(
     margin: 0px;
     padding-top: 1rem;
     font-weight: 600;
+  }
+
+  /* subtle, low-key location tag next to the date line */
+  .experience-text-location {
+    font-weight: 400;
+    opacity: 0.65;
   }
 
   .experience-text-desc {

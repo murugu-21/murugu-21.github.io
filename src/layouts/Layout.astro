@@ -2,6 +2,7 @@
 import "../styles/global.scss";
 import agustinaUrl from "../assets/fonts/Agustina.woff?url";
 import ChatWidget from "../components/chat/ChatWidget.astro";
+import {skillsCategories} from "../data/portfolio";
 
 interface Props {
   title?: string;
@@ -9,11 +10,42 @@ interface Props {
 }
 
 const description =
-  "Full stack engineer focused on cloud-native B2B SaaS — TypeScript across the stack, from React frontends to event-driven Node.js services on AWS. Currently at MedMe Health, reducing manual pharmacist effort through UI Automation and LLMs. Previously founding engineer at HyperStart CLM, where I scaled the product from 0 to $300k ARR, owning features end-to-end across regulated domains including SOC 2 and HIPAA.";
+  "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.";
 const {
   title = "Murugappan M | Full Stack Engineer — TypeScript, Node.js, React & AWS",
   noindex = false
 } = Astro.props;
+
+// Extend the hand-written knowsAbout list below with the resume's skills
+// taxonomy — split each category's "items" string on semicolons/em dashes and
+// on commas that are NOT inside a parenthesized group (so "(AWS SQS,
+// EventBridge)" stays intact instead of splitting into two unbalanced
+// fragments), trim, drop empties and anything already present
+// (case-insensitive).
+const handWrittenKnowsAbout = [
+  "TypeScript",
+  "Node.js",
+  "React",
+  "AWS",
+  "Distributed systems",
+  "Event-driven architecture",
+  "Observability",
+  "SOC 2",
+  "HIPAA"
+];
+const seenKnowsAbout = new Set(handWrittenKnowsAbout.map(s => s.toLowerCase()));
+const extraKnowsAbout: string[] = [];
+for (const {items} of skillsCategories) {
+  for (const raw of items.split(/;|—|,(?![^()]*\))/)) {
+    const term = raw.trim();
+    if (!term) continue;
+    const key = term.toLowerCase();
+    if (seenKnowsAbout.has(key)) continue;
+    seenKnowsAbout.add(key);
+    extraKnowsAbout.push(term);
+  }
+}
+const knowsAbout = [...handWrittenKnowsAbout, ...extraKnowsAbout];
 
 // Microsoft Clarity project id, set per-environment in Cloudflare Pages build
 // env vars. PUBLIC_ because the value is inlined into the served HTML anyway.
@@ -114,7 +146,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
         image: "https://murugappan.dev/og-image.png",
         jobTitle: "Full Stack Engineer",
         description:
-          "Full stack engineer focused on cloud-native B2B SaaS — TypeScript across the stack, from React frontends to event-driven Node.js services on AWS. Currently at MedMe Health, reducing manual pharmacist effort through UI Automation and LLMs. Previously founding engineer at HyperStart CLM, where I scaled the product from 0 to $300k ARR, owning features end-to-end across regulated domains including SOC 2 and HIPAA.",
+          "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.",
         worksFor: {
           "@type": "Organization",
           name: "MedMe Health",
@@ -137,17 +169,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
             url: "https://kct.ac.in"
           }
         ],
-        knowsAbout: [
-          "TypeScript",
-          "Node.js",
-          "React",
-          "AWS",
-          "Distributed systems",
-          "Event-driven architecture",
-          "Observability",
-          "SOC 2",
-          "HIPAA"
-        ],
+        knowsAbout,
         sameAs: [
           "https://github.com/murugu-21",
           "https://www.linkedin.com/in/murugappan-m-56920a192/",
