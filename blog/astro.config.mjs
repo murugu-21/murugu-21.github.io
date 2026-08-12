@@ -40,6 +40,7 @@ export default defineConfig({
         resolvePath: id => new URL("./node_modules/" + id, import.meta.url),
       }),
     ],
+    server: { fs: { allow: [".."] } },
   },
   integrations: [
     react(),

@@ -19,6 +19,7 @@ import "../components/customToggle.css"
 
 import BaseHead from "../components/BaseHead.astro"
 import ThemeToggle from "../components/ThemeToggle.jsx"
+import ChatWidget from "../components/ChatWidget.astro"
 import { SITE_TITLE } from "../consts"
 
 // title/description plus SEO passthroughs for BaseHead (ogType,
@@ -206,5 +207,6 @@ const isRootPath = Astro.url.pathname === rootPath
         blocks.forEach(b => io.observe(b.closest("pre") || b))
       }
     </script>
+    <ChatWidget />
   </body>
 </html>

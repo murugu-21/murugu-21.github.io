@@ -1,6 +1,7 @@
 ---
 import "../styles/global.scss";
 import agustinaUrl from "../assets/fonts/Agustina.woff?url";
+import ChatWidget from "../components/chat/ChatWidget.astro";
 
 interface Props {
   title?: string;
@@ -160,5 +161,6 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
   </head>
   <body>
     <slot />
+    <ChatWidget />
   </body>
 </html>
