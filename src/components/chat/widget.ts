@@ -50,6 +50,7 @@ export function initChatWidget(root: HTMLElement): void {
 
   let socket: PartySocket | null = null;
   let streamEl: HTMLDivElement | null = null;
+  let typingEl: HTMLDivElement | null = null;
 
   const addBubble = (kind: "user" | "assistant" | "system", text: string) => {
     const el = document.createElement("div");
@@ -58,6 +59,20 @@ export function initChatWidget(root: HTMLElement): void {
     messagesEl.appendChild(el);
     messagesEl.scrollTop = messagesEl.scrollHeight;
     return el;
+  };
+
+  const showTyping = () => {
+    const el = document.createElement("div");
+    el.className = "chat-bubble assistant typing";
+    el.innerHTML = "<span></span><span></span><span></span>";
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    typingEl = el;
+  };
+
+  const hideTyping = () => {
+    typingEl?.remove();
+    typingEl = null;
   };
 
   const greetIfEmpty = () => {
@@ -73,20 +88,25 @@ export function initChatWidget(root: HTMLElement): void {
     switch (msg.type) {
       case "history":
         messagesEl.innerHTML = "";
+        typingEl = null;
+        streamEl = null;
         for (const m of msg.messages) addBubble(m.role, m.content);
         greetIfEmpty();
         break;
       case "delta":
+        hideTyping();
         if (!streamEl) streamEl = addBubble("assistant", "");
         streamEl.textContent += msg.text;
         messagesEl.scrollTop = messagesEl.scrollHeight;
         break;
       case "done":
+        hideTyping();
         streamEl = null;
         sendBtn.disabled = false;
         break;
       case "limit":
       case "error":
+        hideTyping();
         streamEl = null;
         sendBtn.disabled = false;
         addBubble("system", msg.message);
@@ -130,6 +150,7 @@ export function initChatWidget(root: HTMLElement): void {
     const text = input.value.trim();
     if (!text || !socket || socket.readyState !== WebSocket.OPEN) return;
     addBubble("user", text);
+    showTyping();
     socket.send(JSON.stringify({type: "chat", text}));
     input.value = "";
     sendBtn.disabled = true;
