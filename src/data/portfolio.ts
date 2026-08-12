@@ -133,15 +133,15 @@ export interface WorkExperience {
 
 export const workExperiences: WorkExperience[] = [
   {
-    role: "Intermediate Software Engineer (L4.5)",
+    role: "Software Engineer II",
     company: "MedMe Health",
     companyLogo: medmeLogo,
     date: "December 2025 – Present",
-    desc: "Leading the design of an event-driven RPA platform that automates pharmacy administrative workflows, for this Y Combinator-backed startup.",
+    desc: "Leading design of the event-driven RPA platform that automates pharmacy admin work at this YC-backed healthtech startup.",
     descBullets: [
-      "Built vendor-agnostic observability across services with OpenTelemetry, shipping traces and metrics into the Grafana LGTM stack.",
+      "Led development of an LLM-based extractor that turns unstructured patient questionnaire answers into structured medication data — solving a long tail of edge cases to lift fax-to-entry accuracy from ~60-65% to 95%+.",
       "Drove HIPAA compliance: access-logged S3 buckets, PHI/PII scrubbing from logs, and server-side encryption of data at rest.",
-      "Led development of an LLM-based extractor that converts unstructured patient questionnaire answers into structured medication data."
+      "Made every service debuggable from one Grafana view — vendor-agnostic OpenTelemetry traces and metrics across the platform."
     ]
   },
   {
@@ -151,9 +151,9 @@ export const workExperiences: WorkExperience[] = [
     date: "April 2025 – December 2025",
     desc: "Owned core platform architecture for HyperStart, the company's contract lifecycle management (CLM) product.",
     descBullets: [
-      "Designed a scalable, event-driven background-job system on AWS SQS and EventBridge — the foundation for cron and async task scheduling across the platform.",
-      "Led the architecture for CRM integrations (Salesforce, HubSpot), automating data prefilling to streamline the client deal-closure pipeline.",
       "Cut infrastructure spend to a 10% MRR-to-server-cost ratio by profiling usage and reallocating resources over 3 months.",
+      "Built the platform's backbone for all async and scheduled work — an event-driven job system on AWS SQS and EventBridge.",
+      "Led the architecture for CRM integrations (Salesforce, HubSpot), automating data prefilling to streamline the client deal-closure pipeline.",
       "Mentored junior engineers and established standardized code-review protocols to raise code quality."
     ]
   },
@@ -164,8 +164,8 @@ export const workExperiences: WorkExperience[] = [
     date: "July 2023 – March 2025",
     desc: "Founding engineer on HyperStart CLM, owning features from design through to customer outcome as the product scaled to $300k ARR.",
     descBullets: [
-      "Optimized contract-listing APIs to respond in under 5 seconds across 15,000+ records by restructuring responses and tuning queries.",
       "Architected an LLM-based pipeline that extracts metadata from signed contracts — a core driver of the product's value proposition.",
+      "Cut contract-listing latency to under 5 seconds across 15,000+ records by restructuring responses and tuning queries.",
       "Spearheaded VAPT and static code analysis for SOC 2 compliance, hardening API Gateways and Auto Scaling Groups.",
       "Built an end-to-end testing pipeline in GitLab CI using Playwright and Docker to ensure stability before deployments."
     ]
