@@ -9,5 +9,8 @@ terraform {
   }
 }
 
-# Auth via CLOUDFLARE_API_TOKEN environment variable.
-provider "cloudflare" {}
+# Auth: var.cloudflare_api_token (from gitignored terraform.tfvars) when set,
+# otherwise the CLOUDFLARE_API_TOKEN environment variable.
+provider "cloudflare" {
+  api_token = var.cloudflare_api_token != "" ? var.cloudflare_api_token : null
+}

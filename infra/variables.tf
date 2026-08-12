@@ -1,3 +1,10 @@
+variable "cloudflare_api_token" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "API token (Zone Settings/DNS/Email Routing write). Prefer a disposable token; falls back to the CLOUDFLARE_API_TOKEN env var when unset."
+}
+
 variable "account_id" {
   type        = string
   description = "Cloudflare account id (dashboard → account home → Account ID)."
