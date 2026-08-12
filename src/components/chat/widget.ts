@@ -117,7 +117,7 @@ export function initChatWidget(root: HTMLElement): void {
   const connect = () => {
     if (socket) return;
     socket = new PartySocket({
-      host: window.location.host,
+      host: import.meta.env.PUBLIC_CHAT_HOST || window.location.host,
       party: "chat-room",
       room: roomId()
     });

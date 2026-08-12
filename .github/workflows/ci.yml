@@ -22,6 +22,9 @@ jobs:
             package-lock.json
             blog/package-lock.json
       - run: npm ci
+      # Secrets live in gitignored .dev.vars locally; wrangler types needs the
+      # key present so the generated Env includes OPPORTUNITY_INBOX.
+      - run: echo "OPPORTUNITY_INBOX=ci@example.com" > .dev.vars
       - run: npx wrangler types
       - run: npm ci --prefix blog
       - run: npm run check-format
