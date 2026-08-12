@@ -92,10 +92,24 @@ try {
 
   // --no-sandbox: CI runners (GitHub ubuntu-24.04 AppArmor, container builds)
   // block Chrome's sandbox; safe here since we only render our own local page.
-  browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  });
+  const launchArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
+  try {
+    browser = await puppeteer.launch({headless: true, args: launchArgs});
+  } catch (err) {
+    // Cloudflare Workers Builds' image lacks Chrome's shared system libraries
+    // (libatk etc.), so puppeteer's own Chrome cannot start there. Fall back
+    // to @sparticuz/chromium — a self-contained build with everything bundled.
+    console.warn(
+      `[generate-resume] system chrome failed (${err.message.split("\n")[0]}); ` +
+        "falling back to @sparticuz/chromium"
+    );
+    const {default: chromium} = await import("@sparticuz/chromium");
+    browser = await puppeteer.launch({
+      headless: true,
+      executablePath: await chromium.executablePath(),
+      args: [...chromium.args, ...launchArgs]
+    });
+  }
   const page = await browser.newPage();
   await page.goto(url, {waitUntil: "networkidle0"});
   await page.pdf({
