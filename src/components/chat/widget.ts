@@ -129,6 +129,7 @@ export function initChatWidget(root: HTMLElement): void {
       }
     });
     socket.addEventListener("close", () => {
+      hideTyping();
       sendBtn.disabled = false;
     });
   };
