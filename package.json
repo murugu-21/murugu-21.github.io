@@ -5,6 +5,7 @@
   "version": "2.0.0",
   "scripts": {
     "dev": "astro dev",
+    "dev:all": "concurrently -n site,worker -c blue,yellow \"astro dev\" \"wrangler dev --port 8787\"",
     "build": "astro build",
     "preview": "astro preview",
     "format": "prettier --write \"src/**/*.{astro,ts,scss}\" \"worker/**/*.ts\" \"*.{ts,jsonc}\"",
@@ -26,6 +27,7 @@
     "@cloudflare/vitest-pool-workers": "^0.21.1",
     "@cloudflare/workers-types": "^5.20260812.1",
     "@types/node": "^25.9.2",
+    "concurrently": "^10.0.1",
     "fontaine": "^0.8.0",
     "pdf-parse": "^2.4.5",
     "prettier": "^3.0.0",

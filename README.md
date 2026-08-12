@@ -54,9 +54,13 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
 - **Widget:** `src/components/chat/` (shared by the blog via relative import).
 - **Email:** `send_email` binding → `OPPORTUNITY_INBOX` (Worker secret).
 - **Limits:** 20 msgs/day per conversation, 300/day globally, 1000 chars/msg.
-- **Local dev:** `npm run build:site && npx wrangler dev` → http://localhost:8787
-  (chat needs the worker; plain `astro dev` shows the widget but can't connect).
+- **Local dev (full-fidelity single-origin):** `npm run build:site && npx wrangler dev` → http://localhost:8787
+  (runs both Astro and Worker on the same origin; chat connects at the Worker origin with full Durable Objects + Workers AI).
   Put `OPPORTUNITY_INBOX=you@example.com` in `.dev.vars` (gitignored).
+- **Local dev (fast HMR loop):** put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env` (gitignored), then run `npm run dev:all`.
+  Starts Astro dev server (with HMR) on :4321 and Worker on :8787 in parallel; the widget connects to the real Worker.
+  Note: the Worker serves grounding from `dist/`, so run `npm run build:site` at least once first, or Jarvis will lack site knowledge.
+  Also note: AI calls in dev hit the real (authenticated) Workers AI, so watch your quota.
 - **Tests:** `npm test` (vitest + workers pool), `npm run check:worker`.
 
 ### One-time cutover (Pages → Worker), in order
