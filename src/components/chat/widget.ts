@@ -134,8 +134,8 @@ export function initChatWidget(root: HTMLElement): void {
     }
   };
 
-  const connect = () => {
-    if (socket) return;
+  const connect = (): PartySocket => {
+    if (socket) return socket;
     socket = new PartySocket({
       host: import.meta.env.PUBLIC_CHAT_HOST || window.location.host,
       party: "chat-room",
@@ -152,6 +152,7 @@ export function initChatWidget(root: HTMLElement): void {
       hideTyping();
       sendBtn.disabled = false;
     });
+    return socket;
   };
 
   launcher.addEventListener("click", () => {
@@ -184,10 +185,10 @@ export function initChatWidget(root: HTMLElement): void {
     // PartySocket buffers sends while CONNECTING/reconnecting and flushes on
     // open — don't gate on readyState or messages get silently dropped
     // during the (re)connect window.
-    if (!socket) connect();
+    const ws = socket ?? connect();
     addBubble("user", text);
     showTyping();
-    socket.send(JSON.stringify({type: "chat", text}));
+    ws.send(JSON.stringify({type: "chat", text}));
     input.value = "";
     sendBtn.disabled = true;
   });
