@@ -38,3 +38,41 @@ Cloudflare Pages (git-integrated) builds on every push to `main` with build comm
 
 - Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio); the hero desk illustration is adapted from that project (recolored to this site's green theme).
 - Originally based on [developerFolio](https://github.com/saadpasta/developerFolio) before the Astro migration.
+
+## AI chat widget
+
+Intercom-style AI concierge on every page (portfolio + blog). Design spec:
+`docs/superpowers/specs/2026-08-12-ai-chat-widget-design.md`.
+
+- **Server:** `worker/` — Cloudflare Worker serving `dist/` as static assets +
+  `ChatRoom` Durable Object (partyserver, SQLite) streaming
+  `@cf/openai/gpt-oss-120b` (Workers AI) over WebSocket at
+  `/parties/chat-room/:roomId`.
+- **Widget:** `src/components/chat/` (shared by the blog via relative import).
+- **Email:** `send_email` binding → `OPPORTUNITY_INBOX` (Worker secret).
+- **Limits:** 20 msgs/day per conversation, 300/day globally, 1000 chars/msg.
+- **Local dev:** `npm run build:site && npx wrangler dev` → http://localhost:8787
+  (chat needs the worker; plain `astro dev` shows the widget but can't connect).
+  Put `OPPORTUNITY_INBOX=you@example.com` in `.dev.vars` (gitignored).
+- **Tests:** `npm test` (vitest + workers pool), `npm run check:worker`.
+
+### One-time cutover (Pages → Worker), in order
+
+1. **Email routing:** `cd infra && terraform init && terraform apply`
+   (needs `CLOUDFLARE_API_TOKEN` env + `terraform.tfvars`, see
+   `terraform.tfvars.example`). Then click the verification link Cloudflare
+   sends to the inbox.
+2. **Worker secret:** `npx wrangler secret put OPPORTUNITY_INBOX`.
+3. **Workers Builds:** Cloudflare dashboard → Workers → create application →
+   connect this repo. Build command:
+   `npm ci --prefix blog && npm run build:site`. Deploy command:
+   `npx wrangler deploy`. Env vars (build): `GITHUB_TOKEN`,
+   `REQUIRE_GITHUB_PROFILE=1`, `PUBLIC_CLARITY_PROJECT_ID`.
+4. **Smoke test** on the `workers.dev` URL: pages render, `_redirects` 301s
+   work, chat answers, opportunity email arrives.
+5. **Access-gate previews:** add a Cloudflare Access policy for the
+   `workers.dev` preview URLs (mirrors the old `*.pages.dev` gating).
+6. **Domain move:** Pages project → remove custom domain `murugappan.dev`;
+   Worker → Settings → Domains & Routes → add custom domain `murugappan.dev`.
+7. **Decommission:** after production traffic is verified on the Worker,
+   delete the Pages project `murugu-21-github-io`.
