@@ -79,6 +79,7 @@ export interface GithubRepo {
   name: string;
   description: string | null;
   url: string;
+  homepageUrl: string | null;
   forkCount: number;
   diskUsage: number;
   primaryLanguage: {name: string; color: string} | null;
@@ -113,7 +114,7 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
       headers: {Authorization: `Bearer ${token}`, "User-Agent": "astro-build"},
       body: JSON.stringify({
         query: `{ user(login: "murugu-21") { pinnedItems(first: 6, types: REPOSITORY) { edges { node { ... on Repository {
-          id name description url forkCount diskUsage
+          id name description url homepageUrl forkCount diskUsage
           primaryLanguage { name color }
           stargazers { totalCount }
           repositoryTopics(first: 12) { nodes { topic { name } } }

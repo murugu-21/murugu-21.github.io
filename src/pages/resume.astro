@@ -1,0 +1,340 @@
+---
+// Standalone resume page — deliberately does NOT use Layout.astro. No chat
+// widget, no theme toggle, always light (this is what scripts/generate-resume.mjs
+// prints to dist/resume.pdf at build time). Portfolio data is the single
+// source of truth: everything below is sourced from src/data/portfolio.ts and
+// src/data/resume.ts, in the same order the PDF resume uses.
+import {
+  greeting,
+  workExperiences,
+  skillsCategories,
+  educationInfo
+} from "../data/portfolio";
+import {resumeContact} from "../data/resume";
+import {fetchPinnedRepos} from "../lib/github";
+
+const repos = (await fetchPinnedRepos()).filter(r => r.description);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Murugappan M — Resume</title>
+    <meta
+      name="description"
+      content={`${resumeContact.title} resume — ${greeting.subTitle}`}
+    />
+  </head>
+  <body>
+    <main class="sheet">
+      <div class="top-bar"></div>
+      <header class="header">
+        <h1 class="name">{resumeContact.name}</h1>
+        <p class="title">{resumeContact.title}</p>
+        <p class="contact-line">
+          {resumeContact.location}
+          {" | "}
+          {
+            resumeContact.phone && (
+              <>
+                {resumeContact.phone}
+                {" | "}
+              </>
+            )
+          }
+          <a href={`mailto:${resumeContact.email}`}>{resumeContact.email}</a>
+          {" | "}
+          <a
+            href={resumeContact.linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {
+              resumeContact.linkedin
+                .replace(/^https?:\/\//, "")
+                .replace(/\/$/, "")
+            }
+          </a>
+          {" | "}
+          <a
+            href={resumeContact.github}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {
+              resumeContact.github
+                .replace(/^https?:\/\//, "")
+                .replace(/\/$/, "")
+            }
+          </a>
+          {" | "}
+          <a
+            href={resumeContact.site}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {resumeContact.site.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+          </a>
+        </p>
+      </header>
+
+      <section class="resume-section">
+        <h2>Professional Summary</h2>
+        <p>{greeting.subTitle}</p>
+      </section>
+
+      <section class="resume-section">
+        <h2>Skills</h2>
+        <ul class="skills-list">
+          {
+            skillsCategories.map(({category, items}) => (
+              <li>
+                <span class="skills-category">{category}:</span> {items}.
+              </li>
+            ))
+          }
+        </ul>
+      </section>
+
+      <section class="resume-section">
+        <h2>Experience</h2>
+        {
+          workExperiences.map(exp => (
+            <div class="role-block">
+              <p class="role-heading">
+                {exp.company}, {exp.location} —{" "}
+                <span class="role-title">{exp.role}</span>
+              </p>
+              <p class="role-date">{exp.date}</p>
+              <p class="role-desc">{exp.desc}</p>
+              {exp.descBullets && exp.descBullets.length > 0 && (
+                <ul>
+                  {exp.descBullets.map(bullet => (
+                    <li>{bullet}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))
+        }
+      </section>
+
+      {
+        repos.length > 0 && (
+          <section class="resume-section">
+            <h2>Projects</h2>
+            {repos.map(repo => (
+              <div class="role-block">
+                <p class="role-heading">
+                  {repo.name}
+                  {repo.homepageUrl && (
+                    <>
+                      {" — "}
+                      <a
+                        href={repo.homepageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {repo.homepageUrl
+                          .replace(/^https?:\/\//, "")
+                          .replace(/\/$/, "")}
+                      </a>
+                    </>
+                  )}
+                </p>
+                <p class="role-desc">{repo.description}</p>
+              </div>
+            ))}
+          </section>
+        )
+      }
+
+      <section class="resume-section">
+        <h2>Education</h2>
+        {
+          educationInfo.map(edu => (
+            <div class="role-block">
+              <p class="role-heading">
+                {edu.schoolName}, {edu.desc.replace(/\.$/, "")} —{" "}
+                <span class="role-title">{edu.subHeader}</span>
+              </p>
+              <p class="role-date">{edu.duration}</p>
+            </div>
+          ))
+        }
+      </section>
+    </main>
+
+    <style>
+      @page {
+        size: Letter;
+        margin: 0.5in 0.6in;
+      }
+
+      :root {
+        --green: #057b01;
+        --bar: #2ccf27;
+        --text: #1a1a1a;
+        --gray: #595959;
+        --link: #1155cc;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #f2f2f2;
+        color: var(--text);
+      }
+
+      body {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 10.5pt;
+        line-height: 1.42;
+      }
+
+      a {
+        color: var(--link);
+        text-decoration: underline;
+      }
+
+      /* Screen preview: centered US-Letter sheet so /resume also looks
+         decent in a browser. Printed output uses @page margins instead of
+         this padding — see the print media block below. */
+      .sheet {
+        max-width: 8.5in;
+        margin: 2rem auto;
+        padding: 0.5in 0.6in;
+        background: #fff;
+        box-shadow: 0 0.1in 0.3in rgba(0, 0, 0, 0.15);
+      }
+
+      .top-bar {
+        height: 8px;
+        background: var(--bar);
+        margin: -0.5in -0.6in 1.1em;
+      }
+
+      .header {
+        margin-bottom: 0.6em;
+      }
+
+      .name {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 30pt;
+        font-weight: 700;
+        margin: 0 0 0.15em;
+        letter-spacing: -0.5px;
+      }
+
+      .title {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        color: var(--green);
+        font-size: 13pt;
+        font-weight: 700;
+        margin: 0 0 0.3em;
+      }
+
+      .contact-line {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 9pt;
+        color: var(--text);
+        margin: 0;
+      }
+
+      .resume-section {
+        margin-top: 0.9em;
+      }
+
+      .resume-section h2 {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        color: var(--green);
+        font-size: 12pt;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin: 0 0 0.4em;
+      }
+
+      .resume-section p {
+        margin: 0 0 0.3em;
+      }
+
+      .skills-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .skills-list li {
+        margin: 0 0 0.35em;
+      }
+
+      .skills-category {
+        font-weight: 700;
+      }
+
+      .role-block {
+        margin-bottom: 0.7em;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .role-heading {
+        font-weight: 700;
+        margin: 0;
+      }
+
+      .role-title {
+        font-weight: 400;
+        font-style: italic;
+      }
+
+      .role-date {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 8.5pt;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--gray);
+        margin: 0.1em 0 0.3em;
+      }
+
+      .role-desc {
+        margin: 0.2em 0;
+      }
+
+      ul {
+        margin: 0.2em 0 0;
+        padding-left: 1.2em;
+      }
+
+      li {
+        margin: 0 0 0.2em;
+      }
+
+      @media print {
+        html,
+        body {
+          background: #fff;
+        }
+
+        .sheet {
+          max-width: none;
+          margin: 0;
+          padding: 0;
+          box-shadow: none;
+        }
+
+        .top-bar {
+          margin: 0 0 1.1em;
+        }
+      }
+    </style>
+  </body>
+</html>

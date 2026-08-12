@@ -34,6 +34,10 @@ npx astro check        # type-check .astro files
 
 Cloudflare Pages (git-integrated) builds on every push to `main` with build command `npm ci --prefix blog && npm run build:site` and output directory `dist`. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, type-check, blog tests, and a build smoke test.
 
+## Resume generation
+
+`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `npm run build:site`, `scripts/generate-resume.mjs` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Cloudflare Pages build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume and in the portfolio's contact section — no phone number is hardcoded in source, so leaving it unset simply omits that line. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Workers Builds' Chromium/Puppeteer compatibility should be re-verified when the AI chat widget cutover (see below) moves builds off Cloudflare Pages; if headless Chromium isn't viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
+
 ## Credits
 
 - Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio); the hero desk illustration is adapted from that project (recolored to this site's green theme).
@@ -66,7 +70,8 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
    connect this repo. Build command:
    `npm ci --prefix blog && npm run build:site`. Deploy command:
    `npx wrangler deploy`. Env vars (build): `GITHUB_TOKEN`,
-   `REQUIRE_GITHUB_PROFILE=1`, `PUBLIC_CLARITY_PROJECT_ID`.
+   `REQUIRE_GITHUB_PROFILE=1`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE`
+   (optional — see "Resume generation" above).
 4. **Smoke test** on the `workers.dev` URL: pages render, `_redirects` 301s
    work, chat answers, opportunity email arrives.
 5. **Access-gate previews:** add a Cloudflare Access policy for the
