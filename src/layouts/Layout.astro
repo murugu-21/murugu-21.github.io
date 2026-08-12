@@ -17,8 +17,11 @@ const {
 } = Astro.props;
 
 // Extend the hand-written knowsAbout list below with the resume's skills
-// taxonomy — split each category's "items" string on commas/semicolons/em
-// dashes, trim, drop empties and anything already present (case-insensitive).
+// taxonomy — split each category's "items" string on semicolons/em dashes and
+// on commas that are NOT inside a parenthesized group (so "(AWS SQS,
+// EventBridge)" stays intact instead of splitting into two unbalanced
+// fragments), trim, drop empties and anything already present
+// (case-insensitive).
 const handWrittenKnowsAbout = [
   "TypeScript",
   "Node.js",
@@ -33,7 +36,7 @@ const handWrittenKnowsAbout = [
 const seenKnowsAbout = new Set(handWrittenKnowsAbout.map(s => s.toLowerCase()));
 const extraKnowsAbout: string[] = [];
 for (const {items} of skillsCategories) {
-  for (const raw of items.split(/[,;]|—/)) {
+  for (const raw of items.split(/;|—|,(?![^()]*\))/)) {
     const term = raw.trim();
     if (!term) continue;
     const key = term.toLowerCase();

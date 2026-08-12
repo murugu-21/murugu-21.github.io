@@ -342,7 +342,11 @@ export const contactInfo = {
   subtitle:
     "Want to discuss a project, a role, or just say hi? My inbox is open.",
   // No phone number is hardcoded in source — set RESUME_PHONE (build env /
-  // local .env) to show it. Empty string renders nothing (see GithubCard.astro).
+  // local .env) to populate it. This value only ever renders in
+  // GithubCard.astro's no-GitHub-profile fallback contact view (production
+  // renders the profile branch instead, which never reads contactInfo.number
+  // — see GithubCard.astro). The resume page (src/data/resume.ts) reads the
+  // same env var independently for its contact line.
   number: import.meta.env.RESUME_PHONE ?? "",
   emailAddress: "murugu2001@gmail.com"
 };
