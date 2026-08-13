@@ -243,10 +243,14 @@ export function ChatWidget() {
     };
   }, []);
 
-  // Keep the newest message in view.
+  // Keep the newest message in view — except on a fresh conversation, where
+  // the greeting (top) must stay visible even if the starter chips overflow
+  // a keyboard-shrunken mobile viewport.
   useEffect(() => {
     const v = viewportRef.current;
-    if (v) v.scrollTop = v.scrollHeight;
+    if (!v) return;
+    const fresh = bubbles.length === 0 && stream === null;
+    v.scrollTop = fresh ? 0 : v.scrollHeight;
   }, [bubbles, stream, typing, greeted, open]);
 
   // Body scroll lock while the panel is full-screen (mobile).
@@ -263,8 +267,12 @@ export function ChatWidget() {
     };
   }, [open]);
 
+  // Autofocus only on desktop: on phones it pops the keyboard the instant
+  // the panel opens, halving the viewport and hiding the greeting.
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (open && window.matchMedia("(min-width: 640px)").matches) {
+      inputRef.current?.focus();
+    }
   }, [open]);
 
   useEffect(
