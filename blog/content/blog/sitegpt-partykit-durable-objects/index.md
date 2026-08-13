@@ -176,17 +176,21 @@ A million concurrent conversations means a million small, independent processes,
 
 Within one room, the ceiling is real: single-threaded execution means one very hot room is bounded by what one process can do, and the practical answer for enormous rooms is sharding them across several objects. For conversations, support chats, docs, lobbies — rooms measured in ones to thousands of participants — you will never feel it. For a 500k-viewer broadcast, this is the wrong primitive (more on that below).
 
-The economics deserve honesty in both directions, because "serverless is cheap" is only half a sentence — it's cheap *at low and spiky utilization*, and you pay a premium per unit of compute for that elasticity. Here's the real shape, using Cloudflare's published rates (requests $0.15/M — websocket messages bill at a 20:1 ratio — duration $12.50/M GB-s, storage $0.20/GB-month) against a minimal VM stack:
+The economics deserve honesty in both directions, because "serverless is cheap" is only half a sentence — it's cheap *at low and spiky utilization*, and you pay a premium per unit of compute for that elasticity. So here are actual monthly estimates, computed from Cloudflare's published rates (Workers Paid $5/mo base; requests $0.15/M with websocket messages billed 20:1; duration $12.50/M GB-s beyond 400k included; SQLite rows written $1.00/M beyond 50M included; storage $0.20/GB-month) against ballpark list prices for a VM stack (VMs, managed Redis, load balancer, managed Postgres). Assumptions: an AI chat like this site's — the room stays awake ~2 seconds per message at 128 MB while the LLM streams — and 2 database rows per message.
+
+| Traffic | socket.io + Redis | Workers + Durable Objects | Difference |
+| --- | --- | --- | --- |
+| ~1k messages/day | ~$60 (2 small VMs $25, Redis $15, LB $10, Postgres $10) | **$0** — inside the free tier | **DO saves ~$60 (100%)** |
+| ~100k messages/day | ~$60 — same floor, barely working | **~$10** ($5 base + ~$4 duration) | **DO saves ~$50 (~6× cheaper)** |
+| ~1M messages/day | ~$150–200 — bigger VMs, bigger Redis, real Postgres | **~$105** ($89 duration + $10 rows + $5 base + misc) | **DO saves ~$50–90 (~40%)** |
+| ~10M messages/day, sustained | ~$250–350 — 3–4 solid VMs, still linear-ish | **~$1,500** (duration ~$930 + rows written ~$550) | **VMs save ~$1,150+ (~5× cheaper)** |
+
+Read the last column top to bottom and you can see the crossover happen — under these assumptions it sits just past a million messages a day. Two footnotes that move it: a plain human-relay chat (no LLM holding the room awake) cuts the DO duration bill by an order of magnitude, pushing the crossover much further out; and the VM column silently assumes somebody patches, scales, and does failover for four systems — price that ops time in and the crossover moves out again. Serverless converts a fixed cost plus an ops job into a linear per-use cost; past sustained heavy throughput, dedicated hardware wins on unit price — which is one reason WhatsApp runs its own Erlang fleet instead of renting actors by the GB-second.
 
 | | socket.io + Redis | Workers + Durable Objects |
 | --- | --- | --- |
-| Day one | ~$40–90/mo floor (2 VMs, managed Redis, LB, DB) — even at zero traffic | $0–5/mo; this site's chatbot fits in the free tier |
-| ~1M messages/day | same footprint, maybe one size up: ~$100–200/mo | duration becomes the bill: rooms are awake while handling messages, so roughly $50–100/mo at a couple of active seconds per message |
-| Sustained heavy load | **wins on raw compute** — a well-utilized VM's GB-second costs a fraction of serverless rates | you keep paying the elasticity premium at every scale |
 | Idle / spiky traffic | full price, 24/7 | ~zero — `hibernate: true` parks idle rooms while the platform holds their sockets open |
-| The hidden line item | ops time: patching, scaling, failover across four systems | vendor margin baked into unit prices |
-
-The crossover logic is boring and true: serverless converts a fixed cost plus an ops burden into a linear per-use cost. Below the crossover — hobby projects, startups pre-product-market-fit, anything with idle nights — the actor stack is dramatically cheaper *and* removes the ops job. Past it — high, sustained, predictable throughput — dedicated servers win on unit price, which is one reason WhatsApp runs its own Erlang fleet instead of renting actors by the GB-second.
+| The hidden line item | ops time across four systems | vendor margin baked into unit prices |
 
 ## When socket.io + Redis is still the right answer
 
