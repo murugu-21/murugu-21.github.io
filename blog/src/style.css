@@ -278,6 +278,23 @@ a:focus {
   align-items: center;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.rss-link {
+  display: inline-flex;
+  align-items: center;
+  color: #f26522;
+  box-shadow: none;
+}
+
+.rss-link:hover {
+  color: var(--color-primary);
+}
+
 .main-heading {
   font-size: var(--fontSize-6);
   margin: 0;
@@ -402,6 +419,18 @@ a.anchor svg[aria-hidden="true"] {
 }
 
 .mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Diagrams render with mermaid's light "neutral" theme; give them a solid
+   light card so labels outside node boxes (sequence-diagram text, edge
+   labels) stay readable in dark mode — and stay correct if the user
+   toggles theme after the SVGs were rendered. */
+.mermaid-diagram img {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
   max-width: 100%;
   height: auto;
 }

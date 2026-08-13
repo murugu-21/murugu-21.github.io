@@ -8,7 +8,6 @@
 - [Blog](https://murugappan.dev/blog)
 - [GitHub](https://github.com/murugu-21)
 - [LinkedIn](https://www.linkedin.com/in/murugappan-m-56920a192/)
-- [Stack Overflow](https://stackoverflow.com/users/15790108/murugappan-m)
 
 ## Machine-readable feeds
 - [Blog RSS](https://murugappan.dev/blog/rss.xml)

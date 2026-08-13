@@ -30,8 +30,8 @@ export const socialMediaLinks = {
   github: "https://github.com/murugu-21",
   linkedin: "https://www.linkedin.com/in/murugappan-m-56920a192/",
   gmail: "murugu2001@gmail.com",
-  stackoverflow: "https://stackoverflow.com/users/15790108/murugappan-m",
-  twitter: "https://twitter.com/murugu21"
+  twitter: "https://twitter.com/murugu21",
+  rss: "https://murugappan.dev/blog/rss.xml"
 };
 
 // Skills Section
@@ -314,6 +314,12 @@ export const blogSection: {
   subtitle:
     "I write about real-world software engineering — distributed systems, cloud architecture, and lessons from production.",
   blogs: [
+    {
+      url: "https://murugappan.dev/blog/sitegpt-partykit-durable-objects/",
+      title: "Why SiteGPT's chat runs on PartyKit, not socket.io + Redis",
+      description:
+        "How a one-process-per-room architecture replaces socket.io + Redis for realtime chat — with production code, cost math, and the actor-model tradeoffs, drawn from the chatbot running on this site."
+    },
     {
       url: "https://murugappan.dev/blog/eventform-outbox-pipeline-claude/",
       title: "Forms in, webhooks out: an event-driven pipeline",
