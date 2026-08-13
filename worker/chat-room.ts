@@ -4,6 +4,8 @@ import {runModelExchange} from "./ai";
 import {parseLeadArguments, sendOpportunityEmail, type Lead} from "./email";
 import {getGrounding} from "./grounding";
 import {buildMessages, ROOM_DAILY_LIMIT} from "./prompt";
+import {neuronCost} from "./rate-limiter";
+import {type Usage} from "./sse";
 import {
   parseClientMessage,
   type ChatHistoryEntry,
@@ -63,10 +65,9 @@ export class ChatRoom extends Server<Env> {
       this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
       return;
     }
-    const limiter = this.env.RateLimiter.get(
-      this.env.RateLimiter.idFromName("global")
-    );
-    if (!(await limiter.consume())) {
+    // Neuron budget: cheap pre-check here, actual usage charged after each
+    // model exchange — the daily cap tracks what Workers AI really serves.
+    if (!(await this.limiter().hasBudget())) {
       this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
       return;
     }
@@ -80,6 +81,7 @@ export class ChatRoom extends Server<Env> {
         buildMessages(grounding, this.history()),
         text => this.send(connection, {type: "delta", text})
       );
+      await this.chargeUsage(result.usage);
 
       let reply = result.content;
       const capture = result.toolCalls.find(
@@ -162,7 +164,24 @@ export class ChatRoom extends Server<Env> {
       ],
       text => this.send(connection, {type: "delta", text})
     );
+    await this.chargeUsage(followUp.usage);
     return followUp.content;
+  }
+
+  private limiter() {
+    return this.env.RateLimiter.get(this.env.RateLimiter.idFromName("global"));
+  }
+
+  private async chargeUsage(usage: Usage | null): Promise<void> {
+    if (!usage) return;
+    try {
+      await this.limiter().charge(
+        neuronCost(usage.promptTokens, usage.completionTokens)
+      );
+    } catch (err) {
+      // Budget accounting must never take down a chat that already answered.
+      console.error("neuron charge failed", err);
+    }
   }
 
   private storeLead(lead: Lead): void {
