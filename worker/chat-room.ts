@@ -14,6 +14,7 @@ import {
 import {NEURON_DAILY_BUDGET, neuronCost} from "./rate-limiter";
 import {type StreamResult, type Usage} from "./sse";
 import {
+  GREETING,
   parseClientMessage,
   type ChatHistoryEntry,
   type ServerMessage
@@ -67,6 +68,13 @@ export class ChatRoom extends Server<Env> {
   }
 
   onConnect(connection: Connection): void {
+    // Seed the greeting as the room's first persisted message so history
+    // replays and transcript downloads always include the opener. The check
+    // and insert are synchronous — no interleaving, no double seed.
+    const count = this.ctx.storage.sql
+      .exec(`SELECT COUNT(*) AS n FROM messages`)
+      .one().n as number;
+    if (count === 0) this.persist("assistant", GREETING);
     this.send(connection, {type: "history", messages: this.history()});
   }
 

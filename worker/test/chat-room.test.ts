@@ -2,8 +2,27 @@ import {env, runInDurableObject} from "cloudflare:test";
 import {describe, expect, it} from "vitest";
 
 import {ChatRoom} from "../chat-room";
+import {GREETING} from "../protocol";
 
 describe("ChatRoom storage", () => {
+  it("seeds the greeting exactly once on first connect", async () => {
+    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-greet"));
+    await runInDurableObject(stub, async (instance: ChatRoom) => {
+      instance.onStart();
+      const sent: string[] = [];
+      const conn = {send: (d: string) => sent.push(d)} as never;
+      instance.onConnect(conn);
+      instance.onConnect(conn); // reconnect must not seed again
+      const rows = instance.ctx.storage.sql
+        .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
+        .toArray();
+      expect(rows).toEqual([{role: "assistant", content: GREETING}]);
+      // both history frames include the greeting
+      const last = JSON.parse(sent[1]);
+      expect(last.messages).toEqual([{role: "assistant", content: GREETING}]);
+    });
+  });
+
   it("creates tables on start and persists/reads messages in order", async () => {
     const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-a"));
     await runInDurableObject(stub, async (instance: ChatRoom) => {

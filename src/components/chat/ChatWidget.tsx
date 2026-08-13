@@ -13,7 +13,7 @@ import {
   X
 } from "lucide-react";
 
-import type {ServerMessage} from "../../../worker/protocol";
+import {GREETING, type ServerMessage} from "../../../worker/protocol";
 import {Button} from "../ui/button";
 import {Card, CardFooter, CardHeader} from "../ui/card";
 import {
@@ -30,9 +30,6 @@ import "./chat.css";
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
 const MAX_LENGTH = 1000;
-
-const GREETING =
-  "Hi, I'm Jarvis — Murugappan's AI assistant. Ask me about his experience, projects, or blog posts — or tell me about an opportunity for him.";
 
 // Shown as tappable chips while the conversation is empty. Subtle by design:
 // each steers Jarvis toward a strong grounded answer without selling.
@@ -143,8 +140,11 @@ export function ChatWidget() {
         streamRef.current = null;
         setStream(null);
         // One state swap = one paint, same as the old replaceChildren fix.
+        // The server seeds the greeting as the room's first message, so it
+        // arrives inside history — the local `greeted` bubble is only the
+        // offline fallback and must clear once real history lands.
         setBubbles(msg.messages.map(m => ({kind: m.role, text: m.content})));
-        if (msg.messages.length === 0) setGreeted(true);
+        setGreeted(false);
         break;
       case "delta": {
         // Left-trim the first chunk — Qwen's no-think mode leads with blank
@@ -292,7 +292,7 @@ export function ChatWidget() {
   useEffect(() => {
     const v = viewportRef.current;
     if (!v) return;
-    const fresh = bubbles.length === 0 && stream === null;
+    const fresh = stream === null && bubbles.every(b => b.kind !== "user");
     v.scrollTop = fresh ? 0 : v.scrollHeight;
   }, [bubbles, stream, typing, greeted, open]);
 
@@ -329,8 +329,14 @@ export function ChatWidget() {
     []
   );
 
+  // Starters show until the visitor has said anything — the greeting seeded
+  // by the server (or the offline fallback) doesn't count as conversation.
   const showStarters =
-    greeted && bubbles.length === 0 && stream === null && !typing && !sending;
+    (greeted || bubbles.length > 0) &&
+    bubbles.every(b => b.kind !== "user") &&
+    stream === null &&
+    !typing &&
+    !sending;
 
   const headerBtn =
     "size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-[18px]";
