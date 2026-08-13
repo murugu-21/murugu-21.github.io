@@ -39,13 +39,13 @@ import Icon from "./Icon.astro";
     <Icon name="twitter" />
   </a>
   <a
-    href={socialMediaLinks.stackoverflow}
-    class="icon-button stack-overflow"
+    href={socialMediaLinks.rss}
+    class="icon-button rss"
     target="_blank"
     rel="noopener noreferrer"
-    aria-label="Stack Overflow profile"
+    aria-label="Subscribe to the blog RSS feed"
   >
-    <Icon name="stack-overflow" />
+    <Icon name="rss" />
   </a>
 </div>
 
@@ -98,8 +98,8 @@ import Icon from "./Icon.astro";
     background-color: $twitter;
   }
 
-  .stack-overflow :global(svg) {
-    background-color: $stackoverflow;
+  .rss :global(svg) {
+    background-color: $rss;
   }
 
   /* Hover Transition */
@@ -107,7 +107,7 @@ import Icon from "./Icon.astro";
   .google :global(svg:hover),
   .github :global(svg:hover),
   .linkedin :global(svg:hover),
-  .stack-overflow :global(svg:hover) {
+  .rss :global(svg:hover) {
     background-color: $buttonColor; // theme green; was $textColor (#2e353f) which blended into the dark background
   }
 
