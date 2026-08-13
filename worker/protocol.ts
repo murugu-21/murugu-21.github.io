@@ -8,7 +8,11 @@ export const GREETING =
   "Hi, I'm Jarvis — Murugappan's AI assistant. Ask me about his experience, " +
   "projects, or blog posts — or tell me about an opportunity for him.";
 
-export type ClientMessage = {type: "chat"; text: string};
+// `page` is the site path the visitor is on when they send the message —
+// optional context, never persisted, validated to a plain absolute path.
+export type ClientMessage = {type: "chat"; text: string; page?: string};
+
+const PAGE_PATH = /^\/[^\s]{0,199}$/;
 
 export type ChatHistoryEntry = {role: "user" | "assistant"; content: string};
 
@@ -32,5 +36,9 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
   if (msg.type !== "chat" || typeof msg.text !== "string") return null;
   const text = msg.text.trim();
   if (text.length === 0 || text.length > MAX_MESSAGE_LENGTH) return null;
-  return {type: "chat", text};
+  const page =
+    typeof msg.page === "string" && PAGE_PATH.test(msg.page)
+      ? msg.page
+      : undefined;
+  return {type: "chat", text, page};
 }

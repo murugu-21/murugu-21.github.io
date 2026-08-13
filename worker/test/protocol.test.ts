@@ -23,6 +23,21 @@ describe("parseClientMessage", () => {
     expect(parseClientMessage(JSON.stringify({type: "chat"}))).toBeNull();
   });
 
+  it("accepts a valid page path and drops invalid ones", () => {
+    expect(
+      parseClientMessage(
+        JSON.stringify({type: "chat", text: "hi", page: "/blog/react/"})
+      )?.page
+    ).toBe("/blog/react/");
+    for (const bad of ["blog/react", "https://evil.example/x", "/a b", "x"]) {
+      expect(
+        parseClientMessage(
+          JSON.stringify({type: "chat", text: "hi", page: bad})
+        )?.page
+      ).toBeUndefined();
+    }
+  });
+
   it("rejects empty and oversized messages", () => {
     expect(
       parseClientMessage(JSON.stringify({type: "chat", text: "   "}))

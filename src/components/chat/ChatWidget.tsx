@@ -229,7 +229,11 @@ export function ChatWidget() {
     setTyping(true);
     setSending(true);
     setConfirmRestart(false);
-    ws.send(JSON.stringify({type: "chat", text}));
+    // Include the page the visitor is on — the room feeds it to the model as
+    // ephemeral context so "this post"/"this page" resolve correctly.
+    ws.send(
+      JSON.stringify({type: "chat", text, page: window.location.pathname})
+    );
   };
 
   const onSubmit = (e: React.FormEvent) => {

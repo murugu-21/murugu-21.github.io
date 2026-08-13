@@ -128,10 +128,20 @@ ${grounding}
 
 export function buildMessages(
   grounding: string,
-  history: ChatHistoryEntry[]
+  history: ChatHistoryEntry[],
+  page?: string
 ): ModelMessage[] {
-  return [
+  const messages: ModelMessage[] = [
     {role: "system", content: buildSystemPrompt(grounding)},
     ...history.slice(-MAX_HISTORY_MESSAGES)
   ];
+  // Ephemeral context, never persisted: lets "this post"/"this page" resolve
+  // (and pair with fetch_page) without fragmenting the conversation per page.
+  if (page) {
+    messages.push({
+      role: "system",
+      content: `The visitor is currently reading https://murugappan.dev${page} — if they ask about "this page" or "this post", that is the page they mean; use fetch_page on it when the summary isn't enough.`
+    });
+  }
+  return messages;
 }

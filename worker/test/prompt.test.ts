@@ -38,6 +38,20 @@ describe("prompt", () => {
     ]);
   });
 
+  it("appends an ephemeral page-context system message when page is given", () => {
+    const messages = buildMessages(
+      "g",
+      [{role: "user", content: "hi"}],
+      "/blog/react/"
+    );
+    const last = messages.at(-1);
+    expect(last?.role).toBe("system");
+    expect(last?.content).toContain("https://murugappan.dev/blog/react/");
+    // and without page, no trailing system message
+    const plain = buildMessages("g", [{role: "user", content: "hi"}]);
+    expect(plain.at(-1)?.role).toBe("user");
+  });
+
   it("clips history to the most recent MAX_HISTORY_MESSAGES", () => {
     const history = Array.from({length: 50}, (_, i) => ({
       role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",

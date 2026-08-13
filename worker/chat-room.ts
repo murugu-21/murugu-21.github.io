@@ -106,7 +106,7 @@ export class ChatRoom extends Server<Env> {
     this.persist("user", msg.text);
 
     try {
-      await this.generate(connection, provider);
+      await this.generate(connection, provider, msg.page);
     } catch (err) {
       console.error("chat generation failed", err);
       if (isNeuronExhaustion(err)) {
@@ -118,7 +118,7 @@ export class ChatRoom extends Server<Env> {
         await this.exhaustBudget();
         if (this.deepseekKey()) {
           try {
-            await this.generate(connection, "deepseek");
+            await this.generate(connection, "deepseek", msg.page);
             return;
           } catch (fallbackErr) {
             console.error("deepseek fallback failed", fallbackErr);
@@ -140,12 +140,17 @@ export class ChatRoom extends Server<Env> {
   // opportunity capture (a follow-up exchange on the same provider), persist.
   private async generate(
     connection: Connection,
-    provider: Provider
+    provider: Provider,
+    page?: string
   ): Promise<void> {
     const onDelta = (text: string) =>
       this.send(connection, {type: "delta", text});
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
-    const messages: ModelMessage[] = buildMessages(grounding, this.history());
+    const messages: ModelMessage[] = buildMessages(
+      grounding,
+      this.history(),
+      page
+    );
 
     const MAX_FETCH_ROUNDS = 2;
     let reply = "";
@@ -159,7 +164,7 @@ export class ChatRoom extends Server<Env> {
       if (!fetchCall || round >= MAX_FETCH_ROUNDS) break;
 
       const url = parseFetchArguments(fetchCall.arguments);
-      const page = url
+      const pageText = url
         ? await fetchSitePage(this.env.ASSETS, url)
         : "The url argument was missing.";
       messages.push(
@@ -174,7 +179,7 @@ export class ChatRoom extends Server<Env> {
             }
           ]
         },
-        {role: "tool", tool_call_id: fetchCall.id, content: page}
+        {role: "tool", tool_call_id: fetchCall.id, content: pageText}
       );
     }
 
