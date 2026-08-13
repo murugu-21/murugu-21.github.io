@@ -146,6 +146,10 @@ export function ChatWidget() {
         setBubbles(msg.messages.map(m => ({kind: m.role, text: m.content})));
         setGreeted(false);
         break;
+      case "visitor":
+        // Another tab of this room sent a message — mirror it here.
+        setBubbles(b => [...b, {kind: "user", text: msg.text}]);
+        break;
       case "delta": {
         // Left-trim the first chunk — Qwen's no-think mode leads with blank
         // lines; keep showing the typing dots until real text arrives.

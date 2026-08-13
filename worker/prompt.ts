@@ -137,10 +137,16 @@ export function buildMessages(
   ];
   // Ephemeral context, never persisted: lets "this post"/"this page" resolve
   // (and pair with fetch_page) without fragmenting the conversation per page.
+  // "this post" is only hard-bound on actual post pages — off a post, the
+  // conversation history is the right way to resolve it.
   if (page) {
+    const url = `https://murugappan.dev${page}`;
+    const isPost = /^\/blog\/.+/.test(page);
     messages.push({
       role: "system",
-      content: `The visitor is currently reading https://murugappan.dev${page} — if they ask about "this page" or "this post", that is the page they mean; use fetch_page on it when the summary isn't enough.`
+      content: isPost
+        ? `The visitor is currently reading the blog post at ${url} — if they ask about "this post" or "this page", that is the one they mean; use fetch_page on it when the summary isn't enough.`
+        : `The visitor is currently browsing ${url} — if they ask about "this page", that is the page they mean. If they ask about "this post" here, they mean whichever post the conversation was about.`
     });
   }
   return messages;

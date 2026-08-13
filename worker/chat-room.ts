@@ -78,6 +78,12 @@ export class ChatRoom extends Server<Env> {
     this.send(connection, {type: "history", messages: this.history()});
   }
 
+  // Serializes turns: two tabs of the same room can send concurrently, and
+  // although the DO is single-threaded, two onMessage invocations would
+  // interleave across await points — garbling the broadcast streams. Each
+  // turn waits for the previous one to finish.
+  private pendingTurn: Promise<void> = Promise.resolve();
+
   async onMessage(connection: Connection, raw: unknown): Promise<void> {
     const msg = parseClientMessage(raw);
     if (!msg) {
@@ -88,6 +94,15 @@ export class ChatRoom extends Server<Env> {
       return;
     }
 
+    const turn = this.pendingTurn.then(() => this.handleTurn(connection, msg));
+    this.pendingTurn = turn.catch(() => {});
+    await turn;
+  }
+
+  private async handleTurn(
+    connection: Connection,
+    msg: {text: string; page?: string}
+  ): Promise<void> {
     if (this.userMessagesSince(Date.now() - DAY_MS) >= ROOM_DAILY_LIMIT) {
       this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
       return;
@@ -104,6 +119,9 @@ export class ChatRoom extends Server<Env> {
     }
 
     this.persist("user", msg.text);
+    // Keep other open tabs of this room in sync — the sender already
+    // rendered its own bubble optimistically, so it is excluded.
+    this.broadcastMsg({type: "visitor", text: msg.text}, [connection.id]);
 
     try {
       await this.generate(connection, provider, msg.page);
@@ -143,8 +161,8 @@ export class ChatRoom extends Server<Env> {
     provider: Provider,
     page?: string
   ): Promise<void> {
-    const onDelta = (text: string) =>
-      this.send(connection, {type: "delta", text});
+    // Replies stream to every open tab of the room, not just the sender.
+    const onDelta = (text: string) => this.broadcastMsg({type: "delta", text});
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
     const messages: ModelMessage[] = buildMessages(
       grounding,
@@ -184,7 +202,7 @@ export class ChatRoom extends Server<Env> {
     }
 
     if (capture) {
-      if (reply) this.send(connection, {type: "delta", text: "\n"});
+      if (reply) this.broadcastMsg({type: "delta", text: "\n"});
       const followUp = await this.handleCapture(capture, connection, provider);
       reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
     }
@@ -193,7 +211,7 @@ export class ChatRoom extends Server<Env> {
     // fetch rounds can leave gaps where content spans exchanges.
     reply = reply.replace(/\n{3,}/g, "\n\n").trim();
     if (reply) this.persist("assistant", reply);
-    this.send(connection, {type: "done"});
+    this.broadcastMsg({type: "done"});
   }
 
   private async exchange(
@@ -298,7 +316,7 @@ export class ChatRoom extends Server<Env> {
           })
         }
       ],
-      text => this.send(connection, {type: "delta", text})
+      text => this.broadcastMsg({type: "delta", text})
     );
     return followUp.content;
   }
@@ -356,6 +374,10 @@ export class ChatRoom extends Server<Env> {
       content,
       Date.now()
     );
+  }
+
+  private broadcastMsg(message: ServerMessage, exclude?: string[]): void {
+    this.broadcast(JSON.stringify(message), exclude);
   }
 
   private send(connection: Connection, message: ServerMessage): void {

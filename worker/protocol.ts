@@ -18,6 +18,9 @@ export type ChatHistoryEntry = {role: "user" | "assistant"; content: string};
 
 export type ServerMessage =
   | {type: "history"; messages: ChatHistoryEntry[]}
+  // Echo of another tab's user message (the sending tab renders its own
+  // bubble optimistically and is excluded from this broadcast).
+  | {type: "visitor"; text: string}
   | {type: "delta"; text: string}
   | {type: "done"}
   | {type: "limit"; message: string}
