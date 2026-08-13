@@ -7,7 +7,9 @@ import type {ChatHistoryEntry} from "./protocol";
 // rate-limiter.ts or the budget falls back to the most expensive known rate.
 export const MODEL_ID = "@cf/qwen/qwen3-30b-a3b-fp8";
 export const MAX_HISTORY_MESSAGES = 20;
-export const ROOM_DAILY_LIMIT = 20;
+// Per-visitor fairness cap (rolling 24h): one room can burn at most ~8% of
+// the global neuron budget; the RateLimiter DO is the hard backstop.
+export const ROOM_DAILY_LIMIT = 40;
 
 // OpenAI-compatible message shapes throughout, so the transport can point at
 // any chat-completions provider (Workers AI today; DeepSeek/Kimi/etc. via AI
