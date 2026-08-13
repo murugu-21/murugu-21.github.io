@@ -1,11 +1,16 @@
 import {Server, type Connection} from "partyserver";
 
-import {runModelExchange} from "./ai";
+import {runDeepseekExchange, runModelExchange} from "./ai";
 import {parseLeadArguments, sendOpportunityEmail, type Lead} from "./email";
 import {getGrounding} from "./grounding";
-import {buildMessages, MODEL_ID, ROOM_DAILY_LIMIT} from "./prompt";
+import {
+  buildMessages,
+  MODEL_ID,
+  ROOM_DAILY_LIMIT,
+  type ModelMessage
+} from "./prompt";
 import {NEURON_DAILY_BUDGET, neuronCost} from "./rate-limiter";
-import {type Usage} from "./sse";
+import {type StreamResult, type Usage} from "./sse";
 import {
   parseClientMessage,
   type ChatHistoryEntry,
@@ -25,6 +30,10 @@ function isNeuronExhaustion(err: unknown): boolean {
 const LIMIT_MESSAGE =
   "I've hit my chat budget for now — please reach Murugappan directly " +
   "through the social links on this site instead.";
+
+// "workers-ai" = free neuron allocation (primary); "deepseek" = paid BYOK
+// overflow once the allocation is spent.
+type Provider = "workers-ai" | "deepseek";
 
 export class ChatRoom extends Server<Env> {
   static options = {hibernate: true};
@@ -73,51 +82,100 @@ export class ChatRoom extends Server<Env> {
       this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
       return;
     }
-    // Neuron budget: cheap pre-check here, actual usage charged after each
-    // model exchange — the daily cap tracks what Workers AI really serves.
+    // Neuron budget: free Workers AI while the allocation lasts, then route
+    // to DeepSeek (BYOK) if a key is configured; without one, gate politely.
+    let provider: Provider = "workers-ai";
     if (!(await this.limiter().hasBudget())) {
-      this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
-      return;
+      if (!this.deepseekKey()) {
+        this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+        return;
+      }
+      provider = "deepseek";
     }
 
     this.persist("user", msg.text);
 
     try {
-      const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
-      const result = await runModelExchange(
-        this.env.AI,
-        buildMessages(grounding, this.history()),
-        text => this.send(connection, {type: "delta", text})
-      );
-      await this.chargeUsage(result.usage);
-
-      let reply = result.content;
-      const capture = result.toolCalls.find(
-        t => t.name === "capture_opportunity"
-      );
-      if (capture) {
-        if (reply) this.send(connection, {type: "delta", text: "\n"});
-        const followUp = await this.handleCapture(capture, connection);
-        reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
-      }
-
-      if (reply) this.persist("assistant", reply);
-      this.send(connection, {type: "done"});
+      await this.generate(connection, provider);
     } catch (err) {
       console.error("chat generation failed", err);
       if (isNeuronExhaustion(err)) {
         // Workers AI says the account allocation is spent — our counter can
         // miss usage it never saw (e.g. burned before a deploy). Sync it so
-        // hasBudget() gates cleanly until the 00:00 UTC reset.
+        // hasBudget() routes straight to the fallback until 00:00 UTC, and
+        // retry this message on DeepSeek right away. The 4006 comes from the
+        // ai.run() call itself, so nothing has been streamed yet.
         await this.exhaustBudget();
-        this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
-        return;
+        if (this.deepseekKey()) {
+          try {
+            await this.generate(connection, "deepseek");
+            return;
+          } catch (fallbackErr) {
+            console.error("deepseek fallback failed", fallbackErr);
+          }
+        } else {
+          this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+          return;
+        }
       }
       this.send(connection, {
         type: "error",
         message: "Something went wrong on my end — please try again."
       });
     }
+  }
+
+  // One full reply turn: grounded exchange, optional opportunity capture
+  // (which runs a follow-up exchange on the same provider), persist, done.
+  private async generate(
+    connection: Connection,
+    provider: Provider
+  ): Promise<void> {
+    const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
+    const result = await this.exchange(
+      provider,
+      buildMessages(grounding, this.history()),
+      text => this.send(connection, {type: "delta", text})
+    );
+
+    let reply = result.content;
+    const capture = result.toolCalls.find(
+      t => t.name === "capture_opportunity"
+    );
+    if (capture) {
+      if (reply) this.send(connection, {type: "delta", text: "\n"});
+      const followUp = await this.handleCapture(capture, connection, provider);
+      reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
+    }
+
+    if (reply) this.persist("assistant", reply);
+    this.send(connection, {type: "done"});
+  }
+
+  private async exchange(
+    provider: Provider,
+    messages: ModelMessage[],
+    onDelta: (text: string) => void
+  ): Promise<StreamResult> {
+    if (provider === "deepseek") {
+      const result = await runDeepseekExchange(
+        this.deepseekKey()!,
+        messages,
+        onDelta
+      );
+      // Paid tokens — keep spend visible in `wrangler tail`.
+      console.log("deepseek usage", JSON.stringify(result.usage));
+      return result;
+    }
+    const result = await runModelExchange(this.env.AI, messages, onDelta);
+    await this.chargeUsage(result.usage);
+    return result;
+  }
+
+  private deepseekKey(): string | null {
+    const key = (this.env as {DEEPSEEK_API_KEY?: string}).DEEPSEEK_API_KEY;
+    const trimmed = key?.trim();
+    return trimmed && !trimmed.startsWith("placeholder") ? trimmed : null;
   }
 
   private async exhaustBudget(): Promise<void> {
@@ -134,7 +192,8 @@ export class ChatRoom extends Server<Env> {
   // phrase the confirmation using the tool result.
   private async handleCapture(
     capture: {id: string; name: string; arguments: string},
-    connection: Connection
+    connection: Connection,
+    provider: Provider
   ): Promise<string> {
     const lead = parseLeadArguments(capture.arguments);
     if (!lead) return "";
@@ -168,8 +227,8 @@ export class ChatRoom extends Server<Env> {
     // OpenAI shape (assistant.tool_calls → tool with tool_call_id) so any
     // chat-completions provider accepts the transcript.
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
-    const followUp = await runModelExchange(
-      this.env.AI,
+    const followUp = await this.exchange(
+      provider,
       [
         ...buildMessages(grounding, this.history()),
         {
@@ -197,7 +256,6 @@ export class ChatRoom extends Server<Env> {
       ],
       text => this.send(connection, {type: "delta", text})
     );
-    await this.chargeUsage(followUp.usage);
     return followUp.content;
   }
 

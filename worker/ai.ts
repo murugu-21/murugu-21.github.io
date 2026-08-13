@@ -11,6 +11,12 @@ export type AiLike = {
   run(model: string, options: Record<string, unknown>): Promise<unknown>;
 };
 
+// Paid overflow model, used only when the free Workers AI neuron allocation
+// is spent (BYOK — the Worker calls DeepSeek's OpenAI-compatible API
+// directly). ~$0.0004 per grounded exchange at V4-Flash list prices.
+export const DEEPSEEK_MODEL = "deepseek-v4-flash";
+export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
+
 function asArgString(args: unknown): string {
   return typeof args === "string" ? args : JSON.stringify(args ?? {});
 }
@@ -84,4 +90,37 @@ export async function runModelExchange(
         }
       : estimateUsage(messages, content);
   return {content, toolCalls, usage};
+}
+
+// Same contract as runModelExchange, but against DeepSeek's OpenAI-compatible
+// chat completions endpoint. The request/response shapes are the strict
+// OpenAI dialect the rest of the worker already speaks, so consumeSse parses
+// the stream unchanged.
+export async function runDeepseekExchange(
+  apiKey: string,
+  messages: ModelMessage[],
+  onDelta: (text: string) => void,
+  fetcher: typeof fetch = fetch
+): Promise<StreamResult> {
+  const res = await fetcher(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      messages,
+      tools: [CAPTURE_TOOL],
+      stream: true,
+      stream_options: {include_usage: true},
+      max_tokens: 800
+    })
+  });
+  if (!res.ok || !res.body) {
+    throw new Error(`deepseek request failed: ${res.status}`);
+  }
+  const result = await consumeSse(res.body, onDelta);
+  result.usage ??= estimateUsage(messages, result.content);
+  return result;
 }
