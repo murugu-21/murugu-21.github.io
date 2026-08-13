@@ -4,11 +4,24 @@
 import {useEffect, useRef, useState} from "react";
 import {nanoid} from "nanoid";
 import {PartySocket} from "partysocket";
-import {Download, MessageCircle, RotateCcw, Send, X} from "lucide-react";
+import {
+  Download,
+  EllipsisVertical,
+  MessageCircle,
+  RotateCcw,
+  Send,
+  X
+} from "lucide-react";
 
 import type {ServerMessage} from "../../../worker/protocol";
 import {Button} from "../ui/button";
 import {Card, CardFooter, CardHeader} from "../ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "../ui/dropdown-menu";
 import {Input} from "../ui/input";
 import {ScrollArea} from "../ui/scroll-area";
 import {cn} from "../../lib/utils";
@@ -303,25 +316,29 @@ export function ChatWidget() {
                 Murugappan's AI assistant — answers from this site
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={headerBtn}
-              aria-label="Restart conversation"
-              onClick={() => setConfirmRestart(v => !v)}
-            >
-              <RotateCcw />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={headerBtn}
-              aria-label="Download transcript"
-              onClick={download}
-              disabled={transcript.length === 0 && !greeted}
-            >
-              <Download />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={headerBtn}
+                  aria-label="Conversation options"
+                >
+                  <EllipsisVertical />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setConfirmRestart(true)}>
+                  <RotateCcw /> Start over
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={transcript.length === 0 && !greeted}
+                  onSelect={download}
+                >
+                  <Download /> Download transcript
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               variant="ghost"
               size="icon"

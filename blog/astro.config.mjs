@@ -56,6 +56,7 @@ export default defineConfig({
         "lucide-react",
         "@radix-ui/react-slot",
         "@radix-ui/react-scroll-area",
+        "@radix-ui/react-dropdown-menu",
       ],
     },
   },
