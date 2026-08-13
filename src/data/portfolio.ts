@@ -315,6 +315,12 @@ export const blogSection: {
     "I write about real-world software engineering — distributed systems, cloud architecture, and lessons from production.",
   blogs: [
     {
+      url: "https://murugappan.dev/blog/sitegpt-partykit-durable-objects/",
+      title: "Why SiteGPT's chat runs on PartyKit, not socket.io + Redis",
+      description:
+        "How a one-process-per-room architecture replaces socket.io + Redis for realtime chat — with production code, cost math, and the actor-model tradeoffs, drawn from the chatbot running on this site."
+    },
+    {
       url: "https://murugappan.dev/blog/eventform-outbox-pipeline-claude/",
       title: "Forms in, webhooks out: an event-driven pipeline",
       description:

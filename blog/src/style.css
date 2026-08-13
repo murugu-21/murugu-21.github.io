@@ -406,6 +406,18 @@ a.anchor svg[aria-hidden="true"] {
   height: auto;
 }
 
+/* Diagrams render with mermaid's light "neutral" theme; give them a solid
+   light card so labels outside node boxes (sequence-diagram text, edge
+   labels) stay readable in dark mode — and stay correct if the user
+   toggles theme after the SVGs were rendered. */
+.mermaid-diagram img {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  max-width: 100%;
+  height: auto;
+}
+
 /* Position/reveal behavior for the heading anchors, matching the styles
    gatsby-remark-autolink-headers used to inject: icon sits to the left of
    the heading and only appears on hover/focus. */
