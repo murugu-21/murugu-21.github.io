@@ -4,7 +4,7 @@ import {runModelExchange} from "./ai";
 import {parseLeadArguments, sendOpportunityEmail, type Lead} from "./email";
 import {getGrounding} from "./grounding";
 import {buildMessages, ROOM_DAILY_LIMIT} from "./prompt";
-import {neuronCost} from "./rate-limiter";
+import {NEURON_DAILY_BUDGET, neuronCost} from "./rate-limiter";
 import {type Usage} from "./sse";
 import {
   parseClientMessage,
@@ -13,6 +13,13 @@ import {
 } from "./protocol";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Workers AI signals a spent free-tier allocation with AiError code 4006.
+function isNeuronExhaustion(err: unknown): boolean {
+  return (
+    err instanceof Error && /\b4006\b|free allocation of.*neurons/i.test(err.message)
+  );
+}
 
 const LIMIT_MESSAGE =
   "I've hit my chat budget for now — please reach Murugappan directly " +
@@ -100,10 +107,28 @@ export class ChatRoom extends Server<Env> {
       this.send(connection, {type: "done"});
     } catch (err) {
       console.error("chat generation failed", err);
+      if (isNeuronExhaustion(err)) {
+        // Workers AI says the account allocation is spent — our counter can
+        // miss usage it never saw (e.g. burned before a deploy). Sync it so
+        // hasBudget() gates cleanly until the 00:00 UTC reset.
+        await this.exhaustBudget();
+        this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+        return;
+      }
       this.send(connection, {
         type: "error",
         message: "Something went wrong on my end — please try again."
       });
+    }
+  }
+
+  private async exhaustBudget(): Promise<void> {
+    try {
+      const limiter = this.limiter();
+      const spent = await limiter.spentToday();
+      await limiter.charge(Math.max(NEURON_DAILY_BUDGET - spent, 1));
+    } catch (err) {
+      console.error("budget exhaustion sync failed", err);
     }
   }
 
