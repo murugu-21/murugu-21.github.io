@@ -70,6 +70,8 @@ function listen(server, port) {
 
 // ATS text-extraction gate: every one of these must be present verbatim in
 // the text extracted from the printed PDF, or the build fails.
+const MAX_PAGES = 2;
+
 const ATS_REQUIRED_TOKENS = [
   "Murugappan M",
   "murugu2001@gmail.com",
@@ -127,18 +129,26 @@ try {
   await parser.destroy();
 
   const missing = ATS_REQUIRED_TOKENS.filter(token => !text.includes(token));
+  const pageCount = info?.total ?? info?.numpages ?? null;
   if (missing.length > 0) {
     console.error(
       `[generate-resume] ATS gate FAILED — missing tokens: ${missing.map(t => JSON.stringify(t)).join(", ")}`
     );
     process.exitCode = 1;
+  } else if (typeof pageCount === "number" && pageCount > MAX_PAGES) {
+    // The CF build image's chromium (@sparticuz) uses wider fallback fonts
+    // than local Chrome, so overflow can be environment-specific — fail the
+    // build rather than silently shipping a 3-page resume.
+    console.error(
+      `[generate-resume] page gate FAILED — ${pageCount} pages (max ${MAX_PAGES})`
+    );
+    process.exitCode = 1;
   } else {
-    const pageCount = info?.total ?? info?.numpages ?? "unknown";
     console.log(
-      `[generate-resume] wrote ${OUT_PATH} (${(size / 1024).toFixed(1)} KB, ${pageCount} page${pageCount === 1 ? "" : "s"})`
+      `[generate-resume] wrote ${OUT_PATH} (${(size / 1024).toFixed(1)} KB, ${pageCount ?? "unknown"} page${pageCount === 1 ? "" : "s"})`
     );
     console.log(
-      `[generate-resume] ATS gate passed — all ${ATS_REQUIRED_TOKENS.length} required tokens found`
+      `[generate-resume] ATS gate passed — all ${ATS_REQUIRED_TOKENS.length} required tokens found; ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"} (max ${MAX_PAGES})`
     );
   }
 } finally {
