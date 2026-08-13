@@ -13,7 +13,8 @@
     "build:blog": "npm --prefix blog run build",
     "build:site": "npm run build && npm run build:blog && rm -rf dist/blog && cp -R blog/dist/. dist/blog/ && node scripts/merge-sitemap.mjs && node scripts/merge-llms.mjs && node scripts/generate-resume.mjs",
     "test": "vitest run",
-    "check:worker": "tsc -p worker"
+    "check:worker": "tsc -p worker",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.2",

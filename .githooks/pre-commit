@@ -1,0 +1,26 @@
+#!/bin/sh
+# Mirrors the CI "checks" job (everything except the full site build) so a
+# failing gate never reaches CI. Installed automatically by `npm install`
+# via the "prepare" script (git config core.hooksPath .githooks).
+# Emergency bypass: git commit --no-verify
+set -e
+
+echo "pre-commit 1/6: prettier (root)"
+npm run --silent check-format
+
+echo "pre-commit 2/6: prettier (blog)"
+npm --prefix blog run --silent check-format
+
+echo "pre-commit 3/6: astro check (root)"
+npx astro check
+
+echo "pre-commit 4/6: worker typecheck"
+npm run --silent check:worker
+
+echo "pre-commit 5/6: unit tests"
+npm test --silent
+
+echo "pre-commit 6/6: astro check (blog)"
+npm --prefix blog run --silent test
+
+echo "pre-commit: all gates green"

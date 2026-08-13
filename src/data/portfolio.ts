@@ -30,7 +30,7 @@ export const socialMediaLinks = {
   github: "https://github.com/murugu-21",
   linkedin: "https://www.linkedin.com/in/murugappan-m-56920a192/",
   gmail: "murugu2001@gmail.com",
-  twitter: "https://twitter.com/murugu21",
+  twitter: "https://x.com/murugu21",
   rss: "https://murugappan.dev/blog/rss.xml"
 };
 
