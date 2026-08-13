@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 
 import {runDeepseekExchange, runModelExchange} from "../ai";
-import {CAPTURE_TOOL, MODEL_ID} from "../prompt";
+import {MODEL_ID, TOOLS} from "../prompt";
 
 function sseStream(events: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -30,7 +30,7 @@ describe("runModelExchange", () => {
     expect(captured.model).toBe(MODEL_ID);
     expect(captured.options).toMatchObject({
       stream: true,
-      tools: [CAPTURE_TOOL]
+      tools: TOOLS
     });
     expect(result.content).toBe("hi");
   });

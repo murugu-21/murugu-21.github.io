@@ -1,4 +1,4 @@
-import {CAPTURE_TOOL, MODEL_ID, type ModelMessage} from "./prompt";
+import {MODEL_ID, TOOLS, type ModelMessage} from "./prompt";
 import {
   consumeSse,
   toolCallId,
@@ -38,7 +38,7 @@ export async function runModelExchange(
 ): Promise<StreamResult> {
   const res = await ai.run(MODEL_ID, {
     messages,
-    tools: [CAPTURE_TOOL],
+    tools: TOOLS,
     stream: true,
     max_tokens: 800
   });
@@ -111,7 +111,7 @@ export async function runDeepseekExchange(
     body: JSON.stringify({
       model: DEEPSEEK_MODEL,
       messages,
-      tools: [CAPTURE_TOOL],
+      tools: TOOLS,
       stream: true,
       stream_options: {include_usage: true},
       max_tokens: 800

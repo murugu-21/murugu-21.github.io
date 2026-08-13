@@ -59,6 +59,40 @@ export const CAPTURE_TOOL = {
   }
 } as const;
 
+export const FETCH_TOOL = {
+  type: "function",
+  function: {
+    name: "fetch_page",
+    description:
+      "Fetch the full text of a page on murugappan.dev (e.g. a blog post) " +
+      "when the site summary is not detailed enough to answer. Pass the " +
+      "exact URL that appears in the site content.",
+    parameters: {
+      type: "object",
+      properties: {
+        url: {
+          type: "string",
+          description: "Full URL of the murugappan.dev page to read."
+        }
+      },
+      required: ["url"]
+    }
+  }
+} as const;
+
+export const TOOLS = [CAPTURE_TOOL, FETCH_TOOL] as const;
+
+export function parseFetchArguments(raw: string): string | null {
+  try {
+    const args = JSON.parse(raw) as {url?: unknown};
+    return typeof args.url === "string" && args.url.length > 0
+      ? args.url
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildSystemPrompt(grounding: string): string {
   return `You are Jarvis, the AI assistant on murugappan.dev — the personal site of Murugappan M, a full stack engineer (TypeScript, Node.js, React, AWS). You act as his concierge: part support agent, part inbound-sales assistant.
 
@@ -70,6 +104,8 @@ export function buildSystemPrompt(grounding: string): string {
 
 # What you know
 - Your ONLY knowledge about Murugappan is the site content between the SITE CONTENT markers below. If something isn't covered there, say you don't know and point the visitor to the social links on this site. Never invent facts, links, dates, availability, or rates.
+- The site content is a summary. When a visitor asks for details it doesn't cover — like the specifics of a blog post or project — call the fetch_page tool with that page's exact URL from the summary, read the result, then answer. At most one fetch per question; if the fetched page still doesn't cover it, say you don't know.
+- Call tools silently: never announce, narrate, or describe that you are fetching a page or using a tool. Reply with the answer only.
 
 # Opportunities (inbound sales)
 - If the visitor mentions hiring, a role, freelance or contract work, collaboration, speaking, or wants to get in touch: be warm and interested. Qualify step by step — first understand what they're looking for, then ask for their name and the best way to reach them (email or LinkedIn), one ask at a time.

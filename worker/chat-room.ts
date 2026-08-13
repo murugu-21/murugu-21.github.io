@@ -2,10 +2,12 @@ import {Server, type Connection} from "partyserver";
 
 import {runDeepseekExchange, runModelExchange} from "./ai";
 import {parseLeadArguments, sendOpportunityEmail, type Lead} from "./email";
+import {fetchSitePage} from "./fetch-page";
 import {getGrounding} from "./grounding";
 import {
   buildMessages,
   MODEL_ID,
+  parseFetchArguments,
   ROOM_DAILY_LIMIT,
   type ModelMessage
 } from "./prompt";
@@ -125,31 +127,58 @@ export class ChatRoom extends Server<Env> {
     }
   }
 
-  // One full reply turn: grounded exchange, optional opportunity capture
-  // (which runs a follow-up exchange on the same provider), persist, done.
+  // One full reply turn: grounded exchange with an on-demand fetch_page loop
+  // (the model may pull a site page's full text before answering), optional
+  // opportunity capture (a follow-up exchange on the same provider), persist.
   private async generate(
     connection: Connection,
     provider: Provider
   ): Promise<void> {
+    const onDelta = (text: string) =>
+      this.send(connection, {type: "delta", text});
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
-    const result = await this.exchange(
-      provider,
-      buildMessages(grounding, this.history()),
-      text => this.send(connection, {type: "delta", text})
-    );
+    const messages: ModelMessage[] = buildMessages(grounding, this.history());
 
-    let reply = result.content;
-    const capture = result.toolCalls.find(
-      t => t.name === "capture_opportunity"
-    );
+    const MAX_FETCH_ROUNDS = 2;
+    let reply = "";
+    let capture: {id: string; name: string; arguments: string} | undefined;
+    for (let round = 0; ; round++) {
+      const result = await this.exchange(provider, messages, onDelta);
+      reply += result.content;
+      capture ??= result.toolCalls.find(t => t.name === "capture_opportunity");
+
+      const fetchCall = result.toolCalls.find(t => t.name === "fetch_page");
+      if (!fetchCall || round >= MAX_FETCH_ROUNDS) break;
+
+      const url = parseFetchArguments(fetchCall.arguments);
+      const page = url
+        ? await fetchSitePage(this.env.ASSETS, url)
+        : "The url argument was missing.";
+      messages.push(
+        {
+          role: "assistant",
+          content: result.content,
+          tool_calls: [
+            {
+              id: fetchCall.id,
+              type: "function",
+              function: {name: fetchCall.name, arguments: fetchCall.arguments}
+            }
+          ]
+        },
+        {role: "tool", tool_call_id: fetchCall.id, content: page}
+      );
+    }
+
     if (capture) {
       if (reply) this.send(connection, {type: "delta", text: "\n"});
       const followUp = await this.handleCapture(capture, connection, provider);
       reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
     }
 
-    // Qwen3's no-think mode can prefix replies with stray blank lines.
-    reply = reply.trim();
+    // Qwen3's no-think mode can prefix replies with stray blank lines, and
+    // fetch rounds can leave gaps where content spans exchanges.
+    reply = reply.replace(/\n{3,}/g, "\n\n").trim();
     if (reply) this.persist("assistant", reply);
     this.send(connection, {type: "done"});
   }
