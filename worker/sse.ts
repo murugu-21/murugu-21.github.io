@@ -1,6 +1,12 @@
 export type ToolCall = {name: string; arguments: string};
 
-export type StreamResult = {content: string; toolCalls: ToolCall[]};
+export type Usage = {promptTokens: number; completionTokens: number};
+
+export type StreamResult = {
+  content: string;
+  toolCalls: ToolCall[];
+  usage: Usage | null;
+};
 
 type PartialToolCall = {name: string; arguments: string};
 
@@ -18,6 +24,7 @@ export async function consumeSse(
   const whole: ToolCall[] = [];
   let buffer = "";
   let content = "";
+  let usage: Usage | null = null;
 
   const handleLine = (line: string): void => {
     if (!line.startsWith("data:")) return;
@@ -26,6 +33,7 @@ export async function consumeSse(
     let data: {
       response?: unknown;
       tool_calls?: unknown;
+      usage?: {prompt_tokens?: unknown; completion_tokens?: unknown};
       choices?: {
         delta?: {
           content?: unknown;
@@ -40,6 +48,17 @@ export async function consumeSse(
       data = JSON.parse(payload);
     } catch {
       return;
+    }
+
+    // Usage arrives on the final event (both API shapes use snake_case).
+    if (
+      typeof data.usage?.prompt_tokens === "number" &&
+      typeof data.usage?.completion_tokens === "number"
+    ) {
+      usage = {
+        promptTokens: data.usage.prompt_tokens,
+        completionTokens: data.usage.completion_tokens
+      };
     }
 
     const delta =
@@ -88,6 +107,7 @@ export async function consumeSse(
 
   return {
     content,
-    toolCalls: [...incremental.filter(t => t && t.name), ...whole]
+    toolCalls: [...incremental.filter(t => t && t.name), ...whole],
+    usage
   };
 }

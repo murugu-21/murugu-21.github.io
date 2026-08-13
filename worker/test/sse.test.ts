@@ -25,6 +25,19 @@ describe("consumeSse", () => {
     expect(result.content).toBe("Hello");
     expect(deltas).toEqual(["Hel", "lo"]);
     expect(result.toolCalls).toEqual([]);
+    expect(result.usage).toBeNull();
+  });
+
+  it("captures usage from the final event", async () => {
+    const result = await consumeSse(
+      sseStream([
+        'data: {"response":"hi"}\n\n',
+        'data: {"response":"","usage":{"prompt_tokens":1200,"completion_tokens":34}}\n\n',
+        "data: [DONE]\n\n"
+      ]),
+      () => {}
+    );
+    expect(result.usage).toEqual({promptTokens: 1200, completionTokens: 34});
   });
 
   it("accumulates chat-completions deltas split across reads", async () => {
