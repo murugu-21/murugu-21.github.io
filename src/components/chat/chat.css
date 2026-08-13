@@ -1,178 +1,147 @@
-/* Chat widget. Palette mirrors src/styles/_variables.scss (portfolio) and the
-   blog dark surface #282c35. Dark selectors: html.dark-mode (portfolio),
-   body.dark (blog). */
+/* Tailwind v4 entry for the chat widget island, shared by the portfolio and
+   the blog. Deliberately imports theme + utilities WITHOUT preflight so
+   Tailwind's global reset can never touch the host site's SCSS — the widget
+   carries its own mini-reset scoped under #chat-widget-root instead.
+
+   shadcn/ui token names (background, primary, muted, …) are mapped to the
+   site palette from src/styles/_variables.scss. Dark mode follows the host
+   conventions: html.dark-mode (portfolio) and body.dark (blog). */
+
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+/* `important` so utilities beat the HOST apps' unlayered global element
+   styles (the blog styles raw h2/p/etc.) — layered CSS always loses to
+   unlayered otherwise. The widget's own mini-reset below is unlayered for
+   the same reason; !important utilities still win over it. */
+@import "tailwindcss/utilities.css" layer(utilities) important;
+
+@source "./";
+@source "../ui/";
+
+@custom-variant dark (&:where(html.dark-mode *, body.dark *));
+
 #chat-widget-root {
-  --chat-accent: #057b01;
-  --chat-accent-hover: #2ccf27;
-  --chat-bg: #ffffff;
-  --chat-surface: #f5f2f4;
-  --chat-text: #2e353f;
-  --chat-muted: #6c757d;
-  --chat-border: rgba(0, 0, 0, 0.12);
-  --chat-shadow: rgba(0, 0, 0, 0.25);
+  --background: #ffffff;
+  --foreground: #2e353f;
+  --card: #ffffff;
+  --card-foreground: #2e353f;
+  --primary: #057b01;
+  --primary-foreground: #ffffff;
+  --primary-hover: #2ccf27;
+  --secondary: #f5f2f4;
+  --secondary-foreground: #2e353f;
+  --muted: #f5f2f4;
+  --muted-foreground: #6c757d;
+  --accent: #f5f2f4;
+  --accent-foreground: #2e353f;
+  --destructive: #dc2626;
+  --border: rgba(0, 0, 0, 0.12);
+  --input: rgba(0, 0, 0, 0.12);
+  --ring: #057b01;
+  --radius: 0.75rem;
+  --shadow-color: rgba(0, 0, 0, 0.25);
   font-family: "Montserrat", Arial, sans-serif;
 }
 
 html.dark-mode #chat-widget-root,
 body.dark #chat-widget-root {
-  --chat-bg: #282c35;
-  --chat-surface: #171c28;
-  --chat-text: #ffffff;
-  --chat-muted: #a7a7a7;
-  --chat-border: rgba(255, 255, 255, 0.16);
-  --chat-shadow: rgba(0, 0, 0, 0.6);
+  --background: #282c35;
+  --foreground: #ffffff;
+  --card: #282c35;
+  --card-foreground: #ffffff;
+  --secondary: #171c28;
+  --secondary-foreground: #ffffff;
+  --muted: #171c28;
+  --muted-foreground: #a7a7a7;
+  --accent: #171c28;
+  --accent-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.16);
+  --input: rgba(255, 255, 255, 0.16);
+  --shadow-color: rgba(0, 0, 0, 0.6);
 }
 
-.chat-launcher {
-  position: fixed;
-  bottom: 20px;
-  right: 30px;
-  z-index: 100;
-  width: 56px;
-  height: 56px;
-  border: none;
-  border-radius: 50%;
-  background: var(--chat-accent);
-  color: #fff;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Mini-reset: the pieces of Tailwind preflight the shadcn primitives rely
+   on, scoped so the host site is untouched. Unlayered on purpose — it must
+   out-cascade the host apps' own unlayered element styles (blog h2/p
+   margins etc.); the !important utilities above still win over it. */
+#chat-widget-root *,
+#chat-widget-root *::before,
+#chat-widget-root *::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: var(--border);
+  margin: 0;
+}
+
+#chat-widget-root button {
+  background-color: transparent;
+  background-image: none;
+  font: inherit;
+  color: inherit;
   cursor: pointer;
-  box-shadow: 0 4px 12px var(--chat-shadow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  text-transform: none;
+  -webkit-appearance: button;
 }
 
-.chat-launcher:hover {
-  background: var(--chat-accent-hover);
-  transition: background ease-in-out 0.2s;
+#chat-widget-root input {
+  font: inherit;
+  color: inherit;
+  padding: 0;
 }
 
-.chat-launcher svg {
-  width: 26px;
-  height: 26px;
+#chat-widget-root h2,
+#chat-widget-root p {
+  font-size: inherit;
+  font-weight: inherit;
+  font-family: inherit;
+  color: inherit;
+  line-height: 1.4;
+}
+
+#chat-widget-root svg {
   display: block;
 }
 
-.chat-tooltip {
-  position: fixed;
-  bottom: 32px;
-  right: 96px;
-  z-index: 100;
-  background: var(--chat-bg);
-  color: var(--chat-text);
-  border: 1px solid var(--chat-border);
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 14px;
-  box-shadow: 0 4px 12px var(--chat-shadow);
-  opacity: 1;
-  transition: opacity 0.6s ease;
-}
-
-.chat-tooltip.fade {
-  opacity: 0;
-}
-
-.chat-panel {
-  position: fixed;
-  bottom: 90px;
-  right: 30px;
-  z-index: 100;
-  width: 370px;
-  max-width: calc(100vw - 24px);
-  height: 520px;
-  max-height: calc(100vh - 120px);
-  display: none;
-  flex-direction: column;
-  background: var(--chat-bg);
-  color: var(--chat-text);
-  border: 1px solid var(--chat-border);
-  border-radius: 14px;
-  box-shadow: 0 8px 30px var(--chat-shadow);
-  overflow: hidden;
-}
-
-.chat-panel.open {
-  display: flex;
-}
-
-.chat-header {
-  padding: 14px 16px;
-  background: var(--chat-accent);
-  color: #fff;
-}
-
-.chat-header h2 {
-  margin: 0;
-  font-size: 16px;
-}
-
-.chat-header p {
-  margin: 2px 0 0;
-  font-size: 12px;
-  opacity: 0.9;
-}
-
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.chat-bubble {
-  max-width: 85%;
-  padding: 8px 12px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.45;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-}
-
-.chat-bubble.user {
-  align-self: flex-end;
-  background: var(--chat-accent);
-  color: #fff;
-  border-bottom-right-radius: 4px;
-}
-
-.chat-bubble.assistant {
-  align-self: flex-start;
-  background: var(--chat-surface);
-  color: var(--chat-text);
-  border-bottom-left-radius: 4px;
-}
-
-.chat-bubble.system {
-  align-self: center;
-  background: transparent;
-  color: var(--chat-muted);
-  font-size: 12px;
-  text-align: center;
-}
-
-.chat-bubble.typing {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 12px;
-}
-
-.chat-bubble.typing span {
+/* Typing indicator — no shadcn primitive for this. */
+.chat-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--chat-muted);
+  background: var(--muted-foreground);
   animation: chat-dot 1.2s infinite;
 }
 
-.chat-bubble.typing span:nth-child(2) {
+.chat-dot:nth-child(2) {
   animation-delay: 0.2s;
 }
 
-.chat-bubble.typing span:nth-child(3) {
+.chat-dot:nth-child(3) {
   animation-delay: 0.4s;
 }
 
@@ -186,51 +155,8 @@ body.dark #chat-widget-root {
   }
 }
 
-.chat-form {
-  display: flex;
-  gap: 8px;
-  padding: 10px;
-  border-top: 1px solid var(--chat-border);
-  background: var(--chat-bg);
-}
-
-.chat-form input {
-  flex: 1;
-  border: 1px solid var(--chat-border);
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-family: inherit;
-  background: var(--chat-surface);
-  color: var(--chat-text);
-  outline: none;
-}
-
-.chat-form input:focus {
-  border-color: var(--chat-accent);
-}
-
-.chat-form button {
-  border: none;
-  border-radius: 10px;
-  padding: 0 16px;
-  background: var(--chat-accent);
-  color: #fff;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-.chat-form button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-@media (max-width: 480px) {
-  .chat-panel {
-    right: 12px;
-    left: 12px;
-    width: auto;
-    bottom: 84px;
-    height: 70vh;
-  }
+/* Body scroll lock while the panel is full-screen on mobile. */
+html.chat-panel-locked,
+html.chat-panel-locked body {
+  overflow: hidden;
 }

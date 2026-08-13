@@ -1,4 +1,9 @@
-const CACHE_KEY = "grounding:v1";
+// v2: root llms.txt only (~3.5KB ≈ 900 tokens). It already carries every blog
+// post as title + summary + link (merge-llms.mjs appends them at build time);
+// grounding on blog/llms-full.txt (~70KB) cost ~20x the neurons per message
+// and would eventually outgrow qwen3-30b's 32k context as posts accumulate.
+// Jarvis answers post questions from summaries and points visitors at links.
+const CACHE_KEY = "grounding:v2";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 type Cached = {text: string; fetchedAt: number};
@@ -28,11 +33,7 @@ export async function getGrounding(
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS)
     return cached.text;
 
-  const [profile, posts] = await Promise.all([
-    fetchText(assets, "/llms.txt"),
-    fetchText(assets, "/blog/llms-full.txt")
-  ]);
-  const text = [profile, posts].filter(Boolean).join("\n\n");
+  const text = await fetchText(assets, "/llms.txt");
   if (!text.trim()) return cached?.text ?? "";
 
   await storage.put(CACHE_KEY, {text, fetchedAt: Date.now()} satisfies Cached);

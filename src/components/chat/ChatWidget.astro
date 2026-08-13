@@ -1,12 +1,10 @@
-<div id="chat-widget-root"></div>
+---
+// React island wrapper. client:idle defers hydration (React + widget JS) to
+// browser idle so it stays out of the initial load waterfall; the wrapper div
+// carries the id the chat.css design tokens are scoped under.
+import {ChatWidget} from "./ChatWidget";
+---
 
-<script>
-  // Defer the whole widget (JS + CSS) to idle so it stays out of the initial
-  // load waterfall — same pattern as the Clarity tag in Layout.astro.
-  const start = () => void import("./widget");
-  if ("requestIdleCallback" in window) {
-    requestIdleCallback(start, {timeout: 4000});
-  } else {
-    setTimeout(start, 2500);
-  }
-</script>
+<div id="chat-widget-root">
+  <ChatWidget client:idle />
+</div>

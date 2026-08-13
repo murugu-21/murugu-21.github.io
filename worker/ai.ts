@@ -1,5 +1,5 @@
 import {CAPTURE_TOOL, MODEL_ID, type ModelMessage} from "./prompt";
-import {consumeSse, type StreamResult, type ToolCall} from "./sse";
+import {consumeSse, type StreamResult, type ToolCall, type Usage} from "./sse";
 
 export type AiLike = {
   run(model: string, options: Record<string, unknown>): Promise<unknown>;
@@ -7,6 +7,16 @@ export type AiLike = {
 
 function asArgString(args: unknown): string {
   return typeof args === "string" ? args : JSON.stringify(args ?? {});
+}
+
+// When the API omits usage, fall back to a chars/4 heuristic; stringifying
+// the messages overestimates slightly, which errs on the safe side for the
+// neuron budget.
+function estimateUsage(messages: ModelMessage[], content: string): Usage {
+  return {
+    promptTokens: Math.ceil(JSON.stringify(messages).length / 4),
+    completionTokens: Math.ceil(content.length / 4)
+  };
 }
 
 export async function runModelExchange(
@@ -22,7 +32,9 @@ export async function runModelExchange(
   });
 
   if (res instanceof ReadableStream) {
-    return consumeSse(res as ReadableStream<Uint8Array>, onDelta);
+    const result = await consumeSse(res as ReadableStream<Uint8Array>, onDelta);
+    result.usage ??= estimateUsage(messages, result.content);
+    return result;
   }
 
   // Some model/tool combinations answer with a plain JSON body even when
@@ -37,6 +49,7 @@ export async function runModelExchange(
   const body = res as {
     response?: string;
     tool_calls?: RawToolCall[];
+    usage?: {prompt_tokens?: unknown; completion_tokens?: unknown};
     choices?: {
       message?: {
         content?: string;
@@ -54,5 +67,13 @@ export async function runModelExchange(
       arguments: asArgString(tc.function?.arguments ?? tc.arguments)
     }))
     .filter(tc => tc.name);
-  return {content, toolCalls};
+  const usage: Usage =
+    typeof body.usage?.prompt_tokens === "number" &&
+    typeof body.usage?.completion_tokens === "number"
+      ? {
+          promptTokens: body.usage.prompt_tokens,
+          completionTokens: body.usage.completion_tokens
+        }
+      : estimateUsage(messages, content);
+  return {content, toolCalls, usage};
 }
