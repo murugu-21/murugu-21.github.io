@@ -88,6 +88,12 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
     {!noindex && <link rel="canonical" href="https://murugappan.dev/" />}
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title="SDE Journey RSS Feed"
+      href="/blog/rss.xml"
+    />
 
     <meta property="og:type" content="website" />
     {!noindex && <meta property="og:url" content="https://murugappan.dev/" />}
