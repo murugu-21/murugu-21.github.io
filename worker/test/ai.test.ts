@@ -61,6 +61,7 @@ describe("runModelExchange", () => {
     expect(deltas).toEqual(["sure"]);
     expect(result.toolCalls).toEqual([
       {
+        id: "call_0",
         name: "capture_opportunity",
         arguments: '{"contact":"a@b.c","summary":"s"}'
       }

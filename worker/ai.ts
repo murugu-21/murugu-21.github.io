@@ -1,5 +1,11 @@
 import {CAPTURE_TOOL, MODEL_ID, type ModelMessage} from "./prompt";
-import {consumeSse, type StreamResult, type ToolCall, type Usage} from "./sse";
+import {
+  consumeSse,
+  toolCallId,
+  type StreamResult,
+  type ToolCall,
+  type Usage
+} from "./sse";
 
 export type AiLike = {
   run(model: string, options: Record<string, unknown>): Promise<unknown>;
@@ -42,6 +48,7 @@ export async function runModelExchange(
   // `tool_calls` shapes share this element type so `tc.name`/`tc.arguments`
   // are always valid to read, whichever shape actually supplied them.
   type RawToolCall = {
+    id?: string;
     name?: string;
     arguments?: unknown;
     function?: {name?: string; arguments?: unknown};
@@ -62,7 +69,8 @@ export async function runModelExchange(
   const rawCalls =
     body.tool_calls ?? body.choices?.[0]?.message?.tool_calls ?? [];
   const toolCalls: ToolCall[] = rawCalls
-    .map(tc => ({
+    .map((tc, i) => ({
+      id: toolCallId(tc.id, i),
       name: tc.function?.name ?? tc.name ?? "",
       arguments: asArgString(tc.function?.arguments ?? tc.arguments)
     }))

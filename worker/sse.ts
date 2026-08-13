@@ -1,4 +1,7 @@
-export type ToolCall = {name: string; arguments: string};
+// OpenAI-compatible tool call: `id` is required downstream (the tool-result
+// message must reference it), so one is synthesized when a provider or the
+// Workers AI native shape omits it.
+export type ToolCall = {id: string; name: string; arguments: string};
 
 export type Usage = {promptTokens: number; completionTokens: number};
 
@@ -8,7 +11,11 @@ export type StreamResult = {
   usage: Usage | null;
 };
 
-type PartialToolCall = {name: string; arguments: string};
+type PartialToolCall = {id: string; name: string; arguments: string};
+
+export function toolCallId(id: unknown, index: number): string {
+  return typeof id === "string" && id.length > 0 ? id : `call_${index}`;
+}
 
 function asArgString(args: unknown): string {
   return typeof args === "string" ? args : JSON.stringify(args ?? {});
@@ -39,6 +46,7 @@ export async function consumeSse(
           content?: unknown;
           tool_calls?: {
             index?: number;
+            id?: string;
             function?: {name?: string; arguments?: string};
           }[];
         };
@@ -72,7 +80,8 @@ export async function consumeSse(
 
     for (const tc of data.choices?.[0]?.delta?.tool_calls ?? []) {
       const i = tc.index ?? 0;
-      incremental[i] ??= {name: "", arguments: ""};
+      incremental[i] ??= {id: "", name: "", arguments: ""};
+      if (tc.id) incremental[i].id = tc.id;
       if (tc.function?.name) incremental[i].name = tc.function.name;
       if (tc.function?.arguments)
         incremental[i].arguments += tc.function.arguments;
@@ -80,6 +89,7 @@ export async function consumeSse(
 
     if (Array.isArray(data.tool_calls)) {
       for (const tc of data.tool_calls as {
+        id?: string;
         name?: string;
         arguments?: unknown;
         function?: {name?: string; arguments?: unknown};
@@ -87,6 +97,7 @@ export async function consumeSse(
         const name = tc.name ?? tc.function?.name ?? "";
         if (name)
           whole.push({
+            id: toolCallId(tc.id, whole.length),
             name,
             arguments: asArgString(tc.arguments ?? tc.function?.arguments)
           });
@@ -107,7 +118,12 @@ export async function consumeSse(
 
   return {
     content,
-    toolCalls: [...incremental.filter(t => t && t.name), ...whole],
+    toolCalls: [
+      ...incremental
+        .filter(t => t && t.name)
+        .map((t, i) => ({...t, id: toolCallId(t.id, i)})),
+      ...whole
+    ],
     usage
   };
 }

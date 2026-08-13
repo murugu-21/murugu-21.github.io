@@ -9,7 +9,7 @@ import {
 
 describe("prompt", () => {
   it("pins the chosen model", () => {
-    expect(MODEL_ID).toBe("@cf/openai/gpt-oss-120b");
+    expect(MODEL_ID).toBe("@cf/qwen/qwen3-30b-a3b-fp8");
   });
 
   it("declares the capture_opportunity tool with required contact and summary", () => {

@@ -3,7 +3,7 @@ import {Server, type Connection} from "partyserver";
 import {runModelExchange} from "./ai";
 import {parseLeadArguments, sendOpportunityEmail, type Lead} from "./email";
 import {getGrounding} from "./grounding";
-import {buildMessages, ROOM_DAILY_LIMIT} from "./prompt";
+import {buildMessages, MODEL_ID, ROOM_DAILY_LIMIT} from "./prompt";
 import {NEURON_DAILY_BUDGET, neuronCost} from "./rate-limiter";
 import {type Usage} from "./sse";
 import {
@@ -17,7 +17,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // Workers AI signals a spent free-tier allocation with AiError code 4006.
 function isNeuronExhaustion(err: unknown): boolean {
   return (
-    err instanceof Error && /\b4006\b|free allocation of.*neurons/i.test(err.message)
+    err instanceof Error &&
+    /\b4006\b|free allocation of.*neurons/i.test(err.message)
   );
 }
 
@@ -96,10 +97,7 @@ export class ChatRoom extends Server<Env> {
       );
       if (capture) {
         if (reply) this.send(connection, {type: "delta", text: "\n"});
-        const followUp = await this.handleCapture(
-          capture.arguments,
-          connection
-        );
+        const followUp = await this.handleCapture(capture, connection);
         reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
       }
 
@@ -135,10 +133,10 @@ export class ChatRoom extends Server<Env> {
   // Records the lead, emails once per conversation, and asks the model to
   // phrase the confirmation using the tool result.
   private async handleCapture(
-    rawArgs: string,
+    capture: {id: string; name: string; arguments: string},
     connection: Connection
   ): Promise<string> {
-    const lead = parseLeadArguments(rawArgs);
+    const lead = parseLeadArguments(capture.arguments);
     if (!lead) return "";
 
     this.storeLead(lead);
@@ -166,7 +164,9 @@ export class ChatRoom extends Server<Env> {
       }
     }
 
-    // Second model pass so the visitor gets a natural confirmation.
+    // Second model pass so the visitor gets a natural confirmation. Strict
+    // OpenAI shape (assistant.tool_calls → tool with tool_call_id) so any
+    // chat-completions provider accepts the transcript.
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
     const followUp = await runModelExchange(
       this.env.AI,
@@ -174,13 +174,21 @@ export class ChatRoom extends Server<Env> {
         ...buildMessages(grounding, this.history()),
         {
           role: "assistant",
-          content: JSON.stringify({
-            tool_call: "capture_opportunity",
-            arguments: lead
-          })
+          content: "",
+          tool_calls: [
+            {
+              id: capture.id,
+              type: "function",
+              function: {
+                name: capture.name,
+                arguments: capture.arguments
+              }
+            }
+          ]
         },
         {
           role: "tool",
+          tool_call_id: capture.id,
           content: JSON.stringify({
             status: "recorded",
             note: "Murugappan will be notified by email."
@@ -201,7 +209,7 @@ export class ChatRoom extends Server<Env> {
     if (!usage) return;
     try {
       await this.limiter().charge(
-        neuronCost(usage.promptTokens, usage.completionTokens)
+        neuronCost(MODEL_ID, usage.promptTokens, usage.completionTokens)
       );
     } catch (err) {
       // Budget accounting must never take down a chat that already answered.

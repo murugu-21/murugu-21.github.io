@@ -63,8 +63,22 @@ describe("consumeSse", () => {
       () => {}
     );
     expect(result.toolCalls).toEqual([
-      {name: "capture_opportunity", arguments: '{"contact":"a@b.c"}'}
+      {
+        id: "call_0",
+        name: "capture_opportunity",
+        arguments: '{"contact":"a@b.c"}'
+      }
     ]);
+  });
+
+  it("preserves provider-sent OpenAI tool call ids", async () => {
+    const result = await consumeSse(
+      sseStream([
+        'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_abc123","function":{"name":"capture_opportunity","arguments":"{}"}}]}}]}\n\n'
+      ]),
+      () => {}
+    );
+    expect(result.toolCalls[0].id).toBe("call_abc123");
   });
 
   it("collects whole tool_calls arrays (non-incremental shape)", async () => {
@@ -76,6 +90,7 @@ describe("consumeSse", () => {
     );
     expect(result.toolCalls).toEqual([
       {
+        id: "call_0",
         name: "capture_opportunity",
         arguments: '{"contact":"x@y.z","summary":"role"}'
       }
