@@ -1,7 +1,7 @@
 // Jarvis chat widget — React island on vendored shadcn/ui primitives, shared
 // by the portfolio and the blog (the blog imports ./mount via a relative
 // path). Idle-mounted by ChatWidget.astro so it never affects initial load.
-import {useEffect, useRef, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {nanoid} from "nanoid";
 import {PartySocket} from "partysocket";
 import {
@@ -53,18 +53,53 @@ function roomId(): string {
   return id;
 }
 
+// Render bare URLs in message text as real links (Jarvis replies in plain
+// text; the system prompt tells it to include full URLs). Split keeps the
+// captured URLs at odd indexes; trailing punctuation stays outside the link.
+const URL_SPLIT = /(https?:\/\/[^\s]+)/;
+
+// The prompt forbids markdown, but models still slip [label](url) through
+// sometimes — flatten it to "label: url" so the linkifier below handles it.
+const MD_LINK = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+
+function renderWithLinks(raw: string) {
+  const text = raw.replace(MD_LINK, (_m, label, url) =>
+    label ? `${label}: ${url}` : url
+  );
+  return text.split(URL_SPLIT).map((part, i) => {
+    if (i % 2 === 0) return part;
+    const trailing = /[.,!?;:)]+$/.exec(part)?.[0] ?? "";
+    const url = trailing ? part.slice(0, -trailing.length) : part;
+    return (
+      <React.Fragment key={i}>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="break-all text-current underline underline-offset-2 hover:opacity-80"
+        >
+          {url}
+        </a>
+        {trailing}
+      </React.Fragment>
+    );
+  });
+}
+
 function BubbleView({kind, text}: Bubble) {
   return (
     <div
       className={cn(
         "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] whitespace-pre-wrap break-words",
-        kind === "user" && "self-end rounded-br-sm bg-primary text-primary-foreground",
-        kind === "assistant" && "self-start rounded-bl-sm bg-muted text-foreground",
+        kind === "user" &&
+          "self-end rounded-br-sm bg-primary text-primary-foreground",
+        kind === "assistant" &&
+          "self-start rounded-bl-sm bg-muted text-foreground",
         kind === "system" &&
           "self-center bg-transparent text-center text-xs text-muted-foreground"
       )}
     >
-      {text}
+      {renderWithLinks(text)}
     </div>
   );
 }
@@ -77,7 +112,9 @@ export function ChatWidget() {
   const [sending, setSending] = useState(false);
   const [greeted, setGreeted] = useState(false);
   const [confirmRestart, setConfirmRestart] = useState(false);
-  const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">("hidden");
+  const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">(
+    "hidden"
+  );
 
   const socketRef = useRef<PartySocket | null>(null);
   // Mirrors for the socket handlers, which outlive any single render.
@@ -109,11 +146,17 @@ export function ChatWidget() {
         setBubbles(msg.messages.map(m => ({kind: m.role, text: m.content})));
         if (msg.messages.length === 0) setGreeted(true);
         break;
-      case "delta":
+      case "delta": {
+        // Left-trim the first chunk — Qwen's no-think mode leads with blank
+        // lines; keep showing the typing dots until real text arrives.
+        const text =
+          streamRef.current === null ? msg.text.replace(/^\s+/, "") : msg.text;
+        if (streamRef.current === null && text === "") break;
         setTyping(false);
-        streamRef.current = (streamRef.current ?? "") + msg.text;
+        streamRef.current = (streamRef.current ?? "") + text;
         setStream(streamRef.current);
         break;
+      }
       case "done":
         setTyping(false);
         commitStream();
@@ -258,7 +301,10 @@ export function ChatWidget() {
     if (!open) return;
     const mq = window.matchMedia("(max-width: 639px)");
     const apply = () =>
-      document.documentElement.classList.toggle("chat-panel-locked", mq.matches);
+      document.documentElement.classList.toggle(
+        "chat-panel-locked",
+        mq.matches
+      );
     apply();
     mq.addEventListener("change", apply);
     return () => {
@@ -364,7 +410,11 @@ export function ChatWidget() {
                 Start a new conversation?
               </span>
               <div className="flex gap-1.5">
-                <Button size="sm" className="h-7 px-2.5 text-xs" onClick={restart}>
+                <Button
+                  size="sm"
+                  className="h-7 px-2.5 text-xs"
+                  onClick={restart}
+                >
                   Start over
                 </Button>
                 <Button
@@ -423,7 +473,12 @@ export function ChatWidget() {
                 autoComplete="off"
                 className="bg-secondary"
               />
-              <Button type="submit" size="icon" aria-label="Send" disabled={sending}>
+              <Button
+                type="submit"
+                size="icon"
+                aria-label="Send"
+                disabled={sending}
+              >
                 <Send />
               </Button>
             </form>

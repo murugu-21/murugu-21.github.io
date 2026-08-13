@@ -148,6 +148,8 @@ export class ChatRoom extends Server<Env> {
       reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
     }
 
+    // Qwen3's no-think mode can prefix replies with stray blank lines.
+    reply = reply.trim();
     if (reply) this.persist("assistant", reply);
     this.send(connection, {type: "done"});
   }
