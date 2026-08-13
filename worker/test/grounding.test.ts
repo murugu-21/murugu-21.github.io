@@ -30,21 +30,27 @@ function fakeAssets(bodies: Record<string, string | null>) {
 }
 
 describe("getGrounding", () => {
-  it("fetches both llms files, concatenates and caches", async () => {
+  it("fetches the root llms.txt only and caches under the v2 key", async () => {
     const storage = fakeStorage();
-    const assets = fakeAssets({
-      "/llms.txt": "PROFILE",
-      "/blog/llms-full.txt": "POSTS"
-    });
+    const assets = fakeAssets({"/llms.txt": "PROFILE + POST SUMMARIES"});
     const text = await getGrounding(storage, assets);
-    expect(text).toContain("PROFILE");
-    expect(text).toContain("POSTS");
-    expect(storage.map.get("grounding:v1")).toMatchObject({text});
+    expect(text).toBe("PROFILE + POST SUMMARIES");
+    expect(assets.calls).toHaveLength(1);
+    expect(new URL(assets.calls[0]).pathname).toBe("/llms.txt");
+    expect(storage.map.get("grounding:v2")).toMatchObject({text});
+  });
+
+  it("ignores stale v1 cache entries (full-text blobs)", async () => {
+    const storage = fakeStorage({
+      "grounding:v1": {text: "HUGE OLD BLOB", fetchedAt: Date.now()}
+    });
+    const assets = fakeAssets({"/llms.txt": "FRESH"});
+    expect(await getGrounding(storage, assets)).toBe("FRESH");
   });
 
   it("serves from cache within TTL without refetching", async () => {
     const storage = fakeStorage({
-      "grounding:v1": {text: "CACHED", fetchedAt: Date.now()}
+      "grounding:v2": {text: "CACHED", fetchedAt: Date.now()}
     });
     const assets = fakeAssets({});
     expect(await getGrounding(storage, assets)).toBe("CACHED");
@@ -53,26 +59,23 @@ describe("getGrounding", () => {
 
   it("refetches after TTL expiry", async () => {
     const storage = fakeStorage({
-      "grounding:v1": {
+      "grounding:v2": {
         text: "STALE",
         fetchedAt: Date.now() - 25 * 60 * 60 * 1000
       }
     });
-    const assets = fakeAssets({
-      "/llms.txt": "FRESH",
-      "/blog/llms-full.txt": ""
-    });
+    const assets = fakeAssets({"/llms.txt": "FRESH"});
     expect(await getGrounding(storage, assets)).toContain("FRESH");
   });
 
   it("falls back to stale cache when fetches fail", async () => {
     const storage = fakeStorage({
-      "grounding:v1": {
+      "grounding:v2": {
         text: "STALE",
         fetchedAt: Date.now() - 25 * 60 * 60 * 1000
       }
     });
-    const assets = fakeAssets({"/llms.txt": null, "/blog/llms-full.txt": null});
+    const assets = fakeAssets({"/llms.txt": null});
     expect(await getGrounding(storage, assets)).toBe("STALE");
   });
 });
