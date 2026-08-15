@@ -3,6 +3,9 @@
   "name": "murugappan-dev",
   "main": "worker/server.ts",
   "routes": [{"pattern": "murugappan.dev", "custom_domain": true}],
+  // the custom domain is the only public host — no *.workers.dev duplicate
+  // for crawlers to index (version preview URLs are unaffected)
+  "workers_dev": false,
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {

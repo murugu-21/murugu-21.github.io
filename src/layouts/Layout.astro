@@ -16,6 +16,10 @@ const {
   noindex = false
 } = Astro.props;
 
+// Self-referencing canonical built on the custom domain, so copies served
+// from any other host (workers.dev preview, etc.) consolidate to it.
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
+
 // Extend the hand-written knowsAbout list below with the resume's skills
 // taxonomy — split each category's "items" string on semicolons/em dashes and
 // on commas that are NOT inside a parenthesized group (so "(AWS SQS,
@@ -87,7 +91,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
-    {!noindex && <link rel="canonical" href="https://murugappan.dev/" />}
+    {!noindex && <link rel="canonical" href={canonicalUrl} />}
     <link
       rel="alternate"
       type="application/rss+xml"
@@ -96,13 +100,13 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     />
 
     <meta property="og:type" content="website" />
-    {!noindex && <meta property="og:url" content="https://murugappan.dev/" />}
+    {!noindex && <meta property="og:url" content={canonicalUrl} />}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content="https://murugappan.dev/og-image.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
-    {!noindex && <meta name="twitter:url" content="https://murugappan.dev/" />}
+    {!noindex && <meta name="twitter:url" content={canonicalUrl} />}
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content="https://murugappan.dev/og-image.png" />

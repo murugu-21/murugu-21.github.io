@@ -21,6 +21,10 @@ const repos = (await fetchPinnedRepos()).filter(r => r.description);
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Print source for dist/resume.pdf, not a destination page: nothing
+         links here and it duplicates homepage content, so keep it out of
+         search indexes. -->
+    <meta name="robots" content="noindex" />
     <title>Murugappan M — Resume</title>
     <meta
       name="description"
