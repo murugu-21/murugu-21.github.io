@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import {readFileSync, writeFileSync, rmSync} from "node:fs";
 
 // Merge the blog's generated urlset with the portfolio's single URL into one
 // root sitemap at dist/sitemap.xml. Runs after both builds (see build:site).
@@ -14,4 +14,10 @@ const out =
   urls.join("") +
   `</urlset>`;
 writeFileSync("dist/sitemap.xml", out);
-console.log(`merge-sitemap: wrote dist/sitemap.xml with ${urls.length + 1} URLs`);
+// The blog's own sitemap files were copied into dist/blog/ by build:site —
+// drop them so every page lives in exactly one sitemap (the merged root one).
+rmSync("dist/blog/sitemap-index.xml", {force: true});
+rmSync("dist/blog/sitemap-0.xml", {force: true});
+console.log(
+  `merge-sitemap: wrote dist/sitemap.xml with ${urls.length + 1} URLs`
+);

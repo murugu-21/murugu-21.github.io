@@ -11,6 +11,11 @@ interface Props {
 
 const description =
   "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.";
+// Search-snippet variant of the pitch, kept under 160 chars so Google doesn't
+// truncate it. The stack list is dropped because the <title> already carries
+// it; og/twitter/JSON-LD keep the full pitch.
+const metaDescription =
+  "I build B2B SaaS that ships in regulated industries — founding engineer, 0 to $300k ARR, now automating pharmacy workflows with LLMs at MedMe Health.";
 const {
   title = "Murugappan M | Full Stack Engineer — TypeScript, Node.js, React & AWS",
   noindex = false
@@ -89,7 +94,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <meta name="description" content={description} />
+    <meta name="description" content={metaDescription} />
     {noindex && <meta name="robots" content="noindex" />}
     {!noindex && <link rel="canonical" href={canonicalUrl} />}
     <link

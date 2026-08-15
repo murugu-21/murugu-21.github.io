@@ -6,7 +6,7 @@ date: "2026-08-16T09:00:00.000Z"
 tags:
   ["websockets", "durable-objects", "partykit", "architecture", "cloudflare"]
 
-description: How a one-process-per-room architecture replaces socket.io + Redis for realtime chat — with production code, cost math, and the actor-model tradeoffs, drawn from the chatbot running on this site.
+description: How one-process-per-room replaces socket.io + Redis for realtime chat — production code, cost math and actor-model tradeoffs from the chatbot on this site.
 ---
 
 [SiteGPT](https://sitegpt.ai)'s founder [Bhanu Teja](https://x.com/pbteja1998) spent months trying to solve a realtime sync problem. His product — a chatbot trained on your website — needed something deceptively hard: when the bot gets stuck, a **human agent should be able to join the same conversation, live**. Visitor, bot, and agent, all seeing the same messages at the same time. Classic multiplayer.

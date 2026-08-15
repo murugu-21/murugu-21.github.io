@@ -1,6 +1,9 @@
 # https://www.robotstxt.org/robotstxt.html
 # All crawlers (incl. AI/LLM bots: GPTBot, ClaudeBot, PerplexityBot, Google-Extended) welcome.
+# Content-Signal (https://contentsignals.org/): explicit yes to search,
+# AI retrieval/grounding, and AI training — this site exists to be found.
 User-agent: *
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Disallow:
 
 Sitemap: https://murugappan.dev/sitemap.xml
