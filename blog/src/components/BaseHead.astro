@@ -131,3 +131,9 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
   )
 }
 {claritySnippet && <script is:inline set:html={claritySnippet} />}
+
+<script>
+  // Shared WebMCP tool registration from the portfolio app (same cross-app
+  // import pattern as the chat widget).
+  import "../../../src/lib/webmcp"
+</script>
