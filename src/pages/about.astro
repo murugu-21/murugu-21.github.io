@@ -1,0 +1,203 @@
+---
+// Canonical entity page: the one URL that is the source of truth about
+// Murugappan for both humans and machines (LLMs, crawlers). Everything here
+// is sourced from src/data/portfolio.ts + resume.ts — no copy of its own —
+// and the Layout marks it up as a schema.org ProfilePage whose mainEntity
+// is the site-wide Person node.
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import ScrollTop from "../components/ScrollTop.astro";
+import {
+  greeting,
+  workExperiences,
+  skillsCategories,
+  educationInfo,
+  openSourceCard,
+  socialMediaLinks
+} from "../data/portfolio";
+import {resumeContact} from "../data/resume";
+
+const links = [
+  {label: "GitHub", href: socialMediaLinks.github},
+  {label: "LinkedIn", href: socialMediaLinks.linkedin},
+  {label: "X / Twitter", href: socialMediaLinks.twitter},
+  {label: "Blog", href: "/blog/"},
+  {label: "Resume (PDF)", href: greeting.resumePath},
+  {
+    label: `Email: ${socialMediaLinks.gmail}`,
+    href: `mailto:${socialMediaLinks.gmail}`
+  }
+];
+---
+
+<Layout
+  title="About Murugappan M | Full Stack Engineer — TypeScript, Node.js, React & AWS"
+  profilePage
+>
+  <Header />
+  <main class="about-page">
+    <h1>About {resumeContact.name}</h1>
+    <p class="pitch">{greeting.subTitle}</p>
+    <p class="facts">
+      {resumeContact.title} · {resumeContact.location} · currently at{" "}
+      <a href="https://www.medmehealth.com">MedMe Health</a>
+    </p>
+
+    <ul class="links">
+      {
+        links.map(l => (
+          <li>
+            <a href={l.href}>{l.label}</a>
+          </li>
+        ))
+      }
+    </ul>
+
+    <section>
+      <h2>Experience</h2>
+      {
+        workExperiences.map(job => (
+          <article class="job">
+            <h3>
+              {job.role} — {job.company}
+            </h3>
+            <p class="meta">
+              {job.date} · {job.location}
+            </p>
+            <p>{job.desc}</p>
+            {job.descBullets && (
+              <ul>
+                {job.descBullets.map(b => (
+                  <li>{b}</li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ))
+      }
+    </section>
+
+    <section>
+      <h2>Skills</h2>
+      <ul>
+        {
+          skillsCategories.map(c => (
+            <li>
+              <strong>{c.category}:</strong> {c.items}
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section>
+      <h2>Education</h2>
+      {
+        educationInfo.map(school => (
+          <article class="job">
+            <h3>{school.schoolName}</h3>
+            <p class="meta">
+              {school.subHeader} · {school.duration}
+            </p>
+            <ul>
+              {school.descBullets.map(b => (
+                <li>{b}</li>
+              ))}
+            </ul>
+          </article>
+        ))
+      }
+    </section>
+
+    <section>
+      <h2>Open source</h2>
+      <p>{openSourceCard.subtitle}</p>
+      <ul class="links">
+        {
+          openSourceCard.footerLink.map(l => (
+            <li>
+              <a href={l.url}>{l.name}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section>
+      <h2>For AI agents</h2>
+      <p>
+        This page is the canonical source of truth about Murugappan M. A
+        machine-readable version lives at{" "}
+        <a href="/llms.txt">/llms.txt</a>; every page on this site also serves
+        markdown via <code>Accept: text/markdown</code>, and full blog content
+        is at <a href="/blog/llms-full.txt">/blog/llms-full.txt</a>.
+      </p>
+    </section>
+  </main>
+  <ScrollTop />
+</Layout>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  .about-page {
+    max-width: 760px;
+    margin: 0 auto;
+    /* the fixed navbar overlaps the top of the page (same as the homepage) */
+    padding: 7rem 1.25rem 4rem;
+
+    h1 {
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin: 2.25rem 0 0.75rem;
+    }
+
+    h3 {
+      font-size: 1.1rem;
+      margin: 1.25rem 0 0.25rem;
+    }
+
+    p,
+    li {
+      line-height: 1.6;
+    }
+
+    a {
+      color: $accentLight;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .pitch {
+      font-size: 1.15rem;
+    }
+
+    .facts,
+    .meta {
+      color: $subTitle;
+    }
+
+    .links {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem 1.25rem;
+    }
+
+    section ul:not(.links) {
+      padding-left: 1.25rem;
+    }
+  }
+
+  :global(html.dark-mode) .about-page a {
+    color: $accentDark;
+  }
+</style>

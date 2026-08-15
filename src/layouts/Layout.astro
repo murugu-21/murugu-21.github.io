@@ -7,6 +7,8 @@ import {skillsCategories} from "../data/portfolio";
 interface Props {
   title?: string;
   noindex?: boolean;
+  // marks this page as THE canonical entity page about the person (/about)
+  profilePage?: boolean;
 }
 
 const description =
@@ -18,7 +20,8 @@ const metaDescription =
   "I build B2B SaaS that ships in regulated industries — founding engineer, 0 to $300k ARR, now automating pharmacy workflows with LLMs at MedMe Health.";
 const {
   title = "Murugappan M | Full Stack Engineer — TypeScript, Node.js, React & AWS",
-  noindex = false
+  noindex = false,
+  profilePage = false
 } = Astro.props;
 
 // Self-referencing canonical built on the custom domain, so copies served
@@ -55,6 +58,82 @@ for (const {items} of skillsCategories) {
   }
 }
 const knowsAbout = [...handWrittenKnowsAbout, ...extraKnowsAbout];
+
+// Identity graph with stable @ids: the blog's BlogPosting/Blog nodes point
+// their author/publisher at PERSON_ID (see blog/src/consts.js — keep in
+// sync), so crawlers can merge every page's markup into one entity.
+const SITE_URL = "https://murugappan.dev";
+const PERSON_ID = `${SITE_URL}/#person`;
+const WEBSITE_ID = `${SITE_URL}/#website`;
+const personNode = {
+  "@type": "Person",
+  "@id": PERSON_ID,
+  name: "Murugappan M",
+  url: `${SITE_URL}/`,
+  image: {
+    "@type": "ImageObject",
+    url: `${SITE_URL}/og-image.png`
+  },
+  jobTitle: "Full Stack Engineer",
+  description,
+  worksFor: {
+    "@type": "Organization",
+    name: "MedMe Health",
+    url: "https://www.medmehealth.com"
+  },
+  alumniOf: [
+    {
+      "@type": "Organization",
+      name: "HyperVerge",
+      url: "https://hyperverge.co"
+    },
+    {
+      "@type": "Organization",
+      name: "Samsung R&D Institute India",
+      url: "https://research.samsung.com/sri-b"
+    },
+    {
+      "@type": "CollegeOrUniversity",
+      name: "Kumaraguru College of Technology",
+      url: "https://kct.ac.in"
+    }
+  ],
+  knowsAbout,
+  sameAs: [
+    "https://github.com/murugu-21",
+    "https://www.linkedin.com/in/murugappan-m-56920a192/",
+    "https://x.com/murugu21"
+  ],
+  // /about is the canonical entity page about the person
+  mainEntityOfPage: {"@id": `${SITE_URL}/about/`}
+};
+const graph: object[] = [
+  {
+    "@type": "WebSite",
+    "@id": WEBSITE_ID,
+    url: `${SITE_URL}/`,
+    name: "Murugappan M — Full Stack Engineer",
+    description,
+    publisher: {"@id": PERSON_ID},
+    inLanguage: "en"
+  },
+  personNode
+];
+// Every indexable page gets a page node tied into the graph; /about (the
+// canonical entity page) is a ProfilePage whose mainEntity is the person.
+if (!noindex) {
+  graph.push({
+    "@type": profilePage ? "ProfilePage" : "WebPage",
+    "@id": canonicalUrl,
+    url: canonicalUrl,
+    name: title,
+    isPartOf: {"@id": WEBSITE_ID},
+    about: {"@id": PERSON_ID},
+    ...(profilePage ? {mainEntity: {"@id": PERSON_ID}} : {}),
+    inLanguage: "en"
+  });
+}
+const jsonLd = {"@context": "https://schema.org", "@graph": graph};
 
 // Microsoft Clarity project id, set per-environment in Cloudflare Pages build
 // env vars. PUBLIC_ because the value is inlined into the served HTML anyway.
@@ -153,47 +232,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
       })();
     </script>
 
-    <script
-      type="application/ld+json"
-      set:html={JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Person",
-        name: "Murugappan M",
-        url: "https://murugappan.dev",
-        image: "https://murugappan.dev/og-image.png",
-        jobTitle: "Full Stack Engineer",
-        description:
-          "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.",
-        worksFor: {
-          "@type": "Organization",
-          name: "MedMe Health",
-          url: "https://www.medmehealth.com"
-        },
-        alumniOf: [
-          {
-            "@type": "Organization",
-            name: "HyperVerge",
-            url: "https://hyperverge.co"
-          },
-          {
-            "@type": "Organization",
-            name: "Samsung R&D Institute India",
-            url: "https://research.samsung.com/sri-b"
-          },
-          {
-            "@type": "CollegeOrUniversity",
-            name: "Kumaraguru College of Technology",
-            url: "https://kct.ac.in"
-          }
-        ],
-        knowsAbout,
-        sameAs: [
-          "https://github.com/murugu-21",
-          "https://www.linkedin.com/in/murugappan-m-56920a192/",
-          "https://x.com/murugu21"
-        ]
-      })}
-    />
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 
     {claritySnippet && <script is:inline set:html={claritySnippet} />}
 

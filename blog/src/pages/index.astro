@@ -8,6 +8,7 @@ import {
   SITE_TITLE,
   SITE_DESCRIPTION,
   SITE_URL,
+  PERSON,
 } from "../consts"
 import {
   getPublishedPosts,
@@ -36,14 +37,13 @@ const serialized = posts.map(post => ({
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Blog",
+  "@id": `${SITE_URL}/#blog`,
   name: SITE_TITLE,
   description: SITE_DESCRIPTION,
   url: `${SITE_URL}/`,
-  author: {
-    "@type": "Person",
-    name: AUTHOR.name,
-    url: `https://x.com/${SOCIAL.twitter}`,
-  },
+  isPartOf: { "@id": "https://murugappan.dev/#website" },
+  author: PERSON,
+  publisher: PERSON,
 }
 ---
 
