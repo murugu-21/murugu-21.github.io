@@ -69,6 +69,15 @@ const personNode = {
   "@type": "Person",
   "@id": PERSON_ID,
   name: "Murugappan M",
+  givenName: "Murugappan",
+  // public handles — help entity resolvers connect the sameAs profiles
+  alternateName: ["murugu-21", "murugu21"],
+  email: "mailto:murugu2001@gmail.com",
+  address: {
+    "@type": "PostalAddress",
+    addressLocality: "Bangalore",
+    addressCountry: "IN"
+  },
   url: `${SITE_URL}/`,
   image: {
     "@type": "ImageObject",
