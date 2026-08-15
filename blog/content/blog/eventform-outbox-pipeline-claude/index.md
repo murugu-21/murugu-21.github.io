@@ -14,7 +14,7 @@ tags:
     "claude-code",
   ]
 
-description: I built EventForm, a multi-tenant form builder with a transactional outbox, Debezium CDC, idempotent webhook delivery and OAuth handed off to Cognito, pair-programming with Claude. Here is what I learned about the patterns, and about working with AI agents.
+description: I built EventForm, a multi-tenant form builder with a transactional outbox, Debezium CDC and idempotent webhook delivery, pair-programming with Claude.
 ---
 
 I wanted a portfolio project that wasn't another todo app. Something anyone could actually click around in, built on the event-driven patterns I keep getting asked about in system design interviews. So I built [EventForm](https://eventform.murugappan.dev) ([source](https://github.com/murugu-21/eventform)) — a mini-Typeform where every form submission fans out to webhook endpoints through a transactional outbox, Debezium CDC, Kafka, and an idempotent consumer. The whole thing runs as a docker-compose stack on a single small AWS box, with Postgres on managed Neon and Cognito handling auth. I built it with Claude Code doing most of the typing, which was its own learning experience.
