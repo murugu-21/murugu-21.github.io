@@ -5,8 +5,10 @@ import {readFileSync, writeFileSync, existsSync, readdirSync} from "node:fs";
 // negotiable page's index.html. Runs after merge-llms (needs the merged
 // root llms.txt) in build:site.
 
-// Homepage: the merged root llms.txt already is the site's markdown summary.
+// Homepage + /about (canonical entity page): the merged root llms.txt
+// already is the site's markdown identity summary — serve it for both.
 writeFileSync("dist/index.md", readFileSync("dist/llms.txt", "utf8"));
+writeFileSync("dist/about/index.md", readFileSync("dist/llms.txt", "utf8"));
 
 // Blog posts: ship the real markdown source, frontmatter included (same
 // shape as Cloudflare's converter output). Gate on the built HTML so drafts

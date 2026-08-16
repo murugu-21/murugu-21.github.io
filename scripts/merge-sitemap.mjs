@@ -6,7 +6,9 @@ const blogSitemap = readFileSync("blog/dist/sitemap-0.xml", "utf8");
 const urls = blogSitemap.match(/<url>[\s\S]*?<\/url>/g) ?? [];
 if (urls.length === 0)
   throw new Error("merge-sitemap: no <url> entries found in blog sitemap");
-const portfolio = `<url><loc>https://murugappan.dev/</loc></url>`;
+const portfolio =
+  `<url><loc>https://murugappan.dev/</loc></url>` +
+  `<url><loc>https://murugappan.dev/about/</loc></url>`;
 const out =
   `<?xml version="1.0" encoding="UTF-8"?>` +
   `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
@@ -19,5 +21,5 @@ writeFileSync("dist/sitemap.xml", out);
 rmSync("dist/blog/sitemap-index.xml", {force: true});
 rmSync("dist/blog/sitemap-0.xml", {force: true});
 console.log(
-  `merge-sitemap: wrote dist/sitemap.xml with ${urls.length + 1} URLs`
+  `merge-sitemap: wrote dist/sitemap.xml with ${urls.length + 2} URLs`
 );

@@ -2,7 +2,7 @@
 import { render } from "astro:content"
 import BaseLayout from "../layouts/BaseLayout.astro"
 import Bio from "../components/Bio.jsx"
-import { AUTHOR, SOCIAL, SITE_TITLE, SITE_URL } from "../consts"
+import { AUTHOR, SOCIAL, SITE_TITLE, SITE_URL, PERSON } from "../consts"
 import {
   getPublishedPosts,
   postPath,
@@ -43,13 +43,14 @@ const jsonLd = {
   dateModified: post.data.date.toISOString(),
   keywords: post.data.tags.join(", "),
   image: `${SITE_URL}/og-image.png`,
-  author: {
-    "@type": "Person",
-    name: AUTHOR.name,
-    url: `https://x.com/${SOCIAL.twitter}`,
+  author: PERSON,
+  publisher: PERSON,
+  isPartOf: {
+    "@type": "Blog",
+    "@id": `${SITE_URL}/#blog`,
+    name: SITE_TITLE,
+    url: `${SITE_URL}/`,
   },
-  publisher: { "@type": "Person", name: AUTHOR.name },
-  isPartOf: { "@type": "Blog", name: SITE_TITLE, url: `${SITE_URL}/` },
 }
 ---
 
