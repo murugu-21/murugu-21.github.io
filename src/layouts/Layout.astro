@@ -185,6 +185,8 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     <meta name="description" content={metaDescription} />
     {noindex && <meta name="robots" content="noindex" />}
     {!noindex && <link rel="canonical" href={canonicalUrl} />}
+    {/* crawler-only pointer to the entity page (not in the human nav) */}
+    <link rel="author" href="/about/" />
     <link
       rel="alternate"
       type="application/rss+xml"

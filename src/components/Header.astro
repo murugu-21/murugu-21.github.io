@@ -1,14 +1,15 @@
 ---
 import ThemeToggle from "./ThemeToggle.astro";
 
-// "/#hash" (not bare "#hash") so the section links also work from /about
+// "/#hash" (not bare "#hash") so the section links also work from /about.
+// /about itself is deliberately NOT in the human nav — it's the machine
+// entity page, reachable via sitemap/llms.txt/rel=author instead.
 const links = [
   {href: "/#skills", label: "Skills"},
   {href: "/#experience", label: "Work Experiences"},
   {href: "/#projects", label: "Projects"},
   {href: "/#achievements", label: "Achievements"},
   {href: "/#blogs", label: "Blogs"},
-  {href: "/about", label: "About"},
   {href: "/#resume", label: "Resume"},
   {href: "/#contact", label: "Contact Me"}
 ];
@@ -278,6 +279,21 @@ const links = [
     :global(html.dark-mode) .header.scrolled {
       background-color: $darkPageBase;
     }
+    /* the signature logo at 1.5em (~300px) + floated hamburger can't share
+       a narrow row — the hamburger wrapped to a second line, doubling the
+       bar height (and hiding content under the fixed header) */
+    .header .logo {
+      font-size: 1.05em;
+      margin-top: 18px;
+    }
+  }
+
+  /* ultra-narrow (<=360px): shrink further so the row still holds both */
+  @media (max-width: 22.49em) {
+    .header .logo {
+      font-size: 0.85em;
+      margin-top: 24px;
+    }
   }
 
   /* 48em = 768px */
@@ -306,6 +322,34 @@ const links = [
   @media (max-width: 960px) and (min-width: 768px) {
     .header {
       font-size: 12px;
+    }
+  }
+
+  /* 961–1320px: full-size nav text + logo don't fit one row (the menu
+     wrapped under the logo) — tighten type and link padding */
+  @media (max-width: 1320px) and (min-width: 961px) {
+    .header {
+      font-size: 14px;
+    }
+    .header li a {
+      padding: 15px 12px;
+    }
+    .header li a::after {
+      left: 12px;
+    }
+    .header li a:hover::after,
+    .header li a:focus-visible::after {
+      width: calc(100% - 24px);
+    }
+  }
+
+  /* tightest desktop band: the theme toggle still wrapped at ~1024px */
+  @media (max-width: 1120px) and (min-width: 961px) {
+    .header {
+      font-size: 13px;
+    }
+    .header li :global(.switch) {
+      margin: 15px 8px;
     }
   }
 </style>
