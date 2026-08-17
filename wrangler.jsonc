@@ -26,5 +26,15 @@
   ],
   "ai": {"binding": "AI"},
   "send_email": [{"name": "EMAIL"}],
+  // Read-only analytics mirror of every room's messages — DO SQLite stays the
+  // serving source of truth; D1 exists so chats are browsable in the dash
+  // (Storage & Databases → D1 → jarvis-chats). Writes are fire-and-forget.
+  "d1_databases": [
+    {
+      "binding": "CHAT_DB",
+      "database_name": "jarvis-chats",
+      "database_id": "a1111792-fb35-470f-85c9-13c3aab0662c"
+    }
+  ],
   "observability": {"enabled": true}
 }
