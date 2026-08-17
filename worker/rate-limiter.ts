@@ -6,17 +6,30 @@ import {DurableObject} from "cloudflare:workers";
 // model call — the last exchange of the day can overshoot by one call's cost.
 export const NEURON_DAILY_BUDGET = 9500;
 
-// @cf/openai/gpt-oss-120b conversion rates from the same pricing page.
-export const NEURONS_PER_M_INPUT_TOKENS = 31818;
-export const NEURONS_PER_M_OUTPUT_TOKENS = 68182;
+// Per-model conversion rates (neurons per M tokens) from the same pricing
+// page. Keyed by model id so swapping MODEL_ID in prompt.ts keeps the budget
+// math honest — an unknown id falls back to the most expensive known rates,
+// which under-counts capacity rather than blowing the real allocation.
+export const MODEL_NEURON_RATES: Record<
+  string,
+  {inputPerM: number; outputPerM: number}
+> = {
+  "@cf/qwen/qwen3-30b-a3b-fp8": {inputPerM: 4625, outputPerM: 30475},
+  "@cf/openai/gpt-oss-120b": {inputPerM: 31818, outputPerM: 68182}
+};
+
+const FALLBACK_RATES = Object.values(MODEL_NEURON_RATES).reduce((a, b) =>
+  a.inputPerM >= b.inputPerM ? a : b
+);
 
 export function neuronCost(
+  modelId: string,
   promptTokens: number,
   completionTokens: number
 ): number {
+  const rates = MODEL_NEURON_RATES[modelId] ?? FALLBACK_RATES;
   return (
-    (promptTokens * NEURONS_PER_M_INPUT_TOKENS +
-      completionTokens * NEURONS_PER_M_OUTPUT_TOKENS) /
+    (promptTokens * rates.inputPerM + completionTokens * rates.outputPerM) /
     1_000_000
   );
 }

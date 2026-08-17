@@ -1,7 +1,7 @@
 // Jarvis chat widget — React island on vendored shadcn/ui primitives, shared
 // by the portfolio and the blog (the blog imports ./mount via a relative
 // path). Idle-mounted by ChatWidget.astro so it never affects initial load.
-import {useEffect, useRef, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {nanoid} from "nanoid";
 import {PartySocket} from "partysocket";
 import {
@@ -13,7 +13,7 @@ import {
   X
 } from "lucide-react";
 
-import type {ServerMessage} from "../../../worker/protocol";
+import {GREETING, type ServerMessage} from "../../../worker/protocol";
 import {Button} from "../ui/button";
 import {Card, CardFooter, CardHeader} from "../ui/card";
 import {
@@ -30,9 +30,6 @@ import "./chat.css";
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
 const MAX_LENGTH = 1000;
-
-const GREETING =
-  "Hi, I'm Jarvis — Murugappan's AI assistant. Ask me about his experience, projects, or blog posts — or tell me about an opportunity for him.";
 
 // Shown as tappable chips while the conversation is empty. Subtle by design:
 // each steers Jarvis toward a strong grounded answer without selling.
@@ -53,18 +50,53 @@ function roomId(): string {
   return id;
 }
 
+// Render bare URLs in message text as real links (Jarvis replies in plain
+// text; the system prompt tells it to include full URLs). Split keeps the
+// captured URLs at odd indexes; trailing punctuation stays outside the link.
+const URL_SPLIT = /(https?:\/\/[^\s]+)/;
+
+// The prompt forbids markdown, but models still slip [label](url) through
+// sometimes — flatten it to "label: url" so the linkifier below handles it.
+const MD_LINK = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
+
+function renderWithLinks(raw: string) {
+  const text = raw.replace(MD_LINK, (_m, label, url) =>
+    label ? `${label}: ${url}` : url
+  );
+  return text.split(URL_SPLIT).map((part, i) => {
+    if (i % 2 === 0) return part;
+    const trailing = /[.,!?;:)]+$/.exec(part)?.[0] ?? "";
+    const url = trailing ? part.slice(0, -trailing.length) : part;
+    return (
+      <React.Fragment key={i}>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="break-all text-current underline underline-offset-2 hover:opacity-80"
+        >
+          {url}
+        </a>
+        {trailing}
+      </React.Fragment>
+    );
+  });
+}
+
 function BubbleView({kind, text}: Bubble) {
   return (
     <div
       className={cn(
         "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] whitespace-pre-wrap break-words",
-        kind === "user" && "self-end rounded-br-sm bg-primary text-primary-foreground",
-        kind === "assistant" && "self-start rounded-bl-sm bg-muted text-foreground",
+        kind === "user" &&
+          "self-end rounded-br-sm bg-primary text-primary-foreground",
+        kind === "assistant" &&
+          "self-start rounded-bl-sm bg-muted text-foreground",
         kind === "system" &&
           "self-center bg-transparent text-center text-xs text-muted-foreground"
       )}
     >
-      {text}
+      {renderWithLinks(text)}
     </div>
   );
 }
@@ -77,7 +109,9 @@ export function ChatWidget() {
   const [sending, setSending] = useState(false);
   const [greeted, setGreeted] = useState(false);
   const [confirmRestart, setConfirmRestart] = useState(false);
-  const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">("hidden");
+  const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">(
+    "hidden"
+  );
 
   const socketRef = useRef<PartySocket | null>(null);
   // Mirrors for the socket handlers, which outlive any single render.
@@ -106,14 +140,27 @@ export function ChatWidget() {
         streamRef.current = null;
         setStream(null);
         // One state swap = one paint, same as the old replaceChildren fix.
+        // The server seeds the greeting as the room's first message, so it
+        // arrives inside history — the local `greeted` bubble is only the
+        // offline fallback and must clear once real history lands.
         setBubbles(msg.messages.map(m => ({kind: m.role, text: m.content})));
-        if (msg.messages.length === 0) setGreeted(true);
+        setGreeted(false);
         break;
-      case "delta":
+      case "visitor":
+        // Another tab of this room sent a message — mirror it here.
+        setBubbles(b => [...b, {kind: "user", text: msg.text}]);
+        break;
+      case "delta": {
+        // Left-trim the first chunk — Qwen's no-think mode leads with blank
+        // lines; keep showing the typing dots until real text arrives.
+        const text =
+          streamRef.current === null ? msg.text.replace(/^\s+/, "") : msg.text;
+        if (streamRef.current === null && text === "") break;
         setTyping(false);
-        streamRef.current = (streamRef.current ?? "") + msg.text;
+        streamRef.current = (streamRef.current ?? "") + text;
         setStream(streamRef.current);
         break;
+      }
       case "done":
         setTyping(false);
         commitStream();
@@ -186,7 +233,11 @@ export function ChatWidget() {
     setTyping(true);
     setSending(true);
     setConfirmRestart(false);
-    ws.send(JSON.stringify({type: "chat", text}));
+    // Include the page the visitor is on — the room feeds it to the model as
+    // ephemeral context so "this post"/"this page" resolve correctly.
+    ws.send(
+      JSON.stringify({type: "chat", text, page: window.location.pathname})
+    );
   };
 
   const onSubmit = (e: React.FormEvent) => {
@@ -249,7 +300,7 @@ export function ChatWidget() {
   useEffect(() => {
     const v = viewportRef.current;
     if (!v) return;
-    const fresh = bubbles.length === 0 && stream === null;
+    const fresh = stream === null && bubbles.every(b => b.kind !== "user");
     v.scrollTop = fresh ? 0 : v.scrollHeight;
   }, [bubbles, stream, typing, greeted, open]);
 
@@ -258,7 +309,10 @@ export function ChatWidget() {
     if (!open) return;
     const mq = window.matchMedia("(max-width: 639px)");
     const apply = () =>
-      document.documentElement.classList.toggle("chat-panel-locked", mq.matches);
+      document.documentElement.classList.toggle(
+        "chat-panel-locked",
+        mq.matches
+      );
     apply();
     mq.addEventListener("change", apply);
     return () => {
@@ -283,8 +337,14 @@ export function ChatWidget() {
     []
   );
 
+  // Starters show until the visitor has said anything — the greeting seeded
+  // by the server (or the offline fallback) doesn't count as conversation.
   const showStarters =
-    greeted && bubbles.length === 0 && stream === null && !typing && !sending;
+    (greeted || bubbles.length > 0) &&
+    bubbles.every(b => b.kind !== "user") &&
+    stream === null &&
+    !typing &&
+    !sending;
 
   const headerBtn =
     "size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-[18px]";
@@ -364,7 +424,11 @@ export function ChatWidget() {
                 Start a new conversation?
               </span>
               <div className="flex gap-1.5">
-                <Button size="sm" className="h-7 px-2.5 text-xs" onClick={restart}>
+                <Button
+                  size="sm"
+                  className="h-7 px-2.5 text-xs"
+                  onClick={restart}
+                >
                   Start over
                 </Button>
                 <Button
@@ -423,7 +487,12 @@ export function ChatWidget() {
                 autoComplete="off"
                 className="bg-secondary"
               />
-              <Button type="submit" size="icon" aria-label="Send" disabled={sending}>
+              <Button
+                type="submit"
+                size="icon"
+                aria-label="Send"
+                disabled={sending}
+              >
                 <Send />
               </Button>
             </form>
