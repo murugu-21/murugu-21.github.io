@@ -368,12 +368,23 @@ export class ChatRoom extends Server<Env> {
   }
 
   private persist(role: "user" | "assistant", content: string): void {
+    const createdAt = Date.now();
     this.ctx.storage.sql.exec(
       `INSERT INTO messages (role, content, created_at) VALUES (?, ?, ?)`,
       role,
       content,
-      Date.now()
+      createdAt
     );
+    // Fire-and-forget mirror to D1 so every room's chat is browsable in the
+    // Cloudflare dash (rooms aren't enumerable, so this is the only global
+    // view). The DO's own SQLite stays the serving source of truth; a mirror
+    // failure logs and never touches the conversation.
+    this.env.CHAT_DB?.prepare(
+      `INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)`
+    )
+      .bind(this.name, role, content, createdAt)
+      .run()
+      .catch((err: unknown) => console.error("d1 mirror failed", err));
   }
 
   private broadcastMsg(message: ServerMessage, exclude?: string[]): void {

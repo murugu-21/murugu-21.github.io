@@ -6,11 +6,18 @@
   // keep DO bindings + migrations in sync with ../../wrangler.jsonc
   "durable_objects": {
     "bindings": [
-      { "name": "ChatRoom", "class_name": "ChatRoom" },
-      { "name": "RateLimiter", "class_name": "RateLimiter" }
+      {"name": "ChatRoom", "class_name": "ChatRoom"},
+      {"name": "RateLimiter", "class_name": "RateLimiter"}
     ]
   },
   "migrations": [
-    { "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }
+    {"tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"]}
+  ],
+  "d1_databases": [
+    {
+      "binding": "CHAT_DB",
+      "database_name": "jarvis-chats-test",
+      "database_id": "test"
+    }
   ]
 }
