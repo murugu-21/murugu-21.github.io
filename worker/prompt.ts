@@ -1,11 +1,13 @@
 import type {ChatHistoryEntry} from "./protocol";
 
-// Qwen3-30B-A3B (MoE, fp8): ~87 neurons per grounded exchange vs ~570 on
-// gpt-oss-120b → ~6.5x more messages inside the free 10k-neuron/day tier.
-// Function calling supported; 32k context fits the ~18k-token prompt.
-// Changing this? Add the model's neuron rates to MODEL_NEURON_RATES in
-// rate-limiter.ts or the budget falls back to the most expensive known rate.
-export const MODEL_ID = "@cf/qwen/qwen3-30b-a3b-fp8";
+// gpt-oss-120b: ~93 neurons per slim-grounded exchange (~100 msgs/day free,
+// DeepSeek overflow behind it). Flipped back from qwen3-30b-a3b (2026-08-17):
+// qwen narrated lead captures ("I've noted it") without calling the
+// capture_opportunity tool — through two prompt hardenings — silently losing
+// leads. gpt-oss calls it reliably. Changing this? Add the model's neuron
+// rates to MODEL_NEURON_RATES in rate-limiter.ts or the budget falls back to
+// the most expensive known rate, and LIVE-TEST the capture flow first.
+export const MODEL_ID = "@cf/openai/gpt-oss-120b";
 export const MAX_HISTORY_MESSAGES = 20;
 // Per-visitor fairness cap (rolling 24h): one room can burn at most ~8% of
 // the global neuron budget; the RateLimiter DO is the hard backstop.
