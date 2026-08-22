@@ -24,6 +24,8 @@
     "astro": "^5.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "hono": "^4.13.3",
+    "hono-party": "^2.1.0",
     "lottie-web": "^5.12.2",
     "lucide-react": "^1.31.0",
     "nanoid": "^6.0.1",
@@ -55,6 +57,11 @@
     "typescript": "^5.9.3",
     "vitest": "^4.1.10",
     "wrangler": "^4.121.0"
+  },
+  "overrides": {
+    "hono-party": {
+      "@cloudflare/workers-types": "$@cloudflare/workers-types"
+    }
   },
   "lint-staged": {
     "*.{js,mjs,jsx,ts,tsx,astro,json,jsonc,md,css,scss}": "prettier --write --ignore-unknown"
