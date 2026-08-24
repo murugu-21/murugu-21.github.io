@@ -75,6 +75,23 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
 <title>{fullTitle}</title>
 {noindex && <meta name="robots" content="noindex" />}
 <link rel="canonical" href={canonical} />
+{
+  /* Agent discovery, same relations the portfolio layout emits (see
+    ../../../src/layouts/Layout.astro): the site's OpenAPI description and the
+    developer portal that documents it. Absolute because the blog is served
+    under a base path. */
+}
+<link
+  rel="service-desc"
+  type="application/json"
+  href="https://murugappan.dev/openapi.json"
+  title="murugappan.dev API — OpenAPI 3.1.0"
+/>
+<link
+  rel="service-doc"
+  type="text/html"
+  href="https://murugappan.dev/developers/"
+/>
 <link rel="icon" type="image/png" href={`${base}/icon.png`} />
 <link rel="manifest" href={`${base}/manifest.webmanifest`} />
 <meta name="theme-color" content="#057b01" />

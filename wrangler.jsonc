@@ -12,7 +12,18 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/parties/*"]
+    // Paths the Worker must answer itself instead of letting the assets
+    // layer serve (or 404) them — keep in sync with worker/server.ts.
+    // /api/* so every failure is the JSON error envelope rather than the HTML
+    // 404 page; /openapi.json so the spec's `servers` names the real host;
+    // /mcp for the Model Context Protocol endpoint.
+    "run_worker_first": [
+      "/parties/*",
+      "/api/*",
+      "/openapi.json",
+      "/mcp",
+      "/mcp/*"
+    ]
   },
   // keep DO bindings + migrations in sync with worker/test/wrangler.jsonc
   "durable_objects": {

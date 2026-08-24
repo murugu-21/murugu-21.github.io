@@ -38,6 +38,68 @@ Cloudflare Workers Builds (git-integrated) builds on every push to `main` with b
 
 `/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `npm run build:site`, `scripts/generate-resume.mjs` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Cloudflare Pages build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Workers Builds' Chromium/Puppeteer compatibility should be re-verified when the AI chat widget cutover (see below) moves builds off Cloudflare Pages; if headless Chromium isn't viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
 
+## Public API (`/api/*`)
+
+A public, unauthenticated JSON API over the site's own content, for AI agents and
+developers. Documented for humans at [`/developers`](https://murugappan.dev/developers/),
+for machines at [`/openapi.json`](https://murugappan.dev/openapi.json) (OpenAPI 3.1.0),
+and for agents at [`/AGENTS.md`](https://murugappan.dev/AGENTS.md).
+
+- **Code:** `worker/api/` — `routes.ts` is the single source of truth for the
+  surface (the router and the spec are both checked against it), `openapi.ts`
+  generates the spec, `errors.ts` is the one JSON error envelope, `store.ts`
+  reads the inputs, `index.ts` is the Hono sub-app.
+- **Endpoints:** `GET /api/profile`, `/api/experience`, `/api/skills`,
+  `/api/education`, `/api/open-source`, `/api/posts` (`?q=`, `?limit=`),
+  `/api/posts/{slug}` (full markdown), `POST /api/contact`, and the spec at
+  `/openapi.json` + `/api/openapi.json`.
+- **No second copy of the data.** `src/pages/api/dataset.json.ts` is an Astro
+  static endpoint that runs `src/data/portfolio.ts` + `resume.ts` through
+  `buildDataset()` (in `worker/api/dataset.ts`) and prerenders
+  `dist/api/dataset.json`; the Worker reads it back through the ASSETS binding.
+  Blog posts come from the merged root `llms.txt` and the per-post `index.md`
+  renditions, so the API can't fall behind the blog. `/developers` renders its
+  endpoint table from the same OpenAPI document the Worker serves.
+- **Worker-owned paths.** `run_worker_first` in `wrangler.jsonc` claims `/api/*`
+  and `/openapi.json` so every API failure is the JSON error envelope rather
+  than the HTML 404 page — keep that list in sync with `worker/server.ts`.
+- **`POST /api/contact`** emails `OPPORTUNITY_INBOX` (same secret and
+  `send_email` binding the chat's lead capture uses). Rate-limited by the
+  existing `RateLimiter` DO: 3/client-IP/UTC-day, 20 site-wide. `"dryRun": true`
+  validates a payload without sending or spending a slot — the endpoint's
+  sandbox. Without the secret configured it answers `503`, never a silent drop.
+
+## MCP server (`/mcp`)
+
+The same content again as a [Model Context Protocol](https://modelcontextprotocol.io)
+server, so an MCP client can use the site without any HTTP glue. Add it as
+`https://murugappan.dev/mcp` — Streamable HTTP, `POST` only, no auth, no session.
+
+- **Code:** `worker/mcp/` — `protocol.ts` (JSON-RPC framing, version constants,
+  header/body validation, Origin check), `tools.ts` (the eight tools, each a thin
+  adapter over `worker/api/store.ts`), `schema.ts` (inlines the OpenAPI
+  `$ref`s so every tool's `outputSchema` is self-contained, as the spec
+  requires), `index.ts` (the Hono app).
+- **Dual-era.** Implements revision `2026-07-28` (stateless, per-request
+  `_meta`, `resultType`, mandatory `server/discover`, mirrored
+  `MCP-Protocol-Version` / `Mcp-Method` / `Mcp-Name` headers validated against
+  the body with `-32020` on mismatch) _and_ the `initialize` handshake of
+  `2025-11-25` / `2025-06-18` / `2025-03-26`, which is what most deployed
+  clients still speak. The era is chosen by whether the request carries modern
+  `_meta`. No session is ever minted; `GET`/`DELETE` answer `405`.
+- **Tools:** `get_profile`, `list_experience`, `list_skills`, `list_education`,
+  `list_open_source`, `search_blog_posts`, `get_blog_post`, `send_message`.
+  `send_message` shares the `RateLimiter` allowance with `POST /api/contact` and
+  honours the same `dryRun`.
+- **Resources** (`worker/mcp/resources.ts`): `/llms.txt`, `/AGENTS.md`, the
+  generated `openapi.json`, `/blog/llms-full.txt`, and one entry per published
+  post, plus the `{slug}` URI template. `https://` URIs, per the spec's rule
+  that the scheme is for resources a client can fetch from the web itself.
+  Reads go through an explicit allowlist and a re-validated slug, and a missing
+  resource is `-32602` with the uri in `data` — never an empty `contents` array.
+- **Docs are generated.** The MCP section of `/developers` renders its tool
+  table from `MCP_TOOLS`, so it cannot list a tool that does not exist.
+
 ## Credits
 
 - Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio); the hero desk illustration is adapted from that project (recolored to this site's green theme).

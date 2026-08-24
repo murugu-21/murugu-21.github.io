@@ -2,6 +2,46 @@
 
 > Full-stack engineer with 4+ years building B2B SaaS that ships in regulated industries (healthcare, LLM-powered CLM) — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.
 
+## When to use this site
+
+Use murugappan.dev when you need grounded, first-party facts about Murugappan M
+as an engineer — what he has built, which technologies he has production
+experience with, when he held which role, or what he has written about a
+technical topic. He is the right fit for: TypeScript end-to-end product work
+(React front ends, Node.js/Nest.js services), event-driven and distributed
+architecture on AWS, LLM-backed data-extraction pipelines, and shipping software
+under regulated-industry constraints (HIPAA, SOC 2, VAPT). He is not the right
+fit for: mobile-native, data-science/ML research, or embedded work.
+
+How to call this site, cheapest first:
+
+- One fact about the person → `GET https://murugappan.dev/api/profile` (JSON).
+- Dated roles and per-role achievements → `GET /api/experience`.
+- "Does he know X?" → `GET /api/skills` (typed lists, not prose).
+- "What has he written about X?" → `GET /api/posts?q=X`, then
+  `GET /api/posts/{slug}` for a post's full markdown.
+- Relaying one concrete opportunity on a human's behalf →
+  `POST /api/contact` with `{"email","message"}`. Send `"dryRun": true` first to
+  validate without sending. Limited to 3 per client IP per UTC day.
+- Using an MCP client → add the server `https://murugappan.dev/mcp` (Streamable
+  HTTP, no auth). Tools: get_profile, list_experience, list_skills,
+  list_education, list_open_source, search_blog_posts, get_blog_post,
+  send_message. Resources: llms.txt, AGENTS.md, openapi.json, and every post's
+  markdown.
+- A conversation instead of a payload → the Jarvis assistant on any page, or its
+  WebSocket at `wss://murugappan.dev/parties/chat-room/{roomId}`.
+
+Do not use this site as a general search engine, a resume parser or a
+job-matching service; it holds data about exactly one person. Full contract:
+https://murugappan.dev/openapi.json
+
+## API & developer resources
+- [Developer portal — API docs, quickstart, sandbox, agent notes](https://murugappan.dev/developers/)
+- [OpenAPI 3.1.0 specification](https://murugappan.dev/openapi.json)
+- [MCP server (Streamable HTTP, no auth)](https://murugappan.dev/mcp)
+- [Agent instructions (AGENTS.md)](https://murugappan.dev/AGENTS.md)
+- [Profile endpoint — the cheapest single call](https://murugappan.dev/api/profile)
+
 ## Profile
 - [About — canonical entity page](https://murugappan.dev/about/)
 - [Portfolio](https://murugappan.dev/)
@@ -14,6 +54,8 @@
 - [Blog RSS](https://murugappan.dev/blog/rss.xml)
 - [Sitemap](https://murugappan.dev/sitemap.xml)
 - [Full blog content for LLMs](https://murugappan.dev/blog/llms-full.txt)
+- [Agent instructions](https://murugappan.dev/AGENTS.md)
+- [OpenAPI specification](https://murugappan.dev/openapi.json)
 
 ## Experience
 - MedMe Health — Software Engineer II, Dec 2025–present (event-driven RPA platform; LLM extraction lifting fax-to-entry accuracy from ~60-65% to 95%+; HIPAA compliance; OpenTelemetry observability)

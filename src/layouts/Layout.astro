@@ -187,6 +187,23 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     {!noindex && <link rel="canonical" href={canonicalUrl} />}
     {/* crawler-only pointer to the entity page (not in the human nav) */}
     <link rel="author" href="/about/" />
+    {
+      /* IANA link relations for agent discovery: the API's OpenAPI description
+        and the human-readable developer portal that documents it. */
+    }
+    <link
+      rel="service-desc"
+      type="application/json"
+      href="/openapi.json"
+      title="murugappan.dev API — OpenAPI 3.1.0"
+    />
+    <link rel="service-doc" type="text/html" href="/developers/" />
+    <link
+      rel="describedby"
+      type="text/plain"
+      href="/llms.txt"
+      title="Site summary for LLMs"
+    />
     <link
       rel="alternate"
       type="application/rss+xml"

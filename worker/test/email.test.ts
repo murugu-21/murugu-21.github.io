@@ -1,8 +1,11 @@
 import {describe, expect, it} from "vitest";
 
 import {
+  formatContactEmail,
   formatOpportunityEmail,
   parseLeadArguments,
+  SENDER_ADDRESS,
+  sendContactEmail,
   sendOpportunityEmail
 } from "../email";
 
@@ -68,6 +71,60 @@ describe("sendOpportunityEmail", () => {
     expect(sent[0]).toMatchObject({
       to: "inbox@example.com",
       from: "chatbot@murugappan.dev"
+    });
+  });
+});
+
+describe("formatContactEmail", () => {
+  const message = {
+    name: "Ada Lovelace",
+    email: "ada@example.com",
+    company: "Analytical Engines Ltd",
+    message: "We are hiring a senior backend engineer."
+  };
+
+  it("names the sender in the subject", () => {
+    expect(formatContactEmail(message).subject).toBe(
+      "New message via the murugappan.dev API — Ada Lovelace"
+    );
+  });
+
+  it("falls back to the email address when no name is given", () => {
+    const {name: _dropped, ...anonymous} = message;
+    expect(formatContactEmail(anonymous).subject).toBe(
+      "New message via the murugappan.dev API — ada@example.com"
+    );
+  });
+
+  it("puts every field and the reply-to address in the body", () => {
+    const {text} = formatContactEmail(message);
+    expect(text).toContain("Name:    Ada Lovelace");
+    expect(text).toContain("Email:   ada@example.com");
+    expect(text).toContain("Company: Analytical Engines Ltd");
+    expect(text).toContain("We are hiring a senior backend engineer.");
+    expect(text).toContain("POST /api/contact");
+  });
+
+  it("marks omitted optional fields rather than leaving a blank line", () => {
+    const {name: _n, company: _c, ...bare} = message;
+    const {text} = formatContactEmail(bare);
+    expect(text).toContain("Name:    (not given)");
+    expect(text).toContain("Company: (not given)");
+  });
+});
+
+describe("sendContactEmail", () => {
+  it("sends from the site address to the configured inbox", async () => {
+    const sent: unknown[] = [];
+    await sendContactEmail(
+      {send: async msg => void sent.push(msg)},
+      "inbox@example.com",
+      {email: "ada@example.com", message: "Hello there, this is a message."}
+    );
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({
+      to: "inbox@example.com",
+      from: SENDER_ADDRESS
     });
   });
 });
