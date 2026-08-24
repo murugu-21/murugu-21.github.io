@@ -1,5 +1,11 @@
 import {DurableObject} from "cloudflare:workers";
 
+// The allowance itself lives with the endpoint that spends it — api/contact.ts
+// has no Workers-runtime imports, so the OpenAPI document and the /developers
+// page can quote the same numbers without pulling this Durable Object (and
+// `cloudflare:workers` with it) into the Astro bundle.
+import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "./api/contact";
+
 // Workers AI's free allocation is 10,000 neurons/day (developers.cloudflare
 // .com/workers-ai/platform/pricing, checked 2026-08-13). The daily budget sits
 // slightly under it because the budget check and the usage charge straddle the
@@ -34,6 +40,10 @@ export function neuronCost(
   );
 }
 
+export type ContactSlot =
+  | {allowed: true}
+  | {allowed: false; scope: "client" | "global"};
+
 // Single fixed-name instance ("global") shared by every ChatRoom: one source
 // of truth for the site-wide daily Workers AI budget, denominated in neurons
 // so the cap always equals what the free tier actually serves.
@@ -49,6 +59,14 @@ export class RateLimiter extends DurableObject {
       `CREATE TABLE IF NOT EXISTS neuron_counters (
         day TEXT PRIMARY KEY,
         neurons REAL NOT NULL DEFAULT 0
+      )`
+    );
+    // Keyed "<day>:global" / "<day>:client:<ip>" so both tiers share one
+    // table and yesterday's rows are trivially identifiable for cleanup.
+    this.sql.exec(
+      `CREATE TABLE IF NOT EXISTS contact_counters (
+        key TEXT PRIMARY KEY,
+        count INTEGER NOT NULL DEFAULT 0
       )`
     );
   }
@@ -67,6 +85,46 @@ export class RateLimiter extends DurableObject {
        ON CONFLICT (day) DO UPDATE SET neurons = neurons + excluded.neurons`,
       this.today(),
       neurons
+    );
+  }
+
+  // Synchronous, so the read-check-increment runs atomically inside the DO:
+  // two concurrent agents can never both take the last slot. The client tier
+  // is checked first, and a client-blocked request never touches the global
+  // counter — one noisy caller must not spend the site-wide allowance.
+  takeContactSlot(client: string): ContactSlot {
+    const day = this.today();
+    this.sql.exec(
+      `DELETE FROM contact_counters WHERE key NOT LIKE ?`,
+      `${day}:%`
+    );
+    const clientKey = `${day}:client:${client}`;
+    if (this.contactCount(clientKey) >= CONTACT_DAILY_PER_CLIENT)
+      return {allowed: false, scope: "client"};
+    const globalKey = `${day}:global`;
+    if (this.contactCount(globalKey) >= CONTACT_DAILY_GLOBAL)
+      return {allowed: false, scope: "global"};
+    this.bumpContact(clientKey);
+    this.bumpContact(globalKey);
+    return {allowed: true};
+  }
+
+  contactsSentToday(): number {
+    return this.contactCount(`${this.today()}:global`);
+  }
+
+  private contactCount(key: string): number {
+    const rows = this.sql
+      .exec(`SELECT count FROM contact_counters WHERE key = ?`, key)
+      .toArray();
+    return rows.length ? (rows[0].count as number) : 0;
+  }
+
+  private bumpContact(key: string): void {
+    this.sql.exec(
+      `INSERT INTO contact_counters (key, count) VALUES (?, 1)
+       ON CONFLICT (key) DO UPDATE SET count = count + 1`,
+      key
     );
   }
 

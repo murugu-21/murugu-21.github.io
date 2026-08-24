@@ -48,6 +48,41 @@ describe("worker entry", () => {
     expect(await response.text()).not.toBe("asset");
   });
 
+  it("claims /api/* itself so failures are JSON, not the HTML 404 page", async () => {
+    let assetHits = 0;
+    const response = await worker.fetch(
+      new Request("https://example.com/api/nope"),
+      envWithAssets(() => assetHits++)
+    );
+    expect(assetHits).toBe(0);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Content-Type")).toMatch(/^application\/json/);
+  });
+
+  it("claims /openapi.json itself rather than serving it as an asset", async () => {
+    let assetHits = 0;
+    const response = await worker.fetch(
+      new Request("https://example.com/openapi.json"),
+      envWithAssets(() => assetHits++)
+    );
+    expect(assetHits).toBe(0);
+    expect(((await response.json()) as {openapi: string}).openapi).toBe(
+      "3.1.0"
+    );
+  });
+
+  it("claims /mcp itself so the MCP endpoint is not a static 404", async () => {
+    let assetHits = 0;
+    const response = await worker.fetch(
+      new Request("https://example.com/mcp", {method: "GET"}),
+      envWithAssets(() => assetHits++)
+    );
+    expect(assetHits).toBe(0);
+    // This revision of Streamable HTTP defines POST only.
+    expect(response.status).toBe(405);
+    expect(response.headers.get("Allow")).toBe("POST, OPTIONS");
+  });
+
   it("upgrades WebSocket connections on the party route", async () => {
     const response = await worker.fetch(
       new Request("https://example.com/parties/chat-room/test-room-ws", {

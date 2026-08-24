@@ -1,0 +1,592 @@
+---
+// Developer portal for the murugappan.dev API. The endpoint table and the
+// tool-definition example are generated from the same OpenAPI document the
+// Worker serves at /openapi.json (worker/api/openapi.ts), so this page cannot
+// document an endpoint that does not exist — or miss one that does.
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import ScrollTop from "../components/ScrollTop.astro";
+import {buildOpenApiDocument} from "../../worker/api/openapi";
+import {
+  CONTACT_DAILY_GLOBAL,
+  CONTACT_DAILY_PER_CLIENT
+} from "../../worker/api/contact";
+import {
+  LATEST_PROTOCOL_VERSION,
+  LEGACY_PROTOCOL_VERSIONS
+} from "../../worker/mcp/protocol";
+import {MCP_TOOLS} from "../../worker/mcp/tools";
+
+const SITE = "https://murugappan.dev";
+const spec = buildOpenApiDocument(SITE);
+
+type Operation = {
+  operationId: string;
+  summary: string;
+  description: string;
+  parameters?: Array<{name: string; in: string; required?: boolean}>;
+};
+
+const operations = Object.entries(spec.paths).flatMap(([path, item]) =>
+  Object.entries(item as Record<string, Operation>).map(([method, op]) => ({
+    path,
+    method: method.toUpperCase(),
+    ...op
+  }))
+);
+
+// A function-calling tool definition derived straight from the spec, so the
+// example on the page is exactly what the spec yields.
+const exampleOp = operations.find(o => o.operationId === "getBlogPost")!;
+const toolExample = {
+  name: exampleOp.operationId,
+  description: exampleOp.description,
+  input_schema: {
+    type: "object",
+    properties: {
+      slug: (
+        spec.components.schemas.PostSummary as {
+          properties: Record<string, unknown>;
+        }
+      ).properties.slug
+    },
+    required: ["slug"]
+  }
+};
+
+const curlProfile = `curl -s ${SITE}/api/profile`;
+const curlPost = `curl -s ${SITE}/api/posts?q=rate+limiting`;
+const curlDryRun = `curl -s ${SITE}/api/contact \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "company": "Analytical Engines",
+    "message": "We are hiring a senior backend engineer for a healthcare data platform.",
+    "dryRun": true
+  }'`;
+const errorExample = `{
+  "error": {
+    "code": "not_found",
+    "message": "There is no API endpoint at /api/nope.",
+    "hint": "Fetch https://murugappan.dev/openapi.json for the full list of endpoints.",
+    "documentation_url": "https://murugappan.dev/developers/"
+  }
+}`;
+const mcpExample = `curl -s ${SITE}/mcp \\
+  -H 'Content-Type: application/json' \\
+  -H 'Accept: application/json, text/event-stream' \\
+  -H 'MCP-Protocol-Version: ${LATEST_PROTOCOL_VERSION}' \\
+  -H 'Mcp-Method: tools/call' \\
+  -H 'Mcp-Name: get_profile' \\
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "get_profile",
+      "arguments": {},
+      "_meta": {
+        "io.modelcontextprotocol/protocolVersion": "${LATEST_PROTOCOL_VERSION}",
+        "io.modelcontextprotocol/clientCapabilities": {}
+      }
+    }
+  }'`;
+const wsExample = `const ws = new WebSocket("wss://murugappan.dev/parties/chat-room/my-room-id");
+ws.onmessage = e => console.log(JSON.parse(e.data)); // history | delta | done
+ws.onopen = () =>
+  ws.send(JSON.stringify({type: "chat", text: "What has Murugappan shipped?"}));`;
+
+const machineFiles = [
+  {
+    path: "/mcp",
+    what: "Model Context Protocol server (Streamable HTTP, POST only, no auth)."
+  },
+  {
+    path: "/openapi.json",
+    what: "OpenAPI 3.1.0 description of this API — the canonical machine-readable contract."
+  },
+  {
+    path: "/api/openapi.json",
+    what: "The same document under the API prefix, for clients that look there."
+  },
+  {
+    path: "/llms.txt",
+    what: "One-page summary of the whole site, including every blog post, with a 'when to use' section for agents."
+  },
+  {
+    path: "/AGENTS.md",
+    what: "Agent instructions: when to reach for this site, which call to make, and what not to use it for."
+  },
+  {
+    path: "/blog/llms-full.txt",
+    what: "Full text of every blog post in one file."
+  },
+  {path: "/sitemap.xml", what: "Every indexable URL on the site."},
+  {
+    path: "/resume.pdf",
+    what: "ATS-parseable resume, generated from the same data this API serves."
+  }
+];
+---
+
+<Layout
+  title="murugappan.dev API — Developer Portal & Agent Docs | Murugappan M"
+>
+  <Header />
+  <main class="dev-page">
+    <h1>murugappan.dev API</h1>
+    <p class="pitch">
+      A public, unauthenticated JSON API over everything this site publishes
+      about <a href="/about/">Murugappan M</a> — profile, work experience, skills,
+      education, open-source work and blog posts — plus one write endpoint for passing
+      along an opportunity. Built for AI agents and for anyone who would rather parse
+      JSON than scrape HTML.
+    </p>
+    <ul class="links">
+      <li><a href="/openapi.json">OpenAPI 3.1.0 spec</a></li>
+      <li><a href="#mcp">MCP server</a></li>
+      <li><a href="/api/profile">GET /api/profile</a></li>
+      <li><a href="/llms.txt">llms.txt</a></li>
+      <li><a href="/AGENTS.md">AGENTS.md</a></li>
+    </ul>
+
+    <section>
+      <h2 id="when-to-use">When to use this API</h2>
+      <p>
+        Reach for it when you need grounded facts about Murugappan M as a
+        candidate or a collaborator:
+      </p>
+      <ul>
+        <li>
+          <strong>“Who is this person?”</strong> — one call to <code
+            >GET /api/profile</code
+          > returns the pitch, current role, location and every public link.
+        </li>
+        <li>
+          <strong>“Has he actually shipped X?”</strong> — <code
+            >GET /api/experience</code
+          > gives dated roles with concrete, per-role achievements, and <code
+            >GET /api/open-source</code
+          > links the individual merged pull requests so a claim can be checked at
+          the source.
+        </li>
+        <li>
+          <strong>“Does he know technology Y?”</strong> — <code
+            >GET /api/skills</code
+          > answers from a typed list instead of an inference over prose.
+        </li>
+        <li>
+          <strong>“What has he written about Z?”</strong> — <code
+            >GET /api/posts?q=…</code
+          > searches titles and summaries; <code
+            >GET /api/posts/&#123;slug&#125;</code
+          > returns a post's full markdown for quoting or summarising.
+        </li>
+        <li>
+          <strong>“Reach out about a role.”</strong> — <code
+            >POST /api/contact</code
+          > delivers a message to his inbox. Use it for one concrete, specific opportunity
+          on a human's behalf.
+        </li>
+      </ul>
+      <p>
+        <strong>When not to use it.</strong> It is not a search engine, a resume parser
+        or a job-matching service, and it holds data about exactly one person. For
+        a conversation rather than a payload, use the chat socket below.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="quickstart">Quickstart</h2>
+      <p>
+        No signup, no key, no client library. Base URL <code>{SITE}</code>.
+        Every response is JSON with permissive CORS, so a browser-side agent can
+        call it directly.
+      </p>
+      <pre><code>{curlProfile}</code></pre>
+      <p>Search the blog and read one post:</p>
+      <pre><code>{curlPost}
+curl -s {SITE}/api/posts/cloud-agnostic-rate-limiting</code></pre>
+      <p>
+        Validate a contact payload without sending anything (see <a
+          href="#sandbox">Sandbox</a
+        >):
+      </p>
+      <pre><code>{curlDryRun}</code></pre>
+    </section>
+
+    <section>
+      <h2 id="endpoints">Endpoints</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Operation</th>
+              <th>Endpoint</th>
+              <th>What it returns</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              operations.map(op => (
+                <tr>
+                  <td>
+                    <code>{op.operationId}</code>
+                  </td>
+                  <td>
+                    <code>
+                      {op.method} {op.path}
+                    </code>
+                  </td>
+                  <td>{op.summary}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Full parameter and response schemas — including the ones the table
+        summarises — live in the <a href="/openapi.json">OpenAPI document</a>.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="authentication">Authentication &amp; API keys</h2>
+      <p>
+        <strong>There are none, by design.</strong> Every endpoint is public and unauthenticated:
+        no API key, no token, no signup, nothing to rotate. If a client asks you for
+        credentials for this API, it is misconfigured. Read endpoints are cached for
+        five minutes at the edge.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="rate-limits">Rate limits</h2>
+      <p>
+        Read endpoints are unmetered. <code>POST /api/contact</code> sends real email,
+        so it allows {CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day
+        and {CONTACT_DAILY_GLOBAL} site-wide; past either it answers
+        <code>429</code> with code <code>rate_limited</code> and a
+        <code>Retry-After</code> header. Allowances reset at 00:00 UTC. A rejected
+        request never spends a slot, and neither does a dry run.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="sandbox">Sandbox</h2>
+      <p>
+        The read endpoints <em>are</em> the sandbox: they are public, unauthenticated
+        and side-effect free, so production is safe to explore as much as you like
+        — there is no separate environment to provision.
+      </p>
+      <p>
+        The one endpoint with a side effect has a dry-run mode instead. Send
+        <code>"dryRun": true</code> to <code>POST /api/contact</code> and the request
+        is validated exactly as a real one would be, then answered
+        <code>200</code> with <code>status: "validated"</code> — no email, no rate-limit
+        slot. Repeat until it validates, then resend without the flag.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="errors">Errors</h2>
+      <p>
+        Every failure under <code>/api</code> — including a 404 on a path that does
+        not exist — returns the same JSON envelope. No HTML error page is ever served
+        under <code>/api</code>. Branch on <code>error.code</code>, not on the
+        message.
+      </p>
+      <pre><code>{errorExample}</code></pre>
+      <p>
+        Codes: <code>not_found</code>, <code>method_not_allowed</code>,
+        <code>invalid_request</code>, <code>unsupported_media_type</code>,
+        <code>payload_too_large</code>, <code>rate_limited</code>,
+        <code>service_unavailable</code>, <code>internal_error</code>.
+        Field-level validation failures add a <code>details</code> array naming each
+        offending field and what it must satisfy, so a function-calling model can
+        repair its own arguments and retry.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="function-calling">Function calling</h2>
+      <p>
+        Every operation in the spec carries a unique <code>operationId</code>, a
+        description, typed parameters and a response schema, which is what makes
+        the document directly convertible to tool definitions. Point your
+        OpenAPI-to-tools converter at <code>{SITE}/openapi.json</code>; the
+        <code>operationId</code> becomes the tool name. For example, <code
+          >getBlogPost</code
+        > yields:
+      </p>
+      <pre><code>{JSON.stringify(toolExample, null, 2)}</code></pre>
+    </section>
+
+    <section>
+      <h2 id="chat">Conversational endpoint (WebSocket)</h2>
+      <p>
+        The site also runs an AI assistant, Jarvis, grounded on this same
+        content. It speaks WebSocket at <code
+          >wss://{
+            SITE.replace("https://", "")
+          }/parties/chat-room/&#123;roomId&#125;</code
+        >, which OpenAPI cannot describe — so it is documented here instead.
+        Pick any room id; the room persists its history.
+      </p>
+      <pre><code>{wsExample}</code></pre>
+      <p>
+        Frames in: <code>&#123;"type":"chat","text":"…"&#125;</code>. Frames
+        out: <code>history</code>, <code>visitor</code>, <code>delta</code>,
+        <code>done</code>, <code>limit</code>, <code>error</code>. Prefer the
+        REST API when you want structured data, and the socket when you want a
+        conversation.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="mcp">MCP server</h2>
+      <p>
+        The same content is served as a <a
+          href="https://modelcontextprotocol.io">Model Context Protocol</a
+        > server. Add it to any MCP client as:
+      </p>
+      <pre><code>{SITE}/mcp</code></pre>
+      <p>
+        Streamable HTTP, <code>POST</code> only, no authentication and no session.
+        It implements protocol revision <code>{LATEST_PROTOCOL_VERSION}</code> — stateless,
+        with per-request metadata — and keeps backward compatibility with the <code
+          >initialize</code
+        >-based revisions ({LEGACY_PROTOCOL_VERSIONS.join(", ")}) that most
+        clients still speak. Call <code>server/discover</code> to see what a given
+        deployment supports. There is no <code>GET</code>
+        stream and nothing to <code>DELETE</code>; both answer <code>405</code>.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Tool</th>
+              <th>What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              MCP_TOOLS.map(tool => (
+                <tr>
+                  <td>
+                    <code>{tool.name}</code>
+                  </td>
+                  <td>{tool.title}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <p>
+        It also serves <strong>resources</strong> — documents a client can attach
+        as context directly, rather than calling a tool for them:
+        <code>/llms.txt</code>, <code>/AGENTS.md</code>, the OpenAPI
+        specification, the full blog text, and every post's markdown (URI
+        template <code>{SITE}/blog/&#123;slug&#125;/index.md</code>). They use
+        <code>https://</code> URIs because they really are fetchable straight from
+        the web, which is what that scheme is reserved for.
+      </p>
+      <p>
+        Every tool declares a typed, self-contained <code>outputSchema</code>
+        (the REST response schemas, inlined), so a client can validate
+        <code>structuredContent</code> without fetching anything else. Recoverable
+        problems — an unknown slug, a bad email, a spent allowance — come back as
+        tool execution errors with text explaining the fix, not as protocol errors.
+      </p>
+      <pre><code>{mcpExample}</code></pre>
+    </section>
+
+    <section>
+      <h2 id="webmcp">In-browser tools (WebMCP)</h2>
+      <p>
+        Every page registers tools on <code>navigator.modelContext</code> when the
+        browser supports the <a
+          href="https://webmachinelearning.github.io/webmcp/">WebMCP</a
+        > draft: <code>get_profile</code>, <code>list_blog_posts</code>,
+        <code>read_blog_post</code> and <code>navigate_to</code>. A browser
+        agent already on the page can call those without any HTTP of its own.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="machine-readable">Machine-readable files</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>URL</th>
+              <th>What it is</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              machineFiles.map(f => (
+                <tr>
+                  <td>
+                    <a href={f.path}>
+                      <code>{f.path}</code>
+                    </a>
+                  </td>
+                  <td>{f.what}</td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Any page URL also serves markdown when requested with <code
+          >Accept: text/markdown</code
+        >.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="stability">Stability &amp; contact</h2>
+      <p>
+        Spec version <code>{spec.info.version}</code>. Additive changes (new
+        endpoints, new optional fields) ship without notice; removals or renames
+        get a version bump. Data is licensed <a
+          href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a
+        > — cite <a href={SITE + "/"}>murugappan.dev</a>. Questions, or
+        something broken? <a href="mailto:murugu2001@gmail.com"
+          >Email Murugappan</a
+        > or use
+        <code>POST /api/contact</code>.
+      </p>
+    </section>
+  </main>
+  <ScrollTop />
+</Layout>
+
+<style lang="scss">
+  @import "../styles/variables";
+
+  /* Same reading column and type scale as /about — this is a documentation
+     page in the site's existing voice, not a new visual language. Widened a
+     little because it carries tables and code blocks. */
+  .dev-page {
+    max-width: 900px;
+    margin: 0 auto;
+    /* the fixed navbar overlaps the top of the page (same as the homepage) */
+    padding: 7rem 1.25rem 4rem;
+
+    h1 {
+      font-size: clamp(1.7rem, 6vw, 2.2rem);
+      margin-bottom: 0.5rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      margin: 2.25rem 0 0.75rem;
+      scroll-margin-top: 6rem;
+    }
+
+    p,
+    li,
+    td {
+      line-height: 1.6;
+    }
+
+    a {
+      color: $accentLight;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .pitch {
+      font-size: 1.15rem;
+    }
+
+    .links {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem 1.25rem;
+    }
+
+    section ul:not(.links) {
+      padding-left: 1.25rem;
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9em;
+      background: rgba(5, 123, 1, 0.08);
+      border-radius: 4px;
+      padding: 0.1em 0.35em;
+      overflow-wrap: anywhere;
+    }
+
+    pre {
+      background: $lightBackground2;
+      border: 1px solid $lightBorder1;
+      border-radius: 8px;
+      padding: 1rem;
+      overflow-x: auto;
+
+      code {
+        background: none;
+        padding: 0;
+        overflow-wrap: normal;
+      }
+    }
+
+    /* tables must scroll inside their own box, never widen the page */
+    .table-scroll {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid $lightBorder1;
+    }
+
+    th {
+      color: $subTitle;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+  }
+
+  :global(html.dark-mode) .dev-page {
+    a {
+      color: $accentDark;
+    }
+
+    code {
+      background: rgba(44, 207, 39, 0.12);
+    }
+
+    pre {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    th,
+    td {
+      border-bottom-color: rgba(255, 255, 255, 0.12);
+    }
+  }
+</style>

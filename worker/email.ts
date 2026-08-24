@@ -4,7 +4,7 @@ export const SENDER_ADDRESS = "chatbot@murugappan.dev";
 
 export type Lead = {name?: string; contact: string; summary: string};
 
-type EmailLike = {
+export type EmailLike = {
   send(msg: {
     to: string;
     from: string;
@@ -59,5 +59,44 @@ export async function sendOpportunityEmail(
   transcript: ChatHistoryEntry[]
 ): Promise<void> {
   const {subject, text} = formatOpportunityEmail(lead, transcript);
+  await email.send({to: inbox, from: SENDER_ADDRESS, subject, text});
+}
+
+// POST /api/contact's payload. Separate from Lead (the chat's
+// capture_opportunity tool result) because there is no transcript to attach
+// and the sender chose their own wording — the email says which door the
+// message came through so replies can be triaged.
+export type ContactMessage = {
+  name?: string;
+  email: string;
+  company?: string;
+  message: string;
+};
+
+export function formatContactEmail(msg: ContactMessage): {
+  subject: string;
+  text: string;
+} {
+  const who = (msg.name || msg.email).replace(/\s+/g, " ").slice(0, 80);
+  return {
+    subject: `New message via the murugappan.dev API — ${who}`,
+    text: [
+      `Name:    ${msg.name ?? "(not given)"}`,
+      `Email:   ${msg.email}`,
+      `Company: ${msg.company ?? "(not given)"}`,
+      "Source:  POST /api/contact",
+      "",
+      "--- Message ---",
+      msg.message
+    ].join("\n")
+  };
+}
+
+export async function sendContactEmail(
+  email: EmailLike,
+  inbox: string,
+  msg: ContactMessage
+): Promise<void> {
+  const {subject, text} = formatContactEmail(msg);
   await email.send({to: inbox, from: SENDER_ADDRESS, subject, text});
 }

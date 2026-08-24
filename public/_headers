@@ -6,12 +6,27 @@
 
 # Agent discovery (RFC 8288 Link relations): point machine clients at the
 # site's machine-readable descriptions from the page response itself.
-# /about is the canonical entity page (rel=author from the homepage).
+# /about is the canonical entity page (rel=author from the homepage);
+# service-desc is the OpenAPI document and service-doc the developer portal.
 /
-  Link: </llms.txt>; rel="describedby"; type="text/plain", </index.md>; rel="alternate"; type="text/markdown", </about/>; rel="author", </blog/rss.xml>; rel="alternate"; type="application/rss+xml"
+  Link: </llms.txt>; rel="describedby"; type="text/plain", </index.md>; rel="alternate"; type="text/markdown", </about/>; rel="author", </blog/rss.xml>; rel="alternate"; type="application/rss+xml", </openapi.json>; rel="service-desc"; type="application/json", </developers/>; rel="service-doc"; type="text/html"
 
 /about/
-  Link: </llms.txt>; rel="describedby"; type="text/plain", </about/index.md>; rel="alternate"; type="text/markdown"
+  Link: </llms.txt>; rel="describedby"; type="text/plain", </about/index.md>; rel="alternate"; type="text/markdown", </openapi.json>; rel="service-desc"; type="application/json", </developers/>; rel="service-doc"; type="text/html"
+
+/developers/
+  Link: </openapi.json>; rel="service-desc"; type="application/json", </AGENTS.md>; rel="describedby"; type="text/markdown", </llms.txt>; rel="describedby"; type="text/plain"
+
+# Agent instructions. Served as markdown (the assets layer would otherwise
+# guess from the extension) and short-cached so a wording change lands fast.
+/AGENTS.md
+  Content-Type: text/markdown; charset=utf-8
+  Cache-Control: public, max-age=3600
+  Link: </openapi.json>; rel="service-desc"; type="application/json", </developers/>; rel="service-doc"; type="text/html"
+
+/llms.txt
+  Cache-Control: public, max-age=3600
+  Link: </openapi.json>; rel="service-desc"; type="application/json", </developers/>; rel="service-doc"; type="text/html"
 
 # Markdown renditions (scripts/generate-markdown.mjs). A zone Transform Rule
 # rewrites Accept: text/markdown page requests to these files, so their body
