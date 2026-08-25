@@ -83,6 +83,33 @@ describe("worker entry", () => {
     expect(response.headers.get("Allow")).toBe("POST, OPTIONS");
   });
 
+  it("claims the versioned API prefix itself", async () => {
+    let assetHits = 0;
+    const response = await worker.fetch(
+      new Request("https://example.com/api/v1/nope"),
+      envWithAssets(() => assetHits++)
+    );
+    expect(assetHits).toBe(0);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("Content-Type")).toMatch(/^application\/json/);
+  });
+
+  it("claims the discovery documents rather than serving them as assets", async () => {
+    for (const path of [
+      "/.well-known/api-catalog",
+      "/.well-known/mcp.json",
+      "/mcp.json"
+    ]) {
+      let assetHits = 0;
+      const response = await worker.fetch(
+        new Request(`https://example.com${path}`),
+        envWithAssets(() => assetHits++)
+      );
+      expect(assetHits, path).toBe(0);
+      expect(response.status, path).toBe(200);
+    }
+  });
+
   it("upgrades WebSocket connections on the party route", async () => {
     const response = await worker.fetch(
       new Request("https://example.com/parties/chat-room/test-room-ws", {

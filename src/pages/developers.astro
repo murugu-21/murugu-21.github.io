@@ -16,6 +16,25 @@ import {
   LEGACY_PROTOCOL_VERSIONS
 } from "../../worker/mcp/protocol";
 import {MCP_TOOLS} from "../../worker/mcp/tools";
+import {
+  API_BASE,
+  API_PATHS,
+  CURRENT_API_VERSION,
+  VERSIONED_API_BASE
+} from "../../worker/api/routes";
+import {
+  API_VERSION,
+  CURRENT_VERSION_RECORD,
+  DEPRECATION_NOTICE_DAYS,
+  POLICY_RULES,
+  VERSIONS
+} from "../../worker/api/versioning";
+import {
+  CONTACT_QUOTAS,
+  policyField,
+  READ_QUOTA
+} from "../../worker/api/ratelimit";
+import {MCP_SERVER_NAME, MCP_SERVER_SCHEMA} from "../../worker/well-known";
 
 const SITE = "https://murugappan.dev";
 const spec = buildOpenApiDocument(SITE);
@@ -54,9 +73,9 @@ const toolExample = {
   }
 };
 
-const curlProfile = `curl -s ${SITE}/api/profile`;
-const curlPost = `curl -s ${SITE}/api/posts?q=rate+limiting`;
-const curlDryRun = `curl -s ${SITE}/api/contact \\
+const curlProfile = `curl -s ${SITE}${API_PATHS.profile}`;
+const curlPost = `curl -s ${SITE}${API_PATHS.posts}?q=rate+limiting`;
+const curlDryRun = `curl -s ${SITE}${API_PATHS.contact} \\
   -H 'Content-Type: application/json' \\
   -d '{
     "name": "Ada Lovelace",
@@ -68,7 +87,7 @@ const curlDryRun = `curl -s ${SITE}/api/contact \\
 const errorExample = `{
   "error": {
     "code": "not_found",
-    "message": "There is no API endpoint at /api/nope.",
+    "message": "There is no API endpoint at /api/v1/nope.",
     "hint": "Fetch https://murugappan.dev/openapi.json for the full list of endpoints.",
     "documentation_url": "https://murugappan.dev/developers/"
   }
@@ -99,6 +118,15 @@ ws.onopen = () =>
 
 const machineFiles = [
   {
+    path: "/.well-known/api-catalog",
+    what: "RFC 9727 link set naming every API this site publishes and where each one is described. The one URL to probe if you know nothing else."
+  },
+  {
+    path: "/.well-known/mcp.json",
+    what: "MCP server manifest (server.json), for a client that installs MCP servers from a manifest."
+  },
+  {path: "/mcp.json", what: "The same manifest at the site root."},
+  {
     path: "/mcp",
     what: "Model Context Protocol server (Streamable HTTP, POST only, no auth)."
   },
@@ -107,8 +135,12 @@ const machineFiles = [
     what: "OpenAPI 3.1.0 description of this API — the canonical machine-readable contract."
   },
   {
-    path: "/api/openapi.json",
-    what: "The same document under the API prefix, for clients that look there."
+    path: API_PATHS.openapi,
+    what: "The same document under the versioned API prefix, for clients that look there."
+  },
+  {
+    path: API_PATHS.versions,
+    what: "The version catalogue and deprecation policy, as data. Also at /api/versions."
   },
   {
     path: "/llms.txt",
@@ -128,25 +160,71 @@ const machineFiles = [
     what: "ATS-parseable resume, generated from the same data this API serves."
   }
 ];
+// Structured data for the API itself, so a search for "murugappan.dev API",
+// "murugappan API docs" or "murugappan MCP server" resolves to this page
+// rather than to the pages about the person.
+const apiJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebAPI",
+      "@id": `${SITE}/developers/#api`,
+      name: "murugappan.dev API",
+      alternateName: [
+        "murugappan.dev REST API",
+        "Murugappan M profile API",
+        "murugappan.dev MCP server"
+      ],
+      description: spec.info.summary,
+      documentation: `${SITE}/developers/`,
+      termsOfService: "https://creativecommons.org/licenses/by/4.0/",
+      provider: {"@id": `${SITE}/#person`},
+      potentialAction: spec.tags.map(tag => ({
+        "@type": "ConsumeAction",
+        name: tag.name,
+        description: tag.description
+      }))
+    },
+    {
+      "@type": "TechArticle",
+      "@id": `${SITE}/developers/#docs`,
+      headline: "murugappan.dev API — developer portal and agent documentation",
+      description:
+        "API reference, authentication, versioning and deprecation policy, rate-limit headers, sandbox, OpenAPI 3.1.0 specification and MCP server for murugappan.dev.",
+      url: `${SITE}/developers/`,
+      about: {"@id": `${SITE}/developers/#api`},
+      author: {"@id": `${SITE}/#person`},
+      inLanguage: "en"
+    }
+  ]
+};
 ---
 
 <Layout
-  title="murugappan.dev API — Developer Portal & Agent Docs | Murugappan M"
+  title="murugappan.dev API — Developer Portal, OpenAPI Spec & MCP Server | Murugappan M"
+  description="Developer docs for the murugappan.dev API: REST endpoints, OpenAPI 3.1.0 spec, MCP server, authentication, versioning and deprecation policy, rate-limit headers. No key, no signup."
 >
   <Header />
   <main class="dev-page">
-    <h1>murugappan.dev API</h1>
+    <h1>murugappan.dev API — developer portal</h1>
     <p class="pitch">
       A public, unauthenticated JSON API over everything this site publishes
       about <a href="/about/">Murugappan M</a> — profile, work experience, skills,
       education, open-source work and blog posts — plus one write endpoint for passing
       along an opportunity. Built for AI agents and for anyone who would rather parse
-      JSON than scrape HTML.
+      JSON than scrape HTML. This page is the whole developer reference: endpoints,
+      authentication, <a href="#versioning">versioning and deprecation</a>,
+      <a href="#rate-limits">rate-limit headers</a>, the
+      <a href="/openapi.json">OpenAPI 3.1.0 specification</a> and the
+      <a href="#mcp">murugappan.dev MCP server</a>.
     </p>
     <ul class="links">
       <li><a href="/openapi.json">OpenAPI 3.1.0 spec</a></li>
       <li><a href="#mcp">MCP server</a></li>
-      <li><a href="/api/profile">GET /api/profile</a></li>
+      <li><a href="/.well-known/mcp.json">MCP manifest</a></li>
+      <li><a href="/.well-known/api-catalog">API catalog</a></li>
+      <li><a href={API_PATHS.profile}>GET {API_PATHS.profile}</a></li>
+      <li><a href={API_PATHS.versions}>Version policy</a></li>
       <li><a href="/llms.txt">llms.txt</a></li>
       <li><a href="/AGENTS.md">AGENTS.md</a></li>
     </ul>
@@ -200,14 +278,16 @@ const machineFiles = [
     <section>
       <h2 id="quickstart">Quickstart</h2>
       <p>
-        No signup, no key, no client library. Base URL <code>{SITE}</code>.
-        Every response is JSON with permissive CORS, so a browser-side agent can
-        call it directly.
+        No signup, no key, no client library. Base URL <code
+          >{SITE}{VERSIONED_API_BASE}</code
+        > — see <a href="#versioning">Versioning</a> for why the version is in the
+        path and why <code>{API_BASE}/…</code> works too. Every response is JSON with
+        permissive CORS, so a browser-side agent can call it directly.
       </p>
       <pre><code>{curlProfile}</code></pre>
       <p>Search the blog and read one post:</p>
       <pre><code>{curlPost}
-curl -s {SITE}/api/posts/cloud-agnostic-rate-limiting</code></pre>
+curl -s {SITE}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</code></pre>
       <p>
         Validate a contact payload without sending anything (see <a
           href="#sandbox">Sandbox</a
@@ -263,14 +343,101 @@ curl -s {SITE}/api/posts/cloud-agnostic-rate-limiting</code></pre>
     </section>
 
     <section>
-      <h2 id="rate-limits">Rate limits</h2>
+      <h2 id="versioning">Versioning &amp; deprecation policy</h2>
       <p>
-        Read endpoints are unmetered. <code>POST /api/contact</code> sends real email,
-        so it allows {CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day
-        and {CONTACT_DAILY_GLOBAL} site-wide; past either it answers
-        <code>429</code> with code <code>rate_limited</code> and a
-        <code>Retry-After</code> header. Allowances reset at 00:00 UTC. A rejected
-        request never spends a slot, and neither does a dry run.
+        The version is a path segment: every endpoint lives under <code
+          >{VERSIONED_API_BASE}</code
+        >. There is no version header and no version query parameter — the URL
+        <em>is</em> the version. The unversioned <code>{API_BASE}/…</code> prefix
+        is a <strong>permanent alias</strong> for <code
+          >{CURRENT_API_VERSION}</code
+        > and will never be repointed at a later major version, so both forms are
+        safe to hard-code.
+      </p>
+      <ul>
+        {POLICY_RULES.map(rule => <li>{rule}</li>)}
+      </ul>
+      <p>
+        Every response names the release it served and the versions still
+        answering:
+      </p>
+      <pre><code>API-Version: {API_VERSION}
+API-Supported-Versions: {VERSIONS.filter(v => v.status !== "sunset")
+          .map(v => v.version)
+          .join(", ")}
+Link: &lt;{API_PATHS.versions}&gt;; rel="version-history"</code></pre>
+      <p>
+        Once a version is deprecated, every one of its responses additionally
+        carries <code>Deprecation</code> (<a
+          href="https://www.rfc-editor.org/rfc/rfc9745">RFC 9745</a
+        >), <code>Sunset</code> (<a
+          href="https://www.rfc-editor.org/rfc/rfc8594">RFC 8594</a
+        >) and <code>Link</code> relations <code>deprecation</code> and
+        <code>successor-version</code>:
+      </p>
+      <pre><code>Deprecation: @1798761600
+Sunset: Thu, 01 Jul 2027 00:00:00 GMT
+Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;; rel="successor-version"</code></pre>
+      <p>
+        At least {DEPRECATION_NOTICE_DAYS} days pass between the first
+        <code>Deprecation</code> header and the sunset date; after sunset the version
+        answers <code>410</code> with the usual error envelope pointing at its successor.
+        Nothing is deprecated today —
+        <code>{CURRENT_VERSION_RECORD.version}</code> is
+        {CURRENT_VERSION_RECORD.status}, released {
+          CURRENT_VERSION_RECORD.releasedOn
+        }. The whole of this section is served as data at <a
+          href={API_PATHS.versions}><code>{API_PATHS.versions}</code></a
+        > (and <code>{API_BASE}/versions</code>), so a client can check it
+        without parsing this page.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="rate-limits">Rate limits &amp; rate-limit headers</h2>
+      <p>
+        Every response carries the <a
+          href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/"
+          >IETF <code>RateLimit</code> header fields</a
+        >, so a client can self-throttle without reading this page:
+        <code>RateLimit-Policy</code> lists the quota policies that apply, and
+        <code>RateLimit</code> is the live snapshot of the one closest to exhaustion
+        — <code>r</code> is what is left, <code>t</code> is seconds until it resets.
+        The de-facto <code>X-RateLimit-Limit</code>,
+        <code>X-RateLimit-Remaining</code> and <code>X-RateLimit-Reset</code> trio
+        mirrors the same numbers for tooling that only looks for those, and a
+        <code>429</code> adds <code>Retry-After</code>.
+      </p>
+      <pre><code>RateLimit-Policy: {policyField([READ_QUOTA])}
+RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
+          READ_QUOTA.windowSeconds
+        }</code></pre>
+      <p>
+        <strong>Reads</strong> are effectively unmetered: the fair-use ceiling is
+        {READ_QUOTA.quota} requests per {READ_QUOTA.windowSeconds} seconds per client
+        address, counted in the edge location that serves you — a client spread across
+        several locations gets that allowance in each, so the advertised number is
+        a floor, not a cap. Read responses are cacheable for five minutes, so a cached
+        response may carry a stale <code>RateLimit</code> snapshot; treat it as advisory
+        and trust the freshest one you have.
+      </p>
+      <p>
+        <strong><code>POST {API_PATHS.contact}</code></strong> sends real email, so
+        it is genuinely metered: {CONTACT_DAILY_PER_CLIENT} requests per client IP
+        per UTC day and {CONTACT_DAILY_GLOBAL} site-wide. Past either it answers
+        <code>429</code> with code <code>rate_limited</code>, a
+        <code>Retry-After</code> counting down to 00:00 UTC, and the tier that ran
+        out:
+      </p>
+      <pre><code>RateLimit-Policy: {policyField(CONTACT_QUOTAS)}
+RateLimit: "{CONTACT_QUOTAS[0].name}";r=0;t=39122
+Retry-After: 39122</code></pre>
+      <p>
+        A rejected request never spends a slot, and neither does a dry run — but
+        a dry run still reports the allowance, so it is the cheapest way to size
+        a real send. All of these headers are listed in
+        <code>Access-Control-Expose-Headers</code>, so a browser-side agent can
+        read them too.
       </p>
     </section>
 
@@ -307,6 +474,29 @@ curl -s {SITE}/api/posts/cloud-agnostic-rate-limiting</code></pre>
         Field-level validation failures add a <code>details</code> array naming each
         offending field and what it must satisfy, so a function-calling model can
         repair its own arguments and retry.
+      </p>
+      <p>
+        <strong>Off the API</strong>, a path that does not exist answers a real <code
+          >404</code
+        > — never a <code>200</code> with the app shell, which would make every URL
+        look valid. The body is content-negotiated: a browser gets the styled 404
+        page, and anything that did not ask for HTML gets a short markdown body listing
+        the sitemap, this portal, the OpenAPI document, the API catalog and the MCP
+        manifest, so a guessed or stale URL can be recovered from in one request.
+      </p>
+    </section>
+
+    <section>
+      <h2 id="webhooks">Webhooks &amp; callbacks</h2>
+      <p>
+        There are none, and that is deliberate: this API has no events to push.
+        Content changes when the site redeploys, so poll instead — read
+        endpoints are cacheable for five minutes, the <a href="/blog/rss.xml"
+          >blog RSS feed</a
+        >
+        announces new posts, and <code>GET {API_PATHS.posts}</code> is one cheap call.
+        <code>POST {API_PATHS.contact}</code> delivers by email and returns no callback;
+        Murugappan replies to the address you supply.
       </p>
     </section>
 
@@ -402,6 +592,30 @@ curl -s {SITE}/api/posts/cloud-agnostic-rate-limiting</code></pre>
         tool execution errors with text explaining the fix, not as protocol errors.
       </p>
       <pre><code>{mcpExample}</code></pre>
+      <h3 id="mcp-manifest">Manifest</h3>
+      <p>
+        For a client that installs servers from a manifest rather than a pasted
+        URL, the server's <code>server.json</code> is published at <a
+          href="/.well-known/mcp.json"><code>/.well-known/mcp.json</code></a
+        > (and at <a href="/mcp.json"><code>/mcp.json</code></a>). It follows
+        the <a href={MCP_SERVER_SCHEMA}>published server.json schema</a>, names
+        the server <code>{MCP_SERVER_NAME}</code> in the reverse-DNS form the registry
+        requires, and declares one
+        <code>streamable-http</code> remote:
+      </p>
+      <pre><code>{`{
+  "$schema": "${MCP_SERVER_SCHEMA}",
+  "name": "${MCP_SERVER_NAME}",
+  "version": "${API_VERSION}",
+  "remotes": [{"type": "streamable-http", "url": "${SITE}/mcp"}]
+}`}</code></pre>
+      <p>
+        The server is also listed in the site's <a
+          href="/.well-known/api-catalog">API catalog</a
+        >, the <a href="https://www.rfc-editor.org/rfc/rfc9727">RFC 9727</a> link
+        set that names every API here and where each one is described — the one URL
+        to probe if you know nothing else about this site.
+      </p>
     </section>
 
     <section>
@@ -452,10 +666,12 @@ curl -s {SITE}/api/posts/cloud-agnostic-rate-limiting</code></pre>
     <section>
       <h2 id="stability">Stability &amp; contact</h2>
       <p>
-        Spec version <code>{spec.info.version}</code>. Additive changes (new
-        endpoints, new optional fields) ship without notice; removals or renames
-        get a version bump. Data is licensed <a
-          href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a
+        Spec version <code>{spec.info.version}</code>, serving API version <code
+          >{CURRENT_API_VERSION}</code
+        > — the full <a href="#versioning">versioning and deprecation policy</a> says
+        what may change inside a version and how a deprecation is announced. Data
+        is licensed <a href="https://creativecommons.org/licenses/by/4.0/"
+          >CC BY 4.0</a
         > — cite <a href={SITE + "/"}>murugappan.dev</a>. Questions, or
         something broken? <a href="mailto:murugu2001@gmail.com"
           >Email Murugappan</a
@@ -465,6 +681,11 @@ curl -s {SITE}/api/posts/cloud-agnostic-rate-limiting</code></pre>
     </section>
   </main>
   <ScrollTop />
+  <script
+    type="application/ld+json"
+    is:inline
+    set:html={JSON.stringify(apiJsonLd)}
+  />
 </Layout>
 
 <style lang="scss">
@@ -487,6 +708,12 @@ curl -s {SITE}/api/posts/cloud-agnostic-rate-limiting</code></pre>
     h2 {
       font-size: 1.5rem;
       margin: 2.25rem 0 0.75rem;
+      scroll-margin-top: 6rem;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      margin: 1.75rem 0 0.5rem;
       scroll-margin-top: 6rem;
     }
 

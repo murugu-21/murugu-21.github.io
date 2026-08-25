@@ -135,13 +135,15 @@ const links = [
       <p>
         Everything on this page is also served as JSON by a public,
         unauthenticated API — start with{" "}
-        <a href="/api/profile">
-          <code>GET /api/profile</code>
+        <a href="/api/v1/profile">
+          <code>GET /api/v1/profile</code>
         </a>
         . The full contract is the{" "}
-        <a href="/openapi.json">OpenAPI 3.1.0 spec</a>, the endpoints and
-        examples are documented in the{" "}
-        <a href="/developers/">developer portal</a>, and{" "}
+        <a href="/openapi.json">OpenAPI 3.1.0 spec</a>, the endpoints,
+        versioning policy and rate-limit headers are documented in the{" "}
+        <a href="/developers/">developer portal</a>, there is an{" "}
+        <a href="/mcp">MCP server</a> with a{" "}
+        <a href="/.well-known/mcp.json">manifest</a>, and{" "}
         <a href="/AGENTS.md">/AGENTS.md</a> says when to reach for this site and which
         call to make.
       </p>

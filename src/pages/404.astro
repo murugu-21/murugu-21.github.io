@@ -1,14 +1,43 @@
 ---
+// The HTML 404. Non-browser clients never see this page: a request without
+// `Sec-Fetch-Mode: navigate` reaches the Worker, which answers the same 404
+// with a short markdown body instead (worker/not-found.ts). The recovery links
+// below are the human half of that same idea.
 import Layout from "../layouts/Layout.astro";
+
+const recovery = [
+  {href: "/", label: "Portfolio"},
+  {href: "/about/", label: "About"},
+  {href: "/blog/", label: "Blog"},
+  {href: "/resume/", label: "Resume"},
+  {href: "/developers/", label: "Developer portal"},
+  {href: "/sitemap.xml", label: "Sitemap"},
+  {href: "/llms.txt", label: "llms.txt"}
+];
 ---
 
-<Layout title="404 — Page not found | Murugappan M" noindex>
+<Layout
+  title="404 — Page not found | Murugappan M"
+  description="That page does not exist on murugappan.dev. Jump to the portfolio, blog, resume, developer portal or sitemap instead."
+  noindex
+>
   <main class="notfound-main">
     <h1 aria-label="Page not found">404</h1>
     <p>
       This page doesn't exist. Try the <a href="/">portfolio</a> or the
       <a href="/blog/">blog</a>.
     </p>
+    <nav aria-label="Where to go instead">
+      <ul class="recovery">
+        {
+          recovery.map(link => (
+            <li>
+              <a href={link.href}>{link.label}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
   </main>
 </Layout>
 <style lang="scss">
@@ -27,6 +56,16 @@ import Layout from "../layouts/Layout.astro";
     }
     a {
       color: $buttonColor;
+    }
+    .recovery {
+      list-style: none;
+      padding: 0;
+      margin: 1.5rem 0 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.4rem 1.25rem;
+      font-size: 0.95rem;
     }
   }
   :global(html.dark-mode) .notfound-main p {

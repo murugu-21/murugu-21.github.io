@@ -68,20 +68,27 @@ describe("contact slots", () => {
     return env.RateLimiter.get(env.RateLimiter.idFromName(name));
   }
 
-  it("allows the first request from a client", async () => {
+  it("allows the first request from a client and reports what is left", async () => {
     expect(await limiter("contact-a").takeContactSlot("1.1.1.1")).toEqual({
-      allowed: true
+      allowed: true,
+      clientRemaining: CONTACT_DAILY_PER_CLIENT - 1,
+      globalRemaining: CONTACT_DAILY_GLOBAL - 1
     });
   });
 
   it("blocks a client once its daily allowance is spent", async () => {
     const stub = limiter("contact-b");
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
-      expect(await stub.takeContactSlot("2.2.2.2")).toEqual({allowed: true});
+      expect(await stub.takeContactSlot("2.2.2.2")).toMatchObject({
+        allowed: true,
+        clientRemaining: CONTACT_DAILY_PER_CLIENT - i - 1
+      });
     }
     expect(await stub.takeContactSlot("2.2.2.2")).toEqual({
       allowed: false,
-      scope: "client"
+      scope: "client",
+      clientRemaining: 0,
+      globalRemaining: CONTACT_DAILY_GLOBAL - CONTACT_DAILY_PER_CLIENT
     });
   });
 
@@ -90,7 +97,10 @@ describe("contact slots", () => {
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
       await stub.takeContactSlot("3.3.3.3");
     }
-    expect(await stub.takeContactSlot("4.4.4.4")).toEqual({allowed: true});
+    expect(await stub.takeContactSlot("4.4.4.4")).toMatchObject({
+      allowed: true,
+      clientRemaining: CONTACT_DAILY_PER_CLIENT - 1
+    });
   });
 
   it("blocks every client once the site-wide daily allowance is spent", async () => {
@@ -106,7 +116,9 @@ describe("contact slots", () => {
     expect(sent).toBe(CONTACT_DAILY_GLOBAL);
     expect(await stub.takeContactSlot("10.0.9.9")).toEqual({
       allowed: false,
-      scope: "global"
+      scope: "global",
+      clientRemaining: CONTACT_DAILY_PER_CLIENT,
+      globalRemaining: 0
     });
   });
 
@@ -116,5 +128,24 @@ describe("contact slots", () => {
       await stub.takeContactSlot("5.5.5.5");
     }
     expect(await stub.contactsSentToday()).toBe(CONTACT_DAILY_PER_CLIENT);
+  });
+
+  it("reports the remaining allowance without spending any of it", async () => {
+    const stub = limiter("contact-f");
+    expect(await stub.contactUsage("6.6.6.6")).toEqual({
+      clientRemaining: CONTACT_DAILY_PER_CLIENT,
+      globalRemaining: CONTACT_DAILY_GLOBAL
+    });
+    await stub.takeContactSlot("6.6.6.6");
+    expect(await stub.contactUsage("6.6.6.6")).toEqual({
+      clientRemaining: CONTACT_DAILY_PER_CLIENT - 1,
+      globalRemaining: CONTACT_DAILY_GLOBAL - 1
+    });
+    // Another client shares the site-wide tier but has its own.
+    expect(await stub.contactUsage("7.7.7.7")).toEqual({
+      clientRemaining: CONTACT_DAILY_PER_CLIENT,
+      globalRemaining: CONTACT_DAILY_GLOBAL - 1
+    });
+    expect(await stub.contactsSentToday()).toBe(1);
   });
 });

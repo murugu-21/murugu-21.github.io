@@ -13,9 +13,16 @@ import {cors} from "hono/cors";
 import {sendContactEmail, type EmailLike} from "../email";
 import {CONTACT_DAILY_PER_CLIENT, parseContactRequest} from "./contact";
 import {apiError, type FieldIssue} from "./errors";
+import {apiHeaders} from "./middleware";
 import {buildOpenApiDocument} from "./openapi";
+import {
+  contactRateLimitHeaders,
+  RATE_LIMIT_EXPOSED_HEADERS,
+  secondsUntilUtcMidnight
+} from "./ratelimit";
 import {ALLOWED_METHODS, API_PATHS, matchApiPath} from "./routes";
 import {loadDataset, loadPostMarkdown, loadPosts} from "./store";
+import {buildVersionsDocument, META_EXPOSED_HEADERS} from "./versioning";
 
 // Read responses are pure functions of the deployed build, so they are safe to
 // cache; five minutes keeps a redeploy visible quickly.
@@ -43,6 +50,20 @@ const datasetUnavailable = () =>
     hint: "This is a transient deployment state — retry in a minute. If it persists, the site's /api/dataset.json build artifact is missing."
   });
 
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+
+/**
+ * The origin to name in a self-describing document. The scheme is forced to
+ * https for any real host: Cloudflare redirects http at the edge, so
+ * advertising it would hand clients a URL that only ever redirects. Local dev
+ * keeps whatever scheme it was reached on.
+ */
+export function publicOrigin(requestUrl: string): string {
+  const url = new URL(requestUrl);
+  if (!LOCAL_HOSTS.has(url.hostname)) url.protocol = "https:";
+  return url.origin;
+}
+
 // The methods a client may use, including the two every endpoint answers.
 function allowHeader(path: string): string {
   const declared = ALLOWED_METHODS[path] ?? ["GET"];
@@ -53,14 +74,26 @@ function allowHeader(path: string): string {
   ].join(", ");
 }
 
-function secondsUntilUtcMidnight(): number {
-  const now = new Date();
-  const midnight = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate() + 1
-  );
-  return Math.max(1, Math.ceil((midnight - now.getTime()) / 1000));
+/**
+ * A successful contact response, carrying what is left of the daily allowance.
+ * Never cached: the body confirms a side effect and the headers are a snapshot.
+ */
+function contactResponse(
+  status: 200 | 202,
+  body: {status: string; message: string},
+  usage: {clientRemaining: number; globalRemaining: number}
+): Response {
+  return new Response(JSON.stringify(body, null, 2), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...contactRateLimitHeaders({
+        ...usage,
+        resetSeconds: secondsUntilUtcMidnight()
+      })
+    }
+  });
 }
 
 export const api = new Hono<{Bindings: Env}>();
@@ -71,9 +104,14 @@ api.use(
     origin: "*",
     allowMethods: ["GET", "HEAD", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type"],
+    // Without this a browser-side agent can read the body but none of the
+    // signalling headers, which is exactly the half it needs to self-throttle.
+    exposeHeaders: [...RATE_LIMIT_EXPOSED_HEADERS, ...META_EXPOSED_HEADERS],
     maxAge: 86400
   })
 );
+
+api.use("*", apiHeaders({enforceReads: true}));
 
 const READ: string[] = ["GET", "HEAD"];
 
@@ -159,6 +197,12 @@ api.on(READ, "/posts/:slug", async c => {
   return json({...post, markdown});
 });
 
+// Version and deprecation metadata. Served under both prefixes, so a client
+// that knows no version yet can still ask which ones exist.
+api.on(READ, "/versions", c =>
+  json(buildVersionsDocument(publicOrigin(c.req.url)))
+);
+
 api.on(READ, "/openapi.json", c => specResponse(c.req.url));
 
 api.post("/contact", async c => {
@@ -214,24 +258,21 @@ api.post("/contact", async c => {
     });
   }
 
+  const limiter = c.env.RateLimiter.get(c.env.RateLimiter.idFromName("global"));
+  const clientIp = c.req.header("CF-Connecting-IP") ?? "unknown";
+
   if (parsed.dryRun) {
-    return new Response(
-      JSON.stringify(
-        {
-          status: "validated",
-          message:
-            "The request is valid. Send it again without dryRun to deliver it."
-        },
-        null,
-        2
-      ),
+    // A dry run spends nothing, which is exactly why it has to report the
+    // allowance honestly: it is how a client sizes a real send.
+    const usage = await limiter.contactUsage(clientIp);
+    return contactResponse(
+      200,
       {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json; charset=utf-8",
-          "Cache-Control": "no-store"
-        }
-      }
+        status: "validated",
+        message:
+          "The request is valid. Send it again without dryRun to deliver it."
+      },
+      usage
     );
   }
 
@@ -248,10 +289,7 @@ api.post("/contact", async c => {
 
   // A slot is only spent once the request is known to be well-formed and
   // deliverable, so a confused caller retrying a bad body is not locked out.
-  const limiter = c.env.RateLimiter.get(c.env.RateLimiter.idFromName("global"));
-  const slot = await limiter.takeContactSlot(
-    c.req.header("CF-Connecting-IP") ?? "unknown"
-  );
+  const slot = await limiter.takeContactSlot(clientIp);
   if (!slot.allowed) {
     return apiError({
       status: 429,
@@ -260,8 +298,14 @@ api.post("/contact", async c => {
         slot.scope === "client"
           ? `This client has already sent ${CONTACT_DAILY_PER_CLIENT} messages today.`
           : "The site-wide daily message allowance is spent.",
-      hint: "The allowance resets at 00:00 UTC. For anything urgent, use the email link in GET /api/profile.",
-      headers: {"Retry-After": String(secondsUntilUtcMidnight())}
+      hint: `The allowance resets at 00:00 UTC — the Retry-After and RateLimit headers on this response say when and how much. For anything urgent, use the email link in GET ${API_PATHS.profile}.`,
+      headers: {
+        "Retry-After": String(secondsUntilUtcMidnight()),
+        ...contactRateLimitHeaders({
+          ...slot,
+          resetSeconds: secondsUntilUtcMidnight()
+        })
+      }
     });
   }
 
@@ -277,23 +321,14 @@ api.post("/contact", async c => {
     });
   }
 
-  return new Response(
-    JSON.stringify(
-      {
-        status: "accepted",
-        message:
-          "Message accepted — Murugappan will reply to the address you gave."
-      },
-      null,
-      2
-    ),
+  return contactResponse(
+    202,
     {
-      status: 202,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store"
-      }
-    }
+      status: "accepted",
+      message:
+        "Message accepted — Murugappan will reply to the address you gave."
+    },
+    slot
   );
 });
 
@@ -320,18 +355,9 @@ api.all("*", c => {
   });
 });
 
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
-
-/**
- * The OpenAPI document, with `servers` set to the host that was asked. The
- * scheme is forced to https for any real host: Cloudflare redirects http at
- * the edge, so advertising it in `servers` would hand clients a URL that only
- * ever redirects. Local dev keeps whatever scheme it was reached on.
- */
+/** The OpenAPI document, with `servers` set to the host that was asked. */
 export function specResponse(requestUrl: string): Response {
-  const url = new URL(requestUrl);
-  if (!LOCAL_HOSTS.has(url.hostname)) url.protocol = "https:";
-  return json(buildOpenApiDocument(url.origin));
+  return json(buildOpenApiDocument(publicOrigin(requestUrl)));
 }
 
 // /openapi.json is the canonical, root-level spec location agents probe first;
@@ -340,8 +366,17 @@ export const specRoutes = new Hono<{Bindings: Env}>();
 
 specRoutes.use(
   "*",
-  cors({origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400})
+  cors({
+    origin: "*",
+    allowMethods: ["GET", "HEAD", "OPTIONS"],
+    exposeHeaders: [...RATE_LIMIT_EXPOSED_HEADERS, ...META_EXPOSED_HEADERS],
+    maxAge: 86400
+  })
 );
+
+// The document describing the API must stay reachable even for a client that
+// has just been throttled, so the ceiling is advertised here but not enforced.
+specRoutes.use("*", apiHeaders({enforceReads: false}));
 
 specRoutes.on(READ, "/", c => specResponse(c.req.url));
 

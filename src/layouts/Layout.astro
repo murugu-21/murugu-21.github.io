@@ -6,6 +6,10 @@ import {skillsCategories} from "../data/portfolio";
 
 interface Props {
   title?: string;
+  // Per-page meta description. Defaults to the site pitch, which is right for
+  // pages about the person; a page about something else (the API, say) needs
+  // its own or it will never surface for a query about that thing.
+  description?: string;
   noindex?: boolean;
   // marks this page as THE canonical entity page about the person (/about)
   profilePage?: boolean;
@@ -20,9 +24,12 @@ const metaDescription =
   "I build B2B SaaS that ships in regulated industries — founding engineer, 0 to $300k ARR, now automating pharmacy workflows with LLMs at MedMe Health.";
 const {
   title = "Murugappan M | Full Stack Engineer — TypeScript, Node.js, React & AWS",
+  description: pageDescription,
   noindex = false,
   profilePage = false
 } = Astro.props;
+const pageMetaDescription = pageDescription ?? metaDescription;
+const socialDescription = pageDescription ?? description;
 
 // Self-referencing canonical built on the custom domain, so copies served
 // from any other host (workers.dev preview, etc.) consolidate to it.
@@ -182,7 +189,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <meta name="description" content={metaDescription} />
+    <meta name="description" content={pageMetaDescription} />
     {noindex && <meta name="robots" content="noindex" />}
     {!noindex && <link rel="canonical" href={canonicalUrl} />}
     {/* crawler-only pointer to the entity page (not in the human nav) */}
@@ -199,6 +206,12 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     />
     <link rel="service-doc" type="text/html" href="/developers/" />
     <link
+      rel="api-catalog"
+      type="application/linkset+json"
+      href="/.well-known/api-catalog"
+      title="murugappan.dev API catalogue (RFC 9727)"
+    />
+    <link
       rel="describedby"
       type="text/plain"
       href="/llms.txt"
@@ -214,13 +227,13 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     <meta property="og:type" content="website" />
     {!noindex && <meta property="og:url" content={canonicalUrl} />}
     <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
+    <meta property="og:description" content={socialDescription} />
     <meta property="og:image" content="https://murugappan.dev/og-image.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     {!noindex && <meta name="twitter:url" content={canonicalUrl} />}
     <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
+    <meta name="twitter:description" content={socialDescription} />
     <meta name="twitter:image" content="https://murugappan.dev/og-image.png" />
 
     <meta name="msapplication-TileColor" content="#057b01" />

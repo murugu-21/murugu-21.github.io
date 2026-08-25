@@ -71,6 +71,9 @@ export const LLMS_FULL_TXT = "# SDE Journey\n\nEvery post, in full.\n";
 
 export const AGENTS_MD = "# AGENTS.md — murugappan.dev\n\nWhen to use.\n";
 
+/** The styled 404 page the assets layer answers a miss with. */
+export const NOT_FOUND_HTML = "<!doctype html><h1>404</h1>";
+
 /** Overriding a path with null makes the assets binding 404 it. */
 export function siteFiles(
   overrides: Record<string, string | null> = {}
@@ -85,20 +88,33 @@ export function siteFiles(
   };
 }
 
+/** The real ASSETS binding takes a string, a URL or a Request — so does this. */
+function assetPath(input: RequestInfo | URL): string {
+  if (typeof input === "string") return new URL(input).pathname;
+  if (input instanceof URL) return input.pathname;
+  return new URL(input.url).pathname;
+}
+
 export function fakeAssets(overrides: Record<string, string | null> = {}) {
   const files = siteFiles(overrides);
   return {
     fetch: (input: RequestInfo | URL) => {
-      const path = new URL(typeof input === "string" ? input : input.toString())
-        .pathname;
+      const path = assetPath(input);
       const body = files[path];
+      // A miss is the styled 404 page, which is what the real binding returns
+      // under assets.not_found_handling: "404-page" (see wrangler.jsonc).
       return Promise.resolve(
         body == null
-          ? new Response("<!doctype html><h1>404</h1>", {
+          ? new Response(NOT_FOUND_HTML, {
               status: 404,
-              headers: {"Content-Type": "text/html"}
+              headers: {"Content-Type": "text/html; charset=utf-8"}
             })
-          : new Response(body, {status: 200})
+          : new Response(body, {
+              status: 200,
+              headers: path.endsWith(".html")
+                ? {"Content-Type": "text/html; charset=utf-8"}
+                : undefined
+            })
       );
     }
   };

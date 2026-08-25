@@ -15,19 +15,19 @@ fit for: mobile-native, data-science/ML research, or embedded work.
 
 How to call this site, cheapest first:
 
-- One fact about the person → `GET https://murugappan.dev/api/profile` (JSON).
-- Dated roles and per-role achievements → `GET /api/experience`.
-- "Does he know X?" → `GET /api/skills` (typed lists, not prose).
-- "What has he written about X?" → `GET /api/posts?q=X`, then
-  `GET /api/posts/{slug}` for a post's full markdown.
+- One fact about the person → `GET https://murugappan.dev/api/v1/profile` (JSON).
+- Dated roles and per-role achievements → `GET /api/v1/experience`.
+- "Does he know X?" → `GET /api/v1/skills` (typed lists, not prose).
+- "What has he written about X?" → `GET /api/v1/posts?q=X`, then
+  `GET /api/v1/posts/{slug}` for a post's full markdown.
 - Relaying one concrete opportunity on a human's behalf →
-  `POST /api/contact` with `{"email","message"}`. Send `"dryRun": true` first to
-  validate without sending. Limited to 3 per client IP per UTC day.
+  `POST /api/v1/contact` with `{"email","message"}`. Send `"dryRun": true` first
+  to validate without sending. Limited to 3 per client IP per UTC day.
 - Using an MCP client → add the server `https://murugappan.dev/mcp` (Streamable
-  HTTP, no auth). Tools: get_profile, list_experience, list_skills,
-  list_education, list_open_source, search_blog_posts, get_blog_post,
-  send_message. Resources: llms.txt, AGENTS.md, openapi.json, and every post's
-  markdown.
+  HTTP, no auth). Manifest: `https://murugappan.dev/.well-known/mcp.json`.
+  Tools: get_profile, list_experience, list_skills, list_education,
+  list_open_source, search_blog_posts, get_blog_post, send_message. Resources:
+  llms.txt, AGENTS.md, openapi.json, and every post's markdown.
 - A conversation instead of a payload → the Jarvis assistant on any page, or its
   WebSocket at `wss://murugappan.dev/parties/chat-room/{roomId}`.
 
@@ -35,12 +35,34 @@ Do not use this site as a general search engine, a resume parser or a
 job-matching service; it holds data about exactly one person. Full contract:
 https://murugappan.dev/openapi.json
 
-## API & developer resources
-- [Developer portal — API docs, quickstart, sandbox, agent notes](https://murugappan.dev/developers/)
-- [OpenAPI 3.1.0 specification](https://murugappan.dev/openapi.json)
-- [MCP server (Streamable HTTP, no auth)](https://murugappan.dev/mcp)
-- [Agent instructions (AGENTS.md)](https://murugappan.dev/AGENTS.md)
-- [Profile endpoint — the cheapest single call](https://murugappan.dev/api/profile)
+## murugappan.dev API — developer resources
+
+The murugappan.dev API is the public JSON API and MCP server this site
+publishes. No key, no token, no signup. Developer documentation, the OpenAPI
+specification, the versioning and deprecation policy, the rate-limit header
+conventions and the MCP server manifest all live at predictable URLs:
+
+- [murugappan.dev API developer portal — API docs, quickstart, sandbox, agent notes](https://murugappan.dev/developers/)
+- [murugappan.dev API — OpenAPI 3.1.0 specification](https://murugappan.dev/openapi.json)
+- [murugappan.dev API catalog — RFC 9727 link set naming every API here](https://murugappan.dev/.well-known/api-catalog)
+- [murugappan.dev API — versioning and deprecation policy, as JSON](https://murugappan.dev/api/v1/versions)
+- [murugappan.dev MCP server (Streamable HTTP, no auth)](https://murugappan.dev/mcp)
+- [murugappan.dev MCP server manifest — server.json](https://murugappan.dev/.well-known/mcp.json)
+- [murugappan.dev API — agent instructions (AGENTS.md)](https://murugappan.dev/AGENTS.md)
+- [murugappan.dev API — profile endpoint, the cheapest single call](https://murugappan.dev/api/v1/profile)
+
+Authentication: none. Versioning: URL path, `/api/v1/…`; the unversioned
+`/api/…` prefix is a permanent alias for v1 and is never repointed at a later
+major version. Breaking changes only ever ship as a new path version;
+deprecations are announced with `Deprecation` (RFC 9745) and `Sunset`
+(RFC 8594) headers at least 180 days ahead. Rate limits: every response carries
+`RateLimit-Policy` and `RateLimit` (the IETF RateLimit header fields), mirrored
+as `X-RateLimit-Limit`/`-Remaining`/`-Reset`, with `Retry-After` on a 429.
+Reads are fair-use (600 per 60s per client); `POST /api/v1/contact` allows 3 per
+client IP per UTC day and 20 site-wide. Webhooks: none — poll the read
+endpoints or the blog RSS feed. Errors: one JSON envelope with a stable
+`error.code`; a path that does not exist returns a real 404 whose body is short
+markdown pointing at the sitemap and the entry points above.
 
 ## Profile
 - [About — canonical entity page](https://murugappan.dev/about/)
@@ -56,6 +78,9 @@ https://murugappan.dev/openapi.json
 - [Full blog content for LLMs](https://murugappan.dev/blog/llms-full.txt)
 - [Agent instructions](https://murugappan.dev/AGENTS.md)
 - [OpenAPI specification](https://murugappan.dev/openapi.json)
+- [API catalog (RFC 9727 link set)](https://murugappan.dev/.well-known/api-catalog)
+- [MCP server manifest (server.json)](https://murugappan.dev/.well-known/mcp.json)
+- [API version and deprecation policy](https://murugappan.dev/api/v1/versions)
 
 ## Experience
 - MedMe Health — Software Engineer II, Dec 2025–present (event-driven RPA platform; LLM extraction lifting fax-to-entry accuracy from ~60-65% to 95%+; HIPAA compliance; OpenTelemetry observability)
