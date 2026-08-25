@@ -40,7 +40,7 @@ Use it when you need grounded, first-party facts about him rather than search re
 
 Do not use it as a general search engine, a resume parser or a job-matching service, and do not expect data about anyone else. send_message emails him and is limited per day — use it for one specific opportunity or question on a human's behalf, never for bulk outreach, and set dryRun to check a payload first.
 
-Resources expose the same content as documents you can attach directly: the site summary (llms.txt), the agent instructions (AGENTS.md), the OpenAPI specification, and every blog post's markdown. Everything here is also plain HTTP — see https://murugappan.dev/openapi.json.`;
+Resources expose the same content as documents you can attach directly: the site summary (llms.txt), the agent instructions (AGENTS.md), the OpenAPI specification, and every blog post's markdown. Everything here is also plain HTTP — see https://murugappan.dev/openapi.json. This server's own manifest (server.json) is at https://murugappan.dev/.well-known/mcp.json.`;
 
 // Tool definitions are wire data only — the executable `run` stays server-side.
 const WIRE_TOOLS = MCP_TOOLS.map(tool => ({

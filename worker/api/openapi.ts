@@ -8,14 +8,21 @@
 // parameters and a response schema — that is what makes the document usable
 // as a function-calling tool definition without hand-editing.
 
-import {API_PATHS} from "./routes";
+import {
+  API_BASE,
+  API_PATHS,
+  CURRENT_API_VERSION,
+  VERSIONED_API_BASE as VERSIONED_BASE
+} from "./routes";
 import {
   CONTACT_DAILY_GLOBAL,
   CONTACT_DAILY_PER_CLIENT,
   CONTACT_LIMITS
 } from "./contact";
+import {CONTACT_QUOTAS, policyField, READ_QUOTA} from "./ratelimit";
+import {API_VERSION, DEPRECATION_NOTICE_DAYS, VERSIONS} from "./versioning";
 
-export const API_VERSION = "1.0.0";
+export {API_VERSION};
 
 export type OpenApiDocument = {
   openapi: string;
@@ -38,23 +45,27 @@ export type OpenApiDocument = {
   };
 };
 
-const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishes about Murugappan M — profile, work experience, skills, education, open-source work and blog posts — plus one write endpoint (\`POST /api/contact\`) for passing along an opportunity.
+const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishes about Murugappan M — profile, work experience, skills, education, open-source work and blog posts — plus one write endpoint (\`POST ${API_PATHS.contact}\`) for passing along an opportunity.
 
-**When to use this API.** Reach for it when you need grounded facts about Murugappan M as a candidate or collaborator: what he has shipped, which technologies he has production experience with, when he held which role, or what he has written about a technical topic. \`GET /api/profile\` is the cheapest single call for "who is this person"; \`GET /api/posts/{slug}\` returns a post's full markdown when you need to cite or summarise his writing. Use \`POST /api/contact\` only to relay a real, specific opportunity or question on a human's behalf.
+**When to use this API.** Reach for it when you need grounded facts about Murugappan M as a candidate or collaborator: what he has shipped, which technologies he has production experience with, when he held which role, or what he has written about a technical topic. \`GET ${API_PATHS.profile}\` is the cheapest single call for "who is this person"; \`GET ${API_PATHS.post}\` returns a post's full markdown when you need to cite or summarise his writing. Use \`POST ${API_PATHS.contact}\` only to relay a real, specific opportunity or question on a human's behalf.
 
 **When not to use it.** It is not a general-purpose search, resume-parsing or job-matching service, and it holds data about exactly one person.
 
-**Authentication.** None. Every endpoint is public and unauthenticated; no key, token or signup is required. Read endpoints are cached for 5 minutes at the edge.
+**Authentication.** None. Every endpoint is public and unauthenticated; no key, token or signup is required. Read endpoints are cached for 5 minutes.
 
-**Rate limits.** Read endpoints are unmetered. \`POST /api/contact\` allows ${CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day and ${CONTACT_DAILY_GLOBAL} site-wide, and answers \`429\` with a \`rate_limited\` code once either is spent.
+**Versioning.** The version is a path segment: \`${VERSIONED_BASE}/…\`. The unversioned \`${API_BASE}/…\` prefix is a permanent alias for \`${CURRENT_API_VERSION}\` and is never repointed at a later major version, so either form is safe to hard-code. Additive changes ship inside a version without notice — ignore response fields you do not recognise. Breaking changes only ever ship as a new path version. Every response carries \`API-Version\` and \`API-Supported-Versions\`; \`GET ${API_PATHS.versions}\` is the machine-readable policy.
 
-**Errors.** Every failure — including 404s on unknown \`/api/*\` paths — returns the \`Error\` schema below: a stable \`code\`, a human \`message\`, a \`hint\` describing the fix, and \`documentation_url\`. No HTML error pages are served under \`/api\`.
+**Deprecation.** A deprecated version answers every request with \`Deprecation\` (RFC 9745) and \`Sunset\` (RFC 8594) headers plus \`Link\` relations \`deprecation\` and \`successor-version\`, and at least ${DEPRECATION_NOTICE_DAYS} days pass between the first \`Deprecation\` header and the sunset date. After sunset the version answers \`410\`. Nothing is currently deprecated: ${VERSIONS.map(v => `\`${v.version}\` is ${v.status}`).join(", ")}.
 
-**MCP.** The same content is served as a Model Context Protocol server (Streamable HTTP) at \`POST /mcp\`, protocol revision 2026-07-28 with backward compatibility for the \`initialize\`-based revisions. Eight tools (\`get_profile\`, \`list_experience\`, \`list_skills\`, \`list_education\`, \`list_open_source\`, \`search_blog_posts\`, \`get_blog_post\`, \`send_message\`) plus resources for the site's documents and every blog post. Add it to an MCP client as \`https://murugappan.dev/mcp\` — no auth.
+**Rate limits.** Every response carries \`RateLimit-Policy\` and \`RateLimit\` (draft-ietf-httpapi-ratelimit-headers), mirrored as \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\`, and a \`429\` adds \`Retry-After\`. Reads have a fair-use ceiling of ${READ_QUOTA.quota} requests per ${READ_QUOTA.windowSeconds} seconds per client, counted in the edge location that serves you — \`${policyField([READ_QUOTA])}\`. \`POST ${API_PATHS.contact}\` really is metered: \`${policyField(CONTACT_QUOTAS)}\` — ${CONTACT_DAILY_PER_CLIENT} per client IP per UTC day and ${CONTACT_DAILY_GLOBAL} site-wide.
+
+**Errors.** Every failure — including 404s on unknown \`${API_BASE}/*\` paths — returns the \`Error\` schema below: a stable \`code\`, a human \`message\`, a \`hint\` describing the fix, and \`documentation_url\`. No HTML error pages are served under \`${API_BASE}\`. Off the API, a request for a path that does not exist gets a real \`404\` whose body is short markdown pointing at the sitemap and these entry points, so an agent can recover without parsing a styled page.
+
+**MCP.** The same content is served as a Model Context Protocol server (Streamable HTTP) at \`POST /mcp\`, protocol revision 2026-07-28 with backward compatibility for the \`initialize\`-based revisions. Eight tools (\`get_profile\`, \`list_experience\`, \`list_skills\`, \`list_education\`, \`list_open_source\`, \`search_blog_posts\`, \`get_blog_post\`, \`send_message\`) plus resources for the site's documents and every blog post. Add it to an MCP client as \`https://murugappan.dev/mcp\` — no auth. Its manifest (\`server.json\`) is at \`https://murugappan.dev/.well-known/mcp.json\`.
 
 **Conversational alternative.** The site also runs an AI assistant ("Jarvis") over a WebSocket at \`/parties/chat-room/{roomId}\`, which OpenAPI cannot describe. Send \`{"type":"chat","text":"..."}\` and read \`delta\`/\`done\` frames back. Prefer this API when you want structured data, and the socket when you want a conversation.
 
-**Other machine-readable entry points.** \`/mcp\` (MCP server), \`/llms.txt\` (site summary + every blog post), \`/AGENTS.md\` (agent instructions), \`/blog/llms-full.txt\` (full post text), \`/sitemap.xml\`, and \`Accept: text/markdown\` on any page URL.`;
+**Other machine-readable entry points.** \`/.well-known/api-catalog\` (RFC 9727 linkset of every API here), \`/.well-known/mcp.json\` (MCP server manifest), \`/mcp\` (MCP server), \`/llms.txt\` (site summary + every blog post), \`/AGENTS.md\` (agent instructions), \`/blog/llms-full.txt\` (full post text), \`/sitemap.xml\`, and \`Accept: text/markdown\` on any page URL.`;
 
 const errorResponse = (description: string) => ({
   description,
@@ -68,14 +79,26 @@ const jsonResponse = (description: string, ref: string) => ({
   content: {"application/json": {schema: {$ref: ref}}}
 });
 
+const rateLimited = errorResponse(
+  "The client's read allowance for the current window is spent (`rate_limited`). `Retry-After` and the `RateLimit` header say when to come back — see the Rate limits section above."
+);
+
 // Shared failure modes for the read endpoints: the dataset is a build
 // artifact read through the ASSETS binding, so "not deployed yet" is a real
 // state and gets its own status rather than a 500.
 const readFailures = {
+  "429": rateLimited,
   "500": errorResponse("Unexpected server error."),
   "503": errorResponse(
     "The site's content dataset is missing or unreadable — retry shortly."
   )
+};
+
+// The two self-describing endpoints read nothing from the build, so they have
+// no 503 — but they are still read requests and share the read allowance.
+const metaFailures = {
+  "429": rateLimited,
+  "500": errorResponse("Unexpected server error.")
 };
 
 const stringProp = (description: string, extra: object = {}) => ({
@@ -318,6 +341,22 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
           }
         }
       },
+      [API_PATHS.versions]: {
+        get: {
+          operationId: "getApiVersions",
+          summary: "Get the version and deprecation policy",
+          description:
+            "Returns every version of this API, its status, the release it serves and its sunset date if it has one, together with the policy in force: how versions are selected, what may change inside one, and which headers announce a deprecation. Read this before hard-coding a base path — it is the machine-readable form of the promise the API makes about not changing under you. Also reachable unversioned at `/api/versions`.",
+          tags: ["meta"],
+          responses: {
+            "200": jsonResponse(
+              "The version catalogue and the policy governing it.",
+              "#/components/schemas/ApiVersions"
+            ),
+            ...metaFailures
+          }
+        }
+      },
       [API_PATHS.openapi]: {
         get: {
           operationId: "getOpenApiSpec",
@@ -338,7 +377,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
                 }
               }
             },
-            "500": errorResponse("Unexpected server error.")
+            ...metaFailures
           }
         }
       }
@@ -735,6 +774,149 @@ export const API_SCHEMAS: Record<string, unknown> = {
       markdown: stringProp(
         "The post's complete markdown source, frontmatter included."
       )
+    }
+  },
+  ApiVersionRecord: {
+    type: "object",
+    title: "ApiVersionRecord",
+    description: "One version of this API and where it is in its lifecycle.",
+    required: [
+      "version",
+      "status",
+      "release",
+      "basePath",
+      "url",
+      "specUrl",
+      "releasedOn",
+      "deprecatedOn",
+      "sunsetOn",
+      "successor"
+    ],
+    additionalProperties: false,
+    properties: {
+      version: stringProp("The path segment that selects this version.", {
+        examples: [CURRENT_API_VERSION]
+      }),
+      status: {
+        type: "string",
+        description:
+          "`current` while it is the newest, `deprecated` once a successor exists and a sunset date is set, `sunset` once it stops answering.",
+        enum: ["current", "deprecated", "sunset"]
+      },
+      release: stringProp(
+        "The semantic release this version serves right now — the value of the `API-Version` response header.",
+        {examples: [API_VERSION]}
+      ),
+      basePath: stringProp("Path prefix every endpoint of this version has.", {
+        examples: [VERSIONED_BASE]
+      }),
+      url: stringProp("Absolute base URL of this version.", {format: "uri"}),
+      specUrl: stringProp("Absolute URL of this version's OpenAPI document.", {
+        format: "uri"
+      }),
+      releasedOn: stringProp("ISO 8601 date the version was published.", {
+        format: "date"
+      }),
+      deprecatedOn: {
+        type: ["string", "null"],
+        format: "date",
+        description:
+          "ISO 8601 date the version was marked deprecated, or null while it is current. Mirrors the `Deprecation` response header."
+      },
+      sunsetOn: {
+        type: ["string", "null"],
+        format: "date",
+        description:
+          "ISO 8601 date the version stops answering, or null while it is current. Mirrors the `Sunset` response header."
+      },
+      successor: {
+        type: ["string", "null"],
+        description:
+          "The version to migrate to, or null when this is the newest."
+      }
+    }
+  },
+  ApiVersionPolicy: {
+    type: "object",
+    title: "ApiVersionPolicy",
+    description: "The rules governing how this API changes.",
+    required: [
+      "scheme",
+      "deprecationNoticeDays",
+      "rules",
+      "documentationUrl",
+      "headers"
+    ],
+    additionalProperties: false,
+    properties: {
+      scheme: {
+        type: "string",
+        description: "How a client selects a version.",
+        enum: ["url-path"]
+      },
+      deprecationNoticeDays: {
+        type: "integer",
+        description:
+          "Minimum days between a version's first `Deprecation` header and its sunset date.",
+        minimum: 0
+      },
+      rules: {
+        type: "array",
+        description:
+          "The policy in full sentences, one commitment per entry — the same text the developer portal publishes.",
+        items: {type: "string"}
+      },
+      documentationUrl: stringProp(
+        "Where the policy is documented for people.",
+        {
+          format: "uri"
+        }
+      ),
+      headers: {
+        type: "object",
+        description:
+          "The response headers that carry version and deprecation state, each mapped to what it means.",
+        additionalProperties: {type: "string"}
+      }
+    }
+  },
+  UnversionedAlias: {
+    type: "object",
+    title: "UnversionedAlias",
+    description:
+      "The unversioned path prefix and the version it is permanently pinned to.",
+    required: ["basePath", "pinnedTo", "note"],
+    additionalProperties: false,
+    properties: {
+      basePath: stringProp("The unversioned prefix.", {examples: [API_BASE]}),
+      pinnedTo: stringProp("The version it always resolves to."),
+      note: stringProp("The promise made about it, in one sentence.")
+    }
+  },
+  ApiVersions: {
+    type: "object",
+    title: "ApiVersions",
+    description: "Response body of getApiVersions.",
+    required: [
+      "current",
+      "currentRelease",
+      "unversionedAlias",
+      "versions",
+      "policy"
+    ],
+    additionalProperties: false,
+    properties: {
+      current: stringProp("The newest version's path segment."),
+      currentRelease: stringProp(
+        "The semantic release the newest version serves."
+      ),
+      unversionedAlias: {$ref: "#/components/schemas/UnversionedAlias"},
+      versions: {
+        type: "array",
+        description: "Every version this deployment knows about, newest first.",
+        items: {$ref: "#/components/schemas/ApiVersionRecord"}
+      },
+      policy: {$ref: "#/components/schemas/ApiVersionPolicy"}
     }
   },
   ContactRequest: {

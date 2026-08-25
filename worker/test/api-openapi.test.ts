@@ -1,7 +1,13 @@
 import {describe, expect, it} from "vitest";
 
 import {buildOpenApiDocument} from "../api/openapi";
-import {ALLOWED_METHODS, SPEC_PATHS} from "../api/routes";
+import {
+  ALLOWED_METHODS,
+  API_PATHS,
+  CURRENT_API_VERSION,
+  SPEC_PATHS,
+  VERSIONED_API_BASE
+} from "../api/routes";
 
 const doc = buildOpenApiDocument("https://murugappan.dev");
 
@@ -55,6 +61,36 @@ describe("buildOpenApiDocument", () => {
     expect(doc.servers).toEqual([
       {url: "https://murugappan.dev", description: "Production"}
     ]);
+  });
+
+  it("publishes every operation under the versioned path prefix", () => {
+    for (const path of Object.keys(doc.paths)) {
+      expect(path.startsWith(VERSIONED_API_BASE), path).toBe(true);
+    }
+  });
+
+  it("documents the versioning and deprecation policy agents have to rely on", () => {
+    const description = doc.info.description;
+    expect(description).toContain(VERSIONED_API_BASE);
+    expect(description).toContain(CURRENT_API_VERSION);
+    // The two standards a deprecation is announced with, named so a client
+    // knows which header shapes to expect.
+    expect(description).toContain("RFC 9745");
+    expect(description).toContain("RFC 8594");
+    expect(description).toContain("Deprecation");
+    expect(description).toContain("Sunset");
+    expect(description).toContain(API_PATHS.versions);
+  });
+
+  it("documents the rate-limit headers it actually sends", () => {
+    expect(doc.info.description).toContain("RateLimit-Policy");
+    expect(doc.info.description).toContain("Retry-After");
+    expect(doc.info.description).toContain("X-RateLimit-Remaining");
+  });
+
+  it("points at the MCP manifest and the API catalogue", () => {
+    expect(doc.info.description).toContain("/.well-known/mcp.json");
+    expect(doc.info.description).toContain("/.well-known/api-catalog");
   });
 
   it("declares the API as unauthenticated rather than leaving it unsaid", () => {
@@ -145,12 +181,22 @@ describe("buildOpenApiDocument", () => {
   });
 
   it("documents the dry-run sandbox on the write operation", () => {
-    const contact = doc.paths["/api/contact"] as {post: Operation};
+    const contact = doc.paths[API_PATHS.contact] as {post: Operation};
     expect(Object.keys(contact.post.responses!)).toContain("200");
     const schema = doc.components.schemas.ContactRequest as {
       properties: Record<string, unknown>;
     };
     expect(schema.properties.dryRun).toBeTruthy();
+  });
+
+  it("documents the 429 the read ceiling can actually produce", () => {
+    for (const [path, method, op] of operations()) {
+      if (method.toUpperCase() !== "GET") continue;
+      expect(
+        Object.keys(op.responses ?? {}),
+        `${method.toUpperCase()} ${path}`
+      ).toContain("429");
+    }
   });
 
   it("documents a machine-readable error body on every failure status", () => {
@@ -175,7 +221,7 @@ describe("buildOpenApiDocument", () => {
   });
 
   it("requires a JSON request body on the write operation", () => {
-    const post = doc.paths["/api/contact"] as {post: Operation};
+    const post = doc.paths[API_PATHS.contact] as {post: Operation};
     expect(post.post.requestBody).toMatchObject({
       required: true,
       content: {

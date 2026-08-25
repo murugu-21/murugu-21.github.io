@@ -12,18 +12,27 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    // Paths the Worker must answer itself instead of letting the assets
-    // layer serve (or 404) them — keep in sync with worker/server.ts.
-    // /api/* so every failure is the JSON error envelope rather than the HTML
-    // 404 page; /openapi.json so the spec's `servers` names the real host;
-    // /mcp for the Model Context Protocol endpoint.
-    "run_worker_first": [
-      "/parties/*",
-      "/api/*",
-      "/openapi.json",
-      "/mcp",
-      "/mcp/*"
-    ]
+    // The Worker runs ahead of asset serving for everything except the
+    // immutable hashed-asset directories. Three reasons, all of which need the
+    // Worker to see the request before the assets layer answers it:
+    //
+    //   * /api/*, /openapi.json, /mcp, /mcp.json and /.well-known/* are the
+    //     Worker's own routes — /api/* so every failure is the JSON error
+    //     envelope rather than the HTML 404 page, and the rest so the generated
+    //     documents name the host that actually answered.
+    //   * A 404 has to be content-negotiated (worker/not-found.ts): markdown for
+    //     a machine client, the styled page for a browser. Left to the assets
+    //     layer, `not_found_handling` answers every miss itself and the Worker
+    //     is never invoked — including for browser navigation requests, which
+    //     `assets_navigation_prefers_asset_serving` routes to asset serving
+    //     unless the Worker runs first.
+    //   * /parties/* is the chat Durable Object.
+    //
+    // `ASSETS.fetch()` still applies _headers, _redirects, html_handling and
+    // not_found_handling, so nothing about asset serving changes — it just
+    // happens one hop later. The exclusions keep the hashed, immutable bundles
+    // (which are most of the request volume) on the zero-invocation path.
+    "run_worker_first": ["/*", "!/static/*", "!/blog/_astro/*"]
   },
   // keep DO bindings + migrations in sync with worker/test/wrangler.jsonc
   "durable_objects": {

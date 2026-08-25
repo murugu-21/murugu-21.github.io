@@ -49,10 +49,31 @@ and for agents at [`/AGENTS.md`](https://murugappan.dev/AGENTS.md).
   surface (the router and the spec are both checked against it), `openapi.ts`
   generates the spec, `errors.ts` is the one JSON error envelope, `store.ts`
   reads the inputs, `index.ts` is the Hono sub-app.
-- **Endpoints:** `GET /api/profile`, `/api/experience`, `/api/skills`,
-  `/api/education`, `/api/open-source`, `/api/posts` (`?q=`, `?limit=`),
-  `/api/posts/{slug}` (full markdown), `POST /api/contact`, and the spec at
-  `/openapi.json` + `/api/openapi.json`.
+- **Endpoints:** `GET /api/v1/profile`, `/api/v1/experience`, `/api/v1/skills`,
+  `/api/v1/education`, `/api/v1/open-source`, `/api/v1/posts` (`?q=`, `?limit=`),
+  `/api/v1/posts/{slug}` (full markdown), `POST /api/v1/contact`,
+  `GET /api/v1/versions`, and the spec at `/openapi.json` + `/api/v1/openapi.json`.
+- **Versioning** (`worker/api/versioning.ts`): the version is a path segment.
+  `API_PATHS` holds the published `/api/v1/...` templates; `toVersionedPath()`
+  normalises the unversioned `/api/...` alias onto them, which is what lets
+  `server.ts` mount the same Hono app at both prefixes (versioned first, so
+  `/api/v1/profile` matches its own route rather than the catch-all). The alias
+  is a permanent pin to v1 — a v2 would live only at `/api/v2/...`. `VERSIONS`
+  is the catalogue: adding a record there is what turns on `Deprecation`
+  (RFC 9745) and `Sunset` (RFC 8594) headers, the `deprecation` /
+  `successor-version` `Link` relations, and the `GET /api/v1/versions` document.
+  Every API response carries `API-Version`, `API-Supported-Versions` and the
+  discovery `Link` relations, applied by `worker/api/middleware.ts` so no
+  endpoint can be added without them.
+- **Rate-limit headers** (`worker/api/ratelimit.ts`): every response carries
+  `RateLimit-Policy` and `RateLimit` in the syntax of
+  draft-ietf-httpapi-ratelimit-headers, mirrored as `X-RateLimit-Limit` /
+  `-Remaining` / `-Reset`, with `Retry-After` on a `429`. Reads have a fair-use
+  ceiling (600 per 60s per client) counted in a per-isolate fixed window — no
+  Durable Object round trip on a read, and the consequence (the ceiling is per
+  edge location, so the advertised number is a floor) is documented on
+  `/developers`. Contact responses report the real daily allowance, which
+  `RateLimiter.takeContactSlot()` / `contactUsage()` now return.
 - **No second copy of the data.** `src/pages/api/dataset.json.ts` is an Astro
   static endpoint that runs `src/data/portfolio.ts` + `resume.ts` through
   `buildDataset()` (in `worker/api/dataset.ts`) and prerenders
@@ -60,14 +81,47 @@ and for agents at [`/AGENTS.md`](https://murugappan.dev/AGENTS.md).
   Blog posts come from the merged root `llms.txt` and the per-post `index.md`
   renditions, so the API can't fall behind the blog. `/developers` renders its
   endpoint table from the same OpenAPI document the Worker serves.
-- **Worker-owned paths.** `run_worker_first` in `wrangler.jsonc` claims `/api/*`
-  and `/openapi.json` so every API failure is the JSON error envelope rather
-  than the HTML 404 page — keep that list in sync with `worker/server.ts`.
-- **`POST /api/contact`** emails `OPPORTUNITY_INBOX` (same secret and
+- **Worker-owned paths.** `run_worker_first` in `wrangler.jsonc` claims `/api/*`,
+  `/openapi.json`, `/mcp*`, `/mcp.json` and `/.well-known/*` so every API failure
+  is the JSON error envelope rather than the HTML 404 page, and so the generated
+  discovery documents name the host that answered — keep that list in sync with
+  `worker/server.ts`.
+- **`POST /api/v1/contact`** emails `OPPORTUNITY_INBOX` (same secret and
   `send_email` binding the chat's lead capture uses). Rate-limited by the
   existing `RateLimiter` DO: 3/client-IP/UTC-day, 20 site-wide. `"dryRun": true`
   validates a payload without sending or spending a slot — the endpoint's
   sandbox. Without the secret configured it answers `503`, never a silent drop.
+
+## Discovery documents and the agent-readable 404
+
+Three things exist so an agent that has never seen this site can find its way in
+without reading prose, and can recover when it guesses a URL wrong.
+
+- **`/.well-known/api-catalog`** (`worker/well-known.ts`) — an RFC 9727 API
+  catalogue, serialised as an RFC 9264 link set
+  (`application/linkset+json`). One context object per API: the REST API
+  (anchored at `/api/v1`, with `service-desc` → `/openapi.json`, `service-doc` →
+  `/developers/`, `service-meta` → `/api/v1/versions`) and the MCP server. Also
+  advertised as `Link: rel="api-catalog"` on the pages and in `<link>` in the
+  layout head.
+- **`/.well-known/mcp.json`** and **`/mcp.json`** — the MCP `server.json`
+  manifest, following the published schema: reverse-DNS `name`
+  (`dev.murugappan/murugappan-dev`), a `description` inside the schema's
+  100-character cap, and one `streamable-http` remote. Anything beyond the
+  schema rides in `_meta` under a reverse-DNS key. Generated, so the remote URL
+  names the host that answered.
+- **The 404** (`worker/not-found.ts`) — every miss reaches the Worker (see
+  `run_worker_first` above) and is content-negotiated: `Accept: text/html` gets
+  the styled `404.html` the assets layer produced, unchanged; anything else
+  (including no `Accept` at all, which is what curl and `fetch` send) gets a
+  short markdown body naming the sitemap, `llms.txt`, `AGENTS.md`,
+  `/developers/`, the OpenAPI document, the API catalogue, the MCP manifest and
+  the pages that do exist. Both branches carry `Vary: Accept` and the discovery
+  `Link` relations, and the status is a real `404` either way.
+
+`public/_redirects` also 301s the URLs people and agents guess before they guess
+`/developers/`: `/docs`, `/api-docs`, `/developer`, `/api-reference`,
+`/mcp-server`.
 
 ## MCP server (`/mcp`)
 
@@ -89,8 +143,8 @@ server, so an MCP client can use the site without any HTTP glue. Add it as
   `_meta`. No session is ever minted; `GET`/`DELETE` answer `405`.
 - **Tools:** `get_profile`, `list_experience`, `list_skills`, `list_education`,
   `list_open_source`, `search_blog_posts`, `get_blog_post`, `send_message`.
-  `send_message` shares the `RateLimiter` allowance with `POST /api/contact` and
-  honours the same `dryRun`.
+  `send_message` shares the `RateLimiter` allowance with `POST /api/v1/contact`
+  and honours the same `dryRun`.
 - **Resources** (`worker/mcp/resources.ts`): `/llms.txt`, `/AGENTS.md`, the
   generated `openapi.json`, `/blog/llms-full.txt`, and one entry per published
   post, plus the `{slug}` URI template. `https://` URIs, per the spec's rule

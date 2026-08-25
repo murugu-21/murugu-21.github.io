@@ -40,9 +40,11 @@ export function neuronCost(
   );
 }
 
-export type ContactSlot =
-  | {allowed: true}
-  | {allowed: false; scope: "client" | "global"};
+/** What is left of each contact tier for today, after the call that reported it. */
+export type ContactUsage = {clientRemaining: number; globalRemaining: number};
+
+export type ContactSlot = ContactUsage &
+  ({allowed: true} | {allowed: false; scope: "client" | "global"});
 
 // Single fixed-name instance ("global") shared by every ChatRoom: one source
 // of truth for the site-wide daily Workers AI budget, denominated in neurons
@@ -99,14 +101,44 @@ export class RateLimiter extends DurableObject {
       `${day}:%`
     );
     const clientKey = `${day}:client:${client}`;
-    if (this.contactCount(clientKey) >= CONTACT_DAILY_PER_CLIENT)
-      return {allowed: false, scope: "client"};
     const globalKey = `${day}:global`;
-    if (this.contactCount(globalKey) >= CONTACT_DAILY_GLOBAL)
-      return {allowed: false, scope: "global"};
+    const clientUsed = this.contactCount(clientKey);
+    if (clientUsed >= CONTACT_DAILY_PER_CLIENT)
+      return {
+        allowed: false,
+        scope: "client",
+        ...this.remaining(clientUsed, this.contactCount(globalKey))
+      };
+    const globalUsed = this.contactCount(globalKey);
+    if (globalUsed >= CONTACT_DAILY_GLOBAL)
+      return {
+        allowed: false,
+        scope: "global",
+        ...this.remaining(clientUsed, globalUsed)
+      };
     this.bumpContact(clientKey);
     this.bumpContact(globalKey);
-    return {allowed: true};
+    return {allowed: true, ...this.remaining(clientUsed + 1, globalUsed + 1)};
+  }
+
+  /**
+   * What is left of both tiers without spending anything — for a dry run,
+   * which has to report the allowance honestly precisely because it does not
+   * consume it.
+   */
+  contactUsage(client: string): ContactUsage {
+    const day = this.today();
+    return this.remaining(
+      this.contactCount(`${day}:client:${client}`),
+      this.contactCount(`${day}:global`)
+    );
+  }
+
+  private remaining(clientUsed: number, globalUsed: number): ContactUsage {
+    return {
+      clientRemaining: Math.max(0, CONTACT_DAILY_PER_CLIENT - clientUsed),
+      globalRemaining: Math.max(0, CONTACT_DAILY_GLOBAL - globalUsed)
+    };
   }
 
   contactsSentToday(): number {
