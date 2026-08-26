@@ -174,9 +174,12 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
 - **Widget:** `src/components/chat/` (shared by the blog via relative import).
 - **Email:** `send_email` binding → `OPPORTUNITY_INBOX` (Worker secret).
 - **Limits:** 20 msgs/day per conversation, 300/day globally, 1000 chars/msg.
-  Spend is capped site-wide by the `RateLimiter` DO at `CHAT_DAILY_BUDGET_USD`
-  ($0.50/day ≈ 170 conversational turns, measured, and priced at DeepSeek's
-  peak uncached rates); past it the widget gates politely instead of billing.
+  Chat runs until the DeepSeek account is actually out of credit — the
+  `RateLimiter` DO reads `GET /user/balance` on the same key (cached 10 min,
+  shared by every room, fails open) and gates below `BALANCE_RESERVE_USD`.
+  A 402 from a chat call is authoritative and gates every room at once; a
+  top-up is picked up at the next cache expiry, no deploy. There is no daily
+  allowance — at ~$0.003/turn, top up to set the ceiling.
 - **Local dev (full-fidelity single-origin):** `npm run build:site && npx wrangler dev` → http://localhost:8787
   (runs both Astro and Worker on the same origin; chat connects at the Worker origin with full Durable Objects).
   Put `OPPORTUNITY_INBOX=you@example.com` and `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored);

@@ -7,6 +7,47 @@ import {consumeSse, type StreamResult, type Usage} from "./sse";
 export const DEEPSEEK_MODEL = "deepseek-v4-flash";
 export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
+// Thrown by runDeepseekExchange so callers can tell "out of credit" (gate the
+// widget politely) from a genuine fault (apologise and let them retry).
+export class DeepseekError extends Error {
+  constructor(readonly status: number) {
+    super(`deepseek request failed: ${status}`);
+    this.name = "DeepseekError";
+  }
+}
+
+// DeepSeek answers a spent account with 402 Insufficient Balance. It is the
+// authoritative signal — the cached balance below can be stale or, if the
+// balance endpoint is unreachable, never fetched at all.
+export function isInsufficientBalance(err: unknown): boolean {
+  return err instanceof DeepseekError && err.status === 402;
+}
+
+export type DeepseekBalance = {available: boolean; totalUsd: number};
+
+// GET /user/balance on the same key that pays for chat. `is_available` is
+// DeepSeek's own verdict on whether the account can serve requests; the
+// dollar figure is returned as a decimal *string* per currency.
+export async function fetchDeepseekBalance(
+  apiKey: string,
+  fetcher: typeof fetch = fetch
+): Promise<DeepseekBalance> {
+  const res = await fetcher(`${DEEPSEEK_BASE_URL}/user/balance`, {
+    headers: {authorization: `Bearer ${apiKey}`}
+  });
+  if (!res.ok) throw new DeepseekError(res.status);
+  const body = (await res.json()) as {
+    is_available?: unknown;
+    balance_infos?: {currency?: unknown; total_balance?: unknown}[];
+  };
+  const usd = body.balance_infos?.find(b => b.currency === "USD");
+  const totalUsd = Number(usd?.total_balance);
+  return {
+    available: body.is_available === true,
+    totalUsd: Number.isFinite(totalUsd) ? totalUsd : 0
+  };
+}
+
 // When the API omits usage, fall back to a chars/4 heuristic; stringifying
 // the messages overestimates slightly, which errs on the safe side for the
 // spend budget.
@@ -46,13 +87,11 @@ export async function runDeepseekExchange(
       thinking: {type: "disabled"}
       // No max_tokens: it bounded the Workers AI neuron cost per call, and on
       // a paid API it only risked truncating a long answer mid-sentence.
-      // Reply length is governed by the prompt, total spend by the
-      // RateLimiter's daily budget.
+      // Reply length is governed by the prompt, and spend by the account
+      // balance the RateLimiter checks.
     })
   });
-  if (!res.ok || !res.body) {
-    throw new Error(`deepseek request failed: ${res.status}`);
-  }
+  if (!res.ok || !res.body) throw new DeepseekError(res.status);
   const result = await consumeSse(res.body, onDelta);
   result.usage ??= estimateUsage(messages, result.content);
   return result;

@@ -1,6 +1,10 @@
 import {describe, expect, it} from "vitest";
 
-import {runDeepseekExchange} from "../ai";
+import {
+  fetchDeepseekBalance,
+  isInsufficientBalance,
+  runDeepseekExchange
+} from "../ai";
 import {TOOLS} from "../prompt";
 
 describe("runDeepseekExchange", () => {
@@ -65,5 +69,65 @@ describe("runDeepseekExchange", () => {
     await expect(
       runDeepseekExchange("sk-test", [], () => {}, fetcher)
     ).rejects.toThrow("deepseek request failed: 402");
+  });
+});
+
+describe("fetchDeepseekBalance", () => {
+  function json(body: unknown, status = 200): typeof fetch {
+    return (async () =>
+      new Response(JSON.stringify(body), {status})) as typeof fetch;
+  }
+
+  it("reads is_available and the USD balance", async () => {
+    const balance = await fetchDeepseekBalance(
+      "sk-test",
+      json({
+        is_available: true,
+        balance_infos: [
+          {currency: "CNY", total_balance: "7.00"},
+          {currency: "USD", total_balance: "1.99"}
+        ]
+      })
+    );
+    // total_balance is a decimal string in the API response, not a number.
+    expect(balance).toEqual({available: true, totalUsd: 1.99});
+  });
+
+  it("reports zero when there is no USD row", async () => {
+    const balance = await fetchDeepseekBalance(
+      "sk-test",
+      json({is_available: true, balance_infos: []})
+    );
+    expect(balance).toEqual({available: true, totalUsd: 0});
+  });
+
+  it("throws on a non-OK response", async () => {
+    await expect(
+      fetchDeepseekBalance("sk-test", json({}, 401))
+    ).rejects.toThrow("401");
+  });
+});
+
+describe("isInsufficientBalance", () => {
+  it("recognises a 402 from an exchange and nothing else", async () => {
+    const failing = (status: number) =>
+      (async () => new Response("no", {status})) as typeof fetch;
+
+    const err = await runDeepseekExchange(
+      "sk-test",
+      [],
+      () => {},
+      failing(402)
+    ).catch((e: unknown) => e);
+    expect(isInsufficientBalance(err)).toBe(true);
+
+    const other = await runDeepseekExchange(
+      "sk-test",
+      [],
+      () => {},
+      failing(500)
+    ).catch((e: unknown) => e);
+    expect(isInsufficientBalance(other)).toBe(false);
+    expect(isInsufficientBalance(new Error("402"))).toBe(false);
   });
 });

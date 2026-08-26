@@ -1,6 +1,6 @@
 import {Server, type Connection} from "partyserver";
 
-import {runDeepseekExchange} from "./ai";
+import {isInsufficientBalance, runDeepseekExchange} from "./ai";
 import {parseLeadArguments, sendOpportunityEmail, type Lead} from "./email";
 import {fetchSitePage} from "./fetch-page";
 import {getGrounding} from "./grounding";
@@ -10,8 +10,7 @@ import {
   ROOM_DAILY_LIMIT,
   type ModelMessage
 } from "./prompt";
-import {exchangeCost} from "./rate-limiter";
-import {type StreamResult, type Usage} from "./sse";
+import {type StreamResult} from "./sse";
 import {
   GREETING,
   parseClientMessage,
@@ -95,10 +94,10 @@ export class ChatRoom extends Server<Env> {
       return;
     }
     // No key means no chat at all — DeepSeek is the only provider. Gate the
-    // same way as a spent budget rather than surfacing a fault the visitor
+    // same way as an empty account rather than surfacing a fault the visitor
     // can do nothing about.
     const key = this.deepseekKey();
-    if (!key || !(await this.limiter().hasBudget())) {
+    if (!key || !(await this.limiter().chatAvailable(key))) {
       this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
       return;
     }
@@ -112,6 +111,13 @@ export class ChatRoom extends Server<Env> {
       await this.generate(key, msg.page);
     } catch (err) {
       console.error("chat generation failed", err);
+      // DeepSeek says the account is empty. That verdict beats the cached
+      // balance, so park the cache and gate every room until the next check.
+      if (isInsufficientBalance(err)) {
+        await this.limiter().markChatExhausted();
+        this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+        return;
+      }
       this.send(connection, {
         type: "error",
         message: "Something went wrong on my end — please try again."
@@ -183,9 +189,9 @@ export class ChatRoom extends Server<Env> {
     onDelta: (text: string) => void
   ): Promise<StreamResult> {
     const result = await runDeepseekExchange(key, messages, onDelta);
-    // Paid tokens — keep spend visible in `wrangler tail`.
+    // Paid tokens — keep spend visible in `wrangler tail`. Nothing is
+    // metered locally any more; DeepSeek's balance is the meter.
     console.log("deepseek usage", JSON.stringify(result.usage));
-    await this.chargeUsage(result.usage);
     return result;
   }
 
@@ -269,18 +275,6 @@ export class ChatRoom extends Server<Env> {
 
   private limiter() {
     return this.env.RateLimiter.get(this.env.RateLimiter.idFromName("global"));
-  }
-
-  private async chargeUsage(usage: Usage | null): Promise<void> {
-    if (!usage) return;
-    try {
-      await this.limiter().charge(
-        exchangeCost(usage.promptTokens, usage.completionTokens)
-      );
-    } catch (err) {
-      // Budget accounting must never take down a chat that already answered.
-      console.error("spend charge failed", err);
-    }
   }
 
   private storeLead(lead: Lead): void {

@@ -1,39 +1,26 @@
 import {DurableObject} from "cloudflare:workers";
 
+import {fetchDeepseekBalance} from "./ai";
 // The allowance itself lives with the endpoint that spends it — api/contact.ts
 // has no Workers-runtime imports, so the OpenAPI document and the /developers
 // page can quote the same numbers without pulling this Durable Object (and
 // `cloudflare:workers` with it) into the Astro bundle.
 import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "./api/contact";
 
-// Site-wide ceiling on chat spend, in USD per UTC day. ROOM_DAILY_LIMIT caps
-// one conversation; this caps the whole site, so N visitors opening N rooms
-// cannot run up an unbounded DeepSeek bill.
-//
-// Measured 2026-08-27 against the live API: ~$0.0018 per grounded exchange
-// (~3.6k prompt tokens once the system prompt, llms.txt grounding and history
-// are counted, ~150 out) and ~$0.003 per conversational TURN, since a turn
-// runs up to three exchanges — two fetch_page rounds plus the capture
-// follow-up. So this budget is roughly 170 turns a day.
-export const CHAT_DAILY_BUDGET_USD = 0.5;
+// Chat is gated on the DeepSeek account's real balance rather than a daily
+// allowance: the budget is whatever has actually been paid for, and a top-up
+// widens the tap on its own. Stop a little above zero so the last exchange of
+// the day can't land mid-reply on an empty account.
+export const BALANCE_RESERVE_USD = 0.05;
 
-// deepseek-v4-flash list prices, USD per M tokens (api-docs.deepseek.com
-// /quick_start/pricing, checked 2026-08-27). These are the PEAK numbers, and
-// input is priced as a cache miss, so the budget always over-counts what a
-// call really cost — it under-serves capacity rather than overshooting the
-// real bill. Off-peak is half this and a grounding cache hit is ~30x cheaper.
-export const DEEPSEEK_RATES = {inputPerM: 0.44, outputPerM: 1.32};
+// How long a balance reading is trusted. DeepSeek's balance settles behind
+// real usage, so a shorter TTL buys little accuracy and costs a round-trip in
+// front of a visitor's message; the 402 path is the accurate one.
+export const BALANCE_TTL_MS = 10 * 60 * 1000;
 
-export function exchangeCost(
-  promptTokens: number,
-  completionTokens: number
-): number {
-  return (
-    (promptTokens * DEEPSEEK_RATES.inputPerM +
-      completionTokens * DEEPSEEK_RATES.outputPerM) /
-    1_000_000
-  );
-}
+const BALANCE_KEY = "deepseek:balance";
+
+type CachedBalance = {available: boolean; totalUsd: number; checkedAt: number};
 
 /** What is left of each contact tier for today, after the call that reported it. */
 export type ContactUsage = {clientRemaining: number; globalRemaining: number};
@@ -41,27 +28,20 @@ export type ContactUsage = {clientRemaining: number; globalRemaining: number};
 export type ContactSlot = ContactUsage &
   ({allowed: true} | {allowed: false; scope: "client" | "global"});
 
-// Single fixed-name instance ("global") shared by every ChatRoom: one source
-// of truth for the site-wide daily chat budget, denominated in the dollars
-// DeepSeek actually bills.
+// Single fixed-name instance ("global") shared by every ChatRoom: one place
+// to cache the DeepSeek balance, so N conversations cost one balance check
+// rather than N, and one room hitting a 402 gates the whole site at once.
 export class RateLimiter extends DurableObject {
   private sql: SqlStorage;
 
   constructor(ctx: DurableObjectState, env: unknown) {
     super(ctx, env as never);
     this.sql = ctx.storage.sql;
-    // Third generation of this counter (message counts, then Workers AI
-    // neurons, now DeepSeek dollars). Each got a new table rather than a
-    // migration: the rows are per-day totals that age out on their own, and a
-    // fresh name means old rows in retired units can never be read as new
-    // ones. The dead tables are left in place — dropping them would be the
-    // only destructive step in an otherwise additive schema.
-    this.sql.exec(
-      `CREATE TABLE IF NOT EXISTS chat_spend (
-        day TEXT PRIMARY KEY,
-        usd REAL NOT NULL DEFAULT 0
-      )`
-    );
+    // Chat once kept a daily counter here (message counts, then Workers AI
+    // neurons, then DeepSeek dollars). All three are gone: the balance is
+    // read from DeepSeek instead of reconstructed locally. Their tables are
+    // left in place rather than dropped — the only destructive step in an
+    // otherwise additive schema, for rows that are already worthless.
     // Keyed "<day>:global" / "<day>:client:<ip>" so both tiers share one
     // table and yesterday's rows are trivially identifiable for cleanup.
     this.sql.exec(
@@ -72,22 +52,43 @@ export class RateLimiter extends DurableObject {
     );
   }
 
-  // Both methods are synchronous (no awaits), so each runs atomically inside
-  // the DO. hasBudget → model call → charge is NOT one atomic unit, so the
-  // last exchange of the day can overshoot by one call's cost — cents, and
-  // the conservative peak-rate pricing above already pads for it.
-  hasBudget(): boolean {
-    return this.spentToday() < CHAT_DAILY_BUDGET_USD;
+  // Can chat still be served? Cached for BALANCE_TTL_MS, so a busy minute
+  // costs one call to DeepSeek rather than one per message. A failed lookup
+  // fails OPEN: the balance endpoint being unreachable is no reason to take
+  // the widget down, and a genuinely empty account is caught by the 402 on
+  // the very next exchange.
+  async chatAvailable(
+    apiKey: string,
+    // Injected by tests only; an RPC caller passes just the key.
+    fetcher: typeof fetch = fetch
+  ): Promise<boolean> {
+    const cached = await this.ctx.storage.get<CachedBalance>(BALANCE_KEY);
+    if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) {
+      return cached.available && cached.totalUsd > BALANCE_RESERVE_USD;
+    }
+    try {
+      const {available, totalUsd} = await fetchDeepseekBalance(apiKey, fetcher);
+      await this.ctx.storage.put(BALANCE_KEY, {
+        available,
+        totalUsd,
+        checkedAt: Date.now()
+      } satisfies CachedBalance);
+      return available && totalUsd > BALANCE_RESERVE_USD;
+    } catch (err) {
+      console.error("deepseek balance check failed", err);
+      return true;
+    }
   }
 
-  charge(usd: number): void {
-    if (!Number.isFinite(usd) || usd <= 0) return;
-    this.sql.exec(
-      `INSERT INTO chat_spend (day, usd) VALUES (?, ?)
-       ON CONFLICT (day) DO UPDATE SET usd = usd + excluded.usd`,
-      this.today(),
-      usd
-    );
+  // Called when DeepSeek itself reports an empty account. Parks the cache in
+  // the exhausted state so every room gates immediately, and lets it expire
+  // normally — a top-up is picked up at the next TTL boundary with no deploy.
+  async markChatExhausted(): Promise<void> {
+    await this.ctx.storage.put(BALANCE_KEY, {
+      available: false,
+      totalUsd: 0,
+      checkedAt: Date.now()
+    } satisfies CachedBalance);
   }
 
   // Synchronous, so the read-check-increment runs atomically inside the DO:
@@ -158,14 +159,6 @@ export class RateLimiter extends DurableObject {
        ON CONFLICT (key) DO UPDATE SET count = count + 1`,
       key
     );
-  }
-
-  /** Dollars spent on chat so far today. */
-  spentToday(): number {
-    const rows = this.sql
-      .exec(`SELECT usd FROM chat_spend WHERE day = ?`, this.today())
-      .toArray();
-    return rows.length ? (rows[0].usd as number) : 0;
   }
 
   private today(): string {

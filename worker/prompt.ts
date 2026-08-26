@@ -1,8 +1,9 @@
 import type {ChatHistoryEntry} from "./protocol";
 
 export const MAX_HISTORY_MESSAGES = 20;
-// Per-visitor fairness cap (rolling 24h): one room can burn at most ~8% of
-// the global spend budget; the RateLimiter DO is the hard backstop.
+// Per-visitor fairness cap (rolling 24h). This is the only PACING on spend:
+// the site-wide gate is the DeepSeek balance itself, which stops chat when
+// the credit is gone rather than rationing it by the day.
 //
 // The model itself lives in ai.ts (DEEPSEEK_MODEL). Swapping it? LIVE-TEST
 // the capture flow first — qwen3-30b was reverted on 2026-08-17 for narrating
