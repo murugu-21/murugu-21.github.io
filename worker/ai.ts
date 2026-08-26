@@ -11,9 +11,10 @@ export type AiLike = {
   run(model: string, options: Record<string, unknown>): Promise<unknown>;
 };
 
-// Paid overflow model, used only when the free Workers AI neuron allocation
-// is spent (BYOK — the Worker calls DeepSeek's OpenAI-compatible API
-// directly). ~$0.0004 per grounded exchange at V4-Flash list prices.
+// Primary model (BYOK — the Worker calls DeepSeek's OpenAI-compatible API
+// directly). ~$0.0004 per grounded exchange at V4-Flash list prices, which
+// buys a fast reply that streams to completion; Workers AI is the free
+// fallback behind it.
 export const DEEPSEEK_MODEL = "deepseek-v4-flash";
 export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
@@ -114,6 +115,11 @@ export async function runDeepseekExchange(
       tools: TOOLS,
       stream: true,
       stream_options: {include_usage: true},
+      // V4-Flash thinks by default, and its reasoning counts against
+      // max_tokens: a grounded question burns the whole 800 on
+      // `reasoning_content` (which this worker drops) and returns an empty
+      // reply. Concierge answers need none of it.
+      thinking: {type: "disabled"},
       max_tokens: 800
     })
   });

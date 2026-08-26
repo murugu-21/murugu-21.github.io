@@ -34,9 +34,18 @@ const LIMIT_MESSAGE =
   "I've hit my chat budget for now — please reach Murugappan directly " +
   "through the social links on this site instead.";
 
-// "workers-ai" = free neuron allocation (primary); "deepseek" = paid BYOK
-// overflow once the allocation is spent.
-type Provider = "workers-ai" | "deepseek";
+// "deepseek" = paid BYOK, the primary path: fast, and it streams a reply to
+// completion. "workers-ai" = the free neuron allocation, kept as the fallback
+// for when no DeepSeek key is configured or the DeepSeek call fails — it is
+// markedly slower and the free tier can cut a reply off mid-stream.
+type Provider = "deepseek" | "workers-ai";
+
+// Providers to try, in order, for one turn. DeepSeek leads when a key is
+// configured and Workers AI is the free backstop behind it; with no key the
+// free tier is all there is.
+export function providerChain(hasDeepseekKey: boolean): Provider[] {
+  return hasDeepseekKey ? ["deepseek", "workers-ai"] : ["workers-ai"];
+}
 
 export class ChatRoom extends Server<Env> {
   static options = {hibernate: true};
@@ -107,15 +116,13 @@ export class ChatRoom extends Server<Env> {
       this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
       return;
     }
-    // Neuron budget: free Workers AI while the allocation lasts, then route
-    // to DeepSeek (BYOK) if a key is configured; without one, gate politely.
-    let provider: Provider = "workers-ai";
-    if (!(await this.limiter().hasBudget())) {
-      if (!this.deepseekKey()) {
-        this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
-        return;
-      }
-      provider = "deepseek";
+    // DeepSeek first whenever a key is configured; Workers AI only backs it
+    // up. The neuron budget is therefore checked lazily — the primary path
+    // costs no RateLimiter round-trip.
+    const key = this.deepseekKey();
+    if (!key && !(await this.limiter().hasBudget())) {
+      this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+      return;
     }
 
     this.persist("user", msg.text);
@@ -123,34 +130,42 @@ export class ChatRoom extends Server<Env> {
     // rendered its own bubble optimistically, so it is excluded.
     this.broadcastMsg({type: "visitor", text: msg.text}, [connection.id]);
 
-    try {
-      await this.generate(connection, provider, msg.page);
-    } catch (err) {
-      console.error("chat generation failed", err);
-      if (isNeuronExhaustion(err)) {
+    for (const provider of providerChain(Boolean(key))) {
+      // Workers AI is only ever tried with allocation left: a 4006 mid-turn
+      // would waste the visitor's wait for nothing.
+      if (provider === "workers-ai" && !(await this.limiter().hasBudget())) {
+        continue;
+      }
+      let streamed = false;
+      try {
+        await this.generate(connection, provider, msg.page, () => {
+          streamed = true;
+        });
+        return;
+      } catch (err) {
+        console.error(`chat generation failed (${provider})`, err);
         // Workers AI says the account allocation is spent — our counter can
         // miss usage it never saw (e.g. burned before a deploy). Sync it so
-        // hasBudget() routes straight to the fallback until 00:00 UTC, and
-        // retry this message on DeepSeek right away. The 4006 comes from the
-        // ai.run() call itself, so nothing has been streamed yet.
-        await this.exhaustBudget();
-        if (this.deepseekKey()) {
-          try {
-            await this.generate(connection, "deepseek", msg.page);
-            return;
-          } catch (fallbackErr) {
-            console.error("deepseek fallback failed", fallbackErr);
-          }
-        } else {
-          this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
-          return;
-        }
+        // hasBudget() stops routing here until 00:00 UTC.
+        if (isNeuronExhaustion(err)) await this.exhaustBudget();
+        // Once deltas have reached the visitor a retry would duplicate the
+        // reply, so a mid-stream failure ends the turn.
+        if (streamed) break;
       }
-      this.send(connection, {
-        type: "error",
-        message: "Something went wrong on my end — please try again."
-      });
     }
+
+    // Every available provider failed. Only the no-capacity case gets the
+    // polite gate; anything else is a genuine fault.
+    const outOfCapacity = !key && !(await this.limiter().hasBudget());
+    this.send(
+      connection,
+      outOfCapacity
+        ? {type: "limit", message: LIMIT_MESSAGE}
+        : {
+            type: "error",
+            message: "Something went wrong on my end — please try again."
+          }
+    );
   }
 
   // One full reply turn: grounded exchange with an on-demand fetch_page loop
@@ -159,10 +174,16 @@ export class ChatRoom extends Server<Env> {
   private async generate(
     connection: Connection,
     provider: Provider,
-    page?: string
+    page?: string,
+    onStreamed: () => void = () => {}
   ): Promise<void> {
     // Replies stream to every open tab of the room, not just the sender.
-    const onDelta = (text: string) => this.broadcastMsg({type: "delta", text});
+    // `onStreamed` tells the caller a retry on another provider would now
+    // duplicate text the visitor has already seen.
+    const onDelta = (text: string) => {
+      if (text) onStreamed();
+      this.broadcastMsg({type: "delta", text});
+    };
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
     const messages: ModelMessage[] = buildMessages(
       grounding,
@@ -203,7 +224,7 @@ export class ChatRoom extends Server<Env> {
 
     if (capture) {
       if (reply) this.broadcastMsg({type: "delta", text: "\n"});
-      const followUp = await this.handleCapture(capture, connection, provider);
+      const followUp = await this.handleCapture(capture, provider, onDelta);
       reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
     }
 
@@ -254,8 +275,8 @@ export class ChatRoom extends Server<Env> {
   // phrase the confirmation using the tool result.
   private async handleCapture(
     capture: {id: string; name: string; arguments: string},
-    connection: Connection,
-    provider: Provider
+    provider: Provider,
+    onDelta: (text: string) => void
   ): Promise<string> {
     const lead = parseLeadArguments(capture.arguments);
     if (!lead) return "";
@@ -316,7 +337,7 @@ export class ChatRoom extends Server<Env> {
           })
         }
       ],
-      text => this.broadcastMsg({type: "delta", text})
+      onDelta
     );
     return followUp.content;
   }

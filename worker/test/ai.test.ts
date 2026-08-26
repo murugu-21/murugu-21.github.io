@@ -130,6 +130,9 @@ describe("runDeepseekExchange", () => {
     expect(body.model).toBe("deepseek-v4-flash");
     expect(body.stream).toBe(true);
     expect(body.stream_options).toEqual({include_usage: true});
+    // V4-Flash reasoning would eat the whole max_tokens budget and leave the
+    // visitor with an empty reply.
+    expect(body.thinking).toEqual({type: "disabled"});
     expect(body.tools[0].function.name).toBe("capture_opportunity");
 
     expect(result.content).toBe("hi there");

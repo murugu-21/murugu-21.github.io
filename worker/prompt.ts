@@ -1,7 +1,8 @@
 import type {ChatHistoryEntry} from "./protocol";
 
-// gpt-oss-120b: ~93 neurons per slim-grounded exchange (~100 msgs/day free,
-// DeepSeek overflow behind it). Flipped back from qwen3-30b-a3b (2026-08-17):
+// The Workers AI fallback model, used when no DEEPSEEK_API_KEY is configured
+// or the DeepSeek call fails. gpt-oss-120b: ~93 neurons per slim-grounded
+// exchange (~100 msgs/day free). Flipped back from qwen3-30b-a3b (2026-08-17):
 // qwen narrated lead captures ("I've noted it") without calling the
 // capture_opportunity tool — through two prompt hardenings — silently losing
 // leads. gpt-oss calls it reliably. Changing this? Add the model's neuron
@@ -14,8 +15,8 @@ export const MAX_HISTORY_MESSAGES = 20;
 export const ROOM_DAILY_LIMIT = 40;
 
 // OpenAI-compatible message shapes throughout, so the transport can point at
-// any chat-completions provider (Workers AI today; DeepSeek/Kimi/etc. via AI
-// Gateway later) without touching the conversation-building code.
+// any chat-completions provider (DeepSeek and Workers AI today; Kimi/etc. via
+// AI Gateway later) without touching the conversation-building code.
 export type ModelToolCall = {
   id: string;
   type: "function";
