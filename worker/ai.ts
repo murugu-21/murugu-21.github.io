@@ -1,30 +1,15 @@
-import {MODEL_ID, TOOLS, type ModelMessage} from "./prompt";
-import {
-  consumeSse,
-  toolCallId,
-  type StreamResult,
-  type ToolCall,
-  type Usage
-} from "./sse";
+import {TOOLS, type ModelMessage} from "./prompt";
+import {consumeSse, type StreamResult, type Usage} from "./sse";
 
-export type AiLike = {
-  run(model: string, options: Record<string, unknown>): Promise<unknown>;
-};
-
-// Primary model (BYOK — the Worker calls DeepSeek's OpenAI-compatible API
-// directly). ~$0.0004 per grounded exchange at V4-Flash list prices, which
-// buys a fast reply that streams to completion; Workers AI is the free
-// fallback behind it.
+// DeepSeek V4-Flash is the only chat provider. It replaced Workers AI
+// (2026-08-27), which was slow enough to be visible in the widget and whose
+// free neuron allocation cut replies off mid-stream.
 export const DEEPSEEK_MODEL = "deepseek-v4-flash";
 export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
-function asArgString(args: unknown): string {
-  return typeof args === "string" ? args : JSON.stringify(args ?? {});
-}
-
 // When the API omits usage, fall back to a chars/4 heuristic; stringifying
 // the messages overestimates slightly, which errs on the safe side for the
-// neuron budget.
+// spend budget.
 function estimateUsage(messages: ModelMessage[], content: string): Usage {
   return {
     promptTokens: Math.ceil(JSON.stringify(messages).length / 4),
@@ -32,71 +17,10 @@ function estimateUsage(messages: ModelMessage[], content: string): Usage {
   };
 }
 
-export async function runModelExchange(
-  ai: AiLike,
-  messages: ModelMessage[],
-  onDelta: (text: string) => void
-): Promise<StreamResult> {
-  const res = await ai.run(MODEL_ID, {
-    messages,
-    tools: TOOLS,
-    stream: true,
-    max_tokens: 800
-  });
-
-  if (res instanceof ReadableStream) {
-    const result = await consumeSse(res as ReadableStream<Uint8Array>, onDelta);
-    result.usage ??= estimateUsage(messages, result.content);
-    return result;
-  }
-
-  // Some model/tool combinations answer with a plain JSON body even when
-  // stream: true was requested — normalize both documented shapes. Both
-  // `tool_calls` shapes share this element type so `tc.name`/`tc.arguments`
-  // are always valid to read, whichever shape actually supplied them.
-  type RawToolCall = {
-    id?: string;
-    name?: string;
-    arguments?: unknown;
-    function?: {name?: string; arguments?: unknown};
-  };
-  const body = res as {
-    response?: string;
-    tool_calls?: RawToolCall[];
-    usage?: {prompt_tokens?: unknown; completion_tokens?: unknown};
-    choices?: {
-      message?: {
-        content?: string;
-        tool_calls?: RawToolCall[];
-      };
-    }[];
-  };
-  const content = body.response ?? body.choices?.[0]?.message?.content ?? "";
-  if (content) onDelta(content);
-  const rawCalls =
-    body.tool_calls ?? body.choices?.[0]?.message?.tool_calls ?? [];
-  const toolCalls: ToolCall[] = rawCalls
-    .map((tc, i) => ({
-      id: toolCallId(tc.id, i),
-      name: tc.function?.name ?? tc.name ?? "",
-      arguments: asArgString(tc.function?.arguments ?? tc.arguments)
-    }))
-    .filter(tc => tc.name);
-  const usage: Usage =
-    typeof body.usage?.prompt_tokens === "number" &&
-    typeof body.usage?.completion_tokens === "number"
-      ? {
-          promptTokens: body.usage.prompt_tokens,
-          completionTokens: body.usage.completion_tokens
-        }
-      : estimateUsage(messages, content);
-  return {content, toolCalls, usage};
-}
-
-// Same contract as runModelExchange, but against DeepSeek's OpenAI-compatible
-// chat completions endpoint. The request/response shapes are the strict
-// OpenAI dialect the rest of the worker already speaks, so consumeSse parses
-// the stream unchanged.
+// One exchange against DeepSeek's OpenAI-compatible chat completions
+// endpoint. The request/response shapes are the strict OpenAI dialect the
+// rest of the worker already speaks, so consumeSse parses the stream
+// unchanged.
 export async function runDeepseekExchange(
   apiKey: string,
   messages: ModelMessage[],
@@ -115,12 +39,15 @@ export async function runDeepseekExchange(
       tools: TOOLS,
       stream: true,
       stream_options: {include_usage: true},
-      // V4-Flash thinks by default, and its reasoning counts against
-      // max_tokens: a grounded question burns the whole 800 on
-      // `reasoning_content` (which this worker drops) and returns an empty
-      // reply. Concierge answers need none of it.
-      thinking: {type: "disabled"},
-      max_tokens: 800
+      // V4-Flash thinks by default and its reasoning counts against any
+      // output cap: under the old max_tokens: 800 a grounded question burned
+      // the whole budget on `reasoning_content` (which this worker drops) and
+      // returned an empty reply. Concierge answers need none of it.
+      thinking: {type: "disabled"}
+      // No max_tokens: it bounded the Workers AI neuron cost per call, and on
+      // a paid API it only risked truncating a long answer mid-sentence.
+      // Reply length is governed by the prompt, total spend by the
+      // RateLimiter's daily budget.
     })
   });
   if (!res.ok || !res.body) {

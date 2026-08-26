@@ -1,7 +1,7 @@
 import {env, runInDurableObject} from "cloudflare:test";
 import {describe, expect, it} from "vitest";
 
-import {ChatRoom, providerChain} from "../chat-room";
+import {ChatRoom} from "../chat-room";
 import {GREETING} from "../protocol";
 
 describe("ChatRoom storage", () => {
@@ -60,15 +60,5 @@ describe("ChatRoom storage", () => {
         .toArray();
       expect(leads).toEqual([{contact: "a@b.c"}]);
     });
-  });
-});
-
-describe("provider chain", () => {
-  it("leads with DeepSeek and keeps Workers AI behind it when a key exists", () => {
-    expect(providerChain(true)).toEqual(["deepseek", "workers-ai"]);
-  });
-
-  it("falls back to Workers AI alone without a key", () => {
-    expect(providerChain(false)).toEqual(["workers-ai"]);
   });
 });

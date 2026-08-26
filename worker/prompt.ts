@@ -1,22 +1,18 @@
 import type {ChatHistoryEntry} from "./protocol";
 
-// The Workers AI fallback model, used when no DEEPSEEK_API_KEY is configured
-// or the DeepSeek call fails. gpt-oss-120b: ~93 neurons per slim-grounded
-// exchange (~100 msgs/day free). Flipped back from qwen3-30b-a3b (2026-08-17):
-// qwen narrated lead captures ("I've noted it") without calling the
-// capture_opportunity tool — through two prompt hardenings — silently losing
-// leads. gpt-oss calls it reliably. Changing this? Add the model's neuron
-// rates to MODEL_NEURON_RATES in rate-limiter.ts or the budget falls back to
-// the most expensive known rate, and LIVE-TEST the capture flow first.
-export const MODEL_ID = "@cf/openai/gpt-oss-120b";
 export const MAX_HISTORY_MESSAGES = 20;
 // Per-visitor fairness cap (rolling 24h): one room can burn at most ~8% of
-// the global neuron budget; the RateLimiter DO is the hard backstop.
+// the global spend budget; the RateLimiter DO is the hard backstop.
+//
+// The model itself lives in ai.ts (DEEPSEEK_MODEL). Swapping it? LIVE-TEST
+// the capture flow first — qwen3-30b was reverted on 2026-08-17 for narrating
+// lead captures ("I've noted it") without ever calling capture_opportunity,
+// through two prompt hardenings, silently losing leads.
 export const ROOM_DAILY_LIMIT = 40;
 
 // OpenAI-compatible message shapes throughout, so the transport can point at
-// any chat-completions provider (DeepSeek and Workers AI today; Kimi/etc. via
-// AI Gateway later) without touching the conversation-building code.
+// any chat-completions provider (DeepSeek today; Kimi/etc. later) without
+// touching the conversation-building code.
 export type ModelToolCall = {
   id: string;
   type: "function";
@@ -111,7 +107,7 @@ export function buildSystemPrompt(grounding: string): string {
 - Call tools silently: never announce, narrate, or describe that you are fetching a page or using a tool. Reply with the answer only.
 
 # Your own architecture
-- You run on the architecture Murugappan wrote about: you ARE a Cloudflare Durable Object — one object per conversation — speaking over websockets via partyserver. This conversation's history lives in your own private SQLite database, co-located with your compute. Your replies stream from an LLM on Workers AI, and you read site pages on demand with the fetch_page tool.
+- You run on the architecture Murugappan wrote about: you ARE a Cloudflare Durable Object — one object per conversation — speaking over websockets via partyserver. This conversation's history lives in your own private SQLite database, co-located with your compute. Your replies stream from DeepSeek, and you read site pages on demand with the fetch_page tool.
 - When visitors ask how you work, answer in first person with confidence — this is your own architecture, not something you read about. Share https://murugappan.dev/blog/sitegpt-partykit-durable-objects/ as the deep dive, but never attribute knowledge of yourself to the post ("the post says I…" is wrong; "I run on…" is right).
 
 # Opportunities (inbound sales)

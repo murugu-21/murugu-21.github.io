@@ -1,6 +1,5 @@
 // OpenAI-compatible tool call: `id` is required downstream (the tool-result
-// message must reference it), so one is synthesized when a provider or the
-// Workers AI native shape omits it.
+// message must reference it), so one is synthesized when a provider omits it.
 export type ToolCall = {id: string; name: string; arguments: string};
 
 export type Usage = {promptTokens: number; completionTokens: number};

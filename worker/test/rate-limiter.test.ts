@@ -1,54 +1,51 @@
 import {env, runInDurableObject} from "cloudflare:test";
 import {describe, expect, it} from "vitest";
 
-import {MODEL_ID} from "../prompt";
 import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "../api/contact";
 import {
-  MODEL_NEURON_RATES,
-  NEURON_DAILY_BUDGET,
-  neuronCost,
+  CHAT_DAILY_BUDGET_USD,
+  DEEPSEEK_RATES,
+  exchangeCost,
   RateLimiter
 } from "../rate-limiter";
 
-describe("neuronCost", () => {
-  it("has rates for the active model", () => {
-    expect(MODEL_NEURON_RATES[MODEL_ID]).toBeDefined();
-  });
-
-  it("converts tokens at the model's published rates", () => {
-    const rates = MODEL_NEURON_RATES[MODEL_ID];
-    expect(neuronCost(MODEL_ID, 1_000_000, 0)).toBe(rates.inputPerM);
-    expect(neuronCost(MODEL_ID, 0, 1_000_000)).toBe(rates.outputPerM);
-    // A typical grounded exchange on qwen3-30b-a3b: ~18k in, ~200 out.
-    expect(neuronCost("@cf/qwen/qwen3-30b-a3b-fp8", 18_000, 200)).toBeCloseTo(
-      89.3,
-      1
+describe("exchangeCost", () => {
+  it("converts tokens at DeepSeek's published rates", () => {
+    expect(exchangeCost(1_000_000, 0)).toBeCloseTo(DEEPSEEK_RATES.inputPerM, 6);
+    expect(exchangeCost(0, 1_000_000)).toBeCloseTo(
+      DEEPSEEK_RATES.outputPerM,
+      6
     );
   });
 
-  it("falls back to the most expensive known rates for unknown models", () => {
-    const worst = Math.max(
-      ...Object.values(MODEL_NEURON_RATES).map(r => r.inputPerM)
-    );
-    expect(neuronCost("@cf/unknown/model", 1_000_000, 0)).toBe(worst);
+  // The shape CHAT_DAILY_BUDGET_USD is sized against, measured against the
+  // live API: ~3.6k grounded prompt tokens and a ~150-token reply. If these
+  // move, the "~170 turns a day" in rate-limiter.ts is stale.
+  it("prices a measured grounded exchange at about a fifth of a cent", () => {
+    expect(exchangeCost(3_650, 150)).toBeCloseTo(0.0018, 4);
+  });
+
+  it("keeps the daily budget worth at least ~150 turns", () => {
+    const perTurn = 0.003; // measured average; a turn is 1-3 exchanges
+    expect(CHAT_DAILY_BUDGET_USD / perTurn).toBeGreaterThan(150);
   });
 });
 
 describe("RateLimiter", () => {
-  it("grants budget until the daily neuron cap is spent", async () => {
+  it("grants budget until the daily spend cap is reached", async () => {
     const stub = env.RateLimiter.get(env.RateLimiter.idFromName("test-day"));
     await runInDurableObject(stub, (instance: RateLimiter) => {
       expect(instance.hasBudget()).toBe(true);
 
-      instance.charge(NEURON_DAILY_BUDGET / 2);
+      instance.charge(CHAT_DAILY_BUDGET_USD / 2);
       expect(instance.hasBudget()).toBe(true);
 
-      instance.charge(NEURON_DAILY_BUDGET / 2 - 1);
+      instance.charge(CHAT_DAILY_BUDGET_USD / 2 - 0.01);
       expect(instance.hasBudget()).toBe(true);
 
-      instance.charge(1);
+      instance.charge(0.01);
       expect(instance.hasBudget()).toBe(false);
-      expect(instance.spentToday()).toBe(NEURON_DAILY_BUDGET);
+      expect(instance.spentToday()).toBeCloseTo(CHAT_DAILY_BUDGET_USD, 6);
     });
   });
 

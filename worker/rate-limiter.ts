@@ -6,36 +6,31 @@ import {DurableObject} from "cloudflare:workers";
 // `cloudflare:workers` with it) into the Astro bundle.
 import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "./api/contact";
 
-// Workers AI's free allocation is 10,000 neurons/day (developers.cloudflare
-// .com/workers-ai/platform/pricing, checked 2026-08-13). The daily budget sits
-// slightly under it because the budget check and the usage charge straddle the
-// model call — the last exchange of the day can overshoot by one call's cost.
-export const NEURON_DAILY_BUDGET = 9500;
+// Site-wide ceiling on chat spend, in USD per UTC day. ROOM_DAILY_LIMIT caps
+// one conversation; this caps the whole site, so N visitors opening N rooms
+// cannot run up an unbounded DeepSeek bill.
+//
+// Measured 2026-08-27 against the live API: ~$0.0018 per grounded exchange
+// (~3.6k prompt tokens once the system prompt, llms.txt grounding and history
+// are counted, ~150 out) and ~$0.003 per conversational TURN, since a turn
+// runs up to three exchanges — two fetch_page rounds plus the capture
+// follow-up. So this budget is roughly 170 turns a day.
+export const CHAT_DAILY_BUDGET_USD = 0.5;
 
-// Per-model conversion rates (neurons per M tokens) from the same pricing
-// page. Keyed by model id so swapping MODEL_ID in prompt.ts keeps the budget
-// math honest — an unknown id falls back to the most expensive known rates,
-// which under-counts capacity rather than blowing the real allocation.
-export const MODEL_NEURON_RATES: Record<
-  string,
-  {inputPerM: number; outputPerM: number}
-> = {
-  "@cf/qwen/qwen3-30b-a3b-fp8": {inputPerM: 4625, outputPerM: 30475},
-  "@cf/openai/gpt-oss-120b": {inputPerM: 31818, outputPerM: 68182}
-};
+// deepseek-v4-flash list prices, USD per M tokens (api-docs.deepseek.com
+// /quick_start/pricing, checked 2026-08-27). These are the PEAK numbers, and
+// input is priced as a cache miss, so the budget always over-counts what a
+// call really cost — it under-serves capacity rather than overshooting the
+// real bill. Off-peak is half this and a grounding cache hit is ~30x cheaper.
+export const DEEPSEEK_RATES = {inputPerM: 0.44, outputPerM: 1.32};
 
-const FALLBACK_RATES = Object.values(MODEL_NEURON_RATES).reduce((a, b) =>
-  a.inputPerM >= b.inputPerM ? a : b
-);
-
-export function neuronCost(
-  modelId: string,
+export function exchangeCost(
   promptTokens: number,
   completionTokens: number
 ): number {
-  const rates = MODEL_NEURON_RATES[modelId] ?? FALLBACK_RATES;
   return (
-    (promptTokens * rates.inputPerM + completionTokens * rates.outputPerM) /
+    (promptTokens * DEEPSEEK_RATES.inputPerM +
+      completionTokens * DEEPSEEK_RATES.outputPerM) /
     1_000_000
   );
 }
@@ -47,20 +42,24 @@ export type ContactSlot = ContactUsage &
   ({allowed: true} | {allowed: false; scope: "client" | "global"});
 
 // Single fixed-name instance ("global") shared by every ChatRoom: one source
-// of truth for the site-wide daily Workers AI budget, denominated in neurons
-// so the cap always equals what the free tier actually serves.
+// of truth for the site-wide daily chat budget, denominated in the dollars
+// DeepSeek actually bills.
 export class RateLimiter extends DurableObject {
   private sql: SqlStorage;
 
   constructor(ctx: DurableObjectState, env: unknown) {
     super(ctx, env as never);
     this.sql = ctx.storage.sql;
-    // Replaces the old message-count `counters` table; that one is left in
-    // place (harmless) so existing production instances need no migration.
+    // Third generation of this counter (message counts, then Workers AI
+    // neurons, now DeepSeek dollars). Each got a new table rather than a
+    // migration: the rows are per-day totals that age out on their own, and a
+    // fresh name means old rows in retired units can never be read as new
+    // ones. The dead tables are left in place — dropping them would be the
+    // only destructive step in an otherwise additive schema.
     this.sql.exec(
-      `CREATE TABLE IF NOT EXISTS neuron_counters (
+      `CREATE TABLE IF NOT EXISTS chat_spend (
         day TEXT PRIMARY KEY,
-        neurons REAL NOT NULL DEFAULT 0
+        usd REAL NOT NULL DEFAULT 0
       )`
     );
     // Keyed "<day>:global" / "<day>:client:<ip>" so both tiers share one
@@ -74,19 +73,20 @@ export class RateLimiter extends DurableObject {
   }
 
   // Both methods are synchronous (no awaits), so each runs atomically inside
-  // the DO. hasBudget → model call → charge is NOT one atomic unit; the
-  // budget's headroom under the real 10k allocation absorbs that overshoot.
+  // the DO. hasBudget → model call → charge is NOT one atomic unit, so the
+  // last exchange of the day can overshoot by one call's cost — cents, and
+  // the conservative peak-rate pricing above already pads for it.
   hasBudget(): boolean {
-    return this.spentToday() < NEURON_DAILY_BUDGET;
+    return this.spentToday() < CHAT_DAILY_BUDGET_USD;
   }
 
-  charge(neurons: number): void {
-    if (!Number.isFinite(neurons) || neurons <= 0) return;
+  charge(usd: number): void {
+    if (!Number.isFinite(usd) || usd <= 0) return;
     this.sql.exec(
-      `INSERT INTO neuron_counters (day, neurons) VALUES (?, ?)
-       ON CONFLICT (day) DO UPDATE SET neurons = neurons + excluded.neurons`,
+      `INSERT INTO chat_spend (day, usd) VALUES (?, ?)
+       ON CONFLICT (day) DO UPDATE SET usd = usd + excluded.usd`,
       this.today(),
-      neurons
+      usd
     );
   }
 
@@ -160,11 +160,12 @@ export class RateLimiter extends DurableObject {
     );
   }
 
+  /** Dollars spent on chat so far today. */
   spentToday(): number {
     const rows = this.sql
-      .exec(`SELECT neurons FROM neuron_counters WHERE day = ?`, this.today())
+      .exec(`SELECT usd FROM chat_spend WHERE day = ?`, this.today())
       .toArray();
-    return rows.length ? (rows[0].neurons as number) : 0;
+    return rows.length ? (rows[0].usd as number) : 0;
   }
 
   private today(): string {

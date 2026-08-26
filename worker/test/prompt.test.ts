@@ -1,15 +1,11 @@
 import {describe, expect, it} from "vitest";
 
-import {
-  buildMessages,
-  CAPTURE_TOOL,
-  MAX_HISTORY_MESSAGES,
-  MODEL_ID
-} from "../prompt";
+import {DEEPSEEK_MODEL} from "../ai";
+import {buildMessages, CAPTURE_TOOL, MAX_HISTORY_MESSAGES} from "../prompt";
 
 describe("prompt", () => {
   it("pins the chosen model", () => {
-    expect(MODEL_ID).toBe("@cf/openai/gpt-oss-120b");
+    expect(DEEPSEEK_MODEL).toBe("deepseek-v4-flash");
   });
 
   it("declares the capture_opportunity tool with required contact and summary", () => {
