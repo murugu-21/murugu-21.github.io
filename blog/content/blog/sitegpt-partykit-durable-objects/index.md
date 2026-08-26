@@ -155,7 +155,7 @@ One message, end to end:
 sequenceDiagram
     participant V as Visitor (PartySocket)
     participant DO as ChatRoom (Durable Object)
-    participant AI as Workers AI
+    participant AI as DeepSeek
     V->>DO: {type:"chat", text}
     DO->>DO: rate check
     DO->>DO: INSERT message (local SQLite)

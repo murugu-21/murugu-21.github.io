@@ -1,91 +1,11 @@
 import {describe, expect, it} from "vitest";
 
-import {runDeepseekExchange, runModelExchange} from "../ai";
-import {MODEL_ID, TOOLS} from "../prompt";
-
-function sseStream(events: string[]): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
-  return new ReadableStream({
-    start(controller) {
-      for (const e of events) controller.enqueue(encoder.encode(e));
-      controller.close();
-    }
-  });
-}
-
-describe("runModelExchange", () => {
-  it("requests the pinned model with streaming, tools and the given messages", async () => {
-    let captured: {model?: string; options?: Record<string, unknown>} = {};
-    const ai = {
-      run: async (model: string, options: Record<string, unknown>) => {
-        captured = {model, options};
-        return sseStream(['data: {"response":"hi"}\n\n']);
-      }
-    };
-    const result = await runModelExchange(
-      ai,
-      [{role: "user", content: "yo"}],
-      () => {}
-    );
-    expect(captured.model).toBe(MODEL_ID);
-    expect(captured.options).toMatchObject({
-      stream: true,
-      tools: TOOLS
-    });
-    expect(result.content).toBe("hi");
-  });
-
-  it("handles a non-stream chat-completions body", async () => {
-    const ai = {
-      run: async () => ({
-        choices: [
-          {
-            message: {
-              content: "sure",
-              tool_calls: [
-                {
-                  function: {
-                    name: "capture_opportunity",
-                    arguments: '{"contact":"a@b.c","summary":"s"}'
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      })
-    };
-    const deltas: string[] = [];
-    const result = await runModelExchange(ai, [], t => deltas.push(t));
-    expect(result.content).toBe("sure");
-    expect(deltas).toEqual(["sure"]);
-    expect(result.toolCalls).toEqual([
-      {
-        id: "call_0",
-        name: "capture_opportunity",
-        arguments: '{"contact":"a@b.c","summary":"s"}'
-      }
-    ]);
-  });
-
-  it("handles a non-stream response/tool_calls body", async () => {
-    const ai = {
-      run: async () => ({
-        response: "ok",
-        tool_calls: [
-          {name: "capture_opportunity", arguments: {contact: "x", summary: "y"}}
-        ]
-      })
-    };
-    const result = await runModelExchange(ai, [], () => {});
-    expect(result.content).toBe("ok");
-    expect(result.toolCalls[0].name).toBe("capture_opportunity");
-    expect(JSON.parse(result.toolCalls[0].arguments)).toEqual({
-      contact: "x",
-      summary: "y"
-    });
-  });
-});
+import {
+  fetchDeepseekBalance,
+  isInsufficientBalance,
+  runDeepseekExchange
+} from "../ai";
+import {TOOLS} from "../prompt";
 
 describe("runDeepseekExchange", () => {
   function sseResponse(events: string[]): Response {
@@ -130,6 +50,12 @@ describe("runDeepseekExchange", () => {
     expect(body.model).toBe("deepseek-v4-flash");
     expect(body.stream).toBe(true);
     expect(body.stream_options).toEqual({include_usage: true});
+    // V4-Flash reasoning would eat the whole max_tokens budget and leave the
+    // visitor with an empty reply.
+    expect(body.thinking).toEqual({type: "disabled"});
+    // Truncating a concierge answer mid-sentence is worse than the tokens it
+    // saves; length is the prompt's job and spend is the RateLimiter's.
+    expect(body.max_tokens).toBeUndefined();
     expect(body.tools[0].function.name).toBe("capture_opportunity");
 
     expect(result.content).toBe("hi there");
@@ -143,5 +69,65 @@ describe("runDeepseekExchange", () => {
     await expect(
       runDeepseekExchange("sk-test", [], () => {}, fetcher)
     ).rejects.toThrow("deepseek request failed: 402");
+  });
+});
+
+describe("fetchDeepseekBalance", () => {
+  function json(body: unknown, status = 200): typeof fetch {
+    return (async () =>
+      new Response(JSON.stringify(body), {status})) as typeof fetch;
+  }
+
+  it("reads is_available and the USD balance", async () => {
+    const balance = await fetchDeepseekBalance(
+      "sk-test",
+      json({
+        is_available: true,
+        balance_infos: [
+          {currency: "CNY", total_balance: "7.00"},
+          {currency: "USD", total_balance: "1.99"}
+        ]
+      })
+    );
+    // total_balance is a decimal string in the API response, not a number.
+    expect(balance).toEqual({available: true, totalUsd: 1.99});
+  });
+
+  it("reports zero when there is no USD row", async () => {
+    const balance = await fetchDeepseekBalance(
+      "sk-test",
+      json({is_available: true, balance_infos: []})
+    );
+    expect(balance).toEqual({available: true, totalUsd: 0});
+  });
+
+  it("throws on a non-OK response", async () => {
+    await expect(
+      fetchDeepseekBalance("sk-test", json({}, 401))
+    ).rejects.toThrow("401");
+  });
+});
+
+describe("isInsufficientBalance", () => {
+  it("recognises a 402 from an exchange and nothing else", async () => {
+    const failing = (status: number) =>
+      (async () => new Response("no", {status})) as typeof fetch;
+
+    const err = await runDeepseekExchange(
+      "sk-test",
+      [],
+      () => {},
+      failing(402)
+    ).catch((e: unknown) => e);
+    expect(isInsufficientBalance(err)).toBe(true);
+
+    const other = await runDeepseekExchange(
+      "sk-test",
+      [],
+      () => {},
+      failing(500)
+    ).catch((e: unknown) => e);
+    expect(isInsufficientBalance(other)).toBe(false);
+    expect(isInsufficientBalance(new Error("402"))).toBe(false);
   });
 });

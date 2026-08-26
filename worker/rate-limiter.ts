@@ -1,44 +1,26 @@
 import {DurableObject} from "cloudflare:workers";
 
+import {fetchDeepseekBalance} from "./ai";
 // The allowance itself lives with the endpoint that spends it — api/contact.ts
 // has no Workers-runtime imports, so the OpenAPI document and the /developers
 // page can quote the same numbers without pulling this Durable Object (and
 // `cloudflare:workers` with it) into the Astro bundle.
 import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "./api/contact";
 
-// Workers AI's free allocation is 10,000 neurons/day (developers.cloudflare
-// .com/workers-ai/platform/pricing, checked 2026-08-13). The daily budget sits
-// slightly under it because the budget check and the usage charge straddle the
-// model call — the last exchange of the day can overshoot by one call's cost.
-export const NEURON_DAILY_BUDGET = 9500;
+// Chat is gated on the DeepSeek account's real balance rather than a daily
+// allowance: the budget is whatever has actually been paid for, and a top-up
+// widens the tap on its own. Stop a little above zero so the last exchange of
+// the day can't land mid-reply on an empty account.
+export const BALANCE_RESERVE_USD = 0.05;
 
-// Per-model conversion rates (neurons per M tokens) from the same pricing
-// page. Keyed by model id so swapping MODEL_ID in prompt.ts keeps the budget
-// math honest — an unknown id falls back to the most expensive known rates,
-// which under-counts capacity rather than blowing the real allocation.
-export const MODEL_NEURON_RATES: Record<
-  string,
-  {inputPerM: number; outputPerM: number}
-> = {
-  "@cf/qwen/qwen3-30b-a3b-fp8": {inputPerM: 4625, outputPerM: 30475},
-  "@cf/openai/gpt-oss-120b": {inputPerM: 31818, outputPerM: 68182}
-};
+// How long a balance reading is trusted. DeepSeek's balance settles behind
+// real usage, so a shorter TTL buys little accuracy and costs a round-trip in
+// front of a visitor's message; the 402 path is the accurate one.
+export const BALANCE_TTL_MS = 10 * 60 * 1000;
 
-const FALLBACK_RATES = Object.values(MODEL_NEURON_RATES).reduce((a, b) =>
-  a.inputPerM >= b.inputPerM ? a : b
-);
+const BALANCE_KEY = "deepseek:balance";
 
-export function neuronCost(
-  modelId: string,
-  promptTokens: number,
-  completionTokens: number
-): number {
-  const rates = MODEL_NEURON_RATES[modelId] ?? FALLBACK_RATES;
-  return (
-    (promptTokens * rates.inputPerM + completionTokens * rates.outputPerM) /
-    1_000_000
-  );
-}
+type CachedBalance = {available: boolean; totalUsd: number; checkedAt: number};
 
 /** What is left of each contact tier for today, after the call that reported it. */
 export type ContactUsage = {clientRemaining: number; globalRemaining: number};
@@ -46,23 +28,20 @@ export type ContactUsage = {clientRemaining: number; globalRemaining: number};
 export type ContactSlot = ContactUsage &
   ({allowed: true} | {allowed: false; scope: "client" | "global"});
 
-// Single fixed-name instance ("global") shared by every ChatRoom: one source
-// of truth for the site-wide daily Workers AI budget, denominated in neurons
-// so the cap always equals what the free tier actually serves.
+// Single fixed-name instance ("global") shared by every ChatRoom: one place
+// to cache the DeepSeek balance, so N conversations cost one balance check
+// rather than N, and one room hitting a 402 gates the whole site at once.
 export class RateLimiter extends DurableObject {
   private sql: SqlStorage;
 
   constructor(ctx: DurableObjectState, env: unknown) {
     super(ctx, env as never);
     this.sql = ctx.storage.sql;
-    // Replaces the old message-count `counters` table; that one is left in
-    // place (harmless) so existing production instances need no migration.
-    this.sql.exec(
-      `CREATE TABLE IF NOT EXISTS neuron_counters (
-        day TEXT PRIMARY KEY,
-        neurons REAL NOT NULL DEFAULT 0
-      )`
-    );
+    // Chat once kept a daily counter here (message counts, then Workers AI
+    // neurons, then DeepSeek dollars). All three are gone: the balance is
+    // read from DeepSeek instead of reconstructed locally. Their tables are
+    // left in place rather than dropped — the only destructive step in an
+    // otherwise additive schema, for rows that are already worthless.
     // Keyed "<day>:global" / "<day>:client:<ip>" so both tiers share one
     // table and yesterday's rows are trivially identifiable for cleanup.
     this.sql.exec(
@@ -73,21 +52,43 @@ export class RateLimiter extends DurableObject {
     );
   }
 
-  // Both methods are synchronous (no awaits), so each runs atomically inside
-  // the DO. hasBudget → model call → charge is NOT one atomic unit; the
-  // budget's headroom under the real 10k allocation absorbs that overshoot.
-  hasBudget(): boolean {
-    return this.spentToday() < NEURON_DAILY_BUDGET;
+  // Can chat still be served? Cached for BALANCE_TTL_MS, so a busy minute
+  // costs one call to DeepSeek rather than one per message. A failed lookup
+  // fails OPEN: the balance endpoint being unreachable is no reason to take
+  // the widget down, and a genuinely empty account is caught by the 402 on
+  // the very next exchange.
+  async chatAvailable(
+    apiKey: string,
+    // Injected by tests only; an RPC caller passes just the key.
+    fetcher: typeof fetch = fetch
+  ): Promise<boolean> {
+    const cached = await this.ctx.storage.get<CachedBalance>(BALANCE_KEY);
+    if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) {
+      return cached.available && cached.totalUsd > BALANCE_RESERVE_USD;
+    }
+    try {
+      const {available, totalUsd} = await fetchDeepseekBalance(apiKey, fetcher);
+      await this.ctx.storage.put(BALANCE_KEY, {
+        available,
+        totalUsd,
+        checkedAt: Date.now()
+      } satisfies CachedBalance);
+      return available && totalUsd > BALANCE_RESERVE_USD;
+    } catch (err) {
+      console.error("deepseek balance check failed", err);
+      return true;
+    }
   }
 
-  charge(neurons: number): void {
-    if (!Number.isFinite(neurons) || neurons <= 0) return;
-    this.sql.exec(
-      `INSERT INTO neuron_counters (day, neurons) VALUES (?, ?)
-       ON CONFLICT (day) DO UPDATE SET neurons = neurons + excluded.neurons`,
-      this.today(),
-      neurons
-    );
+  // Called when DeepSeek itself reports an empty account. Parks the cache in
+  // the exhausted state so every room gates immediately, and lets it expire
+  // normally — a top-up is picked up at the next TTL boundary with no deploy.
+  async markChatExhausted(): Promise<void> {
+    await this.ctx.storage.put(BALANCE_KEY, {
+      available: false,
+      totalUsd: 0,
+      checkedAt: Date.now()
+    } satisfies CachedBalance);
   }
 
   // Synchronous, so the read-check-increment runs atomically inside the DO:
@@ -158,13 +159,6 @@ export class RateLimiter extends DurableObject {
        ON CONFLICT (key) DO UPDATE SET count = count + 1`,
       key
     );
-  }
-
-  spentToday(): number {
-    const rows = this.sql
-      .exec(`SELECT neurons FROM neuron_counters WHERE day = ?`, this.today())
-      .toArray();
-    return rows.length ? (rows[0].neurons as number) : 0;
   }
 
   private today(): string {

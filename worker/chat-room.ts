@@ -1,18 +1,16 @@
 import {Server, type Connection} from "partyserver";
 
-import {runDeepseekExchange, runModelExchange} from "./ai";
+import {isInsufficientBalance, runDeepseekExchange} from "./ai";
 import {parseLeadArguments, sendOpportunityEmail, type Lead} from "./email";
 import {fetchSitePage} from "./fetch-page";
 import {getGrounding} from "./grounding";
 import {
   buildMessages,
-  MODEL_ID,
   parseFetchArguments,
   ROOM_DAILY_LIMIT,
   type ModelMessage
 } from "./prompt";
-import {NEURON_DAILY_BUDGET, neuronCost} from "./rate-limiter";
-import {type StreamResult, type Usage} from "./sse";
+import {type StreamResult} from "./sse";
 import {
   GREETING,
   parseClientMessage,
@@ -22,21 +20,9 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Workers AI signals a spent free-tier allocation with AiError code 4006.
-function isNeuronExhaustion(err: unknown): boolean {
-  return (
-    err instanceof Error &&
-    /\b4006\b|free allocation of.*neurons/i.test(err.message)
-  );
-}
-
 const LIMIT_MESSAGE =
   "I've hit my chat budget for now — please reach Murugappan directly " +
   "through the social links on this site instead.";
-
-// "workers-ai" = free neuron allocation (primary); "deepseek" = paid BYOK
-// overflow once the allocation is spent.
-type Provider = "workers-ai" | "deepseek";
 
 export class ChatRoom extends Server<Env> {
   static options = {hibernate: true};
@@ -107,15 +93,13 @@ export class ChatRoom extends Server<Env> {
       this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
       return;
     }
-    // Neuron budget: free Workers AI while the allocation lasts, then route
-    // to DeepSeek (BYOK) if a key is configured; without one, gate politely.
-    let provider: Provider = "workers-ai";
-    if (!(await this.limiter().hasBudget())) {
-      if (!this.deepseekKey()) {
-        this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
-        return;
-      }
-      provider = "deepseek";
+    // No key means no chat at all — DeepSeek is the only provider. Gate the
+    // same way as an empty account rather than surfacing a fault the visitor
+    // can do nothing about.
+    const key = this.deepseekKey();
+    if (!key || !(await this.limiter().chatAvailable(key))) {
+      this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+      return;
     }
 
     this.persist("user", msg.text);
@@ -124,27 +108,15 @@ export class ChatRoom extends Server<Env> {
     this.broadcastMsg({type: "visitor", text: msg.text}, [connection.id]);
 
     try {
-      await this.generate(connection, provider, msg.page);
+      await this.generate(key, msg.page);
     } catch (err) {
       console.error("chat generation failed", err);
-      if (isNeuronExhaustion(err)) {
-        // Workers AI says the account allocation is spent — our counter can
-        // miss usage it never saw (e.g. burned before a deploy). Sync it so
-        // hasBudget() routes straight to the fallback until 00:00 UTC, and
-        // retry this message on DeepSeek right away. The 4006 comes from the
-        // ai.run() call itself, so nothing has been streamed yet.
-        await this.exhaustBudget();
-        if (this.deepseekKey()) {
-          try {
-            await this.generate(connection, "deepseek", msg.page);
-            return;
-          } catch (fallbackErr) {
-            console.error("deepseek fallback failed", fallbackErr);
-          }
-        } else {
-          this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
-          return;
-        }
+      // DeepSeek says the account is empty. That verdict beats the cached
+      // balance, so park the cache and gate every room until the next check.
+      if (isInsufficientBalance(err)) {
+        await this.limiter().markChatExhausted();
+        this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+        return;
       }
       this.send(connection, {
         type: "error",
@@ -155,12 +127,9 @@ export class ChatRoom extends Server<Env> {
 
   // One full reply turn: grounded exchange with an on-demand fetch_page loop
   // (the model may pull a site page's full text before answering), optional
-  // opportunity capture (a follow-up exchange on the same provider), persist.
-  private async generate(
-    connection: Connection,
-    provider: Provider,
-    page?: string
-  ): Promise<void> {
+  // opportunity capture (one more exchange), persist. Everything it emits is
+  // broadcast to the room, so it needs no particular connection.
+  private async generate(key: string, page?: string): Promise<void> {
     // Replies stream to every open tab of the room, not just the sender.
     const onDelta = (text: string) => this.broadcastMsg({type: "delta", text});
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
@@ -174,7 +143,7 @@ export class ChatRoom extends Server<Env> {
     let reply = "";
     let capture: {id: string; name: string; arguments: string} | undefined;
     for (let round = 0; ; round++) {
-      const result = await this.exchange(provider, messages, onDelta);
+      const result = await this.exchange(key, messages, onDelta);
       reply += result.content;
       capture ??= result.toolCalls.find(t => t.name === "capture_opportunity");
 
@@ -203,7 +172,7 @@ export class ChatRoom extends Server<Env> {
 
     if (capture) {
       if (reply) this.broadcastMsg({type: "delta", text: "\n"});
-      const followUp = await this.handleCapture(capture, connection, provider);
+      const followUp = await this.handleCapture(capture, key, onDelta);
       reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
     }
 
@@ -215,47 +184,30 @@ export class ChatRoom extends Server<Env> {
   }
 
   private async exchange(
-    provider: Provider,
+    key: string,
     messages: ModelMessage[],
     onDelta: (text: string) => void
   ): Promise<StreamResult> {
-    if (provider === "deepseek") {
-      const result = await runDeepseekExchange(
-        this.deepseekKey()!,
-        messages,
-        onDelta
-      );
-      // Paid tokens — keep spend visible in `wrangler tail`.
-      console.log("deepseek usage", JSON.stringify(result.usage));
-      return result;
-    }
-    const result = await runModelExchange(this.env.AI, messages, onDelta);
-    await this.chargeUsage(result.usage);
+    const result = await runDeepseekExchange(key, messages, onDelta);
+    // Paid tokens — keep spend visible in `wrangler tail`. Nothing is
+    // metered locally any more; DeepSeek's balance is the meter.
+    console.log("deepseek usage", JSON.stringify(result.usage));
     return result;
   }
 
+  // Typed non-optional by `wrangler types`, but a deploy can still be missing
+  // the secret — and `.dev.vars` carries a placeholder locally.
   private deepseekKey(): string | null {
-    const key = (this.env as {DEEPSEEK_API_KEY?: string}).DEEPSEEK_API_KEY;
-    const trimmed = key?.trim();
+    const trimmed = (this.env.DEEPSEEK_API_KEY as string | undefined)?.trim();
     return trimmed && !trimmed.startsWith("placeholder") ? trimmed : null;
-  }
-
-  private async exhaustBudget(): Promise<void> {
-    try {
-      const limiter = this.limiter();
-      const spent = await limiter.spentToday();
-      await limiter.charge(Math.max(NEURON_DAILY_BUDGET - spent, 1));
-    } catch (err) {
-      console.error("budget exhaustion sync failed", err);
-    }
   }
 
   // Records the lead, emails once per conversation, and asks the model to
   // phrase the confirmation using the tool result.
   private async handleCapture(
     capture: {id: string; name: string; arguments: string},
-    connection: Connection,
-    provider: Provider
+    key: string,
+    onDelta: (text: string) => void
   ): Promise<string> {
     const lead = parseLeadArguments(capture.arguments);
     if (!lead) return "";
@@ -290,7 +242,7 @@ export class ChatRoom extends Server<Env> {
     // chat-completions provider accepts the transcript.
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
     const followUp = await this.exchange(
-      provider,
+      key,
       [
         ...buildMessages(grounding, this.history()),
         {
@@ -316,25 +268,13 @@ export class ChatRoom extends Server<Env> {
           })
         }
       ],
-      text => this.broadcastMsg({type: "delta", text})
+      onDelta
     );
     return followUp.content;
   }
 
   private limiter() {
     return this.env.RateLimiter.get(this.env.RateLimiter.idFromName("global"));
-  }
-
-  private async chargeUsage(usage: Usage | null): Promise<void> {
-    if (!usage) return;
-    try {
-      await this.limiter().charge(
-        neuronCost(MODEL_ID, usage.promptTokens, usage.completionTokens)
-      );
-    } catch (err) {
-      // Budget accounting must never take down a chat that already answered.
-      console.error("neuron charge failed", err);
-    }
   }
 
   private storeLead(lead: Lead): void {

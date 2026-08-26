@@ -44,7 +44,6 @@
   "migrations": [
     {"tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"]}
   ],
-  "ai": {"binding": "AI"},
   "send_email": [{"name": "EMAIL"}],
   // Read-only analytics mirror of every room's messages — DO SQLite stays the
   // serving source of truth; D1 exists so chats are browsable in the dash
