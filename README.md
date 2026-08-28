@@ -32,7 +32,7 @@ npx astro check        # type-check .astro files
 
 ## Deployment
 
-Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `npm ci --prefix blog && npm run build:site` and deploy command `npx wrangler deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, type-check, worker tests, blog tests, and a build smoke test including resume generation.
+Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `npm ci --prefix blog && npm run build:site` and deploy command `npm run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). `npm run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, type-check, worker tests, blog tests, a build smoke test including resume generation, and a local-only `db:migrate:local` that catches malformed migration SQL before it reaches a deploy.
 
 ## Resume generation
 
@@ -200,7 +200,9 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
 3. **Workers Builds:** Cloudflare dashboard → Workers → create application →
    connect this repo. Build command:
    `npm ci --prefix blog && npm run build:site`. Deploy command:
-   `npx wrangler deploy`. Env vars (build): `GITHUB_TOKEN`,
+   `npm run deploy` (applies D1 migrations, then `wrangler deploy` — a plain
+   `npx wrangler deploy` here silently skips the migrations). Env vars
+   (build): `GITHUB_TOKEN`,
    `REQUIRE_GITHUB_PROFILE=1`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE`
    (optional — see "Resume generation" above).
 4. **Smoke test** on the `workers.dev` URL: pages render, `_redirects` 301s
