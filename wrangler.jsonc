@@ -48,6 +48,12 @@
   // Read-only analytics mirror of every room's messages — DO SQLite stays the
   // serving source of truth; D1 exists so chats are browsable in the dash
   // (Storage & Databases → D1 → jarvis-chats). Writes are fire-and-forget.
+  //
+  // Schema lives in ./migrations (the default `migrations_dir`); apply it with
+  // `npm run db:migrate`. Unlike the DO, which creates its tables in onStart(),
+  // nothing in the Worker issues DDL against D1 — until the migration is
+  // applied every mirror write fails, and because the writes are
+  // fire-and-forget that shows up only as a "d1 mirror failed" line in the logs.
   "d1_databases": [
     {
       "binding": "CHAT_DB",
