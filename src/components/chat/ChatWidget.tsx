@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import {GREETING, type ServerMessage} from "../../../worker/protocol";
+import {ActivityRow, type Activity} from "./ActivityRow";
 import {Button} from "../ui/button";
 import {Card, CardFooter, CardHeader} from "../ui/card";
 import {
@@ -105,7 +106,11 @@ export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [stream, setStream] = useState<string | null>(null);
+  // `typing` is the plain three dots, used for one thing only: the initial
+  // history load. Everything mid-turn goes through the activity row.
   const [typing, setTyping] = useState(false);
+  const [waiting, setWaiting] = useState(false);
+  const [activity, setActivity] = useState<Activity | null>(null);
   const [sending, setSending] = useState(false);
   const [greeted, setGreeted] = useState(false);
   const [confirmRestart, setConfirmRestart] = useState(false);
@@ -137,6 +142,8 @@ export function ChatWidget() {
           greetTimerRef.current = null;
         }
         setTyping(false);
+        setWaiting(false);
+        setActivity(null);
         streamRef.current = null;
         setStream(null);
         // One state swap = one paint, same as the old replaceChildren fix.
@@ -157,18 +164,31 @@ export function ChatWidget() {
           streamRef.current === null ? msg.text.replace(/^\s+/, "") : msg.text;
         if (streamRef.current === null && text === "") break;
         setTyping(false);
+        // Real text is arriving — the row has nothing left to explain.
+        setWaiting(false);
+        setActivity(null);
         streamRef.current = (streamRef.current ?? "") + text;
         setStream(streamRef.current);
         break;
       }
+      case "tool":
+        // A tool round can start after some text has already streamed, so the
+        // row comes back rather than only ever showing before the first token.
+        setActivity({name: msg.name, detail: msg.detail});
+        setWaiting(true);
+        break;
       case "done":
         setTyping(false);
+        setWaiting(false);
+        setActivity(null);
         commitStream();
         setSending(false);
         break;
       case "limit":
       case "error":
         setTyping(false);
+        setWaiting(false);
+        setActivity(null);
         commitStream();
         setSending(false);
         setBubbles(b => [...b, {kind: "system", text: msg.message}]);
@@ -192,6 +212,8 @@ export function ChatWidget() {
     });
     socket.addEventListener("close", () => {
       setTyping(false);
+      setWaiting(false);
+      setActivity(null);
       setSending(false);
     });
     socketRef.current = socket;
@@ -230,7 +252,8 @@ export function ChatWidget() {
     // open — don't gate on readyState or messages get silently dropped.
     const ws = connect();
     setBubbles(b => [...b, {kind: "user", text}]);
-    setTyping(true);
+    setWaiting(true);
+    setActivity(null);
     setSending(true);
     setConfirmRestart(false);
     // Include the page the visitor is on — the room feeds it to the model as
@@ -257,6 +280,8 @@ export function ChatWidget() {
     setBubbles([]);
     setStream(null);
     setTyping(false);
+    setWaiting(false);
+    setActivity(null);
     setSending(false);
     setGreeted(false);
     setConfirmRestart(false);
@@ -302,7 +327,7 @@ export function ChatWidget() {
     if (!v) return;
     const fresh = stream === null && bubbles.every(b => b.kind !== "user");
     v.scrollTop = fresh ? 0 : v.scrollHeight;
-  }, [bubbles, stream, typing, greeted, open]);
+  }, [bubbles, stream, typing, waiting, activity, greeted, open]);
 
   // Body scroll lock while the panel is full-screen (mobile).
   useEffect(() => {
@@ -457,6 +482,7 @@ export function ChatWidget() {
                   <span className="chat-dot" />
                 </div>
               )}
+              {waiting && <ActivityRow activity={activity} />}
               {showStarters && (
                 <div className="mt-1 flex flex-col items-start gap-2">
                   {STARTERS.map(q => (
