@@ -155,6 +155,89 @@ body.dark #chat-widget-root {
   }
 }
 
+/* Activity row — the waiting state while Jarvis reasons or runs a tool.
+   `.chat-shimmer` sweeps a highlight across the label so a long pause still
+   looks alive; the spark marks a thinking beat and the primary-coloured dot
+   marks a real tool call, so flavour is never mistaken for activity. */
+.chat-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: chat-shimmer 2.4s linear infinite;
+}
+
+@keyframes chat-shimmer {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -30% 0;
+  }
+}
+
+.chat-spark {
+  font-size: 12px;
+  line-height: 1;
+  color: var(--primary);
+  animation: chat-spark 1.8s ease-in-out infinite;
+}
+
+@keyframes chat-spark {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.chat-tool-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: chat-tool-dot 1.4s ease-out infinite;
+}
+
+@keyframes chat-tool-dot {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+/* Visitors who asked for less motion keep the words and lose the movement —
+   the gradient must be undone too, or the label stays transparent. */
+@media (prefers-reduced-motion: reduce) {
+  .chat-shimmer,
+  .chat-spark,
+  .chat-tool-dot,
+  .chat-dot {
+    animation: none;
+  }
+
+  .chat-shimmer {
+    background-image: none;
+    color: var(--muted-foreground);
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
 /* Body scroll lock while the panel is full-screen on mobile. */
 html.chat-panel-locked,
 html.chat-panel-locked body {

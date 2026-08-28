@@ -50,9 +50,9 @@ describe("runDeepseekExchange", () => {
     expect(body.model).toBe("deepseek-v4-flash");
     expect(body.stream).toBe(true);
     expect(body.stream_options).toEqual({include_usage: true});
-    // V4-Flash reasoning would eat the whole max_tokens budget and leave the
-    // visitor with an empty reply.
-    expect(body.thinking).toEqual({type: "disabled"});
+    // Reasoning is on: it sharpens tool selection, and with no max_tokens it
+    // can no longer starve the reply.
+    expect(body.thinking).toEqual({type: "enabled"});
     // Truncating a concierge answer mid-sentence is worse than the tokens it
     // saves; length is the prompt's job and spend is the RateLimiter's.
     expect(body.max_tokens).toBeUndefined();

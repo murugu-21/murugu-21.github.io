@@ -14,6 +14,7 @@ import {type StreamResult} from "./sse";
 import {
   GREETING,
   parseClientMessage,
+  toolFrame,
   type ChatHistoryEntry,
   type ServerMessage
 } from "./protocol";
@@ -151,6 +152,9 @@ export class ChatRoom extends Server<Env> {
       if (!fetchCall || round >= MAX_FETCH_ROUNDS) break;
 
       const url = parseFetchArguments(fetchCall.arguments);
+      // Tell the room what is happening before the await: a page fetch plus
+      // the follow-up exchange is the longest silence in a turn.
+      this.broadcastMsg(toolFrame("fetch_page", url));
       const pageText = url
         ? await fetchSitePage(this.env.ASSETS, url)
         : "The url argument was missing.";
@@ -212,6 +216,7 @@ export class ChatRoom extends Server<Env> {
     const lead = parseLeadArguments(capture.arguments);
     if (!lead) return "";
 
+    this.broadcastMsg(toolFrame("capture_opportunity"));
     this.storeLead(lead);
 
     const alreadyCaptured = this.ctx.storage.sql

@@ -80,11 +80,12 @@ export async function runDeepseekExchange(
       tools: TOOLS,
       stream: true,
       stream_options: {include_usage: true},
-      // V4-Flash thinks by default and its reasoning counts against any
-      // output cap: under the old max_tokens: 800 a grounded question burned
-      // the whole budget on `reasoning_content` (which this worker drops) and
-      // returned an empty reply. Concierge answers need none of it.
-      thinking: {type: "disabled"}
+      // Let V4-Flash reason before answering: it picks the fetch_page and
+      // capture_opportunity tool calls more reliably. Safe now that max_tokens
+      // is gone — reasoning used to eat the whole 800-token cap and return an
+      // empty reply. `reasoning_content` deltas are dropped by consumeSse, so
+      // the visitor sees only the answer (typing dots cover the extra pause).
+      thinking: {type: "enabled"}
       // No max_tokens: it bounded the Workers AI neuron cost per call, and on
       // a paid API it only risked truncating a long answer mid-sentence.
       // Reply length is governed by the prompt, and spend by the account

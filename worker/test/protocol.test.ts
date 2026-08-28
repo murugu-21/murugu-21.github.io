@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 
-import {MAX_MESSAGE_LENGTH, parseClientMessage} from "../protocol";
+import {MAX_MESSAGE_LENGTH, parseClientMessage, toolFrame} from "../protocol";
 
 describe("parseClientMessage", () => {
   it("accepts a valid chat message and trims it", () => {
@@ -46,5 +46,31 @@ describe("parseClientMessage", () => {
     expect(
       parseClientMessage(JSON.stringify({type: "chat", text: big}))
     ).toBeNull();
+  });
+});
+
+describe("toolFrame", () => {
+  it("reports a page fetch as the site path, not the full url", () => {
+    expect(
+      toolFrame("fetch_page", "https://murugappan.dev/blog/react/")
+    ).toEqual({type: "tool", name: "fetch_page", detail: "/blog/react/"});
+  });
+
+  it("omits the detail when the url is missing or unparseable", () => {
+    expect(toolFrame("fetch_page", null)).toEqual({
+      type: "tool",
+      name: "fetch_page"
+    });
+    expect(toolFrame("fetch_page", "not a url")).toEqual({
+      type: "tool",
+      name: "fetch_page"
+    });
+  });
+
+  it("never carries a detail for a capture — contact details stay server-side", () => {
+    expect(toolFrame("capture_opportunity")).toEqual({
+      type: "tool",
+      name: "capture_opportunity"
+    });
   });
 });

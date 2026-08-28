@@ -169,9 +169,19 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
 - **Model:** DeepSeek `deepseek-v4-flash` (BYOK via the `DEEPSEEK_API_KEY`
   secret), the only provider — Workers AI was dropped on 2026-08-27 for being
   slow and truncating replies when the free neuron allocation ran out. Thinking
-  is disabled: V4-Flash reasoning counts against the output budget and returns
-  an empty reply otherwise.
+  is enabled (`thinking: {type: "enabled"}`) — the model reasons before
+  answering, which sharpens tool selection; `reasoning_content` is dropped so
+  visitors see only the reply. This is only safe because there is no
+  `max_tokens`: reasoning used to consume the whole 800-token cap.
 - **Widget:** `src/components/chat/` (shared by the blog via relative import).
+  While a turn is in flight the panel shows `ActivityRow` instead of the three
+  dots: a rotating playful label ("Discombobulating…") with an elapsed counter
+  while the model reasons, switching to the real action when the worker
+  broadcasts a `tool` frame ("Reading blog/…", "Noting your details"). The
+  frame carries only the tool name plus a page path — never tool arguments —
+  and is ephemeral: nothing is persisted, and the next delta clears the row.
+  The row is `aria-hidden` with a stable `sr-only` "Jarvis is typing", so the
+  rotating words don't spam the panel's live region.
 - **Email:** `send_email` binding → `OPPORTUNITY_INBOX` (Worker secret).
 - **Limits:** 20 msgs/day per conversation, 300/day globally, 1000 chars/msg.
   Chat runs until the DeepSeek account is actually out of credit — the
