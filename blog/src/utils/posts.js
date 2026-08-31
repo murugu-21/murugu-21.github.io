@@ -13,8 +13,7 @@ export async function getPublishedPosts() {
 }
 
 // Site-relative URL for a post, e.g. /blog/coin-change-problem/
-export const postPath = id =>
-  `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${id}/`
+export const postPath = id => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${id}/`
 
 // Matches Gatsby's date(formatString: "MMMM DD, YYYY"), e.g. "August 09, 2021"
 export function formatDate(date) {
@@ -28,8 +27,7 @@ export function formatDate(date) {
 
 // Reading time in whole minutes from the raw markdown body (replaces
 // Gatsby's MarkdownRemark.timeToRead).
-export const timeToRead = body =>
-  Math.max(1, Math.ceil(getReadingTime(body || "").minutes))
+export const timeToRead = body => Math.max(1, Math.ceil(getReadingTime(body || "").minutes))
 
 // Plain-text excerpt from the raw markdown body (replaces Gatsby's
 // excerpt(pruneLength: 160)); used wherever frontmatter description is absent.

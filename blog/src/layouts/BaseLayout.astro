@@ -37,13 +37,12 @@ const isRootPath = Astro.url.pathname === rootPath
     <BaseHead title={title} description={description} {...seo} />
   </head>
   <body>
-    <!-- Theme bootstrap, ported verbatim from gatsby-ssr.js. Runs before
-         first paint so there is no light/dark flash; exposes
-         window.__setPreferredTheme + two change hooks for the React islands. -->
+    <!-- Theme bootstrap, ported from gatsby-ssr.js. Runs before first paint so
+         there is no light/dark flash; exposes window.__theme (the current
+         value) and window.__setPreferredTheme, and fires a `themechange` event
+         on window so any number of React islands can subscribe (see
+         ../utils/useTheme.js). -->
     <script is:inline>
-      window.__onThemeChange1 = function () {}
-      window.__onThemeChange2 = function () {}
-
       // Shared persistence contract with the portfolio app: key "isDark",
       // value is a JSON bool. Derive the blog's "dark"/"light" string from it.
       var preferredTheme = null
@@ -64,8 +63,7 @@ const isRootPath = Astro.url.pathname === rootPath
         }
         window.__theme = newTheme
         preferredTheme = newTheme
-        window.__onThemeChange1(newTheme)
-        window.__onThemeChange2(newTheme)
+        window.dispatchEvent(new Event("themechange"))
       }
 
       window.__setPreferredTheme = function (newTheme) {

@@ -48,7 +48,9 @@ export type Activity = {name: ToolName; detail?: string};
 export function ActivityRow({activity}: {activity: Activity | null}) {
   const [word, setWord] = useState(() => pickWord(""));
   const [elapsed, setElapsed] = useState(0);
-  const startRef = useRef(Date.now());
+  // Set for real by the effect below, which runs before the interval that
+  // reads it exists — so the placeholder is never observed.
+  const startRef = useRef(0);
 
   // One timer pair for the life of the row: it mounts when the turn starts and
   // unmounts when the first delta lands, so there is nothing to reset.

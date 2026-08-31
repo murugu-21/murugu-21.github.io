@@ -237,7 +237,7 @@ export function validateModernMeta(message: JsonRpcMessage): RpcFailure | null {
 }
 
 export function checkModernVersion(message: JsonRpcMessage): RpcFailure | null {
-  const requested = (message.params?._meta as Record<string, unknown>)[
+  const requested = ((message.params?._meta ?? {}) as Record<string, unknown>)[
     META_PROTOCOL_VERSION
   ] as string;
   if ((MODERN_PROTOCOL_VERSIONS as readonly string[]).includes(requested))

@@ -5,7 +5,6 @@ import {
   isInsufficientBalance,
   runDeepseekExchange
 } from "../ai";
-import {TOOLS} from "../prompt";
 
 describe("runDeepseekExchange", () => {
   function sseResponse(events: string[]): Response {

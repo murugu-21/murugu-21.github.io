@@ -9,11 +9,7 @@ const Post = ({ post }) => {
 
   return (
     <li>
-      <article
-        className="post-list-item"
-        itemScope
-        itemType="http://schema.org/Article"
-      >
+      <article className="post-list-item" itemScope itemType="http://schema.org/Article">
         <header>
           <h2>
             <a href={post.href} itemProp="url">

@@ -34,10 +34,8 @@ const AllPosts = ({ posts }) => {
     return (
       (post.title?.toLowerCase().includes(query) ||
         post.description?.toLowerCase().includes(query) ||
-        (typeof post.description === "undefined" &&
-          post.excerpt?.toLowerCase().includes(query))) &&
-      (selectedTags.length === 0 ||
-        post.tags.some(tag => selectedTags.includes(tag)))
+        (typeof post.description === "undefined" && post.excerpt?.toLowerCase().includes(query))) &&
+      (selectedTags.length === 0 || post.tags.some(tag => selectedTags.includes(tag)))
     )
   })
 
@@ -57,19 +55,13 @@ const AllPosts = ({ posts }) => {
         query={searchQuery}
         onChange={React.useCallback(e => setSearchQuery(e.target.value), [])}
       />
-      <TagBar
-        tags={tags}
-        onTagSelect={handleTagSelect}
-        selectedTags={selectedTags}
-      />
+      <TagBar tags={tags} onTagSelect={handleTagSelect} selectedTags={selectedTags} />
       <ol style={{ listStyle: `none` }}>
         {filteredPosts.map(post => {
           return <Post post={post} key={post.href} />
         })}
       </ol>
-      {filteredPosts.length === 0 && (
-        <p className="post-list-item h2">No matching article found</p>
-      )}
+      {filteredPosts.length === 0 && <p className="post-list-item h2">No matching article found</p>}
     </>
   )
 }
