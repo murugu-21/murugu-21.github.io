@@ -2,11 +2,11 @@ import {readFileSync, writeFileSync, existsSync, readdirSync} from "node:fs";
 
 // Build-time markdown renditions for Accept: text/markdown content
 // negotiation (served by worker/markdown.ts). One index.md next to each
-// negotiable page's index.html. Runs after merge-llms (needs the merged
-// root llms.txt) in build:site.
+// negotiable page's index.html. Runs after `astro build` in build:site, which
+// is what emits the llms.txt files this reads.
 
-// Homepage + /about (canonical entity page): the merged root llms.txt
-// already is the site's markdown identity summary — serve it for both.
+// Homepage + /about (canonical entity page): the root llms.txt already is the
+// site's markdown identity summary — serve it for both.
 writeFileSync("dist/index.md", readFileSync("dist/llms.txt", "utf8"));
 writeFileSync("dist/about/index.md", readFileSync("dist/llms.txt", "utf8"));
 
@@ -14,8 +14,8 @@ writeFileSync("dist/about/index.md", readFileSync("dist/llms.txt", "utf8"));
 // shape as Cloudflare's converter output). Gate on the built HTML so drafts
 // or renamed dirs never leak.
 let posts = 0;
-for (const slug of readdirSync("blog/content/blog")) {
-  const src = `blog/content/blog/${slug}/index.md`;
+for (const slug of readdirSync("content/blog")) {
+  const src = `content/blog/${slug}/index.md`;
   if (!existsSync(src) || !existsSync(`dist/blog/${slug}/index.html`)) continue;
   writeFileSync(`dist/blog/${slug}/index.md`, readFileSync(src, "utf8"));
   posts++;
@@ -23,8 +23,8 @@ for (const slug of readdirSync("blog/content/blog")) {
 if (posts === 0)
   throw new Error("generate-markdown: no blog post markdown written");
 
-// Blog index: reuse the post list the blog build wrote into its llms.txt.
-const postLines = readFileSync("blog/dist/llms.txt", "utf8")
+// Blog index: reuse the post list the /blog/llms.txt route emitted.
+const postLines = readFileSync("dist/blog/llms.txt", "utf8")
   .split("\n")
   .filter(l => l.startsWith("- ["));
 if (postLines.length === 0)

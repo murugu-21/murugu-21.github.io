@@ -1,4 +1,5 @@
 ---
+import "@fontsource/montserrat/400.css";
 import "../styles/global.scss";
 import agustinaUrl from "../assets/fonts/Agustina.woff?url";
 import ChatWidget from "../components/chat/ChatWidget.astro";
@@ -67,7 +68,7 @@ for (const {items} of skillsCategories) {
 const knowsAbout = [...handWrittenKnowsAbout, ...extraKnowsAbout];
 
 // Identity graph with stable @ids: the blog's BlogPosting/Blog nodes point
-// their author/publisher at PERSON_ID (see blog/src/consts.js — keep in
+// their author/publisher at PERSON_ID (see src/blog/consts.js — keep in
 // sync), so crawlers can merge every page's markup into one entity.
 const SITE_URL = "https://murugappan.dev";
 const PERSON_ID = `${SITE_URL}/#person`;

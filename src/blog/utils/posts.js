@@ -12,8 +12,10 @@ export async function getPublishedPosts() {
   return posts.sort((a, b) => a.data.date - b.data.date)
 }
 
-// Site-relative URL for a post, e.g. /blog/coin-change-problem/
-export const postPath = id => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${id}/`
+// Site-relative URL for a post, e.g. /blog/coin-change-problem/. Literal
+// rather than import.meta.env.BASE_URL: the /blog prefix now comes from this
+// route's position under src/pages/blog/, not from an Astro `base` setting.
+export const postPath = id => `/blog/${id}/`
 
 // Matches Gatsby's date(formatString: "MMMM DD, YYYY"), e.g. "August 09, 2021"
 export function formatDate(date) {

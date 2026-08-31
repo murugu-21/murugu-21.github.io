@@ -1,16 +1,16 @@
 ---
 import { render } from "astro:content"
-import BaseLayout from "../layouts/BaseLayout.astro"
-import Bio from "../components/Bio.jsx"
-import { AUTHOR, SOCIAL, SITE_TITLE, SITE_URL, PERSON } from "../consts"
+import BaseLayout from "../../blog/layouts/BaseLayout.astro"
+import Bio from "../../blog/components/Bio.jsx"
+import { AUTHOR, SOCIAL, SITE_TITLE, SITE_URL, PERSON } from "../../blog/consts"
 import {
   getPublishedPosts,
   postPath,
   formatDate,
   timeToRead,
   excerpt,
-} from "../utils/posts"
-import { formatReadingTime } from "../utils/helpers"
+} from "../../blog/utils/posts"
+import { formatReadingTime } from "../../blog/utils/helpers"
 
 // One page per post; prev/next wired in date-ASC order, exactly like the old
 // gatsby-node.js createPages loop.

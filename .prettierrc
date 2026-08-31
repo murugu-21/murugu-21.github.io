@@ -7,5 +7,16 @@
 	"printWidth": 80,
 	"useTabs": false,
 	"tabWidth": 2,
-	"semi": true
+	"semi": true,
+	"overrides": [
+		{
+			"files": "content/**/*.md",
+			"options": {
+				"semi": false,
+				"arrowParens": "avoid",
+				"bracketSpacing": true,
+				"trailingComma": "all"
+			}
+		}
+	]
 }

@@ -2,8 +2,8 @@ import rss from "@astrojs/rss"
 import MarkdownIt from "markdown-it"
 import sanitizeHtml from "sanitize-html"
 
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "../consts"
-import { getPublishedPosts, excerpt } from "../utils/posts"
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "../../blog/consts"
+import { getPublishedPosts, excerpt } from "../../blog/utils/posts"
 
 const parser = new MarkdownIt()
 
@@ -13,14 +13,14 @@ const parser = new MarkdownIt()
 // assets the build actually emits. Importing them here runs them through
 // Astro's asset pipeline and yields the hashed, base-prefixed public path.
 const ORIGIN = new URL(SITE_URL).origin
-const assets = import.meta.glob("../../content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}", {
+const assets = import.meta.glob("../../../content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}", {
   eager: true,
 })
 const ASSET_URLS = new Map(
   Object.entries(assets).map(([file, mod]) => {
     const asset = mod.default
     return [
-      file.replace("../../content/blog/", ""),
+      file.replace("../../../content/blog/", ""),
       ORIGIN + (typeof asset === "string" ? asset : asset.src),
     ]
   }),

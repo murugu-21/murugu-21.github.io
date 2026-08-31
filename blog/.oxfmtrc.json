@@ -1,7 +1,0 @@
-{
-  "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "arrowParens": "avoid",
-  "semi": false,
-  "sortPackageJson": false,
-  "ignorePatterns": []
-}

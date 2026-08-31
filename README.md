@@ -4,7 +4,7 @@ Personal portfolio of Murugappan, built with [Astro 5](https://astro.build) and 
 
 **Live site:** https://murugappan.dev
 
-This is a monorepo: the portfolio lives at the root and the blog (served at `/blog`) lives in `blog/`. `npm run build:site` builds both into a single `dist/`. The light/dark theme is shared between the two apps via the `isDark` localStorage key.
+One Astro project serves both the portfolio and the blog (served at `/blog`): blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position rather than an Astro `base`, and the blog's non-route code (layout, islands, styles, post helpers) is namespaced under `src/blog/`. Posts are markdown in `content/blog/<slug>/index.md`. `npm run build:site` builds the whole site into a single `dist/`. The light/dark theme is shared across both halves via the `isDark` localStorage key.
 
 ## Development
 
@@ -38,6 +38,36 @@ Cloudflare Workers Builds (git-integrated) builds on every push to `main` with b
 ## Resume generation
 
 `/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `npm run build:site`, `scripts/generate-resume.mjs` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Cloudflare Pages build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Workers Builds' Chromium/Puppeteer compatibility should be re-verified when the AI chat widget cutover (see below) moves builds off Cloudflare Pages; if headless Chromium isn't viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
+
+## Blog
+
+The blog (["SDE Journey"](https://murugappan.dev/blog/), migrated from Gatsby) lives in the same Astro project:
+
+    content/blog/          # one directory per post: <slug>/index.md (+ images)
+      draft/               # drafts — visible in dev, excluded from production builds
+    src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
+    src/blog/              # layout, head, React islands (search, tags, theme toggle, bio),
+                           # styles, post helpers, consts.js site metadata
+    src/content.config.ts  # blog content collection schema
+    public/blog/           # static files served verbatim (og-image, icon, manifest, sw.js)
+
+### Writing a post
+
+Create `content/blog/<slug>/index.md` with frontmatter:
+
+```yaml
+---
+title: My post title
+date: "2026-06-10T10:00:00.000Z"
+tags: ["tag-one", "tag-two"]
+description: One-line description shown in lists, search and feeds.
+---
+```
+
+Images placed next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build
+time. ` ```mermaid ` code blocks are rendered to diagrams client-side. The directory name is the URL slug, so
+the post is published at `/blog/<slug>/` and picked up automatically by the sitemap, RSS feed, both `llms.txt`
+files and the markdown renditions.
 
 ## Public API (`/api/*`)
 

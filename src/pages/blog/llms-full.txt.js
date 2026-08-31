@@ -1,5 +1,5 @@
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, AUTHOR } from "../consts"
-import { getPublishedPosts, excerpt } from "../utils/posts"
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, AUTHOR } from "../../blog/consts"
+import { getPublishedPosts, excerpt } from "../../blog/utils/posts"
 
 // Generate /llms-full.txt (https://llmstxt.org) — the full markdown body of
 // every post in one file, so LLM crawlers and agents can ingest the whole
