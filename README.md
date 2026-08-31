@@ -1,6 +1,6 @@
 # murugappan.dev
 
-Personal portfolio of Murugappan, built with [Astro 5](https://astro.build) and deployed to Cloudflare Pages.
+Personal portfolio of Murugappan, built with [Astro 7](https://astro.build) (Vite 8 / Rolldown) and served by a single Cloudflare Worker.
 
 **Live site:** https://murugappan.dev
 
@@ -21,7 +21,7 @@ The GitHub profile card is fetched at **build time** from the GitHub GraphQL API
 GITHUB_TOKEN=ghp_xxx npm run build
 ```
 
-Microsoft Clarity analytics is injected at **build time** when a `PUBLIC_CLARITY_PROJECT_ID` environment variable is set (configured in the Cloudflare Pages build env vars for production). Without it the tag is omitted entirely, so local dev and CI builds stay analytics-free.
+Microsoft Clarity analytics is injected at **build time** when a `PUBLIC_CLARITY_PROJECT_ID` environment variable is set (configured in the Workers Builds build env vars for production). Without it the tag is omitted entirely, so local dev and CI builds stay analytics-free.
 
 ## Checks
 
@@ -33,11 +33,18 @@ npx astro check        # type-check .astro files
 
 ## Deployment
 
-Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `npm run build:site` and deploy command `npm run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). The build command is a Cloudflare dashboard setting, not read from this repo, so it has to be updated by hand there at cutover — nothing in this file enforces it. `npm run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
+Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `npm run build:site` and deploy command `npm run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). Both commands are Cloudflare dashboard settings, not read from this repo, so changing either means editing it by hand there — nothing in this file enforces them. `npm run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
+
+Workers Builds settings, for reference (dashboard → Workers → this application):
+
+- **Build command:** `npm run build:site`
+- **Deploy command:** `npm run deploy` (not `npx wrangler deploy` — see above).
+- **Build env vars:** `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE` (optional — see "Resume generation" below).
+- **Worker secrets:** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `npx wrangler secret put <name>`.
 
 ## Resume generation
 
-`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `npm run build:site`, `scripts/generate-resume.mjs` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Cloudflare Pages build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Workers Builds' Chromium/Puppeteer compatibility should be re-verified when the AI chat widget cutover (see below) moves builds off Cloudflare Pages; if headless Chromium isn't viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
+`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `npm run build:site`, `scripts/generate-resume.mjs` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
 
 ## Blog
 
@@ -230,26 +237,3 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   Note: the Worker serves grounding from `dist/`, so run `npm run build:site` at least once first, or Jarvis will lack site knowledge.
   Also note: AI calls in dev hit the real DeepSeek API and are billed, so watch your spend.
 - **Tests:** `npm test` (vitest + workers pool), `npm run check:worker`.
-
-### One-time cutover (Pages → Worker), in order
-
-1. **Email routing:** `cd infra && terraform init && terraform apply`
-   (needs `CLOUDFLARE_API_TOKEN` env + `terraform.tfvars`, see
-   `terraform.tfvars.example`). Then click the verification link Cloudflare
-   sends to the inbox.
-2. **Worker secret:** `npx wrangler secret put OPPORTUNITY_INBOX`.
-3. **Workers Builds:** Cloudflare dashboard → Workers → create application →
-   connect this repo. Build command: `npm run build:site`. Deploy command:
-   `npm run deploy` (applies D1 migrations, then `wrangler deploy` — a plain
-   `npx wrangler deploy` here silently skips the migrations). Env vars
-   (build): `GITHUB_TOKEN`,
-   `REQUIRE_GITHUB_PROFILE=1`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE`
-   (optional — see "Resume generation" above).
-4. **Smoke test** on the `workers.dev` URL: pages render, `_redirects` 301s
-   work, chat answers, opportunity email arrives.
-5. **Access-gate previews:** add a Cloudflare Access policy for the
-   `workers.dev` preview URLs (mirrors the old `*.pages.dev` gating).
-6. **Domain move:** Pages project → remove custom domain `murugappan.dev`;
-   Worker → Settings → Domains & Routes → add custom domain `murugappan.dev`.
-7. **Decommission:** after production traffic is verified on the Worker,
-   delete the Pages project `murugu-21-github-io`.
