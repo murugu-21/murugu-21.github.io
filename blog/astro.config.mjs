@@ -1,6 +1,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { defineConfig } from "astro/config"
+import { unified } from "@astrojs/markdown-remark"
 import { FontaineTransform } from "fontaine"
 import react from "@astrojs/react"
 import tailwindcss from "@tailwindcss/vite"
@@ -50,8 +51,12 @@ export default defineConfig({
     // two React instances = invalid hook call. Dedupe pins one copy, and the
     // react-consuming widget deps (root-installed) must be bundled rather
     // than SSR-externalized or they'd node-resolve root React again.
-    resolve: { dedupe: ["react", "react-dom"] },
-    ssr: {
+    // noExternal belongs under `resolve` as of Vite 8 — it silently does
+    // nothing under the old `ssr` key or under `environments.ssr.resolve`,
+    // and the failure only shows up at render time as a null-dispatcher
+    // "Cannot read properties of null (reading 'useContext')".
+    resolve: {
+      dedupe: ["react", "react-dom"],
       noExternal: [
         "lucide-react",
         "@radix-ui/react-slot",
@@ -63,6 +68,10 @@ export default defineConfig({
   integrations: [
     react(),
     sitemap({
+      // Astro 7 surfaces the base path itself ("/blog") as a route alongside
+      // the index ("/blog/"), which would put both in the merged root sitemap
+      // as duplicates. Keep only the trailing-slash form.
+      filter: page => page !== "https://murugappan.dev/blog",
       serialize(item) {
         const slug = new URL(item.url).pathname
           .replace(/^\/blog\//, "")
@@ -75,11 +84,16 @@ export default defineConfig({
     }),
   ],
   markdown: {
+    // Astro 7 defaults to the satteri processor, which doesn't run unified
+    // plugins; the heading-anchor pair below needs the remark/rehype pipeline,
+    // so opt back into it explicitly.
+    processor: unified({
+      rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig]],
+    }),
     // PrismJS class-based highlighting, matching gatsby-remark-prismjs; the
     // theme CSS (prismjs/themes/prism.css) is imported in BaseLayout. Mermaid
     // blocks stay as plain <code class="language-mermaid"> and are rendered
     // client-side (see BaseLayout script).
     syntaxHighlight: "prism",
-    rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig]],
   },
 })
