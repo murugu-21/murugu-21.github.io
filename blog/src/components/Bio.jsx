@@ -38,31 +38,19 @@ const Bio = ({ author, social }) => {
         )}
       </div>
       <div style={{ display: "flex", flexDirection: "row", gap: "1rem" }}>
-        <a
-          href="https://github.com/murugu-21"
-          alt="link to author's github profile"
-        >
+        <a href="https://github.com/murugu-21" alt="link to author's github profile">
           <img
             src={theme === "light" ? githubDark.src : githubLight.src}
             width={32}
             height={32}
-            alt={
-              theme === "light"
-                ? "Github profile link dark"
-                : "Github profile link light"
-            }
+            alt={theme === "light" ? "Github profile link dark" : "Github profile link light"}
           />
         </a>
         <a
           href="https://stackoverflow.com/users/15790108/murugappan-m"
           alt="link to author's stackoverflow profile"
         >
-          <img
-            src={stackOverflow.src}
-            width={32}
-            height={32}
-            alt="stackoverflow profile link"
-          />
+          <img src={stackOverflow.src} width={32} height={32} alt="stackoverflow profile link" />
         </a>
       </div>
     </>

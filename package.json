@@ -8,8 +8,8 @@
     "dev:all": "concurrently -n site,worker -c blue,yellow \"astro dev\" \"wrangler dev --port 8787\"",
     "build": "astro build",
     "preview": "astro preview",
-    "format": "prettier --write \"src/**/*.{astro,ts,scss}\" \"worker/**/*.ts\" \"*.{ts,jsonc}\"",
-    "check-format": "prettier --check \"src/**/*.{astro,ts,scss}\" \"worker/**/*.ts\" \"*.{ts,jsonc}\"",
+    "format": "oxfmt src worker scripts vitest.config.ts wrangler.jsonc astro.config.mjs && prettier --write \"src/**/*.astro\"",
+    "check-format": "oxfmt src worker scripts vitest.config.ts wrangler.jsonc astro.config.mjs --check && prettier --check \"src/**/*.astro\"",
     "build:blog": "npm --prefix blog run build",
     "build:site": "npm run build && npm run build:blog && rm -rf dist/blog && cp -R blog/dist/. dist/blog/ && node scripts/merge-sitemap.mjs && node scripts/merge-llms.mjs && node scripts/generate-markdown.mjs && node scripts/generate-resume.mjs",
     "db:migrate": "wrangler d1 migrations apply jarvis-chats --remote",
@@ -50,6 +50,7 @@
     "concurrently": "^10.0.1",
     "fontaine": "^0.8.0",
     "lint-staged": "^17.3.0",
+    "oxfmt": "^0.65.0",
     "pdf-parse": "^2.4.5",
     "prettier": "^3.0.0",
     "prettier-plugin-astro": "^0.14.0",
@@ -67,6 +68,7 @@
     }
   },
   "lint-staged": {
-    "*.{js,mjs,jsx,ts,tsx,astro,json,jsonc,md,css,scss}": "prettier --write --ignore-unknown"
+    "*.{js,mjs,jsx,ts,tsx,json,jsonc,css,scss}": "oxfmt",
+    "*.{astro,md}": "prettier --write --ignore-unknown"
   }
 }

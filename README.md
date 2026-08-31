@@ -26,7 +26,7 @@ Microsoft Clarity analytics is injected at **build time** when a `PUBLIC_CLARITY
 ## Checks
 
 ```bash
-npm run check-format   # prettier
+npm run check-format   # oxfmt (+ prettier for .astro/.md)
 npx astro check        # type-check .astro files
 ```
 

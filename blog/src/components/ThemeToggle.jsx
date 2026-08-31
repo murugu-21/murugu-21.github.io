@@ -17,22 +17,8 @@ const ThemeToggle = () => {
     theme && (
       <Toggle
         icons={{
-          checked: (
-            <img
-              src={moon.src}
-              width={16}
-              height={16}
-              alt="moon image for dark mode"
-            />
-          ),
-          unchecked: (
-            <img
-              src={sun.src}
-              width={16}
-              height={16}
-              alt="sun image for light mode"
-            />
-          ),
+          checked: <img src={moon.src} width={16} height={16} alt="moon image for dark mode" />,
+          unchecked: <img src={sun.src} width={16} height={16} alt="sun image for light mode" />,
         }}
         checked={theme === "dark"}
         onChange={e => {

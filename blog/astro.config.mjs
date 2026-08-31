@@ -73,9 +73,7 @@ export default defineConfig({
       // as duplicates. Keep only the trailing-slash form.
       filter: page => page !== "https://murugappan.dev/blog",
       serialize(item) {
-        const slug = new URL(item.url).pathname
-          .replace(/^\/blog\//, "")
-          .replace(/\/$/, "")
+        const slug = new URL(item.url).pathname.replace(/^\/blog\//, "").replace(/\/$/, "")
         // posts get their publish date; the index gets the newest post's date
         const lastmod = slug === "" ? NEWEST_POST : POST_DATES[slug]
         if (lastmod) item.lastmod = lastmod

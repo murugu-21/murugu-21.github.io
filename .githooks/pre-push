@@ -5,10 +5,10 @@
 # Emergency bypass: git push --no-verify
 set -e
 
-echo "pre-push 1/6: prettier (root)"
+echo "pre-push 1/6: format (root)"
 npm run --silent check-format
 
-echo "pre-push 2/6: prettier (blog)"
+echo "pre-push 2/6: format (blog)"
 npm --prefix blog run --silent check-format
 
 echo "pre-push 3/6: astro check (root)"

@@ -19,9 +19,7 @@ export async function GET() {
     const title = post.data.title || post.id
     const url = `${base}/${post.id}/`
     const date = post.data.date.toISOString().slice(0, 10)
-    const desc = (post.data.description || excerpt(post.body) || ``)
-      .replace(/\s+/g, ` `)
-      .trim()
+    const desc = (post.data.description || excerpt(post.body) || ``).replace(/\s+/g, ` `).trim()
     lines.push(
       ``,
       `---`,

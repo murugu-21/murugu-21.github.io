@@ -51,8 +51,12 @@ function createStaticServer(rootDir) {
         res.end("Not found");
         return;
       }
-      const contentType = MIME_TYPES[extname(filePath)] ?? "application/octet-stream";
-      res.writeHead(200, {"Content-Type": contentType, "Content-Length": stats.size});
+      const contentType =
+        MIME_TYPES[extname(filePath)] ?? "application/octet-stream";
+      res.writeHead(200, {
+        "Content-Type": contentType,
+        "Content-Length": stats.size
+      });
       createReadStream(filePath).pipe(res);
     } catch {
       res.writeHead(404);

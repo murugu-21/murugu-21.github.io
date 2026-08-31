@@ -34,6 +34,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "oxfmt": "^0.65.0",
     "prettier": "^3.3.0",
     "prettier-plugin-astro": "^0.14.1",
     "tailwindcss": "^4.3.3",
@@ -51,9 +52,9 @@
   },
   "scripts": {
     "build": "astro build",
-    "check-format": "prettier --check \"**/*.{js,jsx,ts,tsx,astro,json,md,css}\"",
+    "check-format": "oxfmt src astro.config.mjs --check && prettier --check \"src/**/*.astro\" \"content/**/*.md\"",
     "dev": "astro dev",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,astro,json,md,css}\"",
+    "format": "oxfmt src astro.config.mjs && prettier --write \"src/**/*.astro\" \"content/**/*.md\"",
     "start": "astro dev",
     "serve": "astro preview",
     "test": "astro check"

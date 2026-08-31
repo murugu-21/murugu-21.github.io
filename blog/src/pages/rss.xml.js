@@ -13,10 +13,9 @@ const parser = new MarkdownIt()
 // assets the build actually emits. Importing them here runs them through
 // Astro's asset pipeline and yields the hashed, base-prefixed public path.
 const ORIGIN = new URL(SITE_URL).origin
-const assets = import.meta.glob(
-  "../../content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}",
-  { eager: true },
-)
+const assets = import.meta.glob("../../content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}", {
+  eager: true,
+})
 const ASSET_URLS = new Map(
   Object.entries(assets).map(([file, mod]) => {
     const asset = mod.default
@@ -30,14 +29,11 @@ const ASSET_URLS = new Map(
 // Point a post's relative <img src> at the emitted asset. Absolute URLs,
 // root-relative paths and anchors are left untouched.
 function absolutizeAssets(html, postId) {
-  return html.replace(
-    /(<img\b[^>]*?\bsrc=")([^"]+)(")/gi,
-    (match, before, url, after) => {
-      if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(url)) return match
-      const resolved = ASSET_URLS.get(`${postId}/${url.replace(/^\.\//, "")}`)
-      return resolved ? before + resolved + after : match
-    },
-  )
+  return html.replace(/(<img\b[^>]*?\bsrc=")([^"]+)(")/gi, (match, before, url, after) => {
+    if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(url)) return match
+    const resolved = ASSET_URLS.get(`${postId}/${url.replace(/^\.\//, "")}`)
+    return resolved ? before + resolved + after : match
+  })
 }
 
 // Feed at /blog/rss.xml, ported from gatsby-plugin-feed: newest first, with
