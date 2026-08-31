@@ -114,18 +114,15 @@ export default defineConfig({
       // Tailwind is scoped to the chat widget island (see chat.css — theme +
       // utilities only, no preflight, so it can't touch the site's SCSS).
       tailwindcss(),
-      FontaineTransform.vite({
-        fallbacks: ["Arial", "Georgia"],
-        // @font-face src urls are relative to global.scss
-        resolvePath: id => new URL("./src/styles/" + id, import.meta.url)
-      }),
       // Generates metric-tuned fallback @font-face rules (size-adjust /
-      // ascent-override etc.) for the @fontsource fonts the blog loads, so
-      // the swap from the system fallback to Merriweather/Montserrat causes
-      // no layout shift (fixes the ~0.2 CLS from font swap).
+      // ascent-override etc.) for Agustina and the @fontsource fonts
+      // (Merriweather, Montserrat) so the swap from the system fallback to
+      // the real face causes no layout shift (fixes the ~0.2 CLS from font
+      // swap). One instance covers every stylesheet in the build now that
+      // there's a single Vite pipeline; the fallback stack is the union of
+      // what the two former instances used.
       FontaineTransform.vite({
-        fallbacks: ["Georgia", "Times New Roman"],
-        resolvePath: id => new URL("./node_modules/" + id, import.meta.url)
+        fallbacks: ["Arial", "Georgia", "Times New Roman"]
       })
     ]
   },
