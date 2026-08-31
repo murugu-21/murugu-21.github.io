@@ -1,15 +1,19 @@
-import React from "react"
+import React from "react";
 
-import { formatReadingTime } from "../utils/helpers"
+import {formatReadingTime} from "../utils/helpers";
 
 // `post` is the serialized shape built in index.astro:
 // { href, title, dateFormatted, minutes, tags, description?, excerpt }
-const Post = ({ post }) => {
-  const title = post.title
+const Post = ({post}) => {
+  const title = post.title;
 
   return (
     <li>
-      <article className="post-list-item" itemScope itemType="http://schema.org/Article">
+      <article
+        className="post-list-item"
+        itemScope
+        itemType="http://schema.org/Article"
+      >
         <header>
           <h2>
             <a href={post.href} itemProp="url">
@@ -24,7 +28,7 @@ const Post = ({ post }) => {
             style={{
               display: "flex",
               flexDirection: "row",
-              gap: "10px",
+              gap: "10px"
             }}
           >
             {post.tags.map((tag, idx) => {
@@ -33,27 +37,27 @@ const Post = ({ post }) => {
                   style={{
                     fontSize: "var(--fontSize-0)",
                     border: "1px solid var(--color-box)",
-                    padding: "2px",
+                    padding: "2px"
                   }}
                   key={idx}
                 >
                   {tag}
                 </div>
-              )
+              );
             })}
           </div>
         </header>
         <section>
           <p
             dangerouslySetInnerHTML={{
-              __html: post.description || post.excerpt,
+              __html: post.description || post.excerpt
             }}
             itemProp="description"
           />
         </section>
       </article>
     </li>
-  )
-}
+  );
+};
 
-export default React.memo(Post)
+export default React.memo(Post);

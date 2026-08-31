@@ -1,18 +1,18 @@
-import "../styles/tag.css"
-import React from "react"
+import "../styles/tag.css";
+import React from "react";
 
 const TAG_STYLES = {
   display: "flex",
   alignItems: "center",
   borderRadius: ".25em",
-  marginRight: ".75em",
-}
+  marginRight: ".75em"
+};
 
 const TAG_NAME_STYLES = {
   padding: `0 .5em`,
   borderRight: "none",
-  border: "1px solid var(--color-text)",
-}
+  border: "1px solid var(--color-text)"
+};
 
 const TAG_COUNT_STYLES = {
   display: "flex",
@@ -22,16 +22,16 @@ const TAG_COUNT_STYLES = {
   color: "white",
   borderRadius: "0 .25em .25em 0",
   padding: "0 .5em",
-  alignSelf: "stretch",
-}
+  alignSelf: "stretch"
+};
 
 const INPUT_STYLES = {
   opacity: 0,
   position: "absolute",
-  left: "-99999px",
-}
+  left: "-99999px"
+};
 
-const Tag = ({ tag, onTagSelect, isSelected, marginTop = ".875em" }) => {
+const Tag = ({tag, onTagSelect, isSelected, marginTop = ".875em"}) => {
   return (
     <>
       {onTagSelect && (
@@ -47,12 +47,12 @@ const Tag = ({ tag, onTagSelect, isSelected, marginTop = ".875em" }) => {
       )}
       <label
         htmlFor={onTagSelect && `tag-${tag.name}`}
-        style={{ ...TAG_STYLES, marginTop: marginTop }}
+        style={{...TAG_STYLES, marginTop: marginTop}}
       >
         <span
           style={{
             ...TAG_NAME_STYLES,
-            borderRadius: tag.count != null ? ".25em 0 0 .25em" : ".25em",
+            borderRadius: tag.count != null ? ".25em 0 0 .25em" : ".25em"
           }}
         >
           {tag.name}
@@ -60,7 +60,7 @@ const Tag = ({ tag, onTagSelect, isSelected, marginTop = ".875em" }) => {
         {tag.count && <div style={TAG_COUNT_STYLES}>{tag.count}</div>}
       </label>
     </>
-  )
-}
+  );
+};
 
-export default React.memo(Tag)
+export default React.memo(Tag);

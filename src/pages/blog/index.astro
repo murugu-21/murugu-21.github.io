@@ -1,25 +1,25 @@
 ---
-import BaseLayout from "../../blog/layouts/BaseLayout.astro"
-import AllPosts from "../../blog/components/AllPosts.jsx"
-import Bio from "../../blog/components/Bio.jsx"
+import BaseLayout from "../../blog/layouts/BaseLayout.astro";
+import AllPosts from "../../blog/components/AllPosts.jsx";
+import Bio from "../../blog/components/Bio.jsx";
 import {
   AUTHOR,
   SOCIAL,
   SITE_TITLE,
   SITE_DESCRIPTION,
   SITE_URL,
-  PERSON,
-} from "../../blog/consts"
+  PERSON
+} from "../../blog/consts";
 import {
   getPublishedPosts,
   postPath,
   formatDate,
   timeToRead,
-  excerpt,
-} from "../../blog/utils/posts"
+  excerpt
+} from "../../blog/utils/posts";
 
 // Newest first, like the old index page query (sort: date DESC).
-const posts = (await getPublishedPosts()).reverse()
+const posts = (await getPublishedPosts()).reverse();
 
 // Serializable shape for the AllPosts React island (replaces the page GraphQL
 // query). `description` is intentionally left undefined when missing so the
@@ -31,8 +31,8 @@ const serialized = posts.map(post => ({
   minutes: timeToRead(post.body),
   tags: post.data.tags,
   description: post.data.description,
-  excerpt: excerpt(post.body),
-}))
+  excerpt: excerpt(post.body)
+}));
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -41,10 +41,10 @@ const jsonLd = {
   name: SITE_TITLE,
   description: SITE_DESCRIPTION,
   url: `${SITE_URL}/`,
-  isPartOf: { "@id": "https://murugappan.dev/#website" },
+  isPartOf: {"@id": "https://murugappan.dev/#website"},
   author: PERSON,
-  publisher: PERSON,
-}
+  publisher: PERSON
+};
 ---
 
 <!-- No title prop: the homepage gets the keyword-rich
