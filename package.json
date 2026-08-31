@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "@cloudflare/vitest-pool-workers": "^0.21.1",
+    "@cloudflare/vitest-pool-workers": "^0.22.0",
     "@cloudflare/workers-types": "^5.20260812.1",
     "@sparticuz/chromium": "^149.0.0",
     "@tailwindcss/vite": "^4.3.3",
@@ -62,7 +62,7 @@
     "sharp": "^0.33.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.10",
+    "vitest": "^4.1.11",
     "wrangler": "^4.121.0"
   },
   "overrides": {
