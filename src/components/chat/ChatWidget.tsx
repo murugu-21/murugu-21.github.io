@@ -310,6 +310,11 @@ export function ChatWidget() {
   useEffect(() => {
     if (localStorage.getItem(TOOLTIP_KEY)) return;
     localStorage.setItem(TOOLTIP_KEY, "1");
+    // Deliberately setState-in-effect: this island is client:idle, so it is
+    // server-rendered and then hydrated, and localStorage is unreadable in
+    // both of those passes. Seeding "shown" from a lazy initializer instead
+    // would make the server and hydration renders disagree.
+    // oxlint-disable-next-line react/set-state-in-effect
     setTooltip("shown");
     const fade = setTimeout(() => setTooltip("fading"), 5000);
     const gone = setTimeout(() => setTooltip("hidden"), 5700);

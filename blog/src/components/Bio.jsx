@@ -1,20 +1,15 @@
-import React from "react"
 import profilePic from "../images/profile-pic.webp"
 import githubDark from "../images/Github-dark.png"
 import githubLight from "../images/Github-light.png"
 import stackOverflow from "../images/stack-overflow.png"
+import { useTheme } from "../utils/useTheme"
 
 // Author/social data comes in as props from the Astro pages (replaces the
 // Gatsby useStaticQuery for siteMetadata).
 const Bio = ({ author, social }) => {
-  const [theme, setTheme] = React.useState(null)
-
-  React.useEffect(() => {
-    setTheme(window.__theme)
-    window.__onThemeChange2 = () => {
-      setTheme(window.__theme)
-    }
-  }, [])
+  // null before the bootstrap script has run, which falls through to the
+  // light-on-dark icon — the same default this rendered server-side.
+  const theme = useTheme()
 
   return (
     <>
