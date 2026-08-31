@@ -55,6 +55,31 @@ function singleFileSitemap() {
   };
 }
 
+// Astro only special-cases a *top-level* /404 as a status-code page, so
+// src/pages/blog/404.astro builds to dist/blog/404/index.html, not
+// dist/blog/404.html. Cloudflare's `not_found_handling: "404-page"` walks up
+// to the nearest 404.html for a miss, so without a copy at the old path
+// every /blog/<miss> silently falls back to the portfolio's top-level 404 —
+// no build error, just a wrong page in production. Restore the old path
+// alongside the new one (verified with `wrangler dev` both ways).
+function blogNotFoundCopy() {
+  return {
+    name: "blog-not-found-copy",
+    hooks: {
+      "astro:build:done": ({dir}) => {
+        const src = new URL("blog/404/index.html", dir);
+        const dest = new URL("blog/404.html", dir);
+        if (!fs.existsSync(src)) {
+          throw new Error(
+            "blog-not-found-copy: dist/blog/404/index.html is missing"
+          );
+        }
+        fs.copyFileSync(src, dest);
+      }
+    }
+  };
+}
+
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
@@ -81,7 +106,8 @@ export default defineConfig({
         return item;
       }
     }),
-    singleFileSitemap()
+    singleFileSitemap(),
+    blogNotFoundCopy()
   ],
   vite: {
     plugins: [
