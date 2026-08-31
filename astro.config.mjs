@@ -75,6 +75,18 @@ function blogNotFoundCopy() {
           );
         }
         fs.copyFileSync(src, dest);
+        // Guard against copying the wrong page under a right-looking path:
+        // this exact regression (dist/blog/404.html silently becoming some
+        // other page, so misses fell back to the portfolio 404 with no build
+        // error) already happened once on this branch and the build, test
+        // suite and astro check all missed it. Assert the copy is actually
+        // the blog's 404 by content, not just present.
+        if (!fs.readFileSync(dest, "utf8").includes("SDE Journey")) {
+          throw new Error(
+            "blog-not-found-copy: dist/blog/404.html does not contain " +
+              'the blog\'s title marker "SDE Journey" — wrong page copied'
+          );
+        }
       }
     }
   };

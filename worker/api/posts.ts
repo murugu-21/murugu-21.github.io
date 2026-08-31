@@ -1,7 +1,8 @@
 // Blog posts for /api/posts come from the site's own llms.txt, the same file
-// Jarvis is grounded on (see grounding.ts). merge-llms.mjs appends every post
-// there at build time as "- [title](url): description", so there is exactly
-// one build artifact listing posts and the API cannot fall behind the blog.
+// Jarvis is grounded on (see grounding.ts). src/pages/llms.txt.ts generates
+// every post there at build time as "- [title](url): description", so there
+// is exactly one build artifact listing posts and the API cannot fall behind
+// the blog.
 
 export type PostSummary = {
   slug: string;
@@ -19,8 +20,8 @@ const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SECTION_HEADING = "## Blog posts";
 
 // The list section is preferred; a whole-document scan is the fallback so a
-// rename of the heading in merge-llms.mjs degrades to "still works" rather
-// than to an empty /api/posts.
+// rename of the heading in src/pages/llms.txt.ts degrades to "still works"
+// rather than to an empty /api/posts.
 function candidateLines(llmsTxt: string): string[] {
   const lines = llmsTxt.split("\n");
   const start = lines.findIndex(l => l.trim() === SECTION_HEADING);

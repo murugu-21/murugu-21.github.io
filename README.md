@@ -49,7 +49,7 @@ The blog (["SDE Journey"](https://murugappan.dev/blog/), migrated from Gatsby) l
     src/blog/              # layout, head, React islands (search, tags, theme toggle, bio),
                            # styles, post helpers, consts.js site metadata
     src/content.config.ts  # blog content collection schema
-    public/blog/           # static files served verbatim (og-image, icon, manifest, sw.js)
+    public/blog/           # static files served verbatim (og-image, sw.js)
 
 ### Writing a post
 
