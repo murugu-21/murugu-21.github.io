@@ -1,8 +1,8 @@
 export function formatReadingTime(minutes) {
   let cups = Math.round(minutes / 5)
   if (cups > 5) {
-    return `${new Array(Math.round(cups / Math.E)).fill("🍱").join("")} ${minutes} min read`
+    return `${Array.from({ length: Math.round(cups / Math.E) }, () => "🍱").join("")} ${minutes} min read`
   } else {
-    return `${new Array(cups || 1).fill("☕️").join("")} ${minutes} min read`
+    return `${Array.from({ length: cups || 1 }, () => "☕️").join("")} ${minutes} min read`
   }
 }

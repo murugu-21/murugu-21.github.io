@@ -29,6 +29,8 @@ jobs:
       - run: npm ci --prefix blog
       - run: npm run check-format
       - run: npm --prefix blog run check-format
+      - run: npm run lint
+      - run: npm --prefix blog run lint
       - run: npx astro check
       - run: npm run check:worker
       - run: npm test

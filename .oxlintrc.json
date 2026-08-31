@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "import", "promise"],
+  "categories": {"correctness": "error"},
+  "rules": {
+    "no-irregular-whitespace": ["error", {"skipComments": true}],
+    "react/purity": "warn",
+    "react/set-state-in-effect": "warn"
+  }
+}
