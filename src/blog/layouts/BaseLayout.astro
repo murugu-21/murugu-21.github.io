@@ -1,35 +1,35 @@
 ---
 // Custom typefaces (replaces typeface-montserrat / typeface-merriweather)
-import "@fontsource/montserrat/400.css"
-import "@fontsource/montserrat/700.css"
-import "@fontsource/montserrat/900.css"
-import "@fontsource/merriweather/400.css"
-import "@fontsource/merriweather/400-italic.css"
-import "@fontsource/merriweather/700.css"
-import "@fontsource/merriweather/700-italic.css"
-import "@fontsource/merriweather/900.css"
+import "@fontsource/montserrat/400.css";
+import "@fontsource/montserrat/700.css";
+import "@fontsource/montserrat/900.css";
+import "@fontsource/merriweather/400.css";
+import "@fontsource/merriweather/400-italic.css";
+import "@fontsource/merriweather/700.css";
+import "@fontsource/merriweather/700-italic.css";
+import "@fontsource/merriweather/900.css";
 // normalize CSS across browsers
-import "../styles/normalize.css"
+import "../styles/normalize.css";
 // custom CSS styles
-import "../styles/style.css"
+import "../styles/style.css";
 // Highlighting for code blocks
-import "prismjs/themes/prism.css"
+import "prismjs/themes/prism.css";
 // react-toggle styling for the theme switch
-import "../styles/customToggle.css"
+import "../styles/customToggle.css";
 
-import BaseHead from "../components/BaseHead.astro"
-import ThemeToggle from "../components/ThemeToggle.jsx"
-import ChatWidget from "../../components/chat/ChatWidget.astro"
-import { SITE_TITLE } from "../consts"
+import BaseHead from "../components/BaseHead.astro";
+import ThemeToggle from "../components/ThemeToggle.jsx";
+import ChatWidget from "../../components/chat/ChatWidget.astro";
+import {SITE_TITLE} from "../consts";
 
 // title/description plus SEO passthroughs for BaseHead (ogType,
 // publishedTime, tags, noindex, jsonLd).
-const { title, description, ...seo } = Astro.props
+const {title, description, ...seo} = Astro.props;
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
-const base = "/blog"
-const rootPath = `${base}/`
-const isRootPath = Astro.url.pathname === rootPath
+const base = "/blog";
+const rootPath = `${base}/`;
+const isRootPath = Astro.url.pathname === rootPath;
 ---
 
 <!doctype html>
@@ -46,11 +46,11 @@ const isRootPath = Astro.url.pathname === rootPath
     <script is:inline>
       // Shared persistence contract with the portfolio app: key "isDark",
       // value is a JSON bool. Derive the blog's "dark"/"light" string from it.
-      var preferredTheme = null
+      var preferredTheme = null;
       try {
-        var stored = localStorage.getItem("isDark")
+        var stored = localStorage.getItem("isDark");
         if (stored !== null)
-          preferredTheme = JSON.parse(stored) ? "dark" : "light"
+          preferredTheme = JSON.parse(stored) ? "dark" : "light";
       } catch (err) {}
 
       function setTheme(newTheme) {
@@ -58,26 +58,26 @@ const isRootPath = Astro.url.pathname === rootPath
           preferredTheme &&
           document.body.classList.contains(preferredTheme)
         ) {
-          document.body.classList.replace(preferredTheme, newTheme)
+          document.body.classList.replace(preferredTheme, newTheme);
         } else {
-          document.body.classList.add(newTheme)
+          document.body.classList.add(newTheme);
         }
-        window.__theme = newTheme
-        preferredTheme = newTheme
-        window.dispatchEvent(new Event("themechange"))
+        window.__theme = newTheme;
+        preferredTheme = newTheme;
+        window.dispatchEvent(new Event("themechange"));
       }
 
       window.__setPreferredTheme = function (newTheme) {
-        setTheme(newTheme)
+        setTheme(newTheme);
         try {
-          localStorage.setItem("isDark", JSON.stringify(newTheme === "dark"))
+          localStorage.setItem("isDark", JSON.stringify(newTheme === "dark"));
         } catch (err) {}
-      }
-      var darkQuery = window.matchMedia("(prefers-color-scheme: dark)")
+      };
+      var darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
       darkQuery.onchange = function (e) {
-        window.__setPreferredTheme(e.matches ? "dark" : "light")
-      }
-      setTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"))
+        window.__setPreferredTheme(e.matches ? "dark" : "light");
+      };
+      setTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"));
     </script>
     <div class="global-wrapper" data-is-root-path={isRootPath}>
       <header class="global-header">
@@ -126,62 +126,61 @@ const isRootPath = Astro.url.pathname === rootPath
          scrolls near the viewport (IntersectionObserver, 300px margin), so it
          never competes with the initial page load. -->
     <script>
-      const blocks = document.querySelectorAll("code.language-mermaid")
+      const blocks = document.querySelectorAll("code.language-mermaid");
       if (blocks.length > 0) {
         // Same lazy medium-zoom wiring as post images ([...slug].astro), for
         // the diagram <img>s created below. Separate memoized instance since
         // these elements don't exist at page load.
-        let zoomPromise: Promise<any> | null = null
+        let zoomPromise: Promise<any> | null = null;
         const ensureZoom = () =>
-          (zoomPromise ??= import("medium-zoom").then(
-            ({ default: mediumZoom }) =>
-              mediumZoom({ margin: 24, background: "rgba(0, 0, 0, 0.85)" }),
-          ))
+          (zoomPromise ??= import("medium-zoom").then(({default: mediumZoom}) =>
+            mediumZoom({margin: 24, background: "rgba(0, 0, 0, 0.85)"})
+          ));
         const wireZoom = (img: HTMLImageElement) => {
           const attach = () =>
             ensureZoom().then(zoom => {
               if (!img.dataset.zoomWired) {
-                img.dataset.zoomWired = "1"
-                zoom.attach(img)
+                img.dataset.zoomWired = "1";
+                zoom.attach(img);
               }
-              return zoom
-            })
+              return zoom;
+            });
           img.addEventListener("pointerenter", () => void attach(), {
-            once: true,
-          })
+            once: true
+          });
           img.addEventListener(
             "click",
             async () => {
-              const zoom = await attach()
+              const zoom = await attach();
               if (!document.querySelector(".medium-zoom-image--opened")) {
-                zoom.open({ target: img })
+                zoom.open({target: img});
               }
             },
-            { once: true },
-          )
-        }
+            {once: true}
+          );
+        };
 
-        let loaded = false
+        let loaded = false;
         const renderAll = () => {
-          if (loaded) return
-          loaded = true
-          import("mermaid").then(({ default: mermaid }) => {
+          if (loaded) return;
+          loaded = true;
+          import("mermaid").then(({default: mermaid}) => {
             mermaid.initialize({
               startOnLoad: false,
               theme: "neutral",
               securityLevel: "loose",
-              fontFamily: "Merriweather, Georgia, serif",
-            })
+              fontFamily: "Merriweather, Georgia, serif"
+            });
             blocks.forEach((block, i) => {
-              const pre = block.closest("pre") || block
-              const source = block.textContent || ""
-              const id = `mermaid-svg-${i}`
+              const pre = block.closest("pre") || block;
+              const source = block.textContent || "";
+              const id = `mermaid-svg-${i}`;
 
               mermaid
                 .render(id, source)
-                .then(({ svg }) => {
-                  const figure = document.createElement("figure")
-                  figure.className = "mermaid-diagram"
+                .then(({svg}) => {
+                  const figure = document.createElement("figure");
+                  figure.className = "mermaid-diagram";
                   // Serve the SVG through an <img> (blob URL) so medium-zoom
                   // can attach — it only supports IMG elements. Inside an
                   // SVG-image the page's webfont is unavailable, but Georgia
@@ -189,43 +188,43 @@ const isRootPath = Astro.url.pathname === rootPath
                   // stack) renders instead — visually near-identical. The blob
                   // URL is intentionally never revoked: medium-zoom keeps
                   // using the src for the zoomed view.
-                  const img = document.createElement("img")
-                  const viewBox = svg.match(/viewBox="([^"]+)"/)
+                  const img = document.createElement("img");
+                  const viewBox = svg.match(/viewBox="([^"]+)"/);
                   if (viewBox) {
                     const [, , width, height] = viewBox[1]
                       .trim()
                       .split(/\s+/)
-                      .map(Number)
+                      .map(Number);
                     if (width && height) {
-                      img.width = Math.round(width)
-                      img.height = Math.round(height)
+                      img.width = Math.round(width);
+                      img.height = Math.round(height);
                     }
                   }
                   img.src = URL.createObjectURL(
-                    new Blob([svg], { type: "image/svg+xml" }),
-                  )
-                  img.alt = `Diagram ${i + 1}`
-                  figure.appendChild(img)
-                  pre.replaceWith(figure)
-                  wireZoom(img)
+                    new Blob([svg], {type: "image/svg+xml"})
+                  );
+                  img.alt = `Diagram ${i + 1}`;
+                  figure.appendChild(img);
+                  pre.replaceWith(figure);
+                  wireZoom(img);
                 })
                 .catch(err => {
                   // Leave the source block in place so the page still renders.
-                  console.error("Mermaid render failed:", err)
-                })
-            })
-          })
-        }
+                  console.error("Mermaid render failed:", err);
+                });
+            });
+          });
+        };
 
         const io = new IntersectionObserver(
           (entries, obs) => {
-            if (!entries.some(e => e.isIntersecting)) return
-            obs.disconnect()
-            renderAll()
+            if (!entries.some(e => e.isIntersecting)) return;
+            obs.disconnect();
+            renderAll();
           },
-          { rootMargin: "300px" },
-        )
-        blocks.forEach(b => io.observe(b.closest("pre") || b))
+          {rootMargin: "300px"}
+        );
+        blocks.forEach(b => io.observe(b.closest("pre") || b));
       }
     </script>
     <ChatWidget />

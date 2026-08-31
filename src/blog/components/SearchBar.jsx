@@ -1,5 +1,5 @@
-import React from "react"
-import "../styles/search.css"
+import React from "react";
+import "../styles/search.css";
 
 const SEARCH_STYLE = {
   width: "100%",
@@ -8,10 +8,10 @@ const SEARCH_STYLE = {
   borderRadius: "0.5rem",
   border: "0.1rem solid var(--color-primary)",
   backgroundColor: "var(--color-background)",
-  color: "var(--color-text)",
-}
+  color: "var(--color-text)"
+};
 
-const SearchBar = ({ query, onChange }) => {
+const SearchBar = ({query, onChange}) => {
   return (
     <input
       id="search"
@@ -22,7 +22,7 @@ const SearchBar = ({ query, onChange }) => {
       value={query}
       onInput={onChange}
     />
-  )
-}
+  );
+};
 
-export default React.memo(SearchBar)
+export default React.memo(SearchBar);

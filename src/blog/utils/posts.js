@@ -1,5 +1,5 @@
-import { getCollection } from "astro:content"
-import getReadingTime from "reading-time"
+import {getCollection} from "astro:content";
+import getReadingTime from "reading-time";
 
 // All posts, sorted by date ASC (the order gatsby-node.js used to wire up
 // previous/next links). Drafts (content/blog/draft/**) are excluded from
@@ -7,15 +7,15 @@ import getReadingTime from "reading-time"
 export async function getPublishedPosts() {
   const posts = await getCollection(
     "blog",
-    post => !(import.meta.env.PROD && post.id.startsWith("draft/")),
-  )
-  return posts.sort((a, b) => a.data.date - b.data.date)
+    post => !(import.meta.env.PROD && post.id.startsWith("draft/"))
+  );
+  return posts.sort((a, b) => a.data.date - b.data.date);
 }
 
 // Site-relative URL for a post, e.g. /blog/coin-change-problem/. Literal
 // rather than import.meta.env.BASE_URL: the /blog prefix now comes from this
 // route's position under src/pages/blog/, not from an Astro `base` setting.
-export const postPath = id => `/blog/${id}/`
+export const postPath = id => `/blog/${id}/`;
 
 // Matches Gatsby's date(formatString: "MMMM DD, YYYY"), e.g. "August 09, 2021"
 export function formatDate(date) {
@@ -23,13 +23,14 @@ export function formatDate(date) {
     month: "long",
     day: "2-digit",
     year: "numeric",
-    timeZone: "UTC",
-  })
+    timeZone: "UTC"
+  });
 }
 
 // Reading time in whole minutes from the raw markdown body (replaces
 // Gatsby's MarkdownRemark.timeToRead).
-export const timeToRead = body => Math.max(1, Math.ceil(getReadingTime(body || "").minutes))
+export const timeToRead = body =>
+  Math.max(1, Math.ceil(getReadingTime(body || "").minutes));
 
 // Plain-text excerpt from the raw markdown body (replaces Gatsby's
 // excerpt(pruneLength: 160)); used wherever frontmatter description is absent.
@@ -40,7 +41,7 @@ export function excerpt(body, length = 160) {
     .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/[#>*_`~]/g, "")
     .replace(/\s+/g, " ")
-    .trim()
-  if (text.length <= length) return text
-  return text.slice(0, length).replace(/\s+\S*$/, "") + "…"
+    .trim();
+  if (text.length <= length) return text;
+  return text.slice(0, length).replace(/\s+\S*$/, "") + "…";
 }

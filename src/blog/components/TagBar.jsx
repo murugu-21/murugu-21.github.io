@@ -1,12 +1,12 @@
-import Tag from "./Tag.jsx"
-import React from "react"
+import Tag from "./Tag.jsx";
+import React from "react";
 
 const WRAPPER_STYLES = {
   display: "flex",
-  flexWrap: "wrap",
-}
+  flexWrap: "wrap"
+};
 
-const TagBar = ({ tags, onTagSelect, selectedTags, marginTop }) => {
+const TagBar = ({tags, onTagSelect, selectedTags, marginTop}) => {
   return (
     <div style={WRAPPER_STYLES}>
       {tags.map(tag => {
@@ -18,10 +18,10 @@ const TagBar = ({ tags, onTagSelect, selectedTags, marginTop }) => {
             onTagSelect={onTagSelect}
             isSelected={selectedTags.includes(tag.name)}
           />
-        )
+        );
       })}
     </div>
-  )
-}
+  );
+};
 
-export default TagBar
+export default TagBar;

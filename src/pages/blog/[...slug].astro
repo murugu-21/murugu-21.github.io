@@ -1,44 +1,44 @@
 ---
-import { render } from "astro:content"
-import BaseLayout from "../../blog/layouts/BaseLayout.astro"
-import Bio from "../../blog/components/Bio.jsx"
-import { AUTHOR, SOCIAL, SITE_TITLE, SITE_URL, PERSON } from "../../blog/consts"
+import {render} from "astro:content";
+import BaseLayout from "../../blog/layouts/BaseLayout.astro";
+import Bio from "../../blog/components/Bio.jsx";
+import {AUTHOR, SOCIAL, SITE_TITLE, SITE_URL, PERSON} from "../../blog/consts";
 import {
   getPublishedPosts,
   postPath,
   formatDate,
   timeToRead,
-  excerpt,
-} from "../../blog/utils/posts"
-import { formatReadingTime } from "../../blog/utils/helpers"
+  excerpt
+} from "../../blog/utils/posts";
+import {formatReadingTime} from "../../blog/utils/helpers";
 
 // One page per post; prev/next wired in date-ASC order, exactly like the old
 // gatsby-node.js createPages loop.
 export async function getStaticPaths() {
-  const posts = await getPublishedPosts()
+  const posts = await getPublishedPosts();
   return posts.map((post, index) => ({
-    params: { slug: post.id },
+    params: {slug: post.id},
     props: {
       post,
       previous: index === 0 ? null : posts[index - 1],
-      next: index === posts.length - 1 ? null : posts[index + 1],
-    },
-  }))
+      next: index === posts.length - 1 ? null : posts[index + 1]
+    }
+  }));
 }
 
-const { post, previous, next } = Astro.props
-const { Content } = await render(post)
+const {post, previous, next} = Astro.props;
+const {Content} = await render(post);
 
-const description = post.data.description || excerpt(post.body)
+const description = post.data.description || excerpt(post.body);
 
-const postUrl = `${SITE_URL}/${post.id}/`
+const postUrl = `${SITE_URL}/${post.id}/`;
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   headline: post.data.title,
   description,
   url: postUrl,
-  mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+  mainEntityOfPage: {"@type": "WebPage", "@id": postUrl},
   datePublished: post.data.date.toISOString(),
   dateModified: post.data.date.toISOString(),
   keywords: post.data.tags.join(", "),
@@ -49,9 +49,9 @@ const jsonLd = {
     "@type": "Blog",
     "@id": `${SITE_URL}/#blog`,
     name: SITE_TITLE,
-    url: `${SITE_URL}/`,
-  },
-}
+    url: `${SITE_URL}/`
+  }
+};
 ---
 
 <BaseLayout
@@ -110,20 +110,20 @@ const jsonLd = {
   // Scoped to the articleBody <section>: the Bio avatar / social icon images
   // in the article footer are links, not zoomable content.
   const imgs = document.querySelectorAll<HTMLImageElement>(
-    "article.blog-post section img",
-  )
+    "article.blog-post section img"
+  );
   if (imgs.length > 0) {
     let zoomPromise: Promise<
       ReturnType<typeof import("medium-zoom").default>
-    > | null = null
+    > | null = null;
     const loadZoom = () =>
-      (zoomPromise ??= import("medium-zoom").then(({ default: mediumZoom }) =>
-        mediumZoom(imgs, { margin: 24, background: "rgba(0, 0, 0, 0.85)" }),
-      ))
+      (zoomPromise ??= import("medium-zoom").then(({default: mediumZoom}) =>
+        mediumZoom(imgs, {margin: 24, background: "rgba(0, 0, 0, 0.85)"})
+      ));
     imgs.forEach(img => {
       img.addEventListener("pointerenter", () => void loadZoom(), {
-        once: true,
-      })
+        once: true
+      });
       img.addEventListener(
         "click",
         async event => {
@@ -131,16 +131,16 @@ const jsonLd = {
           // navigate away before the zoom opens. Those hrefs point at the
           // source file next to index.md, which is never emitted as a public
           // asset, so following them 404s. Zoom is the click-to-view path.
-          if (img.closest("a")) event.preventDefault()
-          const zoom = await loadZoom()
+          if (img.closest("a")) event.preventDefault();
+          const zoom = await loadZoom();
           // If the library's own click handler already opened it (it attaches
           // on init after a hover preload), don't double-open.
           if (!document.querySelector(".medium-zoom-image--opened")) {
-            zoom.open({ target: img })
+            zoom.open({target: img});
           }
         },
-        { once: true },
-      )
-    })
+        {once: true}
+      );
+    });
   }
 </script>

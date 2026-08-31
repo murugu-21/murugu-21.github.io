@@ -1,10 +1,10 @@
 ---
-import { SITE_TITLE, SITE_DESCRIPTION, SOCIAL } from "../consts"
+import {SITE_TITLE, SITE_DESCRIPTION, SOCIAL} from "../consts";
 
 // Above-the-fold fonts, preloaded to shrink the font-swap window (CLS).
 // ?url resolves to the same hashed asset the @fontsource CSS references.
-import montserratBlack from "@fontsource/montserrat/files/montserrat-latin-900-normal.woff2?url"
-import merriweatherRegular from "@fontsource/merriweather/files/merriweather-latin-400-normal.woff2?url"
+import montserratBlack from "@fontsource/montserrat/files/montserrat-latin-900-normal.woff2?url";
+import merriweatherRegular from "@fontsource/merriweather/files/merriweather-latin-400-normal.woff2?url";
 
 // Ported from the old react-helmet Seo component (src/components/seo.js).
 // `title` omitted/null → homepage variant. `ogType: "article"` adds the
@@ -16,28 +16,28 @@ const {
   publishedTime = null,
   tags = [],
   noindex = false,
-  jsonLd = null,
-} = Astro.props
+  jsonLd = null
+} = Astro.props;
 
-const metaDescription = description || SITE_DESCRIPTION
+const metaDescription = description || SITE_DESCRIPTION;
 const fullTitle = title
   ? `${title} | ${SITE_TITLE}`
-  : `${SITE_TITLE} — ${SITE_DESCRIPTION}`
-const ogTitle = title || SITE_TITLE
+  : `${SITE_TITLE} — ${SITE_DESCRIPTION}`;
+const ogTitle = title || SITE_TITLE;
 
 // Self-referencing canonical. The pathname already includes the base path
 // ("/blog/..."), so build it from the site ORIGIN to avoid doubling the prefix.
-const origin = new URL(import.meta.env.SITE).origin
+const origin = new URL(import.meta.env.SITE).origin;
 // Pages are served as directories (/blog/, /blog/<slug>/) — keep the
 // trailing slash in the canonical so it matches the served URL + sitemap.
 const pathname = Astro.url.pathname.endsWith("/")
   ? Astro.url.pathname
-  : `${Astro.url.pathname}/`
-const canonical = `${origin}${pathname}`
+  : `${Astro.url.pathname}/`;
+const canonical = `${origin}${pathname}`;
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
-const base = "/blog"
-const ogImage = `${origin}${base}/og-image.png`
+const base = "/blog";
+const ogImage = `${origin}${base}/og-image.png`;
 
 // Microsoft Clarity project id, set per-environment in Cloudflare Pages build
 // env vars. PUBLIC_ because the value is inlined into the served HTML anyway.
@@ -48,7 +48,7 @@ const ogImage = `${origin}${base}/og-image.png`
 // stub buffers clarity() calls until then.
 // trim(): a stray space pasted into the build env var otherwise 400s the tag URL
 const PUBLIC_CLARITY_PROJECT_ID =
-  import.meta.env.PUBLIC_CLARITY_PROJECT_ID?.trim()
+  import.meta.env.PUBLIC_CLARITY_PROJECT_ID?.trim();
 const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
   ? `(function () {
   window.clarity =
@@ -68,7 +68,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     setTimeout(loadClarity, 2000);
   }
 })();`
-  : null
+  : null;
 ---
 
 <meta charset="utf-8" />
@@ -157,5 +157,5 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
 <script>
   // Shared WebMCP tool registration from the portfolio app (same cross-app
   // import pattern as the chat widget).
-  import "../../lib/webmcp"
+  import "../../lib/webmcp";
 </script>
