@@ -9,24 +9,25 @@ import "@fontsource/merriweather/700.css"
 import "@fontsource/merriweather/700-italic.css"
 import "@fontsource/merriweather/900.css"
 // normalize CSS across browsers
-import "../normalize.css"
+import "../styles/normalize.css"
 // custom CSS styles
-import "../style.css"
+import "../styles/style.css"
 // Highlighting for code blocks
 import "prismjs/themes/prism.css"
 // react-toggle styling for the theme switch
-import "../components/customToggle.css"
+import "../styles/customToggle.css"
 
 import BaseHead from "../components/BaseHead.astro"
 import ThemeToggle from "../components/ThemeToggle.jsx"
-import ChatWidget from "../components/ChatWidget.astro"
+import ChatWidget from "../../components/chat/ChatWidget.astro"
 import { SITE_TITLE } from "../consts"
 
 // title/description plus SEO passthroughs for BaseHead (ogType,
 // publishedTime, tags, noindex, jsonLd).
 const { title, description, ...seo } = Astro.props
 
-const base = import.meta.env.BASE_URL.replace(/\/$/, "")
+// Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
+const base = "/blog"
 const rootPath = `${base}/`
 const isRootPath = Astro.url.pathname === rootPath
 ---

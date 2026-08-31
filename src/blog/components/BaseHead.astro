@@ -35,7 +35,8 @@ const pathname = Astro.url.pathname.endsWith("/")
   : `${Astro.url.pathname}/`
 const canonical = `${origin}${pathname}`
 
-const base = import.meta.env.BASE_URL.replace(/\/$/, "")
+// Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
+const base = "/blog"
 const ogImage = `${origin}${base}/og-image.png`
 
 // Microsoft Clarity project id, set per-environment in Cloudflare Pages build
@@ -77,7 +78,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
 <link rel="canonical" href={canonical} />
 {
   /* Agent discovery, same relations the portfolio layout emits (see
-    ../../../src/layouts/Layout.astro): the site's OpenAPI description and the
+    ../../layouts/Layout.astro): the site's OpenAPI description and the
     developer portal that documents it. Absolute because the blog is served
     under a base path. */
 }
@@ -152,5 +153,5 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
 <script>
   // Shared WebMCP tool registration from the portfolio app (same cross-app
   // import pattern as the chat widget).
-  import "../../../src/lib/webmcp"
+  import "../../lib/webmcp"
 </script>

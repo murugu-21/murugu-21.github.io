@@ -7,8 +7,8 @@ import {PDFParse} from "pdf-parse";
 
 // Renders /resume as a PDF with headless Chromium and writes it to
 // dist/resume.pdf. Runs as the last step of `build:site`, after dist/ is
-// final (blog merged in, sitemap/llms merged) so the static server below
-// serves exactly what ships to production.
+// final (markdown renditions written) so the static server below serves
+// exactly what ships to production.
 
 const DIST_DIR = new URL("../dist/", import.meta.url).pathname;
 const OUT_PATH = new URL("../dist/resume.pdf", import.meta.url).pathname;

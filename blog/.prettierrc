@@ -1,5 +1,0 @@
-{
-  "arrowParens": "avoid",
-  "semi": false,
-  "plugins": ["prettier-plugin-astro"]
-}

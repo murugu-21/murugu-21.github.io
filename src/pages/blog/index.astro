@@ -1,7 +1,7 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro"
-import AllPosts from "../components/AllPosts.jsx"
-import Bio from "../components/Bio.jsx"
+import BaseLayout from "../../blog/layouts/BaseLayout.astro"
+import AllPosts from "../../blog/components/AllPosts.jsx"
+import Bio from "../../blog/components/Bio.jsx"
 import {
   AUTHOR,
   SOCIAL,
@@ -9,14 +9,14 @@ import {
   SITE_DESCRIPTION,
   SITE_URL,
   PERSON,
-} from "../consts"
+} from "../../blog/consts"
 import {
   getPublishedPosts,
   postPath,
   formatDate,
   timeToRead,
   excerpt,
-} from "../utils/posts"
+} from "../../blog/utils/posts"
 
 // Newest first, like the old index page query (sort: date DESC).
 const posts = (await getPublishedPosts()).reverse()
