@@ -20,21 +20,16 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            blog/package-lock.json
       - run: npm ci
       # Secrets live in gitignored .dev.vars locally; wrangler types needs the
       # keys present so the generated Env includes them.
       - run: printf 'OPPORTUNITY_INBOX=ci@example.com\nDEEPSEEK_API_KEY=placeholder-key\n' > .dev.vars
       - run: npx wrangler types
-      - run: npm ci --prefix blog
       - run: npm run check-format
-      - run: npm --prefix blog run check-format
       - run: npm run lint
-      - run: npm --prefix blog run lint
       - run: npx astro check
       - run: npm run check:worker
       - run: npm test
-      - run: npm --prefix blog run test
       - run: npm run build:site
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

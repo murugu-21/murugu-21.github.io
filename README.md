@@ -33,7 +33,7 @@ npx astro check        # type-check .astro files
 
 ## Deployment
 
-Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `npm ci --prefix blog && npm run build:site` and deploy command `npm run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). `npm run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker tests, blog tests, and a build smoke test including resume generation.
+Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `npm run build:site` and deploy command `npm run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). The build command is a Cloudflare dashboard setting, not read from this repo, so it has to be updated by hand there at cutover — nothing in this file enforces it. `npm run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
 
 ## Resume generation
 
@@ -239,8 +239,7 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
    sends to the inbox.
 2. **Worker secret:** `npx wrangler secret put OPPORTUNITY_INBOX`.
 3. **Workers Builds:** Cloudflare dashboard → Workers → create application →
-   connect this repo. Build command:
-   `npm ci --prefix blog && npm run build:site`. Deploy command:
+   connect this repo. Build command: `npm run build:site`. Deploy command:
    `npm run deploy` (applies D1 migrations, then `wrangler deploy` — a plain
    `npx wrangler deploy` here silently skips the migrations). Env vars
    (build): `GITHUB_TOKEN`,
