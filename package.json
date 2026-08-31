@@ -75,7 +75,7 @@
     "sass": "^1.69.0",
     "sharp": "^0.33.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.11",
     "wrangler": "^4.121.0"
   },
