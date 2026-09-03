@@ -65,7 +65,7 @@ export const skillsSection: {
     {skillName: "PostgreSQL", iconName: "postgresql"},
     {skillName: "SQLite", iconName: "sqlite"},
     {skillName: "Kafka", iconName: "kafka"},
-    {skillName: "CDC", iconName: "cdc"},
+    {skillName: "CDC (Debezium)", iconName: "cdc"},
     {skillName: "Playwright", iconName: "playwright"},
     {skillName: "k6", iconName: "k6"}
   ]
