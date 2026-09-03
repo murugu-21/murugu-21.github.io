@@ -39,7 +39,13 @@ export const GET: APIRoute = () =>
         workExperiences,
         skillsSection,
         skillsCategories,
-        techStack,
+        // the API lists tool names only; icon keys are a rendering concern
+        techStack: {
+          experience: techStack.experience.map(e => ({
+            ...e,
+            tools: e.tools.map(t => t.name)
+          }))
+        },
         educationInfo,
         openSourceCard,
         isHireable

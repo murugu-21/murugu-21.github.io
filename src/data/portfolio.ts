@@ -72,36 +72,65 @@ export const skillsSection: {
 };
 
 // Proficiency section: broad areas with the tools inside each. The page
-// renders the tools as chips; progressPercentage is kept for the dataset
-// API's self-reported `level` and is not shown on the site.
+// renders the tools as chips with their marks (icon keys into
+// components/Icon.astro); progressPercentage is kept for the dataset API's
+// self-reported `level` and is not shown on the site.
+
+export interface ProficiencyTool {
+  name: string;
+  icon: string;
+}
 
 export const techStack: {
-  experience: {stack: string; tools: string[]; progressPercentage: string}[];
+  experience: {
+    stack: string;
+    tools: ProficiencyTool[];
+    progressPercentage: string;
+  }[];
 } = {
   experience: [
     {
       stack: "Backend",
-      tools: ["Node.js", "Nest.js", "Event-driven"],
+      tools: [
+        {name: "Node.js", icon: "node"},
+        {name: "Nest.js", icon: "nestjs"},
+        {name: "Event-driven", icon: "bolt"}
+      ],
       progressPercentage: "90%"
     },
     {
       stack: "Distributed systems",
-      tools: ["Kafka", "SQS", "DynamoDB", "CDC"],
+      tools: [
+        {name: "Kafka", icon: "kafka"},
+        {name: "SQS", icon: "sqs"},
+        {name: "DynamoDB", icon: "dynamodb"},
+        {name: "CDC", icon: "cdc"}
+      ],
       progressPercentage: "85%"
     },
     {
       stack: "Cloud & Infra",
-      tools: ["AWS", "Terraform", "Docker"],
+      tools: [
+        {name: "AWS", icon: "aws"},
+        {name: "Terraform", icon: "terraform"},
+        {name: "Docker", icon: "docker"}
+      ],
       progressPercentage: "85%"
     },
     {
       stack: "Frontend",
-      tools: ["React", "TypeScript"],
+      tools: [
+        {name: "React", icon: "react"},
+        {name: "TypeScript", icon: "typescript"}
+      ],
       progressPercentage: "80%"
     },
     {
       stack: "Testing",
-      tools: ["Playwright", "k6"],
+      tools: [
+        {name: "Playwright", icon: "playwright"},
+        {name: "k6", icon: "k6"}
+      ],
       progressPercentage: "75%"
     }
   ]

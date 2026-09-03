@@ -1,6 +1,7 @@
 ---
 import {techStack} from "../data/portfolio";
 import {accentTitle} from "../lib/accent";
+import Icon from "./Icon.astro";
 ---
 
 <div class="proficiency-container section-animate" id="proficiency">
@@ -14,7 +15,10 @@ import {accentTitle} from "../lib/accent";
             <dd class="area-tools">
               <ul class="chips">
                 {exp.tools.map(tool => (
-                  <li class="chip">{tool}</li>
+                  <li class="chip">
+                    <Icon name={tool.icon} />
+                    <span>{tool.name}</span>
+                  </li>
                 ))}
               </ul>
             </dd>
@@ -85,6 +89,9 @@ import {accentTitle} from "../lib/accent";
 
   /* same outline + glow language as the Skills chips, at a smaller size */
   .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     padding: 6px 14px;
     border: 1px solid $chipOutlineLight;
     border-radius: 20px;
@@ -100,6 +107,13 @@ import {accentTitle} from "../lib/accent";
   .chip:hover {
     border-color: $accentLight;
     box-shadow: $glowShadowLightHover;
+  }
+
+  .chip > :global(svg) {
+    color: $skillsColor;
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: none;
   }
 
   :global(html.dark-mode) .area-name,
