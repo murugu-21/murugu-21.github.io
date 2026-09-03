@@ -5,7 +5,7 @@ import {glob} from "astro/loaders";
 // Posts live in content/blog/<slug>/index.md, same layout as the Gatsby site.
 // The id (= URL slug) is the directory name, matching Gatsby's createFilePath
 // slugs. Drafts under content/blog/draft/ are filtered out of production in
-// src/utils/posts.js.
+// src/blog/utils/posts.js.
 const blog = defineCollection({
   loader: glob({
     pattern: "**/index.md",

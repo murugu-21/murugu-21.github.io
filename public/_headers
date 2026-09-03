@@ -1,9 +1,6 @@
 /static/*
   Cache-Control: public, max-age=31536000, immutable
 
-/blog/_astro/*
-  Cache-Control: public, max-age=31536000, immutable
-
 # Agent discovery (RFC 8288 Link relations): point machine clients at the
 # site's machine-readable descriptions from the page response itself.
 # /about is the canonical entity page (rel=author from the homepage);

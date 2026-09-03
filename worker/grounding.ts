@@ -1,8 +1,9 @@
 // v2: root llms.txt only (~3.5KB ≈ 900 tokens). It already carries every blog
-// post as title + summary + link (merge-llms.mjs appends them at build time);
-// grounding on blog/llms-full.txt (~70KB) cost ~20x the input tokens per message
-// and would eventually outgrow qwen3-30b's 32k context as posts accumulate.
-// Jarvis answers post questions from summaries and points visitors at links.
+// post as title + summary + link (src/pages/llms.txt.ts generates them at
+// build time); grounding on blog/llms-full.txt (~70KB) cost ~20x the input
+// tokens per message and would eventually outgrow qwen3-30b's 32k context as
+// posts accumulate. Jarvis answers post questions from summaries and points
+// visitors at links.
 const CACHE_KEY = "grounding:v2";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
