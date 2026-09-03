@@ -95,6 +95,7 @@ function blogNotFoundCopy() {
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
+  server: {port: 4399},
   build: {assets: "static"},
   integrations: [
     react(),

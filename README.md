@@ -233,7 +233,7 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   Put `OPPORTUNITY_INBOX=you@example.com` and `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored);
   without the key the chat gates itself, since there is no fallback provider.
 - **Local dev (fast HMR loop):** put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env` (gitignored), then run `npm run dev:all`.
-  Starts Astro dev server (with HMR) on :4321 and Worker on :8787 in parallel; the widget connects to the real Worker.
+  Starts Astro dev server (with HMR) on :4399 and Worker on :8787 in parallel; the widget connects to the real Worker.
   Note: the Worker serves grounding from `dist/`, so run `npm run build:site` at least once first, or Jarvis will lack site knowledge.
   Also note: AI calls in dev hit the real DeepSeek API and are billed, so watch your spend.
 - **Tests:** `npm test` (vitest + workers pool), `npm run check:worker`.
