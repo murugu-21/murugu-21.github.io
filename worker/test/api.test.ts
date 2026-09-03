@@ -125,10 +125,14 @@ describe("the other read endpoints", () => {
   it("returns skills and proficiencies", async () => {
     const body = (await (await get("/api/skills")).json()) as {
       skills: Array<{category: string; skills: string[]}>;
-      proficiencies: Array<{area: string; level: number}>;
+      proficiencies: Array<{area: string; tools: string[]; level: number}>;
     };
     expect(body.skills[0].skills).toEqual(["TypeScript", "Python"]);
-    expect(body.proficiencies[0]).toEqual({area: "Backend", level: 90});
+    expect(body.proficiencies[0]).toEqual({
+      area: "Backend",
+      tools: ["Node.js"],
+      level: 90
+    });
   });
 
   it("returns education", async () => {

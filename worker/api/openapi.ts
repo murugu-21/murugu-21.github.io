@@ -613,10 +613,15 @@ export const API_SCHEMAS: Record<string, unknown> = {
     type: "object",
     title: "Proficiency",
     description: "Self-reported depth in a broad area.",
-    required: ["area", "level"],
+    required: ["area", "tools", "level"],
     additionalProperties: false,
     properties: {
       area: stringProp("The area being rated."),
+      tools: {
+        type: "array",
+        description: "Named technologies within the area.",
+        items: {type: "string"}
+      },
       level: {
         type: "integer",
         description: "Self-reported level from 0 to 100.",
@@ -655,6 +660,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       "period",
       "startDate",
       "endDate",
+      "grade",
       "highlights"
     ],
     additionalProperties: false,
@@ -670,6 +676,11 @@ export const API_SCHEMAS: Record<string, unknown> = {
       endDate: {
         type: ["string", "null"],
         description: "ISO 8601 year-month of completion, or null."
+      },
+      grade: {
+        type: ["string", "null"],
+        description:
+          'Final grade as the site displays it (e.g. "CGPA 9.53 / 10"), or null.'
       },
       highlights: {
         type: "array",

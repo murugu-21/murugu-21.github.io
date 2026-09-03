@@ -56,66 +56,82 @@ export const skillsSection: {
     "⚡ Ship with observability and security built in — OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],
   softwareSkills: [
-    {
-      skillName: "TypeScript / JavaScript",
-      iconName: "js"
-    },
-    {
-      skillName: "reactjs",
-      iconName: "react"
-    },
-    {
-      skillName: "nodejs",
-      iconName: "node"
-    },
-    {
-      skillName: "python",
-      iconName: "python"
-    },
-    {
-      skillName: "aws",
-      iconName: "aws"
-    },
-    {
-      skillName: "docker",
-      iconName: "docker"
-    },
-    {
-      skillName: "sql-database",
-      iconName: "database"
-    },
-    {
-      skillName: "git",
-      iconName: "git-alt"
-    },
-    {
-      skillName: "linux / bash",
-      iconName: "linux"
-    },
-    {
-      skillName: "npm",
-      iconName: "npm"
-    }
+    {skillName: "TypeScript", iconName: "typescript"},
+    {skillName: "React", iconName: "react"},
+    {skillName: "Node.js", iconName: "node"},
+    {skillName: "Python", iconName: "python"},
+    {skillName: "AWS", iconName: "aws"},
+    {skillName: "Docker", iconName: "docker"},
+    {skillName: "PostgreSQL", iconName: "postgresql"},
+    {skillName: "SQLite", iconName: "sqlite"},
+    {skillName: "Kafka", iconName: "kafka"},
+    {skillName: "CDC (Debezium)", iconName: "cdc"},
+    {skillName: "Playwright", iconName: "playwright"},
+    {skillName: "k6", iconName: "k6"}
   ]
 };
 
-// Top 3 proficient stacks/tech experience
+// Proficiency section: broad areas with the tools inside each. The page
+// renders the tools as chips with their marks (icon keys into
+// components/Icon.astro); progressPercentage is kept for the dataset API's
+// self-reported `level` and is not shown on the site.
+
+export interface ProficiencyTool {
+  name: string;
+  icon: string;
+}
 
 export const techStack: {
-  experience: {stack: string; progressPercentage: string}[];
+  experience: {
+    stack: string;
+    tools: ProficiencyTool[];
+    progressPercentage: string;
+  }[];
 } = {
   experience: [
     {
-      stack: "Backend (Node.js, Nest.js, event-driven)",
+      stack: "Backend",
+      tools: [
+        {name: "Node.js", icon: "node"},
+        {name: "Nest.js", icon: "nestjs"},
+        {name: "Event-driven", icon: "bolt"}
+      ],
       progressPercentage: "90%"
     },
     {
-      stack: "Cloud & Infra (AWS, Terraform, Docker)",
+      stack: "Distributed systems",
+      tools: [
+        {name: "Kafka", icon: "kafka"},
+        {name: "SQS", icon: "sqs"},
+        {name: "DynamoDB", icon: "dynamodb"},
+        {name: "CDC", icon: "cdc"}
+      ],
       progressPercentage: "85%"
     },
     {
-      stack: "Frontend (React, TypeScript)",
+      stack: "Cloud & Infra",
+      tools: [
+        {name: "AWS", icon: "aws"},
+        {name: "Terraform", icon: "terraform"},
+        {name: "Docker", icon: "docker"}
+      ],
+      progressPercentage: "85%"
+    },
+    {
+      stack: "Frontend",
+      tools: [
+        {name: "React", icon: "react"},
+        {name: "TypeScript", icon: "typescript"}
+      ],
       progressPercentage: "80%"
+    },
+    {
+      stack: "Testing",
+      tools: [
+        {name: "Playwright", icon: "playwright"},
+        {name: "k6", icon: "k6"}
+      ],
+      progressPercentage: "75%"
     }
   ]
 };
@@ -233,6 +249,8 @@ export interface Education {
   subHeader: string;
   duration: string;
   desc: string;
+  /** Final grade as displayed, e.g. "CGPA 9.53 / 10". */
+  grade?: string;
   descBullets: string[];
 }
 
@@ -243,6 +261,7 @@ export const educationInfo: Education[] = [
     subHeader: "Bachelor of Engineering in Computer Science",
     duration: "June 2019 - April 2023",
     desc: "Coimbatore, India.",
+    grade: "CGPA 9.53 / 10",
     descBullets: [
       "Graduated with a focus on distributed systems, databases, and software engineering."
     ]

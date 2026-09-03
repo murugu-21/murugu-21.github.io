@@ -56,58 +56,54 @@ import Icon from "./Icon.astro";
     font-size: 2em;
   }
 
+  /* The anchor is the 2.6rem circle and the svg a plain 1.3rem glyph inside
+     it. Putting padding + border-radius on the <svg> itself (the old FA <i>
+     translation) made Chrome clip the glyph to the radius inset by the
+     padding, which shaved the corners off the LinkedIn "i" dot. */
   .icon-button {
-    margin-bottom: 10px;
-    text-decoration: none;
-    font-size: 0; // collapse stray whitespace text nodes inside the anchor (JSX used to strip them)
-  }
-
-  /* the FA <i> was a 2.6rem circle with a 1.3rem glyph (font-size) centered
-     via line-height; the inline svg reproduces it with a 1.3rem content box
-     (2.6rem outer minus 0.65rem padding on each side) */
-  .icon-button :global(svg) {
-    color: $textColorDark;
-    border-radius: 2.6rem;
-    cursor: pointer;
-    display: inline-block;
-    box-sizing: border-box;
-    height: 2.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 2.6rem;
-    padding: 0.65rem;
-    margin: 0 5px;
-    position: relative;
-    user-select: none;
-    margin-bottom: 10px;
+    height: 2.6rem;
+    margin: 0 5px 10px;
+    border-radius: 50%;
+    color: $textColorDark;
+    text-decoration: none;
+    cursor: pointer;
     vertical-align: middle;
-    transition: 0.2s ease-in;
+    user-select: none;
+    transition: background-color 0.2s ease-in;
   }
 
-  .linkedin :global(svg) {
+  .icon-button :global(svg) {
+    display: block;
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+
+  .linkedin {
     background-color: $linkedin;
   }
 
-  .github :global(svg) {
+  .github {
     background-color: $github;
   }
 
-  .google :global(svg) {
+  .google {
     background-color: $google;
   }
 
-  .twitter :global(svg) {
+  .twitter {
     background-color: $twitter;
   }
 
-  .rss :global(svg) {
+  .rss {
     background-color: $rss;
   }
 
   /* Hover Transition */
-  .twitter :global(svg:hover),
-  .google :global(svg:hover),
-  .github :global(svg:hover),
-  .linkedin :global(svg:hover),
-  .rss :global(svg:hover) {
+  .icon-button:hover {
     background-color: $buttonColor; // theme green; was $textColor (#2e353f) which blended into the dark background
   }
 

@@ -65,14 +65,19 @@ function input(overrides: Partial<DatasetInput> = {}): DatasetInput {
     ],
     techStack: {
       experience: [
-        {stack: "Backend (Node.js)", progressPercentage: "90%"},
-        {stack: "Frontend (React)", progressPercentage: "80%"}
+        {
+          stack: "Backend",
+          tools: ["Node.js", "Nest.js"],
+          progressPercentage: "90%"
+        },
+        {stack: "Frontend", tools: ["React"], progressPercentage: "80%"}
       ]
     },
     educationInfo: [
       {
         schoolName: "Kumaraguru College of Technology",
         subHeader: "Bachelor of Engineering in Computer Science",
+        grade: "CGPA 9.53 / 10",
         duration: "June 2019 - April 2023",
         desc: "Coimbatore, India.",
         descBullets: ["Focus on distributed systems."]
@@ -228,10 +233,10 @@ describe("buildDataset", () => {
     ]);
   });
 
-  it("turns the proficiency percentages into numbers", () => {
+  it("projects each proficiency with its tools and a numeric level", () => {
     expect(buildDataset(input()).proficiencies).toEqual([
-      {area: "Backend (Node.js)", level: 90},
-      {area: "Frontend (React)", level: 80}
+      {area: "Backend", tools: ["Node.js", "Nest.js"], level: 90},
+      {area: "Frontend", tools: ["React"], level: 80}
     ]);
   });
 
@@ -244,9 +249,21 @@ describe("buildDataset", () => {
         period: "June 2019 - April 2023",
         startDate: "2019-06",
         endDate: "2023-04",
+        grade: "CGPA 9.53 / 10",
         highlights: ["Focus on distributed systems."]
       }
     ]);
+  });
+
+  it("leaves grade null when the school entry has none", () => {
+    const base = input();
+    const [school] = base.educationInfo;
+    const {grade: _grade, ...withoutGrade} = school as typeof school & {
+      grade?: string;
+    };
+    expect(
+      buildDataset({...base, educationInfo: [withoutGrade]}).education[0].grade
+    ).toBeNull();
   });
 
   it("names the open-source project from the card title", () => {

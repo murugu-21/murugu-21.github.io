@@ -28,7 +28,7 @@ export type ExperienceEntry = {
 
 export type SkillCategory = {category: string; skills: string[]};
 
-export type Proficiency = {area: string; level: number};
+export type Proficiency = {area: string; tools: string[]; level: number};
 
 export type EducationEntry = {
   institution: string;
@@ -37,6 +37,8 @@ export type EducationEntry = {
   period: string;
   startDate: string | null;
   endDate: string | null;
+  /** Grade as the site displays it (e.g. "CGPA 9.53 / 10"), or null. */
+  grade: string | null;
   highlights: string[];
 };
 
@@ -98,13 +100,18 @@ export type DatasetInput = {
   skillsSection: {subTitle: string; skills: string[]};
   skillsCategories: ReadonlyArray<{category: string; items: string}>;
   techStack: {
-    experience: ReadonlyArray<{stack: string; progressPercentage: string}>;
+    experience: ReadonlyArray<{
+      stack: string;
+      tools: ReadonlyArray<string>;
+      progressPercentage: string;
+    }>;
   };
   educationInfo: ReadonlyArray<{
     schoolName: string;
     subHeader: string;
     duration: string;
     desc: string;
+    grade?: string;
     descBullets: string[];
   }>;
   openSourceCard: {
@@ -240,6 +247,7 @@ export function buildDataset(input: DatasetInput): Dataset {
     })),
     proficiencies: techStack.experience.map(e => ({
       area: e.stack,
+      tools: [...e.tools],
       level: Number.parseInt(e.progressPercentage, 10)
     })),
     education: educationInfo.map(school => ({
@@ -250,6 +258,7 @@ export function buildDataset(input: DatasetInput): Dataset {
       ...(({current: _current, ...dates}) => dates)(
         parsePeriod(school.duration)
       ),
+      grade: school.grade ?? null,
       highlights: school.descBullets
     })),
     openSource: [

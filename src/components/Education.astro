@@ -26,6 +26,9 @@ import {accentTitle} from "../lib/accent";
               <div class="education-text-details">
                 <h4 class="education-text-subHeader">{school.subHeader}</h4>
                 <p class="education-text-duration">{school.duration}</p>
+                {school.grade && (
+                  <p class="education-text-grade">{school.grade}</p>
+                )}
                 <p class="education-text-desc">{school.desc}</p>
                 <div class="education-text-bullets">
                   <ul>
@@ -139,6 +142,12 @@ import {accentTitle} from "../lib/accent";
     margin: 0px;
     padding-top: 0.5rem;
   }
+  .education-text-grade {
+    color: $titleColor;
+    font-size: 19px;
+    margin: 0px;
+    padding-top: 0.5rem;
+  }
 
   .education-text-desc {
     margin-top: 0.5rem;
@@ -151,7 +160,8 @@ import {accentTitle} from "../lib/accent";
 
   /* old conditional `dark-mode` classes on subHeader/duration */
   :global(html.dark-mode) .education-text-subHeader,
-  :global(html.dark-mode) .education-text-duration {
+  :global(html.dark-mode) .education-text-duration,
+  :global(html.dark-mode) .education-text-grade {
     color: $textColorDark;
   }
 

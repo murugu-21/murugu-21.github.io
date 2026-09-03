@@ -37,7 +37,11 @@ export const DATASET_INPUT: DatasetInput = {
   ],
   skillsSection: {subTitle: "FULL-STACK", skills: ["⚡ Build TypeScript"]},
   skillsCategories: [{category: "Languages", items: "TypeScript, Python"}],
-  techStack: {experience: [{stack: "Backend", progressPercentage: "90%"}]},
+  techStack: {
+    experience: [
+      {stack: "Backend", tools: ["Node.js"], progressPercentage: "90%"}
+    ]
+  },
   educationInfo: [
     {
       schoolName: "Kumaraguru College of Technology",
