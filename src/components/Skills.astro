@@ -100,13 +100,12 @@ import {accentTitle} from "../lib/accent";
     border-radius: 24px;
     box-shadow: $glowShadowLight;
     transition:
-      transform 0.3s ease,
       border-color 0.3s ease,
       box-shadow 0.3s ease;
   }
 
+  /* same hover as the Proficiency chips: glow + outline, no scale */
   .software-skill-chip:hover {
-    transform: scale(1.05);
     border-color: $accentLight;
     box-shadow: $glowShadowLightHover;
   }
