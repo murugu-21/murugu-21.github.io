@@ -660,6 +660,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       "period",
       "startDate",
       "endDate",
+      "grade",
       "highlights"
     ],
     additionalProperties: false,
@@ -675,6 +676,11 @@ export const API_SCHEMAS: Record<string, unknown> = {
       endDate: {
         type: ["string", "null"],
         description: "ISO 8601 year-month of completion, or null."
+      },
+      grade: {
+        type: ["string", "null"],
+        description:
+          'Final grade as the site displays it (e.g. "CGPA 9.53 / 10"), or null.'
       },
       highlights: {
         type: "array",

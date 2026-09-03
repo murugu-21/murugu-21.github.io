@@ -164,7 +164,10 @@ const repos = (await fetchPinnedRepos()).filter(r => r.description);
                 {edu.schoolName}, {edu.desc.replace(/\.$/, "")} —{" "}
                 <span class="role-title">{edu.subHeader}</span>
               </p>
-              <p class="role-date">{edu.duration}</p>
+              <p class="role-date">
+                {edu.duration}
+                {edu.grade && <> · {edu.grade}</>}
+              </p>
             </div>
           ))
         }

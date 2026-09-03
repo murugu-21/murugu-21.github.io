@@ -77,6 +77,7 @@ function input(overrides: Partial<DatasetInput> = {}): DatasetInput {
       {
         schoolName: "Kumaraguru College of Technology",
         subHeader: "Bachelor of Engineering in Computer Science",
+        grade: "CGPA 9.53 / 10",
         duration: "June 2019 - April 2023",
         desc: "Coimbatore, India.",
         descBullets: ["Focus on distributed systems."]
@@ -248,9 +249,21 @@ describe("buildDataset", () => {
         period: "June 2019 - April 2023",
         startDate: "2019-06",
         endDate: "2023-04",
+        grade: "CGPA 9.53 / 10",
         highlights: ["Focus on distributed systems."]
       }
     ]);
+  });
+
+  it("leaves grade null when the school entry has none", () => {
+    const base = input();
+    const [school] = base.educationInfo;
+    const {grade: _grade, ...withoutGrade} = school as typeof school & {
+      grade?: string;
+    };
+    expect(
+      buildDataset({...base, educationInfo: [withoutGrade]}).education[0].grade
+    ).toBeNull();
   });
 
   it("names the open-source project from the card title", () => {

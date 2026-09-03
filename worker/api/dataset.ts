@@ -37,6 +37,8 @@ export type EducationEntry = {
   period: string;
   startDate: string | null;
   endDate: string | null;
+  /** Grade as the site displays it (e.g. "CGPA 9.53 / 10"), or null. */
+  grade: string | null;
   highlights: string[];
 };
 
@@ -109,6 +111,7 @@ export type DatasetInput = {
     subHeader: string;
     duration: string;
     desc: string;
+    grade?: string;
     descBullets: string[];
   }>;
   openSourceCard: {
@@ -255,6 +258,7 @@ export function buildDataset(input: DatasetInput): Dataset {
       ...(({current: _current, ...dates}) => dates)(
         parsePeriod(school.duration)
       ),
+      grade: school.grade ?? null,
       highlights: school.descBullets
     })),
     openSource: [

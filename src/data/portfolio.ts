@@ -249,6 +249,8 @@ export interface Education {
   subHeader: string;
   duration: string;
   desc: string;
+  /** Final grade as displayed, e.g. "CGPA 9.53 / 10". */
+  grade?: string;
   descBullets: string[];
 }
 
@@ -259,6 +261,7 @@ export const educationInfo: Education[] = [
     subHeader: "Bachelor of Engineering in Computer Science",
     duration: "June 2019 - April 2023",
     desc: "Coimbatore, India.",
+    grade: "CGPA 9.53 / 10",
     descBullets: [
       "Graduated with a focus on distributed systems, databases, and software engineering."
     ]
