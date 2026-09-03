@@ -39,13 +39,15 @@ const total = formatDuration(totalExperienceMonths(allPeriods, now));
 <div id="experience">
   <div class="experience-container section-animate" id="workExperience">
     <div>
-      <h2 class="experience-heading" set:html={accentTitle("Experiences")} />
-      <p class="experience-total subTitle">
-        <span
-          class="experience-total-value"
-          data-periods={JSON.stringify(allPeriods)}>{total}</span
-        > of experience across {stints.length} companies
-      </p>
+      <div class="experience-head">
+        <h2 class="experience-heading" set:html={accentTitle("Experiences")} />
+        <p class="experience-total subTitle">
+          <span
+            class="experience-total-value"
+            data-periods={JSON.stringify(allPeriods)}>{total}</span
+          > of experience across {stints.length} companies
+        </p>
+      </div>
       <ol class="stints">
         {
           stints.map(stint => (
@@ -166,9 +168,24 @@ const total = formatDuration(totalExperienceMonths(allPeriods, now));
 <style lang="scss">
   @import "../styles/variables";
 
+  /* title on the left, the total flush right on the same baseline */
+  .experience-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .experience-head .experience-heading {
+    margin-bottom: 0;
+  }
+
   .experience-total {
-    margin: -0.5rem 0 2rem;
+    margin: 0;
     font-size: 18px;
+    text-align: right;
   }
 
   .experience-total-value {
@@ -432,6 +449,13 @@ const total = formatDuration(totalExperienceMonths(allPeriods, now));
   @media (max-width: 768px) {
     .experience-heading {
       font-size: 30px;
+      text-align: center;
+    }
+    .experience-head {
+      flex-direction: column;
+      align-items: center;
+    }
+    .experience-total {
       text-align: center;
     }
     .stint {
