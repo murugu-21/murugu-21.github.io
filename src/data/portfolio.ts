@@ -56,46 +56,18 @@ export const skillsSection: {
     "⚡ Ship with observability and security built in — OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],
   softwareSkills: [
-    {
-      skillName: "TypeScript / JavaScript",
-      iconName: "js"
-    },
-    {
-      skillName: "reactjs",
-      iconName: "react"
-    },
-    {
-      skillName: "nodejs",
-      iconName: "node"
-    },
-    {
-      skillName: "python",
-      iconName: "python"
-    },
-    {
-      skillName: "aws",
-      iconName: "aws"
-    },
-    {
-      skillName: "docker",
-      iconName: "docker"
-    },
-    {
-      skillName: "sql-database",
-      iconName: "database"
-    },
-    {
-      skillName: "git",
-      iconName: "git-alt"
-    },
-    {
-      skillName: "linux / bash",
-      iconName: "linux"
-    },
-    {
-      skillName: "npm",
-      iconName: "npm"
-    }
+    {skillName: "TypeScript", iconName: "typescript"},
+    {skillName: "React", iconName: "react"},
+    {skillName: "Node.js", iconName: "node"},
+    {skillName: "Python", iconName: "python"},
+    {skillName: "AWS", iconName: "aws"},
+    {skillName: "Docker", iconName: "docker"},
+    {skillName: "PostgreSQL", iconName: "postgresql"},
+    {skillName: "SQLite", iconName: "sqlite"},
+    {skillName: "Kafka", iconName: "kafka"},
+    {skillName: "CDC", iconName: "cdc"},
+    {skillName: "Playwright", iconName: "playwright"},
+    {skillName: "k6", iconName: "k6"}
   ]
 };
 
