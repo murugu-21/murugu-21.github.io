@@ -9,6 +9,8 @@ import kumaraguruLogo from "../assets/images/kumaraguruLogo.png";
 
 export const greeting = {
   username: "Murugappan M",
+  // short, candid form used only by the hero line ("I'm Muru")
+  nickname: "Muru",
   title: "Hi all, I'm Murugappan",
   subTitle:
     "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.",

@@ -7,7 +7,7 @@ import Typewriter from "./Typewriter.astro";
 // used with the credit its README asks for — see the Credits section in this
 // repo's README. Recolored purple → theme green at pixel level (selective hue
 // rotate that preserves the skin tones); source art embedded a 775×817 PNG.
-import heroDesk from "../assets/images/heroDesk.png";
+import portrait from "../assets/images/portrait.webp";
 ---
 
 <div class="greet-main section-animate" id="greeting">
@@ -20,7 +20,7 @@ import heroDesk from "../assets/images/heroDesk.png";
             <span class="wave-emoji">👋</span>
           </span>
           <span class="greeting-name">
-            I'm <span class="accent">{greeting.username}</span>
+            I'm <span class="accent">{greeting.nickname}</span>
           </span>
         </h1>
         <p class="greeting-roles"><Typewriter roles={typewriterRoles} /></p>
@@ -39,10 +39,11 @@ import heroDesk from "../assets/images/heroDesk.png";
     </div>
     <div class="greeting-image-div">
       <img
-        src={heroDesk.src}
-        width={heroDesk.width}
-        height={heroDesk.height}
-        alt="Illustration of a developer coding at a desk with a laptop, coffee, and a plant"
+        class="portrait"
+        src={portrait.src}
+        width={portrait.width}
+        height={portrait.height}
+        alt="Murugappan M smiling on a hilltop with arms outstretched"
         fetchpriority="high"
       />
     </div>
@@ -121,10 +122,21 @@ import heroDesk from "../assets/images/heroDesk.png";
     justify-content: center;
   }
 
+  /* round portrait with the site's green ring and glow */
   .greeting-image-div img {
     width: 100%;
-    max-width: 520px;
+    max-width: 440px;
     height: auto;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 6px solid $buttonColor;
+    box-shadow: $glowShadowLight;
+  }
+
+  :global(html.dark-mode) .greeting-image-div img {
+    border-color: $buttonHover;
+    box-shadow: $glowShadowDark;
   }
 
   .wave-emoji {
@@ -202,7 +214,7 @@ import heroDesk from "../assets/images/heroDesk.png";
       display: block;
     }
     .greeting-image-div img {
-      max-width: 300px;
+      max-width: 240px;
     }
   }
 </style>

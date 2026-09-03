@@ -4,6 +4,7 @@ import {contactInfo, isHireable} from "../data/portfolio";
 import {fetchGithubProfile} from "../lib/github";
 import {accentTitle} from "../lib/accent";
 import {resumeContact} from "../data/resume";
+import portrait from "../assets/images/portrait.webp";
 
 const prof = await fetchGithubProfile();
 // The site's own wording ("Bangalore, India") rather than whatever the GitHub
@@ -53,13 +54,12 @@ const location = resumeContact.location;
         </div>
         <div class="image-content-profile">
           <img
-            src={prof.avatarUrl}
-            alt={prof.name + " GitHub avatar"}
+            src={portrait.src}
+            alt="Murugappan M smiling on a hilltop with arms outstretched"
             class="profile-image"
-            width="200"
-            height="200"
+            width={portrait.width}
+            height={portrait.height}
             loading="lazy"
-            crossorigin="anonymous"
           />
         </div>
       </div>
