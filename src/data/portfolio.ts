@@ -210,7 +210,7 @@ export const workExperiences: WorkExperience[] = [
     role: "R&D Intern",
     company: "Samsung R&D Institute India",
     companyLogo: samsungLogo,
-    location: "Bangalore",
+    location: "Bangalore (remote)",
     date: "December 2021 – August 2022",
     partTime: true,
     desc: "Applied machine learning to anomaly detection for security use cases.",
