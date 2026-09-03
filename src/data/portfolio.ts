@@ -114,7 +114,7 @@ export const techStack: {
     },
     {
       stack: "Distributed systems",
-      tools: ["Kafka", "SQS", "DynamoDB"],
+      tools: ["Kafka", "SQS", "DynamoDB", "CDC"],
       progressPercentage: "85%"
     },
     {
