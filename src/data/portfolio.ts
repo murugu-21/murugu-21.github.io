@@ -99,23 +99,38 @@ export const skillsSection: {
   ]
 };
 
-// Top 3 proficient stacks/tech experience
+// Proficiency section: broad areas with the tools inside each. The page
+// renders the tools as chips; progressPercentage is kept for the dataset
+// API's self-reported `level` and is not shown on the site.
 
 export const techStack: {
-  experience: {stack: string; progressPercentage: string}[];
+  experience: {stack: string; tools: string[]; progressPercentage: string}[];
 } = {
   experience: [
     {
-      stack: "Backend (Node.js, Nest.js, event-driven)",
+      stack: "Backend",
+      tools: ["Node.js", "Nest.js", "Event-driven"],
       progressPercentage: "90%"
     },
     {
-      stack: "Cloud & Infra (AWS, Terraform, Docker)",
+      stack: "Distributed systems",
+      tools: ["Kafka", "SQS", "DynamoDB"],
       progressPercentage: "85%"
     },
     {
-      stack: "Frontend (React, TypeScript)",
+      stack: "Cloud & Infra",
+      tools: ["AWS", "Terraform", "Docker"],
+      progressPercentage: "85%"
+    },
+    {
+      stack: "Frontend",
+      tools: ["React", "TypeScript"],
       progressPercentage: "80%"
+    },
+    {
+      stack: "Testing",
+      tools: ["Playwright", "k6"],
+      progressPercentage: "75%"
     }
   ]
 };

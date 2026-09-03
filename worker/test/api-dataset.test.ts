@@ -65,8 +65,12 @@ function input(overrides: Partial<DatasetInput> = {}): DatasetInput {
     ],
     techStack: {
       experience: [
-        {stack: "Backend (Node.js)", progressPercentage: "90%"},
-        {stack: "Frontend (React)", progressPercentage: "80%"}
+        {
+          stack: "Backend",
+          tools: ["Node.js", "Nest.js"],
+          progressPercentage: "90%"
+        },
+        {stack: "Frontend", tools: ["React"], progressPercentage: "80%"}
       ]
     },
     educationInfo: [
@@ -228,10 +232,10 @@ describe("buildDataset", () => {
     ]);
   });
 
-  it("turns the proficiency percentages into numbers", () => {
+  it("projects each proficiency with its tools and a numeric level", () => {
     expect(buildDataset(input()).proficiencies).toEqual([
-      {area: "Backend (Node.js)", level: 90},
-      {area: "Frontend (React)", level: 80}
+      {area: "Backend", tools: ["Node.js", "Nest.js"], level: 90},
+      {area: "Frontend", tools: ["React"], level: 80}
     ]);
   });
 

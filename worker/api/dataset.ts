@@ -28,7 +28,7 @@ export type ExperienceEntry = {
 
 export type SkillCategory = {category: string; skills: string[]};
 
-export type Proficiency = {area: string; level: number};
+export type Proficiency = {area: string; tools: string[]; level: number};
 
 export type EducationEntry = {
   institution: string;
@@ -98,7 +98,11 @@ export type DatasetInput = {
   skillsSection: {subTitle: string; skills: string[]};
   skillsCategories: ReadonlyArray<{category: string; items: string}>;
   techStack: {
-    experience: ReadonlyArray<{stack: string; progressPercentage: string}>;
+    experience: ReadonlyArray<{
+      stack: string;
+      tools: ReadonlyArray<string>;
+      progressPercentage: string;
+    }>;
   };
   educationInfo: ReadonlyArray<{
     schoolName: string;
@@ -240,6 +244,7 @@ export function buildDataset(input: DatasetInput): Dataset {
     })),
     proficiencies: techStack.experience.map(e => ({
       area: e.stack,
+      tools: [...e.tools],
       level: Number.parseInt(e.progressPercentage, 10)
     })),
     education: educationInfo.map(school => ({

@@ -613,10 +613,15 @@ export const API_SCHEMAS: Record<string, unknown> = {
     type: "object",
     title: "Proficiency",
     description: "Self-reported depth in a broad area.",
-    required: ["area", "level"],
+    required: ["area", "tools", "level"],
     additionalProperties: false,
     properties: {
       area: stringProp("The area being rated."),
+      tools: {
+        type: "array",
+        description: "Named technologies within the area.",
+        items: {type: "string"}
+      },
       level: {
         type: "integer",
         description: "Self-reported level from 0 to 100.",

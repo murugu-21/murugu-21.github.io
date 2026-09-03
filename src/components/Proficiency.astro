@@ -3,106 +3,142 @@ import {techStack} from "../data/portfolio";
 import {accentTitle} from "../lib/accent";
 ---
 
-<div class="skills-container section-animate">
-  <div class="skills-bar">
-    <h2 class="skills-heading" set:html={accentTitle("Proficiency")} />
-    {
-      techStack.experience.map(exp => (
-        <div class="skill">
-          <p>{exp.stack}</p>
-          <div
-            class="meter"
-            role="meter"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            aria-valuenow={parseInt(exp.progressPercentage)}
-            aria-label={exp.stack}
-          >
-            <span style={`width: ${exp.progressPercentage}`} />
+<div class="proficiency-container section-animate" id="proficiency">
+  <div>
+    <h2 class="proficiency-heading" set:html={accentTitle("Proficiency")} />
+    <dl class="areas">
+      {
+        techStack.experience.map(exp => (
+          <div class="area">
+            <dt class="area-name">{exp.stack}</dt>
+            <dd class="area-tools">
+              <ul class="chips">
+                {exp.tools.map(tool => (
+                  <li class="chip">{tool}</li>
+                ))}
+              </ul>
+            </dd>
           </div>
-        </div>
-      ))
-    }
+        ))
+      }
+    </dl>
   </div>
 </div>
 
 <style lang="scss">
   @import "../styles/variables";
 
-  .meter {
-    height: 20px;
-    position: relative;
-    background: $progressBarBackground;
-    border-radius: 25px;
-  }
-  .meter > span {
-    display: block;
-    height: 100%;
-    border-top-right-radius: 6px;
-    border-bottom-right-radius: 6px;
-    border-top-left-radius: 20px;
-    border-bottom-left-radius: 20px;
-    background-color: $progressBarSpanBG;
-    position: relative;
-    overflow: hidden;
-  }
-  .skill {
-    line-height: 3.5vw;
-  }
-  .skills-container {
-    display: flex;
-    width: 90%;
-    padding: 20px 10px;
-    margin: 0px auto;
-    margin-top: 2rem;
-  }
-  .skills-container > * {
-    flex: 1;
-    margin-bottom: 30px;
-  }
-  /* the old build-lottie `.skills-image` column is omitted; above 1456px it
-     occupied the right half of the flex row, so cap the bars at 50% there
-     to keep the old proportions (below 1456px the old SCSS hid the image
-     and the bars already spanned the full row) */
-  @media (min-width: 1457px) {
-    .skills-bar {
-      max-width: 50%;
-    }
-  }
-
-  /* `.skills-heading` leaked globally from Skills.scss in the old CRA build;
-     re-declared here because Astro styles are scoped */
-  .skills-heading {
+  .proficiency-heading {
     font-size: 56px;
     font-weight: 400;
     /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
     margin: 0.67em 0;
   }
 
-  /* Media Query */
-  @media (max-width: 1456px) {
-    .skills-bar {
-      line-height: 4rem;
+  .proficiency-container {
+    display: flex;
+    width: 90%;
+    padding: 20px 10px;
+    margin: 0px auto;
+    margin-top: 2rem;
+  }
+
+  .proficiency-container > * {
+    flex: 1;
+  }
+
+  .areas {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* name column + chips column; the name column is sized to the longest
+     name so the chips line up down the page */
+  .area {
+    display: grid;
+    grid-template-columns: 12rem 1fr;
+    align-items: center;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .area-name {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: $textColor;
+  }
+
+  .area-tools {
+    margin: 0;
+  }
+
+  .chips {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* same outline + glow language as the Skills chips, at a smaller size */
+  .chip {
+    padding: 6px 14px;
+    border: 1px solid $chipOutlineLight;
+    border-radius: 20px;
+    box-shadow: $glowShadowLight;
+    font-size: 14px;
+    color: $textColor;
+    white-space: nowrap;
+    transition:
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
+  }
+
+  .chip:hover {
+    border-color: $accentLight;
+    box-shadow: $glowShadowLightHover;
+  }
+
+  :global(html.dark-mode) .area-name,
+  :global(html.dark-mode) .chip {
+    color: $textColorDark;
+  }
+  :global(html.dark-mode) .chip {
+    border-color: $chipOutlineDark;
+    box-shadow: $glowShadowDark;
+  }
+  :global(html.dark-mode) .chip:hover {
+    border-color: $accentDark;
+    box-shadow: $glowShadowDarkHover;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chip {
+      transition: none;
     }
   }
 
+  /* Media Query */
   @media (max-width: 1380px) {
-    .skills-heading {
+    .proficiency-heading {
       font-size: 40px;
     }
   }
 
   @media (max-width: 768px) {
-    .skills-container {
-      flex-direction: column;
-    }
-    .skills-bar {
-      line-height: 3rem;
-      margin: 20px;
-    }
-    .skills-heading {
+    .proficiency-heading {
       font-size: 30px;
       text-align: center;
+    }
+    .area {
+      grid-template-columns: 1fr;
+      gap: 0.4rem;
+    }
+    .area-name {
+      font-size: 16px;
     }
   }
 </style>
