@@ -146,6 +146,8 @@ export interface WorkExperience {
   date: string;
   desc: string;
   descBullets?: string[];
+  /** Part-time roles are labelled and left out of the total experience. */
+  partTime?: boolean;
 }
 
 export const workExperiences: WorkExperience[] = [
@@ -210,6 +212,7 @@ export const workExperiences: WorkExperience[] = [
     companyLogo: samsungLogo,
     location: "Bangalore",
     date: "December 2021 – August 2022",
+    partTime: true,
     desc: "Applied machine learning to anomaly detection for security use cases.",
     descBullets: [
       "Built an unsupervised Isolation Forest model to detect anomalous user activity from IP, API URL, and MAC-address signals — applicable to fraud detection.",

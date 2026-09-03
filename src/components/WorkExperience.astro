@@ -30,9 +30,11 @@ const stints = groupByCompany(workExperiences).map(stint => ({
   ...stint,
   logo: stint.roles[0].companyLogo,
   duration: duration(stint.span),
+  partTime: stint.roles.every(r => r.partTime),
   roles: stint.roles.map(role => ({...role, duration: duration(role.date)}))
 }));
-const allPeriods = workExperiences.map(w => w.date);
+// Part-time roles are shown but do not count toward the total.
+const allPeriods = workExperiences.filter(w => !w.partTime).map(w => w.date);
 const total = formatDuration(totalExperienceMonths(allPeriods, now));
 ---
 
@@ -75,6 +77,7 @@ const total = formatDuration(totalExperienceMonths(allPeriods, now));
                         · {stint.duration.label}
                       </span>
                     )}
+                    {stint.partTime && <span> · Part-time</span>}
                     {stint.location && <span> · {stint.location}</span>}
                   </p>
                 </div>
@@ -98,6 +101,9 @@ const total = formatDuration(totalExperienceMonths(allPeriods, now));
                               {" "}
                               · {role.duration.label}
                             </span>
+                          )}
+                          {role.partTime && !stint.partTime && (
+                            <span> · Part-time</span>
                           )}
                           {!stint.location && <span> · {role.location}</span>}
                         </p>

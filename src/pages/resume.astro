@@ -109,7 +109,10 @@ const repos = (await fetchPinnedRepos()).filter(r => r.description);
             <div class="role-block">
               <p class="role-heading">
                 {exp.company}, {exp.location} —{" "}
-                <span class="role-title">{exp.role}</span>
+                <span class="role-title">
+                  {exp.role}
+                  {exp.partTime && " (Part-time)"}
+                </span>
               </p>
               <p class="role-date">{exp.date}</p>
               <p class="role-desc">{exp.desc}</p>
