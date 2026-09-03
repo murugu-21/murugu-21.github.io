@@ -51,7 +51,7 @@ export const skillsSection: {
   subTitle:
     "FULL-STACK ENGINEER BUILDING CLOUD-NATIVE, EVENT-DRIVEN SYSTEMS END-TO-END",
   skills: [
-    "⚡ Build TypeScript end-to-end — React frontends and event-driven Node.js / Nest.js services",
+    "⚡ Build TypeScript end-to-end — event-driven Node.js / Nest.js services and React frontends",
     "⚡ Design distributed, event-driven systems on AWS (Lambda, API Gateway, SQS, EventBridge)",
     "⚡ Ship with observability and security built in — OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],

@@ -1,19 +1,51 @@
 ---
 import {workExperiences} from "../data/portfolio";
 import {accentTitle} from "../lib/accent";
-import {groupByCompany} from "../lib/experience";
+import {
+  currentMonth,
+  formatDuration,
+  groupByCompany,
+  monthsBetween,
+  periodBounds,
+  totalExperienceMonths
+} from "../lib/experience";
 
 // One card per company stint, roles stacked inside as a promotion ladder.
+// Durations are rendered at build time and, for anything still running,
+// recomputed in the browser (see the script below) so they stay current.
+const now = currentMonth();
+const ym = (v: {year: number; month: number}) =>
+  `${v.year}-${String(v.month).padStart(2, "0")}`;
+const duration = (period: string) => {
+  const b = periodBounds(period);
+  if (!b) return null;
+  return {
+    label: formatDuration(monthsBetween(b.start, b.end ?? now)),
+    start: ym(b.start),
+    end: b.end ? ym(b.end) : "present"
+  };
+};
+
 const stints = groupByCompany(workExperiences).map(stint => ({
   ...stint,
-  logo: stint.roles[0].companyLogo
+  logo: stint.roles[0].companyLogo,
+  duration: duration(stint.span),
+  roles: stint.roles.map(role => ({...role, duration: duration(role.date)}))
 }));
+const allPeriods = workExperiences.map(w => w.date);
+const total = formatDuration(totalExperienceMonths(allPeriods, now));
 ---
 
 <div id="experience">
   <div class="experience-container section-animate" id="workExperience">
     <div>
       <h2 class="experience-heading" set:html={accentTitle("Experiences")} />
+      <p class="experience-total subTitle">
+        <span
+          class="experience-total-value"
+          data-periods={JSON.stringify(allPeriods)}>{total}</span
+        > of experience across {stints.length} companies
+      </p>
       <ol class="stints">
         {
           stints.map(stint => (
@@ -31,6 +63,16 @@ const stints = groupByCompany(workExperiences).map(stint => ({
                   <h3 class="stint-company">{stint.company}</h3>
                   <p class="stint-meta subTitle">
                     {stint.span}
+                    {stint.duration && (
+                      <span
+                        class="duration"
+                        data-start={stint.duration.start}
+                        data-end={stint.duration.end}
+                      >
+                        {" "}
+                        · {stint.duration.label}
+                      </span>
+                    )}
                     {stint.location && <span> · {stint.location}</span>}
                   </p>
                 </div>
@@ -45,6 +87,16 @@ const stints = groupByCompany(workExperiences).map(stint => ({
                       {stint.roles.length > 1 && (
                         <p class="role-date subTitle">
                           {role.date}
+                          {role.duration && (
+                            <span
+                              class="duration"
+                              data-start={role.duration.start}
+                              data-end={role.duration.end}
+                            >
+                              {" "}
+                              · {role.duration.label}
+                            </span>
+                          )}
                           {!stint.location && <span> · {role.location}</span>}
                         </p>
                       )}
@@ -80,8 +132,53 @@ const stints = groupByCompany(workExperiences).map(stint => ({
   </div>
 </div>
 
+<script>
+  // Keep "Present" durations and the total honest between deploys: the
+  // build stamped them for its own month, so recompute against today's.
+  import {
+    currentMonth,
+    formatDuration,
+    monthsBetween,
+    totalExperienceMonths
+  } from "../lib/experience";
+
+  const now = currentMonth();
+  const parse = (v: string) => {
+    const [y, m] = v.split("-").map(Number);
+    return {year: y, month: m};
+  };
+  document
+    .querySelectorAll<HTMLElement>('.duration[data-end="present"]')
+    .forEach(el => {
+      const start = el.dataset.start;
+      if (!start) return;
+      el.textContent = ` · ${formatDuration(monthsBetween(parse(start), now))}`;
+    });
+  const total = document.querySelector<HTMLElement>(".experience-total-value");
+  const periods = total?.dataset.periods;
+  if (total && periods) {
+    total.textContent = formatDuration(
+      totalExperienceMonths(JSON.parse(periods) as string[], now)
+    );
+  }
+</script>
+
 <style lang="scss">
   @import "../styles/variables";
+
+  .experience-total {
+    margin: -1.5rem 0 1.5rem;
+    font-size: 18px;
+  }
+
+  .experience-total-value {
+    font-weight: 600;
+    color: $buttonColor;
+  }
+
+  :global(html.dark-mode) .experience-total-value {
+    color: $buttonHover;
+  }
 
   .experience-heading {
     font-size: 56px;
