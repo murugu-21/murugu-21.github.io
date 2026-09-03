@@ -1,76 +1,87 @@
 ---
 import {workExperiences} from "../data/portfolio";
-import {bannerColor} from "../lib/logoColor";
 import {accentTitle} from "../lib/accent";
+import {groupByCompany} from "../lib/experience";
 
-// The old app sampled each logo's color client-side (color-thief) once the
-// image loaded; here the average color is computed at build time with sharp.
-const cards = await Promise.all(
-  workExperiences.map(async w => ({
-    ...w,
-    banner: await bannerColor(w.company)
-  }))
-);
+// One card per company stint, roles stacked inside as a promotion ladder.
+const stints = groupByCompany(workExperiences).map(stint => ({
+  ...stint,
+  logo: stint.roles[0].companyLogo
+}));
 ---
 
 <div id="experience">
   <div class="experience-container section-animate" id="workExperience">
     <div>
       <h2 class="experience-heading" set:html={accentTitle("Experiences")} />
-      <div class="experience-cards-div">
+      <ol class="stints">
         {
-          cards.map(card => (
-            <div class="experience-card">
-              <div
-                style={`background: ${card.banner}`}
-                class="experience-banner"
-              >
-                <div class="experience-blurred_div" />
-                <div class="experience-div-company">
-                  <h3 class="experience-text-company">{card.company}</h3>
-                </div>
-
+          stints.map(stint => (
+            <li class="stint">
+              <header class="stint-header">
                 <img
-                  class="experience-roundedimg"
-                  src={card.companyLogo.src}
-                  width={card.companyLogo.width}
-                  height={card.companyLogo.height}
-                  alt={card.company + " logo"}
+                  class="stint-logo"
+                  src={stint.logo.src}
+                  width={stint.logo.width}
+                  height={stint.logo.height}
+                  alt={stint.company + " logo"}
                   loading="lazy"
                 />
-              </div>
-              <div class="experience-text-details">
-                <h4 class="experience-text-role">{card.role}</h4>
-                <h4 class="experience-text-date">
-                  {card.date}{" "}
-                  <span class="experience-text-location">
-                    · {card.location}
-                  </span>
-                </h4>
-                <p class="subTitle experience-text-desc">{card.desc}</p>
-                <ul>
-                  {card.descBullets?.map(item => (
-                    <li class="subTitle">{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+                <div>
+                  <h3 class="stint-company">{stint.company}</h3>
+                  <p class="stint-meta subTitle">
+                    {stint.span}
+                    {stint.location && <span> · {stint.location}</span>}
+                  </p>
+                </div>
+              </header>
+
+              <ol class="roles">
+                {stint.roles.map(role => (
+                  <li class="role">
+                    <div class="role-head">
+                      <h4 class="role-title">{role.role}</h4>
+                      {/* a lone role's date already sits in the card header */}
+                      {stint.roles.length > 1 && (
+                        <p class="role-date subTitle">
+                          {role.date}
+                          {!stint.location && <span> · {role.location}</span>}
+                        </p>
+                      )}
+                    </div>
+                    <p class="role-desc">{role.desc}</p>
+                    {role.descBullets?.length ? (
+                      <details class="role-details">
+                        <summary class="role-summary">
+                          <span
+                            class="role-summary-chevron"
+                            aria-hidden="true"
+                          />
+                          {role.descBullets.length}{" "}
+                          {role.descBullets.length === 1
+                            ? "highlight"
+                            : "highlights"}
+                        </summary>
+                        <ul class="role-bullets">
+                          {role.descBullets.map(item => (
+                            <li>{item}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            </li>
           ))
         }
-      </div>
+      </ol>
     </div>
   </div>
 </div>
 
 <style lang="scss">
   @import "../styles/variables";
-
-  /* from old containers/workExperience/WorkExperience.scss */
-  .experience-cards-div {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-    gap: 1rem 1rem;
-  }
 
   .experience-heading {
     font-size: 56px;
@@ -82,6 +93,7 @@ const cards = await Promise.all(
   .experience-container {
     display: flex;
     width: 90%;
+    max-width: 960px;
     padding: 20px 10px;
     margin: 0px auto;
     margin-top: 2rem;
@@ -91,163 +103,233 @@ const cards = await Promise.all(
     flex: 1;
   }
 
-  /* from old components/experienceCard/ExperienceCard.scss, reference glow-card */
-  .experience-card {
-    position: relative;
+  .stints,
+  .roles,
+  .role-bullets {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .stints {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  /* ---- company card ---- */
+
+  .stint {
+    padding: 1.5rem 1.75rem;
+    color: $textColor;
     @include glow-card-light;
   }
 
-  .experience-card:hover {
+  /* glow only on hover: a full-width card scaling up reads as a jump */
+  .stint:hover {
     @include glow-card-light-hover;
+    transform: none;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .experience-card,
-    .experience-card:hover,
-    :global(html.dark-mode) .experience-card:hover {
-      transition: none;
-      transform: none;
-    }
-  }
-
-  .experience-banner {
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 150%;
-    background: $experienceCardBannerLG;
-    border-radius: 10px 10px 0px 0px;
-    -webkit-filter: blur(0px);
-    -moz-filter: blur(0px);
-    -o-filter: blur(0px);
-    -ms-filter: blur(0px);
-    filter: blur(0px);
-    height: 11rem;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-  }
-
-  .experience-blurred_div {
-    position: absolute;
-    background: $experienceCardBlurredDivLG;
-    -webkit-filter: blur(5px);
-    -moz-filter: blur(5px);
-    -o-filter: blur(5px);
-    -ms-filter: blur(5px);
-    filter: blur(5px);
-    height: 11rem;
-    top: 0;
-    left: 0;
-    width: 100%;
-    border-radius: 10px 10px 0px 0px;
-  }
-
-  .experience-div-company {
-    position: absolute;
-    background: transparent;
-    height: 9rem;
-    top: 0;
-    left: 0;
-    width: 100%;
+  .stint-header {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
   }
 
-  .experience-text-company {
-    text-align: center;
-    padding: 1.5rem;
+  .stint-logo {
+    flex: none;
+    width: 4.5rem;
+    height: 4.5rem;
+    object-fit: cover;
+    border-radius: 50%;
+    box-shadow: 0 0.5rem 1rem $lightBoxShadowDarker;
+  }
+
+  .stint-company {
     margin: 0;
-    color: $lightBackground1;
     font-size: 25px;
-    text-align: center;
     font-weight: 700;
-    text-overflow: ellipsis;
-    overflow: hidden;
+    line-height: 1.2;
+  }
+
+  .stint-meta {
+    margin: 0.25rem 0 0;
+    font-size: 16px;
+  }
+
+  /* ---- promotion ladder ---- */
+
+  .roles {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    /* room for the rail: dot column + gap */
+    margin-left: calc(4.5rem / 2 - 0.35rem);
+    padding-left: 1.6rem;
+  }
+
+  .role {
+    position: relative;
+  }
+
+  /* dot */
+  .role::before {
+    content: "";
+    position: absolute;
+    left: -1.6rem;
+    top: 0.45rem;
+    width: 0.7rem;
+    height: 0.7rem;
+    border-radius: 50%;
+    background: $buttonColor;
+    box-shadow: 0 0 0 3px rgba(5, 123, 1, 0.18);
+  }
+
+  /* connector from this dot down to the next role's dot */
+  .role::after {
+    content: "";
+    position: absolute;
+    left: calc(-1.6rem + 0.35rem - 1px);
+    top: 1.15rem;
+    bottom: -1.25rem;
+    width: 2px;
+    background: rgba(5, 123, 1, 0.25);
+  }
+
+  .role:last-child::after {
+    display: none;
+  }
+
+  .role-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 1rem;
+  }
+
+  .role-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .role-date {
+    margin: 0;
+    font-size: 15px;
     white-space: nowrap;
   }
 
-  .experience-roundedimg {
-    position: absolute;
-    object-fit: cover;
-    left: 0;
-    right: 0;
-    top: 7rem;
-    margin-left: auto;
-    margin-right: auto;
-    width: 8rem;
-    height: 8rem;
-    box-shadow: 0 0.5rem 1rem $lightBoxShadowDarker;
-    border-radius: 50%;
+  .role-desc {
+    margin: 0.4rem 0 0;
+    font-size: 16px;
+    line-height: 1.5;
   }
 
-  .experience-text-role {
-    text-align: center;
-    color: $textColor;
-    font-weight: 700;
-    font-size: 25px;
-    margin: 0px;
-    padding-top: 1.5rem;
-    line-height: normal;
+  /* ---- highlights disclosure ---- */
+
+  .role-details {
+    margin-top: 0.5rem;
   }
 
-  .experience-text-date {
-    text-align: center;
-    color: $textColor;
-    font-size: 20px;
-    margin: 0px;
-    padding-top: 1rem;
+  .role-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    list-style: none;
+    font-size: 15px;
     font-weight: 600;
+    color: $buttonColor;
+    user-select: none;
   }
 
-  /* subtle, low-key location tag next to the date line */
-  .experience-text-location {
-    font-weight: 400;
-    opacity: 0.65;
+  .role-summary::-webkit-details-marker {
+    display: none;
   }
 
-  .experience-text-desc {
-    text-align: center;
+  .role-summary:hover {
+    color: $buttonHover;
   }
 
-  .experience-text-details {
-    padding: 1.5rem;
-    margin-top: 2rem;
+  .role-summary:focus-visible {
+    outline: 2px solid $buttonHover;
+    outline-offset: 3px;
+    border-radius: 4px;
   }
 
-  /* old `.experience-card-dark` variant + `dark-mode-text` conditional classes */
-  :global(html.dark-mode) .experience-card {
+  .role-summary-chevron {
+    display: inline-block;
+    width: 0.45rem;
+    height: 0.45rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(-45deg);
+    transition: transform 0.2s ease;
+    margin-bottom: 2px;
+  }
+
+  .role-details[open] .role-summary-chevron {
+    transform: rotate(45deg);
+    margin-bottom: 0;
+    margin-top: -2px;
+  }
+
+  .role-bullets {
+    margin: 0.6rem 0 0;
+    padding-left: 1.25rem;
+    list-style: disc;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+
+  .role-bullets li + li {
+    margin-top: 0.4rem;
+  }
+
+  /* ---- dark mode ---- */
+
+  :global(html.dark-mode) .stint {
     @include glow-card-dark;
   }
-  :global(html.dark-mode) .experience-card:hover {
+  :global(html.dark-mode) .stint:hover {
     @include glow-card-dark-hover;
+    transform: none;
   }
-  :global(html.dark-mode) .experience-text-role,
-  :global(html.dark-mode) .experience-text-date,
-  :global(html.dark-mode) .experience-text-desc,
-  :global(html.dark-mode) .experience-text-details li {
+  :global(html.dark-mode) .stint-meta,
+  :global(html.dark-mode) .role-date {
+    color: rgba(255, 255, 255, 0.65);
+  }
+  :global(html.dark-mode) .role-summary {
+    color: $buttonHover;
+  }
+  :global(html.dark-mode) .role-summary:hover {
     color: $textColorDark;
   }
+  :global(html.dark-mode) .role::before {
+    background: $buttonHover;
+    box-shadow: 0 0 0 3px rgba(44, 207, 39, 0.2);
+  }
+  :global(html.dark-mode) .role::after {
+    background: rgba(44, 207, 39, 0.3);
+  }
 
-  /* Media Query */
+  @media (prefers-reduced-motion: reduce) {
+    .stint,
+    .stint:hover,
+    .role-summary-chevron {
+      transition: none;
+    }
+  }
+
+  /* ---- responsive ---- */
 
   @media (max-width: 1380px) {
     .experience-heading {
       font-size: 40px;
-    }
-    .experience-text-role {
-      padding-top: 0.5rem;
-      font-size: 22px;
-    }
-    .experience-text-company {
-      font-size: 22px;
-    }
-    .experience-text-date {
-      font-size: 18px;
-    }
-    .experience-roundedimg {
-      width: 6.5rem;
-      height: 6.5rem;
     }
   }
 
@@ -256,17 +338,31 @@ const cards = await Promise.all(
       font-size: 30px;
       text-align: center;
     }
-    .experience-text-role {
-      font-size: 22px;
+    .stint {
+      padding: 1.25rem 1rem;
     }
-    .experience-text-company {
-      font-size: 22px;
+    .stint-logo {
+      width: 3rem;
+      height: 3rem;
     }
-    .experience-text-date {
+    .stint-company {
+      font-size: 21px;
+    }
+    .roles {
+      margin-left: calc(3rem / 2 - 0.35rem);
+      padding-left: 1.4rem;
+    }
+    .role::before {
+      left: -1.4rem;
+    }
+    .role::after {
+      left: calc(-1.4rem + 0.35rem - 1px);
+    }
+    .role-title {
       font-size: 18px;
     }
-    .experience-text-desc {
-      font-size: 16px;
+    .role-date {
+      white-space: normal;
     }
   }
 </style>

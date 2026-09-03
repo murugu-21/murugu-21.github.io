@@ -73,7 +73,6 @@
     "prettier-plugin-astro": "^0.14.1",
     "puppeteer": "^25.6.0",
     "sass": "^1.69.0",
-    "sharp": "^0.33.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "vitest": "^4.1.11",
