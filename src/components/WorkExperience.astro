@@ -2,6 +2,7 @@
 import {workExperiences} from "../data/portfolio";
 import {accentTitle} from "../lib/accent";
 import {
+  countCompanies,
   currentMonth,
   formatDuration,
   groupByCompany,
@@ -33,9 +34,12 @@ const stints = groupByCompany(workExperiences).map(stint => ({
   partTime: stint.roles.every(r => r.partTime),
   roles: stint.roles.map(role => ({...role, duration: duration(role.date)}))
 }));
-// Part-time roles are shown but do not count toward the total.
+// Part-time roles are shown but count toward neither the total nor the
+// company count — the headline has to describe the same set of stints on
+// both sides, otherwise it reads as more experience than it is.
 const allPeriods = workExperiences.filter(w => !w.partTime).map(w => w.date);
 const total = formatDuration(totalExperienceMonths(allPeriods, now));
+const companyCount = countCompanies(stints.filter(s => !s.partTime));
 ---
 
 <div id="experience">
@@ -47,7 +51,8 @@ const total = formatDuration(totalExperienceMonths(allPeriods, now));
           <span
             class="experience-total-value"
             data-periods={JSON.stringify(allPeriods)}>{total}</span
-          > of experience across {stints.length} companies
+          > of experience across {companyCount}{" "}
+          {companyCount === 1 ? "company" : "companies"}
         </p>
       </div>
       <ol class="stints">

@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 
-import {groupByCompany} from "./experience";
+import {countCompanies, groupByCompany} from "./experience";
 
 // Minimal shape: the helper is generic over anything carrying company, date
 // and location, so the component can pass the full WorkExperience objects.
@@ -178,5 +178,27 @@ describe("totalExperienceMonths", () => {
     expect(
       totalExperienceMonths(["nonsense", "January 2024 – June 2024"], now)
     ).toBe(6);
+  });
+});
+
+describe("countCompanies", () => {
+  it("counts one stint per distinct company", () => {
+    expect(countCompanies([{company: "MedMe"}, {company: "HyperVerge"}])).toBe(
+      2
+    );
+  });
+
+  it("counts a return to a former employer once", () => {
+    const stints = groupByCompany([
+      role("Acme", "2025 – Present", "Staff"),
+      role("Other", "2023 – 2025", "Senior"),
+      role("Acme", "2020 – 2023", "Junior")
+    ]);
+    expect(stints).toHaveLength(3);
+    expect(countCompanies(stints)).toBe(2);
+  });
+
+  it("counts nothing for an empty list", () => {
+    expect(countCompanies([])).toBe(0);
   });
 });

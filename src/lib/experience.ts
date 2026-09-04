@@ -145,3 +145,14 @@ export function totalExperienceMonths(
   if (cur) total += cur[1] - cur[0] + 1;
   return total;
 }
+
+/**
+ * Distinct companies across the given stints. Grouping is by *consecutive*
+ * company, so a return to a former employer is two stints but still one
+ * company — headline counts have to de-duplicate by name, not count stints.
+ */
+export function countCompanies(
+  stints: ReadonlyArray<{company: string}>
+): number {
+  return new Set(stints.map(s => s.company)).size;
+}
