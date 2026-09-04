@@ -51,7 +51,7 @@ export const skillsSection: {
   subTitle:
     "FULL-STACK ENGINEER BUILDING CLOUD-NATIVE, EVENT-DRIVEN SYSTEMS END-TO-END",
   skills: [
-    "⚡ Build TypeScript end-to-end — React frontends and event-driven Node.js / Nest.js services",
+    "⚡ Build TypeScript end-to-end — event-driven Node.js / Nest.js services and React frontends",
     "⚡ Design distributed, event-driven systems on AWS (Lambda, API Gateway, SQS, EventBridge)",
     "⚡ Ship with observability and security built in — OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],
@@ -146,6 +146,8 @@ export interface WorkExperience {
   date: string;
   desc: string;
   descBullets?: string[];
+  /** Part-time roles are labelled and left out of the total experience. */
+  partTime?: boolean;
 }
 
 export const workExperiences: WorkExperience[] = [
@@ -208,8 +210,9 @@ export const workExperiences: WorkExperience[] = [
     role: "R&D Intern",
     company: "Samsung R&D Institute India",
     companyLogo: samsungLogo,
-    location: "Bangalore",
+    location: "Bangalore (remote)",
     date: "December 2021 – August 2022",
+    partTime: true,
     desc: "Applied machine learning to anomaly detection for security use cases.",
     descBullets: [
       "Built an unsupervised Isolation Forest model to detect anomalous user activity from IP, API URL, and MAC-address signals — applicable to fraud detection.",

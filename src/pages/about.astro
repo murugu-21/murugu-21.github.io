@@ -16,6 +16,12 @@ import {
   socialMediaLinks
 } from "../data/portfolio";
 import {resumeContact} from "../data/resume";
+import {groupByCompany} from "../lib/experience";
+
+// Roles are grouped into company stints so a promotion ladder reads as one
+// employer rather than three. Grouping is by *consecutive* company, so a
+// return to a former employer after a gap stays two entries.
+const stints = groupByCompany(workExperiences);
 
 const links = [
   {label: "GitHub", href: socialMediaLinks.github},
@@ -56,22 +62,36 @@ const links = [
     <section>
       <h2>Experience</h2>
       {
-        workExperiences.map(job => (
-          <article class="job">
-            <h3>
-              {job.role} — {job.company}
-            </h3>
+        stints.map(stint => (
+          <article class="stint">
+            <h3>{stint.company}</h3>
             <p class="meta">
-              {job.date} · {job.location}
+              {stint.span}
+              {stint.location && ` \u00b7 ${stint.location}`}
             </p>
-            <p>{job.desc}</p>
-            {job.descBullets && (
-              <ul>
-                {job.descBullets.map(b => (
-                  <li>{b}</li>
-                ))}
-              </ul>
-            )}
+            {stint.roles.map(job => (
+              <div class="job">
+                <h4>
+                  {job.role}
+                  {job.partTime && " (Part-time)"}
+                </h4>
+                {/* a lone role's dates already sit under the company name */}
+                {stint.roles.length > 1 && (
+                  <p class="meta">
+                    {job.date}
+                    {!stint.location && ` \u00b7 ${job.location}`}
+                  </p>
+                )}
+                <p>{job.desc}</p>
+                {job.descBullets && (
+                  <ul>
+                    {job.descBullets.map(b => (
+                      <li>{b}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
           </article>
         ))
       }
@@ -174,6 +194,16 @@ const links = [
     h3 {
       font-size: 1.1rem;
       margin: 1.25rem 0 0.25rem;
+    }
+
+    h4 {
+      font-size: 1rem;
+      margin: 1rem 0 0.15rem;
+    }
+
+    /* roles read as subsections of their company stint */
+    .stint .job {
+      padding-left: 1rem;
     }
 
     p,
