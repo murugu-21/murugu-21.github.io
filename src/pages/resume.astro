@@ -11,9 +11,15 @@ import {
   educationInfo
 } from "../data/portfolio";
 import {resumeContact} from "../data/resume";
+import {groupByCompany} from "../lib/experience";
 import {fetchPinnedRepos} from "../lib/github";
 
 const repos = (await fetchPinnedRepos()).filter(r => r.description);
+// One block per company stint with the roles nested as a promotion ladder,
+// matching the site's Experiences section. Grouping is by *consecutive*
+// company, so returning to a former employer after a gap stays two blocks
+// rather than collapsing years apart into one run.
+const stints = groupByCompany(workExperiences);
 ---
 
 <!doctype html>
@@ -105,24 +111,38 @@ const repos = (await fetchPinnedRepos()).filter(r => r.description);
       <section class="resume-section">
         <h2>Experience</h2>
         {
-          workExperiences.map(exp => (
-            <div class="role-block">
-              <p class="role-heading">
-                {exp.company}, {exp.location} —{" "}
-                <span class="role-title">
-                  {exp.role}
-                  {exp.partTime && " (Part-time)"}
+          stints.map(stint => (
+            <div class="stint-block">
+              <p class="stint-heading">
+                <span>
+                  {stint.company}
+                  {stint.location && `, ${stint.location}`}
                 </span>
+                <span class="stint-span">{stint.span}</span>
               </p>
-              <p class="role-date">{exp.date}</p>
-              <p class="role-desc">{exp.desc}</p>
-              {exp.descBullets && exp.descBullets.length > 0 && (
-                <ul>
-                  {exp.descBullets.map(bullet => (
-                    <li>{bullet}</li>
-                  ))}
-                </ul>
-              )}
+              {stint.roles.map(exp => (
+                <div class="role-block">
+                  {/* a lone role's dates already sit on the company line */}
+                  <p class="role-heading">
+                    <span class="role-title">
+                      {exp.role}
+                      {exp.partTime && " (Part-time)"}
+                      {!stint.location && `, ${exp.location}`}
+                    </span>
+                    {stint.roles.length > 1 && (
+                      <span class="role-span">{exp.date}</span>
+                    )}
+                  </p>
+                  <p class="role-desc">{exp.desc}</p>
+                  {exp.descBullets && exp.descBullets.length > 0 && (
+                    <ul>
+                      {exp.descBullets.map(bullet => (
+                        <li>{bullet}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
             </div>
           ))
         }
@@ -290,6 +310,60 @@ const repos = (await fetchPinnedRepos()).filter(r => r.description);
         font-weight: 700;
       }
 
+      .stint-block {
+        margin-bottom: 0.6em;
+      }
+
+      /* company on the left, the stint's full span flush right */
+      .stint-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1em;
+        font-weight: 700;
+        margin: 0 0 0.25em;
+        /* never strand a company name at the foot of a page */
+        break-after: avoid;
+        page-break-after: avoid;
+      }
+
+      .stint-span,
+      .role-span {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 8pt;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        color: var(--gray);
+      }
+
+      /* roles read as subsections of the company block */
+      .stint-block .role-block {
+        padding-left: 0.9em;
+        margin-bottom: 0.4em;
+        /* a role with many bullets is taller than the page tail it lands in;
+           let it flow rather than pushing the whole block over and leaving a
+           third of the page blank */
+        break-inside: auto;
+        page-break-inside: auto;
+      }
+
+      /* ...but never strand a role title or its intro line at the foot */
+      .stint-block .role-heading,
+      .stint-block .role-desc {
+        break-after: avoid;
+        page-break-after: avoid;
+      }
+
+      .stint-block .role-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1em;
+        font-weight: 400;
+      }
+
       .role-block {
         margin-bottom: 0.55em;
         break-inside: avoid;
@@ -326,6 +400,8 @@ const repos = (await fetchPinnedRepos()).filter(r => r.description);
 
       li {
         margin: 0 0 0.2em;
+        break-inside: avoid;
+        page-break-inside: avoid;
       }
 
       @media print {
