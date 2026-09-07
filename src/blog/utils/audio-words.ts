@@ -120,15 +120,26 @@ export function alignWords(
 }
 
 const WORD_CLASS = "rw";
+const WORD_ATTR = "data-w";
 
-// Wraps every whitespace-delimited token inside `el` in <span class="rw">,
-// descending into inline children (code, links, emphasis) so their words are
-// covered too. Returns the spans in document order. Idempotent.
-export function wrapWords(el: HTMLElement): HTMLElement[] {
+// Wraps every whitespace-delimited word of `el`'s text in <span class="rw">
+// elements and returns them grouped per word, in document order. Words are
+// found over the block's full text, not per text node, so a word that
+// straddles an inline element boundary ("<a>SiteGPT</a>’s", "<b>place</b>.")
+// stays one word made of two spans. Idempotent: existing spans are regrouped
+// by their word index.
+export function wrapWords(el: HTMLElement): HTMLElement[][] {
   const existing = Array.from(
     el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`)
   );
-  if (existing.length > 0) return existing;
+  if (existing.length > 0) {
+    const grouped: HTMLElement[][] = [];
+    for (const span of existing) {
+      const idx = Number(span.getAttribute(WORD_ATTR));
+      (grouped[idx] ??= []).push(span);
+    }
+    return grouped.filter(Boolean);
+  }
 
   const doc = el.ownerDocument;
   const textNodes: Text[] = [];
@@ -140,48 +151,69 @@ export function wrapWords(el: HTMLElement): HTMLElement[] {
   };
   walk(el);
 
-  const spans: HTMLElement[] = [];
+  // Word ranges over the concatenated text; text node offsets into it.
+  const full = textNodes.map(n => n.data).join("");
+  const ranges: Array<[number, number]> = [];
+  const re = /\S+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(full))) ranges.push([m.index, m.index + m[0].length]);
+  if (ranges.length === 0) return [];
+
+  const words: HTMLElement[][] = ranges.map(() => []);
+  let offset = 0;
+  let r = 0;
   for (const node of textNodes) {
-    const text = node.data;
-    if (!/\S/.test(text)) continue;
+    const nodeStart = offset;
+    const nodeEnd = offset + node.data.length;
+    offset = nodeEnd;
+    // Skip ranges that ended before this node.
+    while (r < ranges.length && ranges[r][1] <= nodeStart) r++;
+    if (r >= ranges.length || ranges[r][0] >= nodeEnd) continue;
+
     const frag = doc.createDocumentFragment();
-    const re = /\S+/g;
-    let last = 0;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(text))) {
-      if (m.index > last)
-        frag.appendChild(doc.createTextNode(text.slice(last, m.index)));
+    let cursor = nodeStart;
+    let k = r;
+    while (k < ranges.length && ranges[k][0] < nodeEnd) {
+      const from = Math.max(ranges[k][0], nodeStart);
+      const to = Math.min(ranges[k][1], nodeEnd);
+      if (from > cursor) {
+        frag.appendChild(doc.createTextNode(full.slice(cursor, from)));
+      }
       const span = doc.createElement("span");
       span.className = WORD_CLASS;
-      span.textContent = m[0];
+      span.setAttribute(WORD_ATTR, String(k));
+      span.textContent = full.slice(from, to);
       frag.appendChild(span);
-      spans.push(span);
-      last = m.index + m[0].length;
+      words[k].push(span);
+      cursor = to;
+      if (ranges[k][1] > nodeEnd) break; // word continues in the next node
+      k++;
     }
-    if (last < text.length)
-      frag.appendChild(doc.createTextNode(text.slice(last)));
+    if (cursor < nodeEnd) {
+      frag.appendChild(doc.createTextNode(full.slice(cursor, nodeEnd)));
+    }
     node.parentNode?.replaceChild(frag, node);
   }
-  return spans;
+  return words;
 }
 
-// Pairs rendered word spans with timed words by position. Spans whose text
-// normalises to nothing (an emoji on its own) are skipped, mirroring how the
-// generator's normalisation dropped them. Null when the sequences disagree.
+const wordText = (pieces: ReadonlyArray<HTMLElement>) =>
+  normalizeSpeechText(pieces.map(p => p.textContent ?? "").join(""));
+
+// Pairs rendered words (as span groups) with timed words by position. Words
+// whose text normalises to nothing (an emoji on its own) are skipped,
+// mirroring how the generator's normalisation dropped them. Null when the
+// sequences disagree, in which case the block keeps its paragraph highlight.
 export function matchWordSpans(
-  spans: ReadonlyArray<HTMLElement>,
-  words: ReadonlyArray<TimedWord>
-): HTMLElement[] | null {
-  const kept = spans.filter(
-    s => normalizeSpeechText(s.textContent ?? "").length > 0
-  );
-  if (kept.length !== words.length) return null;
+  words: ReadonlyArray<ReadonlyArray<HTMLElement>>,
+  timed: ReadonlyArray<TimedWord>
+): HTMLElement[][] | null {
+  const kept = words.filter(w => wordText(w).length > 0);
+  if (kept.length !== timed.length) return null;
   for (let i = 0; i < kept.length; i++) {
-    if (normalizeSpeechText(kept[i].textContent ?? "") !== words[i].w) {
-      return null;
-    }
+    if (wordText(kept[i]) !== timed[i].w) return null;
   }
-  return kept;
+  return kept.map(w => [...w]);
 }
 
 // Index of the word being spoken at time t: the word whose span contains t,

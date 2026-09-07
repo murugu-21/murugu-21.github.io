@@ -131,12 +131,13 @@ export function ListenControls({slug}: {slug: string}) {
 
   // Word-level highlight inside the current block. Spans are created lazily
   // the first time a block becomes active and reused afterwards.
-  const wordRef = useRef<HTMLElement | null>(null);
-  const highlightWord = useCallback((el: HTMLElement | null) => {
-    if (el === wordRef.current) return;
-    wordRef.current?.classList.remove("is-word");
-    wordRef.current = el;
-    el?.classList.add("is-word");
+  // A word is one or more spans (it may straddle an inline element).
+  const wordRef = useRef<HTMLElement[] | null>(null);
+  const highlightWord = useCallback((pieces: HTMLElement[] | null) => {
+    if (pieces === wordRef.current) return;
+    wordRef.current?.forEach(p => p.classList.remove("is-word"));
+    wordRef.current = pieces;
+    pieces?.forEach(p => p.classList.add("is-word"));
   }, []);
 
   const setState = useCallback(
@@ -206,7 +207,7 @@ export function ListenControls({slug}: {slug: string}) {
         pos += t.length + 1;
       }
       const timed: TimedWord[] = tokens.map(t => ({w: t, s: 0, e: 0}));
-      let spans: HTMLElement[] | null | undefined;
+      let spans: HTMLElement[][] | null | undefined;
       u.onstart = () => {
         if (current !== u) return;
         highlightWord(null);
@@ -263,8 +264,8 @@ export function ListenControls({slug}: {slug: string}) {
       // Per block: its timed words (version 2 JSON) and, once wrapped, the
       // rendered spans they map onto. `null` spans = mismatch, paragraph only.
       const words = timings.blocks.map(b => b.words ?? null);
-      const spansByBlock: Array<HTMLElement[] | null | undefined> = [];
-      const wordSpan = (i: number, t: number): HTMLElement | null => {
+      const spansByBlock: Array<HTMLElement[][] | null | undefined> = [];
+      const wordSpan = (i: number, t: number): HTMLElement[] | null => {
         const w = words[i];
         const el = matched[i]?.el;
         if (!w || !el) return null;

@@ -104,13 +104,16 @@ describe("alignWords", () => {
 });
 
 describe("wrapWords", () => {
+  const texts = (words: HTMLElement[][]) =>
+    words.map(pieces => pieces.map(p => p.textContent).join(""));
+
   it("wraps every whitespace-delimited token across inline children, in order", () => {
     const {document} = parseHTML(
       '<p>Use <code>ctrl + i</code> to <a href="#">open</a> it.</p>'
     );
-    const p = document.querySelector("p")!;
-    const spans = wrapWords(p as unknown as HTMLElement);
-    expect(spans.map(s => s.textContent)).toEqual([
+    const p = document.querySelector("p")! as unknown as HTMLElement;
+    const words = wrapWords(p);
+    expect(texts(words)).toEqual([
       "Use",
       "ctrl",
       "+",
@@ -119,17 +122,40 @@ describe("wrapWords", () => {
       "open",
       "it."
     ]);
+    expect(words.every(w => w.length === 1)).toBe(true);
     expect(p.textContent).toBe("Use ctrl + i to open it.");
     expect(p.querySelector("code")?.textContent).toBe("ctrl + i");
   });
 
-  it("is idempotent", () => {
-    const {document} = parseHTML("<p>a b</p>");
+  it("keeps a word whole when it straddles an element boundary", () => {
+    const {document} = parseHTML(
+      '<p><a href="#">SiteGPT</a>’s founder said <strong>place</strong>. Done</p>'
+    );
+    const p = document.querySelector("p")! as unknown as HTMLElement;
+    const words = wrapWords(p);
+    expect(texts(words)).toEqual([
+      "SiteGPT’s",
+      "founder",
+      "said",
+      "place.",
+      "Done"
+    ]);
+    // the straddling words are made of two spans each, one per text node
+    expect(words[0].length).toBe(2);
+    expect(words[3].length).toBe(2);
+    expect(words[1].length).toBe(1);
+    expect(p.querySelector("a")?.textContent).toBe("SiteGPT");
+    expect(p.textContent).toBe("SiteGPT’s founder said place. Done");
+  });
+
+  it("is idempotent, returning the same grouping on a second call", () => {
+    const {document} = parseHTML("<p><em>a</em>b c</p>");
     const p = document.querySelector("p")! as unknown as HTMLElement;
     const first = wrapWords(p);
     const second = wrapWords(p);
-    expect(second).toEqual(first);
-    expect(p.querySelectorAll("span").length).toBe(2);
+    expect(texts(second)).toEqual(["ab", "c"]);
+    expect(second.map(w => w.length)).toEqual(first.map(w => w.length));
+    expect(p.querySelectorAll("span").length).toBe(3);
   });
 });
 
@@ -137,18 +163,27 @@ describe("matchWordSpans", () => {
   const span = (text: string) =>
     ({textContent: text}) as unknown as HTMLElement;
 
-  it("pairs spans with words by position when the normalised tokens agree", () => {
-    const spans = [span("0.3???"), span("😕"), span("Hey")];
-    const words = [
+  it("pairs words with timings by position when the normalised tokens agree", () => {
+    const words = [[span("0.3???")], [span("😕")], [span("Hey")]];
+    const timed = [
       {w: "0.3?", s: 0, e: 1},
       {w: "Hey", s: 1, e: 2}
     ];
-    expect(matchWordSpans(spans, words)).toEqual([spans[0], spans[2]]);
+    expect(matchWordSpans(words, timed)).toEqual([words[0], words[2]]);
+  });
+
+  it("joins the pieces of a word before comparing", () => {
+    const words = [[span("SiteGPT"), span("’s")], [span("founder")]];
+    const timed = [
+      {w: "SiteGPT’s", s: 0, e: 1},
+      {w: "founder", s: 1, e: 2}
+    ];
+    expect(matchWordSpans(words, timed)).toEqual(words);
   });
 
   it("returns null on any mismatch", () => {
     expect(
-      matchWordSpans([span("a"), span("b")], [{w: "a", s: 0, e: 1}])
+      matchWordSpans([[span("a")], [span("b")]], [{w: "a", s: 0, e: 1}])
     ).toBeNull();
   });
 });
