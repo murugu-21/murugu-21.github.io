@@ -1,4 +1,5 @@
 ---
+import {claritySnippet as buildClaritySnippet} from "../../lib/clarity";
 import {SITE_TITLE, SITE_DESCRIPTION, SOCIAL} from "../consts";
 
 // Above-the-fold fonts, preloaded to shrink the font-swap window (CLS).
@@ -45,33 +46,12 @@ const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
 const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
 const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 
-// Microsoft Clarity — session recordings and heatmaps only; PostHog above owns
-// events. Clarity's recording UI is the better tool for watching a session
-// back, and it is unmetered. No clarity() calls anywhere in the app: this tag
-// is the whole integration (../../lib/analytics.ts talks to PostHog only).
-// PUBLIC_ because the value is inlined into the served HTML anyway. Unset
-// (local dev, CI) → the tag is omitted entirely. The snippet is built here and
-// injected via set:html — a <script> nested inside a template expression can't
-// hold braces (they parse as expressions). The tag is injected on idle so it
-// stays out of the initial load waterfall.
-// trim(): a stray space pasted into the build env var otherwise 400s the tag URL
-const PUBLIC_CLARITY_PROJECT_ID =
-  import.meta.env.PUBLIC_CLARITY_PROJECT_ID?.trim();
-const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
-  ? `(function () {
-  var loadClarity = function () {
-    var s = document.createElement("script");
-    s.async = true;
-    s.src = "https://www.clarity.ms/tag/" + ${JSON.stringify(PUBLIC_CLARITY_PROJECT_ID)};
-    document.head.appendChild(s);
-  };
-  if ("requestIdleCallback" in window) {
-    requestIdleCallback(loadClarity, {timeout: 3000});
-  } else {
-    setTimeout(loadClarity, 2000);
-  }
-})();`
-  : null;
+// Microsoft Clarity — session recordings and heatmaps; PostHog owns events.
+// The snippet (including the queue stub Clarity's own tag calls into) lives in
+// ../../lib/clarity.ts so both apps share one copy and it can be tested.
+const claritySnippet = buildClaritySnippet(
+  import.meta.env.PUBLIC_CLARITY_PROJECT_ID
+);
 ---
 
 <meta charset="utf-8" />
