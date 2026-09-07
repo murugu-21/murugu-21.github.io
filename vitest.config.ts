@@ -8,6 +8,10 @@ export default defineConfig({
     })
   ],
   test: {
-    include: ["worker/test/**/*.test.ts", "src/**/*.test.ts"]
+    include: [
+      "worker/test/**/*.test.ts",
+      "src/**/*.test.ts",
+      "scripts/**/*.test.mjs"
+    ]
   }
 });

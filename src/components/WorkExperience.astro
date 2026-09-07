@@ -308,7 +308,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     height: 0.7rem;
     border-radius: 50%;
     background: $buttonColor;
-    box-shadow: 0 0 0 3px rgba(5, 123, 1, 0.18);
+    box-shadow: 0 0 0 3px rgba(6, 3, 141, 0.18);
   }
 
   /* connector from this dot down to the next role's dot */
@@ -319,7 +319,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     top: 1.15rem;
     bottom: -1.25rem;
     width: 2px;
-    background: rgba(5, 123, 1, 0.25);
+    background: rgba(6, 3, 141, 0.25);
   }
 
   .role:last-child::after {
@@ -435,10 +435,10 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
   }
   :global(html.dark-mode) .role::before {
     background: $buttonHover;
-    box-shadow: 0 0 0 3px rgba(44, 207, 39, 0.2);
+    box-shadow: 0 0 0 3px rgba(76, 125, 255, 0.2);
   }
   :global(html.dark-mode) .role::after {
-    background: rgba(44, 207, 39, 0.3);
+    background: rgba(76, 125, 255, 0.3);
   }
 
   @media (prefers-reduced-motion: reduce) {

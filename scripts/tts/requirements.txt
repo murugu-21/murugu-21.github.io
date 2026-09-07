@@ -1,0 +1,4 @@
+# scripts/tts/requirements.txt — Python 3.13, Apple Silicon only (MLX).
+mlx-speech==0.5.2
+numpy>=2.0
+mlx-whisper==0.4.3

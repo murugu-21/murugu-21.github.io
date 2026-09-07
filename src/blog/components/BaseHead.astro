@@ -99,7 +99,7 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
 <link rel="shortcut icon" href="/favicon.ico" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#057b01" />
+<meta name="theme-color" content="#06038d" />
 <meta name="description" content={metaDescription} />
 <link
   rel="preload"
@@ -158,4 +158,12 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
   // Shared WebMCP tool registration from the portfolio app (same cross-app
   // import pattern as the chat widget).
   import "../../lib/webmcp";
+  import {initClickTracking, tag} from "../../lib/analytics";
+
+  // Clarity custom events for annotated links (data-clarity-event), plus the
+  // theme as a session tag. The bootstrap script in ../layouts/BaseLayout.astro
+  // puts the theme on <body> as a class before first paint; this module is
+  // deferred, so it has already run.
+  initClickTracking();
+  tag("theme", document.body.classList.contains("dark") ? "dark" : "light");
 </script>

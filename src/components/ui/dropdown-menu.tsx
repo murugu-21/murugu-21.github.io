@@ -1,7 +1,8 @@
 // shadcn/ui dropdown-menu (new-york, Tailwind v4), vendored — relative
-// imports, trimmed to the pieces the chat widget uses, and portaled into
-// #chat-widget-root (not document.body) so the menu stays inside the
-// element the chat design tokens are scoped under.
+// imports, trimmed to the pieces the islands use. The content is portaled
+// into the calling island's root (`container`), not document.body, so the
+// menu stays inside the element the islands.css tokens are scoped under.
+// Without a container it falls back to the chat widget's root.
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 
@@ -27,14 +28,19 @@ function DropdownMenuTrigger(
 function DropdownMenuContent({
   className,
   sideOffset = 4,
+  container,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
+  container?: HTMLElement | null;
+}) {
   return (
     <DropdownMenuPrimitive.Portal
       container={
         typeof document === "undefined"
           ? undefined
-          : document.getElementById("chat-widget-root")
+          : (container ??
+            document.getElementById("chat-widget-root") ??
+            undefined)
       }
     >
       <DropdownMenuPrimitive.Content

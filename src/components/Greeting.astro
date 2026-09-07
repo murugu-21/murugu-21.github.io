@@ -5,7 +5,7 @@ import Button from "./Button.astro";
 import Typewriter from "./Typewriter.astro";
 // Developer-at-desk illustration from soumyajit4419/Portfolio (home-main.svg),
 // used with the credit its README asks for — see the Credits section in this
-// repo's README. Recolored purple → theme green at pixel level (selective hue
+// repo's README. Recolored purple → theme accent at pixel level (selective hue
 // rotate that preserves the skin tones); source art embedded a 775×817 PNG.
 import portrait from "../assets/images/portrait.webp";
 ---
@@ -28,11 +28,13 @@ import portrait from "../assets/images/portrait.webp";
         <div id="resume" class="empty-div"></div>
         <SocialMedia />
         <div class="button-greeting-div">
-          <Button text="Contact me" href="#contact" />
+          <Button text="Contact me" href="#contact" event="contact_click" />
           <Button
             text="Download my resume"
             href={greeting.resumePath}
             download="Murugappan-M-Resume.pdf"
+            event="resume_download"
+            upgrade
           />
         </div>
       </div>
@@ -122,7 +124,7 @@ import portrait from "../assets/images/portrait.webp";
     justify-content: center;
   }
 
-  /* round portrait with the site's green ring and glow */
+  /* round portrait with the site's navy ring and glow */
   .greeting-image-div img {
     width: 100%;
     max-width: 440px;

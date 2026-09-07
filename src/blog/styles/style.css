@@ -61,8 +61,8 @@
   --fontSize-6: 2.488rem;
   --fontSize-7: 2.986rem;
 
-  --color-primary: #057b01;
-  --color-box: #2ccf27;
+  --color-primary: #06038d;
+  --color-box: #4c7dff;
   --color-accent: #aaaaaa;
   --color-heading: #1a202c;
   --color-heading-black: #000;
@@ -72,8 +72,8 @@
 }
 
 .dark {
-  --color-box: #19a514;
-  --color-primary: #0aee02;
+  --color-box: #3d6ff0;
+  --color-primary: #7da2ff;
   --color-accent: #818cab;
   --color-heading: #f4f4f4;
   --color-heading-black: #fff;
@@ -469,4 +469,28 @@ h5:hover a.anchor svg,
 h6:hover a.anchor svg,
 a.anchor:focus svg {
   visibility: visible;
+}
+
+/* Read-aloud island under the post title; the controls themselves are styled
+   by the shadcn tokens in src/styles/islands.css. */
+.listen-island {
+  margin-bottom: var(--spacing-4);
+}
+
+/* The block currently being read aloud. */
+.blog-post .is-speaking {
+  background: color-mix(in srgb, var(--color-box) 14%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-box) 14%, transparent);
+  border-radius: 4px;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* The word currently being spoken, inside the highlighted block. Spans are
+   inserted lazily by the read-aloud island (src/blog/utils/audio-words.ts). */
+.blog-post .is-speaking .rw.is-word {
+  background: color-mix(in srgb, var(--color-box) 45%, transparent);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-box) 45%, transparent);
 }

@@ -63,7 +63,13 @@ const location = resumeContact.location;
           <div class="contact-text-div">
             {contactInfo.number && (
               <>
-                <a class="contact-detail" href={"tel:" + contactInfo.number}>
+                <a
+                  class="contact-detail"
+                  href={"tel:" + contactInfo.number}
+                  data-clarity-event="social_click"
+                  data-clarity-tag="social"
+                  data-clarity-value="phone"
+                >
                   {contactInfo.number}
                 </a>
                 <br />
@@ -73,6 +79,9 @@ const location = resumeContact.location;
             <a
               class="contact-detail-email"
               href={"mailto:" + contactInfo.emailAddress}
+              data-clarity-event="social_click"
+              data-clarity-tag="social"
+              data-clarity-value="email"
             >
               {contactInfo.emailAddress}
             </a>

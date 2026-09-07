@@ -26,7 +26,8 @@ import {
 import {Input} from "../ui/input";
 import {ScrollArea} from "../ui/scroll-area";
 import {cn} from "../../lib/utils";
-import "./chat.css";
+import {track, upgrade} from "../../lib/analytics";
+import "../../styles/islands.css";
 
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
@@ -125,6 +126,7 @@ export function ChatWidget() {
   const greetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const upgradedRef = useRef(false);
 
   const commitStream = () => {
     const text = streamRef.current;
@@ -186,6 +188,9 @@ export function ChatWidget() {
         break;
       case "limit":
       case "error":
+        // No message text, here or anywhere below: nothing a visitor typed
+        // goes to Clarity.
+        track(msg.type === "limit" ? "chat_limit" : "chat_error");
         setTyping(false);
         setWaiting(false);
         setActivity(null);
@@ -240,6 +245,7 @@ export function ChatWidget() {
     setOpen(next);
     setTooltip("hidden");
     if (next) {
+      track("chat_open");
       connect();
       beginLoading();
     }
@@ -256,6 +262,13 @@ export function ChatWidget() {
     setActivity(null);
     setSending(true);
     setConfirmRestart(false);
+    track("chat_message_sent");
+    // A visitor who actually talked to Jarvis is the session worth watching
+    // back, and Clarity samples recordings otherwise. Once is enough.
+    if (!upgradedRef.current) {
+      upgradedRef.current = true;
+      upgrade("chat");
+    }
     // Include the page the visitor is on — the room feeds it to the model as
     // ephemeral context so "this post"/"this page" resolve correctly.
     ws.send(
@@ -272,6 +285,7 @@ export function ChatWidget() {
   };
 
   const restart = () => {
+    track("chat_restart");
     socketRef.current?.close();
     socketRef.current = null;
     localStorage.setItem(ROOM_KEY, nanoid());
@@ -292,6 +306,7 @@ export function ChatWidget() {
   const transcript = bubbles.filter(b => b.kind !== "system");
 
   const download = () => {
+    track("chat_transcript_download");
     const lines = transcript.map(
       b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`
     );
@@ -496,7 +511,10 @@ export function ChatWidget() {
                       variant="outline"
                       size="sm"
                       className="h-auto rounded-full border-primary/40 px-3 py-1.5 text-left text-[13px] font-normal whitespace-normal text-foreground hover:border-primary"
-                      onClick={() => sendText(q)}
+                      onClick={() => {
+                        track("chat_starter_click");
+                        sendText(q);
+                      }}
                     >
                       {q}
                     </Button>

@@ -19,5 +19,8 @@
       "database_name": "jarvis-chats-test",
       "database_id": "test"
     }
+  ],
+  "r2_buckets": [
+    {"binding": "AUDIO", "bucket_name": "murugappan-dev-audio-test"}
   ]
 }

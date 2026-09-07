@@ -3,12 +3,12 @@ Certain colors are used for different and multiply types of elements.
 For greater control over colors visit each components .scss file. */
 
 /* Palette matched to the blog (murugu-21.github.io):
-   primary green #057b01, bright green #2ccf27, dark bg #282c35,
+   primary navy #06038d (Ashoka Chakra blue), bright blue #4c7dff, dark bg #282c35,
    heading #1a202c, body text #2e353f. */
 
 // button colors
-$buttonColor: #057b01;
-$buttonHover: #2ccf27;
+$buttonColor: #06038d;
+$buttonHover: #4c7dff;
 $topButtonHover: #000;
 
 // text colors light theme
@@ -23,7 +23,7 @@ $blogCardTitleColor: #262626;
 $textColorDark: #ffffff;
 
 // toggle switch colors
-$toggleCheck: #057b01;
+$toggleCheck: #06038d;
 $toggleSwitchSliderBG: #ccc;
 
 // githubRepo specific colors
@@ -32,7 +32,7 @@ $githubRepoCardColor: rgb(88, 96, 105);
 $githubRepoCardRepoCardStatsColor: rgb(106, 115, 125);
 $githubRepoCardRepoNameColor: rgb(36, 41, 46);
 $githubProfileCardLocationTS: #ffebcd;
-$githubProfileCardBorder: #057b01;
+$githubProfileCardBorder: #06038d;
 
 // light background colors
 $lightBackground1: #fff;
@@ -54,7 +54,7 @@ $darkBoxShadow2: #ffffff;
 // borders
 $progressBarBackground: rgb(243, 239, 239);
 $lightBorder1: rgba(211, 211, 211, 0.397);
-$educationCardBorder: #2ccf27;
+$educationCardBorder: #4c7dff;
 
 // hovers
 $achievementCertificateCardHoverDark: rgba(255, 255, 255, 0.2);
@@ -63,13 +63,13 @@ $headerHoverBG: #f4f4f4;
 $contactDetailHoverTS: #b5b5b5;
 
 // misc backgrounds
-$progressBarSpanBG: #2ccf27;
+$progressBarSpanBG: #4c7dff;
 $iconBackground: #333;
 $appHeaderBG: #282c35;
 
 // misc colors
-$skillsColor: #057b01;
-$appLink: #057b01;
+$skillsColor: #06038d;
+$appLink: #06038d;
 
 // social media icons
 $faceBook: #3b5998;
@@ -93,42 +93,42 @@ $kaggle: #20beff;
 }
 
 /* ---------------------------------------------------------------------------
-   Reference-look layer (soumyajit4419/Portfolio visual language, green theme).
-   Dark mode: gradient page background + transparent cards with green glows.
-   Light mode: same shapes with solid surfaces and soft green-tinted shadows.
+   Reference-look layer (soumyajit4419/Portfolio visual language, navy theme).
+   Dark mode: gradient page background + transparent cards with blue glows.
+   Light mode: same shapes with solid surfaces and soft blue-tinted shadows.
 --------------------------------------------------------------------------- */
 
-// accent used for inline highlights and effects (bright green pops on dark,
-// primary green holds AA contrast on white)
-$accentDark: #2ccf27;
-$accentLight: #057b01;
+// accent used for inline highlights and effects (bright blue pops on dark,
+// navy holds AA contrast on white)
+$accentDark: #4c7dff;
+$accentLight: #06038d;
 
 // page background gradients (reference: linear-gradient(to left, rgb(27,20,41), rgb(20,15,35)))
-$darkPageGradient: linear-gradient(to left, rgb(32, 40, 34), rgb(22, 28, 24));
-$lightPageGradient: linear-gradient(to left, #ffffff, #f3f8f3);
+$darkPageGradient: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
+$lightPageGradient: linear-gradient(to left, #ffffff, #f3f4fb);
 
 // solid endpoints for fixed chrome (navbar/footer) that must match the gradient
-$darkPageBase: rgb(22, 28, 24);
-$darkFooterBG: rgb(12, 17, 13); // reference footer: rgb(10,4,22)
+$darkPageBase: rgb(20, 22, 34);
+$darkFooterBG: rgb(11, 12, 22); // reference footer: rgb(10,4,22)
 
 // glow shadows (reference card glow: 0 4px 5px 3px rgba(119,53,136,.46))
-$glowShadowDark: 0 4px 5px 3px rgba(5, 123, 1, 0.28);
-$glowShadowDarkHover: 0 4px 4px 5px rgba(44, 207, 39, 0.42);
-$glowShadowLight: 0 4px 12px 2px rgba(5, 123, 1, 0.14);
-$glowShadowLightHover: 0 6px 16px 4px rgba(5, 123, 1, 0.28);
+$glowShadowDark: 0 4px 5px 3px rgba(6, 3, 141, 0.28);
+$glowShadowDarkHover: 0 4px 4px 5px rgba(76, 125, 255, 0.42);
+$glowShadowLight: 0 4px 12px 2px rgba(6, 3, 141, 0.14);
+$glowShadowLightHover: 0 6px 16px 4px rgba(6, 3, 141, 0.28);
 
 // chip outlines (reference: 1px solid rgba(200,137,230,.637))
-$chipOutlineDark: rgba(44, 207, 39, 0.55);
-$chipOutlineLight: rgba(5, 123, 1, 0.45);
+$chipOutlineDark: rgba(76, 125, 255, 0.55);
+$chipOutlineLight: rgba(6, 3, 141, 0.45);
 
 // navbar (transparent at top -> translucent + blur when scrolled)
-$navScrolledDark: rgba(18, 24, 20, 0.72);
+$navScrolledDark: rgba(17, 19, 30, 0.72);
 $navScrolledLight: rgba(255, 255, 255, 0.72);
 
-// glowing card, light-mode variant (solid surface, soft green shadow)
+// glowing card, light-mode variant (solid surface, soft blue shadow)
 @mixin glow-card-light {
   background-color: $lightBackground2;
-  border: 1px solid rgba(5, 123, 1, 0.18);
+  border: 1px solid rgba(6, 3, 141, 0.18);
   border-radius: 10px;
   box-shadow: $glowShadowLight;
   transition:
@@ -141,10 +141,10 @@ $navScrolledLight: rgba(255, 255, 255, 0.72);
   box-shadow: $glowShadowLightHover;
 }
 
-// glowing card, dark-mode variant (transparent over the page gradient, green glow)
+// glowing card, dark-mode variant (transparent over the page gradient, blue glow)
 @mixin glow-card-dark {
   background-color: transparent;
-  border: 1px solid rgba(44, 207, 39, 0.25);
+  border: 1px solid rgba(76, 125, 255, 0.25);
   box-shadow: $glowShadowDark;
   color: $textColorDark;
 }

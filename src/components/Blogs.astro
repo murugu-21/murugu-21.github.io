@@ -15,7 +15,13 @@ import {accentTitle} from "../lib/accent";
           <div class="blog-container">
             {/* the old card opened blog.url via JS window.open; the whole
                 card is now a real anchor to the post */}
-            <a class="blog-card" href={blog.url}>
+            <a
+              class="blog-card"
+              href={blog.url}
+              data-clarity-event="blog_card_click"
+              data-clarity-tag="post"
+              data-clarity-value={blog.title}
+            >
               <h3 class="blog-title">{blog.title}</h3>
               <p class="small">{blog.description}</p>
               <div class="go-corner" aria-hidden="true">
