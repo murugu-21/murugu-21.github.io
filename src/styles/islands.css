@@ -31,7 +31,9 @@
   --card-foreground: #2e353f;
   --primary: #06038d;
   --primary-foreground: #ffffff;
-  --primary-hover: #4c7dff;
+  /* Darker than the #4c7dff bright accent so the white label keeps AA on
+     hover (that value gave 3.7:1). */
+  --primary-hover: #3b6fe0;
   --secondary: #f5f2f4;
   --secondary-foreground: #2e353f;
   --muted: #f5f2f4;
@@ -53,6 +55,17 @@ body.dark .ui-island {
   --foreground: #ffffff;
   --card: #282c35;
   --card-foreground: #ffffff;
+  /* The dark theme needs a primary of its own. Inheriting the light navy left
+     `color: var(--primary)` accents — the thinking row's spark, the tool dot,
+     the starter-chip borders, the focus ring — at 1.1:1 on these surfaces,
+     which is invisible. #7da2ff is the same lightened blue the blog already
+     uses in its own .dark block (../blog/styles/style.css), so the two apps
+     agree on one dark accent. Foreground flips to the navy: white on this
+     blue is only 2.5:1. src/styles/islands.test.ts holds the ratios. */
+  --primary: #7da2ff;
+  --primary-foreground: #06038d;
+  --primary-hover: #a8c2ff;
+  --ring: #7da2ff;
   --secondary: #171c28;
   --secondary-foreground: #ffffff;
   --muted: #171c28;
