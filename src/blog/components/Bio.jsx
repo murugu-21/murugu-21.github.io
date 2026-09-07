@@ -26,9 +26,9 @@ const Bio = ({author, social}) => {
             technical blog by{" "}
             <a
               href={`https://x.com/${social?.twitter || ``}`}
-              data-clarity-event="social_click"
-              data-clarity-tag="social"
-              data-clarity-value="x"
+              data-ph-event="social_click"
+              data-ph-prop="social"
+              data-ph-value="x"
             >
               <strong>{author.name}</strong>
             </a>
@@ -41,9 +41,9 @@ const Bio = ({author, social}) => {
         <a
           href="https://github.com/murugu-21"
           alt="link to author's github profile"
-          data-clarity-event="social_click"
-          data-clarity-tag="social"
-          data-clarity-value="github"
+          data-ph-event="social_click"
+          data-ph-prop="social"
+          data-ph-value="github"
         >
           <img
             src={theme === "light" ? githubDark.src : githubLight.src}
@@ -59,9 +59,9 @@ const Bio = ({author, social}) => {
         <a
           href="https://stackoverflow.com/users/15790108/murugappan-m"
           alt="link to author's stackoverflow profile"
-          data-clarity-event="social_click"
-          data-clarity-tag="social"
-          data-clarity-value="stackoverflow"
+          data-ph-event="social_click"
+          data-ph-prop="social"
+          data-ph-value="stackoverflow"
         >
           <img
             src={stackOverflow.src}
