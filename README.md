@@ -21,13 +21,28 @@ The GitHub profile card is fetched at **build time** from the GitHub GraphQL API
 GITHUB_TOKEN=ghp_xxx npm run build
 ```
 
-Microsoft Clarity analytics is injected at **build time** when a `PUBLIC_CLARITY_PROJECT_ID` environment variable is set (configured in the Workers Builds build env vars for production). Without it the tag is omitted entirely, so local dev and CI builds stay analytics-free.
+[PostHog](https://posthog.com) analytics is wired at **build time** when both `POST_HOG_TOKEN` and `POST_HOG_URL` are set (configured in the Workers Builds build env vars for production). With either missing the SDK is never loaded, so local dev and CI builds stay analytics-free.
+
+Ingestion goes through **`https://e.murugappan.dev`** — PostHog's _managed_ reverse proxy, a CNAME to their infrastructure (`…cf-prod-us-proxy.proxyhog.com`, US region). Nothing in this repo proxies it; the Worker is not in that request path, and the host is just the SDK's `api_host`. If the CNAME is ever re-added in Cloudflare DNS it must be **DNS only (grey cloud)** — proxying it breaks PostHog's cert issuance and SNI. `ui_host` stays `https://us.posthog.com` so the PostHog toolbar works.
+
+**Session replay is Microsoft Clarity's job, not PostHog's** — the two tools split the work:
+
+|                                                | tool                  |
+| ---------------------------------------------- | --------------------- |
+| Custom events, pageviews, autocapture, funnels | **PostHog**           |
+| Session recordings, heatmaps                   | **Microsoft Clarity** |
+
+PostHog is therefore initialised with `disable_session_recording: true`; recording in both would double the client cost and burn PostHog's quota on footage nobody watches. Clarity's recording UI is the better tool for watching a session back and is unmetered. Clarity is injected at build time when `PUBLIC_CLARITY_PROJECT_ID` is set, on idle so it stays off the initial load waterfall, and it is _only_ a tag — **there are no `clarity()` calls anywhere in the app**; `src/lib/analytics.ts` talks to PostHog exclusively.
+
+Privacy: Clarity masks `<input>` contents in every masking mode and that is not configurable, so the Jarvis chat box and the blog search are covered automatically. A _sent_ chat message is re-rendered as a bubble `<div>` though, which masking modes do not cover, so the transcript container carries `data-clarity-mask="true"` — nothing a visitor typed reaches a recording, matching the no-PII rule the events follow.
 
 ### Custom events
 
-`src/lib/analytics.ts` wraps the Clarity API for both apps — `track(event, tags?)`, `tag(key, value)`, `upgrade(reason)` and `initClickTracking()`. Every one no-ops when the tag was never emitted, and swallows failures, so calls are safe anywhere. Page views, scroll heatmaps and rage/dead clicks come from Clarity itself and are not re-instrumented here. **Nothing a visitor typed** (chat messages, blog search queries) is ever sent.
+`src/lib/analytics.ts` wraps PostHog for both apps — `track(event, props?)`, `tag(key, value)`, `initClickTracking()` and `bootAnalytics()`. `track` captures an event; `tag` registers a _super property_ (session context like `theme`, correct for anonymous visitors rather than person properties). Every one no-ops when the SDK was never loaded and swallows failures, so calls are safe anywhere; anything captured while the SDK is still loading is buffered and replayed. Pageviews, autocapture and heatmaps come from PostHog itself and are not re-instrumented here. **Nothing a visitor typed** (chat messages, blog search queries) is ever sent.
 
-Plain links opt in declaratively — `data-clarity-event`, plus optional `data-clarity-tag`/`data-clarity-value` and a bare `data-clarity-upgrade` — and one delegated `click` listener per document handles them, React-rendered markup included. `initClickTracking()` is called from `src/layouts/Layout.astro` (portfolio) and `src/blog/components/BaseHead.astro` (blog).
+The SDK is the `posthog-js` npm package, `import()`ed on idle so it is a separate chunk outside the initial bundle. The token and host reach the client through `<meta name="ph-token">` / `<meta name="ph-host">` rendered from frontmatter — a meta tag rather than a `data-` attribute on the script because Astro bundles `<script>` as a module, where `document.currentScript` is `null`. This is also why the env vars need no `PUBLIC_` prefix: they are read at build time, never in a client bundle.
+
+Plain links opt in declaratively — `data-ph-event`, plus optional `data-ph-prop`/`data-ph-value` — and one delegated `click` listener per document handles them, React-rendered markup included. `initClickTracking()` is called from `src/layouts/Layout.astro` (portfolio) and `src/blog/components/BaseHead.astro` (blog).
 
 | Event                                            | Fired on                                                                                         |
 | ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
@@ -50,7 +65,7 @@ Plain links opt in declaratively — `data-clarity-event`, plus optional `data-c
 | `listen_audio_fallback`                          | pre-rendered audio failed and speech synthesis took over                                         |
 | `listen_unavailable`                             | no backend at all (should be unreachable — the control hides itself)                             |
 
-Session tags carry context rather than actions: `theme` (`dark`/`light`, set on load and on every toggle) and `listen_backend` (`audio`/`speech`). `upgrade()` is reserved for the two sessions worth watching back — a resume download and a real chat turn — since Clarity samples recordings otherwise.
+Super properties carry context rather than actions: `theme` (`dark`/`light`, set on load and on every toggle) and `listen_backend` (`audio`/`speech`).
 
 ## Checks
 
@@ -68,7 +83,7 @@ Workers Builds settings, for reference (dashboard → Workers → this applicati
 
 - **Build command:** `npm run build:site`
 - **Deploy command:** `npm run deploy` (not `npx wrangler deploy` — see above).
-- **Build env vars:** `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE` (optional — see "Resume generation" below).
+- **Build env vars:** `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `POST_HOG_TOKEN`, `POST_HOG_URL`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE` (optional — see "Resume generation" below).
 - **Worker secrets:** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `npx wrangler secret put <name>`.
 
 ## Resume generation

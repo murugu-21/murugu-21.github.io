@@ -24,8 +24,8 @@
     try {
       localStorage.setItem("isDark", JSON.stringify(box.checked));
     } catch {}
-    // Tag, not an event: the point is filtering recordings by the theme the
-    // visitor actually read the site in.
+    // A super property, not an event: the point is segmenting by the theme
+    // the visitor actually read the site in.
     tag("theme", box.checked ? "dark" : "light");
   });
 </script>

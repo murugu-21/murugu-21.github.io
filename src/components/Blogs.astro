@@ -18,9 +18,9 @@ import {accentTitle} from "../lib/accent";
             <a
               class="blog-card"
               href={blog.url}
-              data-clarity-event="blog_card_click"
-              data-clarity-tag="post"
-              data-clarity-value={blog.title}
+              data-ph-event="blog_card_click"
+              data-ph-prop="post"
+              data-ph-value={blog.title}
             >
               <h3 class="blog-title">{blog.title}</h3>
               <p class="small">{blog.description}</p>

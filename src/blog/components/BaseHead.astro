@@ -39,23 +39,26 @@ const canonical = `${origin}${pathname}`;
 const base = "/blog";
 const ogImage = `${origin}${base}/og-image.png`;
 
-// Microsoft Clarity project id, set per-environment in Cloudflare Pages build
-// env vars. PUBLIC_ because the value is inlined into the served HTML anyway.
-// Unset (local dev, CI) → the tag is omitted entirely. The snippet is built
-// here and injected via set:html — a <script> nested inside a template
-// expression can't hold braces (they parse as expressions). The tag itself is
-// injected on idle so it stays out of the initial load waterfall; the queue
-// stub buffers clarity() calls until then.
+// PostHog analytics, same setup as the portfolio app — see
+// ../../layouts/Layout.astro for why the values are passed through meta tags.
+const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
+const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
+const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
+
+// Microsoft Clarity — session recordings and heatmaps only; PostHog above owns
+// events. Clarity's recording UI is the better tool for watching a session
+// back, and it is unmetered. No clarity() calls anywhere in the app: this tag
+// is the whole integration (../../lib/analytics.ts talks to PostHog only).
+// PUBLIC_ because the value is inlined into the served HTML anyway. Unset
+// (local dev, CI) → the tag is omitted entirely. The snippet is built here and
+// injected via set:html — a <script> nested inside a template expression can't
+// hold braces (they parse as expressions). The tag is injected on idle so it
+// stays out of the initial load waterfall.
 // trim(): a stray space pasted into the build env var otherwise 400s the tag URL
 const PUBLIC_CLARITY_PROJECT_ID =
   import.meta.env.PUBLIC_CLARITY_PROJECT_ID?.trim();
 const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
   ? `(function () {
-  window.clarity =
-    window.clarity ||
-    function () {
-      (window.clarity.q = window.clarity.q || []).push(arguments);
-    };
   var loadClarity = function () {
     var s = document.createElement("script");
     s.async = true;
@@ -152,18 +155,28 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
   )
 }
+{
+  analyticsEnabled && (
+    <>
+      <meta name="ph-token" content={POST_HOG_TOKEN} />
+      <meta name="ph-host" content={POST_HOG_URL} />
+    </>
+  )
+}
+
 {claritySnippet && <script is:inline set:html={claritySnippet} />}
 
 <script>
   // Shared WebMCP tool registration from the portfolio app (same cross-app
   // import pattern as the chat widget).
   import "../../lib/webmcp";
-  import {initClickTracking, tag} from "../../lib/analytics";
+  import {bootAnalytics, initClickTracking, tag} from "../../lib/analytics";
 
-  // Clarity custom events for annotated links (data-clarity-event), plus the
-  // theme as a session tag. The bootstrap script in ../layouts/BaseLayout.astro
+  // PostHog custom events for annotated links (data-ph-event), plus the theme
+  // as a super property. The bootstrap script in ../layouts/BaseLayout.astro
   // puts the theme on <body> as a class before first paint; this module is
   // deferred, so it has already run.
   initClickTracking();
   tag("theme", document.body.classList.contains("dark") ? "dark" : "light");
+  bootAnalytics();
 </script>

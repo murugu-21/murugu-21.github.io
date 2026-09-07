@@ -152,23 +152,38 @@ if (!noindex) {
 }
 const jsonLd = {"@context": "https://schema.org", "@graph": graph};
 
-// Microsoft Clarity project id, set per-environment in Cloudflare Pages build
-// env vars. PUBLIC_ because the value is inlined into the served HTML anyway.
-// Unset (local dev, CI) → the tag is omitted entirely. The snippet is built
-// here and injected via set:html — a <script> nested inside a template
-// expression can't hold braces (they parse as expressions). The tag itself is
-// injected on idle so it stays out of the initial load waterfall; the queue
-// stub buffers clarity() calls until then.
+// PostHog analytics. Ingestion goes through https://e.murugappan.dev —
+// PostHog's managed reverse proxy on our own domain (a CNAME to their
+// infrastructure), so events are not lost to third-party blocking and the
+// data stays on our hostname. Read here in the frontmatter, at build time, and
+// handed to the client through the meta tags below: the SDK itself is
+// dynamic-imported on idle by ../lib/analytics.ts, so it never touches the
+// initial bundle.
+// Either value unset (local dev, CI) → analytics no-ops entirely.
+// The values reach the client through the two meta tags below rather than a
+// data attribute on the script element: Astro bundles <script> as a module,
+// and document.currentScript is null in module scope. The token is a public
+// project key, so it ships in the page either way — which is also why neither
+// var needs a PUBLIC_ prefix: they are read here at build time, never in a
+// client bundle.
+const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
+const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
+const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
+
+// Microsoft Clarity — session recordings and heatmaps only; PostHog above owns
+// events. Clarity's recording UI is the better tool for watching a session
+// back, and it is unmetered. No clarity() calls anywhere in the app: this tag
+// is the whole integration (src/lib/analytics.ts talks to PostHog only).
+// PUBLIC_ because the value is inlined into the served HTML anyway. Unset
+// (local dev, CI) → the tag is omitted entirely. The snippet is built here and
+// injected via set:html — a <script> nested inside a template expression can't
+// hold braces (they parse as expressions). The tag is injected on idle so it
+// stays out of the initial load waterfall.
 // trim(): a stray space pasted into the build env var otherwise 400s the tag URL
 const PUBLIC_CLARITY_PROJECT_ID =
   import.meta.env.PUBLIC_CLARITY_PROJECT_ID?.trim();
 const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
   ? `(function () {
-  window.clarity =
-    window.clarity ||
-    function () {
-      (window.clarity.q = window.clarity.q || []).push(arguments);
-    };
   var loadClarity = function () {
     var s = document.createElement("script");
     s.async = true;
@@ -274,17 +289,26 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
       })();
     </script>
 
-    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    {
+      analyticsEnabled && (
+        <>
+          <meta name="ph-token" content={POST_HOG_TOKEN} />
+          <meta name="ph-host" content={POST_HOG_URL} />
+        </>
+      )
+    }
 
     {claritySnippet && <script is:inline set:html={claritySnippet} />}
 
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
     <script>
       import "../lib/webmcp";
-      import {initClickTracking, tag} from "../lib/analytics";
+      import {bootAnalytics, initClickTracking, tag} from "../lib/analytics";
 
-      // Clarity custom events for the annotated links in the sections below
-      // (data-clarity-event), plus the theme as a session tag so recordings
-      // can be filtered by it. Both no-op when the tag isn't loaded.
+      // PostHog custom events for the annotated links in the sections below
+      // (data-ph-event), plus the theme as a super property. Both no-op until
+      // the SDK boots, buffering anything captured in between.
       initClickTracking();
       tag(
         "theme",
@@ -292,6 +316,9 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
           ? "dark"
           : "light"
       );
+
+      // Reads the meta tags below and loads the SDK on idle.
+      bootAnalytics();
     </script>
   </head>
   <body>

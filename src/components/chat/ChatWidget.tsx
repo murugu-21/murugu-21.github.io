@@ -26,7 +26,7 @@ import {
 import {Input} from "../ui/input";
 import {ScrollArea} from "../ui/scroll-area";
 import {cn} from "../../lib/utils";
-import {track, upgrade} from "../../lib/analytics";
+import {track} from "../../lib/analytics";
 import "../../styles/islands.css";
 
 const ROOM_KEY = "chatRoomId";
@@ -126,7 +126,6 @@ export function ChatWidget() {
   const greetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const upgradedRef = useRef(false);
 
   const commitStream = () => {
     const text = streamRef.current;
@@ -189,7 +188,7 @@ export function ChatWidget() {
       case "limit":
       case "error":
         // No message text, here or anywhere below: nothing a visitor typed
-        // goes to Clarity.
+        // goes to PostHog. Session replay masks the input for the same reason.
         track(msg.type === "limit" ? "chat_limit" : "chat_error");
         setTyping(false);
         setWaiting(false);
@@ -263,12 +262,6 @@ export function ChatWidget() {
     setSending(true);
     setConfirmRestart(false);
     track("chat_message_sent");
-    // A visitor who actually talked to Jarvis is the session worth watching
-    // back, and Clarity samples recordings otherwise. Once is enough.
-    if (!upgradedRef.current) {
-      upgradedRef.current = true;
-      upgrade("chat");
-    }
     // Include the page the visitor is on — the room feeds it to the model as
     // ephemeral context so "this post"/"this page" resolve correctly.
     ws.send(
@@ -489,7 +482,16 @@ export function ChatWidget() {
           )}
 
           <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
-            <div className="flex flex-col gap-2 p-3" aria-live="polite">
+            {/* data-clarity-mask: Clarity masks <input> contents in every
+                masking mode, but a sent message is re-rendered as a bubble
+                <div>, which is not covered — mask the whole transcript so
+                nothing a visitor typed reaches a recording. Matches the
+                no-PII rule the events follow. */}
+            <div
+              className="flex flex-col gap-2 p-3"
+              aria-live="polite"
+              data-clarity-mask="true"
+            >
               {greeted && <BubbleView kind="assistant" text={GREETING} />}
               {bubbles.map((b, i) => (
                 <BubbleView key={i} kind={b.kind} text={b.text} />

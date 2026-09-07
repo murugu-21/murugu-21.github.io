@@ -49,8 +49,8 @@ const ThemeToggle = () => {
         onChange={e => {
           const next = e.target.checked ? "dark" : "light";
           window.__setPreferredTheme(next);
-          // Tag, not an event: the point is filtering recordings by the theme
-          // the reader actually read the post in.
+          // A super property, not an event: the point is segmenting by the
+          // theme the reader actually read the post in.
           tag("theme", next);
         }}
         aria-label="theme toggler"

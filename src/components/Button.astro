@@ -4,12 +4,11 @@ interface Props {
   href: string;
   download?: string;
   newTab?: boolean;
-  /* Clarity custom event fired on click, wired by the delegated listener in
-     ../lib/analytics.ts. `upgrade` also keeps the session recording. */
+  /* PostHog custom event captured on click, wired by the delegated listener
+     in ../lib/analytics.ts. */
   event?: string;
-  upgrade?: boolean;
 }
-const {text, href, download, newTab, event, upgrade} = Astro.props;
+const {text, href, download, newTab, event} = Astro.props;
 ---
 
 <a
@@ -18,8 +17,7 @@ const {text, href, download, newTab, event, upgrade} = Astro.props;
   download={download}
   target={newTab ? "_blank" : undefined}
   rel={newTab ? "noopener noreferrer" : undefined}
-  data-clarity-event={event}
-  data-clarity-upgrade={event && upgrade ? "" : undefined}>{text}</a
+  data-ph-event={event}>{text}</a
 >
 
 <style lang="scss">
