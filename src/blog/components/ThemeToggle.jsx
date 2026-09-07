@@ -2,6 +2,7 @@ import Toggle from "react-toggle";
 import moon from "../images/moon.png";
 import sun from "../images/sun.png";
 import {useTheme} from "../utils/useTheme";
+import {tag} from "../../lib/analytics";
 
 const ThemeToggle = () => {
   // null until the bootstrap script has run, which keeps the toggle out of the
@@ -31,7 +32,11 @@ const ThemeToggle = () => {
         }}
         checked={theme === "dark"}
         onChange={e => {
-          window.__setPreferredTheme(e.target.checked ? "dark" : "light");
+          const next = e.target.checked ? "dark" : "light";
+          window.__setPreferredTheme(next);
+          // Tag, not an event: the point is filtering recordings by the theme
+          // the reader actually read the post in.
+          tag("theme", next);
         }}
         aria-label="theme toggler"
       />

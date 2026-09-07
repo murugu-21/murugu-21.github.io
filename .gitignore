@@ -26,3 +26,7 @@ yarn-error.log*
 .wrangler/
 .dev.vars
 worker-configuration.d.ts
+
+# blog read-aloud: author's voice reference and the local TTS python env
+.voice/
+.venv-tts/

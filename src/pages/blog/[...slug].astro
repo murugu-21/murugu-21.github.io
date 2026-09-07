@@ -11,6 +11,7 @@ import {
   excerpt
 } from "../../blog/utils/posts";
 import {formatReadingTime} from "../../blog/utils/helpers";
+import {ListenControls} from "../../blog/components/ListenControls";
 
 // One page per post; prev/next wired in date-ASC order, exactly like the old
 // gatsby-node.js createPages loop.
@@ -69,6 +70,12 @@ const jsonLd = {
         {formatDate(post.data.date)}
         {` • ${formatReadingTime(timeToRead(post.body))}`}
       </p>
+      <!-- Read-aloud controls: a shadcn island (src/blog/components). Renders
+           nothing until hydrated, and nothing at all without a speech or
+           audio backend. -->
+      <div class="listen-island ui-island">
+        <ListenControls client:load slug={post.id} />
+      </div>
     </header>
     <section itemprop="articleBody">
       <Content />

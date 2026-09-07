@@ -5,6 +5,7 @@ declare module "cloudflare:test" {
   export interface ProvidedEnv {
     ChatRoom: DurableObjectNamespace<ChatRoom>;
     RateLimiter: DurableObjectNamespace<RateLimiter>;
+    AUDIO: R2Bucket;
   }
 
   export const env: ProvidedEnv;

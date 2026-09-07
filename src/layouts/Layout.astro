@@ -237,8 +237,8 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
     <meta name="twitter:description" content={socialDescription} />
     <meta name="twitter:image" content="https://murugappan.dev/og-image.png" />
 
-    <meta name="msapplication-TileColor" content="#057b01" />
-    <meta name="theme-color" content="#057b01" />
+    <meta name="msapplication-TileColor" content="#06038d" />
+    <meta name="theme-color" content="#06038d" />
     <meta
       name="theme-color"
       content="#282c35"
@@ -280,6 +280,18 @@ const claritySnippet = PUBLIC_CLARITY_PROJECT_ID
 
     <script>
       import "../lib/webmcp";
+      import {initClickTracking, tag} from "../lib/analytics";
+
+      // Clarity custom events for the annotated links in the sections below
+      // (data-clarity-event), plus the theme as a session tag so recordings
+      // can be filtered by it. Both no-op when the tag isn't loaded.
+      initClickTracking();
+      tag(
+        "theme",
+        document.documentElement.classList.contains("dark-mode")
+          ? "dark"
+          : "light"
+      );
     </script>
   </head>
   <body>

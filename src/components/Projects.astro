@@ -52,6 +52,9 @@ const show = projectsSection.display && repos.length > 0;
             href={repo.url}
             target="_blank"
             rel="noopener noreferrer"
+            data-clarity-event="project_click"
+            data-clarity-tag="project"
+            data-clarity-value={repo.name}
           >
             <div class="repo-name-div">
               <svg
@@ -131,6 +134,7 @@ const show = projectsSection.display && repos.length > 0;
         text="More Projects"
         href={socialMediaLinks.github}
         newTab={true}
+        event="more_projects_click"
       />
     </div>
   )
@@ -233,7 +237,7 @@ const show = projectsSection.display && repos.length > 0;
     line-height: 1.6;
     padding: 0.1rem 0.6rem;
     border-radius: 999px;
-    background-color: rgba(5, 123, 1, 0.1);
+    background-color: rgba(6, 3, 141, 0.1);
     color: $buttonColor;
     white-space: nowrap;
   }
@@ -294,7 +298,7 @@ const show = projectsSection.display && repos.length > 0;
     @include glow-card-dark-hover;
   }
   :global(html.dark-mode) .repo-topic {
-    background-color: rgba(44, 207, 39, 0.14);
+    background-color: rgba(76, 125, 255, 0.14);
     color: $accentDark;
   }
 

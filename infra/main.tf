@@ -67,3 +67,12 @@ resource "cloudflare_ruleset" "markdown_for_agents" {
     }
   ]
 }
+
+# Private bucket for pre-rendered blog audio (blog/<slug>.mp3 + .json) and the
+# author's voice reference (voice/*). Only the Worker's /blog/audio/* route
+# reads blog/*; voice/* is never served. Objects are written from the author's
+# laptop by `npm run audio` (see README "Read-aloud audio").
+resource "cloudflare_r2_bucket" "blog_audio" {
+  account_id = var.account_id
+  name       = "murugappan-dev-audio"
+}

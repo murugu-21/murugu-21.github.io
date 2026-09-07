@@ -69,14 +69,14 @@ html.dark-mode ::-webkit-scrollbar-track {
   background: $darkPageBase;
 }
 html.dark-mode ::-webkit-scrollbar-thumb {
-  background: rgba(5, 123, 1, 0.85);
+  background: rgba(6, 3, 141, 0.85);
   border-radius: 12px;
 }
 html.dark-mode ::-webkit-scrollbar-thumb:hover {
-  background: rgba(44, 207, 39, 0.85);
+  background: rgba(76, 125, 255, 0.85);
 }
 html.dark-mode {
-  scrollbar-color: rgba(5, 123, 1, 0.85) $darkPageBase;
+  scrollbar-color: rgba(6, 3, 141, 0.85) $darkPageBase;
 }
 
 /* Entrance animation utility */

@@ -23,6 +23,35 @@ GITHUB_TOKEN=ghp_xxx npm run build
 
 Microsoft Clarity analytics is injected at **build time** when a `PUBLIC_CLARITY_PROJECT_ID` environment variable is set (configured in the Workers Builds build env vars for production). Without it the tag is omitted entirely, so local dev and CI builds stay analytics-free.
 
+### Custom events
+
+`src/lib/analytics.ts` wraps the Clarity API for both apps — `track(event, tags?)`, `tag(key, value)`, `upgrade(reason)` and `initClickTracking()`. Every one no-ops when the tag was never emitted, and swallows failures, so calls are safe anywhere. Page views, scroll heatmaps and rage/dead clicks come from Clarity itself and are not re-instrumented here. **Nothing a visitor typed** (chat messages, blog search queries) is ever sent.
+
+Plain links opt in declaratively — `data-clarity-event`, plus optional `data-clarity-tag`/`data-clarity-value` and a bare `data-clarity-upgrade` — and one delegated `click` listener per document handles them, React-rendered markup included. `initClickTracking()` is called from `src/layouts/Layout.astro` (portfolio) and `src/blog/components/BaseHead.astro` (blog).
+
+| Event                                            | Fired on                                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `resume_download`                                | "Download my resume" (also upgrades the session recording)                                       |
+| `contact_click`                                  | "Contact me"                                                                                     |
+| `social_click`                                   | any outbound profile link, tagged `social=github\|linkedin\|email\|phone\|x\|rss\|stackoverflow` |
+| `project_click`                                  | a pinned-repo card, tagged `project=<repo>`                                                      |
+| `more_projects_click`                            | "More Projects"                                                                                  |
+| `oss_link_click`                                 | an open-source card link, tagged `oss=<name>`                                                    |
+| `blog_card_click`                                | a homepage blog card, tagged `post=<title>`                                                      |
+| `chat_open`                                      | the Jarvis launcher is opened                                                                    |
+| `chat_starter_click`                             | a suggested starter chip                                                                         |
+| `chat_message_sent`                              | a message is sent (first one also upgrades the recording)                                        |
+| `chat_limit` / `chat_error`                      | the room replies with a rate limit or an error                                                   |
+| `chat_restart` / `chat_transcript_download`      | conversation menu actions                                                                        |
+| `listen_play`                                    | first play on a post, tagged `post=<slug>`                                                       |
+| `listen_resume` / `listen_pause` / `listen_seek` | transport controls (seek fires once per scrub)                                                   |
+| `listen_rate`                                    | playback speed changed, tagged `listen_rate=<n>x`                                                |
+| `listen_complete`                                | the post was read to the end                                                                     |
+| `listen_audio_fallback`                          | pre-rendered audio failed and speech synthesis took over                                         |
+| `listen_unavailable`                             | no backend at all (should be unreachable — the control hides itself)                             |
+
+Session tags carry context rather than actions: `theme` (`dark`/`light`, set on load and on every toggle) and `listen_backend` (`audio`/`speech`). `upgrade()` is reserved for the two sessions worth watching back — a resume download and a real chat turn — since Clarity samples recordings otherwise.
+
 ## Checks
 
 ```bash
@@ -75,6 +104,52 @@ Images placed next to `index.md` can be referenced relatively (`![alt](image.png
 time. ` ```mermaid ` code blocks are rendered to diagrams client-side. The directory name is the URL slug, so
 the post is published at `/blog/<slug>/` and picked up automatically by the sitemap, RSS feed, both `llms.txt`
 files and the markdown renditions.
+
+### Read-aloud audio
+
+Every post has a **Listen** control. When `/blog/audio/<slug>.json` exists the page plays a
+pre-rendered MP3 of the post in Murugappan's own voice and highlights the paragraph being read
+from the timing JSON; otherwise (a new post, or `astro dev`, which has no Worker) it falls back
+to the browser's speech synthesis. Audio is generated **on a laptop, never in CI**: the model is
+6.7 GB and needs Apple Silicon.
+
+**Pipeline** (`scripts/generate-audio.mjs`): built HTML → the same `speechBlocks()` the page
+uses → emoji/punctuation normalisation → ≤300-char sentence groups → Fish Audio S2 Pro
+(`scripts/tts/synth.py`, [mlx-speech](https://github.com/appautomaton/mlx-speech), default
+sampling) → `atempo=1.08` per chunk → sample-accurate joins (0.15 s within a paragraph,
+0.45 s between) → `loudnorm I=-16` → 64 kbps MP3 + `{blocks:[{text,start,end}]}` JSON →
+R2 bucket `murugappan-dev-audio` (`infra/main.tf`, bound as `AUDIO`), served by
+`worker/audio.ts` with Range/ETag support. Posts whose spoken-text hash is unchanged are skipped.
+Before the loudness pass the chain denoises (`afftdn`) and gates pauses: the raw model output carries audible hiss that normalisation would otherwise lift. Do not add inline style tags or raise temperature: both add more hiss (pilot, 2026-09-05).
+
+**One-time setup**
+
+```bash
+brew install ffmpeg
+python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/tts/requirements.txt
+mkdir .voice && cp <reference.wav> <reference.txt> .voice/   # 15 s clean take + its transcript
+npm run audio -- --upload-voice     # durable copy in R2; restored automatically if .voice/ is lost
+```
+
+The bucket comes from `terraform apply` in `infra/` (or `npx wrangler r2 bucket create
+murugappan-dev-audio`). Voice reference and venv are git-ignored; the reference is never served.
+
+**Publishing a post**
+
+```bash
+npm run build && npm run audio <slug>      # ~3 s of compute per second of audio on an M4 Pro
+npm run audio:align <slug>                # word timings for the Speechify-style highlight, ~5 s per post
+```
+
+Then push as usual. `npm run audio` with no slug renders every changed post; `--force` re-renders,
+`--dry-run` only extracts and hashes, `--local` targets `wrangler dev`'s R2. `npm run audio:align`
+(`scripts/align-audio.mjs`) runs after synthesis, never concurrently: it slices each paragraph out of the
+MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
+(`whisper-large-v3-turbo`, 1.6 GB, auto-downloaded), maps them onto the known text
+(`src/blog/utils/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per
+paragraph. The page highlights the current word when that array exists and the paragraph otherwise;
+the speech-synthesis fallback gets word highlights from the browser's `boundary` events. Fish Audio S2 Pro is
+under the Fish Audio Research License (non-commercial), which this personal blog satisfies.
 
 ## Public API (`/api/*`)
 
@@ -194,7 +269,7 @@ server, so an MCP client can use the site without any HTTP glue. Add it as
 
 ## Credits
 
-- Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio); the hero desk illustration is adapted from that project (recolored to this site's green theme).
+- Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio); the hero desk illustration is adapted from that project (recolored to this site's navy theme).
 - Originally based on [developerFolio](https://github.com/saadpasta/developerFolio) before the Astro migration.
 
 ## AI chat widget

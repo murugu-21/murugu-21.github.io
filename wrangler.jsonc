@@ -61,5 +61,8 @@
       "database_id": "a1111792-fb35-470f-85c9-13c3aab0662c"
     }
   ],
+  // Pre-rendered blog audio + the voice reference, written by `npm run audio`
+  // from a laptop (never from Workers Builds). Served by worker/audio.ts.
+  "r2_buckets": [{"binding": "AUDIO", "bucket_name": "murugappan-dev-audio"}],
   "observability": {"enabled": true}
 }

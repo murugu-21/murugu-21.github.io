@@ -2,6 +2,7 @@ import {Hono} from "hono";
 import {partyserverMiddleware} from "hono-party";
 
 import {api, specRoutes} from "./api";
+import {audio} from "./audio";
 import {ChatRoom} from "./chat-room";
 import {mcp} from "./mcp";
 import {serveAsset} from "./not-found";
@@ -33,6 +34,10 @@ app.route("/openapi.json", specRoutes);
 app.route("/mcp.json", mcpManifest);
 app.route("/.well-known", wellKnown);
 app.route("/mcp", mcp);
+
+// Pre-rendered blog audio from R2 (worker/audio.ts). Registered ahead of the
+// asset catch-all; a missing object still ends in the negotiated 404.
+app.route("/blog/audio", audio);
 
 // Anything else is static assets. A 404 from that layer is content-negotiated:
 // markdown for a machine client, the styled page for a browser.
