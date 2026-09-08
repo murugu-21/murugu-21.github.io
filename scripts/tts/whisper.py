@@ -11,6 +11,7 @@ sequence match in audio-words.ts far more forgiving.
 import json
 import sys
 import time
+from typing import Any
 
 import mlx_whisper
 
@@ -32,7 +33,7 @@ def main() -> int:
         job = json.loads(line)
         t0 = time.time()
         try:
-            result = mlx_whisper.transcribe(
+            result: dict[str, Any] = mlx_whisper.transcribe(
                 job["wav"],
                 path_or_hf_repo=MODEL,
                 language="en",
