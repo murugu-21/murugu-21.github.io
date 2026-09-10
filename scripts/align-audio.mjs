@@ -163,7 +163,7 @@ async function alignPost(slug, worker) {
   try {
     const jsonPath = join(tmp, "timings.json");
     const mp3 = join(tmp, "post.mp3");
-    if (!r2Get(`blog/${slug}.json`, jsonPath)) {
+    if (!r2Get(`blog/breeze/${slug}.json`, jsonPath)) {
       log(`${slug}: no audio in R2, skipping`);
       return "skipped";
     }
@@ -172,7 +172,8 @@ async function alignPost(slug, worker) {
       log(`${slug}: already aligned, skipping`);
       return "skipped";
     }
-    if (!r2Get(`blog/${slug}.mp3`, mp3)) throw new Error("mp3 missing in R2");
+    if (!r2Get(`blog/breeze/${slug}.mp3`, mp3))
+      throw new Error("mp3 missing in R2");
 
     const wav = join(tmp, "post.wav");
     run("ffmpeg", [
@@ -229,7 +230,7 @@ async function alignPost(slug, worker) {
 
     const out = {...timings, version: 2, blocks};
     writeFileSync(jsonPath, JSON.stringify(out));
-    r2Put(`blog/${slug}.json`, jsonPath, "application/json");
+    r2Put(`blog/breeze/${slug}.json`, jsonPath, "application/json");
     log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
     return "aligned";
   } finally {

@@ -123,28 +123,34 @@ files and the markdown renditions.
 ### Read-aloud audio
 
 Every post has a **Listen** control. When `/blog/audio/<slug>.json` exists the page plays a
-pre-rendered MP3 of the post in Murugappan's own voice and highlights the paragraph being read
-from the timing JSON; otherwise (a new post, or `astro dev`, which has no Worker) it falls back
-to the browser's speech synthesis. Audio is generated **on a laptop, never in CI**: the model is
-6.7 GB and needs Apple Silicon.
+pre-rendered MP3 of the post in the blog's designed narrator voice and highlights the paragraph
+being read from the timing JSON; otherwise (a new post, or `astro dev`, which has no Worker) it
+falls back to the browser's speech synthesis. Audio is generated **on a laptop, never in CI**: the
+model is 3.9 GB and needs Apple Silicon.
 
 **Pipeline** (`scripts/generate-audio.mjs`): built HTML → the same `speechBlocks()` the page
-uses → emoji/punctuation normalisation → ≤300-char sentence groups → Fish Audio S2 Pro
-(`scripts/tts/synth.py`, [mlx-speech](https://github.com/appautomaton/mlx-speech), default
-sampling) → `atempo=1.08` per chunk → sample-accurate joins (0.15 s within a paragraph,
-0.45 s between) → `loudnorm I=-16` → 64 kbps MP3 + `{blocks:[{text,start,end}]}` JSON →
-R2 bucket `murugappan-dev-audio` (`infra/main.tf`, bound as `AUDIO`), served by
-`worker/audio.ts` with Range/ETag support. Posts whose spoken-text hash is unchanged are skipped.
-Before the loudness pass the chain denoises (`afftdn`) and gates pauses: the raw model output carries audible hiss that normalisation would otherwise lift. Do not add inline style tags or raise temperature: both add more hiss (pilot, 2026-09-05).
+uses → emoji/punctuation/long-digit-run normalisation → ≤300-char sentence groups → Breeze TTS 2
+(`scripts/tts/synth.py`, [mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit)
+via [mlx-audio](https://github.com/Blaizzy/mlx-audio), plain clone of `.voice/reference.wav`) →
+`atempo=1.08` per chunk → sample-accurate joins (0.15 s within a paragraph, 0.45 s between) →
+`loudnorm I=-16` → 64 kbps MP3 + `{blocks:[{text,start,end}]}` JSON → R2 bucket
+`murugappan-dev-audio` (`infra/main.tf`, bound as `AUDIO`) under the per-voice prefix
+`blog/breeze/`, served by `worker/audio.ts` with Range/ETag support. Posts whose spoken-text hash
+is unchanged are skipped. The previous voice (a Fish Audio S2 Pro clone of a phone recording,
+2026-09-05) is still in the bucket at `blog/<slug>.*` and is no longer referenced.
 
 **One-time setup**
 
 ```bash
 brew install ffmpeg
 python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/tts/requirements.txt
-mkdir .voice && cp <reference.wav> <reference.txt> .voice/   # 15 s clean take + its transcript
+.venv-tts/bin/python scripts/tts/design-voice.py 3   # persona prompt → .voice/candidates/{0,1,2}.wav
+cp .voice/candidates/<k>.wav .voice/reference.wav && cp .voice/candidates/reference.txt .voice/reference.txt
 npm run audio -- --upload-voice     # durable copy in R2; restored automatically if .voice/ is lost
 ```
+
+Or skip the design step and fetch the clip in use: `npm run audio` restores `.voice/` from
+`voice/breeze/` in R2 when it is missing.
 
 The bucket comes from `terraform apply` in `infra/` (or `npx wrangler r2 bucket create
 murugappan-dev-audio`). Voice reference and venv are git-ignored; the reference is never served.
@@ -152,7 +158,7 @@ murugappan-dev-audio`). Voice reference and venv are git-ignored; the reference 
 **Publishing a post**
 
 ```bash
-npm run build && npm run audio <slug>      # ~3 s of compute per second of audio on an M4 Pro
+npm run build && npm run audio <slug>      # ~2.8 s of compute per second of audio on an M4 Pro
 npm run audio:align <slug>                # word timings for the Speechify-style highlight, ~5 s per post
 ```
 
@@ -163,8 +169,27 @@ MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore
 (`whisper-large-v3-turbo`, 1.6 GB, auto-downloaded), maps them onto the known text
 (`src/blog/utils/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per
 paragraph. The page highlights the current word when that array exists and the paragraph otherwise;
-the speech-synthesis fallback gets word highlights from the browser's `boundary` events. Fish Audio S2 Pro is
-under the Fish Audio Research License (non-commercial), which this personal blog satisfies.
+the speech-synthesis fallback gets word highlights from the browser's `boundary` events. Breeze TTS 2
+weights are under the BreezeBlue Research and Non-Commercial License, which this personal blog satisfies.
+
+**The voice** was chosen in a 2026-09-09 listening evaluation against Google Chirp 3 HD, Gemini 3.1
+Flash TTS and the earlier Fish clone. The clone of a phone recording hissed and shifted tone between
+paragraphs; a _designed_ voice fixes both because the reference clip is synthetic (noise floor about
+−60 dBFS) and every paragraph clones the same clip. The design runs once with the persona prompt in
+`scripts/tts/design-voice.py` (`cfg_scale=4`):
+
+> A 25-year-old male software engineer from Chennai with a light Tamil-influenced Indian English
+> accent, recording the audio version of his own blog post. Quiet confidence and a bit of dry
+> humour. Natural conversational pace, slight emphasis on key terms, brief pauses between ideas.
+
+Per-paragraph synthesis passes **no** instruction: classifier-free guidance would run the 3B backbone
+twice per frame and let the delivery drift. Use the 8-bit build; bf16 swaps on a 24 GB machine and is
+3x slower. Breeze loops on long runs of one digit (`0.30000000000000004`), which is why
+`normalizeSpeechText` describes such runs instead of listing them. Gemini 3.1 Flash TTS (voice
+`Fenrir`) sounded as good and renders in seconds, but has no free tier once billing is attached to the
+project; its narration prompt was "Narrate this technical blog post like a calm, clear software
+engineer explaining to a peer. Natural conversational pace, no hype. Read acronyms letter by letter
+and code identifiers exactly as written."
 
 ## Public API (`/api/*`)
 

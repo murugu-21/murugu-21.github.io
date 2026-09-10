@@ -200,20 +200,29 @@ export function wrapWords(el: HTMLElement): HTMLElement[][] {
 const wordText = (pieces: ReadonlyArray<HTMLElement>) =>
   normalizeSpeechText(pieces.map(p => p.textContent ?? "").join(""));
 
-// Pairs rendered words (as span groups) with timed words by position. Words
-// whose text normalises to nothing (an emoji on its own) are skipped,
-// mirroring how the generator's normalisation dropped them. Null when the
-// sequences disagree, in which case the block keeps its paragraph highlight.
+// Pairs rendered words (as span groups) with timed words by position,
+// mirroring the generator's normalisation: a word that normalises to nothing
+// (an emoji on its own) is skipped, and one that normalises to several
+// spoken tokens (0.30000000000000004 → "0.3, then zero repeated 15 times,
+// then 4") claims that many timed words, so the result has one entry per
+// timed word and the rendered word stays lit for the whole run. Null when
+// the sequences disagree, in which case the block keeps its paragraph
+// highlight.
 export function matchWordSpans(
   words: ReadonlyArray<ReadonlyArray<HTMLElement>>,
   timed: ReadonlyArray<TimedWord>
 ): HTMLElement[][] | null {
-  const kept = words.filter(w => wordText(w).length > 0);
-  if (kept.length !== timed.length) return null;
-  for (let i = 0; i < kept.length; i++) {
-    if (wordText(kept[i]) !== timed[i].w) return null;
+  const out: HTMLElement[][] = [];
+  let k = 0;
+  for (const word of words) {
+    const tokens = tokenize(wordText(word));
+    for (const token of tokens) {
+      if (k >= timed.length || timed[k].w !== token) return null;
+      out.push([...word]);
+      k++;
+    }
   }
-  return kept.map(w => [...w]);
+  return k === timed.length ? out : null;
 }
 
 // Index of the word being spoken at time t: the word whose span contains t,

@@ -1,6 +1,7 @@
-// Pre-rendered blog audio from R2: /blog/audio/<slug>.mp3 and .json. Written
-// by scripts/generate-audio.mjs from the author's laptop; the Worker only
-// reads. Range requests matter because <audio> seeks with them.
+// Pre-rendered blog audio from R2: /blog/audio/<slug>.mp3 and .json, stored
+// under the current voice's prefix (see KEY_PREFIX in
+// scripts/generate-audio.mjs). Written from the author's laptop; the Worker
+// only reads. Range requests matter because <audio> seeks with them.
 import {Hono} from "hono";
 
 import {serveAsset} from "./not-found";
@@ -46,7 +47,7 @@ audio.get("/:file", async c => {
   const file = c.req.param("file");
   if (!FILE.test(file)) return serveAsset(c.req.raw, c.env.ASSETS);
 
-  const key = `blog/${file}`;
+  const key = `blog/breeze/${file}`;
   const head = await c.env.AUDIO.head(key);
   if (!head) return serveAsset(c.req.raw, c.env.ASSETS);
 
