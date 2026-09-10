@@ -73,9 +73,15 @@ Super properties carry context rather than actions: `theme` (`dark`/`light`, set
 npm run check-format   # oxfmt (+ prettier for .astro/.md)
 npm run lint           # oxlint
 npm run check:astro    # type-check .astro files
-npm run check:src      # type-check src/**/*.ts(x)
+npm run check:src      # type-check src/, scripts/ and the config files
 npm run check:worker   # type-check worker/
 ```
+
+Everything is TypeScript: the Astro config, the blog islands and routes, and the
+`scripts/` that run under plain `node` (Node 22 strips types natively; `build:site`
+passes `--experimental-strip-types` so a Node 22 older than 22.18 on the build image
+still works). Two files stay JavaScript on purpose: `scripts/ts-alias.cjs` is a
+`node -r` preload and must be CommonJS, and `public/blog/sw.js` is served verbatim.
 
 The project compiler is TypeScript 7, whose native build no longer ships the
 old JS API that Astro's Volar-based tooling calls into — `astro check` crashes on it outright.
@@ -107,7 +113,7 @@ Workers Builds settings, for reference (dashboard → Workers → this applicati
 
 ## Resume generation
 
-`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `npm run build:site`, `scripts/generate-resume.mjs` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
+`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `npm run build:site`, `scripts/generate-resume.ts` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
 
 ## Blog
 
@@ -117,7 +123,7 @@ The blog (["SDE Journey"](https://murugappan.dev/blog/), migrated from Gatsby) l
       draft/               # drafts — visible in dev, excluded from production builds
     src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
     src/blog/              # layout, head, React islands (search, tags, theme toggle, bio),
-                           # styles, post helpers, consts.js site metadata
+                           # styles, post helpers, consts.ts site metadata
     src/content.config.ts  # blog content collection schema
     public/blog/           # static files served verbatim (og-image, sw.js)
 
@@ -147,7 +153,7 @@ being read from the timing JSON; otherwise (a new post, or `astro dev`, which ha
 falls back to the browser's speech synthesis. Audio is generated **on a laptop, never in CI**: the
 model is 3.9 GB and needs Apple Silicon.
 
-**Pipeline** (`scripts/generate-audio.mjs`): built HTML → the same `speechBlocks()` the page
+**Pipeline** (`scripts/generate-audio.ts`): built HTML → the same `speechBlocks()` the page
 uses → emoji/punctuation/long-digit-run normalisation → ≤300-char sentence groups → Breeze TTS 2
 (`scripts/tts/synth.py`, [mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit)
 via [mlx-audio](https://github.com/Blaizzy/mlx-audio), plain clone of `.voice/reference.wav`) →
@@ -183,7 +189,7 @@ npm run audio:align <slug>                # word timings for the Speechify-style
 
 Then push as usual. `npm run audio` with no slug renders every changed post; `--force` re-renders,
 `--dry-run` only extracts and hashes, `--local` targets `wrangler dev`'s R2. `npm run audio:align`
-(`scripts/align-audio.mjs`) runs after synthesis, never concurrently: it slices each paragraph out of the
+(`scripts/align-audio.ts`) runs after synthesis, never concurrently: it slices each paragraph out of the
 MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
 (`whisper-large-v3-turbo`, 1.6 GB, auto-downloaded), maps them onto the known text
 (`src/blog/utils/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per

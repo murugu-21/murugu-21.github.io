@@ -16,6 +16,7 @@
 // atempo=1.08 → sample-accurate assembly with gaps → loudnorm → 64 kbps MP3 +
 // timing JSON → wrangler r2 object put under blog/breeze/.
 import { spawn, spawnSync } from "node:child_process";
+import type { Buffer } from "node:buffer";
 import {
   copyFileSync,
   existsSync,
@@ -32,7 +33,7 @@ import { parseHTML } from "linkedom";
 
 import { speechBlocks } from "../src/blog/utils/speech.ts";
 import { normalizeSpeechText, packSentences, spokenHash } from "../src/blog/utils/audio-prep.ts";
-import { assemble, readWav, writeWav } from "./tts/wav.mjs";
+import { assemble, readWav, writeWav } from "./tts/wav.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const DIST = join(ROOT, "dist", "blog");
@@ -48,7 +49,7 @@ const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "synth.py");
 const BUCKET = "murugappan-dev-audio";
 // Object keys are namespaced per voice generation so a new voice never
-// overwrites the previous one; worker/audio.ts and align-audio.mjs read the
+// overwrites the previous one; worker/audio.ts and align-audio.ts read the
 // same prefix. The Fish clone of 2026-09-05 lives at blog/<slug>.*.
 const KEY_PREFIX = "blog/breeze";
 const VOICE_KEY_PREFIX = "voice/breeze";
@@ -66,21 +67,22 @@ const flags = new Set(args.filter(a => a.startsWith("--")));
 const slugs = args.filter(a => !a.startsWith("--"));
 const local = flags.has("--local");
 
-const log = (...m) => console.error(...m);
-const fail = msg => {
+const log = (...m: unknown[]) => console.error(...m);
+const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
+const fail = (msg: string): never => {
   log(`error: ${msg}`);
   process.exit(1);
 };
 
-function run(cmd, cmdArgs, opts = {}) {
-  const r = spawnSync(cmd, cmdArgs, { encoding: "utf8", ...opts });
+function run(cmd: string, cmdArgs: string[]): string {
+  const r = spawnSync(cmd, cmdArgs, { encoding: "utf8" });
   if (r.status !== 0) {
     throw new Error(`${cmd} ${cmdArgs.join(" ")}\n${r.stderr || r.stdout}`);
   }
   return r.stdout;
 }
 
-const wranglerArgs = extra => [
+const wranglerArgs = (extra: string[]) => [
   "wrangler",
   "r2",
   "object",
@@ -91,7 +93,7 @@ const wranglerArgs = extra => [
 // False only when the object is genuinely absent. Any other wrangler failure
 // (expired login, network) throws, so a broken session can never be mistaken
 // for "nothing there yet".
-function r2Get(key, file) {
+function r2Get(key: string, file: string): boolean {
   const r = spawnSync("npx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
     encoding: "utf8"
   });
@@ -113,7 +115,7 @@ function checkWranglerLogin() {
   }
 }
 
-function r2Put(key, file, contentType) {
+function r2Put(key: string, file: string, contentType: string) {
   run(
     "npx",
     wranglerArgs(["put", `${BUCKET}/${key}`, "--file", file, "--content-type", contentType])
@@ -122,7 +124,7 @@ function r2Put(key, file, contentType) {
 
 // ---- preconditions ---------------------------------------------------------
 
-function checkPreconditions() {
+function checkPreconditions(): { audio: string; text: string } {
   if (!existsSync(DIST)) fail("dist/blog missing — run `npm run build` first");
   for (const tool of ["ffmpeg", "ffprobe"]) {
     if (spawnSync(tool, ["-version"]).status !== 0) {
@@ -158,7 +160,7 @@ function checkPreconditions() {
 
 // Every dist/blog/<dir>/index.html that is a post. The blog's own 404 page
 // lives there too and has no article body.
-function publishedSlugs() {
+function publishedSlugs(): string[] {
   return readdirSync(DIST, { withFileTypes: true })
     .filter(d => {
       const page = join(DIST, d.name, "index.html");
@@ -171,7 +173,7 @@ function publishedSlugs() {
     .map(d => d.name);
 }
 
-function extractBlocks(slug) {
+function extractBlocks(slug: string): string[] {
   const html = readFileSync(join(DIST, slug, "index.html"), "utf8");
   const { document } = parseHTML(html);
   const title = document.querySelector("article.blog-post header h1");
@@ -184,14 +186,27 @@ function extractBlocks(slug) {
 
 // ---- synthesis worker -------------------------------------------------------
 
+// JSON lines from scripts/tts/synth.py: one after the model loads, one per
+// finished chunk, and a `done` marker at the end of each job.
+interface ReadyMsg {
+  loadSeconds: number;
+}
+type ChunkMsg = { id: string; error: string } | { id: string; seconds: number; wall: number };
+type JobMsg = { done: true } | ({ done?: false } & ChunkMsg);
+
+interface Chunk {
+  id: string;
+  text: string;
+}
+
 function startWorker() {
   const proc = spawn(PYTHON, [WORKER], { stdio: ["pipe", "pipe", "inherit"] });
   // Lines are queued, not dropped: two lines often arrive in one data event
   // (the last chunk report and the "done" line), and the consumer only has a
   // waiter registered for the first of them.
   let buffer = "";
-  const pending = [];
-  const waiters = [];
+  const pending: unknown[] = [];
+  const waiters: ((msg: unknown) => void)[] = [];
   proc.stdout.on("data", d => {
     buffer += d;
     let nl;
@@ -199,20 +214,23 @@ function startWorker() {
       const line = buffer.slice(0, nl).trim();
       buffer = buffer.slice(nl + 1);
       if (!line) continue;
-      const msg = JSON.parse(line);
-      if (waiters.length) waiters.shift()(msg);
+      const msg: unknown = JSON.parse(line);
+      const waiter = waiters.shift();
+      if (waiter) waiter(msg);
       else pending.push(msg);
     }
   });
   const next = () =>
-    pending.length ? Promise.resolve(pending.shift()) : new Promise(res => waiters.push(res));
-  const exited = new Promise(res => proc.on("exit", res));
+    pending.length
+      ? Promise.resolve(pending.shift())
+      : new Promise<unknown>(res => waiters.push(res));
+  const exited = new Promise<void>(res => proc.on("exit", () => res()));
   return {
-    ready: next(),
-    async runJob(jobPath, onChunk) {
+    ready: next() as Promise<ReadyMsg>,
+    async runJob(jobPath: string, onChunk: (msg: ChunkMsg) => void) {
       proc.stdin.write(`${jobPath}\n`);
       for (;;) {
-        const msg = await next();
+        const msg = (await next()) as JobMsg;
         if (msg.done) return;
         onChunk(msg);
       }
@@ -225,21 +243,28 @@ function startWorker() {
   };
 }
 
+type Worker = ReturnType<typeof startWorker>;
+
 // ---- per-post pipeline ------------------------------------------------------
 
-function existingHash(slug, tmp) {
+function existingHash(slug: string, tmp: string): string | null {
   const file = join(tmp, "existing.json");
   if (!r2Get(`${KEY_PREFIX}/${slug}.json`, file)) return null;
   try {
-    return JSON.parse(readFileSync(file, "utf8")).hash ?? null;
+    const { hash } = JSON.parse(readFileSync(file, "utf8")) as { hash?: string };
+    return hash ?? null;
   } catch {
     return null;
   }
 }
 
-const round3 = n => Math.round(n * 1000) / 1000;
+const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
-async function renderPost(slug, worker, reference) {
+async function renderPost(
+  slug: string,
+  worker: Worker | null,
+  reference: { audio: string; text: string }
+) {
   const blocks = extractBlocks(slug);
   const hash = await spokenHash(blocks);
   const tmp = mkdtempSync(join(tmpdir(), `audio-${slug}-`));
@@ -248,7 +273,7 @@ async function renderPost(slug, worker, reference) {
       log(`${slug}: unchanged, skipping`);
       return "skipped";
     }
-    const chunks = [];
+    const chunks: Chunk[] = [];
     const chunkIds = blocks.map((text, b) =>
       packSentences(text, CHUNK_MAX).map((chunkText, c) => {
         const id = `b${String(b).padStart(3, "0")}-c${String(c).padStart(2, "0")}`;
@@ -259,14 +284,14 @@ async function renderPost(slug, worker, reference) {
     log(
       `${slug}: ${blocks.length} blocks, ${chunks.length} chunks, ${blocks.join(" ").length} chars`
     );
-    if (flags.has("--dry-run")) return "dry-run";
+    if (flags.has("--dry-run") || !worker) return "dry-run";
 
     const outDir = join(tmp, "chunks");
     const jobPath = join(tmp, "job.json");
     writeFileSync(jobPath, JSON.stringify({ reference, outDir, chunks }));
-    const errors = [];
+    const errors: string[] = [];
     await worker.runJob(jobPath, msg => {
-      if (msg.error) errors.push(`${msg.id}: ${msg.error}`);
+      if ("error" in msg) errors.push(`${msg.id}: ${msg.error}`);
       else log(`  ${msg.id} ${msg.seconds.toFixed(1)}s audio in ${msg.wall}s`);
     });
     if (errors.length) {
@@ -274,8 +299,8 @@ async function renderPost(slug, worker, reference) {
     }
 
     // Post-fx pass 1: tempo per chunk, so timings measured afterwards are exact.
-    let sampleRate = null;
-    const perBlock = chunkIds.map(ids =>
+    let sampleRate: number | undefined;
+    const perBlock: { pcm: Buffer }[][] = chunkIds.map(ids =>
       ids.map(id => {
         const src = join(outDir, `${id}.wav`);
         const dst = join(outDir, `${id}.tempo.wav`);
@@ -305,6 +330,7 @@ async function renderPost(slug, worker, reference) {
         return { pcm: wav.pcm };
       })
     );
+    if (sampleRate === undefined) throw new Error("no chunks rendered");
     const { pcm, timings } = assemble(perBlock, sampleRate, GAPS);
     if (timings.length !== blocks.length) {
       throw new Error("block/timing count mismatch");
@@ -383,7 +409,7 @@ async function main() {
     const ready = await worker.ready;
     log(`model loaded in ${ready.loadSeconds}s`);
   }
-  const failures = [];
+  const failures: string[] = [];
   const t0 = Date.now();
   try {
     for (const slug of targets) {
@@ -391,7 +417,7 @@ async function main() {
         await renderPost(slug, worker, reference);
       } catch (err) {
         failures.push(slug);
-        log(`${slug}: FAILED — ${err.message}`);
+        log(`${slug}: FAILED — ${message(err)}`);
       }
     }
   } finally {
@@ -402,4 +428,6 @@ async function main() {
   if (failures.length) process.exit(1);
 }
 
-main().catch(err => fail(err.stack ?? String(err)));
+main().catch((err: unknown) =>
+  fail(err instanceof Error ? (err.stack ?? err.message) : String(err))
+);

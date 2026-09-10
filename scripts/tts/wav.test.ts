@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Buffer } from "node:buffer";
 
-import { assemble, readWav, silence, writeWav } from "./wav.mjs";
+import { assemble, readWav, silence, writeWav } from "./wav.ts";
 
 const SR = 8000;
-const tone = seconds => {
+const tone = (seconds: number) => {
   const n = Math.round(SR * seconds);
   const pcm = Buffer.alloc(n * 2);
   for (let i = 0; i < n; i++) pcm.writeInt16LE(1000, i * 2);

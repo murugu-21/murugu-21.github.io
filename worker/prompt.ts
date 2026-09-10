@@ -59,7 +59,7 @@ export const CAPTURE_TOOL = {
   }
 } as const;
 
-export const FETCH_TOOL = {
+const FETCH_TOOL = {
   type: "function",
   function: {
     name: "fetch_page",
@@ -91,7 +91,7 @@ export function parseFetchArguments(raw: string): string | null {
   }
 }
 
-export function buildSystemPrompt(grounding: string): string {
+function buildSystemPrompt(grounding: string): string {
   return `You are Jarvis, the AI assistant on murugappan.dev — the personal site of Murugappan M, a full stack engineer (TypeScript, Node.js, React, AWS). You act as his concierge: part support agent, part inbound-sales assistant.
 
 # Output format (strict)

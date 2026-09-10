@@ -1,7 +1,10 @@
+import type { Element } from "hast";
+import type { Options } from "rehype-autolink-headings";
+
 // Reproduces gatsby-remark-autolink-headers: an <a class="anchor"> prepended
 // inside each heading, carrying the GitHub-style link icon. style.css already
 // targets `a.anchor svg[aria-hidden="true"]`.
-const linkIcon = {
+const linkIcon: Element = {
   type: "element",
   tagName: "svg",
   properties: {
@@ -12,7 +15,7 @@ const linkIcon = {
     viewBox: "0 0 16 16",
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: 1.5
+    strokeWidth: "1.5"
   },
   children: [
     {
@@ -27,7 +30,7 @@ const linkIcon = {
   ]
 };
 
-export const autolinkConfig = {
+export const autolinkConfig: Options = {
   behavior: "prepend",
   properties: { class: "anchor", ariaHidden: "true", tabIndex: -1 },
   content: linkIcon

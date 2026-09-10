@@ -1,18 +1,19 @@
 import React, { useState } from "react";
 
-import SearchBar from "./SearchBar.jsx";
-import TagBar from "./TagBar.jsx";
+import SearchBar from "./SearchBar";
+import TagBar from "./TagBar";
+import type { TagCount } from "./Tag";
 
-import Post from "./Post.jsx";
+import Post, { type SerializedPost } from "./Post";
 
-const AllPosts = ({ posts }) => {
-  const [selectedTags, setSelectedTags] = useState([]);
+const AllPosts = ({ posts }: { posts: SerializedPost[] }) => {
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  const tags = React.useMemo(
+  const tags = React.useMemo<TagCount[]>(
     () =>
       Object.entries(
-        posts.reduce((totals, post) => {
-          return post.tags?.reduce((tagTotals, tag) => {
+        posts.reduce<Record<string, number>>((totals, post) => {
+          return post.tags.reduce((tagTotals, tag) => {
             return { ...tagTotals, [tag]: (tagTotals[tag] || 0) + 1 };
           }, totals);
         }, {})
@@ -21,9 +22,6 @@ const AllPosts = ({ posts }) => {
         .sort((a, b) => {
           if (a.count === b.count) return a.name > b.name ? 1 : -1;
           return a.count < b.count ? 1 : -1;
-        })
-        .map(tag => {
-          return { ...tag, selected: false };
         }),
     [posts]
   );
@@ -32,28 +30,34 @@ const AllPosts = ({ posts }) => {
   const query = searchQuery.toLowerCase();
   const filteredPosts = posts.filter(post => {
     return (
-      (post.title?.toLowerCase().includes(query) ||
+      (post.title.toLowerCase().includes(query) ||
         post.description?.toLowerCase().includes(query) ||
-        (typeof post.description === "undefined" && post.excerpt?.toLowerCase().includes(query))) &&
+        (typeof post.description === "undefined" && post.excerpt.toLowerCase().includes(query))) &&
       (selectedTags.length === 0 || post.tags.some(tag => selectedTags.includes(tag)))
     );
   });
 
-  const handleTagSelect = React.useCallback(({ target }) => {
-    setSelectedTags(prevTags => {
-      if (prevTags.includes(target.value)) {
-        return prevTags.filter(tag => target.value !== tag);
-      } else {
-        return [...prevTags, target.value];
-      }
-    });
-  }, []);
+  const handleTagSelect = React.useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+    ({ target }) => {
+      setSelectedTags(prevTags => {
+        if (prevTags.includes(target.value)) {
+          return prevTags.filter(tag => target.value !== tag);
+        } else {
+          return [...prevTags, target.value];
+        }
+      });
+    },
+    []
+  );
 
   return (
     <>
       <SearchBar
         query={searchQuery}
-        onChange={React.useCallback(e => setSearchQuery(e.target.value), [])}
+        onChange={React.useCallback<React.FormEventHandler<HTMLInputElement>>(
+          e => setSearchQuery(e.currentTarget.value),
+          []
+        )}
       />
       <TagBar tags={tags} onTagSelect={handleTagSelect} selectedTags={selectedTags} />
       <ol style={{ listStyle: `none` }}>

@@ -3,13 +3,19 @@
 // trusting ffmpeg's rounded durations.
 import { Buffer } from "node:buffer";
 
-export function readWav(buffer) {
+export interface Wav {
+  sampleRate: number;
+  channels: number;
+  pcm: Buffer;
+}
+
+export function readWav(buffer: Buffer): Wav {
   if (buffer.toString("ascii", 0, 4) !== "RIFF" || buffer.toString("ascii", 8, 12) !== "WAVE") {
     throw new Error("not a RIFF/WAVE file");
   }
   let offset = 12;
-  let fmt = null;
-  let pcm = null;
+  let fmt: { format: number; channels: number; sampleRate: number; bits: number } | null = null;
+  let pcm: Buffer | null = null;
   while (offset + 8 <= buffer.length) {
     const id = buffer.toString("ascii", offset, offset + 4);
     const size = buffer.readUInt32LE(offset + 4);
@@ -33,7 +39,7 @@ export function readWav(buffer) {
   return { sampleRate: fmt.sampleRate, channels: fmt.channels, pcm };
 }
 
-export function writeWav(sampleRate, pcm, channels = 1) {
+export function writeWav(sampleRate: number, pcm: Buffer, channels = 1): Buffer {
   const header = Buffer.alloc(44);
   const blockAlign = channels * 2;
   header.write("RIFF", 0, "ascii");
@@ -52,18 +58,32 @@ export function writeWav(sampleRate, pcm, channels = 1) {
   return Buffer.concat([header, pcm]);
 }
 
-export function silence(sampleRate, seconds) {
+export function silence(sampleRate: number, seconds: number): Buffer {
   return Buffer.alloc(Math.round(sampleRate * seconds) * 2);
 }
 
-// blocks: Array<Array<{pcm}>>. Chunks inside a block are joined with `intra`
-// seconds of silence, blocks with `inter`. Returns the joined PCM and one
-// {start, end} per block, in seconds, exact from the sample counts.
-export function assemble(blocks, sampleRate, gaps) {
-  const parts = [];
-  const timings = [];
+export interface Gaps {
+  intra: number;
+  inter: number;
+}
+
+export interface BlockTiming {
+  start: number;
+  end: number;
+}
+
+// Chunks inside a block are joined with `intra` seconds of silence, blocks
+// with `inter`. Returns the joined PCM and one {start, end} per block, in
+// seconds, exact from the sample counts.
+export function assemble(
+  blocks: { pcm: Buffer }[][],
+  sampleRate: number,
+  gaps: Gaps
+): { pcm: Buffer; timings: BlockTiming[] } {
+  const parts: Buffer[] = [];
+  const timings: BlockTiming[] = [];
   let samples = 0;
-  const push = buf => {
+  const push = (buf: Buffer) => {
     parts.push(buf);
     samples += buf.length / 2;
   };

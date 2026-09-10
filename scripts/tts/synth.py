@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Long-lived Breeze TTS 2 worker for scripts/generate-audio.mjs.
+"""Long-lived Breeze TTS 2 worker for scripts/generate-audio.ts.
 
 Reads job-file paths from stdin, one per line. For each job, synthesises every
 chunk to <outDir>/<id>.wav as a plain clone of the voice reference and reports

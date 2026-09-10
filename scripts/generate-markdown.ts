@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 
 // Build-time markdown renditions for Accept: text/markdown content
-// negotiation (served by worker/markdown.ts). One index.md next to each
+// negotiation (see the Transform Rule note in public/_headers). One index.md next to each
 // negotiable page's index.html. Runs after `astro build` in build:site, which
 // is what emits the llms.txt files this reads.
 

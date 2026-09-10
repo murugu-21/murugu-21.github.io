@@ -16,7 +16,7 @@ export const BALANCE_RESERVE_USD = 0.05;
 // How long a balance reading is trusted. DeepSeek's balance settles behind
 // real usage, so a shorter TTL buys little accuracy and costs a round-trip in
 // front of a visitor's message; the 402 path is the accurate one.
-export const BALANCE_TTL_MS = 10 * 60 * 1000;
+const BALANCE_TTL_MS = 10 * 60 * 1000;
 
 const BALANCE_KEY = "deepseek:balance";
 

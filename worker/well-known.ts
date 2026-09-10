@@ -26,7 +26,7 @@ export const LINKSET_MEDIA_TYPE = "application/linkset+json";
 export const MCP_SERVER_NAME = "dev.murugappan/murugappan-dev";
 export const MCP_SERVER_SCHEMA =
   "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json";
-export const MCP_REPOSITORY = "https://github.com/murugu-21/murugu-21.github.io";
+const MCP_REPOSITORY = "https://github.com/murugu-21/murugu-21.github.io";
 
 const CACHE = "public, max-age=3600";
 

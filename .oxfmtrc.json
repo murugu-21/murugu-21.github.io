@@ -8,6 +8,5 @@
   "useTabs": false,
   "tabWidth": 2,
   "semi": true,
-  "sortPackageJson": false,
-  "ignorePatterns": ["src/serviceWorker.js", "src/assets/lottie"]
+  "sortPackageJson": false
 }
