@@ -125,7 +125,11 @@ body.dark .ui-island {
   -webkit-appearance: button;
 }
 
-.ui-island input {
+/* No Tailwind preflight here, so form controls keep their UA font and
+   `color: fieldtext` (black) unless reset — which is invisible on a dark
+   surface. textarea also defaults to monospace. */
+.ui-island input,
+.ui-island textarea {
   font: inherit;
   color: inherit;
   padding: 0;
