@@ -5,7 +5,7 @@
 // paragraph highlight driven by the timing JSON. Fallback, when that is
 // missing (new post, astro dev has no Worker) or fails: the browser's speech
 // synthesis, one block per utterance. Both backends implement `Player`.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Loader2, Pause, Play } from "lucide-react";
 
 import { Button } from "../../components/ui/button";
@@ -75,6 +75,32 @@ const storeRate = (rate: SpeechRate) => {
   }
 };
 
+// The stored rate as an external store rather than state seeded from an
+// effect. It can't be read on the server, and reading it during the hydration
+// render would mismatch the server HTML, so useSyncExternalStore is the
+// sanctioned shape: getServerSnapshot supplies what the server rendered and
+// React re-renders once after hydration. (utils/useTheme.js is an external
+// store for the same reason.) The value is held in memory as well as in
+// localStorage so the picker still works when storage is blocked.
+let currentRate: SpeechRate | null = null;
+const rateListeners = new Set<() => void>();
+
+const subscribeRate = (onChange: () => void) => {
+  rateListeners.add(onChange);
+  return () => {
+    rateListeners.delete(onChange);
+  };
+};
+
+const getRate = (): SpeechRate => (currentRate ??= readStoredRate());
+const getServerRate = (): SpeechRate => 1;
+
+const publishRate = (next: SpeechRate) => {
+  currentRate = next;
+  storeRate(next);
+  rateListeners.forEach(fn => fn());
+};
+
 // Same extraction + normalisation as the generator, so texts line up with
 // the timing JSON. The title is read first.
 const collectBlocks = (): Block[] => {
@@ -98,7 +124,7 @@ export function ListenControls({ slug }: { slug: string }) {
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const [supported, setSupported] = useState(false);
   const [state, setStateValue] = useState<State>("idle");
-  const [rate, setRateValue] = useState<SpeechRate>(1);
+  const rate = useSyncExternalStore(subscribeRate, getRate, getServerRate);
   const [progress, setProgress] = useState<Progress>({
     position: 0,
     length: 0,
@@ -156,9 +182,7 @@ export function ListenControls({ slug }: { slug: string }) {
     const canSpeak = !!window.speechSynthesis && "SpeechSynthesisUtterance" in window;
     const canPlayAudio = "Audio" in window;
     blocksRef.current = collectBlocks();
-    const stored = readStoredRate();
-    rateRef.current = stored;
-    setRateValue(stored);
+    rateRef.current = getRate();
     setSupported((canSpeak || canPlayAudio) && blocksRef.current.length > 0);
     // Chrome keeps talking after the tab navigates away otherwise.
     const onPageHide = () => playerRef.current?.pause();
@@ -398,16 +422,18 @@ export function ListenControls({ slug }: { slug: string }) {
 
   const onRate = (next: SpeechRate) => {
     rateRef.current = next;
-    setRateValue(next);
-    storeRate(next);
+    publishRate(next);
     track("listen_rate", { listen_rate: `${next}x` });
     playerRef.current?.setRate(next);
   };
 
-  // Rendered only after mount: nothing to show without a DOM to read, and
-  // browsers without either backend never see a dead control.
-  if (!supported) return null;
-
+  // `supported` can only be decided after mount (it needs speechSynthesis /
+  // Audio and the article's blocks), so this used to return null until then.
+  // That made the whole 72px control pop in after hydration and push the
+  // article down — the page's only layout shift. It now renders at full size
+  // from the server in a disabled state and simply becomes interactive once
+  // the effect confirms a backend, so nothing moves. A browser with no
+  // backend at all keeps the disabled control rather than a reserved gap.
   const busy = state === "loading";
   const playing = state === "speaking";
   const Icon = busy ? Loader2 : playing ? Pause : Play;
@@ -419,7 +445,7 @@ export function ListenControls({ slug }: { slug: string }) {
     <div ref={setRoot} className="flex items-center gap-3 rounded-lg bg-muted/60 py-2 pr-2 pl-2">
       <Button
         onClick={onToggle}
-        disabled={busy}
+        disabled={busy || !supported}
         aria-label={busy ? "Loading" : playing ? "Pause" : "Listen"}
         aria-pressed={playing}
         className="size-10 shrink-0 rounded-full p-0 shadow-sm [&_svg:not([class*='size-'])]:size-5"
@@ -443,7 +469,7 @@ export function ListenControls({ slug }: { slug: string }) {
         value={[progress.position]}
         max={progress.length || 1}
         step={seekable ? 0.1 : 1}
-        disabled={!seekable}
+        disabled={!seekable || !supported}
         aria-label="Seek"
         onValueChange={([v]) => {
           if (seekable) playerRef.current?.seek?.(v);
@@ -463,8 +489,11 @@ export function ListenControls({ slug }: { slug: string }) {
           <Button
             variant="ghost"
             size="sm"
+            disabled={!supported}
             aria-label="Playback speed"
-            className="h-7 shrink-0 rounded-full px-2.5 text-xs font-semibold tabular-nums"
+            // w-14 (not auto): a stored 1.75x would otherwise widen the pill
+            // after hydration and nudge the row.
+            className="h-7 w-14 shrink-0 rounded-full px-2.5 text-xs font-semibold tabular-nums"
           >
             {rate}×
           </Button>
