@@ -5,7 +5,7 @@
 // Loaded from both apps' layouts (the blog imports across the monorepo the
 // same way it does the chat widget).
 
-type ToolResult = {content: Array<{type: "text"; text: string}>};
+type ToolResult = { content: Array<{ type: "text"; text: string }> };
 
 interface ModelContextTool {
   name: string;
@@ -19,8 +19,7 @@ interface ModelContext {
   registerTool(tool: ModelContextTool): void;
 }
 
-const mc = (navigator as Navigator & {modelContext?: ModelContext})
-  .modelContext;
+const mc = (navigator as Navigator & { modelContext?: ModelContext }).modelContext;
 
 if (mc && typeof mc.registerTool === "function") {
   // one signal for all tools; aborting on pagehide unregisters them
@@ -28,7 +27,7 @@ if (mc && typeof mc.registerTool === "function") {
   addEventListener("pagehide", () => controller.abort());
 
   const text = (t: string): ToolResult => ({
-    content: [{type: "text", text: t}]
+    content: [{ type: "text", text: t }]
   });
   const fetchText = async (path: string): Promise<string> => {
     const res = await fetch(path);
@@ -41,14 +40,14 @@ if (mc && typeof mc.registerTool === "function") {
       name: "get_profile",
       description:
         "Murugappan M's full professional profile as markdown: pitch, work experience, skills, education, open-source work, and links (resume PDF, GitHub, LinkedIn, blog, RSS).",
-      inputSchema: {type: "object", properties: {}},
+      inputSchema: { type: "object", properties: {} },
       execute: async () => text(await fetchText("/llms.txt"))
     },
     {
       name: "list_blog_posts",
       description:
         "List every post on the SDE Journey blog with title, URL, and summary (markdown). Post slugs for read_blog_post are the last path segment of each URL.",
-      inputSchema: {type: "object", properties: {}},
+      inputSchema: { type: "object", properties: {} },
       execute: async () => text(await fetchText("/blog/index.md"))
     },
     {
@@ -72,9 +71,7 @@ if (mc && typeof mc.registerTool === "function") {
         try {
           return text(await fetchText(`/blog/${slug}/index.md`));
         } catch {
-          return text(
-            `No post found for slug '${slug}'. Call list_blog_posts to see what exists.`
-          );
+          return text(`No post found for slug '${slug}'. Call list_blog_posts to see what exists.`);
         }
       }
     },
@@ -96,9 +93,7 @@ if (mc && typeof mc.registerTool === "function") {
         const path = String(args.path ?? "");
         // same-origin only: site-relative, and "//host" would be scheme-relative
         if (!path.startsWith("/") || path.startsWith("//"))
-          return text(
-            "Only site-relative paths starting with '/' are allowed."
-          );
+          return text("Only site-relative paths starting with '/' are allowed.");
         location.assign(path);
         return text(`Navigating to ${path}`);
       }

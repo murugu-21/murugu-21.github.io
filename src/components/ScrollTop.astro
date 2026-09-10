@@ -48,9 +48,7 @@ import Icon from "./Icon.astro";
     () => {
       btn.style.display = window.scrollY > 20 ? "block" : "none";
     },
-    {passive: true}
+    { passive: true }
   );
-  btn.addEventListener("click", () =>
-    window.scrollTo({top: 0, behavior: "smooth"})
-  );
+  btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 </script>

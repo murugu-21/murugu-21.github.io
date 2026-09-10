@@ -1,14 +1,11 @@
 ---
-import {openSourceSection, openSourceCard} from "../data/portfolio";
-import {accentTitle} from "../lib/accent";
+import { openSourceSection, openSourceCard } from "../data/portfolio";
+import { accentTitle } from "../lib/accent";
 ---
 
 <div class="achievement-section section-animate" id="achievements">
   <div class="achievement-header">
-    <h2
-      class="heading achievement-heading"
-      set:html={accentTitle(openSourceSection.title)}
-    />
+    <h2 class="heading achievement-heading" set:html={accentTitle(openSourceSection.title)} />
     <p class="subTitle achievement-subtitle">{openSourceSection.subtitle}</p>
   </div>
   <div class="achievement-cards-div">

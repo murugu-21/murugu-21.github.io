@@ -3,9 +3,9 @@
 // signalling (api/ratelimit.ts). Kept here rather than in each handler so that
 // no endpoint can be added without them.
 
-import type {MiddlewareHandler} from "hono";
+import type { MiddlewareHandler } from "hono";
 
-import {apiError} from "./errors";
+import { apiError } from "./errors";
 import {
   CONTACT_QUOTAS,
   policyField,
@@ -14,8 +14,8 @@ import {
   takeReadSlot,
   type ReadSlot
 } from "./ratelimit";
-import {API_PATHS, matchApiPath} from "./routes";
-import {versionHeaders, versionLinkHeader} from "./versioning";
+import { API_PATHS, matchApiPath } from "./routes";
+import { versionHeaders, versionLinkHeader } from "./versioning";
 
 export type ApiHeaderOptions = {
   /**
@@ -26,9 +26,7 @@ export type ApiHeaderOptions = {
   enforceReads: boolean;
 };
 
-export function apiHeaders(
-  opts: ApiHeaderOptions
-): MiddlewareHandler<{Bindings: Env}> {
+export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings: Env }> {
   return async (c, next) => {
     const pathname = new URL(c.req.url).pathname;
     const isContact = matchApiPath(pathname) === API_PATHS.contact;
@@ -60,8 +58,7 @@ export function apiHeaders(
     await next();
 
     const headers = c.res.headers;
-    for (const [name, value] of Object.entries(versionHeaders()))
-      headers.set(name, value);
+    for (const [name, value] of Object.entries(versionHeaders())) headers.set(name, value);
     if (!headers.has("Link")) headers.set("Link", versionLinkHeader());
 
     // A handler that already reported its own quota knows more than this

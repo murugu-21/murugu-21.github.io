@@ -1,16 +1,12 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {parseRate, SPEECH_RATES, speechBlocks} from "./speech";
+import { parseRate, SPEECH_RATES, speechBlocks } from "./speech";
 
 // Minimal duck-typed DOM: speechBlocks only reads tagName, textContent and
 // children, so plain objects stand in for Elements and the tests run in the
 // workers pool without a DOM shim.
-type Node = {tagName: string; textContent: string | null; children: Node[]};
-const el = (
-  tagName: string,
-  textContent: string,
-  children: Node[] = []
-): Node => ({
+type Node = { tagName: string; textContent: string | null; children: Node[] };
+const el = (tagName: string, textContent: string, children: Node[] = []): Node => ({
   tagName,
   textContent,
   children
@@ -27,8 +23,8 @@ describe("speechBlocks", () => {
     const p = el("P", "Install it first.");
     const blocks = speechBlocks(root(h2, p));
     expect(blocks).toEqual([
-      {el: h2, text: "Setup"},
-      {el: p, text: "Install it first."}
+      { el: h2, text: "Setup" },
+      { el: p, text: "Install it first." }
     ]);
   });
 
@@ -51,15 +47,15 @@ describe("speechBlocks", () => {
     const li2 = el("LI", "Second");
     const blocks = speechBlocks(root(el("UL", "FirstSecond", [li1, li2])));
     expect(blocks).toEqual([
-      {el: li1, text: "First"},
-      {el: li2, text: "Second"}
+      { el: li1, text: "First" },
+      { el: li2, text: "Second" }
     ]);
   });
 
   it("collapses whitespace and drops empty blocks", () => {
     const p = el("P", "  line one\n   line two  ");
     const blocks = speechBlocks(root(el("P", "   \n "), p));
-    expect(blocks).toEqual([{el: p, text: "line one line two"}]);
+    expect(blocks).toEqual([{ el: p, text: "line one line two" }]);
   });
 });
 

@@ -1,17 +1,17 @@
-import {Hono} from "hono";
-import {partyserverMiddleware} from "hono-party";
+import { Hono } from "hono";
+import { partyserverMiddleware } from "hono-party";
 
-import {api, specRoutes} from "./api";
-import {audio} from "./audio";
-import {ChatRoom} from "./chat-room";
-import {mcp} from "./mcp";
-import {serveAsset} from "./not-found";
-import {RateLimiter} from "./rate-limiter";
-import {mcpManifest, wellKnown} from "./well-known";
+import { api, specRoutes } from "./api";
+import { audio } from "./audio";
+import { ChatRoom } from "./chat-room";
+import { mcp } from "./mcp";
+import { serveAsset } from "./not-found";
+import { RateLimiter } from "./rate-limiter";
+import { mcpManifest, wellKnown } from "./well-known";
 
-export {ChatRoom, RateLimiter};
+export { ChatRoom, RateLimiter };
 
-const app = new Hono<{Bindings: Env}>();
+const app = new Hono<{ Bindings: Env }>();
 
 // Claims /parties/:party/:room (WebSocket upgrades and HTTP) for the Durable
 // Objects; everything else falls through to the next handler.

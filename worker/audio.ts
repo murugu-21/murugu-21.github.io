@@ -2,9 +2,9 @@
 // under the current voice's prefix (see KEY_PREFIX in
 // scripts/generate-audio.mjs). Written from the author's laptop; the Worker
 // only reads. Range requests matter because <audio> seeks with them.
-import {Hono} from "hono";
+import { Hono } from "hono";
 
-import {serveAsset} from "./not-found";
+import { serveAsset } from "./not-found";
 
 const FILE = /^[a-z0-9-]+\.(mp3|json)$/;
 const CACHE = "public, max-age=3600";
@@ -30,18 +30,16 @@ export function parseRange(
   if (!m || (m[1] === "" && m[2] === "")) return null;
   if (m[1] === "") {
     const suffix = Math.min(Number(m[2]), size);
-    return suffix === 0
-      ? "unsatisfiable"
-      : {offset: size - suffix, length: suffix};
+    return suffix === 0 ? "unsatisfiable" : { offset: size - suffix, length: suffix };
   }
   const start = Number(m[1]);
   if (start >= size) return "unsatisfiable";
   const end = m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1);
   if (end < start) return "unsatisfiable";
-  return {offset: start, length: end - start + 1};
+  return { offset: start, length: end - start + 1 };
 }
 
-export const audio = new Hono<{Bindings: Env}>();
+export const audio = new Hono<{ Bindings: Env }>();
 
 audio.get("/:file", async c => {
   const file = c.req.param("file");
@@ -52,8 +50,7 @@ audio.get("/:file", async c => {
   if (!head) return serveAsset(c.req.raw, c.env.ASSETS);
 
   const etag = head.httpEtag;
-  const contentType =
-    head.httpMetadata?.contentType ?? TYPES[file.split(".").pop()!];
+  const contentType = head.httpMetadata?.contentType ?? TYPES[file.split(".").pop()!];
   const baseHeaders = {
     "Content-Type": contentType,
     "Accept-Ranges": "bytes",
@@ -62,18 +59,18 @@ audio.get("/:file", async c => {
   };
 
   if (c.req.header("If-None-Match") === etag) {
-    return new Response(null, {status: 304, headers: baseHeaders});
+    return new Response(null, { status: 304, headers: baseHeaders });
   }
 
   const range = parseRange(c.req.header("Range") ?? null, head.size);
   if (range === "unsatisfiable") {
     return new Response(null, {
       status: 416,
-      headers: {...baseHeaders, "Content-Range": `bytes */${head.size}`}
+      headers: { ...baseHeaders, "Content-Range": `bytes */${head.size}` }
     });
   }
 
-  const object = await c.env.AUDIO.get(key, range ? {range} : undefined);
+  const object = await c.env.AUDIO.get(key, range ? { range } : undefined);
   if (!object) return serveAsset(c.req.raw, c.env.ASSETS);
 
   if (range) {
@@ -89,6 +86,6 @@ audio.get("/:file", async c => {
   }
   return new Response(object.body, {
     status: 200,
-    headers: {...baseHeaders, "Content-Length": String(head.size)}
+    headers: { ...baseHeaders, "Content-Length": String(head.size) }
   });
 });

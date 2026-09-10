@@ -1,7 +1,7 @@
-import {env} from "cloudflare:test";
-import {describe, expect, it} from "vitest";
+import { env } from "cloudflare:test";
+import { describe, expect, it } from "vitest";
 
-import worker, {ChatRoom, RateLimiter} from "../server";
+import worker, { ChatRoom, RateLimiter } from "../server";
 
 // The test wrangler config has no ASSETS binding, so each test injects a mock
 // that marks its responses — proving whether a request fell through to assets
@@ -12,7 +12,7 @@ function envWithAssets(onFetch?: (request: Request) => void): Env {
     ASSETS: {
       fetch: (input: RequestInfo | URL) => {
         onFetch?.(new Request(input));
-        return Promise.resolve(new Response("asset", {status: 200}));
+        return Promise.resolve(new Response("asset", { status: 200 }));
       }
     }
   } as unknown as Env;
@@ -66,15 +66,13 @@ describe("worker entry", () => {
       envWithAssets(() => assetHits++)
     );
     expect(assetHits).toBe(0);
-    expect(((await response.json()) as {openapi: string}).openapi).toBe(
-      "3.1.0"
-    );
+    expect(((await response.json()) as { openapi: string }).openapi).toBe("3.1.0");
   });
 
   it("claims /mcp itself so the MCP endpoint is not a static 404", async () => {
     let assetHits = 0;
     const response = await worker.fetch(
-      new Request("https://example.com/mcp", {method: "GET"}),
+      new Request("https://example.com/mcp", { method: "GET" }),
       envWithAssets(() => assetHits++)
     );
     expect(assetHits).toBe(0);
@@ -95,11 +93,7 @@ describe("worker entry", () => {
   });
 
   it("claims the discovery documents rather than serving them as assets", async () => {
-    for (const path of [
-      "/.well-known/api-catalog",
-      "/.well-known/mcp.json",
-      "/mcp.json"
-    ]) {
+    for (const path of ["/.well-known/api-catalog", "/.well-known/mcp.json", "/mcp.json"]) {
       let assetHits = 0;
       const response = await worker.fetch(
         new Request(`https://example.com${path}`),
@@ -113,7 +107,7 @@ describe("worker entry", () => {
   it("upgrades WebSocket connections on the party route", async () => {
     const response = await worker.fetch(
       new Request("https://example.com/parties/chat-room/test-room-ws", {
-        headers: {Upgrade: "websocket"}
+        headers: { Upgrade: "websocket" }
       }),
       envWithAssets()
     );

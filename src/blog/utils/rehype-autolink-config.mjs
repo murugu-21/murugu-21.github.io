@@ -29,6 +29,6 @@ const linkIcon = {
 
 export const autolinkConfig = {
   behavior: "prepend",
-  properties: {class: "anchor", ariaHidden: "true", tabIndex: -1},
+  properties: { class: "anchor", ariaHidden: "true", tabIndex: -1 },
   content: linkIcon
 };

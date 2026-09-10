@@ -1,16 +1,11 @@
-import {Server, type Connection} from "partyserver";
+import { Server, type Connection } from "partyserver";
 
-import {isInsufficientBalance, runDeepseekExchange} from "./ai";
-import {parseLeadArguments, sendOpportunityEmail, type Lead} from "./email";
-import {fetchSitePage} from "./fetch-page";
-import {getGrounding} from "./grounding";
-import {
-  buildMessages,
-  parseFetchArguments,
-  ROOM_DAILY_LIMIT,
-  type ModelMessage
-} from "./prompt";
-import {type StreamResult} from "./sse";
+import { isInsufficientBalance, runDeepseekExchange } from "./ai";
+import { parseLeadArguments, sendOpportunityEmail, type Lead } from "./email";
+import { fetchSitePage } from "./fetch-page";
+import { getGrounding } from "./grounding";
+import { buildMessages, parseFetchArguments, ROOM_DAILY_LIMIT, type ModelMessage } from "./prompt";
+import { type StreamResult } from "./sse";
 import {
   GREETING,
   parseClientMessage,
@@ -26,7 +21,7 @@ const LIMIT_MESSAGE =
   "through the social links on this site instead.";
 
 export class ChatRoom extends Server<Env> {
-  static options = {hibernate: true};
+  static options = { hibernate: true };
 
   // Widen `ctx` from the base DurableObject's `protected` to `public` so
   // tests can drive `ctx.storage.sql` directly via `runInDurableObject`.
@@ -58,11 +53,9 @@ export class ChatRoom extends Server<Env> {
     // Seed the greeting as the room's first persisted message so history
     // replays and transcript downloads always include the opener. The check
     // and insert are synchronous — no interleaving, no double seed.
-    const count = this.ctx.storage.sql
-      .exec(`SELECT COUNT(*) AS n FROM messages`)
-      .one().n as number;
+    const count = this.ctx.storage.sql.exec(`SELECT COUNT(*) AS n FROM messages`).one().n as number;
     if (count === 0) this.persist("assistant", GREETING);
-    this.send(connection, {type: "history", messages: this.history()});
+    this.send(connection, { type: "history", messages: this.history() });
   }
 
   // Serializes turns: two tabs of the same room can send concurrently, and
@@ -88,10 +81,10 @@ export class ChatRoom extends Server<Env> {
 
   private async handleTurn(
     connection: Connection,
-    msg: {text: string; page?: string}
+    msg: { text: string; page?: string }
   ): Promise<void> {
     if (this.userMessagesSince(Date.now() - DAY_MS) >= ROOM_DAILY_LIMIT) {
-      this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+      this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
       return;
     }
     // No key means no chat at all — DeepSeek is the only provider. Gate the
@@ -99,14 +92,14 @@ export class ChatRoom extends Server<Env> {
     // can do nothing about.
     const key = this.deepseekKey();
     if (!key || !(await this.limiter().chatAvailable(key))) {
-      this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+      this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
       return;
     }
 
     this.persist("user", msg.text);
     // Keep other open tabs of this room in sync — the sender already
     // rendered its own bubble optimistically, so it is excluded.
-    this.broadcastMsg({type: "visitor", text: msg.text}, [connection.id]);
+    this.broadcastMsg({ type: "visitor", text: msg.text }, [connection.id]);
 
     try {
       await this.generate(key, msg.page);
@@ -116,7 +109,7 @@ export class ChatRoom extends Server<Env> {
       // balance, so park the cache and gate every room until the next check.
       if (isInsufficientBalance(err)) {
         await this.limiter().markChatExhausted();
-        this.send(connection, {type: "limit", message: LIMIT_MESSAGE});
+        this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
         return;
       }
       this.send(connection, {
@@ -132,17 +125,13 @@ export class ChatRoom extends Server<Env> {
   // broadcast to the room, so it needs no particular connection.
   private async generate(key: string, page?: string): Promise<void> {
     // Replies stream to every open tab of the room, not just the sender.
-    const onDelta = (text: string) => this.broadcastMsg({type: "delta", text});
+    const onDelta = (text: string) => this.broadcastMsg({ type: "delta", text });
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
-    const messages: ModelMessage[] = buildMessages(
-      grounding,
-      this.history(),
-      page
-    );
+    const messages: ModelMessage[] = buildMessages(grounding, this.history(), page);
 
     const MAX_FETCH_ROUNDS = 2;
     let reply = "";
-    let capture: {id: string; name: string; arguments: string} | undefined;
+    let capture: { id: string; name: string; arguments: string } | undefined;
     for (let round = 0; ; round++) {
       const result = await this.exchange(key, messages, onDelta);
       reply += result.content;
@@ -166,16 +155,16 @@ export class ChatRoom extends Server<Env> {
             {
               id: fetchCall.id,
               type: "function",
-              function: {name: fetchCall.name, arguments: fetchCall.arguments}
+              function: { name: fetchCall.name, arguments: fetchCall.arguments }
             }
           ]
         },
-        {role: "tool", tool_call_id: fetchCall.id, content: pageText}
+        { role: "tool", tool_call_id: fetchCall.id, content: pageText }
       );
     }
 
     if (capture) {
-      if (reply) this.broadcastMsg({type: "delta", text: "\n"});
+      if (reply) this.broadcastMsg({ type: "delta", text: "\n" });
       const followUp = await this.handleCapture(capture, key, onDelta);
       reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
     }
@@ -184,7 +173,7 @@ export class ChatRoom extends Server<Env> {
     // fetch rounds can leave gaps where content spans exchanges.
     reply = reply.replace(/\n{3,}/g, "\n\n").trim();
     if (reply) this.persist("assistant", reply);
-    this.broadcastMsg({type: "done"});
+    this.broadcastMsg({ type: "done" });
   }
 
   private async exchange(
@@ -209,7 +198,7 @@ export class ChatRoom extends Server<Env> {
   // Records the lead, emails once per conversation, and asks the model to
   // phrase the confirmation using the tool result.
   private async handleCapture(
-    capture: {id: string; name: string; arguments: string},
+    capture: { id: string; name: string; arguments: string },
     key: string,
     onDelta: (text: string) => void
   ): Promise<string> {
@@ -225,9 +214,7 @@ export class ChatRoom extends Server<Env> {
     if (alreadyCaptured.length === 0) {
       try {
         await sendOpportunityEmail(
-          this.env.EMAIL as unknown as Parameters<
-            typeof sendOpportunityEmail
-          >[0],
+          this.env.EMAIL as unknown as Parameters<typeof sendOpportunityEmail>[0],
           this.env.OPPORTUNITY_INBOX,
           lead,
           this.history()
@@ -304,10 +291,7 @@ export class ChatRoom extends Server<Env> {
 
   private userMessagesSince(cutoff: number): number {
     const row = this.ctx.storage.sql
-      .exec(
-        `SELECT COUNT(*) AS n FROM messages WHERE role = 'user' AND created_at > ?`,
-        cutoff
-      )
+      .exec(`SELECT COUNT(*) AS n FROM messages WHERE role = 'user' AND created_at > ?`, cutoff)
       .one();
     return row.n as number;
   }

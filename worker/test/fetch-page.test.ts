@@ -1,14 +1,14 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {fetchSitePage} from "../fetch-page";
+import { fetchSitePage } from "../fetch-page";
 
 function fakeAssets(bodies: Record<string, string>) {
   return {
     async fetch(input: string): Promise<Response> {
       const path = new URL(input).pathname;
       const body = bodies[path];
-      if (body == null) return new Response("nope", {status: 404});
-      return new Response(body, {status: 200});
+      if (body == null) return new Response("nope", { status: 404 });
+      return new Response(body, { status: 200 });
     }
   };
 }
@@ -38,11 +38,8 @@ describe("fetchSitePage", () => {
   });
 
   it("extracts a blog post section from llms-full by URL", async () => {
-    const assets = fakeAssets({"/blog/llms-full.txt": LLMS_FULL});
-    const out = await fetchSitePage(
-      assets,
-      "https://murugappan.dev/blog/react/"
-    );
+    const assets = fakeAssets({ "/blog/llms-full.txt": LLMS_FULL });
+    const out = await fetchSitePage(assets, "https://murugappan.dev/blog/react/");
     expect(out).toContain("All about useEffect");
     expect(out).not.toContain("Other content here");
   });
@@ -59,10 +56,7 @@ describe("fetchSitePage", () => {
   });
 
   it("reports unknown pages", async () => {
-    const out = await fetchSitePage(
-      fakeAssets({}),
-      "https://murugappan.dev/nope/"
-    );
+    const out = await fetchSitePage(fakeAssets({}), "https://murugappan.dev/nope/");
     expect(out).toContain("not found");
   });
 });

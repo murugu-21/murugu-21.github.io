@@ -1,18 +1,14 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {normalizeSpeechText, packSentences, spokenHash} from "./audio-prep";
+import { normalizeSpeechText, packSentences, spokenHash } from "./audio-prep";
 
 describe("normalizeSpeechText", () => {
   it("strips emoji and pictographs", () => {
-    expect(normalizeSpeechText("0.1+0.2 not equal to 0.3???😕")).toBe(
-      "0.1+0.2 not equal to 0.3?"
-    );
+    expect(normalizeSpeechText("0.1+0.2 not equal to 0.3???😕")).toBe("0.1+0.2 not equal to 0.3?");
   });
 
   it("collapses runs of terminal punctuation to one mark", () => {
-    expect(normalizeSpeechText("Really!!! Yes... ok??")).toBe(
-      "Really! Yes. ok?"
-    );
+    expect(normalizeSpeechText("Really!!! Yes... ok??")).toBe("Really! Yes. ok?");
   });
 
   it("collapses whitespace and trims", () => {
@@ -28,23 +24,19 @@ describe("normalizeSpeechText", () => {
     expect(normalizeSpeechText("0.1 + 0.2 = 0.30000000000000004 in JS")).toBe(
       "0.1 + 0.2 = 0.3, then zero repeated 15 times, then 4 in JS"
     );
-    expect(normalizeSpeechText("about 1.999999")).toBe(
-      "about 1., then nine repeated 6 times"
-    );
+    expect(normalizeSpeechText("about 1.999999")).toBe("about 1., then nine repeated 6 times");
   });
 
   it("leaves ordinary numbers alone", () => {
-    expect(
-      normalizeSpeechText("100000 rows, pi is 3.14159, 2.0000 exactly")
-    ).toBe("100000 rows, pi is 3.14159, 2.0000 exactly");
+    expect(normalizeSpeechText("100000 rows, pi is 3.14159, 2.0000 exactly")).toBe(
+      "100000 rows, pi is 3.14159, 2.0000 exactly"
+    );
   });
 });
 
 describe("packSentences", () => {
   it("keeps a short block as one chunk", () => {
-    expect(packSentences("One. Two. Three.", 300)).toEqual([
-      "One. Two. Three."
-    ]);
+    expect(packSentences("One. Two. Three.", 300)).toEqual(["One. Two. Three."]);
   });
 
   it("packs sentences greedily without exceeding max", () => {
@@ -57,18 +49,11 @@ describe("packSentences", () => {
 
   it("emits an overlong single sentence on its own", () => {
     const long = "word ".repeat(30).trim() + ".";
-    expect(packSentences(`Short one. ${long} Tail.`, 60)).toEqual([
-      "Short one.",
-      long,
-      "Tail."
-    ]);
+    expect(packSentences(`Short one. ${long} Tail.`, 60)).toEqual(["Short one.", long, "Tail."]);
   });
 
   it("treats ? and ! as sentence ends", () => {
-    expect(packSentences("Why? Because! Fine.", 14)).toEqual([
-      "Why? Because!",
-      "Fine."
-    ]);
+    expect(packSentences("Why? Because! Fine.", 14)).toEqual(["Why? Because!", "Fine."]);
   });
 });
 

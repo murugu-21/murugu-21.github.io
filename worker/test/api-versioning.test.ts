@@ -1,11 +1,6 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  API_BASE,
-  API_PATHS,
-  CURRENT_API_VERSION,
-  VERSIONED_API_BASE
-} from "../api/routes";
+import { API_BASE, API_PATHS, CURRENT_API_VERSION, VERSIONED_API_BASE } from "../api/routes";
 import {
   API_VERSION,
   buildVersionsDocument,
@@ -76,9 +71,7 @@ describe("deprecation field encoding", () => {
   });
 
   it("encodes a sunset as an IMF-fixdate", () => {
-    expect(sunsetFieldValue("1970-01-02")).toBe(
-      "Fri, 02 Jan 1970 00:00:00 GMT"
-    );
+    expect(sunsetFieldValue("1970-01-02")).toBe("Fri, 02 Jan 1970 00:00:00 GMT");
   });
 });
 
@@ -98,9 +91,7 @@ describe("versionLinkHeader", () => {
     expect(link).not.toContain('rel="successor-version"');
     const deprecatedLink = versionLinkHeader(deprecated);
     expect(deprecatedLink).toContain('rel="deprecation"');
-    expect(deprecatedLink).toContain(
-      `<${API_BASE}/v2>; rel="successor-version"`
-    );
+    expect(deprecatedLink).toContain(`<${API_BASE}/v2>; rel="successor-version"`);
   });
 });
 
@@ -119,13 +110,9 @@ describe("buildVersionsDocument", () => {
   });
 
   it("makes every URL absolute against the host that was asked", () => {
-    expect(doc.versions[0].url).toBe(
-      `https://murugappan.dev${VERSIONED_API_BASE}`
-    );
+    expect(doc.versions[0].url).toBe(`https://murugappan.dev${VERSIONED_API_BASE}`);
     expect(doc.versions[0].specUrl).toBe("https://murugappan.dev/openapi.json");
-    expect(doc.policy.documentationUrl).toBe(
-      "https://murugappan.dev/developers/#versioning"
-    );
+    expect(doc.policy.documentationUrl).toBe("https://murugappan.dev/developers/#versioning");
   });
 
   it("states the policy, the notice period and the headers that carry it", () => {

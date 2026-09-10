@@ -10,7 +10,7 @@
 // keeps this module free of any `astro` import (portfolio.ts types its logos
 // as ImageMetadata) so the Worker and its tests can use it directly.
 
-export type Link = {label: string; url: string};
+export type Link = { label: string; url: string };
 
 export type ExperienceEntry = {
   role: string;
@@ -26,9 +26,9 @@ export type ExperienceEntry = {
   highlights: string[];
 };
 
-export type SkillCategory = {category: string; skills: string[]};
+export type SkillCategory = { category: string; skills: string[] };
 
-export type Proficiency = {area: string; tools: string[]; level: number};
+export type Proficiency = { area: string; tools: string[]; level: number };
 
 export type EducationEntry = {
   institution: string;
@@ -57,7 +57,7 @@ export type Person = {
   email: string;
   site: string;
   availableForWork: boolean;
-  currentRole: {role: string; company: string; since: string | null} | null;
+  currentRole: { role: string; company: string; since: string | null } | null;
   focus: string[];
 };
 
@@ -72,7 +72,7 @@ export type Dataset = {
 };
 
 export type DatasetInput = {
-  greeting: {username: string; subTitle: string; resumePath: string};
+  greeting: { username: string; subTitle: string; resumePath: string };
   resumeContact: {
     name: string;
     title: string;
@@ -97,8 +97,8 @@ export type DatasetInput = {
     desc: string;
     descBullets?: string[];
   }>;
-  skillsSection: {subTitle: string; skills: string[]};
-  skillsCategories: ReadonlyArray<{category: string; items: string}>;
+  skillsSection: { subTitle: string; skills: string[] };
+  skillsCategories: ReadonlyArray<{ category: string; items: string }>;
   techStack: {
     experience: ReadonlyArray<{
       stack: string;
@@ -117,7 +117,7 @@ export type DatasetInput = {
   openSourceCard: {
     title: string;
     subtitle: string;
-    footerLink: ReadonlyArray<{name: string; url: string}>;
+    footerLink: ReadonlyArray<{ name: string; url: string }>;
   };
   isHireable: boolean;
 };
@@ -168,13 +168,12 @@ const OPEN_ENDED = /^(present|current|now)$/i;
 // a guess — a wrong date is worse for an agent than an absent one.
 export function parsePeriod(period: string): Period {
   const parts = period.split(/\s+[–—-]\s+/);
-  if (parts.length !== 2)
-    return {startDate: null, endDate: null, current: false};
+  if (parts.length !== 2) return { startDate: null, endDate: null, current: false };
   const startDate = toYearMonth(parts[0]);
-  if (!startDate) return {startDate: null, endDate: null, current: false};
+  if (!startDate) return { startDate: null, endDate: null, current: false };
   const tail = parts[1].trim();
-  if (OPEN_ENDED.test(tail)) return {startDate, endDate: null, current: true};
-  return {startDate, endDate: toYearMonth(tail), current: false};
+  if (OPEN_ENDED.test(tail)) return { startDate, endDate: null, current: true };
+  return { startDate, endDate: toYearMonth(tail), current: false };
 }
 
 export function buildDataset(input: DatasetInput): Dataset {
@@ -226,19 +225,19 @@ export function buildDataset(input: DatasetInput): Dataset {
       focus: skillsSection.skills.map(s => s.replace(/^[\s⚡•-]+/, "").trim())
     },
     links: [
-      {label: "Website", url: `${site}/`},
-      {label: "About (canonical entity page)", url: absolute("/about/")},
-      {label: "Blog", url: absolute("/blog/")},
-      {label: "Blog RSS", url: socialMediaLinks.rss},
-      {label: "Resume (PDF)", url: absolute(greeting.resumePath)},
-      {label: "GitHub", url: socialMediaLinks.github},
-      {label: "LinkedIn", url: socialMediaLinks.linkedin},
-      {label: "X / Twitter", url: socialMediaLinks.twitter},
-      {label: "Email", url: `mailto:${socialMediaLinks.gmail}`},
-      {label: "Developer portal", url: absolute("/developers/")},
-      {label: "OpenAPI spec", url: absolute("/openapi.json")},
-      {label: "llms.txt", url: absolute("/llms.txt")},
-      {label: "Agent instructions", url: absolute("/AGENTS.md")}
+      { label: "Website", url: `${site}/` },
+      { label: "About (canonical entity page)", url: absolute("/about/") },
+      { label: "Blog", url: absolute("/blog/") },
+      { label: "Blog RSS", url: socialMediaLinks.rss },
+      { label: "Resume (PDF)", url: absolute(greeting.resumePath) },
+      { label: "GitHub", url: socialMediaLinks.github },
+      { label: "LinkedIn", url: socialMediaLinks.linkedin },
+      { label: "X / Twitter", url: socialMediaLinks.twitter },
+      { label: "Email", url: `mailto:${socialMediaLinks.gmail}` },
+      { label: "Developer portal", url: absolute("/developers/") },
+      { label: "OpenAPI spec", url: absolute("/openapi.json") },
+      { label: "llms.txt", url: absolute("/llms.txt") },
+      { label: "Agent instructions", url: absolute("/AGENTS.md") }
     ],
     experience,
     skills: skillsCategories.map(c => ({
@@ -255,9 +254,7 @@ export function buildDataset(input: DatasetInput): Dataset {
       credential: school.subHeader,
       location: school.desc.replace(/\.$/, ""),
       period: school.duration,
-      ...(({current: _current, ...dates}) => dates)(
-        parsePeriod(school.duration)
-      ),
+      ...(({ current: _current, ...dates }) => dates)(parsePeriod(school.duration)),
       grade: school.grade ?? null,
       highlights: school.descBullets
     })),

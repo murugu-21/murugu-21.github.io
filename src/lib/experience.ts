@@ -47,9 +47,7 @@ export function groupByCompany<T extends RoleLike>(roles: T[]): Stint<T>[] {
   for (const stint of stints) {
     stint.span = spanOf(stint.roles);
     const first = stint.roles[0].location;
-    stint.location = stint.roles.every(r => r.location === first)
-      ? first
-      : null;
+    stint.location = stint.roles.every(r => r.location === first) ? first : null;
   }
   return stints;
 }
@@ -88,23 +86,21 @@ export function parseMonth(label: string): YearMonth | null {
   if (!m) return null;
   const month = MONTHS.indexOf(m[1].toLowerCase()) + 1;
   if (!month) return null;
-  return {year: Number(m[2]), month};
+  return { year: Number(m[2]), month };
 }
 
-export function periodBounds(
-  period: string
-): {start: YearMonth; end: YearMonth | null} | null {
+export function periodBounds(period: string): { start: YearMonth; end: YearMonth | null } | null {
   const parts = period.split(RANGE_SEPARATOR);
   if (parts.length !== 2) return null;
   const start = parseMonth(parts[0]);
   if (!start) return null;
-  if (OPEN_ENDED.test(parts[1].trim())) return {start, end: null};
+  if (OPEN_ENDED.test(parts[1].trim())) return { start, end: null };
   const end = parseMonth(parts[1]);
-  return end ? {start, end} : null;
+  return end ? { start, end } : null;
 }
 
 export function currentMonth(now = new Date()): YearMonth {
-  return {year: now.getFullYear(), month: now.getMonth() + 1};
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
 }
 
 const toIndex = (ym: YearMonth) => ym.year * 12 + (ym.month - 1);
@@ -123,10 +119,7 @@ export function formatDuration(months: number): string {
 }
 
 /** Months covered by the union of the given ranges (overlaps counted once). */
-export function totalExperienceMonths(
-  periods: string[],
-  now: YearMonth = currentMonth()
-): number {
+export function totalExperienceMonths(periods: string[], now: YearMonth = currentMonth()): number {
   const ranges = periods
     .map(periodBounds)
     .filter((b): b is NonNullable<typeof b> => b !== null)
@@ -151,8 +144,6 @@ export function totalExperienceMonths(
  * company, so a return to a former employer is two stints but still one
  * company — headline counts have to de-duplicate by name, not count stints.
  */
-export function countCompanies(
-  stints: ReadonlyArray<{company: string}>
-): number {
+export function countCompanies(stints: ReadonlyArray<{ company: string }>): number {
   return new Set(stints.map(s => s.company)).size;
 }

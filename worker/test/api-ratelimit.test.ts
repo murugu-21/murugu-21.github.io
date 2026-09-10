@@ -1,6 +1,6 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "../api/contact";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
 import {
   CONTACT_CLIENT_QUOTA,
   CONTACT_GLOBAL_QUOTA,
@@ -104,10 +104,7 @@ describe("takeReadSlot", () => {
     const now = 1_000_000;
     for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot("5.5.5.5", now);
     expect(takeReadSlot("5.5.5.5", now).allowed).toBe(false);
-    const next = takeReadSlot(
-      "5.5.5.5",
-      now + READ_QUOTA.windowSeconds * 1000 + 1
-    );
+    const next = takeReadSlot("5.5.5.5", now + READ_QUOTA.windowSeconds * 1000 + 1);
     expect(next.allowed).toBe(true);
     expect(next.remaining).toBe(READ_QUOTA.quota - 1);
   });
@@ -120,18 +117,14 @@ describe("contactRateLimitHeaders", () => {
       globalRemaining: 15,
       resetSeconds: 3600
     });
-    expect(clientTight.RateLimit).toBe(
-      `"${CONTACT_CLIENT_QUOTA.name}";r=1;t=3600`
-    );
+    expect(clientTight.RateLimit).toBe(`"${CONTACT_CLIENT_QUOTA.name}";r=1;t=3600`);
 
     const globalTight = contactRateLimitHeaders({
       clientRemaining: 3,
       globalRemaining: 0,
       resetSeconds: 3600
     });
-    expect(globalTight.RateLimit).toBe(
-      `"${CONTACT_GLOBAL_QUOTA.name}";r=0;t=3600`
-    );
+    expect(globalTight.RateLimit).toBe(`"${CONTACT_GLOBAL_QUOTA.name}";r=0;t=3600`);
   });
 
   it("always advertises both contact policies", () => {
@@ -147,14 +140,10 @@ describe("contactRateLimitHeaders", () => {
 
 describe("secondsUntilUtcMidnight", () => {
   it("is the whole day at the start of one", () => {
-    expect(secondsUntilUtcMidnight(new Date("2026-08-25T00:00:00Z"))).toBe(
-      86_400
-    );
+    expect(secondsUntilUtcMidnight(new Date("2026-08-25T00:00:00Z"))).toBe(86_400);
   });
 
   it("is never zero, so Retry-After always asks for a real wait", () => {
-    expect(
-      secondsUntilUtcMidnight(new Date("2026-08-25T23:59:59.999Z"))
-    ).toBeGreaterThan(0);
+    expect(secondsUntilUtcMidnight(new Date("2026-08-25T23:59:59.999Z"))).toBeGreaterThan(0);
   });
 });

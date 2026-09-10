@@ -20,11 +20,11 @@ import "../styles/customToggle.css";
 import BaseHead from "../components/BaseHead.astro";
 import ThemeToggle from "../components/ThemeToggle.jsx";
 import ChatWidget from "../../components/chat/ChatWidget.astro";
-import {SITE_TITLE} from "../consts";
+import { SITE_TITLE } from "../consts";
 
 // title/description plus SEO passthroughs for BaseHead (ogType,
 // publishedTime, tags, noindex, jsonLd).
-const {title, description, ...seo} = Astro.props;
+const { title, description, ...seo } = Astro.props;
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
 const base = "/blog";
@@ -49,15 +49,11 @@ const isRootPath = Astro.url.pathname === rootPath;
       var preferredTheme = null;
       try {
         var stored = localStorage.getItem("isDark");
-        if (stored !== null)
-          preferredTheme = JSON.parse(stored) ? "dark" : "light";
+        if (stored !== null) preferredTheme = JSON.parse(stored) ? "dark" : "light";
       } catch (err) {}
 
       function setTheme(newTheme) {
-        if (
-          preferredTheme &&
-          document.body.classList.contains(preferredTheme)
-        ) {
+        if (preferredTheme && document.body.classList.contains(preferredTheme)) {
           document.body.classList.replace(preferredTheme, newTheme);
         } else {
           document.body.classList.add(newTheme);
@@ -133,8 +129,8 @@ const isRootPath = Astro.url.pathname === rootPath;
         // these elements don't exist at page load.
         let zoomPromise: Promise<any> | null = null;
         const ensureZoom = () =>
-          (zoomPromise ??= import("medium-zoom").then(({default: mediumZoom}) =>
-            mediumZoom({margin: 24, background: "rgba(0, 0, 0, 0.85)"})
+          (zoomPromise ??= import("medium-zoom").then(({ default: mediumZoom }) =>
+            mediumZoom({ margin: 24, background: "rgba(0, 0, 0, 0.85)" })
           ));
         const wireZoom = (img: HTMLImageElement) => {
           const attach = () =>
@@ -153,10 +149,10 @@ const isRootPath = Astro.url.pathname === rootPath;
             async () => {
               const zoom = await attach();
               if (!document.querySelector(".medium-zoom-image--opened")) {
-                zoom.open({target: img});
+                zoom.open({ target: img });
               }
             },
-            {once: true}
+            { once: true }
           );
         };
 
@@ -164,7 +160,7 @@ const isRootPath = Astro.url.pathname === rootPath;
         const renderAll = () => {
           if (loaded) return;
           loaded = true;
-          import("mermaid").then(({default: mermaid}) => {
+          import("mermaid").then(({ default: mermaid }) => {
             mermaid.initialize({
               startOnLoad: false,
               theme: "neutral",
@@ -178,7 +174,7 @@ const isRootPath = Astro.url.pathname === rootPath;
 
               mermaid
                 .render(id, source)
-                .then(({svg}) => {
+                .then(({ svg }) => {
                   const figure = document.createElement("figure");
                   figure.className = "mermaid-diagram";
                   // Serve the SVG through an <img> (blob URL) so medium-zoom
@@ -191,18 +187,13 @@ const isRootPath = Astro.url.pathname === rootPath;
                   const img = document.createElement("img");
                   const viewBox = svg.match(/viewBox="([^"]+)"/);
                   if (viewBox) {
-                    const [, , width, height] = viewBox[1]
-                      .trim()
-                      .split(/\s+/)
-                      .map(Number);
+                    const [, , width, height] = viewBox[1].trim().split(/\s+/).map(Number);
                     if (width && height) {
                       img.width = Math.round(width);
                       img.height = Math.round(height);
                     }
                   }
-                  img.src = URL.createObjectURL(
-                    new Blob([svg], {type: "image/svg+xml"})
-                  );
+                  img.src = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
                   img.alt = `Diagram ${i + 1}`;
                   figure.appendChild(img);
                   pre.replaceWith(figure);
@@ -222,7 +213,7 @@ const isRootPath = Astro.url.pathname === rootPath;
             obs.disconnect();
             renderAll();
           },
-          {rootMargin: "300px"}
+          { rootMargin: "300px" }
         );
         blocks.forEach(b => io.observe(b.closest("pre") || b));
       }

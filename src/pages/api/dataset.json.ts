@@ -11,9 +11,9 @@
 // Not a public endpoint: the Worker claims /api/* ahead of static assets, so a
 // request for /api/dataset.json gets the JSON 404. Consume it via /api/profile
 // and friends.
-import type {APIRoute} from "astro";
+import type { APIRoute } from "astro";
 
-import {buildDataset} from "../../../worker/api/dataset";
+import { buildDataset } from "../../../worker/api/dataset";
 import {
   educationInfo,
   greeting,
@@ -25,7 +25,7 @@ import {
   techStack,
   workExperiences
 } from "../../data/portfolio";
-import {resumeContact} from "../../data/resume";
+import { resumeContact } from "../../data/resume";
 
 export const prerender = true;
 
@@ -53,5 +53,5 @@ export const GET: APIRoute = () =>
       null,
       2
     ),
-    {headers: {"Content-Type": "application/json; charset=utf-8"}}
+    { headers: { "Content-Type": "application/json; charset=utf-8" } }
   );

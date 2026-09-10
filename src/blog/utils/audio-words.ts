@@ -2,7 +2,7 @@
 // script (alignWords: whisper output → per-word times) and the client
 // (wrapWords / matchWordSpans / wordAt: DOM spans ↔ those times).
 
-import {normalizeSpeechText} from "./audio-prep.ts";
+import { normalizeSpeechText } from "./audio-prep.ts";
 
 export interface TimedWord {
   w: string;
@@ -24,22 +24,19 @@ export function tokenize(text: string): string[] {
 
 // Matching key: lowercase letters and digits only, so "Don't" ≈ "don't" ≈
 // "dont" and "fine." ≈ "fine".
-const key = (token: string) =>
-  token.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+const key = (token: string) => token.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 // Longest common subsequence over match keys → pairs of [textIndex, whisperIndex].
 function lcsPairs(a: string[], b: string[]): Array<[number, number]> {
   const n = a.length;
   const m = b.length;
-  const dp: number[][] = Array.from({length: n + 1}, () =>
-    Array.from({length: m + 1}, () => 0)
+  const dp: number[][] = Array.from({ length: n + 1 }, () =>
+    Array.from({ length: m + 1 }, () => 0)
   );
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
       dp[i][j] =
-        a[i] && a[i] === b[j]
-          ? dp[i + 1][j + 1] + 1
-          : Math.max(dp[i + 1][j], dp[i][j + 1]);
+        a[i] && a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
     }
   }
   const pairs: Array<[number, number]> = [];
@@ -67,7 +64,7 @@ const MIN_MATCH_RATIO = 0.6;
 export function alignWords(
   text: string,
   whisper: WhisperWord[],
-  block: {start: number; end: number}
+  block: { start: number; end: number }
 ): TimedWord[] | null {
   const tokens = tokenize(text);
   if (tokens.length === 0) return null;
@@ -79,17 +76,17 @@ export function alignWords(
 
   const length = block.end - block.start;
   const clamp = (t: number) => Math.min(length, Math.max(0, t));
-  const anchors = new Map<number, {s: number; e: number}>();
+  const anchors = new Map<number, { s: number; e: number }>();
   for (const [ti, wi] of pairs) {
-    anchors.set(ti, {s: clamp(whisper[wi].start), e: clamp(whisper[wi].end)});
+    anchors.set(ti, { s: clamp(whisper[wi].start), e: clamp(whisper[wi].end) });
   }
 
-  const out: TimedWord[] = Array.from({length: tokens.length});
+  const out: TimedWord[] = Array.from({ length: tokens.length });
   let i = 0;
   while (i < tokens.length) {
     const anchor = anchors.get(i);
     if (anchor) {
-      out[i] = {w: tokens[i], s: anchor.s, e: anchor.e};
+      out[i] = { w: tokens[i], s: anchor.s, e: anchor.e };
       i++;
       continue;
     }
@@ -116,7 +113,7 @@ export function alignWords(
     if (out[k].e < out[k].s) out[k].e = out[k].s;
   }
   const round = (t: number) => Math.round((t + block.start) * 1000) / 1000;
-  return out.map(w => ({w: w.w, s: round(w.s), e: round(w.e)}));
+  return out.map(w => ({ w: w.w, s: round(w.s), e: round(w.e) }));
 }
 
 const WORD_CLASS = "rw";
@@ -129,9 +126,7 @@ const WORD_ATTR = "data-w";
 // stays one word made of two spans. Idempotent: existing spans are regrouped
 // by their word index.
 export function wrapWords(el: HTMLElement): HTMLElement[][] {
-  const existing = Array.from(
-    el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`)
-  );
+  const existing = Array.from(el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`));
   if (existing.length > 0) {
     const grouped: HTMLElement[][] = [];
     for (const span of existing) {

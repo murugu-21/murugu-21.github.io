@@ -1,8 +1,8 @@
 import ToggleModule from "react-toggle";
 import moon from "../images/moon.png";
 import sun from "../images/sun.png";
-import {useTheme} from "../utils/useTheme";
-import {tag} from "../../lib/analytics";
+import { useTheme } from "../utils/useTheme";
+import { tag } from "../../lib/analytics";
 
 // react-toggle is CJS-only: its package.json has `main` and no `exports`,
 // `module` or `type`. This file used to live under blog/package.json, which had
@@ -28,22 +28,8 @@ const ThemeToggle = () => {
     theme && (
       <Toggle
         icons={{
-          checked: (
-            <img
-              src={moon.src}
-              width={16}
-              height={16}
-              alt="moon image for dark mode"
-            />
-          ),
-          unchecked: (
-            <img
-              src={sun.src}
-              width={16}
-              height={16}
-              alt="sun image for light mode"
-            />
-          )
+          checked: <img src={moon.src} width={16} height={16} alt="moon image for dark mode" />,
+          unchecked: <img src={sun.src} width={16} height={16} alt="sun image for light mode" />
         }}
         checked={theme === "dark"}
         onChange={e => {

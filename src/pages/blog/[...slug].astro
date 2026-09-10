@@ -1,8 +1,8 @@
 ---
-import {render} from "astro:content";
+import { render } from "astro:content";
 import BaseLayout from "../../blog/layouts/BaseLayout.astro";
 import Bio from "../../blog/components/Bio.jsx";
-import {AUTHOR, SOCIAL, SITE_TITLE, SITE_URL, PERSON} from "../../blog/consts";
+import { AUTHOR, SOCIAL, SITE_TITLE, SITE_URL, PERSON } from "../../blog/consts";
 import {
   getPublishedPosts,
   postPath,
@@ -10,15 +10,15 @@ import {
   timeToRead,
   excerpt
 } from "../../blog/utils/posts";
-import {formatReadingTime} from "../../blog/utils/helpers";
-import {ListenControls} from "../../blog/components/ListenControls";
+import { formatReadingTime } from "../../blog/utils/helpers";
+import { ListenControls } from "../../blog/components/ListenControls";
 
 // One page per post; prev/next wired in date-ASC order, exactly like the old
 // gatsby-node.js createPages loop.
 export async function getStaticPaths() {
   const posts = await getPublishedPosts();
   return posts.map((post, index) => ({
-    params: {slug: post.id},
+    params: { slug: post.id },
     props: {
       post,
       previous: index === 0 ? null : posts[index - 1],
@@ -27,8 +27,8 @@ export async function getStaticPaths() {
   }));
 }
 
-const {post, previous, next} = Astro.props;
-const {Content} = await render(post);
+const { post, previous, next } = Astro.props;
+const { Content } = await render(post);
 
 const description = post.data.description || excerpt(post.body);
 
@@ -39,7 +39,7 @@ const jsonLd = {
   headline: post.data.title,
   description,
   url: postUrl,
-  mainEntityOfPage: {"@type": "WebPage", "@id": postUrl},
+  mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
   datePublished: post.data.date.toISOString(),
   dateModified: post.data.date.toISOString(),
   keywords: post.data.tags.join(", "),
@@ -116,16 +116,12 @@ const jsonLd = {
   // reader shows intent (hover or click on a post image).
   // Scoped to the articleBody <section>: the Bio avatar / social icon images
   // in the article footer are links, not zoomable content.
-  const imgs = document.querySelectorAll<HTMLImageElement>(
-    "article.blog-post section img"
-  );
+  const imgs = document.querySelectorAll<HTMLImageElement>("article.blog-post section img");
   if (imgs.length > 0) {
-    let zoomPromise: Promise<
-      ReturnType<typeof import("medium-zoom").default>
-    > | null = null;
+    let zoomPromise: Promise<ReturnType<typeof import("medium-zoom").default>> | null = null;
     const loadZoom = () =>
-      (zoomPromise ??= import("medium-zoom").then(({default: mediumZoom}) =>
-        mediumZoom(imgs, {margin: 24, background: "rgba(0, 0, 0, 0.85)"})
+      (zoomPromise ??= import("medium-zoom").then(({ default: mediumZoom }) =>
+        mediumZoom(imgs, { margin: 24, background: "rgba(0, 0, 0, 0.85)" })
       ));
     imgs.forEach(img => {
       img.addEventListener("pointerenter", () => void loadZoom(), {
@@ -143,10 +139,10 @@ const jsonLd = {
           // If the library's own click handler already opened it (it attaches
           // on init after a hover preload), don't double-open.
           if (!document.querySelector(".medium-zoom-image--opened")) {
-            zoom.open({target: img});
+            zoom.open({ target: img });
           }
         },
-        {once: true}
+        { once: true }
       );
     });
   }

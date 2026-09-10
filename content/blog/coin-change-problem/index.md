@@ -18,10 +18,7 @@ function minCoins(coins, n) {
   for (let i = 0; i < coins.length; i++) {
     if (coins[i] <= n) {
       let noOfCoinsSub = minCoins(coins, n - coins[i])
-      if (
-        noOfCoinsSub !== -1 &&
-        (noOfCoinsSub + 1 < noOfCoins || noOfCoins === -1)
-      )
+      if (noOfCoinsSub !== -1 && (noOfCoinsSub + 1 < noOfCoins || noOfCoins === -1))
         noOfCoins = noOfCoinsSub + 1
     }
   }
@@ -47,10 +44,7 @@ function minCoinsMemo(coins, n, dp) {
   for (let i = 0; i < coins.length; i++) {
     if (coins[i] <= n) {
       dp[n - coins[i]] = minCoinsMemo(coins, n - coins[i], dp)
-      if (
-        dp[n - coins[i]] !== -1 &&
-        (dp[n - coins[i]] + 1 < noOfCoins || noOfCoins === -1)
-      ) {
+      if (dp[n - coins[i]] !== -1 && (dp[n - coins[i]] + 1 < noOfCoins || noOfCoins === -1)) {
         noOfCoins = dp[n - coins[i]] + 1
       }
     }

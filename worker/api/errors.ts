@@ -14,7 +14,7 @@ export type ApiErrorCode =
   | "service_unavailable"
   | "internal_error";
 
-export type FieldIssue = {field: string; issue: string};
+export type FieldIssue = { field: string; issue: string };
 
 export const DOCS_URL = "https://murugappan.dev/developers/";
 
@@ -32,7 +32,7 @@ export function apiError(opts: {
       message: opts.message,
       hint: opts.hint,
       documentation_url: DOCS_URL,
-      ...(opts.details ? {details: opts.details} : {})
+      ...(opts.details ? { details: opts.details } : {})
     }
   };
   return new Response(JSON.stringify(body, null, 2), {

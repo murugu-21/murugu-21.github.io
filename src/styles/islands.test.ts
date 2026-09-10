@@ -5,7 +5,7 @@
 // the dark block never defined a --primary of its own. The thinking row's ✦
 // spark is `color: var(--primary)` on `bg-muted`, which went from a marginal
 // 3.11:1 to 1.14:1 — invisible. Nothing failed, because nothing checked.
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
 // Inlined from islands.css by vitest.config.ts — the Workers pool has no
 // filesystem and Vite's CSS pipeline swallows `?raw` for stylesheets.
@@ -19,10 +19,7 @@ const block = (selector: string): Record<string, string> => {
   if (at === -1) throw new Error(`no ${selector} block in islands.css`);
   const body = css.slice(at + selector.length, css.indexOf("}", at));
   return Object.fromEntries(
-    [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(m => [
-      m[1],
-      m[2].trim()
-    ])
+    [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(m => [m[1], m[2].trim()])
   );
 };
 
@@ -30,8 +27,7 @@ const LIGHT = block(".ui-island {");
 const DARK = block("html.dark-mode .ui-island,\nbody.dark .ui-island {");
 
 // Dark mode inherits every token the dark block does not restate.
-const theme = (mode: "light" | "dark") =>
-  mode === "light" ? LIGHT : {...LIGHT, ...DARK};
+const theme = (mode: "light" | "dark") => (mode === "light" ? LIGHT : { ...LIGHT, ...DARK });
 
 const luminance = (hex: string): number => {
   const m = /^#([0-9a-f]{6})$/i.exec(hex);
@@ -67,15 +63,11 @@ describe.each(["light", "dark"] as const)("%s theme tokens", mode => {
 
   // WCAG 1.4.3 AA: the panel header title is 16px semibold — normal text.
   it("keeps a primary button's label readable (>= 4.5:1)", () => {
-    expect(
-      ratio(mode, "--primary-foreground", "--primary")
-    ).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(mode, "--primary-foreground", "--primary")).toBeGreaterThanOrEqual(4.5);
   });
 
   it("keeps that label readable while hovered (>= 4.5:1)", () => {
-    expect(
-      ratio(mode, "--primary-foreground", "--primary-hover")
-    ).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(mode, "--primary-foreground", "--primary-hover")).toBeGreaterThanOrEqual(4.5);
   });
 
   it("shows the focus ring against the panel (>= 3:1)", () => {

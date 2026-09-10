@@ -45,7 +45,7 @@ export function parsePostList(llmsTxt: string): PostSummary[] {
     }
     const slug = pathname.match(POST_PATH)?.[1];
     if (!slug) continue;
-    posts.push({slug, title, url, description: description?.trim() ?? ""});
+    posts.push({ slug, title, url, description: description?.trim() ?? "" });
   }
   return posts;
 }

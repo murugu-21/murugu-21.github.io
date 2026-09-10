@@ -1,10 +1,10 @@
 ---
-import {claritySnippet as buildClaritySnippet} from "../lib/clarity";
+import { claritySnippet as buildClaritySnippet } from "../lib/clarity";
 import "@fontsource/montserrat/400.css";
 import "../styles/global.scss";
 import agustinaUrl from "../assets/fonts/Agustina.woff?url";
 import ChatWidget from "../components/chat/ChatWidget.astro";
-import {skillsCategories} from "../data/portfolio";
+import { skillsCategories } from "../data/portfolio";
 
 interface Props {
   title?: string;
@@ -56,7 +56,7 @@ const handWrittenKnowsAbout = [
 ];
 const seenKnowsAbout = new Set(handWrittenKnowsAbout.map(s => s.toLowerCase()));
 const extraKnowsAbout: string[] = [];
-for (const {items} of skillsCategories) {
+for (const { items } of skillsCategories) {
   for (const raw of items.split(/;|—|,(?![^()]*\))/)) {
     const term = raw.trim();
     if (!term) continue;
@@ -123,7 +123,7 @@ const personNode = {
     "https://x.com/murugu21"
   ],
   // /about is the canonical entity page about the person
-  mainEntityOfPage: {"@id": `${SITE_URL}/about/`}
+  mainEntityOfPage: { "@id": `${SITE_URL}/about/` }
 };
 const graph: object[] = [
   {
@@ -132,7 +132,7 @@ const graph: object[] = [
     url: `${SITE_URL}/`,
     name: "Murugappan M — Full Stack Engineer",
     description,
-    publisher: {"@id": PERSON_ID},
+    publisher: { "@id": PERSON_ID },
     inLanguage: "en"
   },
   personNode
@@ -145,13 +145,13 @@ if (!noindex) {
     "@id": canonicalUrl,
     url: canonicalUrl,
     name: title,
-    isPartOf: {"@id": WEBSITE_ID},
-    about: {"@id": PERSON_ID},
-    ...(profilePage ? {mainEntity: {"@id": PERSON_ID}} : {}),
+    isPartOf: { "@id": WEBSITE_ID },
+    about: { "@id": PERSON_ID },
+    ...(profilePage ? { mainEntity: { "@id": PERSON_ID } } : {}),
     inLanguage: "en"
   });
 }
-const jsonLd = {"@context": "https://schema.org", "@graph": graph};
+const jsonLd = { "@context": "https://schema.org", "@graph": graph };
 
 // PostHog analytics. Ingestion goes through https://e.murugappan.dev —
 // PostHog's managed reverse proxy on our own domain (a CNAME to their
@@ -174,9 +174,7 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 // Microsoft Clarity — session recordings and heatmaps; PostHog owns events.
 // The snippet (including the queue stub Clarity's own tag calls into) lives in
 // ../lib/clarity.ts so both apps share one copy and it can be tested.
-const claritySnippet = buildClaritySnippet(
-  import.meta.env.PUBLIC_CLARITY_PROJECT_ID
-);
+const claritySnippet = buildClaritySnippet(import.meta.env.PUBLIC_CLARITY_PROJECT_ID);
 ---
 
 <!doctype html>
@@ -207,12 +205,7 @@ const claritySnippet = buildClaritySnippet(
       href="/.well-known/api-catalog"
       title="murugappan.dev API catalogue (RFC 9727)"
     />
-    <link
-      rel="describedby"
-      type="text/plain"
-      href="/llms.txt"
-      title="Site summary for LLMs"
-    />
+    <link rel="describedby" type="text/plain" href="/llms.txt" title="Site summary for LLMs" />
     <link
       rel="alternate"
       type="application/rss+xml"
@@ -234,11 +227,7 @@ const claritySnippet = buildClaritySnippet(
 
     <meta name="msapplication-TileColor" content="#06038d" />
     <meta name="theme-color" content="#06038d" />
-    <meta
-      name="theme-color"
-      content="#282c35"
-      media="(prefers-color-scheme: dark)"
-    />
+    <meta name="theme-color" content="#282c35" media="(prefers-color-scheme: dark)" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -247,13 +236,7 @@ const claritySnippet = buildClaritySnippet(
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
 
-    <link
-      rel="preload"
-      as="font"
-      type="font/woff"
-      crossorigin
-      href={agustinaUrl}
-    />
+    <link rel="preload" as="font" type="font/woff" crossorigin href={agustinaUrl} />
 
     <script is:inline>
       (function () {
@@ -284,18 +267,13 @@ const claritySnippet = buildClaritySnippet(
 
     <script>
       import "../lib/webmcp";
-      import {bootAnalytics, initClickTracking, tag} from "../lib/analytics";
+      import { bootAnalytics, initClickTracking, tag } from "../lib/analytics";
 
       // PostHog custom events for the annotated links in the sections below
       // (data-ph-event), plus the theme as a super property. Both no-op until
       // the SDK boots, buffering anything captured in between.
       initClickTracking();
-      tag(
-        "theme",
-        document.documentElement.classList.contains("dark-mode")
-          ? "dark"
-          : "light"
-      );
+      tag("theme", document.documentElement.classList.contains("dark-mode") ? "dark" : "light");
 
       // Reads the meta tags below and loads the SDK on idle.
       bootAnalytics();

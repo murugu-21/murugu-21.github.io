@@ -1,15 +1,15 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {countCompanies, groupByCompany} from "./experience";
+import { countCompanies, groupByCompany } from "./experience";
 
 // Minimal shape: the helper is generic over anything carrying company, date
 // and location, so the component can pass the full WorkExperience objects.
-const role = (
-  company: string,
-  date: string,
-  role: string,
-  location = "Bangalore"
-) => ({company, date, role, location});
+const role = (company: string, date: string, role: string, location = "Bangalore") => ({
+  company,
+  date,
+  role,
+  location
+});
 
 describe("groupByCompany", () => {
   it("keeps one entry per role when companies differ", () => {
@@ -28,11 +28,7 @@ describe("groupByCompany", () => {
       role("HyperVerge", "August 2022 – June 2023", "Intern")
     ]);
     expect(groups).toHaveLength(1);
-    expect(groups[0].roles.map(r => r.role)).toEqual([
-      "SDE 2",
-      "SDE 1",
-      "Intern"
-    ]);
+    expect(groups[0].roles.map(r => r.role)).toEqual(["SDE 2", "SDE 1", "Intern"]);
   });
 
   it("spans a stint from the oldest start to the newest end", () => {
@@ -44,9 +40,7 @@ describe("groupByCompany", () => {
   });
 
   it("keeps a single role's own date string as the span", () => {
-    const [stint] = groupByCompany([
-      role("MedMe", "December 2025 – Present", "SE II")
-    ]);
+    const [stint] = groupByCompany([role("MedMe", "December 2025 – Present", "SE II")]);
     expect(stint.span).toBe("December 2025 – Present");
   });
 
@@ -86,7 +80,7 @@ import {
 
 describe("parseMonth", () => {
   it("reads a 'Month YYYY' label", () => {
-    expect(parseMonth("December 2025")).toEqual({year: 2025, month: 12});
+    expect(parseMonth("December 2025")).toEqual({ year: 2025, month: 12 });
   });
 
   it("returns null for anything else", () => {
@@ -98,14 +92,14 @@ describe("parseMonth", () => {
 describe("periodBounds", () => {
   it("splits a closed range into start and end months", () => {
     expect(periodBounds("July 2023 – March 2025")).toEqual({
-      start: {year: 2023, month: 7},
-      end: {year: 2025, month: 3}
+      start: { year: 2023, month: 7 },
+      end: { year: 2025, month: 3 }
     });
   });
 
   it("marks an open range with a null end", () => {
     expect(periodBounds("December 2025 – Present")).toEqual({
-      start: {year: 2025, month: 12},
+      start: { year: 2025, month: 12 },
       end: null
     });
   });
@@ -117,15 +111,11 @@ describe("periodBounds", () => {
 
 describe("monthsBetween", () => {
   it("counts both the first and the last month, like LinkedIn", () => {
-    expect(monthsBetween({year: 2025, month: 4}, {year: 2025, month: 12})).toBe(
-      9
-    );
+    expect(monthsBetween({ year: 2025, month: 4 }, { year: 2025, month: 12 })).toBe(9);
   });
 
   it("spans years", () => {
-    expect(monthsBetween({year: 2023, month: 7}, {year: 2025, month: 3})).toBe(
-      21
-    );
+    expect(monthsBetween({ year: 2023, month: 7 }, { year: 2025, month: 3 })).toBe(21);
   });
 });
 
@@ -148,7 +138,7 @@ describe("formatDuration", () => {
 });
 
 describe("totalExperienceMonths", () => {
-  const now = {year: 2026, month: 9};
+  const now = { year: 2026, month: 9 };
 
   it("unions overlapping and adjacent roles instead of summing them", () => {
     expect(
@@ -167,25 +157,18 @@ describe("totalExperienceMonths", () => {
 
   it("skips gaps between roles", () => {
     expect(
-      totalExperienceMonths(
-        ["January 2024 – December 2024", "January 2020 – December 2020"],
-        now
-      )
+      totalExperienceMonths(["January 2024 – December 2024", "January 2020 – December 2020"], now)
     ).toBe(24);
   });
 
   it("ignores ranges it cannot read", () => {
-    expect(
-      totalExperienceMonths(["nonsense", "January 2024 – June 2024"], now)
-    ).toBe(6);
+    expect(totalExperienceMonths(["nonsense", "January 2024 – June 2024"], now)).toBe(6);
   });
 });
 
 describe("countCompanies", () => {
   it("counts one stint per distinct company", () => {
-    expect(countCompanies([{company: "MedMe"}, {company: "HyperVerge"}])).toBe(
-      2
-    );
+    expect(countCompanies([{ company: "MedMe" }, { company: "HyperVerge" }])).toBe(2);
   });
 
   it("counts a return to a former employer once", () => {

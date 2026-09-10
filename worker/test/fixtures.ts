@@ -1,7 +1,7 @@
 // Shared site fixture for the API and MCP tests: one description of what the
 // deployed build looks like, so the two surfaces are exercised against the
 // same content instead of drifting fixtures.
-import {buildDataset, type DatasetInput} from "../api/dataset";
+import { buildDataset, type DatasetInput } from "../api/dataset";
 
 export const DATASET_INPUT: DatasetInput = {
   greeting: {
@@ -35,12 +35,10 @@ export const DATASET_INPUT: DatasetInput = {
       descBullets: ["Lifted extraction accuracy to 95%+."]
     }
   ],
-  skillsSection: {subTitle: "FULL-STACK", skills: ["⚡ Build TypeScript"]},
-  skillsCategories: [{category: "Languages", items: "TypeScript, Python"}],
+  skillsSection: { subTitle: "FULL-STACK", skills: ["⚡ Build TypeScript"] },
+  skillsCategories: [{ category: "Languages", items: "TypeScript, Python" }],
   techStack: {
-    experience: [
-      {stack: "Backend", tools: ["Node.js"], progressPercentage: "90%"}
-    ]
+    experience: [{ stack: "Backend", tools: ["Node.js"], progressPercentage: "90%" }]
   },
   educationInfo: [
     {
@@ -54,7 +52,7 @@ export const DATASET_INPUT: DatasetInput = {
   openSourceCard: {
     title: "AnkiDroid — Open Source Contributor",
     subtitle: "3 merged pull requests.",
-    footerLink: [{name: "Image paste", url: "https://gh.example/1"}]
+    footerLink: [{ name: "Image paste", url: "https://gh.example/1" }]
   },
   isHireable: true
 };
@@ -68,8 +66,7 @@ export const LLMS_TXT = `# Murugappan M
 - [Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/): Find minimum number of coins.
 `;
 
-export const POST_MARKDOWN =
-  "---\ntitle: Coin Change Problem\n---\n\nBody text.\n";
+export const POST_MARKDOWN = "---\ntitle: Coin Change Problem\n---\n\nBody text.\n";
 
 export const LLMS_FULL_TXT = "# SDE Journey\n\nEvery post, in full.\n";
 
@@ -111,12 +108,12 @@ export function fakeAssets(overrides: Record<string, string | null> = {}) {
         body == null
           ? new Response(NOT_FOUND_HTML, {
               status: 404,
-              headers: {"Content-Type": "text/html; charset=utf-8"}
+              headers: { "Content-Type": "text/html; charset=utf-8" }
             })
           : new Response(body, {
               status: 200,
               headers: path.endsWith(".html")
-                ? {"Content-Type": "text/html; charset=utf-8"}
+                ? { "Content-Type": "text/html; charset=utf-8" }
                 : undefined
             })
       );

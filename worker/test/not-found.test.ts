@@ -1,16 +1,11 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  markdownNotFound,
-  notFoundMarkdown,
-  prefersMarkdown,
-  serveAsset
-} from "../not-found";
+import { markdownNotFound, notFoundMarkdown, prefersMarkdown, serveAsset } from "../not-found";
 import worker from "../server";
-import {fakeAssets, LLMS_TXT, NOT_FOUND_HTML} from "./fixtures";
-import {env} from "cloudflare:test";
+import { fakeAssets, LLMS_TXT, NOT_FOUND_HTML } from "./fixtures";
+import { env } from "cloudflare:test";
 
-const testEnv = (): Env => ({...env, ASSETS: fakeAssets()}) as unknown as Env;
+const testEnv = (): Env => ({ ...env, ASSETS: fakeAssets() }) as unknown as Env;
 
 const fetchPath = (path: string, init?: RequestInit) =>
   worker.fetch(new Request(`https://murugappan.dev${path}`, init), testEnv());
@@ -25,11 +20,9 @@ describe("prefersMarkdown", () => {
   });
 
   it("gives a browser the HTML page", () => {
-    expect(
-      prefersMarkdown(
-        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-      )
-    ).toBe(false);
+    expect(prefersMarkdown("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")).toBe(
+      false
+    );
     expect(prefersMarkdown("application/xhtml+xml")).toBe(false);
   });
 
@@ -86,9 +79,7 @@ describe("markdownNotFound", () => {
   it("is a real 404 with a markdown body", async () => {
     const res = markdownNotFound("/nope", "GET");
     expect(res.status).toBe(404);
-    expect(res.headers.get("Content-Type")).toBe(
-      "text/markdown; charset=utf-8"
-    );
+    expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
     expect(await res.text()).toContain("# 404 Not Found");
   });
 
@@ -125,10 +116,7 @@ describe("serveAsset", () => {
   });
 
   it("replaces the HTML 404 page with markdown for a machine client", async () => {
-    const res = await serveAsset(
-      new Request("https://murugappan.dev/nope"),
-      fakeAssets() as never
-    );
+    const res = await serveAsset(new Request("https://murugappan.dev/nope"), fakeAssets() as never);
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
   });
@@ -136,7 +124,7 @@ describe("serveAsset", () => {
   it("serves the styled page to a browser, and declares the negotiation", async () => {
     const res = await serveAsset(
       new Request("https://murugappan.dev/nope", {
-        headers: {Accept: "text/html,application/xhtml+xml"}
+        headers: { Accept: "text/html,application/xhtml+xml" }
       }),
       fakeAssets() as never
     );
@@ -149,11 +137,11 @@ describe("serveAsset", () => {
 
   it("falls back to markdown when the assets layer serves no HTML page", async () => {
     const emptyAssets = {
-      fetch: () => Promise.resolve(new Response(null, {status: 404}))
+      fetch: () => Promise.resolve(new Response(null, { status: 404 }))
     };
     const res = await serveAsset(
       new Request("https://murugappan.dev/nope", {
-        headers: {Accept: "text/html"}
+        headers: { Accept: "text/html" }
       }),
       emptyAssets as never
     );
@@ -166,7 +154,7 @@ describe("serveAsset", () => {
     const res = await serveAsset(
       new Request("https://murugappan.dev/nope", {
         method: "HEAD",
-        headers: {Accept: "text/html"}
+        headers: { Accept: "text/html" }
       }),
       fakeAssets() as never
     );

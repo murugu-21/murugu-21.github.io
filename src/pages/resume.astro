@@ -4,15 +4,10 @@
 // prints to dist/resume.pdf at build time). Portfolio data is the single
 // source of truth: everything below is sourced from src/data/portfolio.ts and
 // src/data/resume.ts, in the same order the PDF resume uses.
-import {
-  greeting,
-  workExperiences,
-  skillsCategories,
-  educationInfo
-} from "../data/portfolio";
-import {resumeContact} from "../data/resume";
-import {groupByCompany} from "../lib/experience";
-import {fetchPinnedRepos} from "../lib/github";
+import { greeting, workExperiences, skillsCategories, educationInfo } from "../data/portfolio";
+import { resumeContact } from "../data/resume";
+import { groupByCompany } from "../lib/experience";
+import { fetchPinnedRepos } from "../lib/github";
 
 const repos = (await fetchPinnedRepos()).filter(r => r.description);
 // One block per company stint with the roles nested as a promotion ladder,
@@ -32,10 +27,7 @@ const stints = groupByCompany(workExperiences);
          search indexes. -->
     <meta name="robots" content="noindex" />
     <title>Murugappan M — Resume</title>
-    <meta
-      name="description"
-      content={`${resumeContact.title} resume — ${greeting.subTitle}`}
-    />
+    <meta name="description" content={`${resumeContact.title} resume — ${greeting.subTitle}`} />
   </head>
   <body>
     <main class="sheet">
@@ -56,35 +48,15 @@ const stints = groupByCompany(workExperiences);
           }
           <a href={`mailto:${resumeContact.email}`}>{resumeContact.email}</a>
           {" | "}
-          <a
-            href={resumeContact.linkedin}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {
-              resumeContact.linkedin
-                .replace(/^https?:\/\//, "")
-                .replace(/\/$/, "")
-            }
+          <a href={resumeContact.linkedin} target="_blank" rel="noopener noreferrer">
+            {resumeContact.linkedin.replace(/^https?:\/\//, "").replace(/\/$/, "")}
           </a>
           {" | "}
-          <a
-            href={resumeContact.github}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {
-              resumeContact.github
-                .replace(/^https?:\/\//, "")
-                .replace(/\/$/, "")
-            }
+          <a href={resumeContact.github} target="_blank" rel="noopener noreferrer">
+            {resumeContact.github.replace(/^https?:\/\//, "").replace(/\/$/, "")}
           </a>
           {" | "}
-          <a
-            href={resumeContact.site}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href={resumeContact.site} target="_blank" rel="noopener noreferrer">
             {resumeContact.site.replace(/^https?:\/\//, "").replace(/\/$/, "")}
           </a>
         </p>
@@ -99,7 +71,7 @@ const stints = groupByCompany(workExperiences);
         <h2>Skills</h2>
         <ul class="skills-list">
           {
-            skillsCategories.map(({category, items}) => (
+            skillsCategories.map(({ category, items }) => (
               <li>
                 <span class="skills-category">{category}:</span> {items}.
               </li>
@@ -129,9 +101,7 @@ const stints = groupByCompany(workExperiences);
                       {exp.partTime && " (Part-time)"}
                       {!stint.location && `, ${exp.location}`}
                     </span>
-                    {stint.roles.length > 1 && (
-                      <span class="role-span">{exp.date}</span>
-                    )}
+                    {stint.roles.length > 1 && <span class="role-span">{exp.date}</span>}
                   </p>
                   <p class="role-desc">{exp.desc}</p>
                   {exp.descBullets && exp.descBullets.length > 0 && (
@@ -159,14 +129,8 @@ const stints = groupByCompany(workExperiences);
                   {repo.homepageUrl && (
                     <>
                       {" — "}
-                      <a
-                        href={repo.homepageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {repo.homepageUrl
-                          .replace(/^https?:\/\//, "")
-                          .replace(/\/$/, "")}
+                      <a href={repo.homepageUrl} target="_blank" rel="noopener noreferrer">
+                        {repo.homepageUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}
                       </a>
                     </>
                   )}

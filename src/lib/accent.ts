@@ -16,8 +16,6 @@ export function accentTitle(title: string): string {
     }
   }
   return words
-    .map((w, i) =>
-      i === idx ? `<span class="accent">${escapeHtml(w)}</span>` : escapeHtml(w)
-    )
+    .map((w, i) => (i === idx ? `<span class="accent">${escapeHtml(w)}</span>` : escapeHtml(w)))
     .join(" ");
 }

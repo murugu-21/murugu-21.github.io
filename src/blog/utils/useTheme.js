@@ -1,4 +1,4 @@
-import {useSyncExternalStore} from "react";
+import { useSyncExternalStore } from "react";
 
 // The theme is owned by the blocking script in ../layouts/BaseLayout.astro,
 // which runs before first paint and re-fires `themechange` on every switch.

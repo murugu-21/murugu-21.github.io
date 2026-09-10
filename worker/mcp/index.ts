@@ -3,10 +3,10 @@
 // server choose that over an SSE stream per request, and nothing here streams
 // or reports progress, so there is no reason to open one.
 
-import {Hono} from "hono";
-import {cors} from "hono/cors";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 
-import {API_VERSION} from "../api/openapi";
+import { API_VERSION } from "../api/openapi";
 import {
   checkModernVersion,
   isAllowedOrigin,
@@ -27,10 +27,10 @@ import {
   type JsonRpcMessage,
   type RpcFailure
 } from "./protocol";
-import {BLOG_POST_TEMPLATE, listResources, readResource} from "./resources";
-import {findTool, MCP_TOOLS, type ToolContext, type ToolResult} from "./tools";
+import { BLOG_POST_TEMPLATE, listResources, readResource } from "./resources";
+import { findTool, MCP_TOOLS, type ToolContext, type ToolResult } from "./tools";
 
-const SERVER_INFO = {name: SERVER_NAME, version: API_VERSION};
+const SERVER_INFO = { name: SERVER_NAME, version: API_VERSION };
 
 // Natural-language guidance for the calling model, per DiscoverResult
 // `instructions` / legacy InitializeResult `instructions`.
@@ -54,7 +54,7 @@ const WIRE_TOOLS = MCP_TOOLS.map(tool => ({
 
 // Read results are pure functions of the deployed build; an hour is well inside
 // how often the site redeploys, and both fields are advisory to the client.
-const LIST_CACHE = {ttlMs: 3_600_000, cacheScope: "public"} as const;
+const LIST_CACHE = { ttlMs: 3_600_000, cacheScope: "public" } as const;
 
 function jsonResponse(
   body: unknown,
@@ -79,11 +79,11 @@ function rpcError(
   return jsonResponse(
     {
       jsonrpc: "2.0",
-      ...(id === undefined ? {} : {id}),
+      ...(id === undefined ? {} : { id }),
       error: {
         code: failure.code,
         message: failure.message,
-        ...(failure.data === undefined ? {} : {data: failure.data})
+        ...(failure.data === undefined ? {} : { data: failure.data })
       }
     },
     failure.status,
@@ -92,7 +92,7 @@ function rpcError(
 }
 
 function rpcResult(id: JsonRpcId, result: object): Response {
-  return jsonResponse({jsonrpc: "2.0", id, result});
+  return jsonResponse({ jsonrpc: "2.0", id, result });
 }
 
 const discoverResult = () => ({
@@ -104,23 +104,22 @@ const discoverResult = () => ({
   ...LIST_CACHE
 });
 
-const CAPABILITIES = {tools: {}, resources: {}};
+const CAPABILITIES = { tools: {}, resources: {} };
 
 /** A resources/read that resolved to nothing is an Invalid Params failure. */
 function resourceNotFound(uri: unknown): RpcFailure {
   return {
     status: 200,
     code: JSON_RPC_INVALID_PARAMS,
-    message:
-      "Resource not found. Call resources/list for the resources this server offers.",
-    data: {uri}
+    message: "Resource not found. Call resources/list for the resources this server offers.",
+    data: { uri }
   };
 }
 
 async function readResourceResult(
   message: JsonRpcMessage,
   ctx: ToolContext
-): Promise<{contents: unknown[]} | RpcFailure> {
+): Promise<{ contents: unknown[] } | RpcFailure> {
   const uri = message.params?.uri;
   if (typeof uri !== "string") {
     return {
@@ -130,12 +129,12 @@ async function readResourceResult(
     };
   }
   const contents = await readResource(uri, ctx);
-  return contents === null ? resourceNotFound(uri) : {contents};
+  return contents === null ? resourceNotFound(uri) : { contents };
 }
 
 function toolCallArgs(
   message: JsonRpcMessage
-): {name: string; args: Record<string, unknown>} | RpcFailure {
+): { name: string; args: Record<string, unknown> } | RpcFailure {
   const name = message.params?.name;
   if (typeof name !== "string") {
     return {
@@ -145,10 +144,7 @@ function toolCallArgs(
     };
   }
   const raw = message.params?.arguments;
-  if (
-    raw !== undefined &&
-    (typeof raw !== "object" || raw === null || Array.isArray(raw))
-  ) {
+  if (raw !== undefined && (typeof raw !== "object" || raw === null || Array.isArray(raw))) {
     return {
       status: 200,
       code: JSON_RPC_INVALID_PARAMS,
@@ -162,7 +158,7 @@ function toolCallArgs(
       message: `Unknown tool: ${name}. Call tools/list for the tools this server offers.`
     };
   }
-  return {name, args: (raw as Record<string, unknown>) ?? {}};
+  return { name, args: (raw as Record<string, unknown>) ?? {} };
 }
 
 async function runTool(
@@ -176,7 +172,7 @@ async function runTool(
 
 const isFailure = (value: object): value is RpcFailure => "code" in value;
 
-export const mcp = new Hono<{Bindings: Env}>();
+export const mcp = new Hono<{ Bindings: Env }>();
 
 mcp.use(
   "*",
@@ -225,7 +221,7 @@ mcp.post("*", async c => {
   const message = parsed.message;
 
   // Notifications get no response body on either era.
-  if (message.id === undefined) return new Response(null, {status: 202});
+  if (message.id === undefined) return new Response(null, { status: 202 });
   const id = message.id;
 
   const ctx: ToolContext = {
@@ -245,14 +241,14 @@ mcp.post("*", async c => {
       rpcResult(id, {
         resultType: "complete",
         ...result,
-        _meta: {[META_SERVER_INFO]: SERVER_INFO}
+        _meta: { [META_SERVER_INFO]: SERVER_INFO }
       });
 
     switch (message.method) {
       case "server/discover":
         return complete(discoverResult());
       case "tools/list":
-        return complete({tools: WIRE_TOOLS, ...LIST_CACHE});
+        return complete({ tools: WIRE_TOOLS, ...LIST_CACHE });
       case "resources/list":
         return complete({
           resources: await listResources(ctx),
@@ -275,7 +271,7 @@ mcp.post("*", async c => {
               content: result.content,
               ...(result.structuredContent === undefined
                 ? {}
-                : {structuredContent: result.structuredContent}),
+                : { structuredContent: result.structuredContent }),
               isError: result.isError === true
             });
       }
@@ -298,13 +294,11 @@ mcp.post("*", async c => {
       return rpcResult(id, {
         resultType: "complete",
         ...discoverResult(),
-        _meta: {[META_SERVER_INFO]: SERVER_INFO}
+        _meta: { [META_SERVER_INFO]: SERVER_INFO }
       });
     case "initialize":
       return rpcResult(id, {
-        protocolVersion: negotiateLegacyVersion(
-          message.params?.protocolVersion
-        ),
+        protocolVersion: negotiateLegacyVersion(message.params?.protocolVersion),
         capabilities: CAPABILITIES,
         serverInfo: SERVER_INFO,
         instructions: `${INSTRUCTIONS}\n\nProtocol versions supported by this server: ${SUPPORTED_PROTOCOL_VERSIONS.join(", ")} (latest: ${LATEST_PROTOCOL_VERSION}).`
@@ -312,11 +306,11 @@ mcp.post("*", async c => {
     case "ping":
       return rpcResult(id, {});
     case "tools/list":
-      return rpcResult(id, {tools: WIRE_TOOLS});
+      return rpcResult(id, { tools: WIRE_TOOLS });
     case "resources/list":
-      return rpcResult(id, {resources: await listResources(ctx)});
+      return rpcResult(id, { resources: await listResources(ctx) });
     case "resources/templates/list":
-      return rpcResult(id, {resourceTemplates: [BLOG_POST_TEMPLATE]});
+      return rpcResult(id, { resourceTemplates: [BLOG_POST_TEMPLATE] });
     case "resources/read": {
       const result = await readResourceResult(message, ctx);
       return isFailure(result) ? rpcError(id, result) : rpcResult(id, result);
@@ -329,7 +323,7 @@ mcp.post("*", async c => {
             content: result.content,
             ...(result.structuredContent === undefined
               ? {}
-              : {structuredContent: result.structuredContent}),
+              : { structuredContent: result.structuredContent }),
             isError: result.isError === true
           });
     }
@@ -354,6 +348,6 @@ mcp.all("*", c =>
       code: JSON_RPC_METHOD_NOT_FOUND,
       message: `${c.req.method} is not supported on the MCP endpoint. This revision of Streamable HTTP defines POST only — there is no GET stream and no session to DELETE.`
     },
-    {Allow: "POST, OPTIONS"}
+    { Allow: "POST, OPTIONS" }
   )
 );

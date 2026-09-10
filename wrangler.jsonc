@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "murugappan-dev",
   "main": "worker/server.ts",
-  "routes": [{"pattern": "murugappan.dev", "custom_domain": true}],
+  "routes": [{ "pattern": "murugappan.dev", "custom_domain": true }],
   // the custom domain is the only public host — no *.workers.dev duplicate
   // for crawlers to index (version preview URLs are unaffected)
   "workers_dev": false,
@@ -37,14 +37,12 @@
   // keep DO bindings + migrations in sync with worker/test/wrangler.jsonc
   "durable_objects": {
     "bindings": [
-      {"name": "ChatRoom", "class_name": "ChatRoom"},
-      {"name": "RateLimiter", "class_name": "RateLimiter"}
+      { "name": "ChatRoom", "class_name": "ChatRoom" },
+      { "name": "RateLimiter", "class_name": "RateLimiter" }
     ]
   },
-  "migrations": [
-    {"tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"]}
-  ],
-  "send_email": [{"name": "EMAIL"}],
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }],
+  "send_email": [{ "name": "EMAIL" }],
   // Read-only analytics mirror of every room's messages — DO SQLite stays the
   // serving source of truth; D1 exists so chats are browsable in the dash
   // (Storage & Databases → D1 → jarvis-chats). Writes are fire-and-forget.
@@ -63,6 +61,6 @@
   ],
   // Pre-rendered blog audio + the voice reference, written by `npm run audio`
   // from a laptop (never from Workers Builds). Served by worker/audio.ts.
-  "r2_buckets": [{"binding": "AUDIO", "bucket_name": "murugappan-dev-audio"}],
-  "observability": {"enabled": true}
+  "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "murugappan-dev-audio" }],
+  "observability": { "enabled": true }
 }

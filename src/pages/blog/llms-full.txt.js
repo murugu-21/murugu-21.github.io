@@ -1,10 +1,5 @@
-import {
-  SITE_TITLE,
-  SITE_DESCRIPTION,
-  SITE_URL,
-  AUTHOR
-} from "../../blog/consts";
-import {getPublishedPosts, excerpt} from "../../blog/utils/posts";
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, AUTHOR } from "../../blog/consts";
+import { getPublishedPosts, excerpt } from "../../blog/utils/posts";
 
 // Generate /llms-full.txt (https://llmstxt.org) — the full markdown body of
 // every post in one file, so LLM crawlers and agents can ingest the whole
@@ -24,9 +19,7 @@ export async function GET() {
     const title = post.data.title || post.id;
     const url = `${base}/${post.id}/`;
     const date = post.data.date.toISOString().slice(0, 10);
-    const desc = (post.data.description || excerpt(post.body) || ``)
-      .replace(/\s+/g, ` `)
-      .trim();
+    const desc = (post.data.description || excerpt(post.body) || ``).replace(/\s+/g, ` `).trim();
     lines.push(
       ``,
       `---`,
@@ -42,6 +35,6 @@ export async function GET() {
   lines.push(``);
 
   return new Response(lines.join(`\n`), {
-    headers: {"Content-Type": "text/plain; charset=utf-8"}
+    headers: { "Content-Type": "text/plain; charset=utf-8" }
   });
 }

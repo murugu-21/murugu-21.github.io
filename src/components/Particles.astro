@@ -27,9 +27,9 @@
         canvas.height = height;
       };
       resize();
-      window.addEventListener("resize", resize, {passive: true});
+      window.addEventListener("resize", resize, { passive: true });
 
-      const particles = Array.from({length: COUNT}, () => ({
+      const particles = Array.from({ length: COUNT }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         r: 0.6 + Math.random() * 1.2,

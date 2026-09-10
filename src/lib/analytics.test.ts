@@ -1,7 +1,7 @@
-import {afterEach, describe, expect, it, vi} from "vitest";
-import {parseHTML} from "linkedom";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { parseHTML } from "linkedom";
 
-import {initClickTracking, tag, track} from "./analytics";
+import { initClickTracking, tag, track } from "./analytics";
 
 // The real snippet defines window.posthog as a stub whose methods queue until
 // array.js loads (see ../layouts/Layout.astro); tests stand in spies and
@@ -9,30 +9,30 @@ import {initClickTracking, tag, track} from "./analytics";
 const withPostHog = () => {
   const capture = vi.fn();
   const register = vi.fn();
-  (globalThis as {posthog?: unknown}).posthog = {capture, register};
-  return {capture, register};
+  (globalThis as { posthog?: unknown }).posthog = { capture, register };
+  return { capture, register };
 };
 
 afterEach(() => {
-  delete (globalThis as {posthog?: unknown}).posthog;
+  delete (globalThis as { posthog?: unknown }).posthog;
 });
 
 describe("track", () => {
   it("captures the event", () => {
-    const {capture} = withPostHog();
+    const { capture } = withPostHog();
     track("resume_download");
     expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
   });
 
   it("captures properties alongside the event", () => {
-    const {capture} = withPostHog();
-    track("social_click", {social: "github"});
-    expect(capture.mock.calls).toEqual([["social_click", {social: "github"}]]);
+    const { capture } = withPostHog();
+    track("social_click", { social: "github" });
+    expect(capture.mock.calls).toEqual([["social_click", { social: "github" }]]);
   });
 
   it("drops properties with a blank value", () => {
-    const {capture} = withPostHog();
-    track("blog_card_click", {post: "", tag: "  "});
+    const { capture } = withPostHog();
+    track("blog_card_click", { post: "", tag: "  " });
     expect(capture.mock.calls).toEqual([["blog_card_click", undefined]]);
   });
 
@@ -41,7 +41,7 @@ describe("track", () => {
   });
 
   it("swallows failures from inside posthog", () => {
-    (globalThis as {posthog?: unknown}).posthog = {
+    (globalThis as { posthog?: unknown }).posthog = {
       capture: () => {
         throw new Error("blocked");
       },
@@ -51,7 +51,7 @@ describe("track", () => {
   });
 
   it("ignores a half-initialised global", () => {
-    (globalThis as {posthog?: unknown}).posthog = {};
+    (globalThis as { posthog?: unknown }).posthog = {};
     expect(() => track("resume_download")).not.toThrow();
   });
 });
@@ -60,29 +60,28 @@ describe("tag", () => {
   // Super properties, not person properties: visitors here are anonymous, and
   // these describe the session rather than an identified user.
   it("registers a super property", () => {
-    const {register, capture} = withPostHog();
+    const { register, capture } = withPostHog();
     tag("theme", "dark");
-    expect(register.mock.calls).toEqual([[{theme: "dark"}]]);
+    expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
     expect(capture).not.toHaveBeenCalled();
   });
 
   it("ignores a blank value", () => {
-    const {register} = withPostHog();
+    const { register } = withPostHog();
     tag("theme", "");
     expect(register).not.toHaveBeenCalled();
   });
 });
 
 describe("initClickTracking", () => {
-  const dom = (body: string) =>
-    parseHTML(`<html><body>${body}</body></html>`).document;
-  const click = (el: {dispatchEvent: (e: Event) => void}, doc: Document) => {
-    const Ctor = (doc.defaultView as unknown as {Event: typeof Event}).Event;
-    el.dispatchEvent(new Ctor("click", {bubbles: true}));
+  const dom = (body: string) => parseHTML(`<html><body>${body}</body></html>`).document;
+  const click = (el: { dispatchEvent: (e: Event) => void }, doc: Document) => {
+    const Ctor = (doc.defaultView as unknown as { Event: typeof Event }).Event;
+    el.dispatchEvent(new Ctor("click", { bubbles: true }));
   };
 
   it("captures the annotated event when the link is clicked", () => {
-    const {capture} = withPostHog();
+    const { capture } = withPostHog();
     const doc = dom(`<a id="cv" data-ph-event="resume_download">CV</a>`);
     initClickTracking(doc as unknown as Document);
     click(doc.getElementById("cv")!, doc as unknown as Document);
@@ -90,17 +89,17 @@ describe("initClickTracking", () => {
   });
 
   it("resolves the nearest annotated ancestor of the click target", () => {
-    const {capture} = withPostHog();
+    const { capture } = withPostHog();
     const doc = dom(
       `<a data-ph-event="social_click" data-ph-prop="social" data-ph-value="github"><svg id="glyph"></svg></a>`
     );
     initClickTracking(doc as unknown as Document);
     click(doc.getElementById("glyph")!, doc as unknown as Document);
-    expect(capture.mock.calls).toEqual([["social_click", {social: "github"}]]);
+    expect(capture.mock.calls).toEqual([["social_click", { social: "github" }]]);
   });
 
   it("ignores clicks with no annotated ancestor", () => {
-    const {capture} = withPostHog();
+    const { capture } = withPostHog();
     const doc = dom(`<a id="plain" href="/">Home</a>`);
     initClickTracking(doc as unknown as Document);
     click(doc.getElementById("plain")!, doc as unknown as Document);
@@ -108,7 +107,7 @@ describe("initClickTracking", () => {
   });
 
   it("attaches one listener however many times it is called", () => {
-    const {capture} = withPostHog();
+    const { capture } = withPostHog();
     const doc = dom(`<a id="cv" data-ph-event="resume_download"></a>`);
     initClickTracking(doc as unknown as Document);
     initClickTracking(doc as unknown as Document);
@@ -131,17 +130,13 @@ describe("initAnalytics", () => {
     const capture = vi.fn();
     const register = vi.fn();
     const init = vi.fn();
-    return {sdk: {capture, register, init}, capture, register, init};
+    return { sdk: { capture, register, init }, capture, register, init };
   };
 
   it("initialises the SDK with the token and the proxy host", async () => {
-    const {sdk, init} = fakeSdk();
+    const { sdk, init } = fakeSdk();
     const ph = await fresh();
-    await ph.initAnalytics(
-      "phc_test",
-      "https://e.example.dev",
-      async () => sdk
-    );
+    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
     expect(init).toHaveBeenCalledTimes(1);
     const [token, config] = init.mock.calls[0];
     expect(token).toBe("phc_test");
@@ -153,29 +148,21 @@ describe("initAnalytics", () => {
   // both would double the client cost and burn PostHog's replay quota on
   // footage nobody watches.
   it("leaves session replay to Clarity", async () => {
-    const {sdk, init} = fakeSdk();
+    const { sdk, init } = fakeSdk();
     const ph = await fresh();
-    await ph.initAnalytics(
-      "phc_test",
-      "https://e.example.dev",
-      async () => sdk
-    );
+    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
     expect(init.mock.calls[0][1].disable_session_recording).toBe(true);
   });
 
   it("replays events captured before the SDK finished loading", async () => {
-    const {sdk, capture, register} = fakeSdk();
+    const { sdk, capture, register } = fakeSdk();
     let release: (() => void) | undefined;
     const gate = new Promise<void>(r => (release = r));
     const ph = await fresh();
-    const booting = ph.initAnalytics(
-      "phc_test",
-      "https://e.example.dev",
-      async () => {
-        await gate;
-        return sdk;
-      }
-    );
+    const booting = ph.initAnalytics("phc_test", "https://e.example.dev", async () => {
+      await gate;
+      return sdk;
+    });
     // Nothing can have reached the SDK yet — it does not exist.
     ph.track("resume_download");
     ph.tag("theme", "dark");
@@ -183,7 +170,7 @@ describe("initAnalytics", () => {
     release!();
     await booting;
     expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
-    expect(register.mock.calls).toEqual([[{theme: "dark"}]]);
+    expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
   });
 
   it("drops events when analytics was never initialised", () => {
@@ -193,7 +180,7 @@ describe("initAnalytics", () => {
   });
 
   it("does nothing without a token or host", async () => {
-    const {sdk, init} = fakeSdk();
+    const { sdk, init } = fakeSdk();
     const ph = await fresh();
     await ph.initAnalytics("", "https://e.example.dev", async () => sdk);
     await ph.initAnalytics("phc_test", "", async () => sdk);

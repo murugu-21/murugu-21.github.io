@@ -10,12 +10,7 @@
 //   * RFC 8288  Link relations `deprecation`, `successor-version`,
 //     `version-history`, `latest-version`, `service-desc`, `service-doc`.
 
-import {
-  API_PATHS,
-  API_BASE,
-  CURRENT_API_VERSION,
-  VERSIONED_API_BASE
-} from "./routes";
+import { API_PATHS, API_BASE, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./routes";
 
 /** Release of the current version, and the value of the `API-Version` header. */
 export const API_VERSION = "1.0.0";
@@ -77,8 +72,8 @@ export const POLICY_RULES: readonly string[] = [
 export type VersionsDocument = {
   current: string;
   currentRelease: string;
-  unversionedAlias: {basePath: string; pinnedTo: string; note: string};
-  versions: Array<VersionRecord & {url: string}>;
+  unversionedAlias: { basePath: string; pinnedTo: string; note: string };
+  versions: Array<VersionRecord & { url: string }>;
   policy: {
     scheme: string;
     deprecationNoticeDays: number;
@@ -111,12 +106,9 @@ export function buildVersionsDocument(origin: string): VersionsDocument {
       documentationUrl: `${base}/developers/#versioning`,
       headers: {
         "API-Version": "The semantic release that answered this request.",
-        "API-Supported-Versions":
-          "Every path version this deployment still answers.",
-        Deprecation:
-          "RFC 9745. Present only on a deprecated version; the date it was deprecated.",
-        Sunset:
-          "RFC 8594. Present only on a deprecated version; the date it stops answering.",
+        "API-Supported-Versions": "Every path version this deployment still answers.",
+        Deprecation: "RFC 9745. Present only on a deprecated version; the date it was deprecated.",
+        Sunset: "RFC 8594. Present only on a deprecated version; the date it stops answering.",
         Link: "RFC 8288 relations: version-history, latest-version, service-desc, service-doc, and deprecation plus successor-version once deprecated."
       }
     }
@@ -147,8 +139,7 @@ export function versionHeaders(
       .map(v => v.version)
       .join(", ")
   };
-  if (record.deprecatedOn)
-    headers.Deprecation = deprecationFieldValue(record.deprecatedOn);
+  if (record.deprecatedOn) headers.Deprecation = deprecationFieldValue(record.deprecatedOn);
   if (record.sunsetOn) headers.Sunset = sunsetFieldValue(record.sunsetOn);
   return headers;
 }
@@ -158,9 +149,7 @@ export function versionHeaders(
  * the version history are, plus the migration pointers a deprecated version
  * owes its callers.
  */
-export function versionLinkHeader(
-  record: VersionRecord = CURRENT_VERSION_RECORD
-): string {
+export function versionLinkHeader(record: VersionRecord = CURRENT_VERSION_RECORD): string {
   const links = [
     `<${API_PATHS.openapiRoot}>; rel="service-desc"; type="application/json"`,
     `<https://murugappan.dev/developers/>; rel="service-doc"; type="text/html"`,
@@ -172,8 +161,7 @@ export function versionLinkHeader(
     links.push(
       `<https://murugappan.dev/developers/#versioning>; rel="deprecation"; type="text/html"`
     );
-    if (record.successor)
-      links.push(`<${API_BASE}/${record.successor}>; rel="successor-version"`);
+    if (record.successor) links.push(`<${API_BASE}/${record.successor}>; rel="successor-version"`);
   }
   return links.join(", ");
 }

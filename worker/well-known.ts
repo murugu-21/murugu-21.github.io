@@ -10,14 +10,14 @@
 // Both are generated rather than shipped as static files, so the URLs they
 // contain name the host that actually answered.
 
-import {Hono} from "hono";
-import {cors} from "hono/cors";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 
-import {publicOrigin} from "./api";
-import {API_PATHS, VERSIONED_API_BASE} from "./api/routes";
-import {API_VERSION} from "./api/versioning";
-import {LATEST_PROTOCOL_VERSION, SERVER_NAME} from "./mcp/protocol";
-import {MCP_TOOLS} from "./mcp/tools";
+import { publicOrigin } from "./api";
+import { API_PATHS, VERSIONED_API_BASE } from "./api/routes";
+import { API_VERSION } from "./api/versioning";
+import { LATEST_PROTOCOL_VERSION, SERVER_NAME } from "./mcp/protocol";
+import { MCP_TOOLS } from "./mcp/tools";
 
 /** RFC 9727 media type for a link set serialised as JSON (RFC 9264). */
 export const LINKSET_MEDIA_TYPE = "application/linkset+json";
@@ -26,8 +26,7 @@ export const LINKSET_MEDIA_TYPE = "application/linkset+json";
 export const MCP_SERVER_NAME = "dev.murugappan/murugappan-dev";
 export const MCP_SERVER_SCHEMA =
   "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json";
-export const MCP_REPOSITORY =
-  "https://github.com/murugu-21/murugu-21.github.io";
+export const MCP_REPOSITORY = "https://github.com/murugu-21/murugu-21.github.io";
 
 const CACHE = "public, max-age=3600";
 
@@ -40,7 +39,7 @@ function document(body: unknown, contentType: string): Response {
   });
 }
 
-type LinksetTarget = {href: string; type?: string; title?: string};
+type LinksetTarget = { href: string; type?: string; title?: string };
 
 /**
  * The API catalogue: one context object per API, anchored at the API's own
@@ -52,11 +51,11 @@ export function buildApiCatalog(origin: string): {
 } {
   const base = origin.replace(/\/$/, "");
   const abs = (path: string): string => `${base}${path}`;
-  const target = (
-    href: string,
-    type: string,
-    title: string
-  ): LinksetTarget => ({href, type, title});
+  const target = (href: string, type: string, title: string): LinksetTarget => ({
+    href,
+    type,
+    title
+  });
 
   return {
     linkset: [
@@ -70,11 +69,7 @@ export function buildApiCatalog(origin: string): {
           )
         ],
         "service-doc": [
-          target(
-            abs("/developers/"),
-            "text/html",
-            "murugappan.dev API — developer portal"
-          )
+          target(abs("/developers/"), "text/html", "murugappan.dev API — developer portal")
         ],
         "service-meta": [
           target(
@@ -84,11 +79,7 @@ export function buildApiCatalog(origin: string): {
           )
         ],
         describedby: [
-          target(
-            abs("/AGENTS.md"),
-            "text/markdown",
-            "murugappan.dev — agent instructions"
-          )
+          target(abs("/AGENTS.md"), "text/markdown", "murugappan.dev — agent instructions")
         ],
         status: [
           target(
@@ -97,7 +88,7 @@ export function buildApiCatalog(origin: string): {
             "murugappan.dev API — versioning and deprecation status"
           )
         ],
-        author: [{href: abs("/about/"), title: "Murugappan M"}]
+        author: [{ href: abs("/about/"), title: "Murugappan M" }]
       },
       {
         anchor: abs("/mcp"),
@@ -109,20 +100,12 @@ export function buildApiCatalog(origin: string): {
           )
         ],
         "service-doc": [
-          target(
-            abs("/developers/#mcp"),
-            "text/html",
-            "murugappan.dev MCP server — documentation"
-          )
+          target(abs("/developers/#mcp"), "text/html", "murugappan.dev MCP server — documentation")
         ],
         describedby: [
-          target(
-            abs("/AGENTS.md"),
-            "text/markdown",
-            "murugappan.dev — agent instructions"
-          )
+          target(abs("/AGENTS.md"), "text/markdown", "murugappan.dev — agent instructions")
         ],
-        author: [{href: abs("/about/"), title: "Murugappan M"}]
+        author: [{ href: abs("/about/"), title: "Murugappan M" }]
       }
     ]
   };
@@ -143,8 +126,8 @@ export function buildMcpManifest(origin: string): Record<string, unknown> {
       "First-party facts about Murugappan M: profile, experience, skills, writing, and a way to reach him.",
     version: API_VERSION,
     websiteUrl: `${base}/developers/#mcp`,
-    repository: {url: MCP_REPOSITORY, source: "github"},
-    remotes: [{type: "streamable-http", url: `${base}/mcp`}],
+    repository: { url: MCP_REPOSITORY, source: "github" },
+    remotes: [{ type: "streamable-http", url: `${base}/mcp` }],
     _meta: {
       "dev.murugappan/server": {
         transport: "streamable-http",
@@ -162,12 +145,9 @@ export function buildMcpManifest(origin: string): Record<string, unknown> {
 const READ: string[] = ["GET", "HEAD"];
 
 /** Mounted at /.well-known — see server.ts. */
-export const wellKnown = new Hono<{Bindings: Env}>();
+export const wellKnown = new Hono<{ Bindings: Env }>();
 
-wellKnown.use(
-  "*",
-  cors({origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400})
-);
+wellKnown.use("*", cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 }));
 
 wellKnown.on(READ, "/api-catalog", c =>
   document(buildApiCatalog(publicOrigin(c.req.url)), LINKSET_MEDIA_TYPE)
@@ -178,11 +158,11 @@ wellKnown.on(READ, "/mcp.json", c =>
 );
 
 /** The same manifest at the site root, which is where clients look first. */
-export const mcpManifest = new Hono<{Bindings: Env}>();
+export const mcpManifest = new Hono<{ Bindings: Env }>();
 
 mcpManifest.use(
   "*",
-  cors({origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400})
+  cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 })
 );
 
 mcpManifest.on(READ, "/", c =>

@@ -13,7 +13,7 @@
 // first changes nothing else about asset serving — `ASSETS.fetch()` still
 // applies _headers, _redirects and html_handling.
 
-import {API_PATHS, VERSIONED_API_BASE} from "./api/routes";
+import { API_PATHS, VERSIONED_API_BASE } from "./api/routes";
 
 export const SITE_ORIGIN = "https://murugappan.dev";
 
@@ -28,8 +28,7 @@ export function prefersMarkdown(accept: string | null): boolean {
   if (!accept) return true;
   const lower = accept.toLowerCase();
   if (lower.includes("text/markdown")) return true;
-  if (lower.includes("text/html") || lower.includes("application/xhtml+xml"))
-    return false;
+  if (lower.includes("text/html") || lower.includes("application/xhtml+xml")) return false;
   return true;
 }
 
@@ -103,7 +102,7 @@ export function markdownNotFound(pathname: string, method: string): Response {
   });
 }
 
-type AssetsLike = {fetch(request: Request): Promise<Response>};
+type AssetsLike = { fetch(request: Request): Promise<Response> };
 
 /**
  * The styled page the assets layer produced, with the negotiation declared and
@@ -115,10 +114,7 @@ function htmlNotFound(request: Request, response: Response): Response {
   if (!(response.headers.get("Content-Type") ?? "").startsWith("text/html"))
     return markdownNotFound(new URL(request.url).pathname, request.method);
 
-  const html = new Response(
-    request.method === "HEAD" ? null : response.body,
-    response
-  );
+  const html = new Response(request.method === "HEAD" ? null : response.body, response);
   // The same URL answers markdown for a machine client, so caches must key on
   // Accept. Everything else about the response is left exactly as served.
   html.headers.set("Vary", "Accept");
@@ -131,10 +127,7 @@ function htmlNotFound(request: Request, response: Response): Response {
  * Any other status — a hit, a redirect from _redirects, a 304 — is passed
  * through untouched.
  */
-export async function serveAsset(
-  request: Request,
-  assets: AssetsLike
-): Promise<Response> {
+export async function serveAsset(request: Request, assets: AssetsLike): Promise<Response> {
   const response = await assets.fetch(request);
   if (response.status !== 404) return response;
 

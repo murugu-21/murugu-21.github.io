@@ -1,9 +1,9 @@
-import {createServer} from "node:http";
-import {readFile, stat} from "node:fs/promises";
-import {createReadStream} from "node:fs";
-import {extname, join, normalize} from "node:path";
+import { createServer } from "node:http";
+import { readFile, stat } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { extname, join, normalize } from "node:path";
 import puppeteer from "puppeteer";
-import {PDFParse} from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 // Renders /resume as a PDF with headless Chromium and writes it to
 // dist/resume.pdf. Runs as the last step of `build:site`, after dist/ is
@@ -51,8 +51,7 @@ function createStaticServer(rootDir) {
         res.end("Not found");
         return;
       }
-      const contentType =
-        MIME_TYPES[extname(filePath)] ?? "application/octet-stream";
+      const contentType = MIME_TYPES[extname(filePath)] ?? "application/octet-stream";
       res.writeHead(200, {
         "Content-Type": contentType,
         "Content-Length": stats.size
@@ -93,14 +92,14 @@ let browser;
 try {
   server = createStaticServer(DIST_DIR);
   await listen(server, 0);
-  const {port} = server.address();
+  const { port } = server.address();
   const url = `http://127.0.0.1:${port}/resume/`;
 
   // --no-sandbox: CI runners (GitHub ubuntu-24.04 AppArmor, container builds)
   // block Chrome's sandbox; safe here since we only render our own local page.
   const launchArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
   try {
-    browser = await puppeteer.launch({headless: true, args: launchArgs});
+    browser = await puppeteer.launch({ headless: true, args: launchArgs });
   } catch (err) {
     // Cloudflare Workers Builds' image lacks Chrome's shared system libraries
     // (libatk etc.), so puppeteer's own Chrome cannot start there. Fall back
@@ -109,7 +108,7 @@ try {
       `[generate-resume] system chrome failed (${err.message.split("\n")[0]}); ` +
         "falling back to @sparticuz/chromium"
     );
-    const {default: chromium} = await import("@sparticuz/chromium");
+    const { default: chromium } = await import("@sparticuz/chromium");
     browser = await puppeteer.launch({
       headless: true,
       executablePath: await chromium.executablePath(),
@@ -117,18 +116,18 @@ try {
     });
   }
   const page = await browser.newPage();
-  await page.goto(url, {waitUntil: "networkidle0"});
+  await page.goto(url, { waitUntil: "networkidle0" });
   await page.pdf({
     path: OUT_PATH,
     format: "Letter",
     printBackground: true,
-    margin: {top: 0, right: 0, bottom: 0, left: 0}
+    margin: { top: 0, right: 0, bottom: 0, left: 0 }
   });
 
-  const {size} = await stat(OUT_PATH);
+  const { size } = await stat(OUT_PATH);
   const buffer = await readFile(OUT_PATH);
-  const parser = new PDFParse({data: buffer});
-  const {text} = await parser.getText();
+  const parser = new PDFParse({ data: buffer });
+  const { text } = await parser.getText();
   const info = await parser.getInfo().catch(() => null);
   await parser.destroy();
 
@@ -143,9 +142,7 @@ try {
     // The CF build image's chromium (@sparticuz) uses wider fallback fonts
     // than local Chrome, so overflow can be environment-specific — fail the
     // build rather than silently shipping a 3-page resume.
-    console.error(
-      `[generate-resume] page gate FAILED — ${pageCount} pages (max ${MAX_PAGES})`
-    );
+    console.error(`[generate-resume] page gate FAILED — ${pageCount} pages (max ${MAX_PAGES})`);
     process.exitCode = 1;
   } else {
     console.log(

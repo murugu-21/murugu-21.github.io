@@ -1,7 +1,7 @@
 // Pure helpers that keep the paragraph highlight in step with pre-rendered
 // audio. Types mirror the timing JSON written by scripts/generate-audio.mjs.
 
-import type {TimedWord} from "./audio-words";
+import type { TimedWord } from "./audio-words";
 
 export interface TimedBlock {
   text: string;
@@ -30,22 +30,17 @@ export interface MatchedBlock<T> {
 // Pair page blocks with timings by position, but only when the normalised
 // text still matches: an edited paragraph plays fine, it just isn't lit up.
 export function matchBlocks<T>(
-  page: ReadonlyArray<{el: T; text: string}>,
+  page: ReadonlyArray<{ el: T; text: string }>,
   timed: ReadonlyArray<TimedBlock>
 ): Array<MatchedBlock<T> | null> {
   return page.map((block, i) => {
     const t = timed[i];
-    return t && t.text === block.text
-      ? {el: block.el, start: t.start, end: t.end}
-      : null;
+    return t && t.text === block.text ? { el: block.el, start: t.start, end: t.end } : null;
   });
 }
 
 // Binary search for the block whose [start, end) contains t; -1 if none.
-export function blockAt(
-  timed: ReadonlyArray<{start: number; end: number}>,
-  t: number
-): number {
+export function blockAt(timed: ReadonlyArray<{ start: number; end: number }>, t: number): number {
   let lo = 0;
   let hi = timed.length - 1;
   while (lo <= hi) {
@@ -68,15 +63,15 @@ export interface ScrollBand {
   bottom: number;
 }
 
-export const BLOCK_BAND: ScrollBand = {top: 0.1, bottom: 0.5};
+export const BLOCK_BAND: ScrollBand = { top: 0.1, bottom: 0.5 };
 // Words only pull the page when they get close to the bottom, so a long
 // paragraph scrolls in a few steps rather than on every line. The band
 // starts at 0 because a tall block is shown from its start, which puts its
 // first word at the very top of the viewport.
-export const WORD_BAND: ScrollBand = {top: 0, bottom: 0.8};
+export const WORD_BAND: ScrollBand = { top: 0, bottom: 0.8 };
 
 export function scrollTarget(
-  rect: {top: number; height: number},
+  rect: { top: number; height: number },
   viewportHeight: number,
   band: ScrollBand = BLOCK_BAND
 ): "center" | "start" | null {

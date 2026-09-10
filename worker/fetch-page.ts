@@ -7,7 +7,7 @@
 const SITE_HOST = "murugappan.dev";
 const MAX_CHARS = 24_000;
 
-type AssetsLike = {fetch(input: string): Promise<Response>};
+type AssetsLike = { fetch(input: string): Promise<Response> };
 
 function normalize(url: string): string {
   return url.endsWith("/") ? url : `${url}/`;
@@ -34,10 +34,7 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-export async function fetchSitePage(
-  assets: AssetsLike,
-  rawUrl: string
-): Promise<string> {
+export async function fetchSitePage(assets: AssetsLike, rawUrl: string): Promise<string> {
   let url: URL;
   try {
     url = new URL(rawUrl, `https://${SITE_HOST}`);
@@ -56,18 +53,12 @@ export async function fetchSitePage(
       const target = normalize(`https://${SITE_HOST}${url.pathname}`);
       const section = full
         .split(/\n(?=# )/)
-        .find(
-          s =>
-            s.includes(`URL: ${target}`) ||
-            s.includes(`URL: ${target.slice(0, -1)}`)
-        );
+        .find(s => s.includes(`URL: ${target}`) || s.includes(`URL: ${target.slice(0, -1)}`));
       if (section) return section.slice(0, MAX_CHARS);
     }
   }
 
-  const res = await assets
-    .fetch(`https://assets.local${url.pathname}`)
-    .catch(() => null);
+  const res = await assets.fetch(`https://assets.local${url.pathname}`).catch(() => null);
   if (!res || !res.ok) {
     return "That page was not found on the site.";
   }
@@ -76,10 +67,7 @@ export async function fetchSitePage(
   return text.slice(0, MAX_CHARS) || "That page has no readable text.";
 }
 
-async function assetText(
-  assets: AssetsLike,
-  path: string
-): Promise<string | null> {
+async function assetText(assets: AssetsLike, path: string): Promise<string | null> {
   try {
     const res = await assets.fetch(`https://assets.local${path}`);
     return res.ok ? await res.text() : null;

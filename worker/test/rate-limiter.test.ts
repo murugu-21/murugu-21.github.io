@@ -1,30 +1,30 @@
-import {env, runInDurableObject} from "cloudflare:test";
-import {describe, expect, it} from "vitest";
+import { env, runInDurableObject } from "cloudflare:test";
+import { describe, expect, it } from "vitest";
 
-import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "../api/contact";
-import {BALANCE_RESERVE_USD, RateLimiter} from "../rate-limiter";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
+import { BALANCE_RESERVE_USD, RateLimiter } from "../rate-limiter";
 
 function balanceResponse(
   body: unknown,
   status = 200
-): {fetcher: typeof fetch; calls: () => number} {
+): { fetcher: typeof fetch; calls: () => number } {
   let calls = 0;
   const fetcher = (async () => {
     calls++;
-    return new Response(JSON.stringify(body), {status});
+    return new Response(JSON.stringify(body), { status });
   }) as typeof fetch;
-  return {fetcher, calls: () => calls};
+  return { fetcher, calls: () => calls };
 }
 
 const HEALTHY = {
   is_available: true,
-  balance_infos: [{currency: "USD", total_balance: "1.99"}]
+  balance_infos: [{ currency: "USD", total_balance: "1.99" }]
 };
 
 describe("chatAvailable", () => {
   it("allows chat on a funded account and caches the reading", async () => {
     const stub = env.RateLimiter.get(env.RateLimiter.idFromName("bal-ok"));
-    const {fetcher, calls} = balanceResponse(HEALTHY);
+    const { fetcher, calls } = balanceResponse(HEALTHY);
     await runInDurableObject(stub, async (instance: RateLimiter) => {
       expect(await instance.chatAvailable("sk-test", fetcher)).toBe(true);
       // Second call inside the TTL must not cost another round-trip: every
@@ -36,11 +36,9 @@ describe("chatAvailable", () => {
 
   it("gates once the balance is down to the reserve", async () => {
     const stub = env.RateLimiter.get(env.RateLimiter.idFromName("bal-low"));
-    const {fetcher} = balanceResponse({
+    const { fetcher } = balanceResponse({
       is_available: true,
-      balance_infos: [
-        {currency: "USD", total_balance: String(BALANCE_RESERVE_USD)}
-      ]
+      balance_infos: [{ currency: "USD", total_balance: String(BALANCE_RESERVE_USD) }]
     });
     await runInDurableObject(stub, async (instance: RateLimiter) => {
       expect(await instance.chatAvailable("sk-test", fetcher)).toBe(false);
@@ -49,9 +47,9 @@ describe("chatAvailable", () => {
 
   it("gates when DeepSeek reports the account unavailable", async () => {
     const stub = env.RateLimiter.get(env.RateLimiter.idFromName("bal-unavail"));
-    const {fetcher} = balanceResponse({
+    const { fetcher } = balanceResponse({
       is_available: false,
-      balance_infos: [{currency: "USD", total_balance: "10.00"}]
+      balance_infos: [{ currency: "USD", total_balance: "10.00" }]
     });
     await runInDurableObject(stub, async (instance: RateLimiter) => {
       expect(await instance.chatAvailable("sk-test", fetcher)).toBe(false);
@@ -60,11 +58,11 @@ describe("chatAvailable", () => {
 
   it("reads the USD row, ignoring other currencies", async () => {
     const stub = env.RateLimiter.get(env.RateLimiter.idFromName("bal-cny"));
-    const {fetcher} = balanceResponse({
+    const { fetcher } = balanceResponse({
       is_available: true,
       balance_infos: [
-        {currency: "CNY", total_balance: "0.00"},
-        {currency: "USD", total_balance: "1.99"}
+        { currency: "CNY", total_balance: "0.00" },
+        { currency: "USD", total_balance: "1.99" }
       ]
     });
     await runInDurableObject(stub, async (instance: RateLimiter) => {
@@ -76,7 +74,7 @@ describe("chatAvailable", () => {
   // down — a truly empty account is caught by the 402 on the next exchange.
   it("fails open when the balance lookup errors", async () => {
     const stub = env.RateLimiter.get(env.RateLimiter.idFromName("bal-err"));
-    const {fetcher} = balanceResponse({}, 500);
+    const { fetcher } = balanceResponse({}, 500);
     await runInDurableObject(stub, async (instance: RateLimiter) => {
       expect(await instance.chatAvailable("sk-test", fetcher)).toBe(true);
     });
@@ -84,7 +82,7 @@ describe("chatAvailable", () => {
 
   it("gates every room immediately once DeepSeek reports a 402", async () => {
     const stub = env.RateLimiter.get(env.RateLimiter.idFromName("bal-402"));
-    const {fetcher, calls} = balanceResponse(HEALTHY);
+    const { fetcher, calls } = balanceResponse(HEALTHY);
     await runInDurableObject(stub, async (instance: RateLimiter) => {
       expect(await instance.chatAvailable("sk-test", fetcher)).toBe(true);
       await instance.markChatExhausted();

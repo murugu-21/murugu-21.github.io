@@ -1,6 +1,6 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {apiError, DOCS_URL} from "../api/errors";
+import { apiError, DOCS_URL } from "../api/errors";
 
 describe("apiError", () => {
   it("returns a JSON body with code, message, hint and docs link", async () => {
@@ -28,12 +28,12 @@ describe("apiError", () => {
       code: "invalid_request",
       message: "The request body is not valid.",
       hint: "Fix the listed fields and retry.",
-      details: [{field: "email", issue: "must be a valid email address"}]
+      details: [{ field: "email", issue: "must be a valid email address" }]
     });
     expect(res.status).toBe(422);
-    const body = (await res.json()) as {error: {details: unknown}};
+    const body = (await res.json()) as { error: { details: unknown } };
     expect(body.error.details).toEqual([
-      {field: "email", issue: "must be a valid email address"}
+      { field: "email", issue: "must be a valid email address" }
     ]);
   });
 
@@ -43,7 +43,7 @@ describe("apiError", () => {
       code: "rate_limited",
       message: "Too many requests.",
       hint: "Retry tomorrow.",
-      headers: {"Retry-After": "3600"}
+      headers: { "Retry-After": "3600" }
     });
     expect(res.headers.get("Retry-After")).toBe("3600");
   });

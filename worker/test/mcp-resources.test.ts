@@ -1,18 +1,7 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {
-  BLOG_POST_TEMPLATE,
-  listResources,
-  readResource,
-  RESOURCE_ORIGIN
-} from "../mcp/resources";
-import {
-  AGENTS_MD,
-  fakeAssets,
-  LLMS_FULL_TXT,
-  LLMS_TXT,
-  POST_MARKDOWN
-} from "./fixtures";
+import { BLOG_POST_TEMPLATE, listResources, readResource, RESOURCE_ORIGIN } from "../mcp/resources";
+import { AGENTS_MD, fakeAssets, LLMS_FULL_TXT, LLMS_TXT, POST_MARKDOWN } from "./fixtures";
 
 const ctx = (overrides: Record<string, string | null> = {}) => ({
   assets: fakeAssets(overrides)
@@ -42,9 +31,7 @@ describe("listResources", () => {
 
   it("annotates resources for the assistant with a priority", async () => {
     for (const resource of await listResources(ctx())) {
-      expect(resource.annotations?.audience, resource.uri).toContain(
-        "assistant"
-      );
+      expect(resource.annotations?.audience, resource.uri).toContain("assistant");
       const priority = resource.annotations?.priority ?? -1;
       expect(priority, resource.uri).toBeGreaterThan(0);
       expect(priority, resource.uri).toBeLessThanOrEqual(1);
@@ -52,18 +39,14 @@ describe("listResources", () => {
   });
 
   it("ranks the site summary above an individual blog post", async () => {
-    const byUri = new Map(
-      (await listResources(ctx())).map(r => [r.uri, r.annotations?.priority])
-    );
+    const byUri = new Map((await listResources(ctx())).map(r => [r.uri, r.annotations?.priority]));
     expect(byUri.get(`${RESOURCE_ORIGIN}/llms.txt`)!).toBeGreaterThan(
       byUri.get(`${RESOURCE_ORIGIN}/blog/coin-change-problem/index.md`)!
     );
   });
 
   it("still lists the static documents when the post list is unavailable", async () => {
-    const uris = (await listResources(ctx({"/llms.txt": null}))).map(
-      r => r.uri
-    );
+    const uris = (await listResources(ctx({ "/llms.txt": null }))).map(r => r.uri);
     expect(uris).toContain(`${RESOURCE_ORIGIN}/openapi.json`);
     expect(uris.some(u => u.includes("/blog/coin-change"))).toBe(false);
   });
@@ -79,9 +62,7 @@ describe("listResources", () => {
 
 describe("BLOG_POST_TEMPLATE", () => {
   it("is an RFC 6570 template over the post slug", () => {
-    expect(BLOG_POST_TEMPLATE.uriTemplate).toBe(
-      `${RESOURCE_ORIGIN}/blog/{slug}/index.md`
-    );
+    expect(BLOG_POST_TEMPLATE.uriTemplate).toBe(`${RESOURCE_ORIGIN}/blog/{slug}/index.md`);
     expect(BLOG_POST_TEMPLATE.mimeType).toBe("text/markdown");
     expect(BLOG_POST_TEMPLATE.description).toBeTruthy();
   });
@@ -106,22 +87,16 @@ describe("readResource", () => {
   });
 
   it("reads the full blog text", async () => {
-    const contents = await readResource(
-      `${RESOURCE_ORIGIN}/blog/llms-full.txt`,
-      ctx()
-    );
+    const contents = await readResource(`${RESOURCE_ORIGIN}/blog/llms-full.txt`, ctx());
     expect(contents![0].text).toBe(LLMS_FULL_TXT);
   });
 
   it("generates the OpenAPI document rather than reading a file", async () => {
-    const contents = await readResource(
-      `${RESOURCE_ORIGIN}/openapi.json`,
-      ctx()
-    );
+    const contents = await readResource(`${RESOURCE_ORIGIN}/openapi.json`, ctx());
     expect(contents![0].mimeType).toBe("application/json");
     const doc = JSON.parse(contents![0].text) as {
       openapi: string;
-      servers: Array<{url: string}>;
+      servers: Array<{ url: string }>;
     };
     expect(doc.openapi).toBe("3.1.0");
     expect(doc.servers[0].url).toBe(RESOURCE_ORIGIN);
@@ -130,23 +105,16 @@ describe("readResource", () => {
   it("reads a blog post's markdown", async () => {
     const uri = `${RESOURCE_ORIGIN}/blog/coin-change-problem/index.md`;
     const contents = await readResource(uri, ctx());
-    expect(contents).toEqual([
-      {uri, mimeType: "text/markdown", text: POST_MARKDOWN}
-    ]);
+    expect(contents).toEqual([{ uri, mimeType: "text/markdown", text: POST_MARKDOWN }]);
   });
 
   it("returns null for a post that is not published", async () => {
-    expect(
-      await readResource(`${RESOURCE_ORIGIN}/blog/ghost/index.md`, ctx())
-    ).toBeNull();
+    expect(await readResource(`${RESOURCE_ORIGIN}/blog/ghost/index.md`, ctx())).toBeNull();
   });
 
   it("returns null for a listed post whose markdown is missing", async () => {
     expect(
-      await readResource(
-        `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`,
-        ctx()
-      )
+      await readResource(`${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`, ctx())
     ).toBeNull();
   });
 
@@ -166,23 +134,15 @@ describe("readResource", () => {
   });
 
   it("refuses a same-path uri on another origin", async () => {
+    expect(await readResource("https://evil.example/llms.txt", ctx())).toBeNull();
     expect(
-      await readResource("https://evil.example/llms.txt", ctx())
-    ).toBeNull();
-    expect(
-      await readResource(
-        "https://evil.example/blog/coin-change-problem/index.md",
-        ctx()
-      )
+      await readResource("https://evil.example/blog/coin-change-problem/index.md", ctx())
     ).toBeNull();
   });
 
   it("returns null when a static document is not deployed", async () => {
     expect(
-      await readResource(
-        `${RESOURCE_ORIGIN}/llms.txt`,
-        ctx({"/llms.txt": null})
-      )
+      await readResource(`${RESOURCE_ORIGIN}/llms.txt`, ctx({ "/llms.txt": null }))
     ).toBeNull();
   });
 });

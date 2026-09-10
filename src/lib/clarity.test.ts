@@ -1,6 +1,6 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {claritySnippet} from "./clarity";
+import { claritySnippet } from "./clarity";
 
 describe("claritySnippet", () => {
   it("emits nothing without a project id (local dev, CI)", () => {
@@ -23,9 +23,7 @@ describe("claritySnippet", () => {
 
   it("defines the stub before requesting the tag", () => {
     const snippet = claritySnippet("y02rymlwm4")!;
-    expect(snippet.indexOf("window.clarity =")).toBeLessThan(
-      snippet.indexOf("clarity.ms/tag/")
-    );
+    expect(snippet.indexOf("window.clarity =")).toBeLessThan(snippet.indexOf("clarity.ms/tag/"));
   });
 
   it("loads the tag on idle so it stays off the initial waterfall", () => {

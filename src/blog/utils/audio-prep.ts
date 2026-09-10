@@ -2,8 +2,7 @@
 // The client must normalise the same way so block texts match the timing JSON.
 
 // Emoji, pictographs and their modifiers. Punctuation is kept.
-const SYMBOLS =
-  /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE0F}\u{200D}]/gu;
+const SYMBOLS = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE0F}\u{200D}]/gu;
 
 // A run of five or more of one digit in the fractional part of a decimal
 // (0.30000000000000004). LLM-style TTS models loop on these, so the run is
@@ -70,7 +69,5 @@ export function packSentences(text: string, max = 300): string[] {
 export async function spokenHash(texts: string[]): Promise<string> {
   const data = new TextEncoder().encode(texts.join("\n"));
   const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest), b =>
-    b.toString(16).padStart(2, "0")
-  ).join("");
+  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
 }

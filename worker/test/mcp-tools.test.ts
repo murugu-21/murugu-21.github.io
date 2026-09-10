@@ -1,15 +1,15 @@
-import {env} from "cloudflare:test";
-import {describe, expect, it} from "vitest";
+import { env } from "cloudflare:test";
+import { describe, expect, it } from "vitest";
 
-import {CONTACT_DAILY_PER_CLIENT} from "../api/contact";
-import {MCP_TOOLS, findTool, type ToolContext} from "../mcp/tools";
-import {fakeAssets, POST_MARKDOWN} from "./fixtures";
+import { CONTACT_DAILY_PER_CLIENT } from "../api/contact";
+import { MCP_TOOLS, findTool, type ToolContext } from "../mcp/tools";
+import { fakeAssets, POST_MARKDOWN } from "./fixtures";
 
 function ctx(
   options: {
     assets?: Record<string, string | null>;
     inbox?: string | null;
-    email?: {send(msg: unknown): Promise<unknown>} | null;
+    email?: { send(msg: unknown): Promise<unknown> } | null;
     ip?: string;
   } = {}
 ): ToolContext {
@@ -17,12 +17,8 @@ function ctx(
     assets: fakeAssets(options.assets),
     env: {
       ...env,
-      OPPORTUNITY_INBOX:
-        options.inbox === undefined ? "inbox@example.com" : options.inbox,
-      EMAIL:
-        options.email === undefined
-          ? {send: () => Promise.resolve()}
-          : options.email
+      OPPORTUNITY_INBOX: options.inbox === undefined ? "inbox@example.com" : options.inbox,
+      EMAIL: options.email === undefined ? { send: () => Promise.resolve() } : options.email
     } as unknown as Env,
     clientIp: options.ip ?? "203.0.113.50"
   };
@@ -103,10 +99,7 @@ describe("MCP_TOOLS definitions", () => {
 
   it("describes every input property", () => {
     for (const tool of MCP_TOOLS) {
-      const props = (tool.inputSchema.properties ?? {}) as Record<
-        string,
-        {description?: string}
-      >;
+      const props = (tool.inputSchema.properties ?? {}) as Record<string, { description?: string }>;
       for (const [name, schema] of Object.entries(props)) {
         expect(schema.description, `${tool.name}.${name}`).toBeTruthy();
       }
@@ -138,7 +131,7 @@ describe("read tools", () => {
     const result = await call("get_profile");
     expect(result.isError).toBeFalsy();
     const data = result.structuredContent as {
-      person: {name: string};
+      person: { name: string };
       links: unknown[];
     };
     expect(data.person.name).toBe("Murugappan M");
@@ -149,7 +142,7 @@ describe("read tools", () => {
 
   it("list_experience returns dated roles", async () => {
     const data = (await call("list_experience")).structuredContent as {
-      experience: Array<{company: string; startDate: string}>;
+      experience: Array<{ company: string; startDate: string }>;
     };
     expect(data.experience[0]).toMatchObject({
       company: "MedMe Health",
@@ -159,7 +152,7 @@ describe("read tools", () => {
 
   it("list_skills returns categories and proficiencies", async () => {
     const data = (await call("list_skills")).structuredContent as {
-      skills: Array<{skills: string[]}>;
+      skills: Array<{ skills: string[] }>;
       proficiencies: unknown[];
     };
     expect(data.skills[0].skills).toEqual(["TypeScript", "Python"]);
@@ -168,16 +161,14 @@ describe("read tools", () => {
 
   it("list_education returns the degree", async () => {
     const data = (await call("list_education")).structuredContent as {
-      education: Array<{institution: string}>;
+      education: Array<{ institution: string }>;
     };
-    expect(data.education[0].institution).toBe(
-      "Kumaraguru College of Technology"
-    );
+    expect(data.education[0].institution).toBe("Kumaraguru College of Technology");
   });
 
   it("list_open_source returns verifiable links", async () => {
     const data = (await call("list_open_source")).structuredContent as {
-      openSource: Array<{project: string}>;
+      openSource: Array<{ project: string }>;
     };
     expect(data.openSource[0].project).toBe("AnkiDroid");
   });
@@ -187,7 +178,7 @@ describe("read tools", () => {
       "get_profile",
       {},
       {
-        assets: {"/api/dataset.json": null}
+        assets: { "/api/dataset.json": null }
       }
     );
     expect(result.isError).toBe(true);
@@ -205,47 +196,49 @@ describe("search_blog_posts", () => {
   });
 
   it("filters case-insensitively", async () => {
-    const data = (await call("search_blog_posts", {query: "RATE LIMITING"}))
-      .structuredContent as {posts: Array<{slug: string}>; count: number};
+    const data = (await call("search_blog_posts", { query: "RATE LIMITING" }))
+      .structuredContent as { posts: Array<{ slug: string }>; count: number };
     expect(data.count).toBe(1);
     expect(data.posts[0].slug).toBe("cloud-agnostic-rate-limiting");
   });
 
   it("applies limit", async () => {
-    const data = (await call("search_blog_posts", {limit: 1}))
-      .structuredContent as {count: number};
+    const data = (await call("search_blog_posts", { limit: 1 })).structuredContent as {
+      count: number;
+    };
     expect(data.count).toBe(1);
   });
 
   it("rejects an out-of-range limit as a tool execution error", async () => {
-    const result = await call("search_blog_posts", {limit: 0});
+    const result = await call("search_blog_posts", { limit: 0 });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/limit/);
   });
 
   it("rejects a non-string query", async () => {
-    const result = await call("search_blog_posts", {query: 42});
+    const result = await call("search_blog_posts", { query: 42 });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/query/);
   });
 
   it("returns an empty list when nothing matches", async () => {
-    const data = (await call("search_blog_posts", {query: "kubernetes"}))
-      .structuredContent as {count: number};
+    const data = (await call("search_blog_posts", { query: "kubernetes" })).structuredContent as {
+      count: number;
+    };
     expect(data.count).toBe(0);
   });
 });
 
 describe("get_blog_post", () => {
   it("returns the post markdown", async () => {
-    const data = (await call("get_blog_post", {slug: "coin-change-problem"}))
-      .structuredContent as {markdown: string; title: string};
+    const data = (await call("get_blog_post", { slug: "coin-change-problem" }))
+      .structuredContent as { markdown: string; title: string };
     expect(data.title).toBe("Coin Change Problem");
     expect(data.markdown).toBe(POST_MARKDOWN);
   });
 
   it("tells the model how to recover from an unknown slug", async () => {
-    const result = await call("get_blog_post", {slug: "nope"});
+    const result = await call("get_blog_post", { slug: "nope" });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("search_blog_posts");
   });
@@ -257,7 +250,7 @@ describe("get_blog_post", () => {
   });
 
   it("rejects a traversal attempt", async () => {
-    const result = await call("get_blog_post", {slug: "../../llms.txt"});
+    const result = await call("get_blog_post", { slug: "../../llms.txt" });
     expect(result.isError).toBe(true);
   });
 });
@@ -270,16 +263,15 @@ describe("send_message", () => {
   };
 
   it("sends the message and confirms acceptance", async () => {
-    const sent: Array<{to: string; subject: string}> = [];
+    const sent: Array<{ to: string; subject: string }> = [];
     const result = await call("send_message", message, {
       ip: "198.51.100.60",
-      email: {send: async m => void sent.push(m as (typeof sent)[number])}
+      email: { send: async m => void sent.push(m as (typeof sent)[number]) }
     });
     expect(result.isError).toBeFalsy();
     expect(result.structuredContent).toEqual({
       status: "accepted",
-      message:
-        "Message accepted — Murugappan will reply to the address you gave."
+      message: "Message accepted — Murugappan will reply to the address you gave."
     });
     expect(sent).toHaveLength(1);
     expect(sent[0].subject).toContain("Ada Lovelace");
@@ -289,21 +281,19 @@ describe("send_message", () => {
     const sent: unknown[] = [];
     const result = await call(
       "send_message",
-      {...message, dryRun: true},
-      {ip: "198.51.100.61", email: {send: async m => void sent.push(m)}}
+      { ...message, dryRun: true },
+      { ip: "198.51.100.61", email: { send: async m => void sent.push(m) } }
     );
     expect(result.isError).toBeFalsy();
-    expect((result.structuredContent as {status: string}).status).toBe(
-      "validated"
-    );
+    expect((result.structuredContent as { status: string }).status).toBe("validated");
     expect(sent).toEqual([]);
   });
 
   it("reports each invalid field so the model can self-correct", async () => {
     const result = await call(
       "send_message",
-      {email: "nope", message: "hi"},
-      {ip: "198.51.100.62"}
+      { email: "nope", message: "hi" },
+      { ip: "198.51.100.62" }
     );
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("email");
@@ -312,10 +302,10 @@ describe("send_message", () => {
 
   it("shares the daily allowance with POST /api/contact", async () => {
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
-      const ok = await call("send_message", message, {ip: "198.51.100.63"});
+      const ok = await call("send_message", message, { ip: "198.51.100.63" });
       expect(ok.isError).toBeFalsy();
     }
-    const result = await call("send_message", message, {ip: "198.51.100.63"});
+    const result = await call("send_message", message, { ip: "198.51.100.63" });
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/allowance|limit/i);
   });
@@ -331,7 +321,7 @@ describe("send_message", () => {
   it("reports a failed delivery as a tool execution error", async () => {
     const result = await call("send_message", message, {
       ip: "198.51.100.65",
-      email: {send: () => Promise.reject(new Error("relay down"))}
+      email: { send: () => Promise.reject(new Error("relay down")) }
     });
     expect(result.isError).toBe(true);
   });

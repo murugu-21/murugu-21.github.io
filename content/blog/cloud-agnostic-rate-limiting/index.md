@@ -3,8 +3,7 @@ title: Modern distributed rate limiting in the cloud
 
 date: "2026-06-09T10:30:00.121Z"
 
-tags:
-  ["rate-limiting", "architecture", "cloud-agnostic", "llm-agents", "startups"]
+tags: ["rate-limiting", "architecture", "cloud-agnostic", "llm-agents", "startups"]
 
 description: Why LLM agents make per-user rate limiting essential, and a two-tier IP and per-user pattern that protects your compute budget across clouds
 ---

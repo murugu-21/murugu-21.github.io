@@ -9,16 +9,11 @@
 // — bad slug, out-of-range limit, invalid email, spent allowance — comes back
 // as a tool execution error (`isError: true`) with text that says what to do.
 
-import {API_SCHEMAS} from "../api/openapi";
-import {parseContactRequest, CONTACT_DAILY_PER_CLIENT} from "../api/contact";
-import {
-  loadDataset,
-  loadPostMarkdown,
-  loadPosts,
-  type AssetsLike
-} from "../api/store";
-import {sendContactEmail, type EmailLike} from "../email";
-import {resolveSchema, type JsonSchema} from "./schema";
+import { API_SCHEMAS } from "../api/openapi";
+import { parseContactRequest, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
+import { loadDataset, loadPostMarkdown, loadPosts, type AssetsLike } from "../api/store";
+import { sendContactEmail, type EmailLike } from "../email";
+import { resolveSchema, type JsonSchema } from "./schema";
 
 export type ToolContext = {
   assets: AssetsLike;
@@ -27,7 +22,7 @@ export type ToolContext = {
   clientIp: string;
 };
 
-export type ToolTextContent = {type: "text"; text: string};
+export type ToolTextContent = { type: "text"; text: string };
 
 export type ToolResult = {
   content: ToolTextContent[];
@@ -72,14 +67,14 @@ const out = (name: string) => resolveSchema(name, API_SCHEMAS);
 /** Success: structured data plus the serialized JSON the spec asks for. */
 function ok(data: unknown): ToolResult {
   return {
-    content: [{type: "text", text: JSON.stringify(data, null, 2)}],
+    content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
     structuredContent: data
   };
 }
 
 /** A failure the calling model can act on. */
 function fail(text: string): ToolResult {
-  return {content: [{type: "text", text}], isError: true};
+  return { content: [{ type: "text", text }], isError: true };
 }
 
 const DATASET_UNAVAILABLE =
@@ -91,9 +86,7 @@ function datasetTool(
   title: string,
   description: string,
   schema: string,
-  project: (
-    data: NonNullable<Awaited<ReturnType<typeof loadDataset>>>
-  ) => unknown
+  project: (data: NonNullable<Awaited<ReturnType<typeof loadDataset>>>) => unknown
 ): McpTool {
   return {
     name,
@@ -112,12 +105,11 @@ function datasetTool(
 function optionalString(
   args: Record<string, unknown>,
   field: string
-): {value?: string; error?: string} {
+): { value?: string; error?: string } {
   const raw = args[field];
   if (raw === undefined || raw === null) return {};
-  if (typeof raw !== "string")
-    return {error: `The '${field}' argument must be a string.`};
-  return {value: raw};
+  if (typeof raw !== "string") return { error: `The '${field}' argument must be a string.` };
+  return { value: raw };
 }
 
 export const MCP_TOOLS: McpTool[] = [
@@ -126,35 +118,35 @@ export const MCP_TOOLS: McpTool[] = [
     "Profile of Murugappan M",
     "Returns the canonical summary of Murugappan M — a full stack engineer (TypeScript, Node.js, React, AWS) based in Bangalore, India: name, headline, elevator pitch, location, email, whether he is open to work, his current role with a start month, his stated focus areas, and every public link (site, about page, blog, RSS, resume PDF, GitHub, LinkedIn, X, developer portal, OpenAPI spec). Call this first — it is one request and answers most questions about who he is.",
     "Profile",
-    data => ({person: data.person, links: data.links})
+    data => ({ person: data.person, links: data.links })
   ),
   datasetTool(
     "list_experience",
     "Work experience",
     "Returns every role Murugappan M has held, newest first, each with company, location, the human-readable period, ISO 8601 year-month start and end dates, a `current` flag, a one-line summary, and the concrete achievements of that role. Use this instead of parsing his resume PDF whenever you need dated, per-role facts — for example to check whether he has production experience with a technology, and when.",
     "ExperienceList",
-    data => ({experience: data.experience})
+    data => ({ experience: data.experience })
   ),
   datasetTool(
     "list_skills",
     "Skills and proficiencies",
     "Returns the technologies Murugappan M works with, grouped into categories (languages, full stack, observability and security, cloud and infrastructure), plus self-reported proficiency levels per broad area. Use this to answer 'does he know X' from a typed list rather than inferring it from prose.",
     "SkillsResponse",
-    data => ({skills: data.skills, proficiencies: data.proficiencies})
+    data => ({ skills: data.skills, proficiencies: data.proficiencies })
   ),
   datasetTool(
     "list_education",
     "Education",
     "Returns Murugappan M's formal education: institution, credential, location, the human-readable period, ISO 8601 year-month start and end dates, and any highlights. One entry today; the shape is a list so it stays stable.",
     "EducationList",
-    data => ({education: data.education})
+    data => ({ education: data.education })
   ),
   datasetTool(
     "list_open_source",
     "Open-source contributions",
     "Returns Murugappan M's public open-source work: the project, the role he held, what the contributions were, and links to the individual merged pull requests. Use this when you need to verify a claim about his open-source work at the source rather than repeat it.",
     "OpenSourceList",
-    data => ({openSource: data.openSource})
+    data => ({ openSource: data.openSource })
   ),
   {
     name: "search_blog_posts",
@@ -200,12 +192,11 @@ export const MCP_TOOLS: McpTool[] = [
       if (needle) {
         posts = posts.filter(
           p =>
-            p.title.toLowerCase().includes(needle) ||
-            p.description.toLowerCase().includes(needle)
+            p.title.toLowerCase().includes(needle) || p.description.toLowerCase().includes(needle)
         );
       }
       if (limit !== undefined) posts = posts.slice(0, limit);
-      return ok({posts, count: posts.length});
+      return ok({ posts, count: posts.length });
     }
   },
   {
@@ -232,18 +223,14 @@ export const MCP_TOOLS: McpTool[] = [
       const slug = optionalString(args, "slug");
       if (slug.error) return fail(slug.error);
       if (!slug.value)
-        return fail(
-          "The 'slug' argument is required. Call search_blog_posts to discover slugs."
-        );
+        return fail("The 'slug' argument is required. Call search_blog_posts to discover slugs.");
 
       const notFound = `No published post has the slug '${slug.value}'. Call search_blog_posts to see which slugs exist.`;
-      const post = (await loadPosts(ctx.assets)).find(
-        p => p.slug === slug.value
-      );
+      const post = (await loadPosts(ctx.assets)).find(p => p.slug === slug.value);
       if (!post) return fail(notFound);
       const markdown = await loadPostMarkdown(ctx.assets, slug.value);
       if (markdown === null) return fail(notFound);
-      return ok({...post, markdown});
+      return ok({ ...post, markdown });
     }
   },
   {
@@ -297,9 +284,7 @@ export const MCP_TOOLS: McpTool[] = [
     async run(args, ctx) {
       const parsed = parseContactRequest(args);
       if (!parsed.ok) {
-        const issues = parsed.issues
-          .map(i => `- ${i.field}: ${i.issue}`)
-          .join("\n");
+        const issues = parsed.issues.map(i => `- ${i.field}: ${i.issue}`).join("\n");
         return fail(
           `The message was not sent because these arguments are invalid:\n${issues}\nFix them and call send_message again.`
         );
@@ -308,8 +293,7 @@ export const MCP_TOOLS: McpTool[] = [
       if (parsed.dryRun) {
         return ok({
           status: "validated",
-          message:
-            "The request is valid. Call again without dryRun to deliver it."
+          message: "The request is valid. Call again without dryRun to deliver it."
         });
       }
 
@@ -320,9 +304,7 @@ export const MCP_TOOLS: McpTool[] = [
           "Message delivery is not configured on this deployment. Use one of the contact links from get_profile instead."
         );
 
-      const limiter = ctx.env.RateLimiter.get(
-        ctx.env.RateLimiter.idFromName("global")
-      );
+      const limiter = ctx.env.RateLimiter.get(ctx.env.RateLimiter.idFromName("global"));
       const slot = await limiter.takeContactSlot(ctx.clientIp);
       if (!slot.allowed)
         return fail(
@@ -341,8 +323,7 @@ export const MCP_TOOLS: McpTool[] = [
       }
       return ok({
         status: "accepted",
-        message:
-          "Message accepted — Murugappan will reply to the address you gave."
+        message: "Message accepted — Murugappan will reply to the address you gave."
       });
     }
   }

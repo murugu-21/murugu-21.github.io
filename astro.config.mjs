@@ -1,14 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import {defineConfig} from "astro/config";
-import {unified} from "@astrojs/markdown-remark";
-import {FontaineTransform} from "fontaine";
+import { defineConfig } from "astro/config";
+import { unified } from "@astrojs/markdown-remark";
+import { FontaineTransform } from "fontaine";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import {autolinkConfig} from "./src/blog/utils/rehype-autolink-config.mjs";
+import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config.mjs";
 
 // slug -> ISO publish date from each post's frontmatter, used as the sitemap
 // <lastmod> so crawlers can prioritize recently-updated pages.
@@ -18,9 +18,7 @@ function postDates() {
   for (const dir of fs.readdirSync(root)) {
     const file = path.join(root, dir, "index.md");
     if (!fs.existsSync(file)) continue;
-    const match = fs
-      .readFileSync(file, "utf8")
-      .match(/^date:\s*"?([^"\n]+)"?\s*$/m);
+    const match = fs.readFileSync(file, "utf8").match(/^date:\s*"?([^"\n]+)"?\s*$/m);
     if (match) dates[dir] = new Date(match[1]).toISOString();
   }
   return dates;
@@ -37,18 +35,16 @@ function singleFileSitemap() {
   return {
     name: "single-file-sitemap",
     hooks: {
-      "astro:build:done": ({dir, logger}) => {
+      "astro:build:done": ({ dir, logger }) => {
         const chunk = new URL("sitemap-0.xml", dir);
         if (fs.existsSync(new URL("sitemap-1.xml", dir))) {
-          throw new Error(
-            "single-file-sitemap: more than one sitemap chunk was written"
-          );
+          throw new Error("single-file-sitemap: more than one sitemap chunk was written");
         }
         if (!fs.existsSync(chunk)) {
           throw new Error("single-file-sitemap: dist/sitemap-0.xml is missing");
         }
         fs.renameSync(chunk, new URL("sitemap.xml", dir));
-        fs.rmSync(new URL("sitemap-index.xml", dir), {force: true});
+        fs.rmSync(new URL("sitemap-index.xml", dir), { force: true });
         logger.info("`sitemap.xml` created at `dist`");
       }
     }
@@ -66,13 +62,11 @@ function blogNotFoundCopy() {
   return {
     name: "blog-not-found-copy",
     hooks: {
-      "astro:build:done": ({dir}) => {
+      "astro:build:done": ({ dir }) => {
         const src = new URL("blog/404/index.html", dir);
         const dest = new URL("blog/404.html", dir);
         if (!fs.existsSync(src)) {
-          throw new Error(
-            "blog-not-found-copy: dist/blog/404/index.html is missing"
-          );
+          throw new Error("blog-not-found-copy: dist/blog/404/index.html is missing");
         }
         fs.copyFileSync(src, dest);
         // Guard against copying the wrong page under a right-looking path:
@@ -95,8 +89,8 @@ function blogNotFoundCopy() {
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
-  server: {port: 4399},
-  build: {assets: "static"},
+  server: { port: 4399 },
+  build: { assets: "static" },
   integrations: [
     react(),
     sitemap({
@@ -104,7 +98,7 @@ export default defineConfig({
       // page, so /blog/404/ has to be excluded by hand.
       filter: page => !/\/404\/?$/.test(page),
       serialize(item) {
-        const {pathname} = new URL(item.url);
+        const { pathname } = new URL(item.url);
         // The blog index carries the newest post's date. NB /blog/ strips to
         // "" below, not "blog" — hence the explicit check.
         if (pathname === "/blog/") {

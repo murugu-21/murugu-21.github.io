@@ -6,7 +6,7 @@ const WRAPPER_STYLES = {
   flexWrap: "wrap"
 };
 
-const TagBar = ({tags, onTagSelect, selectedTags, marginTop}) => {
+const TagBar = ({ tags, onTagSelect, selectedTags, marginTop }) => {
   return (
     <div style={WRAPPER_STYLES}>
       {tags.map(tag => {

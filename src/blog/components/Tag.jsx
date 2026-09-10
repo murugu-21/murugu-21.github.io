@@ -31,7 +31,7 @@ const INPUT_STYLES = {
   left: "-99999px"
 };
 
-const Tag = ({tag, onTagSelect, isSelected, marginTop = ".875em"}) => {
+const Tag = ({ tag, onTagSelect, isSelected, marginTop = ".875em" }) => {
   return (
     <>
       {onTagSelect && (
@@ -47,7 +47,7 @@ const Tag = ({tag, onTagSelect, isSelected, marginTop = ".875em"}) => {
       )}
       <label
         htmlFor={onTagSelect && `tag-${tag.name}`}
-        style={{...TAG_STYLES, marginTop: marginTop}}
+        style={{ ...TAG_STYLES, marginTop: marginTop }}
       >
         <span
           style={{

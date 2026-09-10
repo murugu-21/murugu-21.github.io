@@ -1,13 +1,10 @@
 // Minimal 16-bit PCM WAV helpers so the orchestrator can join chunks with
 // sample-accurate gaps and derive block timings from byte counts, instead of
 // trusting ffmpeg's rounded durations.
-import {Buffer} from "node:buffer";
+import { Buffer } from "node:buffer";
 
 export function readWav(buffer) {
-  if (
-    buffer.toString("ascii", 0, 4) !== "RIFF" ||
-    buffer.toString("ascii", 8, 12) !== "WAVE"
-  ) {
+  if (buffer.toString("ascii", 0, 4) !== "RIFF" || buffer.toString("ascii", 8, 12) !== "WAVE") {
     throw new Error("not a RIFF/WAVE file");
   }
   let offset = 12;
@@ -33,7 +30,7 @@ export function readWav(buffer) {
   if (fmt.format !== 1 || fmt.bits !== 16) {
     throw new Error("only 16-bit PCM WAV is supported");
   }
-  return {sampleRate: fmt.sampleRate, channels: fmt.channels, pcm};
+  return { sampleRate: fmt.sampleRate, channels: fmt.channels, pcm };
 }
 
 export function writeWav(sampleRate, pcm, channels = 1) {
@@ -77,7 +74,7 @@ export function assemble(blocks, sampleRate, gaps) {
       if (c > 0) push(silence(sampleRate, gaps.intra));
       push(chunk.pcm);
     });
-    timings.push({start, end: samples / sampleRate});
+    timings.push({ start, end: samples / sampleRate });
   });
-  return {pcm: Buffer.concat(parts), timings};
+  return { pcm: Buffer.concat(parts), timings };
 }

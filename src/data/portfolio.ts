@@ -1,4 +1,4 @@
-import type {ImageMetadata} from "astro";
+import type { ImageMetadata } from "astro";
 
 import medmeLogo from "../assets/images/medmeLogo.png";
 import hypervergeLogo from "../assets/images/hypervergeLogo.png";
@@ -50,26 +50,25 @@ export const skillsSection: {
   softwareSkills: SoftwareSkill[];
 } = {
   title: "What I do",
-  subTitle:
-    "FULL-STACK ENGINEER BUILDING CLOUD-NATIVE, EVENT-DRIVEN SYSTEMS END-TO-END",
+  subTitle: "FULL-STACK ENGINEER BUILDING CLOUD-NATIVE, EVENT-DRIVEN SYSTEMS END-TO-END",
   skills: [
     "⚡ Build TypeScript end-to-end — event-driven Node.js / Nest.js services and React frontends",
     "⚡ Design distributed, event-driven systems on AWS (Lambda, API Gateway, SQS, EventBridge)",
     "⚡ Ship with observability and security built in — OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],
   softwareSkills: [
-    {skillName: "TypeScript", iconName: "typescript"},
-    {skillName: "React", iconName: "react"},
-    {skillName: "Node.js", iconName: "node"},
-    {skillName: "Python", iconName: "python"},
-    {skillName: "AWS", iconName: "aws"},
-    {skillName: "Docker", iconName: "docker"},
-    {skillName: "PostgreSQL", iconName: "postgresql"},
-    {skillName: "SQLite", iconName: "sqlite"},
-    {skillName: "Kafka", iconName: "kafka"},
-    {skillName: "CDC (Debezium)", iconName: "cdc"},
-    {skillName: "Playwright", iconName: "playwright"},
-    {skillName: "k6", iconName: "k6"}
+    { skillName: "TypeScript", iconName: "typescript" },
+    { skillName: "React", iconName: "react" },
+    { skillName: "Node.js", iconName: "node" },
+    { skillName: "Python", iconName: "python" },
+    { skillName: "AWS", iconName: "aws" },
+    { skillName: "Docker", iconName: "docker" },
+    { skillName: "PostgreSQL", iconName: "postgresql" },
+    { skillName: "SQLite", iconName: "sqlite" },
+    { skillName: "Kafka", iconName: "kafka" },
+    { skillName: "CDC (Debezium)", iconName: "cdc" },
+    { skillName: "Playwright", iconName: "playwright" },
+    { skillName: "k6", iconName: "k6" }
   ]
 };
 
@@ -94,44 +93,44 @@ export const techStack: {
     {
       stack: "Backend",
       tools: [
-        {name: "Node.js", icon: "node"},
-        {name: "Nest.js", icon: "nestjs"},
-        {name: "Event-driven", icon: "bolt"}
+        { name: "Node.js", icon: "node" },
+        { name: "Nest.js", icon: "nestjs" },
+        { name: "Event-driven", icon: "bolt" }
       ],
       progressPercentage: "90%"
     },
     {
       stack: "Distributed systems",
       tools: [
-        {name: "Kafka", icon: "kafka"},
-        {name: "SQS", icon: "sqs"},
-        {name: "DynamoDB", icon: "dynamodb"},
-        {name: "CDC", icon: "cdc"}
+        { name: "Kafka", icon: "kafka" },
+        { name: "SQS", icon: "sqs" },
+        { name: "DynamoDB", icon: "dynamodb" },
+        { name: "CDC", icon: "cdc" }
       ],
       progressPercentage: "85%"
     },
     {
       stack: "Cloud & Infra",
       tools: [
-        {name: "AWS", icon: "aws"},
-        {name: "Terraform", icon: "terraform"},
-        {name: "Docker", icon: "docker"}
+        { name: "AWS", icon: "aws" },
+        { name: "Terraform", icon: "terraform" },
+        { name: "Docker", icon: "docker" }
       ],
       progressPercentage: "85%"
     },
     {
       stack: "Frontend",
       tools: [
-        {name: "React", icon: "react"},
-        {name: "TypeScript", icon: "typescript"}
+        { name: "React", icon: "react" },
+        { name: "TypeScript", icon: "typescript" }
       ],
       progressPercentage: "80%"
     },
     {
       stack: "Testing",
       tools: [
-        {name: "Playwright", icon: "playwright"},
-        {name: "k6", icon: "k6"}
+        { name: "Playwright", icon: "playwright" },
+        { name: "k6", icon: "k6" }
       ],
       progressPercentage: "75%"
     }
@@ -227,8 +226,8 @@ export const workExperiences: WorkExperience[] = [
 // section (see src/data/resume.ts) and folded into Layout.astro's JSON-LD
 // knowsAbout. The portfolio's own Skills section keeps its own curated list.
 
-export const skillsCategories: {category: string; items: string}[] = [
-  {category: "Languages", items: "TypeScript, Python, SQL, Bash, YAML"},
+export const skillsCategories: { category: string; items: string }[] = [
+  { category: "Languages", items: "TypeScript, Python, SQL, Bash, YAML" },
   {
     category: "Full Stack",
     items:
@@ -290,7 +289,7 @@ export const projectsSection: {
 
 // Open Source Contributions Section (formerly achievementSection)
 
-export const openSourceSection: {title: string; subtitle: string} = {
+export const openSourceSection: { title: string; subtitle: string } = {
   title: "Open Source Contributions 🌐",
   subtitle: "Code I've contributed to projects used by people around the world."
 };
@@ -300,7 +299,7 @@ export const openSourceCard: {
   subtitle: string;
   image: string;
   imageAlt: string;
-  footerLink: {name: string; url: string}[];
+  footerLink: { name: string; url: string }[];
 } = {
   title: "AnkiDroid — Open Source Contributor",
   subtitle:
@@ -332,7 +331,7 @@ export const openSourceCard: {
 export const blogSection: {
   title: string;
   subtitle: string;
-  blogs: {url: string; title: string; description: string}[];
+  blogs: { url: string; title: string; description: string }[];
 } = {
   title: "Blogs",
   subtitle:
@@ -359,8 +358,7 @@ export const blogSection: {
     {
       url: "https://murugappan.dev/blog/",
       title: "SDE Journey — my technical blog",
-      description:
-        "Hard-won lessons from building software that actually runs in production."
+      description: "Hard-won lessons from building software that actually runs in production."
     }
   ]
 };
@@ -369,8 +367,7 @@ export const blogSection: {
 
 export const contactInfo = {
   title: "Contact Me ☎️",
-  subtitle:
-    "Want to discuss a project, a role, or just say hi? My inbox is open.",
+  subtitle: "Want to discuss a project, a role, or just say hi? My inbox is open.",
   // No phone number is hardcoded in source — set RESUME_PHONE (build env /
   // local .env) to populate it. This value only ever renders in
   // GithubCard.astro's no-GitHub-profile fallback contact view (production

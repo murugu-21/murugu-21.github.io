@@ -7,22 +7,22 @@
 // Data comes from the site's own build artifacts (see store.ts) — there is no
 // second copy of the profile anywhere in this directory.
 
-import {Hono} from "hono";
-import {cors} from "hono/cors";
+import { Hono } from "hono";
+import { cors } from "hono/cors";
 
-import {sendContactEmail, type EmailLike} from "../email";
-import {CONTACT_DAILY_PER_CLIENT, parseContactRequest} from "./contact";
-import {apiError, type FieldIssue} from "./errors";
-import {apiHeaders} from "./middleware";
-import {buildOpenApiDocument} from "./openapi";
+import { sendContactEmail, type EmailLike } from "../email";
+import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "./contact";
+import { apiError, type FieldIssue } from "./errors";
+import { apiHeaders } from "./middleware";
+import { buildOpenApiDocument } from "./openapi";
 import {
   contactRateLimitHeaders,
   RATE_LIMIT_EXPOSED_HEADERS,
   secondsUntilUtcMidnight
 } from "./ratelimit";
-import {ALLOWED_METHODS, API_PATHS, matchApiPath} from "./routes";
-import {loadDataset, loadPostMarkdown, loadPosts} from "./store";
-import {buildVersionsDocument, META_EXPOSED_HEADERS} from "./versioning";
+import { ALLOWED_METHODS, API_PATHS, matchApiPath } from "./routes";
+import { loadDataset, loadPostMarkdown, loadPosts } from "./store";
+import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
 // Read responses are pure functions of the deployed build, so they are safe to
 // cache; five minutes keeps a redeploy visible quickly.
@@ -30,8 +30,7 @@ const READ_CACHE = "public, max-age=300";
 const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 const POSTS_LIMIT_MAX = 100;
 
-const SPEC_HINT =
-  "Fetch https://murugappan.dev/openapi.json for the full list of endpoints.";
+const SPEC_HINT = "Fetch https://murugappan.dev/openapi.json for the full list of endpoints.";
 
 function json(data: unknown, cache = READ_CACHE): Response {
   return new Response(JSON.stringify(data, null, 2), {
@@ -67,11 +66,7 @@ export function publicOrigin(requestUrl: string): string {
 // The methods a client may use, including the two every endpoint answers.
 function allowHeader(path: string): string {
   const declared = ALLOWED_METHODS[path] ?? ["GET"];
-  return [
-    ...declared,
-    ...(declared.includes("GET") ? ["HEAD"] : []),
-    "OPTIONS"
-  ].join(", ");
+  return [...declared, ...(declared.includes("GET") ? ["HEAD"] : []), "OPTIONS"].join(", ");
 }
 
 /**
@@ -80,8 +75,8 @@ function allowHeader(path: string): string {
  */
 function contactResponse(
   status: 200 | 202,
-  body: {status: string; message: string},
-  usage: {clientRemaining: number; globalRemaining: number}
+  body: { status: string; message: string },
+  usage: { clientRemaining: number; globalRemaining: number }
 ): Response {
   return new Response(JSON.stringify(body, null, 2), {
     status,
@@ -96,7 +91,7 @@ function contactResponse(
   });
 }
 
-export const api = new Hono<{Bindings: Env}>();
+export const api = new Hono<{ Bindings: Env }>();
 
 api.use(
   "*",
@@ -111,38 +106,38 @@ api.use(
   })
 );
 
-api.use("*", apiHeaders({enforceReads: true}));
+api.use("*", apiHeaders({ enforceReads: true }));
 
 const READ: string[] = ["GET", "HEAD"];
 
 api.on(READ, "/profile", async c => {
   const data = await loadDataset(c.env.ASSETS);
   if (!data) return datasetUnavailable();
-  return json({person: data.person, links: data.links});
+  return json({ person: data.person, links: data.links });
 });
 
 api.on(READ, "/experience", async c => {
   const data = await loadDataset(c.env.ASSETS);
   if (!data) return datasetUnavailable();
-  return json({experience: data.experience});
+  return json({ experience: data.experience });
 });
 
 api.on(READ, "/skills", async c => {
   const data = await loadDataset(c.env.ASSETS);
   if (!data) return datasetUnavailable();
-  return json({skills: data.skills, proficiencies: data.proficiencies});
+  return json({ skills: data.skills, proficiencies: data.proficiencies });
 });
 
 api.on(READ, "/education", async c => {
   const data = await loadDataset(c.env.ASSETS);
   if (!data) return datasetUnavailable();
-  return json({education: data.education});
+  return json({ education: data.education });
 });
 
 api.on(READ, "/open-source", async c => {
   const data = await loadDataset(c.env.ASSETS);
   if (!data) return datasetUnavailable();
-  return json({openSource: data.openSource});
+  return json({ openSource: data.openSource });
 });
 
 api.on(READ, "/posts", async c => {
@@ -171,13 +166,11 @@ api.on(READ, "/posts", async c => {
   let posts = await loadPosts(c.env.ASSETS);
   if (query) {
     posts = posts.filter(
-      p =>
-        p.title.toLowerCase().includes(query) ||
-        p.description.toLowerCase().includes(query)
+      p => p.title.toLowerCase().includes(query) || p.description.toLowerCase().includes(query)
     );
   }
   if (limit !== undefined) posts = posts.slice(0, limit);
-  return json({posts, count: posts.length});
+  return json({ posts, count: posts.length });
 });
 
 api.on(READ, "/posts/:slug", async c => {
@@ -194,14 +187,12 @@ api.on(READ, "/posts/:slug", async c => {
   if (!post) return notFound();
   const markdown = await loadPostMarkdown(c.env.ASSETS, slug);
   if (markdown === null) return notFound();
-  return json({...post, markdown});
+  return json({ ...post, markdown });
 });
 
 // Version and deprecation metadata. Served under both prefixes, so a client
 // that knows no version yet can still ask which ones exist.
-api.on(READ, "/versions", c =>
-  json(buildVersionsDocument(publicOrigin(c.req.url)))
-);
+api.on(READ, "/versions", c => json(buildVersionsDocument(publicOrigin(c.req.url))));
 
 api.on(READ, "/openapi.json", c => specResponse(c.req.url));
 
@@ -269,8 +260,7 @@ api.post("/contact", async c => {
       200,
       {
         status: "validated",
-        message:
-          "The request is valid. Send it again without dryRun to deliver it."
+        message: "The request is valid. Send it again without dryRun to deliver it."
       },
       usage
     );
@@ -325,8 +315,7 @@ api.post("/contact", async c => {
     202,
     {
       status: "accepted",
-      message:
-        "Message accepted — Murugappan will reply to the address you gave."
+      message: "Message accepted — Murugappan will reply to the address you gave."
     },
     slot
   );
@@ -344,7 +333,7 @@ api.all("*", c => {
       code: "method_not_allowed",
       message: `${c.req.method} is not supported on ${known}.`,
       hint: `Use ${allowHeader(known)} on this path instead.`,
-      headers: {Allow: allowHeader(known)}
+      headers: { Allow: allowHeader(known) }
     });
   }
   return apiError({
@@ -362,7 +351,7 @@ export function specResponse(requestUrl: string): Response {
 
 // /openapi.json is the canonical, root-level spec location agents probe first;
 // it lives outside /api so it gets its own tiny app to mount.
-export const specRoutes = new Hono<{Bindings: Env}>();
+export const specRoutes = new Hono<{ Bindings: Env }>();
 
 specRoutes.use(
   "*",
@@ -376,7 +365,7 @@ specRoutes.use(
 
 // The document describing the API must stay reachable even for a client that
 // has just been throttled, so the ceiling is advertised here but not enforced.
-specRoutes.use("*", apiHeaders({enforceReads: false}));
+specRoutes.use("*", apiHeaders({ enforceReads: false }));
 
 specRoutes.on(READ, "/", c => specResponse(c.req.url));
 
@@ -386,6 +375,6 @@ specRoutes.all("*", c =>
     code: "method_not_allowed",
     message: `${c.req.method} is not supported on ${API_PATHS.openapiRoot}.`,
     hint: `Use ${allowHeader(API_PATHS.openapiRoot)} on this path instead.`,
-    headers: {Allow: allowHeader(API_PATHS.openapiRoot)}
+    headers: { Allow: allowHeader(API_PATHS.openapiRoot) }
   })
 );
