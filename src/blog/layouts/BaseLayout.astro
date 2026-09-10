@@ -40,7 +40,7 @@ const isRootPath = Astro.url.pathname === rootPath;
          there is no light/dark flash; exposes window.__theme (the current
          value) and window.__setPreferredTheme, and fires a `themechange` event
          on window so any number of React islands can subscribe (see
-         ../utils/useTheme.js). -->
+         ../utils/useTheme.ts). -->
     <script is:inline>
       // Shared persistence contract with the portfolio app: key "isDark",
       // value is a JSON bool. Derive the blog's "dark"/"light" string from it.
@@ -125,7 +125,7 @@ const isRootPath = Astro.url.pathname === rootPath;
         // Same lazy medium-zoom wiring as post images ([...slug].astro), for
         // the diagram <img>s created below. Separate memoized instance since
         // these elements don't exist at page load.
-        let zoomPromise: Promise<any> | null = null;
+        let zoomPromise: Promise<ReturnType<typeof import("medium-zoom").default>> | null = null;
         const ensureZoom = () =>
           (zoomPromise ??= import("medium-zoom").then(({ default: mediumZoom }) =>
             mediumZoom({ margin: 24, background: "rgba(0, 0, 0, 0.85)" })

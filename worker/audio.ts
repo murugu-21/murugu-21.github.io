@@ -1,6 +1,6 @@
 // Pre-rendered blog audio from R2: /blog/audio/<slug>.mp3 and .json, stored
 // under the current voice's prefix (see KEY_PREFIX in
-// scripts/generate-audio.mjs). Written from the author's laptop; the Worker
+// scripts/generate-audio.ts). Written from the author's laptop; the Worker
 // only reads. Range requests matter because <audio> seeks with them.
 import { Hono } from "hono";
 

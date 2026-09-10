@@ -4,7 +4,7 @@ import { excerpt, getPublishedPosts } from "./posts";
 // Newest-first "- [title](url): description" lines describing every published
 // post. Shared by /llms.txt (site-wide map) and /blog/llms.txt (blog-only map)
 // so the two can never drift.
-export async function postLines() {
+export async function postLines(): Promise<string[]> {
   const posts = (await getPublishedPosts()).reverse();
   const base = SITE_URL.replace(/\/$/, "");
   return posts.map(post => {

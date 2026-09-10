@@ -123,6 +123,7 @@ body.dark .ui-island {
   cursor: pointer;
   text-transform: none;
   -webkit-appearance: button;
+  appearance: button;
 }
 
 /* No Tailwind preflight here, so form controls keep their UA font and

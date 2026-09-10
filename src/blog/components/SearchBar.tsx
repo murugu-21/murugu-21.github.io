@@ -1,7 +1,7 @@
 import React from "react";
 import "../styles/search.css";
 
-const SEARCH_STYLE = {
+const SEARCH_STYLE: React.CSSProperties = {
   width: "100%",
   padding: ".25em .5em",
   fontSize: "1.25rem",
@@ -11,7 +11,12 @@ const SEARCH_STYLE = {
   color: "var(--color-text)"
 };
 
-const SearchBar = ({ query, onChange }) => {
+interface SearchBarProps {
+  query: string;
+  onChange: React.FormEventHandler<HTMLInputElement>;
+}
+
+const SearchBar = ({ query, onChange }: SearchBarProps) => {
   return (
     <input
       id="search"

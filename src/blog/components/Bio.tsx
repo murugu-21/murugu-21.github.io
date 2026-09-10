@@ -4,9 +4,14 @@ import githubLight from "../images/Github-light.png";
 import stackOverflow from "../images/stack-overflow.png";
 import { useTheme } from "../utils/useTheme";
 
+interface BioProps {
+  author: { name: string; summary?: string };
+  social: { twitter: string };
+}
+
 // Author/social data comes in as props from the Astro pages (replaces the
 // Gatsby useStaticQuery for siteMetadata).
-const Bio = ({ author, social }) => {
+const Bio = ({ author, social }: BioProps) => {
   // null before the bootstrap script has run, which falls through to the
   // light-on-dark icon — the same default this rendered server-side.
   const theme = useTheme();
@@ -21,11 +26,11 @@ const Bio = ({ author, social }) => {
           height={50}
           alt="Profile picture"
         />
-        {author?.name && (
+        {author.name && (
           <p>
             technical blog by{" "}
             <a
-              href={`https://x.com/${social?.twitter || ``}`}
+              href={`https://x.com/${social.twitter}`}
               data-ph-event="social_click"
               data-ph-prop="social"
               data-ph-value="x"
@@ -33,14 +38,13 @@ const Bio = ({ author, social }) => {
               <strong>{author.name}</strong>
             </a>
             <br></br>
-            {author?.summary || null}
+            {author.summary || null}
           </p>
         )}
       </div>
       <div style={{ display: "flex", flexDirection: "row", gap: "1rem" }}>
         <a
           href="https://github.com/murugu-21"
-          alt="link to author's github profile"
           data-ph-event="social_click"
           data-ph-prop="social"
           data-ph-value="github"
@@ -54,7 +58,6 @@ const Bio = ({ author, social }) => {
         </a>
         <a
           href="https://stackoverflow.com/users/15790108/murugappan-m"
-          alt="link to author's stackoverflow profile"
           data-ph-event="social_click"
           data-ph-prop="social"
           data-ph-value="stackoverflow"

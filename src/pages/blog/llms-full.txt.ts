@@ -3,7 +3,7 @@ import { getPublishedPosts, excerpt } from "../../blog/utils/posts";
 
 // Generate /llms-full.txt (https://llmstxt.org) — the full markdown body of
 // every post in one file, so LLM crawlers and agents can ingest the whole
-// blog without fetching each page. Same ordering/filtering as llms.txt.js;
+// blog without fetching each page. Same ordering/filtering as llms.txt.ts;
 // drafts are already excluded from production by getPublishedPosts.
 export async function GET() {
   const posts = (await getPublishedPosts()).reverse(); // newest first

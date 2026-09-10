@@ -1,0 +1,11 @@
+{
+  // src/styles/islands.css is Tailwind 4: @source, @theme and @custom-variant are
+  // unknown to vscode-css-language-server, which otherwise flags each one.
+  "lsp": {
+    "vscode-css-language-server": {
+      "settings": {
+        "css": { "lint": { "unknownAtRules": "ignore" } }
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 // Read-aloud controls for a blog post, as a shadcn/ui island.
 //
 // Preferred path: pre-rendered audio in the author's voice from
-// /blog/audio/<slug>.{json,mp3} (scripts/generate-audio.mjs), with the
+// /blog/audio/<slug>.{json,mp3} (scripts/generate-audio.ts), with the
 // paragraph highlight driven by the timing JSON. Fallback, when that is
 // missing (new post, astro dev has no Worker) or fails: the browser's speech
 // synthesis, one block per utterance. Both backends implement `Player`.
@@ -79,7 +79,7 @@ const storeRate = (rate: SpeechRate) => {
 // effect. It can't be read on the server, and reading it during the hydration
 // render would mismatch the server HTML, so useSyncExternalStore is the
 // sanctioned shape: getServerSnapshot supplies what the server rendered and
-// React re-renders once after hydration. (utils/useTheme.js is an external
+// React re-renders once after hydration. (utils/useTheme.ts is an external
 // store for the same reason.) The value is held in memory as well as in
 // localStorage so the picker still works when storage is blocked.
 let currentRate: SpeechRate | null = null;
@@ -465,7 +465,7 @@ export function ListenControls({ slug }: { slug: string }) {
       </span>
 
       <Slider
-        className="group min-w-0 flex-1 [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:hover:opacity-100 [&_[data-slot=slider-track]]:h-1 hover:[&_[data-slot=slider-thumb]]:opacity-100 focus-within:[&_[data-slot=slider-thumb]]:opacity-100"
+        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 **:data-[slot=slider-thumb]:hover:opacity-100 **:data-[slot=slider-track]:h-1 hover:**:data-[slot=slider-thumb]:opacity-100 focus-within:**:data-[slot=slider-thumb]:opacity-100"
         value={[progress.position]}
         max={progress.length || 1}
         step={seekable ? 0.1 : 1}

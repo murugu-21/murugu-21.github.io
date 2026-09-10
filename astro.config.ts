@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { AstroIntegration } from "astro";
 import { defineConfig } from "astro/config";
 import { unified } from "@astrojs/markdown-remark";
 import { FontaineTransform } from "fontaine";
@@ -8,13 +9,13 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config.mjs";
+import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 
 // slug -> ISO publish date from each post's frontmatter, used as the sitemap
 // <lastmod> so crawlers can prioritize recently-updated pages.
-function postDates() {
+function postDates(): Record<string, string> {
   const root = path.join(process.cwd(), "content/blog");
-  const dates = {};
+  const dates: Record<string, string> = {};
   for (const dir of fs.readdirSync(root)) {
     const file = path.join(root, dir, "index.md");
     if (!fs.existsSync(file)) continue;
@@ -31,7 +32,7 @@ const NEWEST_POST = Object.values(POST_DATES).sort().pop();
 // negotiated 404 body (worker/not-found.ts), the developer portal and the
 // api-catalog all name that exact URL. Collapse the single chunk onto it.
 // entryLimit is 45000 and the site has ~14 URLs, so there is only ever one.
-function singleFileSitemap() {
+function singleFileSitemap(): AstroIntegration {
   return {
     name: "single-file-sitemap",
     hooks: {
@@ -58,7 +59,7 @@ function singleFileSitemap() {
 // every /blog/<miss> silently falls back to the portfolio's top-level 404 —
 // no build error, just a wrong page in production. Restore the old path
 // alongside the new one (verified with `wrangler dev` both ways).
-function blogNotFoundCopy() {
+function blogNotFoundCopy(): AstroIntegration {
   return {
     name: "blog-not-found-copy",
     hooks: {

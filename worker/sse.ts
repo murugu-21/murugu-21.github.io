@@ -12,7 +12,7 @@ export type StreamResult = {
 
 type PartialToolCall = { id: string; name: string; arguments: string };
 
-export function toolCallId(id: unknown, index: number): string {
+function toolCallId(id: unknown, index: number): string {
   return typeof id === "string" && id.length > 0 ? id : `call_${index}`;
 }
 

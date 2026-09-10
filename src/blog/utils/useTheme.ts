@@ -6,20 +6,22 @@ import { useSyncExternalStore } from "react";
 // useSyncExternalStore: no setState-in-effect, and the listener is actually
 // torn down on unmount.
 
-const subscribe = onStoreChange => {
+type Theme = "light" | "dark";
+
+const subscribe = (onStoreChange: () => void) => {
   window.addEventListener("themechange", onStoreChange);
   return () => window.removeEventListener("themechange", onStoreChange);
 };
 
 // A string, so React's identity check settles immediately.
-const getSnapshot = () => window.__theme;
+const getSnapshot = (): Theme | null => window.__theme ?? null;
 
 // window.__theme only exists once the browser has run the bootstrap script, so
 // the server — and therefore the hydration pass, which React renders from this
 // same snapshot — sees "theme not known yet". React re-renders with the real
 // value right after hydration, so callers must handle null.
-const getServerSnapshot = () => null;
+const getServerSnapshot = (): Theme | null => null;
 
-export function useTheme() {
+export function useTheme(): Theme | null {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

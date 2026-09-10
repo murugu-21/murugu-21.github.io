@@ -50,7 +50,7 @@ export function parsePostList(llmsTxt: string): PostSummary[] {
   return posts;
 }
 
-// generate-markdown.mjs writes the post's markdown source next to its built
+// generate-markdown.ts writes the post's markdown source next to its built
 // index.html; the slug is re-validated here because it comes from the request
 // path, not from the parsed list.
 export function postMarkdownPath(slug: string): string | null {

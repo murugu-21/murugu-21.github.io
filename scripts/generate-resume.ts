@@ -1,8 +1,8 @@
-import { createServer } from "node:http";
+import { createServer, type Server } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { extname, join, normalize } from "node:path";
-import puppeteer from "puppeteer";
+import puppeteer, { type Browser } from "puppeteer";
 import { PDFParse } from "pdf-parse";
 
 // Renders /resume as a PDF with headless Chromium and writes it to
@@ -13,7 +13,7 @@ import { PDFParse } from "pdf-parse";
 const DIST_DIR = new URL("../dist/", import.meta.url).pathname;
 const OUT_PATH = new URL("../dist/resume.pdf", import.meta.url).pathname;
 
-const MIME_TYPES = {
+const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -33,10 +33,10 @@ const MIME_TYPES = {
 };
 
 /** Minimal static file server over dist/, directory-index aware (foo/ -> foo/index.html). */
-function createStaticServer(rootDir) {
+function createStaticServer(rootDir: string): Server {
   return createServer(async (req, res) => {
     try {
-      const url = new URL(req.url, "http://localhost");
+      const url = new URL(req.url ?? "/", "http://localhost");
       let pathname = decodeURIComponent(url.pathname);
       if (pathname.endsWith("/")) pathname += "index.html";
       const filePath = normalize(join(rootDir, pathname));
@@ -64,7 +64,7 @@ function createStaticServer(rootDir) {
   });
 }
 
-function listen(server, port) {
+function listen(server: Server, port: number): Promise<void> {
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(port, "127.0.0.1", () => resolve());
@@ -87,13 +87,14 @@ const ATS_REQUIRED_TOKENS = [
   "$300k"
 ];
 
-let server;
-let browser;
+let server: Server | undefined;
+let browser: Browser | undefined;
 try {
   server = createStaticServer(DIST_DIR);
   await listen(server, 0);
-  const { port } = server.address();
-  const url = `http://127.0.0.1:${port}/resume/`;
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("static server has no port");
+  const url = `http://127.0.0.1:${address.port}/resume/`;
 
   // --no-sandbox: CI runners (GitHub ubuntu-24.04 AppArmor, container builds)
   // block Chrome's sandbox; safe here since we only render our own local page.
@@ -105,7 +106,7 @@ try {
     // (libatk etc.), so puppeteer's own Chrome cannot start there. Fall back
     // to @sparticuz/chromium — a self-contained build with everything bundled.
     console.warn(
-      `[generate-resume] system chrome failed (${err.message.split("\n")[0]}); ` +
+      `[generate-resume] system chrome failed (${(err instanceof Error ? err.message : String(err)).split("\n")[0]}); ` +
         "falling back to @sparticuz/chromium"
     );
     const { default: chromium } = await import("@sparticuz/chromium");
@@ -132,7 +133,7 @@ try {
   await parser.destroy();
 
   const missing = ATS_REQUIRED_TOKENS.filter(token => !text.includes(token));
-  const pageCount = info?.total ?? info?.numpages ?? null;
+  const pageCount = info?.total ?? null;
   if (missing.length > 0) {
     console.error(
       `[generate-resume] ATS gate FAILED — missing tokens: ${missing.map(t => JSON.stringify(t)).join(", ")}`
@@ -154,7 +155,10 @@ try {
   }
 } finally {
   if (browser) await browser.close();
-  if (server) await new Promise(resolve => server.close(resolve));
+  if (server) {
+    const s = server;
+    await new Promise<void>(resolve => s.close(() => resolve()));
+  }
 }
 
 if (process.exitCode) process.exit(process.exitCode);

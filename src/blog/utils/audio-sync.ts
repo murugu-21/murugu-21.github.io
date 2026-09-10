@@ -1,5 +1,5 @@
 // Pure helpers that keep the paragraph highlight in step with pre-rendered
-// audio. Types mirror the timing JSON written by scripts/generate-audio.mjs.
+// audio. Types mirror the timing JSON written by scripts/generate-audio.ts.
 
 import type { TimedWord } from "./audio-words";
 
@@ -63,7 +63,7 @@ export interface ScrollBand {
   bottom: number;
 }
 
-export const BLOCK_BAND: ScrollBand = { top: 0.1, bottom: 0.5 };
+const BLOCK_BAND: ScrollBand = { top: 0.1, bottom: 0.5 };
 // Words only pull the page when they get close to the bottom, so a long
 // paragraph scrolls in a few steps rather than on every line. The band
 // starts at 0 because a tall block is shown from its start, which puts its

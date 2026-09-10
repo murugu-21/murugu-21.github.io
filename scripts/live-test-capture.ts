@@ -11,13 +11,14 @@
 // to call the tool, or claims the lead was recorded without calling it.
 import { readFileSync } from "node:fs";
 
-import { buildMessages, TOOLS } from "../worker/prompt.ts";
+import { buildMessages, TOOLS, type ModelMessage, type ModelToolCall } from "../worker/prompt.ts";
+import type { ChatHistoryEntry } from "../worker/protocol.ts";
 
 // ai.ts can't be imported here — it resolves its own imports the bundler way,
 // which bare Node won't do — so read the two constants out of its source and
 // keep it the single source of truth.
 const aiSource = readFileSync("worker/ai.ts", "utf8");
-const constant = name =>
+const constant = (name: string): string =>
   aiSource.match(new RegExp(`^export const ${name} = "(.*)";$`, "m"))?.[1] ??
   (() => {
     throw new Error(`${name} not found in worker/ai.ts`);
@@ -44,9 +45,9 @@ const visitorTurns = [
 const CLAIMS_RECORDED =
   /\b(noted (it|this|that)|pass(ed|ing)? (it |this )?(on|along)|forwarded|be in touch|let him know)\b/i;
 
-const history = [];
-let captured = null;
-let falseClaim = null;
+const history: ModelMessage[] = [];
+let captured: { contact?: string } | null = null;
+let falseClaim: string | null = null;
 
 for (const turn of visitorTurns) {
   history.push({ role: "user", content: turn });
@@ -55,14 +56,19 @@ for (const turn of visitorTurns) {
     headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model,
-      messages: buildMessages(grounding, history),
+      // The Worker only ever stores user/assistant turns; this script feeds the
+      // tool round-trip back in as well, which buildMessages passes through.
+      messages: buildMessages(grounding, history as ChatHistoryEntry[]),
       tools: TOOLS,
       thinking: { type: "enabled" }
     })
   });
   if (!res.ok) throw new Error(`${model}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
 
-  const message = (await res.json()).choices[0].message;
+  const { choices } = (await res.json()) as {
+    choices: { message: { content?: string; tool_calls?: ModelToolCall[] } }[];
+  };
+  const message = choices[0].message;
   const toolCalls = message.tool_calls ?? [];
   const content = (message.content ?? "").trim();
 
@@ -71,7 +77,7 @@ for (const turn of visitorTurns) {
   console.log(`tools  : ${toolCalls.map(c => c.function.name).join(", ") || "(none)"}`);
 
   const capture = toolCalls.find(c => c.function.name === "capture_opportunity");
-  if (capture) captured = JSON.parse(capture.function.arguments);
+  if (capture) captured = JSON.parse(capture.function.arguments) as { contact?: string };
   if (!captured && CLAIMS_RECORDED.test(content)) falseClaim ??= content;
 
   history.push({

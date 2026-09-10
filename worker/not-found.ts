@@ -15,7 +15,7 @@
 
 import { API_PATHS, VERSIONED_API_BASE } from "./api/routes";
 
-export const SITE_ORIGIN = "https://murugappan.dev";
+const SITE_ORIGIN = "https://murugappan.dev";
 
 /**
  * Whether to answer with markdown rather than the HTML page. A client that

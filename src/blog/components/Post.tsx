@@ -2,9 +2,19 @@ import React from "react";
 
 import { formatReadingTime } from "../utils/helpers";
 
-// `post` is the serialized shape built in index.astro:
-// { href, title, dateFormatted, minutes, tags, description?, excerpt }
-const Post = ({ post }) => {
+// The serialized shape built in index.astro (the page's content-collection
+// entry, flattened so it can cross the island boundary as JSON).
+export interface SerializedPost {
+  href: string;
+  title: string;
+  dateFormatted: string;
+  minutes: number;
+  tags: string[];
+  description?: string;
+  excerpt: string;
+}
+
+const Post = ({ post }: { post: SerializedPost }) => {
   const title = post.title;
 
   return (

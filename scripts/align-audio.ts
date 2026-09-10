@@ -18,7 +18,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-import { alignWords } from "../src/blog/utils/audio-words.ts";
+import { alignWords, type TimedWord, type WhisperWord } from "../src/blog/utils/audio-words.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
@@ -30,13 +30,14 @@ const flags = new Set(args.filter(a => a.startsWith("--")));
 const slugs = args.filter(a => !a.startsWith("--"));
 const local = flags.has("--local");
 
-const log = (...m) => console.error(...m);
-const fail = msg => {
+const log = (...m: unknown[]) => console.error(...m);
+const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
+const fail = (msg: string): never => {
   log(`error: ${msg}`);
   process.exit(1);
 };
 
-function run(cmd, cmdArgs) {
+function run(cmd: string, cmdArgs: string[]): string {
   const r = spawnSync(cmd, cmdArgs, { encoding: "utf8" });
   if (r.status !== 0) {
     throw new Error(`${cmd} ${cmdArgs.join(" ")}\n${r.stderr || r.stdout}`);
@@ -44,7 +45,7 @@ function run(cmd, cmdArgs) {
   return r.stdout;
 }
 
-const wranglerArgs = extra => [
+const wranglerArgs = (extra: string[]) => [
   "wrangler",
   "r2",
   "object",
@@ -55,7 +56,7 @@ const wranglerArgs = extra => [
 // False only when the object is genuinely absent. Any other wrangler failure
 // (expired login, network) throws, so a broken session can never be mistaken
 // for "nothing there yet".
-function r2Get(key, file) {
+function r2Get(key: string, file: string): boolean {
   const r = spawnSync("npx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
     encoding: "utf8"
   });
@@ -77,7 +78,7 @@ function checkWranglerLogin() {
   }
 }
 
-function r2Put(key, file, contentType) {
+function r2Put(key: string, file: string, contentType: string) {
   run(
     "npx",
     wranglerArgs(["put", `${BUCKET}/${key}`, "--file", file, "--content-type", contentType])
@@ -86,7 +87,7 @@ function r2Put(key, file, contentType) {
 
 // Every slug with a JSON in the bucket. `wrangler r2 object` has no list
 // command, so the blog's own dist/ directory is the source of candidates.
-function publishedSlugs() {
+function publishedSlugs(): string[] {
   const dist = join(ROOT, "dist", "blog");
   if (!existsSync(dist)) fail("dist/blog missing — run `npm run build` first");
   return run("ls", [dist])
@@ -101,11 +102,17 @@ function publishedSlugs() {
 
 // ---- whisper worker ---------------------------------------------------------
 
+// One JSON line back from scripts/tts/whisper.py per transcribe() job.
+interface WhisperReply {
+  error?: string;
+  words?: WhisperWord[];
+}
+
 function startWorker() {
   const proc = spawn(PYTHON, [WORKER], { stdio: ["pipe", "pipe", "inherit"] });
   let buffer = "";
-  const pending = [];
-  const waiters = [];
+  const pending: unknown[] = [];
+  const waiters: ((msg: unknown) => void)[] = [];
   proc.stdout.on("data", d => {
     buffer += d;
     let nl;
@@ -113,18 +120,21 @@ function startWorker() {
       const line = buffer.slice(0, nl).trim();
       buffer = buffer.slice(nl + 1);
       if (!line) continue;
-      const msg = JSON.parse(line);
-      if (waiters.length) waiters.shift()(msg);
+      const msg: unknown = JSON.parse(line);
+      const waiter = waiters.shift();
+      if (waiter) waiter(msg);
       else pending.push(msg);
     }
   });
   const next = () =>
-    pending.length ? Promise.resolve(pending.shift()) : new Promise(res => waiters.push(res));
-  const exited = new Promise(res => proc.on("exit", res));
+    pending.length
+      ? Promise.resolve(pending.shift())
+      : new Promise<unknown>(res => waiters.push(res));
+  const exited = new Promise<void>(res => proc.on("exit", () => res()));
   return {
-    async transcribe(job) {
+    async transcribe(job: { id: string; wav: string; text: string }): Promise<WhisperReply> {
       proc.stdin.write(`${JSON.stringify(job)}\n`);
-      return next();
+      return (await next()) as WhisperReply;
     },
     async close() {
       proc.stdin.write("quit\n");
@@ -134,9 +144,24 @@ function startWorker() {
   };
 }
 
+type Worker = ReturnType<typeof startWorker>;
+
+// The timing JSON written by generate-audio.ts (version 1) and rewritten here
+// with per-word times (version 2); mirrors src/blog/utils/audio-sync.ts.
+interface TimingBlock {
+  text: string;
+  start: number;
+  end: number;
+  words?: TimedWord[];
+}
+interface Timings {
+  version: number;
+  blocks: TimingBlock[];
+}
+
 // ---- per-post -----------------------------------------------------------------
 
-async function alignPost(slug, worker) {
+async function alignPost(slug: string, worker: Worker) {
   const tmp = mkdtempSync(join(tmpdir(), `align-${slug}-`));
   try {
     const jsonPath = join(tmp, "timings.json");
@@ -145,7 +170,7 @@ async function alignPost(slug, worker) {
       log(`${slug}: no audio in R2, skipping`);
       return "skipped";
     }
-    const timings = JSON.parse(readFileSync(jsonPath, "utf8"));
+    const timings = JSON.parse(readFileSync(jsonPath, "utf8")) as Timings;
     if (timings.version >= 2 && !flags.has("--force")) {
       log(`${slug}: already aligned, skipping`);
       return "skipped";
@@ -156,7 +181,7 @@ async function alignPost(slug, worker) {
     run("ffmpeg", ["-y", "-loglevel", "error", "-i", mp3, "-ac", "1", "-ar", "16000", wav]);
 
     let aligned = 0;
-    const blocks = [];
+    const blocks: TimingBlock[] = [];
     for (const [i, block] of timings.blocks.entries()) {
       const slice = join(tmp, `b${i}.wav`);
       run("ffmpeg", [
@@ -182,12 +207,13 @@ async function alignPost(slug, worker) {
         blocks.push(rest);
         continue;
       }
-      const words = alignWords(block.text, reply.words, block);
+      const whisperWords = reply.words ?? [];
+      const words = alignWords(block.text, whisperWords, block);
       if (words) {
         aligned++;
         blocks.push({ ...rest, words });
       } else {
-        log(`  b${i}: poor match (${reply.words.length} whisper words), paragraph only`);
+        log(`  b${i}: poor match (${whisperWords.length} whisper words), paragraph only`);
         blocks.push(rest);
       }
     }
@@ -214,7 +240,7 @@ async function main() {
   checkWranglerLogin();
   const targets = slugs.length ? slugs : publishedSlugs();
   const worker = startWorker();
-  const failures = [];
+  const failures: string[] = [];
   const t0 = Date.now();
   try {
     for (const slug of targets) {
@@ -222,7 +248,7 @@ async function main() {
         await alignPost(slug, worker);
       } catch (err) {
         failures.push(slug);
-        log(`${slug}: FAILED — ${err.message}`);
+        log(`${slug}: FAILED — ${message(err)}`);
       }
     }
   } finally {
@@ -233,4 +259,6 @@ async function main() {
   if (failures.length) process.exit(1);
 }
 
-main().catch(err => fail(err.stack ?? String(err)));
+main().catch((err: unknown) =>
+  fail(err instanceof Error ? (err.stack ?? err.message) : String(err))
+);

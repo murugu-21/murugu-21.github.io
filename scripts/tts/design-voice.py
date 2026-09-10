@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Design the read-aloud voice once, from a persona prompt (Breeze TTS 2 voice design).
 
   .venv-tts/bin/python scripts/tts/design-voice.py [count]
@@ -20,6 +19,7 @@ import sys
 import time
 import wave
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -58,7 +58,8 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     (out / "reference.txt").write_text(SENTENCE + "\n")
     with contextlib.redirect_stdout(sys.stderr):
-        model = load(MODEL)
+        # load() is typed as the generic nn.Module; generate() is the Breeze model's.
+        model: Any = load(MODEL)
     for k in range(count):
         t0 = time.time()
         parts = [
