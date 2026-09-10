@@ -4,7 +4,7 @@ import "@fontsource/montserrat/400.css";
 import "../styles/global.scss";
 import agustinaUrl from "../assets/fonts/Agustina.woff?url";
 import ChatWidget from "../components/chat/ChatWidget.astro";
-import { skillsCategories } from "../data/portfolio";
+import { sameAs, skillsCategories } from "../data/portfolio";
 
 interface Props {
   title?: string;
@@ -117,11 +117,7 @@ const personNode = {
     }
   ],
   knowsAbout,
-  sameAs: [
-    "https://github.com/murugu-21",
-    "https://www.linkedin.com/in/murugappan-m-56920a192/",
-    "https://x.com/murugu21"
-  ],
+  sameAs,
   // /about is the canonical entity page about the person
   mainEntityOfPage: { "@id": `${SITE_URL}/about/` }
 };

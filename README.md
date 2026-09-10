@@ -44,26 +44,26 @@ The SDK is the `posthog-js` npm package, `import()`ed on idle so it is a separat
 
 Plain links opt in declaratively — `data-ph-event`, plus optional `data-ph-prop`/`data-ph-value` — and one delegated `click` listener per document handles them, React-rendered markup included. `initClickTracking()` is called from `src/layouts/Layout.astro` (portfolio) and `src/blog/components/BaseHead.astro` (blog).
 
-| Event                                            | Fired on                                                                                         |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
-| `resume_download`                                | "Download my resume" (also upgrades the session recording)                                       |
-| `contact_click`                                  | "Contact me"                                                                                     |
-| `social_click`                                   | any outbound profile link, tagged `social=github\|linkedin\|email\|phone\|x\|rss\|stackoverflow` |
-| `project_click`                                  | a pinned-repo card, tagged `project=<repo>`                                                      |
-| `more_projects_click`                            | "More Projects"                                                                                  |
-| `oss_link_click`                                 | an open-source card link, tagged `oss=<name>`                                                    |
-| `blog_card_click`                                | a homepage blog card, tagged `post=<title>`                                                      |
-| `chat_open`                                      | the Jarvis launcher is opened                                                                    |
-| `chat_starter_click`                             | a suggested starter chip                                                                         |
-| `chat_message_sent`                              | a message is sent (first one also upgrades the recording)                                        |
-| `chat_limit` / `chat_error`                      | the room replies with a rate limit or an error                                                   |
-| `chat_restart` / `chat_transcript_download`      | conversation menu actions                                                                        |
-| `listen_play`                                    | first play on a post, tagged `post=<slug>`                                                       |
-| `listen_resume` / `listen_pause` / `listen_seek` | transport controls (seek fires once per scrub)                                                   |
-| `listen_rate`                                    | playback speed changed, tagged `listen_rate=<n>x`                                                |
-| `listen_complete`                                | the post was read to the end                                                                     |
-| `listen_audio_fallback`                          | pre-rendered audio failed and speech synthesis took over                                         |
-| `listen_unavailable`                             | no backend at all (should be unreachable — the control hides itself)                             |
+| Event                                            | Fired on                                                                          |
+| ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `resume_download`                                | "Download my resume" (also upgrades the session recording)                        |
+| `contact_click`                                  | "Contact me"                                                                      |
+| `social_click`                                   | any outbound profile link, tagged `social=github\|linkedin\|email\|phone\|x\|rss` |
+| `project_click`                                  | a pinned-repo card, tagged `project=<repo>`                                       |
+| `more_projects_click`                            | "More Projects"                                                                   |
+| `oss_link_click`                                 | an open-source card link, tagged `oss=<name>`                                     |
+| `blog_card_click`                                | a homepage blog card, tagged `post=<title>`                                       |
+| `chat_open`                                      | the Jarvis launcher is opened                                                     |
+| `chat_starter_click`                             | a suggested starter chip                                                          |
+| `chat_message_sent`                              | a message is sent (first one also upgrades the recording)                         |
+| `chat_limit` / `chat_error`                      | the room replies with a rate limit or an error                                    |
+| `chat_restart` / `chat_transcript_download`      | conversation menu actions                                                         |
+| `listen_play`                                    | first play on a post, tagged `post=<slug>`                                        |
+| `listen_resume` / `listen_pause` / `listen_seek` | transport controls (seek fires once per scrub)                                    |
+| `listen_rate`                                    | playback speed changed, tagged `listen_rate=<n>x`                                 |
+| `listen_complete`                                | the post was read to the end                                                      |
+| `listen_audio_fallback`                          | pre-rendered audio failed and speech synthesis took over                          |
+| `listen_unavailable`                             | no backend at all (should be unreachable — the control hides itself)              |
 
 Super properties carry context rather than actions: `theme` (`dark`/`light`, set on load and on every toggle) and `listen_backend` (`audio`/`speech`).
 

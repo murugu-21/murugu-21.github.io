@@ -285,7 +285,7 @@ a:focus {
 .rss-link {
   display: inline-flex;
   align-items: center;
-  color: #f26522;
+  color: var(--color-text);
   box-shadow: none;
 }
 
@@ -335,10 +335,37 @@ a:focus {
 }
 
 .bio-avatar {
+  flex: none;
+  width: 50px;
+  height: 50px;
   margin-right: var(--spacing-4);
-  margin-bottom: var(--spacing-0);
-  min-width: 50px;
   border-radius: 100%;
+  overflow: hidden;
+}
+
+/* The landing portrait is a full-body square (face around x 21–79%, y 8–67%);
+   scale it up inside the circle so the 50px avatar shows head and shoulders. */
+.bio-avatar img {
+  display: block;
+  width: 171%;
+  height: 171%;
+  max-width: none;
+  transform: translate(-20.8%, -8.5%);
+}
+
+.bio-social {
+  display: flex;
+  gap: var(--spacing-4);
+}
+
+.bio-social a {
+  display: inline-flex;
+  color: var(--color-text);
+  box-shadow: none;
+}
+
+.bio-social a:hover {
+  color: var(--color-primary);
 }
 
 .blog-post header h1 {

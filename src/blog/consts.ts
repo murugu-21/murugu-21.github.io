@@ -1,4 +1,6 @@
 // Site metadata, ported from gatsby-config.js siteMetadata.
+import { sameAs, socialMediaLinks } from "../data/portfolio";
+
 export const SITE_TITLE = "SDE Journey";
 export const SITE_DESCRIPTION = "A Technical blog on my experiences in the tech industry";
 // Full public URL of the blog (origin + base path).
@@ -8,7 +10,8 @@ export const AUTHOR = {
   summary: "Hard-won lessons from building software that actually runs in production"
 };
 export const SOCIAL = {
-  twitter: "murugu21"
+  // X handle for twitter:creator, taken from the one profile URL in portfolio.ts.
+  twitter: new URL(socialMediaLinks.twitter).pathname.replace(/^\//, "")
 };
 // Canonical schema.org identity — same @id the portfolio app publishes
 // (src/layouts/Layout.astro), so crawlers merge the blog's author with the
@@ -18,9 +21,5 @@ export const PERSON = {
   "@id": "https://murugappan.dev/#person",
   name: AUTHOR.name,
   url: "https://murugappan.dev/about/",
-  sameAs: [
-    "https://github.com/murugu-21",
-    "https://www.linkedin.com/in/murugappan-m-56920a192/",
-    `https://x.com/${SOCIAL.twitter}`
-  ]
+  sameAs
 };

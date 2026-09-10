@@ -1,78 +1,73 @@
 ---
 import { socialMediaLinks } from "../data/portfolio";
 import Icon from "./Icon.astro";
+
+// Monochrome glyphs in the section's text color, same treatment as the blog
+// footer (src/blog/components/Bio.astro), instead of per-brand colored discs.
+const links = [
+  {
+    href: socialMediaLinks.github,
+    icon: "github",
+    value: "github",
+    label: "GitHub profile",
+    external: true
+  },
+  {
+    href: socialMediaLinks.linkedin,
+    icon: "linkedin-in",
+    value: "linkedin",
+    label: "LinkedIn profile",
+    external: true
+  },
+  {
+    href: `mailto:${socialMediaLinks.gmail}`,
+    icon: "envelope",
+    value: "email",
+    label: "Send an email",
+    external: false
+  },
+  {
+    href: socialMediaLinks.twitter,
+    icon: "twitter",
+    value: "x",
+    label: "X (formerly Twitter) profile",
+    external: true
+  },
+  {
+    href: socialMediaLinks.rss,
+    icon: "rss",
+    value: "rss",
+    label: "Subscribe to the blog RSS feed",
+    external: true
+  }
+];
 ---
 
 <div class="social-media-div">
-  <a
-    href={socialMediaLinks.github}
-    data-ph-event="social_click"
-    data-ph-prop="social"
-    data-ph-value="github"
-    class="icon-button github"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="GitHub profile"
-  >
-    <Icon name="github" />
-  </a>
-  <a
-    href={socialMediaLinks.linkedin}
-    data-ph-event="social_click"
-    data-ph-prop="social"
-    data-ph-value="linkedin"
-    class="icon-button linkedin"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="LinkedIn profile"
-  >
-    <Icon name="linkedin-in" />
-  </a>
-  <a
-    href={`mailto:${socialMediaLinks.gmail}`}
-    data-ph-event="social_click"
-    data-ph-prop="social"
-    data-ph-value="email"
-    class="icon-button google"
-    aria-label="Send an email"
-  >
-    <Icon name="envelope" />
-  </a>
-  <a
-    href={socialMediaLinks.twitter}
-    data-ph-event="social_click"
-    data-ph-prop="social"
-    data-ph-value="x"
-    class="icon-button twitter"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="X (formerly Twitter) profile"
-  >
-    <Icon name="twitter" />
-  </a>
-  <a
-    href={socialMediaLinks.rss}
-    data-ph-event="social_click"
-    data-ph-prop="social"
-    data-ph-value="rss"
-    class="icon-button rss"
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Subscribe to the blog RSS feed"
-  >
-    <Icon name="rss" />
-  </a>
+  {
+    links.map(link => (
+      <a
+        href={link.href}
+        data-ph-event="social_click"
+        data-ph-prop="social"
+        data-ph-value={link.value}
+        class="icon-button"
+        target={link.external ? "_blank" : undefined}
+        rel={link.external ? "noopener noreferrer" : undefined}
+        aria-label={link.label}
+        title={link.label}
+      >
+        <Icon name={link.icon} />
+      </a>
+    ))
+  }
 </div>
 
 <style lang="scss">
   @import "../styles/variables";
 
-  .social-media-div {
-    font-size: 2em;
-  }
-
-  /* The anchor is the 2.6rem circle and the svg a plain 1.3rem glyph inside
-     it. Putting padding + border-radius on the <svg> itself (the old FA <i>
+  /* The anchor keeps a 2.6rem hit target; the svg is a plain glyph inside it.
+     Putting padding + border-radius on the <svg> itself (the old FA <i>
      translation) made Chrome clip the glyph to the radius inset by the
      padding, which shaved the corners off the LinkedIn "i" dot. */
   .icon-button {
@@ -82,44 +77,30 @@ import Icon from "./Icon.astro";
     width: 2.6rem;
     height: 2.6rem;
     margin: 0 5px 10px;
-    border-radius: 50%;
-    color: $textColorDark;
+    color: $textColor;
     text-decoration: none;
     cursor: pointer;
     vertical-align: middle;
     user-select: none;
-    transition: background-color 0.2s ease-in;
+    transition: color 0.2s ease-in;
   }
 
   .icon-button :global(svg) {
     display: block;
-    width: 1.3rem;
-    height: 1.3rem;
+    width: 1.6rem;
+    height: 1.6rem;
   }
 
-  .linkedin {
-    background-color: $linkedin;
-  }
-
-  .github {
-    background-color: $github;
-  }
-
-  .google {
-    background-color: $google;
-  }
-
-  .twitter {
-    background-color: $twitter;
-  }
-
-  .rss {
-    background-color: $rss;
-  }
-
-  /* Hover Transition */
   .icon-button:hover {
-    background-color: $buttonColor; // theme navy; was $textColor (#2e353f) which blended into the dark background
+    color: $buttonColor;
+  }
+
+  :global(html.dark-mode) .icon-button {
+    color: $textColorDark;
+  }
+
+  :global(html.dark-mode) .icon-button:hover {
+    color: $buttonHover;
   }
 
   /* Media Query */

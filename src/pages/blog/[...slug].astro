@@ -1,8 +1,8 @@
 ---
 import { render } from "astro:content";
 import BaseLayout from "../../blog/layouts/BaseLayout.astro";
-import Bio from "../../blog/components/Bio";
-import { AUTHOR, SOCIAL, SITE_TITLE, SITE_URL, PERSON } from "../../blog/consts";
+import Bio from "../../blog/components/Bio.astro";
+import { SITE_TITLE, SITE_URL, PERSON } from "../../blog/consts";
 import {
   getPublishedPosts,
   postPath,
@@ -82,7 +82,7 @@ const jsonLd = {
     </section>
     <hr />
     <footer>
-      <Bio client:load author={AUTHOR} social={SOCIAL} />
+      <Bio />
     </footer>
   </article>
   <nav class="blog-post-nav">
@@ -114,8 +114,8 @@ const jsonLd = {
 <script>
   // Notion-style image zoom, loaded lazily: zero zoom JS ships unless the
   // reader shows intent (hover or click on a post image).
-  // Scoped to the articleBody <section>: the Bio avatar / social icon images
-  // in the article footer are links, not zoomable content.
+  // Scoped to the articleBody <section>: the Bio avatar in the article footer
+  // is not zoomable content.
   const imgs = document.querySelectorAll<HTMLImageElement>("article.blog-post section img");
   if (imgs.length > 0) {
     let zoomPromise: Promise<ReturnType<typeof import("medium-zoom").default>> | null = null;

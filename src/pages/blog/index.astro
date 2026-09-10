@@ -1,8 +1,8 @@
 ---
 import BaseLayout from "../../blog/layouts/BaseLayout.astro";
 import AllPosts from "../../blog/components/AllPosts";
-import Bio from "../../blog/components/Bio";
-import { AUTHOR, SOCIAL, SITE_TITLE, SITE_DESCRIPTION, SITE_URL, PERSON } from "../../blog/consts";
+import Bio from "../../blog/components/Bio.astro";
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, PERSON } from "../../blog/consts";
 import {
   getPublishedPosts,
   postPath,
@@ -44,5 +44,5 @@ const jsonLd = {
      "SDE Journey — <description>" title from BaseHead. -->
 <BaseLayout jsonLd={jsonLd}>
   <AllPosts client:load posts={serialized} />
-  <Bio client:load author={AUTHOR} social={SOCIAL} />
+  <Bio />
 </BaseLayout>
