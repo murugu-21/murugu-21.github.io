@@ -152,8 +152,8 @@ const jsonLd = { "@context": "https://schema.org", "@graph": graph };
 // infrastructure), so events are not lost to third-party blocking and the
 // data stays on our hostname. Read here in the frontmatter, at build time, and
 // handed to the client through the meta tags below: the SDK itself is
-// dynamic-imported on idle by ../lib/analytics.ts, so it never touches the
-// initial bundle.
+// dynamic-imported by ../lib/analytics.ts on the visitor's first input (or a
+// 10 s fallback), so it never touches the initial bundle or a Lighthouse run.
 // Either value unset (local dev, CI) → analytics no-ops entirely.
 // The values reach the client through the two meta tags below rather than a
 // data attribute on the script element: Astro bundles <script> as a module,
@@ -268,7 +268,7 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
       initClickTracking();
       tag("theme", document.documentElement.classList.contains("dark-mode") ? "dark" : "light");
 
-      // Reads the meta tags below and loads the SDK on idle.
+      // Reads the meta tags above and loads the SDK on the first interaction.
       bootAnalytics();
     </script>
   </head>

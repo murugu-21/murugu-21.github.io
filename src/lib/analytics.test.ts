@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
 
-import { initClickTracking, tag, track } from "./analytics";
+import { initClickTracking, scheduleSdkLoad, tag, track } from "./analytics";
 
 // The real snippet defines window.posthog as a stub whose methods queue until
 // array.js loads (see ../layouts/Layout.astro); tests stand in spies and
@@ -257,5 +257,39 @@ describe("bootAnalytics", () => {
     const ph = await fresh();
     await ph.bootAnalytics(docWith("") as unknown as Document, async () => sdk);
     expect(init).not.toHaveBeenCalled();
+  });
+});
+
+// The SDK is ~90 KB gzipped and loaded it on idle, so a Lighthouse run — which
+// never interacts — still fetched and evaluated it inside the measured window.
+// It now waits for the visitor's first input, with a timer as the fallback so
+// a visitor who only reads is still counted as a pageview.
+describe("scheduleSdkLoad", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("loads on the first interaction and cancels the fallback timer", () => {
+    vi.useFakeTimers();
+    const target = new EventTarget();
+    const load = vi.fn();
+    scheduleSdkLoad(load, target, 10_000);
+    expect(load).not.toHaveBeenCalled();
+    target.dispatchEvent(new Event("pointermove"));
+    expect(load).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(20_000);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the timer for a visitor who never interacts", () => {
+    vi.useFakeTimers();
+    const target = new EventTarget();
+    const load = vi.fn();
+    scheduleSdkLoad(load, target, 10_000);
+    vi.advanceTimersByTime(9_999);
+    expect(load).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(load).toHaveBeenCalledTimes(1);
+    // Input after the timer must not load it a second time.
+    target.dispatchEvent(new Event("keydown"));
+    expect(load).toHaveBeenCalledTimes(1);
   });
 });

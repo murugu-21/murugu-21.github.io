@@ -9,8 +9,8 @@
 // Two things make every function here safe to call unconditionally:
 //   - The snippet is only emitted when POST_HOG_TOKEN and POST_HOG_URL are
 //     set, so on local dev and CI `posthog` is absent and these all no-op.
-//   - When it is emitted, the snippet's stub queues calls until array.js
-//     finishes loading on idle, so there is no "too early" to worry about.
+//   - When it is emitted, calls made before the SDK lands are buffered and
+//     replayed once it does, so there is no "too early" to worry about.
 // Failures are swallowed: analytics must never break a click path.
 //
 // Event names are snake_case `<surface>_<action>`. Never pass anything a
@@ -120,9 +120,9 @@ export function initClickTracking(root?: Document): void {
  * CI) it no-ops and every track/tag call is dropped.
  *
  * The import is dynamic so the SDK is a separate chunk fetched after the page
- * is interactive rather than part of the initial bundle — the layouts call
- * this from requestIdleCallback. Anything captured while it loads is buffered
- * and replayed, so an early click is not lost.
+ * is interactive rather than part of the initial bundle — bootAnalytics
+ * schedules it (see scheduleSdkLoad). Anything captured while it loads is
+ * buffered and replayed, so an early click is not lost.
  */
 export async function initAnalytics(
   token: string | undefined,
@@ -186,15 +186,43 @@ export async function initAnalytics(
   }
 }
 
+// How long a visitor who never interacts waits before the SDK loads anyway.
+// Lighthouse stops observing a couple of seconds after the page goes quiet
+// (it runs unthrottled and simulates the slow network afterwards), so this
+// lands well outside its trace while still counting a visitor who only reads.
+const SDK_LOAD_FALLBACK_MS = 10_000;
+
 /**
- * Read the PostHog config the layouts render into <meta> tags and load the SDK
- * once the page is interactive. A meta tag rather than a data attribute on the
+ * Run `load` once: on the visitor's first input, or after `fallbackMs` if none
+ * arrives. The SDK is ~90 KB gzipped with a 4x-throttled evaluation of a few
+ * hundred ms; scheduled on idle it was fetched and run inside the window
+ * Lighthouse measures, and flagged as unused and legacy JavaScript. Nothing on
+ * the page waits for it — calls made before it lands are buffered by
+ * initAnalytics and replayed — so it can wait for the same signal as the chat
+ * island and session replay (see ./first-interaction.ts).
+ */
+export function scheduleSdkLoad(
+  load: () => void,
+  target: EventTarget,
+  fallbackMs: number = SDK_LOAD_FALLBACK_MS
+): void {
+  let done = false;
+  const once = () => {
+    if (done) return;
+    done = true;
+    cancel();
+    clearTimeout(timer);
+    load();
+  };
+  const cancel = onFirstInteraction(once, target);
+  const timer = setTimeout(once, fallbackMs);
+}
+
+/**
+ * Read the PostHog config the layouts render into <meta> tags and schedule the
+ * SDK load (scheduleSdkLoad). A meta tag rather than a data attribute on the
  * script element: Astro bundles `<script>` as a module, and
  * `document.currentScript` is null in module scope.
- *
- * Idle-scheduled because the SDK is a few tens of KB gzipped and nothing on
- * the page waits for it — calls made before it lands are buffered by
- * initAnalytics and replayed.
  */
 export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> {
   const doc = root ?? (globalThis as { document?: Document }).document;
@@ -205,13 +233,8 @@ export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> 
   const token = meta("ph-token");
   const host = meta("ph-host");
   if (!token || !host) return Promise.resolve();
-  // Tests drive this synchronously; the browser waits for idle.
+  // Tests drive this synchronously; the browser waits for the visitor.
   if (root || load) return initAnalytics(token, host, load);
-  const boot = () => void initAnalytics(token, host);
-  const g = globalThis as {
-    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-  };
-  if (g.requestIdleCallback) g.requestIdleCallback(boot, { timeout: 3000 });
-  else setTimeout(boot, 2000);
+  scheduleSdkLoad(() => void initAnalytics(token, host), window);
   return Promise.resolve();
 }
