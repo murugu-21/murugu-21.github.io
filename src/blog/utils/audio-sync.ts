@@ -57,3 +57,32 @@ export function blockAt(
   }
   return -1;
 }
+
+// Where to scroll so the reader keeps up with the highlight. `nearest` was
+// the earlier choice and it only moves once the block has left the screen,
+// then parks it on the bottom edge. Instead: do nothing while the block's top
+// sits in a reading band (10-50% of the viewport by default), centre it when
+// it drifts out, and for a block taller than the screen show its start.
+export interface ScrollBand {
+  top: number;
+  bottom: number;
+}
+
+export const BLOCK_BAND: ScrollBand = {top: 0.1, bottom: 0.5};
+// Words only pull the page when they get close to the bottom, so a long
+// paragraph scrolls in a few steps rather than on every line. The band
+// starts at 0 because a tall block is shown from its start, which puts its
+// first word at the very top of the viewport.
+export const WORD_BAND: ScrollBand = {top: 0, bottom: 0.8};
+
+export function scrollTarget(
+  rect: {top: number; height: number},
+  viewportHeight: number,
+  band: ScrollBand = BLOCK_BAND
+): "center" | "start" | null {
+  const top = rect.top / viewportHeight;
+  if (rect.height > viewportHeight) {
+    return top >= 0 && top <= band.top ? null : "start";
+  }
+  return top >= band.top && top <= band.bottom ? null : "center";
+}

@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 
-import {blockAt, matchBlocks} from "./audio-sync";
+import {blockAt, matchBlocks, scrollTarget} from "./audio-sync";
 
 const timed = [
   {text: "Title", start: 0, end: 2},
@@ -63,5 +63,42 @@ describe("blockAt", () => {
 
   it("returns -1 for an empty list", () => {
     expect(blockAt([], 0)).toBe(-1);
+  });
+});
+
+describe("scrollTarget", () => {
+  const vh = 1000;
+  const rect = (top: number, height: number) => ({top, height});
+
+  it("leaves a block alone while its top sits in the reading band", () => {
+    expect(scrollTarget(rect(100, 200), vh)).toBeNull();
+    expect(scrollTarget(rect(450, 200), vh)).toBeNull();
+  });
+
+  it("centres a block that has drifted below the band, long before it leaves the screen", () => {
+    expect(scrollTarget(rect(600, 200), vh)).toBe("center");
+    expect(scrollTarget(rect(950, 200), vh)).toBe("center");
+  });
+
+  it("centres a block that is above the band (a seek backwards)", () => {
+    expect(scrollTarget(rect(-50, 200), vh)).toBe("center");
+    expect(scrollTarget(rect(40, 200), vh)).toBe("center");
+  });
+
+  it("shows the start of a block taller than the screen instead of its middle", () => {
+    expect(scrollTarget(rect(700, 1400), vh)).toBe("start");
+    expect(scrollTarget(rect(-900, 1400), vh)).toBe("start");
+  });
+
+  it("leaves a tall block alone while its start is still near the top", () => {
+    expect(scrollTarget(rect(60, 1400), vh)).toBeNull();
+  });
+
+  it("takes a wider band for words, so a word only pulls the page when it nears the bottom", () => {
+    const words = {top: 0, bottom: 0.8};
+    expect(scrollTarget(rect(0, 24), vh, words)).toBeNull();
+    expect(scrollTarget(rect(700, 24), vh, words)).toBeNull();
+    expect(scrollTarget(rect(850, 24), vh, words)).toBe("center");
+    expect(scrollTarget(rect(-30, 24), vh, words)).toBe("center");
   });
 });
