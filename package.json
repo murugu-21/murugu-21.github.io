@@ -17,7 +17,9 @@
     "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",
     "deploy": "npm run db:migrate && wrangler deploy",
     "test": "vitest run",
-    "check:worker": "tsc -p worker",
+    "check:astro": "NODE_OPTIONS=\"-r ./scripts/ts-alias.cjs\" astro check",
+    "check:src": "node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
+    "check:worker": "node node_modules/typescript/bin/tsc -p worker",
     "prepare": "git config core.hooksPath .githooks",
     "audio": "node --disable-warning=ExperimentalWarning scripts/generate-audio.mjs",
     "audio:align": "node --disable-warning=ExperimentalWarning scripts/align-audio.mjs"
@@ -66,6 +68,7 @@
     "@types/node": "^25.9.2",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
+    "@typescript/typescript6": "^6.0.2",
     "concurrently": "^10.0.1",
     "fontaine": "^0.8.0",
     "linkedom": "^0.18.13",
@@ -79,13 +82,16 @@
     "sass": "^1.69.0",
     "sharp": "^0.33.5",
     "tailwindcss": "^4.3.3",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.11",
     "wrangler": "^4.121.0"
   },
   "overrides": {
     "hono-party": {
       "@cloudflare/workers-types": "$@cloudflare/workers-types"
+    },
+    "@astrojs/check": {
+      "typescript": "^7.0.2"
     }
   },
   "lint-staged": {
