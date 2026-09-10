@@ -1,9 +1,9 @@
 ---
 import SocialMedia from "./SocialMedia.astro";
-import {contactInfo, isHireable} from "../data/portfolio";
-import {fetchGithubProfile} from "../lib/github";
-import {accentTitle} from "../lib/accent";
-import {resumeContact} from "../data/resume";
+import { contactInfo, isHireable } from "../data/portfolio";
+import { fetchGithubProfile } from "../lib/github";
+import { accentTitle } from "../lib/accent";
+import { resumeContact } from "../data/resume";
 
 const prof = await fetchGithubProfile();
 // The site's own wording ("Bangalore, India") rather than whatever the GitHub
@@ -55,10 +55,7 @@ const location = resumeContact.location;
     <div class="main contact-margin-top section-animate" id="contact">
       <div class="contact-div-main">
         <div class="contact-header">
-          <h2
-            class="heading contact-title"
-            set:html={accentTitle(contactInfo.title)}
-          />
+          <h2 class="heading contact-title" set:html={accentTitle(contactInfo.title)} />
           <p class="subTitle contact-subtitle">{contactInfo.subtitle}</p>
           <div class="contact-text-div">
             {contactInfo.number && (

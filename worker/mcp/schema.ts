@@ -13,15 +13,9 @@ const REF_PREFIX = "#/components/schemas/";
 // with headroom; a cycle trips it instead of hanging the isolate.
 const MAX_DEPTH = 16;
 
-export function inlineRefs(
-  node: unknown,
-  schemas: Record<string, unknown>,
-  depth = 0
-): unknown {
+export function inlineRefs(node: unknown, schemas: Record<string, unknown>, depth = 0): unknown {
   if (depth > MAX_DEPTH) {
-    throw new Error(
-      `inlineRefs: exceeded maximum schema depth (${MAX_DEPTH}) — is a $ref cyclic?`
-    );
+    throw new Error(`inlineRefs: exceeded maximum schema depth (${MAX_DEPTH}) — is a $ref cyclic?`);
   }
   if (Array.isArray(node)) {
     return node.map(item => inlineRefs(item, schemas, depth + 1));
@@ -38,18 +32,14 @@ export function inlineRefs(
     if (!(name in schemas)) {
       throw new Error(`inlineRefs: no schema named '${name}'`);
     }
-    const resolved = inlineRefs(
-      schemas[name],
-      schemas,
-      depth + 1
-    ) as JsonSchema;
+    const resolved = inlineRefs(schemas[name], schemas, depth + 1) as JsonSchema;
     // JSON Schema 2020-12 allows keywords alongside $ref; the siblings win.
     const siblings: JsonSchema = {};
     for (const [key, value] of entries) {
       if (key === "$ref") continue;
       siblings[key] = inlineRefs(value, schemas, depth + 1);
     }
-    return {...resolved, ...siblings};
+    return { ...resolved, ...siblings };
   }
 
   const out: JsonSchema = {};
@@ -60,9 +50,6 @@ export function inlineRefs(
 }
 
 /** A named API schema as a self-contained JSON Schema 2020-12 document. */
-export function resolveSchema(
-  name: string,
-  schemas: Record<string, unknown>
-): JsonSchema {
-  return inlineRefs({$ref: `${REF_PREFIX}${name}`}, schemas) as JsonSchema;
+export function resolveSchema(name: string, schemas: Record<string, unknown>): JsonSchema {
+  return inlineRefs({ $ref: `${REF_PREFIX}${name}` }, schemas) as JsonSchema;
 }

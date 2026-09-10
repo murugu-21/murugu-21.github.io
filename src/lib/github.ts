@@ -20,56 +20,42 @@ export async function fetchGithubProfile(): Promise<GithubProfile | null> {
     process.env.REACT_APP_GITHUB_TOKEN;
   if (!token) {
     console.warn("[github] no GITHUB_TOKEN — rendering contact fallback");
-    if (REQUIRED)
-      throw new Error(
-        "[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1"
-      );
+    if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
     return null;
   }
   try {
     const res = await fetch("https://api.github.com/graphql", {
       method: "POST",
-      headers: {Authorization: `Bearer ${token}`, "User-Agent": "astro-build"},
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "astro-build"
+      },
       body: JSON.stringify({
         query: `{ user(login: "murugu-21") { name bio avatarUrl location } }`
       })
     });
     if (!res.ok) {
-      console.warn(
-        `[github] GraphQL HTTP ${res.status} — rendering contact fallback`
-      );
-      if (REQUIRED)
-        throw new Error(
-          "[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1"
-        );
+      console.warn(`[github] GraphQL HTTP ${res.status} — rendering contact fallback`);
+      if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
       return null;
     }
     const json = await res.json();
     if (json.errors) {
       console.warn(
         "[github] GraphQL errors — rendering contact fallback",
-        json.errors.map((e: {message: string}) => e.message)
+        json.errors.map((e: { message: string }) => e.message)
       );
-      if (REQUIRED)
-        throw new Error(
-          "[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1"
-        );
+      if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
       return null;
     }
     const user = json?.data?.user ?? null;
     if (!user && REQUIRED)
-      throw new Error(
-        "[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1"
-      );
+      throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
     return user;
   } catch (e) {
-    if (e instanceof Error && e.message.includes("REQUIRE_GITHUB_PROFILE"))
-      throw e;
+    if (e instanceof Error && e.message.includes("REQUIRE_GITHUB_PROFILE")) throw e;
     console.warn("[github] fetch failed — rendering contact fallback", e);
-    if (REQUIRED)
-      throw new Error(
-        "[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1"
-      );
+    if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
     return null;
   }
 }
@@ -82,8 +68,8 @@ export interface GithubRepo {
   homepageUrl: string | null;
   forkCount: number;
   diskUsage: number;
-  primaryLanguage: {name: string; color: string} | null;
-  stargazers: {totalCount: number};
+  primaryLanguage: { name: string; color: string } | null;
+  stargazers: { totalCount: number };
   topics: string[];
 }
 
@@ -111,7 +97,10 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
   try {
     const res = await fetch("https://api.github.com/graphql", {
       method: "POST",
-      headers: {Authorization: `Bearer ${token}`, "User-Agent": "astro-build"},
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "astro-build"
+      },
       body: JSON.stringify({
         query: `{ user(login: "murugu-21") { pinnedItems(first: 6, types: REPOSITORY) { edges { node { ... on Repository {
           id name description url homepageUrl forkCount diskUsage
@@ -129,13 +118,13 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
     if (json.errors) {
       console.warn(
         "[github] pinned repos GraphQL errors — skipping",
-        json.errors.map((e: {message: string}) => e.message)
+        json.errors.map((e: { message: string }) => e.message)
       );
       return [];
     }
     const edges = (json?.data?.user?.pinnedItems?.edges ?? []) as {
       node: Omit<GithubRepo, "topics"> & {
-        repositoryTopics?: {nodes?: {topic: {name: string}}[]};
+        repositoryTopics?: { nodes?: { topic: { name: string } }[] };
       };
     }[];
     // Flatten repositoryTopics.nodes[].topic.name → string[] so the card just
@@ -143,7 +132,7 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
     return edges
       .map(e => e.node)
       .filter(Boolean)
-      .map(({repositoryTopics, ...rest}) => ({
+      .map(({ repositoryTopics, ...rest }) => ({
         ...rest,
         topics: (repositoryTopics?.nodes ?? []).map(t => t.topic.name)
       }));

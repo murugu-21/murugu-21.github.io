@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   formatContactEmail,
@@ -12,10 +12,12 @@ import {
 describe("parseLeadArguments", () => {
   it("parses valid tool arguments", () => {
     expect(
-      parseLeadArguments(
-        '{"name":"Ada","contact":"ada@lovelace.dev","summary":"CTO role"}'
-      )
-    ).toEqual({name: "Ada", contact: "ada@lovelace.dev", summary: "CTO role"});
+      parseLeadArguments('{"name":"Ada","contact":"ada@lovelace.dev","summary":"CTO role"}')
+    ).toEqual({
+      name: "Ada",
+      contact: "ada@lovelace.dev",
+      summary: "CTO role"
+    });
   });
 
   it("rejects missing contact or summary, and malformed JSON", () => {
@@ -27,15 +29,15 @@ describe("parseLeadArguments", () => {
 
 describe("formatOpportunityEmail", () => {
   it("includes lead fields and full transcript", () => {
-    const {subject, text} = formatOpportunityEmail(
+    const { subject, text } = formatOpportunityEmail(
       {
         name: "Ada",
         contact: "ada@lovelace.dev",
         summary: "CTO role at Analytical Engines"
       },
       [
-        {role: "user", content: "hiring you!"},
-        {role: "assistant", content: "great, what's your email?"}
+        { role: "user", content: "hiring you!" },
+        { role: "assistant", content: "great, what's your email?" }
       ]
     );
     expect(subject).toContain("Ada");
@@ -46,7 +48,7 @@ describe("formatOpportunityEmail", () => {
   });
 
   it("sanitizes a newline-bearing name out of the subject header", () => {
-    const {subject} = formatOpportunityEmail(
+    const { subject } = formatOpportunityEmail(
       {
         name: "line1\nline2",
         contact: "ada@lovelace.dev",
@@ -62,9 +64,9 @@ describe("sendOpportunityEmail", () => {
   it("sends via the binding to the configured inbox", async () => {
     const sent: unknown[] = [];
     await sendOpportunityEmail(
-      {send: async msg => void sent.push(msg)},
+      { send: async msg => void sent.push(msg) },
       "inbox@example.com",
-      {contact: "a@b.c", summary: "s"},
+      { contact: "a@b.c", summary: "s" },
       []
     );
     expect(sent).toHaveLength(1);
@@ -90,14 +92,14 @@ describe("formatContactEmail", () => {
   });
 
   it("falls back to the email address when no name is given", () => {
-    const {name: _dropped, ...anonymous} = message;
+    const { name: _dropped, ...anonymous } = message;
     expect(formatContactEmail(anonymous).subject).toBe(
       "New message via the murugappan.dev API — ada@example.com"
     );
   });
 
   it("puts every field and the reply-to address in the body", () => {
-    const {text} = formatContactEmail(message);
+    const { text } = formatContactEmail(message);
     expect(text).toContain("Name:    Ada Lovelace");
     expect(text).toContain("Email:   ada@example.com");
     expect(text).toContain("Company: Analytical Engines Ltd");
@@ -106,8 +108,8 @@ describe("formatContactEmail", () => {
   });
 
   it("marks omitted optional fields rather than leaving a blank line", () => {
-    const {name: _n, company: _c, ...bare} = message;
-    const {text} = formatContactEmail(bare);
+    const { name: _n, company: _c, ...bare } = message;
+    const { text } = formatContactEmail(bare);
     expect(text).toContain("Name:    (not given)");
     expect(text).toContain("Company: (not given)");
   });
@@ -116,11 +118,10 @@ describe("formatContactEmail", () => {
 describe("sendContactEmail", () => {
   it("sends from the site address to the configured inbox", async () => {
     const sent: unknown[] = [];
-    await sendContactEmail(
-      {send: async msg => void sent.push(msg)},
-      "inbox@example.com",
-      {email: "ada@example.com", message: "Hello there, this is a message."}
-    );
+    await sendContactEmail({ send: async msg => void sent.push(msg) }, "inbox@example.com", {
+      email: "ada@example.com",
+      message: "Hello there, this is a message."
+    });
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({
       to: "inbox@example.com",

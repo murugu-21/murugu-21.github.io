@@ -13,18 +13,12 @@
 // write version 2 JSON back. Blocks that align poorly keep no `words` and
 // fall back to the paragraph highlight. Do not run while `npm run audio` is
 // synthesising: both want the GPU.
-import {spawn, spawnSync} from "node:child_process";
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync
-} from "node:fs";
-import {tmpdir} from "node:os";
-import {join, resolve} from "node:path";
+import { spawn, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
-import {alignWords} from "../src/blog/utils/audio-words.ts";
+import { alignWords } from "../src/blog/utils/audio-words.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
@@ -43,7 +37,7 @@ const fail = msg => {
 };
 
 function run(cmd, cmdArgs) {
-  const r = spawnSync(cmd, cmdArgs, {encoding: "utf8"});
+  const r = spawnSync(cmd, cmdArgs, { encoding: "utf8" });
   if (r.status !== 0) {
     throw new Error(`${cmd} ${cmdArgs.join(" ")}\n${r.stderr || r.stdout}`);
   }
@@ -62,11 +56,9 @@ const wranglerArgs = extra => [
 // (expired login, network) throws, so a broken session can never be mistaken
 // for "nothing there yet".
 function r2Get(key, file) {
-  const r = spawnSync(
-    "npx",
-    wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]),
-    {encoding: "utf8"}
-  );
+  const r = spawnSync("npx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
+    encoding: "utf8"
+  });
   if (r.status === 0 && existsSync(file)) return true;
   const err = `${r.stderr}\n${r.stdout}`;
   if (/not found|does not exist|NoSuchKey|10007/i.test(err)) return false;
@@ -77,11 +69,8 @@ function r2Get(key, file) {
 // after minutes (or hours) of local work.
 function checkWranglerLogin() {
   if (local) return;
-  const r = spawnSync("npx", ["wrangler", "whoami"], {encoding: "utf8"});
-  if (
-    r.status !== 0 ||
-    /not logged in|expired/i.test(`${r.stderr}${r.stdout}`)
-  ) {
+  const r = spawnSync("npx", ["wrangler", "whoami"], { encoding: "utf8" });
+  if (r.status !== 0 || /not logged in|expired/i.test(`${r.stderr}${r.stdout}`)) {
     fail(
       "wrangler is not logged in (or the OAuth token expired) — run `npx wrangler login` in an interactive terminal, then retry"
     );
@@ -91,14 +80,7 @@ function checkWranglerLogin() {
 function r2Put(key, file, contentType) {
   run(
     "npx",
-    wranglerArgs([
-      "put",
-      `${BUCKET}/${key}`,
-      "--file",
-      file,
-      "--content-type",
-      contentType
-    ])
+    wranglerArgs(["put", `${BUCKET}/${key}`, "--file", file, "--content-type", contentType])
   );
 }
 
@@ -113,16 +95,14 @@ function publishedSlugs() {
       d =>
         d &&
         existsSync(join(dist, d, "index.html")) &&
-        readFileSync(join(dist, d, "index.html"), "utf8").includes(
-          'itemprop="articleBody"'
-        )
+        readFileSync(join(dist, d, "index.html"), "utf8").includes('itemprop="articleBody"')
     );
 }
 
 // ---- whisper worker ---------------------------------------------------------
 
 function startWorker() {
-  const proc = spawn(PYTHON, [WORKER], {stdio: ["pipe", "pipe", "inherit"]});
+  const proc = spawn(PYTHON, [WORKER], { stdio: ["pipe", "pipe", "inherit"] });
   let buffer = "";
   const pending = [];
   const waiters = [];
@@ -139,9 +119,7 @@ function startWorker() {
     }
   });
   const next = () =>
-    pending.length
-      ? Promise.resolve(pending.shift())
-      : new Promise(res => waiters.push(res));
+    pending.length ? Promise.resolve(pending.shift()) : new Promise(res => waiters.push(res));
   const exited = new Promise(res => proc.on("exit", res));
   return {
     async transcribe(job) {
@@ -172,22 +150,10 @@ async function alignPost(slug, worker) {
       log(`${slug}: already aligned, skipping`);
       return "skipped";
     }
-    if (!r2Get(`blog/breeze/${slug}.mp3`, mp3))
-      throw new Error("mp3 missing in R2");
+    if (!r2Get(`blog/breeze/${slug}.mp3`, mp3)) throw new Error("mp3 missing in R2");
 
     const wav = join(tmp, "post.wav");
-    run("ffmpeg", [
-      "-y",
-      "-loglevel",
-      "error",
-      "-i",
-      mp3,
-      "-ac",
-      "1",
-      "-ar",
-      "16000",
-      wav
-    ]);
+    run("ffmpeg", ["-y", "-loglevel", "error", "-i", mp3, "-ac", "1", "-ar", "16000", wav]);
 
     let aligned = 0;
     const blocks = [];
@@ -210,7 +176,7 @@ async function alignPost(slug, worker) {
         wav: slice,
         text: block.text
       });
-      const {words: _drop, ...rest} = block;
+      const { words: _drop, ...rest } = block;
       if (reply.error) {
         log(`  b${i}: whisper failed — ${reply.error}`);
         blocks.push(rest);
@@ -219,22 +185,20 @@ async function alignPost(slug, worker) {
       const words = alignWords(block.text, reply.words, block);
       if (words) {
         aligned++;
-        blocks.push({...rest, words});
+        blocks.push({ ...rest, words });
       } else {
-        log(
-          `  b${i}: poor match (${reply.words.length} whisper words), paragraph only`
-        );
+        log(`  b${i}: poor match (${reply.words.length} whisper words), paragraph only`);
         blocks.push(rest);
       }
     }
 
-    const out = {...timings, version: 2, blocks};
+    const out = { ...timings, version: 2, blocks };
     writeFileSync(jsonPath, JSON.stringify(out));
     r2Put(`blog/breeze/${slug}.json`, jsonPath, "application/json");
     log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
     return "aligned";
   } finally {
-    rmSync(tmp, {recursive: true, force: true});
+    rmSync(tmp, { recursive: true, force: true });
   }
 }
 
@@ -243,12 +207,9 @@ async function alignPost(slug, worker) {
 async function main() {
   if (!existsSync(PYTHON)) fail('no .venv-tts — see README "Read-aloud audio"');
   if (spawnSync(PYTHON, ["-c", "import mlx_whisper"]).status !== 0) {
-    fail(
-      ".venv-tts cannot import mlx_whisper — pip install -r scripts/tts/requirements.txt"
-    );
+    fail(".venv-tts cannot import mlx_whisper — pip install -r scripts/tts/requirements.txt");
   }
-  if (spawnSync("ffmpeg", ["-version"]).status !== 0)
-    fail("ffmpeg not on PATH");
+  if (spawnSync("ffmpeg", ["-version"]).status !== 0) fail("ffmpeg not on PATH");
 
   checkWranglerLogin();
   const targets = slugs.length ? slugs : publishedSlugs();
@@ -268,9 +229,7 @@ async function main() {
     await worker.close();
   }
   const minutes = ((Date.now() - t0) / 60000).toFixed(1);
-  log(
-    `done in ${minutes} min${failures.length ? `, failed: ${failures.join(", ")}` : ""}`
-  );
+  log(`done in ${minutes} min${failures.length ? `, failed: ${failures.join(", ")}` : ""}`);
   if (failures.length) process.exit(1);
 }
 

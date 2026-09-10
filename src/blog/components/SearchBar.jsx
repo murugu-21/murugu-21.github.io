@@ -11,7 +11,7 @@ const SEARCH_STYLE = {
   color: "var(--color-text)"
 };
 
-const SearchBar = ({query, onChange}) => {
+const SearchBar = ({ query, onChange }) => {
   return (
     <input
       id="search"

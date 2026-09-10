@@ -1,4 +1,4 @@
-import {readFileSync, writeFileSync, existsSync, readdirSync} from "node:fs";
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
 
 // Build-time markdown renditions for Accept: text/markdown content
 // negotiation (served by worker/markdown.ts). One index.md next to each
@@ -20,8 +20,7 @@ for (const slug of readdirSync("content/blog")) {
   writeFileSync(`dist/blog/${slug}/index.md`, readFileSync(src, "utf8"));
   posts++;
 }
-if (posts === 0)
-  throw new Error("generate-markdown: no blog post markdown written");
+if (posts === 0) throw new Error("generate-markdown: no blog post markdown written");
 
 // Blog index: reuse the post list the /blog/llms.txt route emitted.
 const postLines = readFileSync("dist/blog/llms.txt", "utf8")
@@ -33,6 +32,4 @@ writeFileSync(
   "dist/blog/index.md",
   `# SDE Journey\n\n> A Technical blog on my experiences in the tech industry\n\n## Posts\n${postLines.join("\n")}\n`
 );
-console.log(
-  `generate-markdown: wrote homepage + blog index + ${posts} post index.md files`
-);
+console.log(`generate-markdown: wrote homepage + blog index + ${posts} post index.md files`);

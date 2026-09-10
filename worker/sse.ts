@@ -1,8 +1,8 @@
 // OpenAI-compatible tool call: `id` is required downstream (the tool-result
 // message must reference it), so one is synthesized when a provider omits it.
-export type ToolCall = {id: string; name: string; arguments: string};
+export type ToolCall = { id: string; name: string; arguments: string };
 
-export type Usage = {promptTokens: number; completionTokens: number};
+export type Usage = { promptTokens: number; completionTokens: number };
 
 export type StreamResult = {
   content: string;
@@ -10,7 +10,7 @@ export type StreamResult = {
   usage: Usage | null;
 };
 
-type PartialToolCall = {id: string; name: string; arguments: string};
+type PartialToolCall = { id: string; name: string; arguments: string };
 
 export function toolCallId(id: unknown, index: number): string {
   return typeof id === "string" && id.length > 0 ? id : `call_${index}`;
@@ -39,14 +39,14 @@ export async function consumeSse(
     let data: {
       response?: unknown;
       tool_calls?: unknown;
-      usage?: {prompt_tokens?: unknown; completion_tokens?: unknown};
+      usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
       choices?: {
         delta?: {
           content?: unknown;
           tool_calls?: {
             index?: number;
             id?: string;
-            function?: {name?: string; arguments?: string};
+            function?: { name?: string; arguments?: string };
           }[];
         };
       }[];
@@ -69,9 +69,7 @@ export async function consumeSse(
     }
 
     const delta =
-      typeof data.response === "string"
-        ? data.response
-        : data.choices?.[0]?.delta?.content;
+      typeof data.response === "string" ? data.response : data.choices?.[0]?.delta?.content;
     if (typeof delta === "string" && delta.length > 0) {
       content += delta;
       onDelta(delta);
@@ -79,11 +77,10 @@ export async function consumeSse(
 
     for (const tc of data.choices?.[0]?.delta?.tool_calls ?? []) {
       const i = tc.index ?? 0;
-      incremental[i] ??= {id: "", name: "", arguments: ""};
+      incremental[i] ??= { id: "", name: "", arguments: "" };
       if (tc.id) incremental[i].id = tc.id;
       if (tc.function?.name) incremental[i].name = tc.function.name;
-      if (tc.function?.arguments)
-        incremental[i].arguments += tc.function.arguments;
+      if (tc.function?.arguments) incremental[i].arguments += tc.function.arguments;
     }
 
     if (Array.isArray(data.tool_calls)) {
@@ -91,7 +88,7 @@ export async function consumeSse(
         id?: string;
         name?: string;
         arguments?: unknown;
-        function?: {name?: string; arguments?: unknown};
+        function?: { name?: string; arguments?: unknown };
       }[]) {
         const name = tc.name ?? tc.function?.name ?? "";
         if (name)
@@ -105,22 +102,19 @@ export async function consumeSse(
   };
 
   for (;;) {
-    const {done, value} = await reader.read();
+    const { done, value } = await reader.read();
     if (done) break;
-    buffer += decoder.decode(value, {stream: true});
+    buffer += decoder.decode(value, { stream: true });
     const events = buffer.split("\n\n");
     buffer = events.pop() ?? "";
-    for (const event of events)
-      for (const line of event.split("\n")) handleLine(line);
+    for (const event of events) for (const line of event.split("\n")) handleLine(line);
   }
   for (const line of buffer.split("\n")) handleLine(line);
 
   return {
     content,
     toolCalls: [
-      ...incremental
-        .filter(t => t && t.name)
-        .map((t, i) => ({...t, id: toolCallId(t.id, i)})),
+      ...incremental.filter(t => t && t.name).map((t, i) => ({ ...t, id: toolCallId(t.id, i) })),
       ...whole
     ],
     usage

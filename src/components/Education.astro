@@ -1,6 +1,6 @@
 ---
-import {educationInfo} from "../data/portfolio";
-import {accentTitle} from "../lib/accent";
+import { educationInfo } from "../data/portfolio";
+import { accentTitle } from "../lib/accent";
 ---
 
 <div class="education-section section-animate" id="education">
@@ -26,9 +26,7 @@ import {accentTitle} from "../lib/accent";
               <div class="education-text-details">
                 <h4 class="education-text-subHeader">{school.subHeader}</h4>
                 <p class="education-text-duration">{school.duration}</p>
-                {school.grade && (
-                  <p class="education-text-grade">{school.grade}</p>
-                )}
+                {school.grade && <p class="education-text-grade">{school.grade}</p>}
                 <p class="education-text-desc">{school.desc}</p>
                 <div class="education-text-bullets">
                   <ul>

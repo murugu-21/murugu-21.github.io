@@ -1,44 +1,44 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {blockAt, matchBlocks, scrollTarget} from "./audio-sync";
+import { blockAt, matchBlocks, scrollTarget } from "./audio-sync";
 
 const timed = [
-  {text: "Title", start: 0, end: 2},
-  {text: "First paragraph.", start: 2.5, end: 6},
-  {text: "Second paragraph.", start: 6.4, end: 9}
+  { text: "Title", start: 0, end: 2 },
+  { text: "First paragraph.", start: 2.5, end: 6 },
+  { text: "Second paragraph.", start: 6.4, end: 9 }
 ];
 
 describe("matchBlocks", () => {
   it("pairs blocks by index when texts are equal", () => {
     const page = [
-      {el: "h1", text: "Title"},
-      {el: "p1", text: "First paragraph."},
-      {el: "p2", text: "Second paragraph."}
+      { el: "h1", text: "Title" },
+      { el: "p1", text: "First paragraph." },
+      { el: "p2", text: "Second paragraph." }
     ];
     expect(matchBlocks(page, timed)).toEqual([
-      {el: "h1", start: 0, end: 2},
-      {el: "p1", start: 2.5, end: 6},
-      {el: "p2", start: 6.4, end: 9}
+      { el: "h1", start: 0, end: 2 },
+      { el: "p1", start: 2.5, end: 6 },
+      { el: "p2", start: 6.4, end: 9 }
     ]);
   });
 
   it("leaves a block unhighlighted when its text changed since generation", () => {
     const page = [
-      {el: "h1", text: "Title"},
-      {el: "p1", text: "First paragraph, edited."},
-      {el: "p2", text: "Second paragraph."}
+      { el: "h1", text: "Title" },
+      { el: "p1", text: "First paragraph, edited." },
+      { el: "p2", text: "Second paragraph." }
     ];
     const result = matchBlocks(page, timed);
     expect(result[1]).toBeNull();
-    expect(result[2]).toEqual({el: "p2", start: 6.4, end: 9});
+    expect(result[2]).toEqual({ el: "p2", start: 6.4, end: 9 });
   });
 
   it("handles a page with more blocks than the timings", () => {
     const page = [
-      {el: "h1", text: "Title"},
-      {el: "p1", text: "First paragraph."},
-      {el: "p2", text: "Second paragraph."},
-      {el: "p3", text: "New paragraph."}
+      { el: "h1", text: "Title" },
+      { el: "p1", text: "First paragraph." },
+      { el: "p2", text: "Second paragraph." },
+      { el: "p3", text: "New paragraph." }
     ];
     expect(matchBlocks(page, timed)[3]).toBeNull();
   });
@@ -68,7 +68,7 @@ describe("blockAt", () => {
 
 describe("scrollTarget", () => {
   const vh = 1000;
-  const rect = (top: number, height: number) => ({top, height});
+  const rect = (top: number, height: number) => ({ top, height });
 
   it("leaves a block alone while its top sits in the reading band", () => {
     expect(scrollTarget(rect(100, 200), vh)).toBeNull();
@@ -95,7 +95,7 @@ describe("scrollTarget", () => {
   });
 
   it("takes a wider band for words, so a word only pulls the page when it nears the bottom", () => {
-    const words = {top: 0, bottom: 0.8};
+    const words = { top: 0, bottom: 0.8 };
     expect(scrollTarget(rect(0, 24), vh, words)).toBeNull();
     expect(scrollTarget(rect(700, 24), vh, words)).toBeNull();
     expect(scrollTarget(rect(850, 24), vh, words)).toBe("center");

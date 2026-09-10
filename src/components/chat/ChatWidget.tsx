@@ -1,32 +1,25 @@
 // Jarvis chat widget — React island on vendored shadcn/ui primitives, shared
 // by the portfolio and the blog (the blog imports ./mount via a relative
 // path). Idle-mounted by ChatWidget.astro so it never affects initial load.
-import React, {useEffect, useRef, useState} from "react";
-import {nanoid} from "nanoid";
-import {PartySocket} from "partysocket";
-import {
-  Download,
-  EllipsisVertical,
-  MessageCircle,
-  RotateCcw,
-  Send,
-  X
-} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { nanoid } from "nanoid";
+import { PartySocket } from "partysocket";
+import { Download, EllipsisVertical, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 
-import {GREETING, type ServerMessage} from "../../../worker/protocol";
-import {ActivityRow, type Activity} from "./ActivityRow";
-import {Button} from "../ui/button";
-import {Card, CardFooter, CardHeader} from "../ui/card";
+import { GREETING, type ServerMessage } from "../../../worker/protocol";
+import { ActivityRow, type Activity } from "./ActivityRow";
+import { Button } from "../ui/button";
+import { Card, CardFooter, CardHeader } from "../ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "../ui/dropdown-menu";
-import {Input} from "../ui/input";
-import {ScrollArea} from "../ui/scroll-area";
-import {cn} from "../../lib/utils";
-import {track} from "../../lib/analytics";
+import { Input } from "../ui/input";
+import { ScrollArea } from "../ui/scroll-area";
+import { cn } from "../../lib/utils";
+import { track } from "../../lib/analytics";
 import "../../styles/islands.css";
 
 const ROOM_KEY = "chatRoomId";
@@ -41,7 +34,7 @@ const STARTERS = [
   "Summarize his experience in 30 seconds"
 ];
 
-type Bubble = {kind: "user" | "assistant" | "system"; text: string};
+type Bubble = { kind: "user" | "assistant" | "system"; text: string };
 
 function roomId(): string {
   let id = localStorage.getItem(ROOM_KEY);
@@ -62,9 +55,7 @@ const URL_SPLIT = /(https?:\/\/[^\s]+)/;
 const MD_LINK = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
 
 function renderWithLinks(raw: string) {
-  const text = raw.replace(MD_LINK, (_m, label, url) =>
-    label ? `${label}: ${url}` : url
-  );
+  const text = raw.replace(MD_LINK, (_m, label, url) => (label ? `${label}: ${url}` : url));
   return text.split(URL_SPLIT).map((part, i) => {
     if (i % 2 === 0) return part;
     const trailing = /[.,!?;:)]+$/.exec(part)?.[0] ?? "";
@@ -85,17 +76,14 @@ function renderWithLinks(raw: string) {
   });
 }
 
-function BubbleView({kind, text}: Bubble) {
+function BubbleView({ kind, text }: Bubble) {
   return (
     <div
       className={cn(
         "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] whitespace-pre-wrap break-words",
-        kind === "user" &&
-          "self-end rounded-br-sm bg-primary text-primary-foreground",
-        kind === "assistant" &&
-          "self-start rounded-bl-sm bg-muted text-foreground",
-        kind === "system" &&
-          "self-center bg-transparent text-center text-xs text-muted-foreground"
+        kind === "user" && "self-end rounded-br-sm bg-primary text-primary-foreground",
+        kind === "assistant" && "self-start rounded-bl-sm bg-muted text-foreground",
+        kind === "system" && "self-center bg-transparent text-center text-xs text-muted-foreground"
       )}
     >
       {renderWithLinks(text)}
@@ -115,9 +103,7 @@ export function ChatWidget() {
   const [sending, setSending] = useState(false);
   const [greeted, setGreeted] = useState(false);
   const [confirmRestart, setConfirmRestart] = useState(false);
-  const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">(
-    "hidden"
-  );
+  const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">("hidden");
 
   const socketRef = useRef<PartySocket | null>(null);
   // Mirrors for the socket handlers, which outlive any single render.
@@ -131,7 +117,7 @@ export function ChatWidget() {
     const text = streamRef.current;
     streamRef.current = null;
     setStream(null);
-    if (text) setBubbles(b => [...b, {kind: "assistant", text}]);
+    if (text) setBubbles(b => [...b, { kind: "assistant", text }]);
   };
 
   const handleServerMessage = (msg: ServerMessage) => {
@@ -151,18 +137,17 @@ export function ChatWidget() {
         // The server seeds the greeting as the room's first message, so it
         // arrives inside history — the local `greeted` bubble is only the
         // offline fallback and must clear once real history lands.
-        setBubbles(msg.messages.map(m => ({kind: m.role, text: m.content})));
+        setBubbles(msg.messages.map(m => ({ kind: m.role, text: m.content })));
         setGreeted(false);
         break;
       case "visitor":
         // Another tab of this room sent a message — mirror it here.
-        setBubbles(b => [...b, {kind: "user", text: msg.text}]);
+        setBubbles(b => [...b, { kind: "user", text: msg.text }]);
         break;
       case "delta": {
         // Left-trim the first chunk — Qwen's no-think mode leads with blank
         // lines; keep showing the typing dots until real text arrives.
-        const text =
-          streamRef.current === null ? msg.text.replace(/^\s+/, "") : msg.text;
+        const text = streamRef.current === null ? msg.text.replace(/^\s+/, "") : msg.text;
         if (streamRef.current === null && text === "") break;
         setTyping(false);
         // Real text is arriving — the row has nothing left to explain.
@@ -175,7 +160,7 @@ export function ChatWidget() {
       case "tool":
         // A tool round can start after some text has already streamed, so the
         // row comes back rather than only ever showing before the first token.
-        setActivity({name: msg.name, detail: msg.detail});
+        setActivity({ name: msg.name, detail: msg.detail });
         setWaiting(true);
         break;
       case "done":
@@ -195,7 +180,7 @@ export function ChatWidget() {
         setActivity(null);
         commitStream();
         setSending(false);
-        setBubbles(b => [...b, {kind: "system", text: msg.message}]);
+        setBubbles(b => [...b, { kind: "system", text: msg.message }]);
         break;
     }
   };
@@ -256,7 +241,7 @@ export function ChatWidget() {
     // PartySocket buffers sends while CONNECTING/reconnecting and flushes on
     // open — don't gate on readyState or messages get silently dropped.
     const ws = connect();
-    setBubbles(b => [...b, {kind: "user", text}]);
+    setBubbles(b => [...b, { kind: "user", text }]);
     setWaiting(true);
     setActivity(null);
     setSending(true);
@@ -264,9 +249,7 @@ export function ChatWidget() {
     track("chat_message_sent");
     // Include the page the visitor is on — the room feeds it to the model as
     // ephemeral context so "this post"/"this page" resolve correctly.
-    ws.send(
-      JSON.stringify({type: "chat", text, page: window.location.pathname})
-    );
+    ws.send(JSON.stringify({ type: "chat", text, page: window.location.pathname }));
   };
 
   const onSubmit = (e: React.FormEvent) => {
@@ -300,13 +283,11 @@ export function ChatWidget() {
 
   const download = () => {
     track("chat_transcript_download");
-    const lines = transcript.map(
-      b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`
-    );
+    const lines = transcript.map(b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`);
     if (greeted) lines.unshift(`Jarvis: ${GREETING}`);
     const date = new Date().toISOString().slice(0, 10);
     const body = `Chat with Jarvis — murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;
-    const url = URL.createObjectURL(new Blob([body], {type: "text/plain"}));
+    const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
     const a = document.createElement("a");
     a.href = url;
     a.download = `jarvis-chat-${date}.txt`;
@@ -346,11 +327,7 @@ export function ChatWidget() {
   useEffect(() => {
     if (!open) return;
     const mq = window.matchMedia("(max-width: 639px)");
-    const apply = () =>
-      document.documentElement.classList.toggle(
-        "chat-panel-locked",
-        mq.matches
-      );
+    const apply = () => document.documentElement.classList.toggle("chat-panel-locked", mq.matches);
     apply();
     mq.addEventListener("change", apply);
     return () => {
@@ -458,15 +435,9 @@ export function ChatWidget() {
 
           {confirmRestart && (
             <div className="flex items-center justify-between gap-2 border-b bg-muted/50 px-3 py-2">
-              <span className="text-xs text-muted-foreground">
-                Start a new conversation?
-              </span>
+              <span className="text-xs text-muted-foreground">Start a new conversation?</span>
               <div className="flex gap-1.5">
-                <Button
-                  size="sm"
-                  className="h-7 px-2.5 text-xs"
-                  onClick={restart}
-                >
+                <Button size="sm" className="h-7 px-2.5 text-xs" onClick={restart}>
                   Start over
                 </Button>
                 <Button
@@ -487,11 +458,7 @@ export function ChatWidget() {
                 <div>, which is not covered — mask the whole transcript so
                 nothing a visitor typed reaches a recording. Matches the
                 no-PII rule the events follow. */}
-            <div
-              className="flex flex-col gap-2 p-3"
-              aria-live="polite"
-              data-clarity-mask="true"
-            >
+            <div className="flex flex-col gap-2 p-3" aria-live="polite" data-clarity-mask="true">
               {greeted && <BubbleView kind="assistant" text={GREETING} />}
               {bubbles.map((b, i) => (
                 <BubbleView key={i} kind={b.kind} text={b.text} />
@@ -538,12 +505,7 @@ export function ChatWidget() {
                 autoComplete="off"
                 className="bg-secondary"
               />
-              <Button
-                type="submit"
-                size="icon"
-                aria-label="Send"
-                disabled={sending}
-              >
+              <Button type="submit" size="icon" aria-label="Send" disabled={sending}>
                 <Send />
               </Button>
             </form>

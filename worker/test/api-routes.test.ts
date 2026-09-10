@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   ALLOWED_METHODS,
@@ -24,9 +24,7 @@ describe("the versioned surface", () => {
 describe("toVersionedPath", () => {
   it("rewrites the unversioned alias onto the versioned template", () => {
     expect(toVersionedPath("/api/profile")).toBe("/api/v1/profile");
-    expect(toVersionedPath("/api/posts/some-slug")).toBe(
-      "/api/v1/posts/some-slug"
-    );
+    expect(toVersionedPath("/api/posts/some-slug")).toBe("/api/v1/posts/some-slug");
   });
 
   it("leaves an already-versioned path alone", () => {
@@ -56,9 +54,7 @@ describe("matchApiPath", () => {
 
   it("matches a post path to its templated form", () => {
     expect(matchApiPath("/api/posts/coin-change-problem")).toBe(API_PATHS.post);
-    expect(matchApiPath("/api/posts/coin-change-problem/")).toBe(
-      API_PATHS.post
-    );
+    expect(matchApiPath("/api/posts/coin-change-problem/")).toBe(API_PATHS.post);
   });
 
   it("prefers the literal collection path over the template", () => {
@@ -77,17 +73,13 @@ describe("matchApiPath", () => {
 
   it("matches the versioned form of every endpoint", () => {
     expect(matchApiPath("/api/v1/profile")).toBe(API_PATHS.profile);
-    expect(matchApiPath("/api/v1/posts/coin-change-problem")).toBe(
-      API_PATHS.post
-    );
+    expect(matchApiPath("/api/v1/posts/coin-change-problem")).toBe(API_PATHS.post);
     expect(matchApiPath("/api/v1/versions")).toBe(API_PATHS.versions);
   });
 
   it("maps the unversioned alias to the same template as the versioned path", () => {
     expect(matchApiPath("/api/versions")).toBe(API_PATHS.versions);
-    expect(matchApiPath("/api/open-source")).toBe(
-      matchApiPath("/api/v1/open-source")
-    );
+    expect(matchApiPath("/api/open-source")).toBe(matchApiPath("/api/v1/open-source"));
   });
 
   it("returns null for a version that does not exist", () => {

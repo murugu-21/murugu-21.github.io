@@ -15,7 +15,7 @@
 // 8-bit via mlx-audio, plain clone of .voice/reference.wav) → per-chunk
 // atempo=1.08 → sample-accurate assembly with gaps → loudnorm → 64 kbps MP3 +
 // timing JSON → wrangler r2 object put under blog/breeze/.
-import {spawn, spawnSync} from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   copyFileSync,
   existsSync,
@@ -26,17 +26,13 @@ import {
   rmSync,
   writeFileSync
 } from "node:fs";
-import {tmpdir} from "node:os";
-import {join, resolve} from "node:path";
-import {parseHTML} from "linkedom";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { parseHTML } from "linkedom";
 
-import {speechBlocks} from "../src/blog/utils/speech.ts";
-import {
-  normalizeSpeechText,
-  packSentences,
-  spokenHash
-} from "../src/blog/utils/audio-prep.ts";
-import {assemble, readWav, writeWav} from "./tts/wav.mjs";
+import { speechBlocks } from "../src/blog/utils/speech.ts";
+import { normalizeSpeechText, packSentences, spokenHash } from "../src/blog/utils/audio-prep.ts";
+import { assemble, readWav, writeWav } from "./tts/wav.mjs";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const DIST = join(ROOT, "dist", "blog");
@@ -58,13 +54,12 @@ const KEY_PREFIX = "blog/breeze";
 const VOICE_KEY_PREFIX = "voice/breeze";
 const VOICE_ID = "breeze-tts-2-8bit/chennai-2026-09-09";
 const CHUNK_MAX = 300;
-const GAPS = {intra: 0.15, inter: 0.45};
+const GAPS = { intra: 0.15, inter: 0.45 };
 const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
 // Whole-post chain, applied after assembly and before the MP3 encode: podcast
 // loudness only. Breeze output sits at about -60 dBFS between words, so the
 // denoise and gate the Fish clone needed are gone (measured 2026-09-09).
-const POSTFX =
-  process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
+const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter(a => a.startsWith("--")));
@@ -78,7 +73,7 @@ const fail = msg => {
 };
 
 function run(cmd, cmdArgs, opts = {}) {
-  const r = spawnSync(cmd, cmdArgs, {encoding: "utf8", ...opts});
+  const r = spawnSync(cmd, cmdArgs, { encoding: "utf8", ...opts });
   if (r.status !== 0) {
     throw new Error(`${cmd} ${cmdArgs.join(" ")}\n${r.stderr || r.stdout}`);
   }
@@ -97,11 +92,9 @@ const wranglerArgs = extra => [
 // (expired login, network) throws, so a broken session can never be mistaken
 // for "nothing there yet".
 function r2Get(key, file) {
-  const r = spawnSync(
-    "npx",
-    wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]),
-    {encoding: "utf8"}
-  );
+  const r = spawnSync("npx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
+    encoding: "utf8"
+  });
   if (r.status === 0 && existsSync(file)) return true;
   const err = `${r.stderr}\n${r.stdout}`;
   if (/not found|does not exist|NoSuchKey|10007/i.test(err)) return false;
@@ -112,11 +105,8 @@ function r2Get(key, file) {
 // after minutes (or hours) of local work.
 function checkWranglerLogin() {
   if (local) return;
-  const r = spawnSync("npx", ["wrangler", "whoami"], {encoding: "utf8"});
-  if (
-    r.status !== 0 ||
-    /not logged in|expired/i.test(`${r.stderr}${r.stdout}`)
-  ) {
+  const r = spawnSync("npx", ["wrangler", "whoami"], { encoding: "utf8" });
+  if (r.status !== 0 || /not logged in|expired/i.test(`${r.stderr}${r.stdout}`)) {
     fail(
       "wrangler is not logged in (or the OAuth token expired) — run `npx wrangler login` in an interactive terminal, then retry"
     );
@@ -126,14 +116,7 @@ function checkWranglerLogin() {
 function r2Put(key, file, contentType) {
   run(
     "npx",
-    wranglerArgs([
-      "put",
-      `${BUCKET}/${key}`,
-      "--file",
-      file,
-      "--content-type",
-      contentType
-    ])
+    wranglerArgs(["put", `${BUCKET}/${key}`, "--file", file, "--content-type", contentType])
   );
 }
 
@@ -153,26 +136,22 @@ function checkPreconditions() {
       );
     }
     if (spawnSync(PYTHON, ["-c", "import mlx_audio"]).status !== 0) {
-      fail(
-        ".venv-tts cannot import mlx_audio — reinstall scripts/tts/requirements.txt"
-      );
+      fail(".venv-tts cannot import mlx_audio — reinstall scripts/tts/requirements.txt");
     }
   }
   const wav = join(VOICE_DIR, "reference.wav");
   const txt = join(VOICE_DIR, "reference.txt");
   if (!existsSync(wav) || !existsSync(txt)) {
     log("no .voice/ reference locally, fetching from R2 …");
-    mkdirSync(VOICE_DIR, {recursive: true});
+    mkdirSync(VOICE_DIR, { recursive: true });
     if (
       !r2Get(`${VOICE_KEY_PREFIX}/reference.wav`, wav) ||
       !r2Get(`${VOICE_KEY_PREFIX}/reference.txt`, txt)
     ) {
-      fail(
-        "voice reference missing locally and in R2 — restore .voice/reference.{wav,txt}"
-      );
+      fail("voice reference missing locally and in R2 — restore .voice/reference.{wav,txt}");
     }
   }
-  return {audio: wav, text: readFileSync(txt, "utf8").trim()};
+  return { audio: wav, text: readFileSync(txt, "utf8").trim() };
 }
 
 // ---- extraction ------------------------------------------------------------
@@ -180,7 +159,7 @@ function checkPreconditions() {
 // Every dist/blog/<dir>/index.html that is a post. The blog's own 404 page
 // lives there too and has no article body.
 function publishedSlugs() {
-  return readdirSync(DIST, {withFileTypes: true})
+  return readdirSync(DIST, { withFileTypes: true })
     .filter(d => {
       const page = join(DIST, d.name, "index.html");
       return (
@@ -194,7 +173,7 @@ function publishedSlugs() {
 
 function extractBlocks(slug) {
   const html = readFileSync(join(DIST, slug, "index.html"), "utf8");
-  const {document} = parseHTML(html);
+  const { document } = parseHTML(html);
   const title = document.querySelector("article.blog-post header h1");
   const body = document.querySelector("section[itemprop='articleBody']");
   if (!body) throw new Error(`${slug}: no articleBody section`);
@@ -206,7 +185,7 @@ function extractBlocks(slug) {
 // ---- synthesis worker -------------------------------------------------------
 
 function startWorker() {
-  const proc = spawn(PYTHON, [WORKER], {stdio: ["pipe", "pipe", "inherit"]});
+  const proc = spawn(PYTHON, [WORKER], { stdio: ["pipe", "pipe", "inherit"] });
   // Lines are queued, not dropped: two lines often arrive in one data event
   // (the last chunk report and the "done" line), and the consumer only has a
   // waiter registered for the first of them.
@@ -226,9 +205,7 @@ function startWorker() {
     }
   });
   const next = () =>
-    pending.length
-      ? Promise.resolve(pending.shift())
-      : new Promise(res => waiters.push(res));
+    pending.length ? Promise.resolve(pending.shift()) : new Promise(res => waiters.push(res));
   const exited = new Promise(res => proc.on("exit", res));
   return {
     ready: next(),
@@ -275,7 +252,7 @@ async function renderPost(slug, worker, reference) {
     const chunkIds = blocks.map((text, b) =>
       packSentences(text, CHUNK_MAX).map((chunkText, c) => {
         const id = `b${String(b).padStart(3, "0")}-c${String(c).padStart(2, "0")}`;
-        chunks.push({id, text: chunkText});
+        chunks.push({ id, text: chunkText });
         return id;
       })
     );
@@ -286,16 +263,14 @@ async function renderPost(slug, worker, reference) {
 
     const outDir = join(tmp, "chunks");
     const jobPath = join(tmp, "job.json");
-    writeFileSync(jobPath, JSON.stringify({reference, outDir, chunks}));
+    writeFileSync(jobPath, JSON.stringify({ reference, outDir, chunks }));
     const errors = [];
     await worker.runJob(jobPath, msg => {
       if (msg.error) errors.push(`${msg.id}: ${msg.error}`);
       else log(`  ${msg.id} ${msg.seconds.toFixed(1)}s audio in ${msg.wall}s`);
     });
     if (errors.length) {
-      throw new Error(
-        `synthesis failed for ${errors.length} chunk(s):\n${errors.join("\n")}`
-      );
+      throw new Error(`synthesis failed for ${errors.length} chunk(s):\n${errors.join("\n")}`);
     }
 
     // Post-fx pass 1: tempo per chunk, so timings measured afterwards are exact.
@@ -327,10 +302,10 @@ async function renderPost(slug, worker, reference) {
         if (wav.sampleRate !== sampleRate) {
           throw new Error(`sample rate mismatch in ${id}`);
         }
-        return {pcm: wav.pcm};
+        return { pcm: wav.pcm };
       })
     );
-    const {pcm, timings} = assemble(perBlock, sampleRate, GAPS);
+    const { pcm, timings } = assemble(perBlock, sampleRate, GAPS);
     if (timings.length !== blocks.length) {
       throw new Error("block/timing count mismatch");
     }
@@ -376,7 +351,7 @@ async function renderPost(slug, worker, reference) {
     return "rendered";
   } finally {
     if (flags.has("--keep")) log(`${slug}: kept ${tmp}`);
-    else rmSync(tmp, {recursive: true, force: true});
+    else rmSync(tmp, { recursive: true, force: true });
   }
 }
 
@@ -423,9 +398,7 @@ async function main() {
     if (worker) await worker.close();
   }
   const minutes = ((Date.now() - t0) / 60000).toFixed(1);
-  log(
-    `done in ${minutes} min${failures.length ? `, failed: ${failures.join(", ")}` : ""}`
-  );
+  log(`done in ${minutes} min${failures.length ? `, failed: ${failures.join(", ")}` : ""}`);
   if (failures.length) process.exit(1);
 }
 

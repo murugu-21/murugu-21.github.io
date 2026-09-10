@@ -1,6 +1,6 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {parsePostList, postMarkdownPath} from "../api/posts";
+import { parsePostList, postMarkdownPath } from "../api/posts";
 
 const LLMS = `# Murugappan M — Full Stack Engineer
 
@@ -72,9 +72,7 @@ describe("parsePostList", () => {
 
 describe("postMarkdownPath", () => {
   it("maps a slug to its built markdown rendition", () => {
-    expect(postMarkdownPath("coin-change-problem")).toBe(
-      "/blog/coin-change-problem/index.md"
-    );
+    expect(postMarkdownPath("coin-change-problem")).toBe("/blog/coin-change-problem/index.md");
   });
 
   it("rejects a slug that is not a plain kebab-case token", () => {

@@ -186,9 +186,7 @@ import { useContext } from "react"
 import { stateContext } from "./App"
 export default function CustomButton() {
   const dispatch = useContext(stateContext)
-  return (
-    <button onClick={() => dispatch({ type: "increment" })}>increment </button>
-  )
+  return <button onClick={() => dispatch({ type: "increment" })}>increment </button>
 }
 ```
 

@@ -2,9 +2,9 @@
 // answers, so the gap before the first token is long enough to need filling —
 // this row says what Jarvis is actually doing when a tool is running, and
 // keeps the visitor amused with a rotating word when it is only thinking.
-import {useEffect, useRef, useState} from "react";
+import { useEffect, useRef, useState } from "react";
 
-import type {ToolName} from "../../../worker/protocol";
+import type { ToolName } from "../../../worker/protocol";
 
 // Deliberately in Jarvis's voice: dry, a little absurd, never cutesy. Two
 // rules — no promises about what the answer will contain, and nothing that
@@ -33,9 +33,7 @@ const ELAPSED_AFTER_MS = 3000;
 // semantic event; the wording lives here with the rest of the UI copy.
 function toolLabel(name: ToolName, detail?: string): string {
   if (name === "capture_opportunity") return "Noting your details";
-  return detail
-    ? `Reading ${detail.replace(/^\/|\/$/g, "")}`
-    : "Reading a page";
+  return detail ? `Reading ${detail.replace(/^\/|\/$/g, "")}` : "Reading a page";
 }
 
 function pickWord(current: string): string {
@@ -43,9 +41,9 @@ function pickWord(current: string): string {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-export type Activity = {name: ToolName; detail?: string};
+export type Activity = { name: ToolName; detail?: string };
 
-export function ActivityRow({activity}: {activity: Activity | null}) {
+export function ActivityRow({ activity }: { activity: Activity | null }) {
   const [word, setWord] = useState(() => pickWord(""));
   const [elapsed, setElapsed] = useState(0);
   // Set for real by the effect below, which runs before the interval that
@@ -78,17 +76,11 @@ export function ActivityRow({activity}: {activity: Activity | null}) {
         aria-hidden="true"
         className="flex max-w-[85%] items-center gap-2 self-start rounded-xl rounded-bl-sm bg-muted px-3 py-2 text-sm text-muted-foreground"
       >
-        {activity ? (
-          <span className="chat-tool-dot" />
-        ) : (
-          <span className="chat-spark">✦</span>
-        )}
+        {activity ? <span className="chat-tool-dot" /> : <span className="chat-spark">✦</span>}
         <span className="chat-shimmer">
           {activity ? toolLabel(activity.name, activity.detail) : word}…
         </span>
-        {showElapsed && (
-          <span className="text-xs tabular-nums opacity-60">{elapsed}s</span>
-        )}
+        {showElapsed && <span className="text-xs tabular-nums opacity-60">{elapsed}s</span>}
       </div>
       <span className="sr-only">Jarvis is typing</span>
     </>

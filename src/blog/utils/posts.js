@@ -1,4 +1,4 @@
-import {getCollection} from "astro:content";
+import { getCollection } from "astro:content";
 import getReadingTime from "reading-time";
 
 // All posts, sorted by date ASC (the order gatsby-node.js used to wire up
@@ -29,8 +29,7 @@ export function formatDate(date) {
 
 // Reading time in whole minutes from the raw markdown body (replaces
 // Gatsby's MarkdownRemark.timeToRead).
-export const timeToRead = body =>
-  Math.max(1, Math.ceil(getReadingTime(body || "").minutes));
+export const timeToRead = body => Math.max(1, Math.ceil(getReadingTime(body || "").minutes));
 
 // Plain-text excerpt from the raw markdown body (replaces Gatsby's
 // excerpt(pruneLength: 160)); used wherever frontmatter description is absent.

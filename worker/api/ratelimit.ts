@@ -20,7 +20,7 @@
 //   contact — the daily allowance POST /api/contact really spends, counted in
 //             the RateLimiter Durable Object.
 
-import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "./contact";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./contact";
 
 export type Quota = {
   /** Policy name, quoted verbatim in both header fields. */
@@ -47,41 +47,28 @@ export const CONTACT_GLOBAL_QUOTA: Quota = {
   windowSeconds: 86_400
 };
 
-export const CONTACT_QUOTAS: readonly Quota[] = [
-  CONTACT_CLIENT_QUOTA,
-  CONTACT_GLOBAL_QUOTA
-];
+export const CONTACT_QUOTAS: readonly Quota[] = [CONTACT_CLIENT_QUOTA, CONTACT_GLOBAL_QUOTA];
 
 /** `RateLimit-Policy`: the quota policies that apply, in declaration order. */
 export function policyField(quotas: readonly Quota[]): string {
-  return quotas
-    .map(q => `"${q.name}";q=${q.quota};w=${q.windowSeconds}`)
-    .join(", ");
+  return quotas.map(q => `"${q.name}";q=${q.quota};w=${q.windowSeconds}`).join(", ");
 }
 
 const clamp = (n: number) => Math.max(0, Math.floor(n));
 
 /** `RateLimit`: the live snapshot of one policy. */
-export function rateLimitField(
-  quota: Quota,
-  remaining: number,
-  resetSeconds: number
-): string {
+export function rateLimitField(quota: Quota, remaining: number, resetSeconds: number): string {
   return `"${quota.name}";r=${clamp(remaining)};t=${clamp(resetSeconds)}`;
 }
 
 /** The draft fields plus the de-facto `X-RateLimit-*` trio for one policy. */
 export function rateLimitHeaders(
   policies: readonly Quota[],
-  reported: {quota: Quota; remaining: number; resetSeconds: number}
+  reported: { quota: Quota; remaining: number; resetSeconds: number }
 ): Record<string, string> {
   return {
     "RateLimit-Policy": policyField(policies),
-    RateLimit: rateLimitField(
-      reported.quota,
-      reported.remaining,
-      reported.resetSeconds
-    ),
+    RateLimit: rateLimitField(reported.quota, reported.remaining, reported.resetSeconds),
     "X-RateLimit-Limit": String(reported.quota.quota),
     "X-RateLimit-Remaining": String(clamp(reported.remaining)),
     "X-RateLimit-Reset": String(clamp(reported.resetSeconds))
@@ -94,7 +81,7 @@ export type ReadSlot = {
   resetSeconds: number;
 };
 
-type Window = {resetAt: number; used: number};
+type Window = { resetAt: number; used: number };
 
 // Fixed windows held in the isolate, not in a Durable Object: a read is a pure
 // function of the deployed build, so paying a cross-region round trip to count
@@ -130,12 +117,11 @@ export function takeReadSlot(client: string, now = Date.now()): ReadSlot {
   let window = windows.get(client);
   if (!window || window.resetAt <= now) {
     prune(now);
-    window = {resetAt: now + windowMs, used: 0};
+    window = { resetAt: now + windowMs, used: 0 };
     windows.set(client, window);
   }
   const resetSeconds = Math.ceil((window.resetAt - now) / 1000);
-  if (window.used >= READ_QUOTA.quota)
-    return {allowed: false, remaining: 0, resetSeconds};
+  if (window.used >= READ_QUOTA.quota) return { allowed: false, remaining: 0, resetSeconds };
   window.used++;
   return {
     allowed: true,
@@ -175,11 +161,7 @@ export function contactRateLimitHeaders(usage: {
 
 /** Seconds until the daily contact allowances reset (00:00 UTC). */
 export function secondsUntilUtcMidnight(now = new Date()): number {
-  const midnight = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate() + 1
-  );
+  const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
   return Math.max(1, Math.ceil((midnight - now.getTime()) / 1000));
 }
 

@@ -1,4 +1,4 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   buildDataset,
@@ -56,7 +56,7 @@ function input(overrides: Partial<DatasetInput> = {}): DatasetInput {
       skills: ["⚡ Build TypeScript end-to-end", "⚡ Design on AWS"]
     },
     skillsCategories: [
-      {category: "Languages", items: "TypeScript, Python, SQL"},
+      { category: "Languages", items: "TypeScript, Python, SQL" },
       {
         category: "Full Stack",
         items:
@@ -70,7 +70,7 @@ function input(overrides: Partial<DatasetInput> = {}): DatasetInput {
           tools: ["Node.js", "Nest.js"],
           progressPercentage: "90%"
         },
-        {stack: "Frontend", tools: ["React"], progressPercentage: "80%"}
+        { stack: "Frontend", tools: ["React"], progressPercentage: "80%" }
       ]
     },
     educationInfo: [
@@ -86,7 +86,7 @@ function input(overrides: Partial<DatasetInput> = {}): DatasetInput {
     openSourceCard: {
       title: "AnkiDroid — Open Source Contributor",
       subtitle: "3 merged pull requests to AnkiDroid.",
-      footerLink: [{name: "Image paste (#10320)", url: "https://gh.example/1"}]
+      footerLink: [{ name: "Image paste (#10320)", url: "https://gh.example/1" }]
     },
     isHireable: true,
     ...overrides
@@ -104,16 +104,14 @@ describe("splitSkillItems", () => {
   });
 
   it("keeps a parenthesised group with commas intact", () => {
-    expect(
-      splitSkillItems("event-driven architecture (AWS SQS, EventBridge), REST")
-    ).toEqual(["event-driven architecture (AWS SQS, EventBridge)", "REST"]);
+    expect(splitSkillItems("event-driven architecture (AWS SQS, EventBridge), REST")).toEqual([
+      "event-driven architecture (AWS SQS, EventBridge)",
+      "REST"
+    ]);
   });
 
   it("drops empty fragments", () => {
-    expect(splitSkillItems("TypeScript,, ; Python")).toEqual([
-      "TypeScript",
-      "Python"
-    ]);
+    expect(splitSkillItems("TypeScript,, ; Python")).toEqual(["TypeScript", "Python"]);
   });
 });
 
@@ -153,7 +151,7 @@ describe("parsePeriod", () => {
 
 describe("buildDataset", () => {
   it("projects the person block from the portfolio data", () => {
-    const {person} = buildDataset(input());
+    const { person } = buildDataset(input());
     expect(person.name).toBe("Ada L");
     expect(person.headline).toBe("Full Stack Engineer");
     expect(person.pitch).toBe("I build things that ship.");
@@ -164,7 +162,7 @@ describe("buildDataset", () => {
   });
 
   it("derives the current role from the open-ended experience entry", () => {
-    const {person} = buildDataset(input());
+    const { person } = buildDataset(input());
     expect(person.currentRole).toEqual({
       role: "Software Engineer II",
       company: "MedMe Health",
@@ -174,7 +172,7 @@ describe("buildDataset", () => {
 
   it("reports no current role when every entry has ended", () => {
     const data = input();
-    const {person} = buildDataset({
+    const { person } = buildDataset({
       ...data,
       workExperiences: [data.workExperiences[1]]
     });
@@ -189,16 +187,12 @@ describe("buildDataset", () => {
   });
 
   it("builds absolute links including the resume PDF", () => {
-    const byLabel = new Map(
-      buildDataset(input()).links.map(l => [l.label, l.url])
-    );
+    const byLabel = new Map(buildDataset(input()).links.map(l => [l.label, l.url]));
     expect(byLabel.get("Resume (PDF)")).toBe("https://example.com/resume.pdf");
     expect(byLabel.get("Email")).toBe("mailto:ada@example.com");
     expect(byLabel.get("GitHub")).toBe("https://github.example/ada");
     expect(byLabel.get("Blog")).toBe("https://example.com/blog/");
-    expect(byLabel.get("OpenAPI spec")).toBe(
-      "https://example.com/openapi.json"
-    );
+    expect(byLabel.get("OpenAPI spec")).toBe("https://example.com/openapi.json");
   });
 
   it("types each experience entry with dates and highlights", () => {
@@ -220,7 +214,7 @@ describe("buildDataset", () => {
 
   it("splits each skill category into a typed list", () => {
     expect(buildDataset(input()).skills).toEqual([
-      {category: "Languages", skills: ["TypeScript", "Python", "SQL"]},
+      { category: "Languages", skills: ["TypeScript", "Python", "SQL"] },
       {
         category: "Full Stack",
         skills: [
@@ -235,8 +229,8 @@ describe("buildDataset", () => {
 
   it("projects each proficiency with its tools and a numeric level", () => {
     expect(buildDataset(input()).proficiencies).toEqual([
-      {area: "Backend", tools: ["Node.js", "Nest.js"], level: 90},
-      {area: "Frontend", tools: ["React"], level: 80}
+      { area: "Backend", tools: ["Node.js", "Nest.js"], level: 90 },
+      { area: "Frontend", tools: ["React"], level: 80 }
     ]);
   });
 
@@ -258,12 +252,10 @@ describe("buildDataset", () => {
   it("leaves grade null when the school entry has none", () => {
     const base = input();
     const [school] = base.educationInfo;
-    const {grade: _grade, ...withoutGrade} = school as typeof school & {
+    const { grade: _grade, ...withoutGrade } = school as typeof school & {
       grade?: string;
     };
-    expect(
-      buildDataset({...base, educationInfo: [withoutGrade]}).education[0].grade
-    ).toBeNull();
+    expect(buildDataset({ ...base, educationInfo: [withoutGrade] }).education[0].grade).toBeNull();
   });
 
   it("names the open-source project from the card title", () => {
@@ -272,7 +264,7 @@ describe("buildDataset", () => {
         project: "AnkiDroid",
         role: "Open Source Contributor",
         description: "3 merged pull requests to AnkiDroid.",
-        links: [{label: "Image paste (#10320)", url: "https://gh.example/1"}]
+        links: [{ label: "Image paste (#10320)", url: "https://gh.example/1" }]
       }
     ]);
   });
@@ -292,11 +284,11 @@ describe("parseDataset", () => {
 
   it("rejects a document with no person name", () => {
     const built = buildDataset(input()) as unknown as Record<string, unknown>;
-    expect(parseDataset({...built, person: {}})).toBeNull();
+    expect(parseDataset({ ...built, person: {} })).toBeNull();
   });
 
   it("rejects a document with a missing collection", () => {
-    const {experience: _dropped, ...rest} = buildDataset(input());
+    const { experience: _dropped, ...rest } = buildDataset(input());
     expect(parseDataset(rest)).toBeNull();
   });
 });

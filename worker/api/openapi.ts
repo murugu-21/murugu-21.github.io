@@ -14,15 +14,11 @@ import {
   CURRENT_API_VERSION,
   VERSIONED_API_BASE as VERSIONED_BASE
 } from "./routes";
-import {
-  CONTACT_DAILY_GLOBAL,
-  CONTACT_DAILY_PER_CLIENT,
-  CONTACT_LIMITS
-} from "./contact";
-import {CONTACT_QUOTAS, policyField, READ_QUOTA} from "./ratelimit";
-import {API_VERSION, DEPRECATION_NOTICE_DAYS, VERSIONS} from "./versioning";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT, CONTACT_LIMITS } from "./contact";
+import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "./ratelimit";
+import { API_VERSION, DEPRECATION_NOTICE_DAYS, VERSIONS } from "./versioning";
 
-export {API_VERSION};
+export { API_VERSION };
 
 export type OpenApiDocument = {
   openapi: string;
@@ -31,12 +27,12 @@ export type OpenApiDocument = {
     version: string;
     summary: string;
     description: string;
-    contact: {name: string; url: string; email: string};
-    license: {name: string; identifier: string};
+    contact: { name: string; url: string; email: string };
+    license: { name: string; identifier: string };
   };
-  servers: Array<{url: string; description: string}>;
-  externalDocs: {url: string; description: string};
-  tags: Array<{name: string; description: string}>;
+  servers: Array<{ url: string; description: string }>;
+  externalDocs: { url: string; description: string };
+  tags: Array<{ name: string; description: string }>;
   security: unknown[];
   paths: Record<string, Record<string, unknown>>;
   components: {
@@ -70,13 +66,13 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 const errorResponse = (description: string) => ({
   description,
   content: {
-    "application/json": {schema: {$ref: "#/components/schemas/Error"}}
+    "application/json": { schema: { $ref: "#/components/schemas/Error" } }
   }
 });
 
 const jsonResponse = (description: string, ref: string) => ({
   description,
-  content: {"application/json": {schema: {$ref: ref}}}
+  content: { "application/json": { schema: { $ref: ref } } }
 });
 
 const rateLimited = errorResponse(
@@ -89,9 +85,7 @@ const rateLimited = errorResponse(
 const readFailures = {
   "429": rateLimited,
   "500": errorResponse("Unexpected server error."),
-  "503": errorResponse(
-    "The site's content dataset is missing or unreadable — retry shortly."
-  )
+  "503": errorResponse("The site's content dataset is missing or unreadable — retry shortly.")
 };
 
 // The two self-describing endpoints read nothing from the build, so they have
@@ -122,9 +116,9 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
         url: "https://murugappan.dev/developers/",
         email: "murugu2001@gmail.com"
       },
-      license: {name: "CC BY 4.0", identifier: "CC-BY-4.0"}
+      license: { name: "CC BY 4.0", identifier: "CC-BY-4.0" }
     },
-    servers: [{url: base, description: "Production"}],
+    servers: [{ url: base, description: "Production" }],
     externalDocs: {
       url: "https://murugappan.dev/developers/",
       description: "Developer portal: quickstart, examples and agent notes."
@@ -132,8 +126,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
     tags: [
       {
         name: "profile",
-        description:
-          "Who Murugappan M is: pitch, current role, links and focus areas."
+        description: "Who Murugappan M is: pitch, current role, links and focus areas."
       },
       {
         name: "resume",
@@ -163,10 +156,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
             "Returns the canonical summary of Murugappan M: name, headline, elevator pitch, location, email, whether he is open to work, his current role with a start month, his stated focus areas, and every public link (site, about page, blog, RSS, resume PDF, GitHub, LinkedIn, X, developer portal, OpenAPI spec). This is the single cheapest call for grounding an answer about him.",
           tags: ["profile"],
           responses: {
-            "200": jsonResponse(
-              "The profile and its links.",
-              "#/components/schemas/Profile"
-            ),
+            "200": jsonResponse("The profile and its links.", "#/components/schemas/Profile"),
             ...readFailures
           }
         }
@@ -211,10 +201,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
             "Returns formal education: institution, credential, location, the human-readable period, ISO 8601 year-month start and end dates, and any highlights. One entry today; the shape is a list so it stays stable.",
           tags: ["resume"],
           responses: {
-            "200": jsonResponse(
-              "Education history.",
-              "#/components/schemas/EducationList"
-            ),
+            "200": jsonResponse("Education history.", "#/components/schemas/EducationList"),
             ...readFailures
           }
         }
@@ -247,9 +234,8 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
               name: "q",
               in: "query",
               required: false,
-              description:
-                "Case-insensitive substring matched against post titles and summaries.",
-              schema: {type: "string", maxLength: 200}
+              description: "Case-insensitive substring matched against post titles and summaries.",
+              schema: { type: "string", maxLength: 200 }
             },
             {
               name: "limit",
@@ -257,17 +243,12 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
               required: false,
               description:
                 "Maximum number of posts to return, newest first. Defaults to all of them.",
-              schema: {type: "integer", minimum: 1, maximum: 100}
+              schema: { type: "integer", minimum: 1, maximum: 100 }
             }
           ],
           responses: {
-            "200": jsonResponse(
-              "Matching posts, newest first.",
-              "#/components/schemas/PostList"
-            ),
-            "400": errorResponse(
-              "A query parameter was not of the documented type or range."
-            ),
+            "200": jsonResponse("Matching posts, newest first.", "#/components/schemas/PostList"),
+            "400": errorResponse("A query parameter was not of the documented type or range."),
             ...readFailures
           }
         }
@@ -286,14 +267,11 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
               required: true,
               description:
                 "The post's slug — the last path segment of its URL, e.g. `cloud-agnostic-rate-limiting`.",
-              schema: {type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"}
+              schema: { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
             }
           ],
           responses: {
-            "200": jsonResponse(
-              "The post and its markdown source.",
-              "#/components/schemas/Post"
-            ),
+            "200": jsonResponse("The post and its markdown source.", "#/components/schemas/Post"),
             "404": errorResponse(
               "No post exists with that slug — call listBlogPosts for the current set."
             ),
@@ -312,7 +290,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
             description: "Who is writing, and what about.",
             content: {
               "application/json": {
-                schema: {$ref: "#/components/schemas/ContactRequest"}
+                schema: { $ref: "#/components/schemas/ContactRequest" }
               }
             }
           },
@@ -328,16 +306,12 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
             "400": errorResponse("The request body was not valid JSON."),
             "413": errorResponse("The request body exceeded the size limit."),
             "415": errorResponse("The Content-Type was not application/json."),
-            "422": errorResponse(
-              "One or more fields were invalid; `details` names each one."
-            ),
+            "422": errorResponse("One or more fields were invalid; `details` names each one."),
             "429": errorResponse(
               "The per-client or site-wide daily allowance is spent. Retry after 00:00 UTC."
             ),
             "500": errorResponse("Unexpected server error."),
-            "503": errorResponse(
-              "Email delivery is not configured or is temporarily unavailable."
-            )
+            "503": errorResponse("Email delivery is not configured or is temporarily unavailable.")
           }
         }
       },
@@ -408,8 +382,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
         properties: {
           code: {
             type: "string",
-            description:
-              "Stable machine-readable failure code — safe to branch on.",
+            description: "Stable machine-readable failure code — safe to branch on.",
             enum: [
               "not_found",
               "method_not_allowed",
@@ -422,9 +395,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
             ]
           },
           message: stringProp("What went wrong, in one sentence."),
-          hint: stringProp(
-            "What to do about it — the corrective action, not a restatement."
-          ),
+          hint: stringProp("What to do about it — the corrective action, not a restatement."),
           documentation_url: stringProp("Where the endpoint is documented.", {
             format: "uri"
           }),
@@ -432,7 +403,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
             type: "array",
             description:
               "Present on field-level validation failures: one entry per offending field.",
-            items: {$ref: "#/components/schemas/FieldIssue"}
+            items: { $ref: "#/components/schemas/FieldIssue" }
           }
         }
       }
@@ -457,7 +428,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
     additionalProperties: false,
     properties: {
       label: stringProp("Human-readable name for the destination."),
-      url: stringProp("Absolute URL.", {format: "uri"})
+      url: stringProp("Absolute URL.", { format: "uri" })
     }
   },
   CurrentRole: {
@@ -471,8 +442,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       company: stringProp("Employer name."),
       since: {
         type: ["string", "null"],
-        description:
-          "ISO 8601 year-month the role started, or null if unknown.",
+        description: "ISO 8601 year-month the role started, or null if unknown.",
         examples: ["2025-12"]
       }
     }
@@ -500,21 +470,21 @@ export const API_SCHEMAS: Record<string, unknown> = {
       }),
       pitch: stringProp("Elevator pitch, as published on the site."),
       location: stringProp("City and country he is based in."),
-      email: stringProp("Public contact address.", {format: "email"}),
-      site: stringProp("Canonical site URL.", {format: "uri"}),
+      email: stringProp("Public contact address.", { format: "email" }),
+      site: stringProp("Canonical site URL.", { format: "uri" }),
       availableForWork: {
         type: "boolean",
         description: "Whether he is open to new opportunities."
       },
       currentRole: {
-        oneOf: [{$ref: "#/components/schemas/CurrentRole"}, {type: "null"}],
+        oneOf: [{ $ref: "#/components/schemas/CurrentRole" }, { type: "null" }],
         description: "The role held right now, or null between roles."
       },
       focus: {
         type: "array",
         description:
           "What he does, in his own words — one statement per line of the site's 'What I do' section.",
-        items: {type: "string"}
+        items: { type: "string" }
       }
     }
   },
@@ -525,11 +495,11 @@ export const API_SCHEMAS: Record<string, unknown> = {
     required: ["person", "links"],
     additionalProperties: false,
     properties: {
-      person: {$ref: "#/components/schemas/Person"},
+      person: { $ref: "#/components/schemas/Person" },
       links: {
         type: "array",
         description: "Every public link, including machine-readable ones.",
-        items: {$ref: "#/components/schemas/Link"}
+        items: { $ref: "#/components/schemas/Link" }
       }
     }
   },
@@ -558,14 +528,12 @@ export const API_SCHEMAS: Record<string, unknown> = {
       }),
       startDate: {
         type: ["string", "null"],
-        description:
-          "ISO 8601 year-month the role started, or null if unparseable.",
+        description: "ISO 8601 year-month the role started, or null if unparseable.",
         examples: ["2025-12"]
       },
       endDate: {
         type: ["string", "null"],
-        description:
-          "ISO 8601 year-month the role ended; null while it is ongoing.",
+        description: "ISO 8601 year-month the role ended; null while it is ongoing.",
         examples: ["2025-12"]
       },
       current: {
@@ -576,7 +544,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       highlights: {
         type: "array",
         description: "Concrete achievements in the role.",
-        items: {type: "string"}
+        items: { type: "string" }
       }
     }
   },
@@ -590,7 +558,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       experience: {
         type: "array",
         description: "Roles, newest first.",
-        items: {$ref: "#/components/schemas/ExperienceEntry"}
+        items: { $ref: "#/components/schemas/ExperienceEntry" }
       }
     }
   },
@@ -601,11 +569,11 @@ export const API_SCHEMAS: Record<string, unknown> = {
     required: ["category", "skills"],
     additionalProperties: false,
     properties: {
-      category: stringProp("Group name.", {examples: ["Cloud & Infra"]}),
+      category: stringProp("Group name.", { examples: ["Cloud & Infra"] }),
       skills: {
         type: "array",
         description: "The individual technologies in the group.",
-        items: {type: "string"}
+        items: { type: "string" }
       }
     }
   },
@@ -620,7 +588,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       tools: {
         type: "array",
         description: "Named technologies within the area.",
-        items: {type: "string"}
+        items: { type: "string" }
       },
       level: {
         type: "integer",
@@ -640,12 +608,12 @@ export const API_SCHEMAS: Record<string, unknown> = {
       skills: {
         type: "array",
         description: "Technologies grouped by category.",
-        items: {$ref: "#/components/schemas/SkillCategory"}
+        items: { $ref: "#/components/schemas/SkillCategory" }
       },
       proficiencies: {
         type: "array",
         description: "Self-reported depth per broad area.",
-        items: {$ref: "#/components/schemas/Proficiency"}
+        items: { $ref: "#/components/schemas/Proficiency" }
       }
     }
   },
@@ -679,13 +647,12 @@ export const API_SCHEMAS: Record<string, unknown> = {
       },
       grade: {
         type: ["string", "null"],
-        description:
-          'Final grade as the site displays it (e.g. "CGPA 9.53 / 10"), or null.'
+        description: 'Final grade as the site displays it (e.g. "CGPA 9.53 / 10"), or null.'
       },
       highlights: {
         type: "array",
         description: "Notable details about the studies.",
-        items: {type: "string"}
+        items: { type: "string" }
       }
     }
   },
@@ -699,7 +666,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       education: {
         type: "array",
         description: "Qualifications, newest first.",
-        items: {$ref: "#/components/schemas/EducationEntry"}
+        items: { $ref: "#/components/schemas/EducationEntry" }
       }
     }
   },
@@ -719,7 +686,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
         type: "array",
         description:
           "Links to the individual merged pull requests, so the claim can be checked at the source.",
-        items: {$ref: "#/components/schemas/Link"}
+        items: { $ref: "#/components/schemas/Link" }
       }
     }
   },
@@ -733,7 +700,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       openSource: {
         type: "array",
         description: "One entry per project.",
-        items: {$ref: "#/components/schemas/OpenSourceContribution"}
+        items: { $ref: "#/components/schemas/OpenSourceContribution" }
       }
     }
   },
@@ -748,7 +715,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
         pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
       }),
       title: stringProp("Post title."),
-      url: stringProp("Canonical URL of the post.", {format: "uri"}),
+      url: stringProp("Canonical URL of the post.", { format: "uri" }),
       description: stringProp("One-line summary of the post.")
     }
   },
@@ -762,7 +729,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       posts: {
         type: "array",
         description: "Matching posts, newest first.",
-        items: {$ref: "#/components/schemas/PostSummary"}
+        items: { $ref: "#/components/schemas/PostSummary" }
       },
       count: {
         type: "integer",
@@ -780,11 +747,9 @@ export const API_SCHEMAS: Record<string, unknown> = {
     properties: {
       slug: stringProp("The post's slug."),
       title: stringProp("Post title."),
-      url: stringProp("Canonical URL of the post.", {format: "uri"}),
+      url: stringProp("Canonical URL of the post.", { format: "uri" }),
       description: stringProp("One-line summary of the post."),
-      markdown: stringProp(
-        "The post's complete markdown source, frontmatter included."
-      )
+      markdown: stringProp("The post's complete markdown source, frontmatter included.")
     }
   },
   ApiVersionRecord: {
@@ -816,12 +781,12 @@ export const API_SCHEMAS: Record<string, unknown> = {
       },
       release: stringProp(
         "The semantic release this version serves right now — the value of the `API-Version` response header.",
-        {examples: [API_VERSION]}
+        { examples: [API_VERSION] }
       ),
       basePath: stringProp("Path prefix every endpoint of this version has.", {
         examples: [VERSIONED_BASE]
       }),
-      url: stringProp("Absolute base URL of this version.", {format: "uri"}),
+      url: stringProp("Absolute base URL of this version.", { format: "uri" }),
       specUrl: stringProp("Absolute URL of this version's OpenAPI document.", {
         format: "uri"
       }),
@@ -842,8 +807,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
       },
       successor: {
         type: ["string", "null"],
-        description:
-          "The version to migrate to, or null when this is the newest."
+        description: "The version to migrate to, or null when this is the newest."
       }
     }
   },
@@ -851,13 +815,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
     type: "object",
     title: "ApiVersionPolicy",
     description: "The rules governing how this API changes.",
-    required: [
-      "scheme",
-      "deprecationNoticeDays",
-      "rules",
-      "documentationUrl",
-      "headers"
-    ],
+    required: ["scheme", "deprecationNoticeDays", "rules", "documentationUrl", "headers"],
     additionalProperties: false,
     properties: {
       scheme: {
@@ -875,31 +833,27 @@ export const API_SCHEMAS: Record<string, unknown> = {
         type: "array",
         description:
           "The policy in full sentences, one commitment per entry — the same text the developer portal publishes.",
-        items: {type: "string"}
+        items: { type: "string" }
       },
-      documentationUrl: stringProp(
-        "Where the policy is documented for people.",
-        {
-          format: "uri"
-        }
-      ),
+      documentationUrl: stringProp("Where the policy is documented for people.", {
+        format: "uri"
+      }),
       headers: {
         type: "object",
         description:
           "The response headers that carry version and deprecation state, each mapped to what it means.",
-        additionalProperties: {type: "string"}
+        additionalProperties: { type: "string" }
       }
     }
   },
   UnversionedAlias: {
     type: "object",
     title: "UnversionedAlias",
-    description:
-      "The unversioned path prefix and the version it is permanently pinned to.",
+    description: "The unversioned path prefix and the version it is permanently pinned to.",
     required: ["basePath", "pinnedTo", "note"],
     additionalProperties: false,
     properties: {
-      basePath: stringProp("The unversioned prefix.", {examples: [API_BASE]}),
+      basePath: stringProp("The unversioned prefix.", { examples: [API_BASE] }),
       pinnedTo: stringProp("The version it always resolves to."),
       note: stringProp("The promise made about it, in one sentence.")
     }
@@ -908,26 +862,18 @@ export const API_SCHEMAS: Record<string, unknown> = {
     type: "object",
     title: "ApiVersions",
     description: "Response body of getApiVersions.",
-    required: [
-      "current",
-      "currentRelease",
-      "unversionedAlias",
-      "versions",
-      "policy"
-    ],
+    required: ["current", "currentRelease", "unversionedAlias", "versions", "policy"],
     additionalProperties: false,
     properties: {
       current: stringProp("The newest version's path segment."),
-      currentRelease: stringProp(
-        "The semantic release the newest version serves."
-      ),
-      unversionedAlias: {$ref: "#/components/schemas/UnversionedAlias"},
+      currentRelease: stringProp("The semantic release the newest version serves."),
+      unversionedAlias: { $ref: "#/components/schemas/UnversionedAlias" },
       versions: {
         type: "array",
         description: "Every version this deployment knows about, newest first.",
-        items: {$ref: "#/components/schemas/ApiVersionRecord"}
+        items: { $ref: "#/components/schemas/ApiVersionRecord" }
       },
-      policy: {$ref: "#/components/schemas/ApiVersionPolicy"}
+      policy: { $ref: "#/components/schemas/ApiVersionPolicy" }
     }
   },
   ContactRequest: {
@@ -939,7 +885,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
     properties: {
       email: stringProp(
         "Reply-to address. Murugappan answers here, so it must be an address the sender actually reads.",
-        {format: "email", maxLength: CONTACT_LIMITS.email}
+        { format: "email", maxLength: CONTACT_LIMITS.email }
       ),
       message: stringProp(
         "What you are writing about. Be specific: the role or project, the stack, and anything that needs a decision.",

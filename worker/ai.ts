@@ -1,5 +1,5 @@
-import {TOOLS, type ModelMessage} from "./prompt";
-import {consumeSse, type StreamResult, type Usage} from "./sse";
+import { TOOLS, type ModelMessage } from "./prompt";
+import { consumeSse, type StreamResult, type Usage } from "./sse";
 
 // DeepSeek V4-Flash is the only chat provider. It replaced Workers AI
 // (2026-08-27), which was slow enough to be visible in the widget and whose
@@ -23,7 +23,7 @@ export function isInsufficientBalance(err: unknown): boolean {
   return err instanceof DeepseekError && err.status === 402;
 }
 
-export type DeepseekBalance = {available: boolean; totalUsd: number};
+export type DeepseekBalance = { available: boolean; totalUsd: number };
 
 // GET /user/balance on the same key that pays for chat. `is_available` is
 // DeepSeek's own verdict on whether the account can serve requests; the
@@ -33,12 +33,12 @@ export async function fetchDeepseekBalance(
   fetcher: typeof fetch = fetch
 ): Promise<DeepseekBalance> {
   const res = await fetcher(`${DEEPSEEK_BASE_URL}/user/balance`, {
-    headers: {authorization: `Bearer ${apiKey}`}
+    headers: { authorization: `Bearer ${apiKey}` }
   });
   if (!res.ok) throw new DeepseekError(res.status);
   const body = (await res.json()) as {
     is_available?: unknown;
-    balance_infos?: {currency?: unknown; total_balance?: unknown}[];
+    balance_infos?: { currency?: unknown; total_balance?: unknown }[];
   };
   const usd = body.balance_infos?.find(b => b.currency === "USD");
   const totalUsd = Number(usd?.total_balance);
@@ -79,13 +79,13 @@ export async function runDeepseekExchange(
       messages,
       tools: TOOLS,
       stream: true,
-      stream_options: {include_usage: true},
+      stream_options: { include_usage: true },
       // Let V4-Flash reason before answering: it picks the fetch_page and
       // capture_opportunity tool calls more reliably. Safe now that max_tokens
       // is gone — reasoning used to eat the whole 800-token cap and return an
       // empty reply. `reasoning_content` deltas are dropped by consumeSse, so
       // the visitor sees only the answer (typing dots cover the extra pause).
-      thinking: {type: "enabled"}
+      thinking: { type: "enabled" }
       // No max_tokens: it bounded the Workers AI neuron cost per call, and on
       // a paid API it only risked truncating a long answer mid-sentence.
       // Reply length is governed by the prompt, and spend by the account

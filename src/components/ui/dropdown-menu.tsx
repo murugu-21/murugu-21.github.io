@@ -6,23 +6,14 @@
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 
-import {cn} from "../../lib/utils";
+import { cn } from "../../lib/utils";
 
-function DropdownMenu(
-  props: React.ComponentProps<typeof DropdownMenuPrimitive.Root>
-) {
+function DropdownMenu(props: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
   return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
 
-function DropdownMenuTrigger(
-  props: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>
-) {
-  return (
-    <DropdownMenuPrimitive.Trigger
-      data-slot="dropdown-menu-trigger"
-      {...props}
-    />
-  );
+function DropdownMenuTrigger(props: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
+  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
 }
 
 function DropdownMenuContent({
@@ -38,9 +29,7 @@ function DropdownMenuContent({
       container={
         typeof document === "undefined"
           ? undefined
-          : (container ??
-            document.getElementById("chat-widget-root") ??
-            undefined)
+          : (container ?? document.getElementById("chat-widget-root") ?? undefined)
       }
     >
       <DropdownMenuPrimitive.Content
@@ -72,9 +61,4 @@ function DropdownMenuItem({
   );
 }
 
-export {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem
-};
+export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem };

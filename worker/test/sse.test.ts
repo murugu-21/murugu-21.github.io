@@ -1,6 +1,6 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {consumeSse} from "../sse";
+import { consumeSse } from "../sse";
 
 function sseStream(events: string[]): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -16,10 +16,7 @@ describe("consumeSse", () => {
   it("accumulates response-shape deltas and reports them", async () => {
     const deltas: string[] = [];
     const result = await consumeSse(
-      sseStream([
-        'data: {"response":"Hel"}\n\n',
-        'data: {"response":"lo"}\n\ndata: [DONE]\n\n'
-      ]),
+      sseStream(['data: {"response":"Hel"}\n\n', 'data: {"response":"lo"}\n\ndata: [DONE]\n\n']),
       t => deltas.push(t)
     );
     expect(result.content).toBe("Hello");
@@ -37,7 +34,7 @@ describe("consumeSse", () => {
       ]),
       () => {}
     );
-    expect(result.usage).toEqual({promptTokens: 1200, completionTokens: 34});
+    expect(result.usage).toEqual({ promptTokens: 1200, completionTokens: 34 });
   });
 
   it("accumulates chat-completions deltas split across reads", async () => {

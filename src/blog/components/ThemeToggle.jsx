@@ -1,8 +1,8 @@
 import Toggle from "react-toggle";
 import moon from "../images/moon.png";
 import sun from "../images/sun.png";
-import {useTheme} from "../utils/useTheme";
-import {tag} from "../../lib/analytics";
+import { useTheme } from "../utils/useTheme";
+import { tag } from "../../lib/analytics";
 
 const ThemeToggle = () => {
   // null until the bootstrap script has run, which keeps the toggle out of the
@@ -13,22 +13,8 @@ const ThemeToggle = () => {
     theme && (
       <Toggle
         icons={{
-          checked: (
-            <img
-              src={moon.src}
-              width={16}
-              height={16}
-              alt="moon image for dark mode"
-            />
-          ),
-          unchecked: (
-            <img
-              src={sun.src}
-              width={16}
-              height={16}
-              alt="sun image for light mode"
-            />
-          )
+          checked: <img src={moon.src} width={16} height={16} alt="moon image for dark mode" />,
+          unchecked: <img src={sun.src} width={16} height={16} alt="sun image for light mode" />
         }}
         checked={theme === "dark"}
         onChange={e => {

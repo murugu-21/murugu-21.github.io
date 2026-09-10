@@ -1,4 +1,4 @@
-import {socialMediaLinks} from "./portfolio";
+import { socialMediaLinks } from "./portfolio";
 
 // Resume-only contact block. The phone number is never hardcoded — it comes
 // from the RESUME_PHONE build-time env var (set in Cloudflare build env and,

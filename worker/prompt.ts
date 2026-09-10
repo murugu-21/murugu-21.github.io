@@ -1,4 +1,4 @@
-import type {ChatHistoryEntry} from "./protocol";
+import type { ChatHistoryEntry } from "./protocol";
 
 export const MAX_HISTORY_MESSAGES = 20;
 // Per-visitor fairness cap (rolling 24h). This is the only PACING on spend:
@@ -17,7 +17,7 @@ export const ROOM_DAILY_LIMIT = 40;
 export type ModelToolCall = {
   id: string;
   type: "function";
-  function: {name: string; arguments: string};
+  function: { name: string; arguments: string };
 };
 
 export type ModelMessage = {
@@ -45,8 +45,7 @@ export const CAPTURE_TOOL = {
         },
         contact: {
           type: "string",
-          description:
-            "How to reach the visitor: email, LinkedIn URL, or phone."
+          description: "How to reach the visitor: email, LinkedIn URL, or phone."
         },
         summary: {
           type: "string",
@@ -84,10 +83,8 @@ export const TOOLS = [CAPTURE_TOOL, FETCH_TOOL] as const;
 
 export function parseFetchArguments(raw: string): string | null {
   try {
-    const args = JSON.parse(raw) as {url?: unknown};
-    return typeof args.url === "string" && args.url.length > 0
-      ? args.url
-      : null;
+    const args = JSON.parse(raw) as { url?: unknown };
+    return typeof args.url === "string" && args.url.length > 0 ? args.url : null;
   } catch {
     return null;
   }
@@ -132,7 +129,7 @@ export function buildMessages(
   page?: string
 ): ModelMessage[] {
   const messages: ModelMessage[] = [
-    {role: "system", content: buildSystemPrompt(grounding)},
+    { role: "system", content: buildSystemPrompt(grounding) },
     ...history.slice(-MAX_HISTORY_MESSAGES)
   ];
   // Ephemeral context, never persisted: lets "this post"/"this page" resolve

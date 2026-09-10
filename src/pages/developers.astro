@@ -6,16 +6,10 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import ScrollTop from "../components/ScrollTop.astro";
-import {buildOpenApiDocument} from "../../worker/api/openapi";
-import {
-  CONTACT_DAILY_GLOBAL,
-  CONTACT_DAILY_PER_CLIENT
-} from "../../worker/api/contact";
-import {
-  LATEST_PROTOCOL_VERSION,
-  LEGACY_PROTOCOL_VERSIONS
-} from "../../worker/mcp/protocol";
-import {MCP_TOOLS} from "../../worker/mcp/tools";
+import { buildOpenApiDocument } from "../../worker/api/openapi";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "../../worker/api/contact";
+import { LATEST_PROTOCOL_VERSION, LEGACY_PROTOCOL_VERSIONS } from "../../worker/mcp/protocol";
+import { MCP_TOOLS } from "../../worker/mcp/tools";
 import {
   API_BASE,
   API_PATHS,
@@ -29,12 +23,8 @@ import {
   POLICY_RULES,
   VERSIONS
 } from "../../worker/api/versioning";
-import {
-  CONTACT_QUOTAS,
-  policyField,
-  READ_QUOTA
-} from "../../worker/api/ratelimit";
-import {MCP_SERVER_NAME, MCP_SERVER_SCHEMA} from "../../worker/well-known";
+import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "../../worker/api/ratelimit";
+import { MCP_SERVER_NAME, MCP_SERVER_SCHEMA } from "../../worker/well-known";
 
 const SITE = "https://murugappan.dev";
 const spec = buildOpenApiDocument(SITE);
@@ -43,7 +33,7 @@ type Operation = {
   operationId: string;
   summary: string;
   description: string;
-  parameters?: Array<{name: string; in: string; required?: boolean}>;
+  parameters?: Array<{ name: string; in: string; required?: boolean }>;
 };
 
 const operations = Object.entries(spec.paths).flatMap(([path, item]) =>
@@ -125,7 +115,7 @@ const machineFiles = [
     path: "/.well-known/mcp.json",
     what: "MCP server manifest (server.json), for a client that installs MCP servers from a manifest."
   },
-  {path: "/mcp.json", what: "The same manifest at the site root."},
+  { path: "/mcp.json", what: "The same manifest at the site root." },
   {
     path: "/mcp",
     what: "Model Context Protocol server (Streamable HTTP, POST only, no auth)."
@@ -154,7 +144,7 @@ const machineFiles = [
     path: "/blog/llms-full.txt",
     what: "Full text of every blog post in one file."
   },
-  {path: "/sitemap.xml", what: "Every indexable URL on the site."},
+  { path: "/sitemap.xml", what: "Every indexable URL on the site." },
   {
     path: "/resume.pdf",
     what: "ATS-parseable resume, generated from the same data this API serves."
@@ -178,7 +168,7 @@ const apiJsonLd = {
       description: spec.info.summary,
       documentation: `${SITE}/developers/`,
       termsOfService: "https://creativecommons.org/licenses/by/4.0/",
-      provider: {"@id": `${SITE}/#person`},
+      provider: { "@id": `${SITE}/#person` },
       potentialAction: spec.tags.map(tag => ({
         "@type": "ConsumeAction",
         name: tag.name,
@@ -192,8 +182,8 @@ const apiJsonLd = {
       description:
         "API reference, authentication, versioning and deprecation policy, rate-limit headers, sandbox, OpenAPI 3.1.0 specification and MCP server for murugappan.dev.",
       url: `${SITE}/developers/`,
-      about: {"@id": `${SITE}/developers/#api`},
-      author: {"@id": `${SITE}/#person`},
+      about: { "@id": `${SITE}/developers/#api` },
+      author: { "@id": `${SITE}/#person` },
       inLanguage: "en"
     }
   ]
@@ -208,12 +198,13 @@ const apiJsonLd = {
   <main class="dev-page">
     <h1>murugappan.dev API — developer portal</h1>
     <p class="pitch">
-      A public, unauthenticated JSON API over everything this site publishes
-      about <a href="/about/">Murugappan M</a> — profile, work experience, skills,
-      education, open-source work and blog posts — plus one write endpoint for passing
-      along an opportunity. Built for AI agents and for anyone who would rather parse
-      JSON than scrape HTML. This page is the whole developer reference: endpoints,
-      authentication, <a href="#versioning">versioning and deprecation</a>,
+      A public, unauthenticated JSON API over everything this site publishes about <a href="/about/"
+        >Murugappan M</a
+      > — profile, work experience, skills, education, open-source work and blog posts — plus one write
+      endpoint for passing along an opportunity. Built for AI agents and for anyone who would rather parse
+      JSON than scrape HTML. This page is the whole developer reference: endpoints, authentication, <a
+        href="#versioning">versioning and deprecation</a
+      >,
       <a href="#rate-limits">rate-limit headers</a>, the
       <a href="/openapi.json">OpenAPI 3.1.0 specification</a> and the
       <a href="#mcp">murugappan.dev MCP server</a>.
@@ -232,66 +223,54 @@ const apiJsonLd = {
     <section>
       <h2 id="when-to-use">When to use this API</h2>
       <p>
-        Reach for it when you need grounded facts about Murugappan M as a
-        candidate or a collaborator:
+        Reach for it when you need grounded facts about Murugappan M as a candidate or a
+        collaborator:
       </p>
       <ul>
         <li>
-          <strong>“Who is this person?”</strong> — one call to <code
-            >GET /api/profile</code
-          > returns the pitch, current role, location and every public link.
+          <strong>“Who is this person?”</strong> — one call to <code>GET /api/profile</code> returns the
+          pitch, current role, location and every public link.
         </li>
         <li>
-          <strong>“Has he actually shipped X?”</strong> — <code
-            >GET /api/experience</code
-          > gives dated roles with concrete, per-role achievements, and <code
-            >GET /api/open-source</code
-          > links the individual merged pull requests so a claim can be checked at
-          the source.
+          <strong>“Has he actually shipped X?”</strong> — <code>GET /api/experience</code> gives dated
+          roles with concrete, per-role achievements, and <code>GET /api/open-source</code> links the
+          individual merged pull requests so a claim can be checked at the source.
         </li>
         <li>
-          <strong>“Does he know technology Y?”</strong> — <code
-            >GET /api/skills</code
-          > answers from a typed list instead of an inference over prose.
+          <strong>“Does he know technology Y?”</strong> — <code>GET /api/skills</code> answers from a
+          typed list instead of an inference over prose.
         </li>
         <li>
-          <strong>“What has he written about Z?”</strong> — <code
-            >GET /api/posts?q=…</code
-          > searches titles and summaries; <code
-            >GET /api/posts/&#123;slug&#125;</code
-          > returns a post's full markdown for quoting or summarising.
+          <strong>“What has he written about Z?”</strong> — <code>GET /api/posts?q=…</code> searches titles
+          and summaries; <code>GET /api/posts/&#123;slug&#125;</code> returns a post's full markdown for
+          quoting or summarising.
         </li>
         <li>
-          <strong>“Reach out about a role.”</strong> — <code
-            >POST /api/contact</code
-          > delivers a message to his inbox. Use it for one concrete, specific opportunity
-          on a human's behalf.
+          <strong>“Reach out about a role.”</strong> — <code>POST /api/contact</code> delivers a message
+          to his inbox. Use it for one concrete, specific opportunity on a human's behalf.
         </li>
       </ul>
       <p>
-        <strong>When not to use it.</strong> It is not a search engine, a resume parser
-        or a job-matching service, and it holds data about exactly one person. For
-        a conversation rather than a payload, use the chat socket below.
+        <strong>When not to use it.</strong> It is not a search engine, a resume parser or a job-matching
+        service, and it holds data about exactly one person. For a conversation rather than a payload,
+        use the chat socket below.
       </p>
     </section>
 
     <section>
       <h2 id="quickstart">Quickstart</h2>
       <p>
-        No signup, no key, no client library. Base URL <code
-          >{SITE}{VERSIONED_API_BASE}</code
-        > — see <a href="#versioning">Versioning</a> for why the version is in the
-        path and why <code>{API_BASE}/…</code> works too. Every response is JSON with
-        permissive CORS, so a browser-side agent can call it directly.
+        No signup, no key, no client library. Base URL <code>{SITE}{VERSIONED_API_BASE}</code> — see <a
+          href="#versioning">Versioning</a
+        > for why the version is in the path and why <code>{API_BASE}/…</code> works too. Every response
+        is JSON with permissive CORS, so a browser-side agent can call it directly.
       </p>
       <pre><code>{curlProfile}</code></pre>
       <p>Search the blog and read one post:</p>
       <pre><code>{curlPost}
 curl -s {SITE}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</code></pre>
       <p>
-        Validate a contact payload without sending anything (see <a
-          href="#sandbox">Sandbox</a
-        >):
+        Validate a contact payload without sending anything (see <a href="#sandbox">Sandbox</a>):
       </p>
       <pre><code>{curlDryRun}</code></pre>
     </section>
@@ -327,50 +306,44 @@ curl -s {SITE}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</code></pr
         </table>
       </div>
       <p>
-        Full parameter and response schemas — including the ones the table
-        summarises — live in the <a href="/openapi.json">OpenAPI document</a>.
+        Full parameter and response schemas — including the ones the table summarises — live in the <a
+          href="/openapi.json">OpenAPI document</a
+        >.
       </p>
     </section>
 
     <section>
       <h2 id="authentication">Authentication &amp; API keys</h2>
       <p>
-        <strong>There are none, by design.</strong> Every endpoint is public and unauthenticated:
-        no API key, no token, no signup, nothing to rotate. If a client asks you for
-        credentials for this API, it is misconfigured. Read endpoints are cached for
-        five minutes at the edge.
+        <strong>There are none, by design.</strong> Every endpoint is public and unauthenticated: no API
+        key, no token, no signup, nothing to rotate. If a client asks you for credentials for this API,
+        it is misconfigured. Read endpoints are cached for five minutes at the edge.
       </p>
     </section>
 
     <section>
       <h2 id="versioning">Versioning &amp; deprecation policy</h2>
       <p>
-        The version is a path segment: every endpoint lives under <code
-          >{VERSIONED_API_BASE}</code
-        >. There is no version header and no version query parameter — the URL
-        <em>is</em> the version. The unversioned <code>{API_BASE}/…</code> prefix
-        is a <strong>permanent alias</strong> for <code
-          >{CURRENT_API_VERSION}</code
-        > and will never be repointed at a later major version, so both forms are
-        safe to hard-code.
+        The version is a path segment: every endpoint lives under <code>{VERSIONED_API_BASE}</code>.
+        There is no version header and no version query parameter — the URL
+        <em>is</em> the version. The unversioned <code>{API_BASE}/…</code> prefix is a <strong
+          >permanent alias</strong
+        > for <code>{CURRENT_API_VERSION}</code> and will never be repointed at a later major version,
+        so both forms are safe to hard-code.
       </p>
       <ul>
         {POLICY_RULES.map(rule => <li>{rule}</li>)}
       </ul>
-      <p>
-        Every response names the release it served and the versions still
-        answering:
-      </p>
+      <p>Every response names the release it served and the versions still answering:</p>
       <pre><code>API-Version: {API_VERSION}
 API-Supported-Versions: {VERSIONS.filter(v => v.status !== "sunset")
           .map(v => v.version)
           .join(", ")}
 Link: &lt;{API_PATHS.versions}&gt;; rel="version-history"</code></pre>
       <p>
-        Once a version is deprecated, every one of its responses additionally
-        carries <code>Deprecation</code> (<a
-          href="https://www.rfc-editor.org/rfc/rfc9745">RFC 9745</a
-        >), <code>Sunset</code> (<a
+        Once a version is deprecated, every one of its responses additionally carries <code
+          >Deprecation</code
+        > (<a href="https://www.rfc-editor.org/rfc/rfc9745">RFC 9745</a>), <code>Sunset</code> (<a
           href="https://www.rfc-editor.org/rfc/rfc8594">RFC 8594</a
         >) and <code>Link</code> relations <code>deprecation</code> and
         <code>successor-version</code>:
@@ -380,16 +353,15 @@ Sunset: Thu, 01 Jul 2027 00:00:00 GMT
 Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;; rel="successor-version"</code></pre>
       <p>
         At least {DEPRECATION_NOTICE_DAYS} days pass between the first
-        <code>Deprecation</code> header and the sunset date; after sunset the version
-        answers <code>410</code> with the usual error envelope pointing at its successor.
-        Nothing is deprecated today —
+        <code>Deprecation</code> header and the sunset date; after sunset the version answers <code
+          >410</code
+        > with the usual error envelope pointing at its successor. Nothing is deprecated today —
         <code>{CURRENT_VERSION_RECORD.version}</code> is
-        {CURRENT_VERSION_RECORD.status}, released {
-          CURRENT_VERSION_RECORD.releasedOn
-        }. The whole of this section is served as data at <a
-          href={API_PATHS.versions}><code>{API_PATHS.versions}</code></a
-        > (and <code>{API_BASE}/versions</code>), so a client can check it
-        without parsing this page.
+        {CURRENT_VERSION_RECORD.status}, released {CURRENT_VERSION_RECORD.releasedOn}. The whole of
+        this section is served as data at <a href={API_PATHS.versions}
+          ><code>{API_PATHS.versions}</code></a
+        > (and <code>{API_BASE}/versions</code>), so a client can check it without parsing this
+        page.
       </p>
     </section>
 
@@ -401,11 +373,12 @@ Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;;
           >IETF <code>RateLimit</code> header fields</a
         >, so a client can self-throttle without reading this page:
         <code>RateLimit-Policy</code> lists the quota policies that apply, and
-        <code>RateLimit</code> is the live snapshot of the one closest to exhaustion
-        — <code>r</code> is what is left, <code>t</code> is seconds until it resets.
-        The de-facto <code>X-RateLimit-Limit</code>,
-        <code>X-RateLimit-Remaining</code> and <code>X-RateLimit-Reset</code> trio
-        mirrors the same numbers for tooling that only looks for those, and a
+        <code>RateLimit</code> is the live snapshot of the one closest to exhaustion — <code>r</code
+        > is what is left, <code>t</code> is seconds until it resets. The de-facto <code
+          >X-RateLimit-Limit</code
+        >,
+        <code>X-RateLimit-Remaining</code> and <code>X-RateLimit-Reset</code> trio mirrors the same numbers
+        for tooling that only looks for those, and a
         <code>429</code> adds <code>Retry-After</code>.
       </p>
       <pre><code>RateLimit-Policy: {policyField([READ_QUOTA])}
@@ -414,102 +387,93 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
         }</code></pre>
       <p>
         <strong>Reads</strong> are effectively unmetered: the fair-use ceiling is
-        {READ_QUOTA.quota} requests per {READ_QUOTA.windowSeconds} seconds per client
-        address, counted in the edge location that serves you — a client spread across
-        several locations gets that allowance in each, so the advertised number is
-        a floor, not a cap. Read responses are cacheable for five minutes, so a cached
-        response may carry a stale <code>RateLimit</code> snapshot; treat it as advisory
+        {READ_QUOTA.quota} requests per {READ_QUOTA.windowSeconds} seconds per client address, counted
+        in the edge location that serves you — a client spread across several locations gets that allowance
+        in each, so the advertised number is a floor, not a cap. Read responses are cacheable for five
+        minutes, so a cached response may carry a stale <code>RateLimit</code> snapshot; treat it as advisory
         and trust the freshest one you have.
       </p>
       <p>
-        <strong><code>POST {API_PATHS.contact}</code></strong> sends real email, so
-        it is genuinely metered: {CONTACT_DAILY_PER_CLIENT} requests per client IP
-        per UTC day and {CONTACT_DAILY_GLOBAL} site-wide. Past either it answers
+        <strong><code>POST {API_PATHS.contact}</code></strong> sends real email, so it is genuinely metered:
+        {CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day and {CONTACT_DAILY_GLOBAL} site-wide.
+        Past either it answers
         <code>429</code> with code <code>rate_limited</code>, a
-        <code>Retry-After</code> counting down to 00:00 UTC, and the tier that ran
-        out:
+        <code>Retry-After</code> counting down to 00:00 UTC, and the tier that ran out:
       </p>
       <pre><code>RateLimit-Policy: {policyField(CONTACT_QUOTAS)}
 RateLimit: "{CONTACT_QUOTAS[0].name}";r=0;t=39122
 Retry-After: 39122</code></pre>
       <p>
-        A rejected request never spends a slot, and neither does a dry run — but
-        a dry run still reports the allowance, so it is the cheapest way to size
-        a real send. All of these headers are listed in
-        <code>Access-Control-Expose-Headers</code>, so a browser-side agent can
-        read them too.
+        A rejected request never spends a slot, and neither does a dry run — but a dry run still
+        reports the allowance, so it is the cheapest way to size a real send. All of these headers
+        are listed in
+        <code>Access-Control-Expose-Headers</code>, so a browser-side agent can read them too.
       </p>
     </section>
 
     <section>
       <h2 id="sandbox">Sandbox</h2>
       <p>
-        The read endpoints <em>are</em> the sandbox: they are public, unauthenticated
-        and side-effect free, so production is safe to explore as much as you like
-        — there is no separate environment to provision.
+        The read endpoints <em>are</em> the sandbox: they are public, unauthenticated and side-effect
+        free, so production is safe to explore as much as you like — there is no separate environment
+        to provision.
       </p>
       <p>
         The one endpoint with a side effect has a dry-run mode instead. Send
-        <code>"dryRun": true</code> to <code>POST /api/contact</code> and the request
-        is validated exactly as a real one would be, then answered
-        <code>200</code> with <code>status: "validated"</code> — no email, no rate-limit
-        slot. Repeat until it validates, then resend without the flag.
+        <code>"dryRun": true</code> to <code>POST /api/contact</code> and the request is validated exactly
+        as a real one would be, then answered
+        <code>200</code> with <code>status: "validated"</code> — no email, no rate-limit slot. Repeat
+        until it validates, then resend without the flag.
       </p>
     </section>
 
     <section>
       <h2 id="errors">Errors</h2>
       <p>
-        Every failure under <code>/api</code> — including a 404 on a path that does
-        not exist — returns the same JSON envelope. No HTML error page is ever served
-        under <code>/api</code>. Branch on <code>error.code</code>, not on the
-        message.
+        Every failure under <code>/api</code> — including a 404 on a path that does not exist — returns
+        the same JSON envelope. No HTML error page is ever served under <code>/api</code>. Branch on <code
+          >error.code</code
+        >, not on the message.
       </p>
       <pre><code>{errorExample}</code></pre>
       <p>
         Codes: <code>not_found</code>, <code>method_not_allowed</code>,
         <code>invalid_request</code>, <code>unsupported_media_type</code>,
         <code>payload_too_large</code>, <code>rate_limited</code>,
-        <code>service_unavailable</code>, <code>internal_error</code>.
-        Field-level validation failures add a <code>details</code> array naming each
-        offending field and what it must satisfy, so a function-calling model can
-        repair its own arguments and retry.
+        <code>service_unavailable</code>, <code>internal_error</code>. Field-level validation
+        failures add a <code>details</code> array naming each offending field and what it must satisfy,
+        so a function-calling model can repair its own arguments and retry.
       </p>
       <p>
-        <strong>Off the API</strong>, a path that does not exist answers a real <code
-          >404</code
-        > — never a <code>200</code> with the app shell, which would make every URL
-        look valid. The body is content-negotiated: a browser gets the styled 404
-        page, and anything that did not ask for HTML gets a short markdown body listing
-        the sitemap, this portal, the OpenAPI document, the API catalog and the MCP
-        manifest, so a guessed or stale URL can be recovered from in one request.
+        <strong>Off the API</strong>, a path that does not exist answers a real <code>404</code> — never
+        a <code>200</code> with the app shell, which would make every URL look valid. The body is content-negotiated:
+        a browser gets the styled 404 page, and anything that did not ask for HTML gets a short markdown
+        body listing the sitemap, this portal, the OpenAPI document, the API catalog and the MCP manifest,
+        so a guessed or stale URL can be recovered from in one request.
       </p>
     </section>
 
     <section>
       <h2 id="webhooks">Webhooks &amp; callbacks</h2>
       <p>
-        There are none, and that is deliberate: this API has no events to push.
-        Content changes when the site redeploys, so poll instead — read
-        endpoints are cacheable for five minutes, the <a href="/blog/rss.xml"
-          >blog RSS feed</a
+        There are none, and that is deliberate: this API has no events to push. Content changes when
+        the site redeploys, so poll instead — read endpoints are cacheable for five minutes, the <a
+          href="/blog/rss.xml">blog RSS feed</a
         >
         announces new posts, and <code>GET {API_PATHS.posts}</code> is one cheap call.
-        <code>POST {API_PATHS.contact}</code> delivers by email and returns no callback;
-        Murugappan replies to the address you supply.
+        <code>POST {API_PATHS.contact}</code> delivers by email and returns no callback; Murugappan replies
+        to the address you supply.
       </p>
     </section>
 
     <section>
       <h2 id="function-calling">Function calling</h2>
       <p>
-        Every operation in the spec carries a unique <code>operationId</code>, a
-        description, typed parameters and a response schema, which is what makes
-        the document directly convertible to tool definitions. Point your
-        OpenAPI-to-tools converter at <code>{SITE}/openapi.json</code>; the
-        <code>operationId</code> becomes the tool name. For example, <code
-          >getBlogPost</code
-        > yields:
+        Every operation in the spec carries a unique <code>operationId</code>, a description, typed
+        parameters and a response schema, which is what makes the document directly convertible to
+        tool definitions. Point your OpenAPI-to-tools converter at <code>{SITE}/openapi.json</code>;
+        the
+        <code>operationId</code> becomes the tool name. For example, <code>getBlogPost</code> yields:
       </p>
       <pre><code>{JSON.stringify(toolExample, null, 2)}</code></pre>
     </section>
@@ -517,40 +481,37 @@ Retry-After: 39122</code></pre>
     <section>
       <h2 id="chat">Conversational endpoint (WebSocket)</h2>
       <p>
-        The site also runs an AI assistant, Jarvis, grounded on this same
-        content. It speaks WebSocket at <code
-          >wss://{
-            SITE.replace("https://", "")
-          }/parties/chat-room/&#123;roomId&#125;</code
-        >, which OpenAPI cannot describe — so it is documented here instead.
-        Pick any room id; the room persists its history.
+        The site also runs an AI assistant, Jarvis, grounded on this same content. It speaks
+        WebSocket at <code
+          >wss://{SITE.replace("https://", "")}/parties/chat-room/&#123;roomId&#125;</code
+        >, which OpenAPI cannot describe — so it is documented here instead. Pick any room id; the
+        room persists its history.
       </p>
       <pre><code>{wsExample}</code></pre>
       <p>
-        Frames in: <code>&#123;"type":"chat","text":"…"&#125;</code>. Frames
-        out: <code>history</code>, <code>visitor</code>, <code>delta</code>,
-        <code>done</code>, <code>limit</code>, <code>error</code>. Prefer the
-        REST API when you want structured data, and the socket when you want a
-        conversation.
+        Frames in: <code>&#123;"type":"chat","text":"…"&#125;</code>. Frames out: <code
+          >history</code
+        >, <code>visitor</code>, <code>delta</code>,
+        <code>done</code>, <code>limit</code>, <code>error</code>. Prefer the REST API when you want
+        structured data, and the socket when you want a conversation.
       </p>
     </section>
 
     <section>
       <h2 id="mcp">MCP server</h2>
       <p>
-        The same content is served as a <a
-          href="https://modelcontextprotocol.io">Model Context Protocol</a
+        The same content is served as a <a href="https://modelcontextprotocol.io"
+          >Model Context Protocol</a
         > server. Add it to any MCP client as:
       </p>
       <pre><code>{SITE}/mcp</code></pre>
       <p>
-        Streamable HTTP, <code>POST</code> only, no authentication and no session.
-        It implements protocol revision <code>{LATEST_PROTOCOL_VERSION}</code> — stateless,
-        with per-request metadata — and keeps backward compatibility with the <code
-          >initialize</code
-        >-based revisions ({LEGACY_PROTOCOL_VERSIONS.join(", ")}) that most
-        clients still speak. Call <code>server/discover</code> to see what a given
-        deployment supports. There is no <code>GET</code>
+        Streamable HTTP, <code>POST</code> only, no authentication and no session. It implements protocol
+        revision <code>{LATEST_PROTOCOL_VERSION}</code> — stateless, with per-request metadata — and keeps
+        backward compatibility with the <code>initialize</code>-based revisions ({
+          LEGACY_PROTOCOL_VERSIONS.join(", ")
+        }) that most clients still speak. Call <code>server/discover</code> to see what a given deployment
+        supports. There is no <code>GET</code>
         stream and nothing to <code>DELETE</code>; both answer <code>405</code>.
       </p>
       <div class="table-scroll">
@@ -576,31 +537,32 @@ Retry-After: 39122</code></pre>
         </table>
       </div>
       <p>
-        It also serves <strong>resources</strong> — documents a client can attach
-        as context directly, rather than calling a tool for them:
-        <code>/llms.txt</code>, <code>/AGENTS.md</code>, the OpenAPI
-        specification, the full blog text, and every post's markdown (URI
-        template <code>{SITE}/blog/&#123;slug&#125;/index.md</code>). They use
-        <code>https://</code> URIs because they really are fetchable straight from
-        the web, which is what that scheme is reserved for.
+        It also serves <strong>resources</strong> — documents a client can attach as context directly,
+        rather than calling a tool for them:
+        <code>/llms.txt</code>, <code>/AGENTS.md</code>, the OpenAPI specification, the full blog
+        text, and every post's markdown (URI template <code
+          >{SITE}/blog/&#123;slug&#125;/index.md</code
+        >). They use
+        <code>https://</code> URIs because they really are fetchable straight from the web, which is what
+        that scheme is reserved for.
       </p>
       <p>
         Every tool declares a typed, self-contained <code>outputSchema</code>
         (the REST response schemas, inlined), so a client can validate
-        <code>structuredContent</code> without fetching anything else. Recoverable
-        problems — an unknown slug, a bad email, a spent allowance — come back as
-        tool execution errors with text explaining the fix, not as protocol errors.
+        <code>structuredContent</code> without fetching anything else. Recoverable problems — an unknown
+        slug, a bad email, a spent allowance — come back as tool execution errors with text explaining
+        the fix, not as protocol errors.
       </p>
       <pre><code>{mcpExample}</code></pre>
       <h3 id="mcp-manifest">Manifest</h3>
       <p>
-        For a client that installs servers from a manifest rather than a pasted
-        URL, the server's <code>server.json</code> is published at <a
-          href="/.well-known/mcp.json"><code>/.well-known/mcp.json</code></a
-        > (and at <a href="/mcp.json"><code>/mcp.json</code></a>). It follows
-        the <a href={MCP_SERVER_SCHEMA}>published server.json schema</a>, names
-        the server <code>{MCP_SERVER_NAME}</code> in the reverse-DNS form the registry
-        requires, and declares one
+        For a client that installs servers from a manifest rather than a pasted URL, the server's <code
+          >server.json</code
+        > is published at <a href="/.well-known/mcp.json"><code>/.well-known/mcp.json</code></a> (and
+        at <a href="/mcp.json"><code>/mcp.json</code></a>). It follows the <a
+          href={MCP_SERVER_SCHEMA}>published server.json schema</a
+        >, names the server <code>{MCP_SERVER_NAME}</code> in the reverse-DNS form the registry requires,
+        and declares one
         <code>streamable-http</code> remote:
       </p>
       <pre><code>{`{
@@ -610,23 +572,22 @@ Retry-After: 39122</code></pre>
   "remotes": [{"type": "streamable-http", "url": "${SITE}/mcp"}]
 }`}</code></pre>
       <p>
-        The server is also listed in the site's <a
-          href="/.well-known/api-catalog">API catalog</a
-        >, the <a href="https://www.rfc-editor.org/rfc/rfc9727">RFC 9727</a> link
-        set that names every API here and where each one is described — the one URL
-        to probe if you know nothing else about this site.
+        The server is also listed in the site's <a href="/.well-known/api-catalog">API catalog</a>,
+        the <a href="https://www.rfc-editor.org/rfc/rfc9727">RFC 9727</a> link set that names every API
+        here and where each one is described — the one URL to probe if you know nothing else about this
+        site.
       </p>
     </section>
 
     <section>
       <h2 id="webmcp">In-browser tools (WebMCP)</h2>
       <p>
-        Every page registers tools on <code>navigator.modelContext</code> when the
-        browser supports the <a
-          href="https://webmachinelearning.github.io/webmcp/">WebMCP</a
-        > draft: <code>get_profile</code>, <code>list_blog_posts</code>,
-        <code>read_blog_post</code> and <code>navigate_to</code>. A browser
-        agent already on the page can call those without any HTTP of its own.
+        Every page registers tools on <code>navigator.modelContext</code> when the browser supports the
+        <a href="https://webmachinelearning.github.io/webmcp/">WebMCP</a> draft: <code
+          >get_profile</code
+        >, <code>list_blog_posts</code>,
+        <code>read_blog_post</code> and <code>navigate_to</code>. A browser agent already on the
+        page can call those without any HTTP of its own.
       </p>
     </section>
 
@@ -657,9 +618,7 @@ Retry-After: 39122</code></pre>
         </table>
       </div>
       <p>
-        Any page URL also serves markdown when requested with <code
-          >Accept: text/markdown</code
-        >.
+        Any page URL also serves markdown when requested with <code>Accept: text/markdown</code>.
       </p>
     </section>
 
@@ -668,24 +627,18 @@ Retry-After: 39122</code></pre>
       <p>
         Spec version <code>{spec.info.version}</code>, serving API version <code
           >{CURRENT_API_VERSION}</code
-        > — the full <a href="#versioning">versioning and deprecation policy</a> says
-        what may change inside a version and how a deprecation is announced. Data
-        is licensed <a href="https://creativecommons.org/licenses/by/4.0/"
-          >CC BY 4.0</a
-        > — cite <a href={SITE + "/"}>murugappan.dev</a>. Questions, or
-        something broken? <a href="mailto:murugu2001@gmail.com"
-          >Email Murugappan</a
+        > — the full <a href="#versioning">versioning and deprecation policy</a> says what may change
+        inside a version and how a deprecation is announced. Data is licensed <a
+          href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a
+        > — cite <a href={SITE + "/"}>murugappan.dev</a>. Questions, or something broken? <a
+          href="mailto:murugu2001@gmail.com">Email Murugappan</a
         > or use
         <code>POST /api/contact</code>.
       </p>
     </section>
   </main>
   <ScrollTop />
-  <script
-    type="application/ld+json"
-    is:inline
-    set:html={JSON.stringify(apiJsonLd)}
-  />
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(apiJsonLd)} />
 </Layout>
 
 <style lang="scss">

@@ -1,6 +1,6 @@
-import {defineCollection} from "astro:content";
-import {z} from "astro/zod";
-import {glob} from "astro/loaders";
+import { defineCollection } from "astro:content";
+import { z } from "astro/zod";
+import { glob } from "astro/loaders";
 
 // Posts live in content/blog/<slug>/index.md, same layout as the Gatsby site.
 // The id (= URL slug) is the directory name, matching Gatsby's createFilePath
@@ -10,7 +10,7 @@ const blog = defineCollection({
   loader: glob({
     pattern: "**/index.md",
     base: "./content/blog",
-    generateId: ({entry}) => entry.replace(/\/index\.md$/, "")
+    generateId: ({ entry }) => entry.replace(/\/index\.md$/, "")
   }),
   schema: z.object({
     title: z.string(),
@@ -20,4 +20,4 @@ const blog = defineCollection({
   })
 });
 
-export const collections = {blog};
+export const collections = { blog };

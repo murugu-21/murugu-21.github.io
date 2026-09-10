@@ -1,19 +1,15 @@
 import React from "react";
 
-import {formatReadingTime} from "../utils/helpers";
+import { formatReadingTime } from "../utils/helpers";
 
 // `post` is the serialized shape built in index.astro:
 // { href, title, dateFormatted, minutes, tags, description?, excerpt }
-const Post = ({post}) => {
+const Post = ({ post }) => {
   const title = post.title;
 
   return (
     <li>
-      <article
-        className="post-list-item"
-        itemScope
-        itemType="http://schema.org/Article"
-      >
+      <article className="post-list-item" itemScope itemType="http://schema.org/Article">
         <header>
           <h2>
             <a href={post.href} itemProp="url">

@@ -2,10 +2,10 @@
 // forwardRef (React 18; upstream now assumes React 19 ref-as-prop).
 import * as React from "react";
 
-import {cn} from "../../lib/utils";
+import { cn } from "../../lib/utils";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({className, type, ...props}, ref) => {
+  ({ className, type, ...props }, ref) => {
     return (
       <input
         type={type}
@@ -23,4 +23,4 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
 );
 Input.displayName = "Input";
 
-export {Input};
+export { Input };

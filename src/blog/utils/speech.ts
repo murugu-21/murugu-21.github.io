@@ -15,14 +15,7 @@ export interface SpeechBlock<T extends BlockLike> {
 
 // Hearing raw code, mermaid source or a flattened table read aloud is noise,
 // so those blocks are dropped rather than announced.
-const SKIPPED_TAGS = new Set([
-  "PRE",
-  "FIGURE",
-  "TABLE",
-  "HR",
-  "SCRIPT",
-  "STYLE"
-]);
+const SKIPPED_TAGS = new Set(["PRE", "FIGURE", "TABLE", "HR", "SCRIPT", "STYLE"]);
 // Lists are read item by item so the highlight and the resume point stay fine
 // grained on long lists.
 const SPLIT_TAGS = new Set(["UL", "OL"]);
@@ -39,7 +32,7 @@ export function speechBlocks<T extends BlockLike>(root: T): SpeechBlock<T>[] {
       return;
     }
     const text = clean(el.textContent);
-    if (text) out.push({el, text});
+    if (text) out.push({ el, text });
   };
   Array.from(root.children as ArrayLike<T>).forEach(visit);
   return out;
@@ -52,7 +45,5 @@ export type SpeechRate = (typeof SPEECH_RATES)[number];
 
 export function parseRate(value: string | null): SpeechRate {
   const n = Number(value);
-  return (SPEECH_RATES as readonly number[]).includes(n)
-    ? (n as SpeechRate)
-    : 1;
+  return (SPEECH_RATES as readonly number[]).includes(n) ? (n as SpeechRate) : 1;
 }

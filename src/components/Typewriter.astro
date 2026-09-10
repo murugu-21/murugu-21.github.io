@@ -5,13 +5,12 @@
 interface Props {
   roles: string[];
 }
-const {roles} = Astro.props;
+const { roles } = Astro.props;
 ---
 
 <span class="typewriter" data-roles={JSON.stringify(roles)}>
-  <span class="typewriter-text">{roles[0]}</span><span
-    class="typewriter-cursor"
-    aria-hidden="true">|</span
+  <span class="typewriter-text">{roles[0]}</span><span class="typewriter-cursor" aria-hidden="true"
+    >|</span
   >
 </span>
 

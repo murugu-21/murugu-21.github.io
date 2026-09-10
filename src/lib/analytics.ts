@@ -25,8 +25,7 @@ interface PostHog {
 /** Injectable for tests; production dynamic-imports the real browser SDK. */
 export type SdkLoader = () => Promise<PostHog>;
 
-const loadSdk: SdkLoader = () =>
-  import("posthog-js").then(m => m.default as unknown as PostHog);
+const loadSdk: SdkLoader = () => import("posthog-js").then(m => m.default as unknown as PostHog);
 
 // Set once initAnalytics resolves. Checked before the global so a booted SDK
 // is used even if something else reassigns window.posthog.
@@ -39,7 +38,7 @@ let pending: Array<(ph: PostHog) => void> | null = null;
 
 const client = (): PostHog | null => {
   if (sdk) return sdk;
-  const p = (globalThis as {posthog?: Partial<PostHog>}).posthog;
+  const p = (globalThis as { posthog?: Partial<PostHog> }).posthog;
   return typeof p?.capture === "function" && typeof p.register === "function"
     ? (p as PostHog)
     : null;
@@ -61,9 +60,7 @@ const send = (fn: (ph: PostHog) => void): void => {
 };
 
 // Blank values carry no signal and clutter PostHog's property list.
-const clean = (
-  props?: Record<string, string>
-): Record<string, string> | undefined => {
+const clean = (props?: Record<string, string>): Record<string, string> | undefined => {
   const kept = Object.entries(props ?? {}).filter(([, v]) => v.trim());
   return kept.length ? Object.fromEntries(kept) : undefined;
 };
@@ -75,7 +72,7 @@ const clean = (
  */
 export function tag(key: string, value: string): void {
   if (!value.trim()) return;
-  send(ph => ph.register({[key]: value}));
+  send(ph => ph.register({ [key]: value }));
 }
 
 /** Capture a custom event, with optional properties describing it. */
@@ -97,7 +94,7 @@ const TRACKED = new WeakSet<object>();
  * by a React island. Links stay plain <a>s with no JS in their nav path.
  */
 export function initClickTracking(root?: Document): void {
-  const doc = root ?? (globalThis as {document?: Document}).document;
+  const doc = root ?? (globalThis as { document?: Document }).document;
   if (!doc || TRACKED.has(doc)) return;
   TRACKED.add(doc);
   doc.addEventListener(
@@ -107,10 +104,10 @@ export function initClickTracking(root?: Document): void {
       const el = target?.closest?.<HTMLElement>("[data-ph-event]");
       const name = el?.dataset.phEvent;
       if (!el || !name) return;
-      const {phProp, phValue} = el.dataset;
-      track(name, phProp && phValue ? {[phProp]: phValue} : undefined);
+      const { phProp, phValue } = el.dataset;
+      track(name, phProp && phValue ? { [phProp]: phValue } : undefined);
     },
-    {passive: true}
+    { passive: true }
   );
 }
 
@@ -147,7 +144,7 @@ export async function initAnalytics(
     });
     sdk = ph;
     // Expose it the way the snippet would, so the PostHog toolbar can find it.
-    (globalThis as {posthog?: PostHog}).posthog = ph;
+    (globalThis as { posthog?: PostHog }).posthog = ph;
     const queued = pending;
     pending = null;
     for (const fn of queued) {
@@ -173,16 +170,12 @@ export async function initAnalytics(
  * the page waits for it — calls made before it lands are buffered by
  * initAnalytics and replayed.
  */
-export function bootAnalytics(
-  root?: Document,
-  load?: SdkLoader
-): Promise<void> {
-  const doc = root ?? (globalThis as {document?: Document}).document;
+export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> {
+  const doc = root ?? (globalThis as { document?: Document }).document;
   if (!doc) return Promise.resolve();
   const meta = (name: string) =>
-    doc
-      .querySelector<HTMLMetaElement>(`meta[name="${name}"]`)
-      ?.getAttribute("content") ?? undefined;
+    doc.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.getAttribute("content") ??
+    undefined;
   const token = meta("ph-token");
   const host = meta("ph-host");
   if (!token || !host) return Promise.resolve();
@@ -190,9 +183,9 @@ export function bootAnalytics(
   if (root || load) return initAnalytics(token, host, load);
   const boot = () => void initAnalytics(token, host);
   const g = globalThis as {
-    requestIdleCallback?: (cb: () => void, opts?: {timeout: number}) => number;
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
   };
-  if (g.requestIdleCallback) g.requestIdleCallback(boot, {timeout: 3000});
+  if (g.requestIdleCallback) g.requestIdleCallback(boot, { timeout: 3000 });
   else setTimeout(boot, 2000);
   return Promise.resolve();
 }

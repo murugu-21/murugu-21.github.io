@@ -1,8 +1,8 @@
-import {env, runInDurableObject} from "cloudflare:test";
-import {describe, expect, it} from "vitest";
+import { env, runInDurableObject } from "cloudflare:test";
+import { describe, expect, it } from "vitest";
 
-import {ChatRoom} from "../chat-room";
-import {GREETING} from "../protocol";
+import { ChatRoom } from "../chat-room";
+import { GREETING } from "../protocol";
 
 describe("ChatRoom storage", () => {
   it("seeds the greeting exactly once on first connect", async () => {
@@ -10,16 +10,16 @@ describe("ChatRoom storage", () => {
     await runInDurableObject(stub, async (instance: ChatRoom) => {
       instance.onStart();
       const sent: string[] = [];
-      const conn = {send: (d: string) => sent.push(d)} as never;
+      const conn = { send: (d: string) => sent.push(d) } as never;
       instance.onConnect(conn);
       instance.onConnect(conn); // reconnect must not seed again
       const rows = instance.ctx.storage.sql
         .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
         .toArray();
-      expect(rows).toEqual([{role: "assistant", content: GREETING}]);
+      expect(rows).toEqual([{ role: "assistant", content: GREETING }]);
       // both history frames include the greeting
       const last = JSON.parse(sent[1]);
-      expect(last.messages).toEqual([{role: "assistant", content: GREETING}]);
+      expect(last.messages).toEqual([{ role: "assistant", content: GREETING }]);
     });
   });
 
@@ -34,8 +34,8 @@ describe("ChatRoom storage", () => {
         .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
         .toArray();
       expect(rows).toEqual([
-        {role: "user", content: "q"},
-        {role: "assistant", content: "a"}
+        { role: "user", content: "q" },
+        { role: "assistant", content: "a" }
       ]);
     });
   });
@@ -55,10 +55,8 @@ describe("ChatRoom storage", () => {
           `INSERT INTO meta (key, value) VALUES ('lead_captured', 'again')`
         )
       ).toThrow();
-      const leads = instance.ctx.storage.sql
-        .exec(`SELECT contact FROM leads`)
-        .toArray();
-      expect(leads).toEqual([{contact: "a@b.c"}]);
+      const leads = instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray();
+      expect(leads).toEqual([{ contact: "a@b.c" }]);
     });
   });
 });

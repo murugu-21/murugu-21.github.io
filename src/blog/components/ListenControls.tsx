@@ -5,19 +5,19 @@
 // paragraph highlight driven by the timing JSON. Fallback, when that is
 // missing (new post, astro dev has no Worker) or fails: the browser's speech
 // synthesis, one block per utterance. Both backends implement `Player`.
-import {useCallback, useEffect, useRef, useState} from "react";
-import {Check, Loader2, Pause, Play} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, Loader2, Pause, Play } from "lucide-react";
 
-import {Button} from "../../components/ui/button";
+import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "../../components/ui/dropdown-menu";
-import {Slider} from "../../components/ui/slider";
-import {tag, track} from "../../lib/analytics";
-import {normalizeSpeechText} from "../utils/audio-prep";
+import { Slider } from "../../components/ui/slider";
+import { tag, track } from "../../lib/analytics";
+import { normalizeSpeechText } from "../utils/audio-prep";
 import {
   WORD_BAND,
   blockAt,
@@ -25,19 +25,8 @@ import {
   scrollTarget,
   type AudioTimings
 } from "../utils/audio-sync";
-import {
-  matchWordSpans,
-  tokenize,
-  wordAt,
-  wrapWords,
-  type TimedWord
-} from "../utils/audio-words";
-import {
-  parseRate,
-  SPEECH_RATES,
-  speechBlocks,
-  type SpeechRate
-} from "../utils/speech";
+import { matchWordSpans, tokenize, wordAt, wrapWords, type TimedWord } from "../utils/audio-words";
+import { parseRate, SPEECH_RATES, speechBlocks, type SpeechRate } from "../utils/speech";
 import "../../styles/islands.css";
 
 type State = "idle" | "loading" | "speaking" | "paused";
@@ -90,22 +79,20 @@ const storeRate = (rate: SpeechRate) => {
 // the timing JSON. The title is read first.
 const collectBlocks = (): Block[] => {
   const article = document.querySelector<HTMLElement>("article.blog-post");
-  const body = article?.querySelector<HTMLElement>(
-    "section[itemprop='articleBody']"
-  );
+  const body = article?.querySelector<HTMLElement>("section[itemprop='articleBody']");
   if (!body) return [];
   const blocks: Block[] = speechBlocks(body)
-    .map(b => ({el: b.el, text: normalizeSpeechText(b.text)}))
+    .map(b => ({ el: b.el, text: normalizeSpeechText(b.text) }))
     .filter(b => b.text);
   const title = article?.querySelector<HTMLElement>("header h1");
   if (title) {
     const text = normalizeSpeechText(title.textContent ?? "");
-    if (text) blocks.unshift({el: title, text});
+    if (text) blocks.unshift({ el: title, text });
   }
   return blocks;
 };
 
-export function ListenControls({slug}: {slug: string}) {
+export function ListenControls({ slug }: { slug: string }) {
   // The island root, held in state (not a ref) because it is read during
   // render as the dropdown's portal container.
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
@@ -131,11 +118,8 @@ export function ListenControls({slug}: {slug: string}) {
     highlightedRef.current = el;
     if (el) {
       el.classList.add("is-speaking");
-      const block = scrollTarget(
-        el.getBoundingClientRect(),
-        window.innerHeight
-      );
-      if (block) el.scrollIntoView({block, behavior: "smooth"});
+      const block = scrollTarget(el.getBoundingClientRect(), window.innerHeight);
+      if (block) el.scrollIntoView({ block, behavior: "smooth" });
     }
   }, []);
 
@@ -150,12 +134,8 @@ export function ListenControls({slug}: {slug: string}) {
     pieces?.forEach(p => p.classList.add("is-word"));
     // Inside a paragraph taller than the reading band, follow the word.
     if (pieces?.length) {
-      const block = scrollTarget(
-        pieces[0].getBoundingClientRect(),
-        window.innerHeight,
-        WORD_BAND
-      );
-      if (block) pieces[0].scrollIntoView({block, behavior: "smooth"});
+      const block = scrollTarget(pieces[0].getBoundingClientRect(), window.innerHeight, WORD_BAND);
+      if (block) pieces[0].scrollIntoView({ block, behavior: "smooth" });
     }
   }, []);
 
@@ -166,15 +146,14 @@ export function ListenControls({slug}: {slug: string}) {
       if (next === "idle") {
         highlightWord(null);
         highlight(null);
-        setProgress(p => ({...p, position: 0}));
+        setProgress(p => ({ ...p, position: 0 }));
       }
     },
     [highlight, highlightWord]
   );
 
   useEffect(() => {
-    const canSpeak =
-      !!window.speechSynthesis && "SpeechSynthesisUtterance" in window;
+    const canSpeak = !!window.speechSynthesis && "SpeechSynthesisUtterance" in window;
     const canPlayAudio = "Audio" in window;
     blocksRef.current = collectBlocks();
     const stored = readStoredRate();
@@ -225,13 +204,17 @@ export function ListenControls({slug}: {slug: string}) {
         offsets.push(pos);
         pos += t.length + 1;
       }
-      const timed: TimedWord[] = tokens.map(t => ({w: t, s: 0, e: 0}));
+      const timed: TimedWord[] = tokens.map(t => ({ w: t, s: 0, e: 0 }));
       let spans: HTMLElement[][] | null | undefined;
       u.onstart = () => {
         if (current !== u) return;
         highlightWord(null);
         highlight(block.el);
-        setProgress({position: i + 1, length: blocks.length, seekable: false});
+        setProgress({
+          position: i + 1,
+          length: blocks.length,
+          seekable: false
+        });
       };
       u.onboundary = event => {
         if (current !== u || event.name !== "word") return;
@@ -278,7 +261,7 @@ export function ListenControls({slug}: {slug: string}) {
       audio.preload = "auto";
       const matched = matchBlocks(blocksRef.current, timings.blocks);
       const ranges = matched.map(m =>
-        m ? {start: m.start, end: m.end} : {start: -1, end: -1}
+        m ? { start: m.start, end: m.end } : { start: -1, end: -1 }
       );
       // Per block: its timed words (version 2 JSON) and, once wrapped, the
       // rendered spans they map onto. `null` spans = mismatch, paragraph only.
@@ -336,9 +319,7 @@ export function ListenControls({slug}: {slug: string}) {
       });
       audio.addEventListener("error", () => {
         cancelAnimationFrame(raf);
-        console.warn(
-          "Read-aloud audio failed, falling back to speech synthesis"
-        );
+        console.warn("Read-aloud audio failed, falling back to speech synthesis");
         track("listen_audio_fallback");
         const fallback = window.speechSynthesis ? speechPlayer() : null;
         playerRef.current = fallback;
@@ -370,28 +351,20 @@ export function ListenControls({slug}: {slug: string}) {
     if ("Audio" in window) {
       try {
         const res = await fetch(`/blog/audio/${slug}.json`, {
-          headers: {Accept: "application/json"}
+          headers: { Accept: "application/json" }
         });
         if (res.ok) {
           const timings = (await res.json()) as AudioTimings;
-          if (
-            (timings.version === 1 || timings.version === 2) &&
-            Array.isArray(timings.blocks)
-          ) {
+          if ((timings.version === 1 || timings.version === 2) && Array.isArray(timings.blocks)) {
             const player = audioPlayer(timings);
             player.setRate(rateRef.current);
             tag("listen_backend", "audio");
             return player;
           }
         }
-        console.warn(
-          `No read-aloud audio for this post (${res.status}), using speech synthesis`
-        );
+        console.warn(`No read-aloud audio for this post (${res.status}), using speech synthesis`);
       } catch (err) {
-        console.warn(
-          "Read-aloud audio unavailable, using speech synthesis",
-          err
-        );
+        console.warn("Read-aloud audio unavailable, using speech synthesis", err);
       }
     }
     if (!window.speechSynthesis) return null;
@@ -409,7 +382,7 @@ export function ListenControls({slug}: {slug: string}) {
     if (!playerRef.current) {
       // First play of the post: `post` tags the session with what was read,
       // and the backend tag is set inside loadPlayer once one is chosen.
-      track("listen_play", {post: slug});
+      track("listen_play", { post: slug });
       setState("loading");
       playerRef.current = await loadPlayer();
       if (!playerRef.current) {
@@ -427,7 +400,7 @@ export function ListenControls({slug}: {slug: string}) {
     rateRef.current = next;
     setRateValue(next);
     storeRate(next);
-    track("listen_rate", {listen_rate: `${next}x`});
+    track("listen_rate", { listen_rate: `${next}x` });
     playerRef.current?.setRate(next);
   };
 
@@ -443,10 +416,7 @@ export function ListenControls({slug}: {slug: string}) {
   // Spotify-shaped transport: round primary play button, thin seek bar with
   // the thumb revealed on hover, times in tabular figures, speed as a pill.
   return (
-    <div
-      ref={setRoot}
-      className="flex items-center gap-3 rounded-lg bg-muted/60 py-2 pr-2 pl-2"
-    >
+    <div ref={setRoot} className="flex items-center gap-3 rounded-lg bg-muted/60 py-2 pr-2 pl-2">
       <Button
         onClick={onToggle}
         disabled={busy}

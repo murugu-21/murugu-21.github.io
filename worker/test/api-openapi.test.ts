@@ -1,6 +1,6 @@
-import {describe, expect, it} from "vitest";
+import { describe, expect, it } from "vitest";
 
-import {buildOpenApiDocument} from "../api/openapi";
+import { buildOpenApiDocument } from "../api/openapi";
 import {
   ALLOWED_METHODS,
   API_PATHS,
@@ -24,9 +24,7 @@ type Operation = {
 function operations(): Array<[string, string, Operation]> {
   const out: Array<[string, string, Operation]> = [];
   for (const [path, item] of Object.entries(doc.paths)) {
-    for (const [method, op] of Object.entries(
-      item as Record<string, Operation>
-    )) {
+    for (const [method, op] of Object.entries(item as Record<string, Operation>)) {
       out.push([path, method, op]);
     }
   }
@@ -58,9 +56,7 @@ describe("buildOpenApiDocument", () => {
   });
 
   it("points the server at the given origin", () => {
-    expect(doc.servers).toEqual([
-      {url: "https://murugappan.dev", description: "Production"}
-    ]);
+    expect(doc.servers).toEqual([{ url: "https://murugappan.dev", description: "Production" }]);
   });
 
   it("publishes every operation under the versioned path prefix", () => {
@@ -143,7 +139,7 @@ describe("buildOpenApiDocument", () => {
         expect(param.in, where).toBeTruthy();
         expect(param.description, where).toBeTruthy();
         expect(param.schema, where).toBeTruthy();
-        expect((param.schema as {type?: string}).type, where).toBeTruthy();
+        expect((param.schema as { type?: string }).type, where).toBeTruthy();
         if (param.in === "path") expect(param.required, where).toBe(true);
       }
     }
@@ -162,26 +158,21 @@ describe("buildOpenApiDocument", () => {
   it("gives every success status a described JSON response schema", () => {
     for (const [path, method, op] of operations()) {
       const where = `${method.toUpperCase()} ${path}`;
-      const success = Object.keys(op.responses ?? {}).filter(s =>
-        s.startsWith("2")
-      );
+      const success = Object.keys(op.responses ?? {}).filter(s => s.startsWith("2"));
       expect(success.length, where).toBeGreaterThan(0);
       for (const status of success) {
         const response = op.responses![status] as {
           description?: string;
-          content?: Record<string, {schema?: unknown}>;
+          content?: Record<string, { schema?: unknown }>;
         };
         expect(response.description, `${where} ${status}`).toBeTruthy();
-        expect(
-          response.content?.["application/json"]?.schema,
-          `${where} ${status}`
-        ).toBeTruthy();
+        expect(response.content?.["application/json"]?.schema, `${where} ${status}`).toBeTruthy();
       }
     }
   });
 
   it("documents the dry-run sandbox on the write operation", () => {
-    const contact = doc.paths[API_PATHS.contact] as {post: Operation};
+    const contact = doc.paths[API_PATHS.contact] as { post: Operation };
     expect(Object.keys(contact.post.responses!)).toContain("200");
     const schema = doc.components.schemas.ContactRequest as {
       properties: Record<string, unknown>;
@@ -192,10 +183,7 @@ describe("buildOpenApiDocument", () => {
   it("documents the 429 the read ceiling can actually produce", () => {
     for (const [path, method, op] of operations()) {
       if (method.toUpperCase() !== "GET") continue;
-      expect(
-        Object.keys(op.responses ?? {}),
-        `${method.toUpperCase()} ${path}`
-      ).toContain("429");
+      expect(Object.keys(op.responses ?? {}), `${method.toUpperCase()} ${path}`).toContain("429");
     }
   });
 
@@ -204,13 +192,10 @@ describe("buildOpenApiDocument", () => {
       const failures = Object.keys(op.responses ?? {}).filter(
         s => s.startsWith("4") || s.startsWith("5")
       );
-      expect(
-        failures.length,
-        `${method.toUpperCase()} ${path}`
-      ).toBeGreaterThan(0);
+      expect(failures.length, `${method.toUpperCase()} ${path}`).toBeGreaterThan(0);
       for (const status of failures) {
         const response = op.responses![status] as {
-          content?: Record<string, {schema?: {$ref?: string}}>;
+          content?: Record<string, { schema?: { $ref?: string } }>;
         };
         expect(
           response.content?.["application/json"]?.schema?.$ref,
@@ -221,12 +206,12 @@ describe("buildOpenApiDocument", () => {
   });
 
   it("requires a JSON request body on the write operation", () => {
-    const post = doc.paths[API_PATHS.contact] as {post: Operation};
+    const post = doc.paths[API_PATHS.contact] as { post: Operation };
     expect(post.post.requestBody).toMatchObject({
       required: true,
       content: {
         "application/json": {
-          schema: {$ref: "#/components/schemas/ContactRequest"}
+          schema: { $ref: "#/components/schemas/ContactRequest" }
         }
       }
     });
@@ -242,11 +227,10 @@ describe("buildOpenApiDocument", () => {
 
   it("describes every property of every component schema", () => {
     for (const [name, schema] of Object.entries(doc.components.schemas)) {
-      const properties = (schema as {properties?: Record<string, unknown>})
-        .properties;
+      const properties = (schema as { properties?: Record<string, unknown> }).properties;
       if (!properties) continue;
       for (const [property, value] of Object.entries(properties)) {
-        const spec = value as {description?: string; $ref?: string};
+        const spec = value as { description?: string; $ref?: string };
         if (spec.$ref) continue;
         expect(spec.description, `${name}.${property}`).toBeTruthy();
       }

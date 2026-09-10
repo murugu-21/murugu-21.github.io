@@ -4,7 +4,7 @@ interface Props {
   label: string;
   eager?: boolean;
 }
-const {src, label, eager} = Astro.props;
+const { src, label, eager } = Astro.props;
 ---
 
 <div
@@ -25,8 +25,7 @@ const {src, label, eager} = Astro.props;
     if (el.dataset.loaded) return;
     el.dataset.loaded = "true";
     try {
-      const lottie = (await import("lottie-web/build/player/lottie_light"))
-        .default;
+      const lottie = (await import("lottie-web/build/player/lottie_light")).default;
       const res = await fetch(el.dataset.lottieSrc!);
       if (!res.ok) throw new Error(`lottie fetch ${res.status}`);
       const data = await res.json();
@@ -54,7 +53,7 @@ const {src, label, eager} = Astro.props;
         initHolder(e.target as HTMLElement);
       });
     },
-    {rootMargin: "120px"}
+    { rootMargin: "120px" }
   );
   holders.forEach(h => {
     if (h.dataset.eager)

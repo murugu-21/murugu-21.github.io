@@ -18,11 +18,7 @@
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
 export const MODERN_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION] as const;
 // Newest first — the first entry is what `initialize` falls back to.
-export const LEGACY_PROTOCOL_VERSIONS = [
-  "2025-11-25",
-  "2025-06-18",
-  "2025-03-26"
-] as const;
+export const LEGACY_PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"] as const;
 export const SUPPORTED_PROTOCOL_VERSIONS: string[] = [
   ...MODERN_PROTOCOL_VERSIONS,
   ...LEGACY_PROTOCOL_VERSIONS
@@ -33,8 +29,7 @@ export const SERVER_NAME = "murugappan.dev";
 // `_meta` keys reserved by the specification.
 export const META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
 export const META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo";
-export const META_CLIENT_CAPABILITIES =
-  "io.modelcontextprotocol/clientCapabilities";
+export const META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
 export const META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
 // JSON-RPC 2.0 standard codes plus the MCP-reserved sub-range (-32020..-32099).
@@ -64,7 +59,7 @@ export type RpcFailure = {
 
 export function parseMessage(
   raw: unknown
-): {ok: true; message: JsonRpcMessage} | {ok: false; failure: RpcFailure} {
+): { ok: true; message: JsonRpcMessage } | { ok: false; failure: RpcFailure } {
   // "The body of the HTTP POST MUST be a single JSON-RPC request or
   // notification" — a batch array is not a valid body on this transport.
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
@@ -89,11 +84,7 @@ export function parseMessage(
       }
     };
   }
-  if (
-    msg.id !== undefined &&
-    typeof msg.id !== "string" &&
-    typeof msg.id !== "number"
-  ) {
+  if (msg.id !== undefined && typeof msg.id !== "string" && typeof msg.id !== "number") {
     return {
       ok: false,
       failure: {
@@ -107,12 +98,10 @@ export function parseMessage(
     ok: true,
     message: {
       jsonrpc: "2.0",
-      ...(msg.id === undefined ? {} : {id: msg.id as JsonRpcId}),
+      ...(msg.id === undefined ? {} : { id: msg.id as JsonRpcId }),
       method: msg.method,
       params:
-        typeof msg.params === "object" &&
-        msg.params !== null &&
-        !Array.isArray(msg.params)
+        typeof msg.params === "object" && msg.params !== null && !Array.isArray(msg.params)
           ? (msg.params as Record<string, unknown>)
           : undefined
     }
@@ -123,9 +112,7 @@ export function parseMessage(
 export function isModernRequest(message: JsonRpcMessage): boolean {
   const meta = message.params?._meta;
   if (typeof meta !== "object" || meta === null) return false;
-  return (
-    typeof (meta as Record<string, unknown>)[META_PROTOCOL_VERSION] === "string"
-  );
+  return typeof (meta as Record<string, unknown>)[META_PROTOCOL_VERSION] === "string";
 }
 
 const BASE64_SENTINEL = /^=\?base64\?(.*)\?=$/;
@@ -141,22 +128,16 @@ export function decodeHeaderValue(value: string): string | null {
   try {
     // atob gives Latin-1 bytes; the sentinel wraps UTF-8, so re-decode them.
     const bytes = Uint8Array.from(atob(match[1]), c => c.charCodeAt(0));
-    return new TextDecoder("utf-8", {fatal: true, ignoreBOM: false}).decode(
-      bytes
-    );
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes);
   } catch {
     return null;
   }
 }
 
-const NAME_REQUIRED_METHODS = new Set([
-  "tools/call",
-  "resources/read",
-  "prompts/get"
-]);
+const NAME_REQUIRED_METHODS = new Set(["tools/call", "resources/read", "prompts/get"]);
 
 function headerMismatch(message: string): RpcFailure {
-  return {status: 400, code: MCP_HEADER_MISMATCH, message};
+  return { status: 400, code: MCP_HEADER_MISMATCH, message };
 }
 
 /**
@@ -166,15 +147,13 @@ function headerMismatch(message: string): RpcFailure {
  */
 export function validateModernHeaders(
   message: JsonRpcMessage,
-  headers: {get(name: string): string | null}
+  headers: { get(name: string): string | null }
 ): RpcFailure | null {
   const meta = (message.params?._meta ?? {}) as Record<string, unknown>;
 
   const versionHeader = headers.get("MCP-Protocol-Version");
   if (!versionHeader) {
-    return headerMismatch(
-      "Header mismatch: the required MCP-Protocol-Version header is missing."
-    );
+    return headerMismatch("Header mismatch: the required MCP-Protocol-Version header is missing.");
   }
   if (versionHeader !== meta[META_PROTOCOL_VERSION]) {
     return headerMismatch(
@@ -184,9 +163,7 @@ export function validateModernHeaders(
 
   const methodHeader = headers.get("Mcp-Method");
   if (!methodHeader) {
-    return headerMismatch(
-      "Header mismatch: the required Mcp-Method header is missing."
-    );
+    return headerMismatch("Header mismatch: the required Mcp-Method header is missing.");
   }
   if (methodHeader !== message.method) {
     return headerMismatch(
@@ -222,11 +199,7 @@ export function validateModernHeaders(
 export function validateModernMeta(message: JsonRpcMessage): RpcFailure | null {
   const meta = (message.params?._meta ?? {}) as Record<string, unknown>;
   const capabilities = meta[META_CLIENT_CAPABILITIES];
-  if (
-    typeof capabilities !== "object" ||
-    capabilities === null ||
-    Array.isArray(capabilities)
-  ) {
+  if (typeof capabilities !== "object" || capabilities === null || Array.isArray(capabilities)) {
     return {
       status: 400,
       code: JSON_RPC_INVALID_PARAMS,
@@ -240,13 +213,12 @@ export function checkModernVersion(message: JsonRpcMessage): RpcFailure | null {
   const requested = ((message.params?._meta ?? {}) as Record<string, unknown>)[
     META_PROTOCOL_VERSION
   ] as string;
-  if ((MODERN_PROTOCOL_VERSIONS as readonly string[]).includes(requested))
-    return null;
+  if ((MODERN_PROTOCOL_VERSIONS as readonly string[]).includes(requested)) return null;
   return {
     status: 400,
     code: MCP_UNSUPPORTED_PROTOCOL_VERSION,
     message: `Unsupported protocol version '${requested}' for a request carrying per-request metadata. Supported versions: ${SUPPORTED_PROTOCOL_VERSIONS.join(", ")}.`,
-    data: {supported: SUPPORTED_PROTOCOL_VERSIONS, requested}
+    data: { supported: SUPPORTED_PROTOCOL_VERSIONS, requested }
   };
 }
 
@@ -261,7 +233,7 @@ export function checkModernVersion(message: JsonRpcMessage): RpcFailure | null {
 export function isAllowedOrigin(origin: string | null): boolean {
   if (origin === null) return true; // non-browser client: no Origin header
   try {
-    const {protocol} = new URL(origin);
+    const { protocol } = new URL(origin);
     return protocol === "http:" || protocol === "https:";
   } catch {
     return false;

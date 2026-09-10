@@ -1,6 +1,6 @@
 declare module "cloudflare:test" {
-  import type {RateLimiter} from "../rate-limiter";
-  import type {ChatRoom} from "../chat-room";
+  import type { RateLimiter } from "../rate-limiter";
+  import type { ChatRoom } from "../chat-room";
 
   export interface ProvidedEnv {
     ChatRoom: DurableObjectNamespace<ChatRoom>;

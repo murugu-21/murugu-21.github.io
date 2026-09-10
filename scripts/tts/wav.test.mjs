@@ -1,7 +1,7 @@
-import {describe, expect, it} from "vitest";
-import {Buffer} from "node:buffer";
+import { describe, expect, it } from "vitest";
+import { Buffer } from "node:buffer";
 
-import {assemble, readWav, silence, writeWav} from "./wav.mjs";
+import { assemble, readWav, silence, writeWav } from "./wav.mjs";
 
 const SR = 8000;
 const tone = seconds => {
@@ -37,21 +37,24 @@ describe("silence", () => {
 
 describe("assemble", () => {
   it("joins chunks with intra gaps, blocks with inter gaps, and reports block timings", () => {
-    const {pcm, timings} = assemble(
-      [[{pcm: tone(1)}, {pcm: tone(1)}], [{pcm: tone(2)}]],
+    const { pcm, timings } = assemble(
+      [[{ pcm: tone(1) }, { pcm: tone(1) }], [{ pcm: tone(2) }]],
       SR,
-      {intra: 0.5, inter: 1}
+      { intra: 0.5, inter: 1 }
     );
     // block 0: 1 + 0.5 + 1 = 2.5 s; gap 1 s; block 1: 2 s → total 5.5 s
     expect(pcm.length).toBe(SR * 5.5 * 2);
     expect(timings).toEqual([
-      {start: 0, end: 2.5},
-      {start: 3.5, end: 5.5}
+      { start: 0, end: 2.5 },
+      { start: 3.5, end: 5.5 }
     ]);
   });
 
   it("adds no trailing gap after the last block", () => {
-    const {pcm} = assemble([[{pcm: tone(1)}]], SR, {intra: 0.5, inter: 1});
+    const { pcm } = assemble([[{ pcm: tone(1) }]], SR, {
+      intra: 0.5,
+      inter: 1
+    });
     expect(pcm.length).toBe(SR * 1 * 2);
   });
 });

@@ -1,11 +1,11 @@
-import {DurableObject} from "cloudflare:workers";
+import { DurableObject } from "cloudflare:workers";
 
-import {fetchDeepseekBalance} from "./ai";
+import { fetchDeepseekBalance } from "./ai";
 // The allowance itself lives with the endpoint that spends it — api/contact.ts
 // has no Workers-runtime imports, so the OpenAPI document and the /developers
 // page can quote the same numbers without pulling this Durable Object (and
 // `cloudflare:workers` with it) into the Astro bundle.
-import {CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT} from "./api/contact";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./api/contact";
 
 // Chat is gated on the DeepSeek account's real balance rather than a daily
 // allowance: the budget is whatever has actually been paid for, and a top-up
@@ -20,13 +20,17 @@ export const BALANCE_TTL_MS = 10 * 60 * 1000;
 
 const BALANCE_KEY = "deepseek:balance";
 
-type CachedBalance = {available: boolean; totalUsd: number; checkedAt: number};
+type CachedBalance = {
+  available: boolean;
+  totalUsd: number;
+  checkedAt: number;
+};
 
 /** What is left of each contact tier for today, after the call that reported it. */
-export type ContactUsage = {clientRemaining: number; globalRemaining: number};
+export type ContactUsage = { clientRemaining: number; globalRemaining: number };
 
 export type ContactSlot = ContactUsage &
-  ({allowed: true} | {allowed: false; scope: "client" | "global"});
+  ({ allowed: true } | { allowed: false; scope: "client" | "global" });
 
 // Single fixed-name instance ("global") shared by every ChatRoom: one place
 // to cache the DeepSeek balance, so N conversations cost one balance check
@@ -67,7 +71,7 @@ export class RateLimiter extends DurableObject {
       return cached.available && cached.totalUsd > BALANCE_RESERVE_USD;
     }
     try {
-      const {available, totalUsd} = await fetchDeepseekBalance(apiKey, fetcher);
+      const { available, totalUsd } = await fetchDeepseekBalance(apiKey, fetcher);
       await this.ctx.storage.put(BALANCE_KEY, {
         available,
         totalUsd,
@@ -97,10 +101,7 @@ export class RateLimiter extends DurableObject {
   // counter — one noisy caller must not spend the site-wide allowance.
   takeContactSlot(client: string): ContactSlot {
     const day = this.today();
-    this.sql.exec(
-      `DELETE FROM contact_counters WHERE key NOT LIKE ?`,
-      `${day}:%`
-    );
+    this.sql.exec(`DELETE FROM contact_counters WHERE key NOT LIKE ?`, `${day}:%`);
     const clientKey = `${day}:client:${client}`;
     const globalKey = `${day}:global`;
     const clientUsed = this.contactCount(clientKey);
@@ -119,7 +120,7 @@ export class RateLimiter extends DurableObject {
       };
     this.bumpContact(clientKey);
     this.bumpContact(globalKey);
-    return {allowed: true, ...this.remaining(clientUsed + 1, globalUsed + 1)};
+    return { allowed: true, ...this.remaining(clientUsed + 1, globalUsed + 1) };
   }
 
   /**
@@ -147,9 +148,7 @@ export class RateLimiter extends DurableObject {
   }
 
   private contactCount(key: string): number {
-    const rows = this.sql
-      .exec(`SELECT count FROM contact_counters WHERE key = ?`, key)
-      .toArray();
+    const rows = this.sql.exec(`SELECT count FROM contact_counters WHERE key = ?`, key).toArray();
     return rows.length ? (rows[0].count as number) : 0;
   }
 

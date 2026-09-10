@@ -1,24 +1,28 @@
-import {beforeEach, describe, expect, it} from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import {parseRange} from "../audio";
+import { parseRange } from "../audio";
 import worker from "../server";
-import {fakeAssets} from "./fixtures";
-import {env} from "cloudflare:test";
+import { fakeAssets } from "./fixtures";
+import { env } from "cloudflare:test";
 
-const testEnv = (): Env => ({...env, ASSETS: fakeAssets()}) as unknown as Env;
+const testEnv = (): Env => ({ ...env, ASSETS: fakeAssets() }) as unknown as Env;
 
 const fetchPath = (path: string, init?: RequestInit) =>
   worker.fetch(new Request(`https://murugappan.dev${path}`, init), testEnv());
 
 const MP3 = new Uint8Array(1000).map((_, i) => i % 251);
-const JSON_BODY = JSON.stringify({version: 1, slug: "first-post", blocks: []});
+const JSON_BODY = JSON.stringify({
+  version: 1,
+  slug: "first-post",
+  blocks: []
+});
 
 beforeEach(async () => {
   await env.AUDIO.put("blog/breeze/first-post.mp3", MP3, {
-    httpMetadata: {contentType: "audio/mpeg"}
+    httpMetadata: { contentType: "audio/mpeg" }
   });
   await env.AUDIO.put("blog/breeze/first-post.json", JSON_BODY, {
-    httpMetadata: {contentType: "application/json"}
+    httpMetadata: { contentType: "application/json" }
   });
 });
 
@@ -42,19 +46,17 @@ describe("GET /blog/audio/:file", () => {
 
   it("honours a byte range", async () => {
     const res = await fetchPath("/blog/audio/first-post.mp3", {
-      headers: {Range: "bytes=100-199"}
+      headers: { Range: "bytes=100-199" }
     });
     expect(res.status).toBe(206);
     expect(res.headers.get("Content-Range")).toBe("bytes 100-199/1000");
     expect(res.headers.get("Content-Length")).toBe("100");
-    expect(new Uint8Array(await res.arrayBuffer())).toEqual(
-      MP3.slice(100, 200)
-    );
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(MP3.slice(100, 200));
   });
 
   it("honours an open-ended range", async () => {
     const res = await fetchPath("/blog/audio/first-post.mp3", {
-      headers: {Range: "bytes=900-"}
+      headers: { Range: "bytes=900-" }
     });
     expect(res.status).toBe(206);
     expect(res.headers.get("Content-Range")).toBe("bytes 900-999/1000");
@@ -62,7 +64,7 @@ describe("GET /blog/audio/:file", () => {
 
   it("rejects an unsatisfiable range", async () => {
     const res = await fetchPath("/blog/audio/first-post.mp3", {
-      headers: {Range: "bytes=5000-6000"}
+      headers: { Range: "bytes=5000-6000" }
     });
     expect(res.status).toBe(416);
     expect(res.headers.get("Content-Range")).toBe("bytes */1000");
@@ -72,7 +74,7 @@ describe("GET /blog/audio/:file", () => {
     const first = await fetchPath("/blog/audio/first-post.mp3");
     const etag = first.headers.get("ETag")!;
     const res = await fetchPath("/blog/audio/first-post.mp3", {
-      headers: {"If-None-Match": etag}
+      headers: { "If-None-Match": etag }
     });
     expect(res.status).toBe(304);
   });
@@ -93,13 +95,13 @@ describe("GET /blog/audio/:file", () => {
 
 describe("parseRange", () => {
   it("parses closed, open and suffix ranges", () => {
-    expect(parseRange("bytes=0-9", 100)).toEqual({offset: 0, length: 10});
-    expect(parseRange("bytes=90-", 100)).toEqual({offset: 90, length: 10});
-    expect(parseRange("bytes=-5", 100)).toEqual({offset: 95, length: 5});
+    expect(parseRange("bytes=0-9", 100)).toEqual({ offset: 0, length: 10 });
+    expect(parseRange("bytes=90-", 100)).toEqual({ offset: 90, length: 10 });
+    expect(parseRange("bytes=-5", 100)).toEqual({ offset: 95, length: 5 });
   });
 
   it("clamps an end past the object", () => {
-    expect(parseRange("bytes=95-500", 100)).toEqual({offset: 95, length: 5});
+    expect(parseRange("bytes=95-500", 100)).toEqual({ offset: 95, length: 5 });
   });
 
   it("flags ranges beyond the object and ignores garbage", () => {
