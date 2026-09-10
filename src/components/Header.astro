@@ -32,9 +32,9 @@ const links = [
           </li>
         ))
       }
-      <li><ThemeToggle /></li>
     </ul>
   </nav>
+  <div class="theme-slot"><ThemeToggle /></div>
 </header>
 
 <script>
@@ -167,6 +167,17 @@ const links = [
     transition:
       max-height 0.2s ease-out,
       visibility 0.2s;
+  }
+
+  /* Below the 48em breakpoint the menu collapses, so the toggle can't live
+     inside it — react.dev keeps its theme control in the top bar at every
+     width. Anchored to the fixed header, just clear of the hamburger. */
+  .header .theme-slot {
+    position: absolute;
+    top: 8px;
+    /* the hamburger's box is 62px wide (22px bars + 20px padding each side)
+       and sits 20px off the edge — clear it plus a small gap */
+    right: 86px;
   }
 
   /* menu icon (hamburger bars in accent blue, reference-style) */
@@ -311,6 +322,13 @@ const links = [
     }
     .header .menu-btn {
       display: none;
+    }
+    .header nav {
+      margin-left: auto;
+    }
+    .header .theme-slot {
+      position: static;
+      margin-left: 4px;
     }
   }
   @media (max-width: 960px) and (min-width: 768px) {

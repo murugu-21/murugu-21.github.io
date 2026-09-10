@@ -1,155 +1,152 @@
 ---
-// Theme toggle island: ports the old React ToggleSwitch (sun/moon slider).
-// Checked = dark mode (moon); unchecked = light mode (sun).
+// Theme toggle: modelled on the react.dev header control — a round ghost icon
+// button showing the theme you'd switch TO (sun while dark, moon while light)
+// rather than a slider. Icons are the lucide sun/moon paths, inlined.
+//
+// Shared by BOTH apps, which have different theme contracts (the same split
+// islands.css encodes as `html.dark-mode` vs `body.dark`):
+//   portfolio — owns the class itself, writes localStorage directly
+//   blog      — a pre-paint bootstrap owns it and exposes __setPreferredTheme
+// The script below detects which is present. Being plain Astro, it is server
+// rendered at full size, so unlike a hydrated island it can't shift the
+// header after paint.
 ---
 
-<label class="switch">
-  <input type="checkbox" id="theme-toggle" aria-label="Dark mode" />
-  <span class="slider round">
-    <span class="emoji" aria-hidden="true">
-      <span class="sun">☀️</span>
-      <span class="moon">🌜</span>
-    </span>
-  </span>
-</label>
+<button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+  <svg
+    class="icon sun"
+    xmlns="http://www.w3.org/2000/svg"
+    width="28"
+    height="28"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2"></path>
+    <path d="M12 20v2"></path>
+    <path d="m4.93 4.93 1.41 1.41"></path>
+    <path d="m17.66 17.66 1.41 1.41"></path>
+    <path d="M2 12h2"></path>
+    <path d="M20 12h2"></path>
+    <path d="m6.34 17.66-1.41 1.41"></path>
+    <path d="m19.07 4.93-1.41 1.41"></path>
+  </svg>
+  <svg
+    class="icon moon"
+    xmlns="http://www.w3.org/2000/svg"
+    width="28"
+    height="28"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path
+      d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"
+    ></path>
+  </svg>
+</button>
 
 <script>
   import { tag } from "../lib/analytics";
 
-  const box = document.getElementById("theme-toggle") as HTMLInputElement;
+  const btn = document.getElementById("theme-toggle") as HTMLButtonElement;
   const root = document.documentElement;
-  box.checked = root.classList.contains("dark-mode");
-  box.addEventListener("change", () => {
-    root.classList.toggle("dark-mode", box.checked);
-    try {
-      localStorage.setItem("isDark", JSON.stringify(box.checked));
-    } catch {}
+
+  const isDark = () =>
+    root.classList.contains("dark-mode") || document.body.classList.contains("dark");
+
+  // The label names the action, so it tracks the theme rather than the state.
+  const label = () => btn.setAttribute("aria-label", isDark() ? "Use light mode" : "Use dark mode");
+  label();
+
+  btn.addEventListener("click", () => {
+    const next = isDark() ? "light" : "dark";
+    if (window.__setPreferredTheme) {
+      // Blog: the bootstrap owns the class, persistence and `themechange`.
+      window.__setPreferredTheme(next);
+    } else {
+      root.classList.toggle("dark-mode", next === "dark");
+      try {
+        localStorage.setItem("isDark", JSON.stringify(next === "dark"));
+      } catch {}
+    }
+    label();
     // A super property, not an event: the point is segmenting by the theme
     // the visitor actually read the site in.
-    tag("theme", box.checked ? "dark" : "light");
+    tag("theme", next);
   });
+
+  // The blog can change theme from elsewhere (OS preference); keep up.
+  window.addEventListener("themechange", label);
 </script>
 
-<style lang="scss">
-  @import "../styles/variables";
-
-  .switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 26px;
-  }
-
-  /* Fix visible slider checkbox */
-  input {
-    transform: scale(0.5);
-  }
-
-  .slider {
-    position: absolute;
+<style>
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 9999px;
+    background: transparent;
+    color: inherit;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: $toggleSwitchSliderBG;
-    -webkit-transition: 0.4s;
-    transition: 0.4s;
+    transition:
+      transform 0.15s ease,
+      background-color 0.15s ease;
   }
 
-  .slider::before {
-    position: absolute;
-    content: "";
-    height: 26px;
-    width: 28px;
-    left: 0;
-    bottom: 0;
-    background-color: $textColorDark;
-    -webkit-transition: 0.4s;
-    transition: 0.4s;
+  /* Tinted from the icon's own colour, so it works in both themes without a
+     second variable. */
+  .theme-toggle:hover {
+    background-color: color-mix(in srgb, currentColor 10%, transparent);
   }
 
-  input:checked + .slider {
-    background-color: $toggleCheck;
+  .theme-toggle:active {
+    transform: scale(0.95);
   }
 
-  input:focus-visible + .slider {
-    box-shadow: 0 0 0 3px $toggleCheck;
+  .theme-toggle:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
   }
 
-  input:checked + .slider::before,
-  input:checked + .slider > .emoji {
-    -webkit-transform: translateX(26px);
-    -ms-transform: translateX(26px);
-    transform: translateX(26px);
+  .icon {
+    display: block;
   }
 
-  /* Rounded sliders */
-  .slider.round {
-    border-radius: 34px;
-    display: flex;
-    align-items: center;
-  }
-
-  .slider.round::before {
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-  }
-
-  .slider::after {
-    display: inline;
-    position: absolute;
-    right: 9.3%;
-    bottom: 17.5%;
-  }
-
-  input:checked + .slider::after {
-    display: inline;
-    position: absolute;
-    right: 56.3%;
-    bottom: 14.5%;
-  }
-
-  .emoji {
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    margin-left: 2px;
-  }
-
-  /* The old React component swapped the emoji in JS; here both are rendered
-     and CSS shows the one matching the checkbox state. */
-  .emoji .moon {
-    display: none;
-  }
-  input:checked + .slider .moon {
-    display: inline;
-  }
-  input:checked + .slider .sun {
+  /* Show the theme you'd switch TO: sun while dark, moon while light. */
+  .sun {
     display: none;
   }
 
-  @media all and (max-width: 786px) and (min-width: 425px) {
-    input:checked + .slider::after {
-      right: 60.3%;
-      bottom: 20.5%;
-    }
-    .slider::after {
-      right: 15.3%;
-      bottom: 22.5%;
-    }
+  :global(html.dark-mode) .sun,
+  :global(body.dark) .sun {
+    display: block;
   }
 
-  @media all and (max-width: 2560px) and (min-width: 1552px) {
-    .slider::after {
-      bottom: 12.5% !important;
-    }
+  :global(html.dark-mode) .moon,
+  :global(body.dark) .moon {
+    display: none;
   }
 
-  @media all and (max-width: 1552px) and (min-width: 1440px) {
-    .slider::after {
-      bottom: 7.5% !important;
+  @media (prefers-reduced-motion: reduce) {
+    .theme-toggle {
+      transition: none;
+    }
+    .theme-toggle:active {
+      transform: none;
     }
   }
 </style>

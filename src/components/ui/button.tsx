@@ -30,25 +30,24 @@ const buttonVariants = cva(
   }
 );
 
-// forwardRef (React 18): Radix asChild/Slot must be able to attach refs to
-// the underlying button (e.g. DropdownMenuTrigger's popper anchor).
-const Button = React.forwardRef<
-  HTMLButtonElement,
-  React.ComponentProps<"button"> &
-    VariantProps<typeof buttonVariants> & {
-      asChild?: boolean;
-    }
->(({ className, variant, size, asChild = false, ...props }, ref) => {
+function Button({
+  className,
+  variant,
+  size,
+  asChild = false,
+  ...props
+}: React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+  }) {
   const Comp = asChild ? Slot : "button";
   return (
     <Comp
-      ref={ref}
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />
   );
-});
-Button.displayName = "Button";
+}
 
 export { Button, buttonVariants };

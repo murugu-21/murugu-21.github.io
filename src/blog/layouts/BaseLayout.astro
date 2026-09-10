@@ -14,11 +14,9 @@ import "../styles/normalize.css";
 import "../styles/style.css";
 // Highlighting for code blocks
 import "prismjs/themes/prism.css";
-// react-toggle styling for the theme switch
-import "../styles/customToggle.css";
 
 import BaseHead from "../components/BaseHead.astro";
-import ThemeToggle from "../components/ThemeToggle.jsx";
+import ThemeToggle from "../../components/ThemeToggle.astro";
 import ChatWidget from "../../components/chat/ChatWidget.astro";
 import { SITE_TITLE } from "../consts";
 
@@ -109,7 +107,7 @@ const isRootPath = Astro.url.pathname === rootPath;
               ></path>
             </svg>
           </a>
-          <ThemeToggle client:load />
+          <ThemeToggle />
         </div>
       </header>
       <main>
