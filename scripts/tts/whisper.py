@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Long-lived word-timestamp worker for scripts/align-audio.ts.
 
 Reads JSON lines from stdin: {"id", "wav", "text"} where wav is a 16 kHz mono
@@ -20,7 +19,7 @@ import mlx_whisper
 MODEL = "mlx-community/whisper-large-v3-turbo"
 
 
-def emit(obj: dict) -> None:
+def emit(obj: dict[str, object]) -> None:
     sys.stdout.write(json.dumps(obj) + "\n")
     sys.stdout.flush()
 
@@ -63,7 +62,7 @@ def main() -> int:
                 if len(retry) > len(words):
                     words = retry
             emit({"id": job["id"], "words": words, "wall": round(time.time() - t0, 2)})
-        except Exception as exc:  # report and keep serving
+        except Exception as exc:  # noqa: BLE001 — report and keep serving
             emit({"id": job["id"], "error": f"{type(exc).__name__}: {exc}"})
     return 0
 

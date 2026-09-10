@@ -1,0 +1,10 @@
+# Editor/type-checker settings for the read-aloud TTS scripts in scripts/tts.
+# There is no Python package here; the scripts run under .venv-tts (see README
+# "Read-aloud audio"), and basedpyright needs to know that to resolve mlx imports.
+[tool.basedpyright]
+venvPath = "."
+venv = ".venv-tts"
+pythonVersion = "3.13"
+# Pyright's default mode. basedpyright's "recommended" adds reportUnknown*/reportAny
+# warnings that the untyped mlx-audio / mlx-whisper APIs cannot satisfy.
+typeCheckingMode = "standard"

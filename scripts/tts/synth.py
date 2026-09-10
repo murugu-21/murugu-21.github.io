@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Long-lived Breeze TTS 2 worker for scripts/generate-audio.ts.
 
 Reads job-file paths from stdin, one per line. For each job, synthesises every
@@ -36,7 +35,7 @@ PROTOCOL = sys.stdout
 sys.stdout = sys.stderr
 
 
-def emit(obj: dict) -> None:
+def emit(obj: dict[str, object]) -> None:
     PROTOCOL.write(json.dumps(obj) + "\n")
     PROTOCOL.flush()
 
@@ -50,7 +49,7 @@ def write_wav(path: Path, audio: np.ndarray) -> None:
         w.writeframes(pcm.tobytes())
 
 
-def synthesize(model, text: str, reference: dict) -> np.ndarray:
+def synthesize(model, text: str, reference: dict[str, str]) -> np.ndarray:
     parts = []
     for chunk in model.generate(
         text=text,
@@ -85,7 +84,7 @@ def run_job(model, job_path: str) -> None:
                     "wall": round(time.time() - t0, 1),
                 }
             )
-        except Exception as exc:  # report and keep going; the orchestrator decides
+        except Exception as exc:  # noqa: BLE001 — report and keep going; the orchestrator decides
             emit({"id": chunk["id"], "error": f"{type(exc).__name__}: {exc}"})
     emit({"done": True, "job": job_path})
 

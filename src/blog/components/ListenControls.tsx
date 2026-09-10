@@ -465,7 +465,7 @@ export function ListenControls({ slug }: { slug: string }) {
       </span>
 
       <Slider
-        className="group min-w-0 flex-1 [&_[data-slot=slider-thumb]]:opacity-0 [&_[data-slot=slider-thumb]]:hover:opacity-100 [&_[data-slot=slider-track]]:h-1 hover:[&_[data-slot=slider-thumb]]:opacity-100 focus-within:[&_[data-slot=slider-thumb]]:opacity-100"
+        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 **:data-[slot=slider-thumb]:hover:opacity-100 **:data-[slot=slider-track]:h-1 hover:**:data-[slot=slider-thumb]:opacity-100 focus-within:**:data-[slot=slider-thumb]:opacity-100"
         value={[progress.position]}
         max={progress.length || 1}
         step={seekable ? 0.1 : 1}

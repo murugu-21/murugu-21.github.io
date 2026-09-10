@@ -83,7 +83,7 @@ function BubbleView({ kind, text }: Bubble) {
   return (
     <div
       className={cn(
-        "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] whitespace-pre-wrap break-words",
+        "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] whitespace-pre-wrap wrap-break-word",
         kind === "user" && "self-end rounded-br-sm bg-primary text-primary-foreground",
         kind === "assistant" && "self-start rounded-bl-sm bg-muted text-foreground",
         kind === "system" && "self-center bg-transparent text-center text-xs text-muted-foreground"
@@ -388,12 +388,12 @@ export function ChatWidget() {
     !sending;
 
   const headerBtn =
-    "size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-[18px]";
+    "size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-4.5";
 
   return (
     <>
       <Button
-        className="fixed right-[30px] bottom-5 z-[1000] size-14 rounded-full shadow-lg [&_svg:not([class*='size-'])]:size-6"
+        className="fixed right-7.5 bottom-5 z-1000 size-14 rounded-full shadow-lg [&_svg:not([class*='size-'])]:size-6"
         aria-label="Chat with Jarvis, Murugappan's AI assistant"
         aria-expanded={open}
         onClick={toggleOpen}
@@ -404,7 +404,7 @@ export function ChatWidget() {
       {tooltip !== "hidden" && (
         <div
           className={cn(
-            "fixed right-24 bottom-8 z-[1000] rounded-[10px] border bg-background px-3 py-2 text-sm text-foreground shadow-lg transition-opacity duration-[600ms]",
+            "fixed right-24 bottom-8 z-1000 rounded-[10px] border bg-background px-3 py-2 text-sm text-foreground shadow-lg transition-opacity duration-600",
             tooltip === "fading" && "opacity-0"
           )}
         >
@@ -416,7 +416,7 @@ export function ChatWidget() {
         <Card
           role="dialog"
           aria-label="Chat with Jarvis, Murugappan's AI assistant"
-          className="fixed right-[30px] bottom-[90px] z-[1001] h-[520px] max-h-[calc(100vh-120px)] w-[370px] max-w-[calc(100vw-24px)] overflow-hidden rounded-[14px] shadow-2xl max-sm:top-0 max-sm:right-0 max-sm:bottom-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-auto max-sm:max-w-none max-sm:rounded-none max-sm:border-0"
+          className="fixed right-7.5 bottom-22.5 z-1001 h-130 max-h-[calc(100vh-120px)] w-92.5 max-w-[calc(100vw-24px)] overflow-hidden rounded-[14px] shadow-2xl max-sm:top-0 max-sm:right-0 max-sm:bottom-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-auto max-sm:max-w-none max-sm:rounded-none max-sm:border-0"
         >
           <CardHeader className="flex-row items-center gap-1 bg-primary py-3 text-primary-foreground">
             <div className="min-w-0 flex-1">
