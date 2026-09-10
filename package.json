@@ -17,6 +17,7 @@
     "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",
     "deploy": "npm run db:migrate && wrangler deploy",
     "test": "vitest run",
+    "test:capture": "node --experimental-transform-types --disable-warning=ExperimentalWarning scripts/live-test-capture.mjs",
     "check:astro": "NODE_OPTIONS=\"-r ./scripts/ts-alias.cjs\" astro check",
     "check:src": "node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
     "check:worker": "node node_modules/typescript/bin/tsc -p worker",
