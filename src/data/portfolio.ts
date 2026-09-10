@@ -36,11 +36,19 @@ export const socialMediaLinks = {
   rss: "https://murugappan.dev/blog/rss.xml"
 };
 
+// schema.org Person.sameAs — the public profiles, shared by the portfolio
+// layout and the blog so the two JSON-LD graphs describe one entity.
+export const sameAs = [
+  socialMediaLinks.github,
+  socialMediaLinks.linkedin,
+  socialMediaLinks.twitter
+];
+
 // Skills Section
 
 export interface SoftwareSkill {
   skillName: string;
-  iconName: string; // key into components/Icon.astro path map
+  iconName: string; // <symbol id> in src/assets/icons.svg, rendered by components/Icon.astro
 }
 
 export const skillsSection: {
@@ -73,8 +81,8 @@ export const skillsSection: {
 };
 
 // Proficiency section: broad areas with the tools inside each. The page
-// renders the tools as chips with their marks (icon keys into
-// components/Icon.astro); progressPercentage is kept for the dataset API's
+// renders the tools as chips with their marks (icon = <symbol id> in
+// src/assets/icons.svg); progressPercentage is kept for the dataset API's
 // self-reported `level` and is not shown on the site.
 
 export interface ProficiencyTool {

@@ -67,18 +67,6 @@ $appHeaderBG: #282c35;
 $skillsColor: #06038d;
 $appLink: #06038d;
 
-// social media icons
-$faceBook: #3b5998;
-$linkedin: #0e76a8;
-$github: #333;
-$gitlab: #fca326;
-$google: #ea4335;
-$twitter: #000000; // X (formerly Twitter) brand black
-$medium: #000;
-$rss: #f26522;
-$instagram: #c13584;
-$kaggle: #20beff;
-
 // The old React app applied a bare `.dark-mode` class to inner elements (cards,
 // footer, section roots) whose dark background/text came from a global rule.
 // Astro components must opt in explicitly instead:
