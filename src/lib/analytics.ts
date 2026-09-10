@@ -16,10 +16,13 @@
 // Event names are snake_case `<surface>_<action>`. Never pass anything a
 // visitor typed (chat messages, search queries) — no PII goes to PostHog.
 
+import { onFirstInteraction } from "./first-interaction";
+
 interface PostHog {
   capture(event: string, properties?: Record<string, string>): void;
   register(properties: Record<string, string>): void;
   init(token: string, config: Record<string, unknown>): void;
+  startSessionRecording(): void;
 }
 
 /** Injectable for tests; production dynamic-imports the real browser SDK. */
@@ -134,15 +137,38 @@ export async function initAnalytics(
       api_host: host.trim().replace(/\/$/, ""),
       // PostHog's real domain, not the proxy — the toolbar needs it.
       ui_host: "https://us.posthog.com",
-      // Session replay is Microsoft Clarity's job here (see the layouts):
-      // its recording UI is the better debugging tool and it is unmetered,
-      // where PostHog's replay is quota'd. Recording in both would double the
-      // client cost for footage nobody watches. PostHog keeps the events.
+      // Session replay starts on the visitor's first interaction (below), not
+      // at boot. The recorder is the SDK's heaviest extension, and loading it
+      // in the idle window right after paint put its evaluation inside what
+      // Lighthouse scores as blocking time; a visitor who never touches the
+      // page has nothing worth replaying anyway. Recording must also be
+      // switched on in the PostHog project's replay settings.
       disable_session_recording: true,
+      session_recording: {
+        maskAllInputs: true,
+        // Sent chat messages are re-rendered as text, which input masking
+        // does not cover — the transcript carries this attribute.
+        maskTextSelector: "[data-ph-mask]"
+      },
+      // Extensions this site does not use. Each is a separate script the SDK
+      // would otherwise fetch and evaluate after boot (surveys alone was 34 KB
+      // and a 67 ms task in the Lighthouse trace).
+      disable_surveys: true,
+      capture_dead_clicks: false,
       persistence: "localStorage+cookie",
       capture_pageview: true
     });
     sdk = ph;
+    const win = (globalThis as { window?: EventTarget }).window;
+    if (win) {
+      onFirstInteraction(() => {
+        try {
+          ph.startSessionRecording();
+        } catch {
+          // recorder blocked or offline — events still flow
+        }
+      }, win);
+    }
     // Expose it the way the snippet would, so the PostHog toolbar can find it.
     (globalThis as { posthog?: PostHog }).posthog = ph;
     const queued = pending;

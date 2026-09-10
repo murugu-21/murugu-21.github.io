@@ -3,7 +3,6 @@ import path from "node:path";
 import type { AstroIntegration } from "astro";
 import { defineConfig } from "astro/config";
 import { unified } from "@astrojs/markdown-remark";
-import { FontaineTransform } from "fontaine";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
@@ -87,6 +86,24 @@ function blogNotFoundCopy(): AstroIntegration {
   };
 }
 
+// `client:interaction` — hydrate an island on the visitor's first input rather
+// than on idle. The reasoning lives with the directive itself,
+// src/directives/interaction.ts; the attribute is typed in
+// src/client-directives.d.ts.
+function clientInteractionDirective(): AstroIntegration {
+  return {
+    name: "client-interaction-directive",
+    hooks: {
+      "astro:config:setup": ({ addClientDirective }) => {
+        addClientDirective({
+          name: "interaction",
+          entrypoint: "./src/directives/interaction.ts"
+        });
+      }
+    }
+  };
+}
+
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
@@ -94,6 +111,7 @@ export default defineConfig({
   build: { assets: "static" },
   integrations: [
     react(),
+    clientInteractionDirective(),
     sitemap({
       // The integration only recognises a top-level /404 as a status-code
       // page, so /blog/404/ has to be excluded by hand.
@@ -118,20 +136,23 @@ export default defineConfig({
     blogNotFoundCopy()
   ],
   vite: {
+    // build.inlineStylesheets "auto" inlines a stylesheet into the page when
+    // Vite's assetsInlineLimit says so. Raise that to 8 KB for CSS only, so
+    // ScrollTop's ~7.6 KB scoped sheet rides in the HTML instead of costing a
+    // render-blocking request; the 30 KB+ sheets stay external. CSS only
+    // because the limit is otherwise global: as a plain number it also
+    // base64-inlined every sub-8 KB font subset into the stylesheets that
+    // reference them, which tripled the chat sheet's gzipped size (6 → 22
+    // KB) on the critical path. `undefined` keeps Vite's 4 KB default for
+    // everything else.
+    build: {
+      assetsInlineLimit: (file, content) =>
+        file.endsWith(".css") ? content.byteLength < 8192 : undefined
+    },
     plugins: [
       // Tailwind is scoped to the chat widget island (see chat.css — theme +
       // utilities only, no preflight, so it can't touch the site's SCSS).
-      tailwindcss(),
-      // Generates metric-tuned fallback @font-face rules (size-adjust /
-      // ascent-override etc.) for Agustina and the @fontsource fonts
-      // (Merriweather, Montserrat) so the swap from the system fallback to
-      // the real face causes no layout shift (fixes the ~0.2 CLS from font
-      // swap). One instance covers every stylesheet in the build now that
-      // there's a single Vite pipeline; the fallback stack is the union of
-      // what the two former instances used.
-      FontaineTransform.vite({
-        fallbacks: ["Arial", "Georgia", "Times New Roman"]
-      })
+      tailwindcss()
     ]
   },
   markdown: {

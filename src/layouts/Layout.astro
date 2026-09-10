@@ -1,8 +1,6 @@
 ---
-import { claritySnippet as buildClaritySnippet } from "../lib/clarity";
-import "@fontsource/montserrat/400.css";
+import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../lib/fonts";
 import "../styles/global.scss";
-import agustinaUrl from "../assets/fonts/Agustina.woff?url";
 import ChatWidget from "../components/chat/ChatWidget.astro";
 import { sameAs, skillsCategories } from "../data/portfolio";
 
@@ -166,11 +164,6 @@ const jsonLd = { "@context": "https://schema.org", "@graph": graph };
 const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
 const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
 const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
-
-// Microsoft Clarity — session recordings and heatmaps; PostHog owns events.
-// The snippet (including the queue stub Clarity's own tag calls into) lives in
-// ../lib/clarity.ts so both apps share one copy and it can be tested.
-const claritySnippet = buildClaritySnippet(import.meta.env.PUBLIC_CLARITY_PROJECT_ID);
 ---
 
 <!doctype html>
@@ -232,7 +225,13 @@ const claritySnippet = buildClaritySnippet(import.meta.env.PUBLIC_CLARITY_PROJEC
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
 
-    <link rel="preload" as="font" type="font/woff" crossorigin href={agustinaUrl} />
+    {
+      /* The text face is preloaded so it is usually in hand by first paint:
+        with no metric-tuned fallback faces (see ../lib/fonts.ts) the swap
+        from the system font is what would otherwise shift layout. */
+    }
+    <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
+    <style is:inline set:html={FIRA_CODE_FACE}></style>
 
     <script is:inline>
       (function () {
@@ -256,8 +255,6 @@ const claritySnippet = buildClaritySnippet(import.meta.env.PUBLIC_CLARITY_PROJEC
         </>
       )
     }
-
-    {claritySnippet && <script is:inline set:html={claritySnippet} />}
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 

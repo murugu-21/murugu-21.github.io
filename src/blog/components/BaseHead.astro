@@ -1,11 +1,10 @@
 ---
-import { claritySnippet as buildClaritySnippet } from "../../lib/clarity";
 import { SITE_TITLE, SITE_DESCRIPTION, SOCIAL } from "../consts";
 
-// Above-the-fold fonts, preloaded to shrink the font-swap window (CLS).
-// ?url resolves to the same hashed asset the @fontsource CSS references.
-import montserratBlack from "@fontsource/montserrat/files/montserrat-latin-900-normal.woff2?url";
-import merriweatherRegular from "@fontsource/merriweather/files/merriweather-latin-400-normal.woff2?url";
+// The text face, declared inline below and preloaded so it is usually in hand
+// by first paint (no metric-tuned fallback faces — the swap is what would
+// otherwise shift layout).
+import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../../lib/fonts";
 
 // Ported from the old react-helmet Seo component (src/components/seo.js).
 // `title` omitted/null → homepage variant. `ogType: "article"` adds the
@@ -41,11 +40,6 @@ const ogImage = `${origin}${base}/og-image.png`;
 const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
 const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
 const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
-
-// Microsoft Clarity — session recordings and heatmaps; PostHog owns events.
-// The snippet (including the queue stub Clarity's own tag calls into) lives in
-// ../../lib/clarity.ts so both apps share one copy and it can be tested.
-const claritySnippet = buildClaritySnippet(import.meta.env.PUBLIC_CLARITY_PROJECT_ID);
 ---
 
 <meta charset="utf-8" />
@@ -74,8 +68,8 @@ const claritySnippet = buildClaritySnippet(import.meta.env.PUBLIC_CLARITY_PROJEC
 <link rel="manifest" href="/manifest.json" />
 <meta name="theme-color" content="#06038d" />
 <meta name="description" content={metaDescription} />
-<link rel="preload" as="font" type="font/woff2" crossorigin href={montserratBlack} />
-<link rel="preload" as="font" type="font/woff2" crossorigin href={merriweatherRegular} />
+<link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
+<style is:inline set:html={FIRA_CODE_FACE}></style>
 <meta property="og:title" content={ogTitle} />
 <meta property="og:description" content={metaDescription} />
 <meta property="og:type" content={ogType} />
@@ -111,8 +105,6 @@ const claritySnippet = buildClaritySnippet(import.meta.env.PUBLIC_CLARITY_PROJEC
     </>
   )
 }
-
-{claritySnippet && <script is:inline set:html={claritySnippet} />}
 
 <script>
   // Shared WebMCP tool registration from the portfolio app (same cross-app

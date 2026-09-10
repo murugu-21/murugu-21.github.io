@@ -1,4 +1,5 @@
 ---
+import { Image } from "astro:assets";
 import { workExperiences } from "../data/portfolio";
 import { accentTitle } from "../lib/accent";
 import {
@@ -58,11 +59,14 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
           stints.map(stint => (
             <li class="stint">
               <header class="stint-header">
-                <img
+                {/* Rendered at 4.5rem (3rem on phones): 72px + a 2x variant
+                    as WebP, instead of the 256px source PNG. */}
+                <Image
                   class="stint-logo"
-                  src={stint.logo.src}
-                  width={stint.logo.width}
-                  height={stint.logo.height}
+                  src={stint.logo}
+                  width={72}
+                  height={72}
+                  densities={[1, 2]}
                   alt={stint.company + " logo"}
                   loading="lazy"
                 />

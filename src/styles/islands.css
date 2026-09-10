@@ -46,7 +46,7 @@
   --ring: #06038d;
   --radius: 0.75rem;
   --shadow-color: rgba(0, 0, 0, 0.25);
-  font-family: "Montserrat", Arial, sans-serif;
+  font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 html.dark-mode .ui-island,
