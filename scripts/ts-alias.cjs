@@ -6,7 +6,7 @@
 // Microsoft publishes that old API as `@typescript/typescript6` for exactly
 // this overlap. Volar hardcodes `require("typescript")` rather than accepting
 // an injected compiler, so this preload points the CJS resolver at the compat
-// package for the duration of `npm run check:astro`. Everything else — tsc,
+// package for the duration of `bun run check:astro`. Everything else — tsc,
 // check:src, check:worker, the editor — uses the real TypeScript 7.
 //
 // Delete this file, the `@typescript/typescript6` devDependency, and the

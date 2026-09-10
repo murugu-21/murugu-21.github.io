@@ -5,4 +5,4 @@
 # Emergency bypass: git commit --no-verify
 set -e
 
-npx lint-staged
+bunx lint-staged

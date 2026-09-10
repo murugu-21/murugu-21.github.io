@@ -1,17 +1,17 @@
 // Adds word-level timings to the read-aloud JSON already in R2, so the page
 // can highlight the word being spoken. Runs on the author's laptop after
-// `npm run audio`; never re-synthesises anything:
+// `bun run audio`; never re-synthesises anything:
 //
-//   npm run audio:align              # every post whose JSON is still version 1
-//   npm run audio:align first-post   # one post
-//   npm run audio:align -- --force   # re-align version 2 posts too
-//   npm run audio:align -- --local   # target `wrangler dev`'s local R2
+//   bun run audio:align              # every post whose JSON is still version 1
+//   bun run audio:align first-post   # one post
+//   bun run audio:align --force   # re-align version 2 posts too
+//   bun run audio:align --local   # target `wrangler dev`'s local R2
 //
 // Per post: fetch <slug>.json + .mp3 → decode to 16 kHz mono → slice each
 // block by its timings → mlx-whisper word timestamps (scripts/tts/whisper.py,
 // long-lived worker) → alignWords() maps them onto the block's known text →
 // write version 2 JSON back. Blocks that align poorly keep no `words` and
-// fall back to the paragraph highlight. Do not run while `npm run audio` is
+// fall back to the paragraph highlight. Do not run while `bun run audio` is
 // synthesising: both want the GPU.
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -57,7 +57,7 @@ const wranglerArgs = (extra: string[]) => [
 // (expired login, network) throws, so a broken session can never be mistaken
 // for "nothing there yet".
 function r2Get(key: string, file: string): boolean {
-  const r = spawnSync("npx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
+  const r = spawnSync("bunx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
     encoding: "utf8"
   });
   if (r.status === 0 && existsSync(file)) return true;
@@ -70,17 +70,17 @@ function r2Get(key: string, file: string): boolean {
 // after minutes (or hours) of local work.
 function checkWranglerLogin() {
   if (local) return;
-  const r = spawnSync("npx", ["wrangler", "whoami"], { encoding: "utf8" });
+  const r = spawnSync("bunx", ["wrangler", "whoami"], { encoding: "utf8" });
   if (r.status !== 0 || /not logged in|expired/i.test(`${r.stderr}${r.stdout}`)) {
     fail(
-      "wrangler is not logged in (or the OAuth token expired) — run `npx wrangler login` in an interactive terminal, then retry"
+      "wrangler is not logged in (or the OAuth token expired) — run `bunx wrangler login` in an interactive terminal, then retry"
     );
   }
 }
 
 function r2Put(key: string, file: string, contentType: string) {
   run(
-    "npx",
+    "bunx",
     wranglerArgs(["put", `${BUCKET}/${key}`, "--file", file, "--content-type", contentType])
   );
 }
@@ -89,7 +89,7 @@ function r2Put(key: string, file: string, contentType: string) {
 // command, so the blog's own dist/ directory is the source of candidates.
 function publishedSlugs(): string[] {
   const dist = join(ROOT, "dist", "blog");
-  if (!existsSync(dist)) fail("dist/blog missing — run `npm run build` first");
+  if (!existsSync(dist)) fail("dist/blog missing — run `bun run build` first");
   return run("ls", [dist])
     .split("\n")
     .filter(

@@ -48,7 +48,7 @@
   // (Storage & Databases → D1 → jarvis-chats). Writes are fire-and-forget.
   //
   // Schema lives in ./migrations (the default `migrations_dir`); apply it with
-  // `npm run db:migrate`. Unlike the DO, which creates its tables in onStart(),
+  // `bun run db:migrate`. Unlike the DO, which creates its tables in onStart(),
   // nothing in the Worker issues DDL against D1 — until the migration is
   // applied every mirror write fails, and because the writes are
   // fire-and-forget that shows up only as a "d1 mirror failed" line in the logs.
@@ -59,7 +59,7 @@
       "database_id": "a1111792-fb35-470f-85c9-13c3aab0662c"
     }
   ],
-  // Pre-rendered blog audio + the voice reference, written by `npm run audio`
+  // Pre-rendered blog audio + the voice reference, written by `bun run audio`
   // from a laptop (never from Workers Builds). Served by worker/audio.ts.
   "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "murugappan-dev-audio" }],
   "observability": { "enabled": true }

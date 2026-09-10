@@ -4,21 +4,31 @@ Personal portfolio of Murugappan, built with [Astro 7](https://astro.build) (Vit
 
 **Live site:** https://murugappan.dev
 
-One Astro project serves both the portfolio and the blog (served at `/blog`): blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position rather than an Astro `base`, and the blog's non-route code (layout, islands, styles, post helpers) is namespaced under `src/blog/`. Posts are markdown in `content/blog/<slug>/index.md`. `npm run build:site` builds the whole site into a single `dist/`. The light/dark theme is shared across both halves via the `isDark` localStorage key.
+One Astro project serves both the portfolio and the blog (served at `/blog`): blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position rather than an Astro `base`, and the blog's non-route code (layout, islands, styles, post helpers) is namespaced under `src/blog/`. Posts are markdown in `content/blog/<slug>/index.md`. `bun run build:site` builds the whole site into a single `dist/`. The light/dark theme is shared across both halves via the `isDark` localStorage key.
 
 ## Development
 
 ```bash
-npm install
-npm run dev       # local dev server
-npm run build     # production build into dist/
-npm run preview   # preview the production build
+bun install
+bun run dev       # local dev server
+bun run build     # production build into dist/
+bun run preview   # preview the production build
 ```
+
+[Bun](https://bun.sh) (version pinned in `package.json` → `packageManager`) installs
+dependencies, runs the package scripts and executes the TypeScript in `scripts/`
+directly. Node (version in `.nvmrc`) stays the runtime underneath: Astro, Wrangler
+and Vitest ship `node` shebangs, which Bun honours, and the Workers Vitest pool only
+drives workerd from a Node host — so never `bun --bun` those, and run the suite with
+`bun run test`, not `bun test` (Bun's own runner). Bun blocks the install scripts of
+packages outside its default trust list; the two it blocks here (`@parcel/watcher`
+builds from source only when its prebuilt binary is missing, `core-js` prints a
+funding banner) are safe to leave blocked.
 
 The GitHub profile card is fetched at **build time** from the GitHub GraphQL API. Set a `GITHUB_TOKEN` environment variable locally (any token with public read scope) to render it; without one the site builds fine and shows a contact fallback instead.
 
 ```bash
-GITHUB_TOKEN=ghp_xxx npm run build
+GITHUB_TOKEN=ghp_xxx bun run build
 ```
 
 [PostHog](https://posthog.com) analytics is wired at **build time** when both `POST_HOG_TOKEN` and `POST_HOG_URL` are set (configured in the Workers Builds build env vars for production). With either missing the SDK is never loaded, so local dev and CI builds stay analytics-free.
@@ -70,18 +80,18 @@ Super properties carry context rather than actions: `theme` (`dark`/`light`, set
 ## Checks
 
 ```bash
-npm run check-format   # oxfmt (+ prettier for .astro/.md)
-npm run lint           # oxlint
-npm run check:astro    # type-check .astro files
-npm run check:src      # type-check src/, scripts/ and the config files
-npm run check:worker   # type-check worker/
+bun run check-format   # oxfmt (+ prettier for .astro/.md)
+bun run lint           # oxlint
+bun run check:astro    # type-check .astro files
+bun run check:src      # type-check src/, scripts/ and the config files
+bun run check:worker   # type-check worker/
 ```
 
 Everything is TypeScript: the Astro config, the blog islands and routes, and the
-`scripts/` that run under plain `node` (Node 22 strips types natively; `build:site`
-passes `--experimental-strip-types` so a Node 22 older than 22.18 on the build image
-still works). Two files stay JavaScript on purpose: `scripts/ts-alias.cjs` is a
-`node -r` preload and must be CommonJS, and `public/blog/sw.js` is served verbatim.
+`scripts/`, which Bun runs directly (`bun scripts/<name>.ts`). Two files stay
+JavaScript on purpose: `scripts/ts-alias.cjs` is a `node -r` preload for
+`astro check` (which runs under Node) and must be CommonJS, and `public/blog/sw.js`
+is served verbatim.
 
 The project compiler is TypeScript 7, whose native build no longer ships the
 old JS API that Astro's Volar-based tooling calls into — `astro check` crashes on it outright.
@@ -94,7 +104,7 @@ so `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's
 
 Two consequences of having both compilers in the tree. `@typescript/typescript6`
 pulls its own TypeScript 6, and that copy wins `node_modules/.bin/tsc` — so bare
-`npx tsc` reports 6.0.3, and the `check:*` scripts invoke
+`bunx tsc` reports 6.0.3, and the `check:*` scripts invoke
 `node node_modules/typescript/bin/tsc` by path to be sure they get 7. And
 TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace
 TypeScript version" lands on the 6 copy; point it at the TypeScript 7 language
@@ -102,18 +112,18 @@ service instead.
 
 ## Deployment
 
-Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `npm run build:site` and deploy command `npm run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). Both commands are Cloudflare dashboard settings, not read from this repo, so changing either means editing it by hand there — nothing in this file enforces them. `npm run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
+Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `bun run build:site` and deploy command `bun run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). Both commands are Cloudflare dashboard settings, not read from this repo, so changing either means editing it by hand there — nothing in this file enforces them. `bun run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
 
 Workers Builds settings, for reference (dashboard → Workers → this application):
 
-- **Build command:** `npm run build:site`
-- **Deploy command:** `npm run deploy` (not `npx wrangler deploy` — see above).
-- **Build env vars:** `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `POST_HOG_TOKEN`, `POST_HOG_URL`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE` (optional — see "Resume generation" below).
-- **Worker secrets:** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `npx wrangler secret put <name>`.
+- **Build command:** `bun run build:site`. Workers Builds picks the package manager from the lockfile and installs before the build command runs; it has recognised Bun's text `bun.lock` since May 2025 (earlier it only knew the binary `bun.lockb`, which is why older guides prepend `bun install &&`).
+- **Deploy command:** `bun run deploy` (not `bunx wrangler deploy` — see above).
+- **Build env vars:** `BUN_VERSION` (match `packageManager` in `package.json`; the image's default Bun is older), `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `POST_HOG_TOKEN`, `POST_HOG_URL`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE` (optional — see "Resume generation" below). Node's version comes from `.nvmrc`.
+- **Worker secrets:** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `bunx wrangler secret put <name>`.
 
 ## Resume generation
 
-`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `npm run build:site`, `scripts/generate-resume.ts` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
+`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `bun run build:site`, `scripts/generate-resume.ts` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
 
 ## Blog
 
@@ -171,24 +181,24 @@ brew install ffmpeg
 python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/tts/requirements.txt
 .venv-tts/bin/python scripts/tts/design-voice.py 3   # persona prompt → .voice/candidates/{0,1,2}.wav
 cp .voice/candidates/<k>.wav .voice/reference.wav && cp .voice/candidates/reference.txt .voice/reference.txt
-npm run audio -- --upload-voice     # durable copy in R2; restored automatically if .voice/ is lost
+bun run audio --upload-voice     # durable copy in R2; restored automatically if .voice/ is lost
 ```
 
-Or skip the design step and fetch the clip in use: `npm run audio` restores `.voice/` from
+Or skip the design step and fetch the clip in use: `bun run audio` restores `.voice/` from
 `voice/breeze/` in R2 when it is missing.
 
-The bucket comes from `terraform apply` in `infra/` (or `npx wrangler r2 bucket create
+The bucket comes from `terraform apply` in `infra/` (or `bunx wrangler r2 bucket create
 murugappan-dev-audio`). Voice reference and venv are git-ignored; the reference is never served.
 
 **Publishing a post**
 
 ```bash
-npm run build && npm run audio <slug>      # ~2.8 s of compute per second of audio on an M4 Pro
-npm run audio:align <slug>                # word timings for the Speechify-style highlight, ~5 s per post
+bun run build && bun run audio <slug>      # ~2.8 s of compute per second of audio on an M4 Pro
+bun run audio:align <slug>                # word timings for the Speechify-style highlight, ~5 s per post
 ```
 
-Then push as usual. `npm run audio` with no slug renders every changed post; `--force` re-renders,
-`--dry-run` only extracts and hashes, `--local` targets `wrangler dev`'s R2. `npm run audio:align`
+Then push as usual. `bun run audio` with no slug renders every changed post; `--force` re-renders,
+`--dry-run` only extracts and hashes, `--local` targets `wrangler dev`'s R2. `bun run audio:align`
 (`scripts/align-audio.ts`) runs after synthesis, never concurrently: it slices each paragraph out of the
 MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
 (`whisper-large-v3-turbo`, 1.6 GB, auto-downloaded), maps them onto the known text
@@ -353,7 +363,7 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   `max_tokens`: reasoning used to consume the whole 800-token cap. `deepseek-flash`
   tracks the current Flash generation — it became V4.1-Flash on 2026-09-10, when
   the older `deepseek-v4-flash` name was retired to a temporary compat alias.
-- **Swapping the model:** run `npm run test:capture` first. It drives a real
+- **Swapping the model:** run `bun run test:capture` first. It drives a real
   lead-capture conversation against the live model and fails if
   `capture_opportunity` is never called, or is called without the visitor's
   contact detail. qwen3-30b was reverted on 2026-08-17 for narrating captures
@@ -376,12 +386,12 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   A 402 from a chat call is authoritative and gates every room at once; a
   top-up is picked up at the next cache expiry, no deploy. There is no daily
   allowance — at ~$0.003/turn, top up to set the ceiling.
-- **Local dev (full-fidelity single-origin):** `npm run build:site && npx wrangler dev` → http://localhost:8787
+- **Local dev (full-fidelity single-origin):** `bun run build:site && bunx wrangler dev` → http://localhost:8787
   (runs both Astro and Worker on the same origin; chat connects at the Worker origin with full Durable Objects).
   Put `OPPORTUNITY_INBOX=you@example.com` and `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored);
   without the key the chat gates itself, since there is no fallback provider.
-- **Local dev (fast HMR loop):** put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env` (gitignored), then run `npm run dev:all`.
+- **Local dev (fast HMR loop):** put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env` (gitignored), then run `bun run dev:all`.
   Starts Astro dev server (with HMR) on :4399 and Worker on :8787 in parallel; the widget connects to the real Worker.
-  Note: the Worker serves grounding from `dist/`, so run `npm run build:site` at least once first, or Jarvis will lack site knowledge.
+  Note: the Worker serves grounding from `dist/`, so run `bun run build:site` at least once first, or Jarvis will lack site knowledge.
   Also note: AI calls in dev hit the real DeepSeek API and are billed, so watch your spend.
-- **Tests:** `npm test` (vitest + workers pool), `npm run check:worker`.
+- **Tests:** `bun run test` (vitest + workers pool), `bun run check:worker`.
