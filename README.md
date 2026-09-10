@@ -72,8 +72,27 @@ Super properties carry context rather than actions: `theme` (`dark`/`light`, set
 ```bash
 npm run check-format   # oxfmt (+ prettier for .astro/.md)
 npm run lint           # oxlint
-npx astro check        # type-check .astro files
+npm run check:astro    # type-check .astro files
+npm run check:src      # type-check src/**/*.ts(x)
+npm run check:worker   # type-check worker/
 ```
+
+The project compiler is TypeScript 7, whose native build no longer ships the
+old JS API that Astro's Volar-based tooling calls into — `astro check` crashes on it outright.
+Microsoft publishes that old API as `@typescript/typescript6` for this overlap,
+so `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's
+`require("typescript")` at the compat package while everything else stays on 7.
+`@astrojs/check` also still declares a `typescript@^5 || ^6` peer, hence the
+`overrides` entry in `package.json`. All three come out together once
+`@astrojs/check` supports TypeScript 7.
+
+Two consequences of having both compilers in the tree. `@typescript/typescript6`
+pulls its own TypeScript 6, and that copy wins `node_modules/.bin/tsc` — so bare
+`npx tsc` reports 6.0.3, and the `check:*` scripts invoke
+`node node_modules/typescript/bin/tsc` by path to be sure they get 7. And
+TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace
+TypeScript version" lands on the 6 copy; point it at the TypeScript 7 language
+service instead.
 
 ## Deployment
 
@@ -319,13 +338,21 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
 - **Server:** `worker/` — Cloudflare Worker serving `dist/` as static assets +
   `ChatRoom` Durable Object (partyserver, SQLite) streaming replies over
   WebSocket at `/parties/chat-room/:roomId`.
-- **Model:** DeepSeek `deepseek-v4-flash` (BYOK via the `DEEPSEEK_API_KEY`
+- **Model:** DeepSeek `deepseek-flash` (BYOK via the `DEEPSEEK_API_KEY`
   secret), the only provider — Workers AI was dropped on 2026-08-27 for being
   slow and truncating replies when the free neuron allocation ran out. Thinking
   is enabled (`thinking: {type: "enabled"}`) — the model reasons before
   answering, which sharpens tool selection; `reasoning_content` is dropped so
   visitors see only the reply. This is only safe because there is no
-  `max_tokens`: reasoning used to consume the whole 800-token cap.
+  `max_tokens`: reasoning used to consume the whole 800-token cap. `deepseek-flash`
+  tracks the current Flash generation — it became V4.1-Flash on 2026-09-10, when
+  the older `deepseek-v4-flash` name was retired to a temporary compat alias.
+- **Swapping the model:** run `npm run test:capture` first. It drives a real
+  lead-capture conversation against the live model and fails if
+  `capture_opportunity` is never called, or is called without the visitor's
+  contact detail. qwen3-30b was reverted on 2026-08-17 for narrating captures
+  it never made — unit tests cannot catch that, only the live model can. Needs
+  `.dev.vars` and a built `dist/llms.txt`; costs a fraction of a cent.
 - **Widget:** `src/components/chat/` (shared by the blog via relative import).
   While a turn is in flight the panel shows `ActivityRow` instead of the three
   dots: a rotating playful label ("Discombobulating…") with an elapsed counter

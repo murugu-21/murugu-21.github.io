@@ -5,19 +5,22 @@
 # Emergency bypass: git push --no-verify
 set -e
 
-echo "pre-push 1/5: format"
+echo "pre-push 1/6: format"
 npm run --silent check-format
 
-echo "pre-push 2/5: lint"
+echo "pre-push 2/6: lint"
 npm run --silent lint
 
-echo "pre-push 3/5: astro check"
-npx astro check
+echo "pre-push 3/6: astro check"
+npm run --silent check:astro
 
-echo "pre-push 4/5: worker typecheck"
+echo "pre-push 4/6: src typecheck"
+npm run --silent check:src
+
+echo "pre-push 5/6: worker typecheck"
 npm run --silent check:worker
 
-echo "pre-push 5/5: unit tests"
+echo "pre-push 6/6: unit tests"
 npm test --silent
 
 echo "pre-push: all gates green"

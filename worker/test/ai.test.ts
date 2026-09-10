@@ -39,7 +39,7 @@ describe("runDeepseekExchange", () => {
     const headers = captured!.init.headers as Record<string, string>;
     expect(headers.authorization).toBe("Bearer sk-test");
     const body = JSON.parse(captured!.init.body as string);
-    expect(body.model).toBe("deepseek-v4-flash");
+    expect(body.model).toBe("deepseek-flash");
     expect(body.stream).toBe(true);
     expect(body.stream_options).toEqual({ include_usage: true });
     // Reasoning is on: it sharpens tool selection, and with no max_tokens it

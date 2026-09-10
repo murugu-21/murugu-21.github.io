@@ -27,7 +27,8 @@ jobs:
       - run: npx wrangler types
       - run: npm run check-format
       - run: npm run lint
-      - run: npx astro check
+      - run: npm run check:astro
+      - run: npm run check:src
       - run: npm run check:worker
       - run: npm test
       - run: npm run build:site
