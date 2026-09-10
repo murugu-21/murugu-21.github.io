@@ -14,10 +14,10 @@ const MP3 = new Uint8Array(1000).map((_, i) => i % 251);
 const JSON_BODY = JSON.stringify({version: 1, slug: "first-post", blocks: []});
 
 beforeEach(async () => {
-  await env.AUDIO.put("blog/first-post.mp3", MP3, {
+  await env.AUDIO.put("blog/breeze/first-post.mp3", MP3, {
     httpMetadata: {contentType: "audio/mpeg"}
   });
-  await env.AUDIO.put("blog/first-post.json", JSON_BODY, {
+  await env.AUDIO.put("blog/breeze/first-post.json", JSON_BODY, {
     httpMetadata: {contentType: "application/json"}
   });
 });

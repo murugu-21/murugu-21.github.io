@@ -186,6 +186,45 @@ describe("matchWordSpans", () => {
       matchWordSpans([[span("a")], [span("b")]], [{w: "a", s: 0, e: 1}])
     ).toBeNull();
   });
+
+  // The generator speaks 0.30000000000000004 as "0.3, then zero repeated 15
+  // times, then 4": one rendered word, eight timed words. The rendered word
+  // is highlighted for the whole run.
+  it("maps one rendered word onto the several timed words it expands to", () => {
+    const words = [
+      [span("equals")],
+      [span("0.30000000000000004")],
+      [span("here")]
+    ];
+    const timed = [
+      {w: "equals", s: 0, e: 1},
+      {w: "0.3,", s: 1, e: 2},
+      {w: "then", s: 2, e: 3},
+      {w: "zero", s: 3, e: 4},
+      {w: "repeated", s: 4, e: 5},
+      {w: "15", s: 5, e: 6},
+      {w: "times,", s: 6, e: 7},
+      {w: "then", s: 7, e: 8},
+      {w: "4", s: 8, e: 9},
+      {w: "here", s: 9, e: 10}
+    ];
+    const spans = matchWordSpans(words, timed);
+    expect(spans).toHaveLength(timed.length);
+    expect(spans![0]).toEqual(words[0]);
+    for (let k = 1; k <= 8; k++) expect(spans![k]).toEqual(words[1]);
+    expect(spans![9]).toEqual(words[2]);
+  });
+
+  it("still returns null when an expanded word disagrees with the timings", () => {
+    const words = [[span("0.30000000000000004")]];
+    expect(
+      matchWordSpans(words, [
+        {w: "0.3,", s: 0, e: 1},
+        {w: "then", s: 1, e: 2},
+        {w: "nine", s: 2, e: 3}
+      ])
+    ).toBeNull();
+  });
 });
 
 describe("wordAt", () => {

@@ -5,9 +5,38 @@
 const SYMBOLS =
   /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE0F}\u{200D}]/gu;
 
+// A run of five or more of one digit in the fractional part of a decimal
+// (0.30000000000000004). LLM-style TTS models loop on these, so the run is
+// described instead of listed.
+const LONG_DIGIT_RUN = /(\d+\.\d*?)((\d)\3{4,})(\d*)/g;
+const DIGIT_NAMES = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine"
+];
+
+function describeDigitRun(
+  _match: string,
+  head: string,
+  run: string,
+  digit: string,
+  tail: string
+): string {
+  const spoken = `${head}, then ${DIGIT_NAMES[Number(digit)]} repeated ${run.length} times`;
+  return tail ? `${spoken}, then ${tail}` : spoken;
+}
+
 export function normalizeSpeechText(text: string): string {
   return text
     .replace(SYMBOLS, "")
+    .replace(LONG_DIGIT_RUN, describeDigitRun)
     .replace(/([?!.])[?!.]+/g, "$1")
     .replace(/\s+/g, " ")
     .trim();

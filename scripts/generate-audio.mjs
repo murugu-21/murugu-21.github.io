@@ -1,4 +1,4 @@
-// Renders each published blog post to MP3 in the author's cloned voice and
+// Renders each published blog post to MP3 in the blog's designed voice and
 // uploads it, with per-paragraph timings, to R2. Runs on the author's laptop:
 //
 //   npm run build                # dist/ must be current
@@ -11,9 +11,10 @@
 //   npm run audio -- --upload-voice   # push .voice/* to R2 once
 //
 // Pipeline per post: dist HTML → speechBlocks (same function the page uses) →
-// normalise → pack into ≤300-char sentence groups → Python worker (Fish S2 Pro
-// via mlx-speech) → per-chunk atempo=1.08 → sample-accurate assembly with gaps
-// → loudnorm → 64 kbps MP3 + timing JSON → wrangler r2 object put.
+// normalise → pack into ≤300-char sentence groups → Python worker (Breeze TTS 2
+// 8-bit via mlx-audio, plain clone of .voice/reference.wav) → per-chunk
+// atempo=1.08 → sample-accurate assembly with gaps → loudnorm → 64 kbps MP3 +
+// timing JSON → wrangler r2 object put under blog/breeze/.
 import {spawn, spawnSync} from "node:child_process";
 import {
   copyFileSync,
@@ -39,33 +40,31 @@ import {assemble, readWav, writeWav} from "./tts/wav.mjs";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const DIST = join(ROOT, "dist", "blog");
-// Tuning knobs. The defaults are the settings the 2026-09-05 listening pilot
+// Tuning knobs. The defaults are the settings the 2026-09-09 evaluation
 // settled on; the env overrides exist for A/B renders, not for production.
 //   AUDIO_VOICE_DIR   directory holding reference.wav + reference.txt
 //   AUDIO_TEMPO       atempo factor, "1" disables the pass
-//   AUDIO_LOUDNORM    "0" disables the denoise/gate/loudness chain
+//   AUDIO_LOUDNORM    "0" disables the loudness pass
 const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   ? resolve(process.env.AUDIO_VOICE_DIR)
   : join(ROOT, ".voice");
 const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "synth.py");
 const BUCKET = "murugappan-dev-audio";
-const VOICE_ID = "fish-s2-pro/lively-2026-09-05";
+// Object keys are namespaced per voice generation so a new voice never
+// overwrites the previous one; worker/audio.ts and align-audio.mjs read the
+// same prefix. The Fish clone of 2026-09-05 lives at blog/<slug>.*.
+const KEY_PREFIX = "blog/breeze";
+const VOICE_KEY_PREFIX = "voice/breeze";
+const VOICE_ID = "breeze-tts-2-8bit/chennai-2026-09-09";
 const CHUNK_MAX = 300;
 const GAPS = {intra: 0.15, inter: 0.45};
 const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
-// Whole-post chain, applied after assembly and before the MP3 encode:
-// spectral denoise + gate first (the raw model output carries ~30 dB SNR of
-// hiss that loudness normalisation would otherwise lift into audibility),
-// then normalise to podcast loudness. Chosen by ear on 2026-09-05.
+// Whole-post chain, applied after assembly and before the MP3 encode: podcast
+// loudness only. Breeze output sits at about -60 dBFS between words, so the
+// denoise and gate the Fish clone needed are gone (measured 2026-09-09).
 const POSTFX =
-  process.env.AUDIO_LOUDNORM === "0"
-    ? null
-    : [
-        "afftdn=nf=-45:tn=1",
-        "agate=threshold=0.01:ratio=4:attack=5:release=120",
-        "loudnorm=I=-16:TP=-1.5:LRA=9"
-      ].join(",");
+  process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter(a => a.startsWith("--")));
@@ -153,9 +152,9 @@ function checkPreconditions() {
         "no .venv-tts — run: python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/tts/requirements.txt"
       );
     }
-    if (spawnSync(PYTHON, ["-c", "import mlx_speech"]).status !== 0) {
+    if (spawnSync(PYTHON, ["-c", "import mlx_audio"]).status !== 0) {
       fail(
-        ".venv-tts cannot import mlx_speech — reinstall scripts/tts/requirements.txt"
+        ".venv-tts cannot import mlx_audio — reinstall scripts/tts/requirements.txt"
       );
     }
   }
@@ -165,8 +164,8 @@ function checkPreconditions() {
     log("no .voice/ reference locally, fetching from R2 …");
     mkdirSync(VOICE_DIR, {recursive: true});
     if (
-      !r2Get("voice/reference.wav", wav) ||
-      !r2Get("voice/reference.txt", txt)
+      !r2Get(`${VOICE_KEY_PREFIX}/reference.wav`, wav) ||
+      !r2Get(`${VOICE_KEY_PREFIX}/reference.txt`, txt)
     ) {
       fail(
         "voice reference missing locally and in R2 — restore .voice/reference.{wav,txt}"
@@ -253,7 +252,7 @@ function startWorker() {
 
 function existingHash(slug, tmp) {
   const file = join(tmp, "existing.json");
-  if (!r2Get(`blog/${slug}.json`, file)) return null;
+  if (!r2Get(`${KEY_PREFIX}/${slug}.json`, file)) return null;
   try {
     return JSON.parse(readFileSync(file, "utf8")).hash ?? null;
   } catch {
@@ -336,8 +335,8 @@ async function renderPost(slug, worker, reference) {
       throw new Error("block/timing count mismatch");
     }
 
-    // Post-fx pass 2: denoise, gate and loudness-normalise the whole post,
-    // then encode MP3. None of these change timing.
+    // Post-fx pass 2: loudness-normalise the whole post, then encode MP3.
+    // Neither changes timing.
     const fullWav = join(tmp, `${slug}.wav`);
     const mp3 = join(tmp, `${slug}.mp3`);
     writeFileSync(fullWav, writeWav(sampleRate, pcm));
@@ -371,8 +370,8 @@ async function renderPost(slug, worker, reference) {
         }))
       })
     );
-    r2Put(`blog/${slug}.mp3`, mp3, "audio/mpeg");
-    r2Put(`blog/${slug}.json`, json, "application/json");
+    r2Put(`${KEY_PREFIX}/${slug}.mp3`, mp3, "audio/mpeg");
+    r2Put(`${KEY_PREFIX}/${slug}.json`, json, "application/json");
     log(`${slug}: uploaded ${(duration / 60).toFixed(1)} min`);
     return "rendered";
   } finally {
@@ -390,8 +389,8 @@ async function main() {
     if (!existsSync(wav) || !existsSync(txt)) {
       fail("put reference.wav and reference.txt in .voice/ first");
     }
-    r2Put("voice/reference.wav", wav, "audio/wav");
-    r2Put("voice/reference.txt", txt, "text/plain");
+    r2Put(`${VOICE_KEY_PREFIX}/reference.wav`, wav, "audio/wav");
+    r2Put(`${VOICE_KEY_PREFIX}/reference.txt`, txt, "text/plain");
     log("voice reference uploaded");
     return;
   }

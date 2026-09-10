@@ -22,6 +22,22 @@ describe("normalizeSpeechText", () => {
   it("returns an empty string when only symbols remain", () => {
     expect(normalizeSpeechText("🎉🎉")).toBe("");
   });
+
+  // LLM-style TTS (Breeze) loops on long runs of one digit; spell them out.
+  it("describes a long run of one digit in a decimal instead of listing it", () => {
+    expect(normalizeSpeechText("0.1 + 0.2 = 0.30000000000000004 in JS")).toBe(
+      "0.1 + 0.2 = 0.3, then zero repeated 15 times, then 4 in JS"
+    );
+    expect(normalizeSpeechText("about 1.999999")).toBe(
+      "about 1., then nine repeated 6 times"
+    );
+  });
+
+  it("leaves ordinary numbers alone", () => {
+    expect(
+      normalizeSpeechText("100000 rows, pi is 3.14159, 2.0000 exactly")
+    ).toBe("100000 rows, pi is 3.14159, 2.0000 exactly");
+  });
 });
 
 describe("packSentences", () => {

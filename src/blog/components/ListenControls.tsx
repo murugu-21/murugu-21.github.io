@@ -18,7 +18,13 @@ import {
 import {Slider} from "../../components/ui/slider";
 import {tag, track} from "../../lib/analytics";
 import {normalizeSpeechText} from "../utils/audio-prep";
-import {blockAt, matchBlocks, type AudioTimings} from "../utils/audio-sync";
+import {
+  WORD_BAND,
+  blockAt,
+  matchBlocks,
+  scrollTarget,
+  type AudioTimings
+} from "../utils/audio-sync";
 import {
   matchWordSpans,
   tokenize,
@@ -125,7 +131,11 @@ export function ListenControls({slug}: {slug: string}) {
     highlightedRef.current = el;
     if (el) {
       el.classList.add("is-speaking");
-      el.scrollIntoView({block: "nearest", behavior: "smooth"});
+      const block = scrollTarget(
+        el.getBoundingClientRect(),
+        window.innerHeight
+      );
+      if (block) el.scrollIntoView({block, behavior: "smooth"});
     }
   }, []);
 
@@ -138,6 +148,15 @@ export function ListenControls({slug}: {slug: string}) {
     wordRef.current?.forEach(p => p.classList.remove("is-word"));
     wordRef.current = pieces;
     pieces?.forEach(p => p.classList.add("is-word"));
+    // Inside a paragraph taller than the reading band, follow the word.
+    if (pieces?.length) {
+      const block = scrollTarget(
+        pieces[0].getBoundingClientRect(),
+        window.innerHeight,
+        WORD_BAND
+      );
+      if (block) pieces[0].scrollIntoView({block, behavior: "smooth"});
+    }
   }, []);
 
   const setState = useCallback(
