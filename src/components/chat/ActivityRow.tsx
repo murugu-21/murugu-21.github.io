@@ -1,4 +1,4 @@
-// The waiting state of the chat panel. DeepSeek V4-Flash reasons before it
+// The waiting state of the chat panel. DeepSeek V4.1-Flash reasons before it
 // answers, so the gap before the first token is long enough to need filling —
 // this row says what Jarvis is actually doing when a tool is running, and
 // keeps the visitor amused with a rotating word when it is only thinking.

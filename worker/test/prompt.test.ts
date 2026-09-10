@@ -5,7 +5,7 @@ import { buildMessages, CAPTURE_TOOL, MAX_HISTORY_MESSAGES } from "../prompt";
 
 describe("prompt", () => {
   it("pins the chosen model", () => {
-    expect(DEEPSEEK_MODEL).toBe("deepseek-v4-flash");
+    expect(DEEPSEEK_MODEL).toBe("deepseek-flash");
   });
 
   it("declares the capture_opportunity tool with required contact and summary", () => {

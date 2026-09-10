@@ -16,8 +16,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from "../ui/dropdown-menu";
-import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
+import { Textarea } from "../ui/textarea";
 import { cn } from "../../lib/utils";
 import { track } from "../../lib/analytics";
 import "../../styles/islands.css";
@@ -25,6 +25,9 @@ import "../../styles/islands.css";
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
 const MAX_LENGTH = 1000;
+// The composer grows with its content up to this height (~5 lines), then
+// scrolls. Long text wraps either way — it never scrolls sideways.
+const MAX_INPUT_HEIGHT = 120;
 
 // Shown as tappable chips while the conversation is empty. Subtle by design:
 // each steers Jarvis toward a strong grounded answer without selling.
@@ -111,7 +114,7 @@ export function ChatWidget() {
   const streamRef = useRef<string | null>(null);
   const greetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const commitStream = () => {
     const text = streamRef.current;
@@ -237,7 +240,7 @@ export function ChatWidget() {
 
   const sendText = (raw: string) => {
     const text = raw.trim();
-    if (!text || sending) return;
+    if (!text || sending) return false;
     // PartySocket buffers sends while CONNECTING/reconnecting and flushes on
     // open — don't gate on readyState or messages get silently dropped.
     const ws = connect();
@@ -250,14 +253,37 @@ export function ChatWidget() {
     // Include the page the visitor is on — the room feeds it to the model as
     // ephemeral context so "this post"/"this page" resolve correctly.
     ws.send(JSON.stringify({ type: "chat", text, page: window.location.pathname }));
+    return true;
+  };
+
+  // Reset before measuring, or scrollHeight only ever grows.
+  const autoGrow = (el: HTMLTextAreaElement) => {
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_HEIGHT)}px`;
+  };
+
+  const submit = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    // Only clear on an accepted send — sendText refuses while a turn is in
+    // flight, and Enter-to-send makes silently wiping the box easy to hit.
+    if (!sendText(el.value)) return;
+    el.value = "";
+    autoGrow(el);
   };
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const el = inputRef.current;
-    if (!el) return;
-    sendText(el.value);
-    el.value = "";
+    submit();
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter sends, Shift+Enter is a newline. isComposing guards IME input:
+    // the Enter that commits a candidate must not send the message.
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      submit();
+    }
   };
 
   const restart = () => {
@@ -494,16 +520,24 @@ export function ChatWidget() {
           </ScrollArea>
 
           <CardFooter className="border-t p-2.5">
-            <form className="flex w-full gap-2" onSubmit={onSubmit}>
-              <Input
+            <form className="flex w-full items-end gap-2" onSubmit={onSubmit}>
+              {/* data-clarity-mask: the transcript comment above reasons about
+                  Clarity's built-in <input> masking; don't assume it extends
+                  to <textarea> — mask the composer explicitly. */}
+              <Textarea
                 ref={inputRef}
                 id="chat-input"
                 name="message"
+                rows={1}
                 maxLength={MAX_LENGTH}
                 placeholder="Ask a question…"
                 aria-label="Your message"
                 autoComplete="off"
-                className="bg-secondary"
+                data-clarity-mask="true"
+                onInput={e => autoGrow(e.currentTarget)}
+                onKeyDown={onKeyDown}
+                style={{ maxHeight: MAX_INPUT_HEIGHT }}
+                className="field-sizing-fixed min-h-0 resize-none overflow-x-hidden bg-secondary"
               />
               <Button type="submit" size="icon" aria-label="Send" disabled={sending}>
                 <Send />

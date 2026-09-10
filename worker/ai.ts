@@ -1,10 +1,16 @@
 import { TOOLS, type ModelMessage } from "./prompt";
 import { consumeSse, type StreamResult, type Usage } from "./sse";
 
-// DeepSeek V4-Flash is the only chat provider. It replaced Workers AI
+// DeepSeek V4.1-Flash is the only chat provider. It replaced Workers AI
 // (2026-08-27), which was slow enough to be visible in the widget and whose
 // free neuron allocation cut replies off mid-stream.
-export const DEEPSEEK_MODEL = "deepseek-v4-flash";
+//
+// `deepseek-flash` always points at the current Flash generation — on
+// 2026-09-10 that became V4.1-Flash, and the old `deepseek-v4-flash` name
+// was retired to a temporary compat alias onto the same model. So this is a
+// rename off a deprecated alias, not a change of model: chat was already
+// being served by V4.1-Flash. Capture flow live-tested on the rename.
+export const DEEPSEEK_MODEL = "deepseek-flash";
 export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
 // Thrown by runDeepseekExchange so callers can tell "out of credit" (gate the
@@ -80,7 +86,7 @@ export async function runDeepseekExchange(
       tools: TOOLS,
       stream: true,
       stream_options: { include_usage: true },
-      // Let V4-Flash reason before answering: it picks the fetch_page and
+      // Let Flash reason before answering: it picks the fetch_page and
       // capture_opportunity tool calls more reliably. Safe now that max_tokens
       // is gone — reasoning used to eat the whole 800-token cap and return an
       // empty reply. `reasoning_content` deltas are dropped by consumeSse, so

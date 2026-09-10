@@ -6,9 +6,10 @@ export const MAX_HISTORY_MESSAGES = 20;
 // the credit is gone rather than rationing it by the day.
 //
 // The model itself lives in ai.ts (DEEPSEEK_MODEL). Swapping it? LIVE-TEST
-// the capture flow first — qwen3-30b was reverted on 2026-08-17 for narrating
-// lead captures ("I've noted it") without ever calling capture_opportunity,
-// through two prompt hardenings, silently losing leads.
+// the capture flow first with `npm run test:capture` — qwen3-30b was reverted
+// on 2026-08-17 for narrating lead captures ("I've noted it") without ever
+// calling capture_opportunity, through two prompt hardenings, silently losing
+// leads.
 export const ROOM_DAILY_LIMIT = 40;
 
 // OpenAI-compatible message shapes throughout, so the transport can point at
