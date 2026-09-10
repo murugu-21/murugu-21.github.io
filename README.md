@@ -72,8 +72,27 @@ Super properties carry context rather than actions: `theme` (`dark`/`light`, set
 ```bash
 npm run check-format   # oxfmt (+ prettier for .astro/.md)
 npm run lint           # oxlint
-npx astro check        # type-check .astro files
+npm run check:astro    # type-check .astro files
+npm run check:src      # type-check src/**/*.ts(x)
+npm run check:worker   # type-check worker/
 ```
+
+The project compiler is TypeScript 7, whose native build no longer ships the
+old JS API that Astro's Volar-based tooling calls into — `astro check` crashes on it outright.
+Microsoft publishes that old API as `@typescript/typescript6` for this overlap,
+so `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's
+`require("typescript")` at the compat package while everything else stays on 7.
+`@astrojs/check` also still declares a `typescript@^5 || ^6` peer, hence the
+`overrides` entry in `package.json`. All three come out together once
+`@astrojs/check` supports TypeScript 7.
+
+Two consequences of having both compilers in the tree. `@typescript/typescript6`
+pulls its own TypeScript 6, and that copy wins `node_modules/.bin/tsc` — so bare
+`npx tsc` reports 6.0.3, and the `check:*` scripts invoke
+`node node_modules/typescript/bin/tsc` by path to be sure they get 7. And
+TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace
+TypeScript version" lands on the 6 copy; point it at the TypeScript 7 language
+service instead.
 
 ## Deployment
 
