@@ -1,0 +1,14 @@
+---
+// The row of tag filter chips on the blog index (was TagBar.tsx).
+import Tag, { type TagCount } from "./Tag.astro";
+
+interface Props {
+  tags: TagCount[];
+}
+const { tags } = Astro.props;
+---
+
+{/* Was an inline `display: flex; flex-wrap: wrap` style object. */}
+<div class="flex flex-wrap">
+  {tags.map(tag => <Tag tag={tag} />)}
+</div>

@@ -1,0 +1,74 @@
+---
+// The blog index's searchable, tag-filterable post list — server-rendered
+// Astro plus ~30 lines of inline script. Replaces the AllPosts React island
+// (a Gatsby leftover): the list, chips and search box never needed React, and
+// hydrating them pulled ~70 KB of script ahead of the largest paint on
+// mobile. Filtering is the same as before — case-insensitive substring match
+// on title + description (or the excerpt when there is no description), AND
+// "has at least one checked tag" — applied by toggling `hidden` on the <li>s.
+import type { SerializedPost } from "../utils/posts";
+import SearchBar from "./SearchBar.astro";
+import TagBar from "./TagBar.astro";
+import type { TagCount } from "./Tag.astro";
+import Post from "./Post.astro";
+
+interface Props {
+  posts: SerializedPost[];
+}
+const { posts } = Astro.props;
+
+// Tag counts, most-used first, ties alphabetical (the old React useMemo).
+const totals = new Map<string, number>();
+for (const post of posts) {
+  for (const tag of post.tags) totals.set(tag, (totals.get(tag) ?? 0) + 1);
+}
+const tags: TagCount[] = [...totals]
+  .map(([name, count]) => ({ name, count }))
+  .sort((a, b) => (a.count === b.count ? (a.name > b.name ? 1 : -1) : b.count - a.count));
+---
+
+<div data-post-list>
+  <SearchBar />
+  <TagBar tags={tags} />
+  {
+    /* `ul, ol { margin: 1em 0 2rem; padding: 0; list-style: none }` — the 2rem
+      bottom came from style.css, the 1em top from the UA sheet. */
+  }
+  <ol class="mt-4 mb-8 list-none p-0">
+    {posts.map(post => <Post post={post} />)}
+  </ol>
+  <p class="post-list-item h2 my-8 leading-relaxed" data-empty hidden>No matching article found</p>
+</div>
+
+<script>
+  const root = document.querySelector<HTMLElement>("[data-post-list]");
+  if (root) {
+    const search = root.querySelector<HTMLInputElement>("#search");
+    const tagInputs = Array.from(root.querySelectorAll<HTMLInputElement>("input.tag"));
+    const items = Array.from(root.querySelectorAll<HTMLLIElement>("li[data-tags]")).map(li => ({
+      li,
+      text: li.dataset.search ?? "",
+      tags: JSON.parse(li.dataset.tags ?? "[]") as string[]
+    }));
+    const empty = root.querySelector<HTMLElement>("[data-empty]");
+
+    const apply = () => {
+      const query = (search?.value ?? "").toLowerCase();
+      const selected = tagInputs.filter(t => t.checked).map(t => t.value);
+      let shown = 0;
+      for (const item of items) {
+        const match =
+          item.text.includes(query) &&
+          (selected.length === 0 || item.tags.some(tag => selected.includes(tag)));
+        item.li.hidden = !match;
+        if (match) shown++;
+      }
+      if (empty) empty.hidden = shown > 0;
+    };
+
+    search?.addEventListener("input", apply);
+    for (const input of tagInputs) input.addEventListener("change", apply);
+    // A query restored by the browser (back/forward, form restore) applies too.
+    if (search?.value || tagInputs.some(t => t.checked)) apply();
+  }
+</script>
