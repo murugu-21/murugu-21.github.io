@@ -130,11 +130,13 @@ const menu = [
   </nav>
   <!-- Below 768px the menu collapses, so the toggle can't live inside it —
        react.dev keeps its theme control in the top bar at every width. Anchored
-       to the fixed header, vertically centred like the hamburger and clear of
-       its 62px box (22px bars + 20px padding each side) sitting 20px off the
-       edge. -->
+       to the fixed header at the centre of the collapsed bar (41px: 10px
+       padding + half the hamburger's 62px box — 22px bars + 20px padding each
+       side), NOT `top-1/2`: the header grows when the menu opens and a
+       percentage offset dragged the toggle into the middle of the menu list.
+       Clear of the hamburger, 20px off the edge. -->
   <div
-    class="theme-slot absolute top-1/2 right-[86px] -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0"
+    class="theme-slot absolute top-[41px] right-[86px] -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0"
   >
     <ThemeToggle />
   </div>

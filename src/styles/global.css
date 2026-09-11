@@ -125,24 +125,16 @@
     color: white;
   }
 
-  /* Themed scrollbar in dark mode. Unlike the old setup these now apply to
-     BOTH apps (this is the one shared entry) — a deliberate unification; the
-     old blog kept the browser default scrollbar. */
-  html.dark-mode ::-webkit-scrollbar {
-    width: 10px;
-  }
-  html.dark-mode ::-webkit-scrollbar-track {
-    background: var(--color-dark-base);
-  }
-  html.dark-mode ::-webkit-scrollbar-thumb {
-    background: rgba(6, 3, 141, 0.85);
-    border-radius: 12px;
-  }
-  html.dark-mode ::-webkit-scrollbar-thumb:hover {
-    background: rgba(76, 125, 255, 0.85);
-  }
+  /* Themed scrollbar in dark mode, for BOTH apps and EVERY scroller (page,
+     code blocks, tables, chat transcript): `scrollbar-color` is inherited, so
+     one declaration on the root covers them all with one renderer. The old
+     `::-webkit-scrollbar*` rules are gone on purpose — Chrome ignores them
+     wherever `scrollbar-color` applies, so the page scrollbar was drawn by
+     the standard path while the blog's code blocks got the 10px rounded
+     WebKit thumb: two different scrollbars on one site. Thumb is the
+     dark-theme button fill (blue-light); navy sat at ~1.1:1 on the track. */
   html.dark-mode {
-    scrollbar-color: rgba(6, 3, 141, 0.85) var(--color-dark-base);
+    scrollbar-color: var(--color-blue-light) var(--color-dark-base);
   }
 }
 

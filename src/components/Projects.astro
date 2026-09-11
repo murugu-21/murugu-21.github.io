@@ -46,7 +46,7 @@ const show = projectsSection.display && repos.length > 0;
       <div class="repo-cards-div-main grid grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-4 max-md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
         {repos.map(repo => (
           <a
-            class="repo-card-div glow-card block cursor-pointer p-8 text-repo-text no-underline dark:text-white"
+            class="repo-card-div glow-card flex flex-col cursor-pointer p-8 text-repo-text no-underline dark:text-white"
             href={repo.url}
             target="_blank"
             rel="noopener noreferrer"
@@ -82,7 +82,7 @@ const show = projectsSection.display && repos.length > 0;
                 ))}
               </div>
             )}
-            <div class="repo-stats flex justify-between text-[13px] text-repo-stats dark:text-white">
+            <div class="repo-stats mt-auto flex justify-between text-[13px] text-repo-stats dark:text-white">
               <div class="repo-left-stat flex grow">
                 {repo.primaryLanguage && (
                   <span class="mr-3 flex items-center">

@@ -22,10 +22,13 @@ const recovery = [
   noindex
 >
   <main class="notfound-main flex min-h-[60vh] flex-col items-center justify-center text-center">
-    <h1 aria-label="Page not found" class="m-0 text-[72px] font-bold text-navy">404</h1>
+    <h1 aria-label="Page not found" class="m-0 text-[72px] font-bold text-navy dark:text-blue">
+      404
+    </h1>
     <p class="my-[1em] dark:text-white">
-      This page doesn't exist. Try the <a href="/" class="text-navy underline">portfolio</a> or the
-      <a href="/blog/" class="text-navy underline">blog</a>.
+      This page doesn't exist. Try the <a href="/" class="text-navy underline dark:text-blue"
+        >portfolio</a
+      > or the{" "}<a href="/blog/" class="text-navy underline dark:text-blue">blog</a>.
     </p>
     <nav aria-label="Where to go instead">
       <ul
@@ -34,7 +37,7 @@ const recovery = [
         {
           recovery.map(link => (
             <li>
-              <a href={link.href} class="text-navy underline">
+              <a href={link.href} class="text-navy underline dark:text-blue">
                 {link.label}
               </a>
             </li>

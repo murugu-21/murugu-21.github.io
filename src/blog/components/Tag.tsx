@@ -28,11 +28,13 @@ interface TagProps {
 const LABEL_CLASS = [
   // base: `.tag + label { cursor: pointer }` plus the label's own box
   "mt-[.875em] mr-[.75em] flex cursor-pointer items-center rounded-[.25em]",
-  // `.tag:checked + label { background-color: var(--color-box); color: #fff }`
-  "[.tag:checked+&]:bg-blue [.tag:checked+&]:text-white dark:[.tag:checked+&]:bg-box-dark",
-  // `.tag:hover + label { outline: none; border-color/box-shadow: var(--color-box) }`
-  "[.tag:hover+&]:border-blue [.tag:hover+&]:shadow-[0_0_10px_var(--color-blue)] [.tag:hover+&]:outline-none",
-  "dark:[.tag:hover+&]:border-box-dark dark:[.tag:hover+&]:shadow-[0_0_10px_var(--color-box-dark)]",
+  // `.tag:checked + label { background-color: …; color: #fff }` — the fill is
+  // the site accent per theme (navy / box-dark), the same blue the links and
+  // titles use, not the old blog's second blue.
+  "[.tag:checked+&]:bg-navy [.tag:checked+&]:text-white dark:[.tag:checked+&]:bg-box-dark",
+  // `.tag:hover + label { outline: none; border-color/box-shadow: … }`
+  "[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline)] [.tag:hover+&]:outline-none",
+  "dark:[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline-dark)]",
   // `.tag:focus + label { border-radius: .25em }` — inert, kept for parity
   "[.tag:focus+&]:rounded-[0.25em]"
 ].join(" ");
@@ -56,10 +58,14 @@ const Tag = ({ tag, onTagSelect, isSelected }: TagProps) => {
         {/* The old inline object set `borderRight: "none"` before the `border`
             shorthand, so React serialised the shorthand last and all four sides
             kept the 1px border. */}
-        <span className="rounded-[.25em_0_0_.25em] border border-text px-[.5em] dark:border-text-dark">
+        {/* Chip outline is the portfolio's chip token (navy 45% / blue 55%),
+            the same outline the per-post tag chips use. */}
+        <span className="rounded-[.25em_0_0_.25em] border border-chip-outline px-[.5em] dark:border-chip-outline-dark">
           {tag.name}
         </span>
-        <div className="flex items-center self-stretch rounded-[0_.25em_.25em_0] bg-accent-grey px-[.5em] text-[.8em] text-white dark:bg-accent-grey-dark">
+        {/* Count badge: tonal accent (was #aaa with white numerals, 2.3:1);
+            on a checked chip it sits on the navy fill, so it flips to white. */}
+        <div className="flex items-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy [.tag:checked+label_&]:bg-white/20 [.tag:checked+label_&]:text-white dark:bg-blue-light/20 dark:text-blue-light">
           {tag.count}
         </div>
       </label>

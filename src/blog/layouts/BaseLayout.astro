@@ -4,26 +4,32 @@
 // The one Tailwind entry, shared with the portfolio app
 import "../../styles/global.css";
 import Icon from "../../components/Icon.astro";
-// Highlighting for code blocks
+// Highlighting for code blocks: Prism's light theme, then the fence surface +
+// dark palette that must follow it unlayered (see prism-dark.css header).
 import "prismjs/themes/prism.css";
+import "../styles/prism-dark.css";
 // Rendered-markdown rules for post bodies (every selector under .blog-post)
 import "../styles/post.css";
 
 import BaseHead from "../components/BaseHead.astro";
 import ThemeToggle from "../../components/ThemeToggle.astro";
 import ChatWidget from "../../components/chat/ChatWidget.astro";
+// The landing page's drifting starfield, shared so the blog reads as the
+// same site (idle-loaded canvas, off under prefers-reduced-motion).
+import Particles from "../../components/Particles.astro";
 import { SITE_TITLE } from "../consts";
 
 // title/description plus SEO passthroughs for BaseHead (ogType,
 // publishedTime, tags, noindex, jsonLd).
 const { title, description, ...seo } = Astro.props;
 
-// The <body> utilities below are the blog's own page canvas and body type,
-// which used to come from style.css (`html { line-height: 1.5; font-size: 16px }`
-// + `body { font-size: 1rem; color; background-color }`). The shared entry's
-// base layer paints the PORTFOLIO gradient and sets 19px/23px, so the blog has
-// to restate both: `bg-none` clears the gradient that the base `background`
-// shorthand sets, `text-base leading-normal` restores 16px/1.5.
+// The <body> utilities below are the blog's body type and text colour, which
+// used to come from style.css (`html { line-height: 1.5; font-size: 16px }` +
+// `body { font-size: 1rem; color }`). The shared entry's base layer sets
+// 19px/23px, so `text-base leading-normal` restores 16px/1.5. The page canvas
+// is NOT restated: the blog paints the same gradients as the portfolio (base
+// layer, --background-image-page / -dark) so the shared starfield reads the
+// same on both apps — the old flat white / #282c35 canvas is gone.
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
 const base = "/blog";
@@ -36,9 +42,8 @@ const isRootPath = Astro.url.pathname === rootPath;
   <head>
     <BaseHead title={title} description={description} {...seo} />
   </head>
-  <body
-    class="bg-none bg-white text-base leading-normal text-text dark:bg-dark-bg dark:text-text-dark"
-  >
+  <body class="text-base leading-normal text-text dark:text-text-dark">
+    <Particles />
     <!-- Theme bootstrap, ported from gatsby-ssr.js. Runs before first paint so
          there is no light/dark flash; exposes window.__theme (the current
          value) and window.__setPreferredTheme, and fires a `themechange` event
@@ -79,13 +84,13 @@ const isRootPath = Astro.url.pathname === rootPath;
          the Bio sits in the page slot, so the override has to be written from
          the wrapper. Its (0,3,0) specificity beats Bio's own `mb-16`. -->
     <div
-      class="global-wrapper mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:[&_.bio]:mb-5"
+      class="global-wrapper mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:[&_.bio]:mb-5 max-md:pb-24"
       data-is-root-path={isRootPath}
     >
       <header class="global-header mb-12 flex flex-row items-center justify-between">
         {
           isRootPath ? (
-            <h1 class="main-heading m-0 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-black dark:text-white">
+            <h1 class="main-heading m-0 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-title dark:text-white">
               <a class="text-inherit no-underline" href={rootPath}>
                 {SITE_TITLE}
               </a>
@@ -123,8 +128,42 @@ const isRootPath = Astro.url.pathname === rootPath;
          scrolls near the viewport (IntersectionObserver, 300px margin), so it
          never competes with the initial page load. -->
     <script>
+      import { FIRA_CODE_URL } from "../../lib/fonts";
+
       const blocks = document.querySelectorAll("code.language-mermaid");
       if (blocks.length > 0) {
+        // Mermaid measures label widths in the live DOM, where the page's Fira
+        // Code webfont is loaded — but the SVG is then shown through an <img>,
+        // and an SVG-as-image cannot reach the page's fonts, so the browser
+        // substituted a system monospace with different advance widths and
+        // labels ran past their node boxes (cut off at the box edge). Embedding
+        // the same woff2 as a data: URI inside each SVG makes the image render
+        // with the exact face it was measured in. Fetched once (already in
+        // the HTTP cache: the layout preloads it); ~100 KB base64 per blob.
+        const fontFace: Promise<string> = fetch(FIRA_CODE_URL)
+          .then(r => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+          .then(
+            blob =>
+              new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result));
+                reader.onerror = () => reject(reader.error);
+                reader.readAsDataURL(blob);
+              })
+          )
+          .then(
+            dataUrl =>
+              `@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;src:url(${dataUrl}) format("woff2-variations")}`
+          )
+          .catch(() => "");
+
+        // Baked into the SVG (not just CSS on the <img>) so the zoomed copy —
+        // which medium-zoom clones outside the article, over its dark overlay —
+        // keeps a solid light card behind edge labels and sequence text too.
+        const svgStyle = (face: string) => `<style>${face}svg{background:#fff}</style>`;
+        const withEmbeddedStyle = (svg: string, face: string) =>
+          svg.replace(/<svg\b[^>]*>/, open => `${open}${svgStyle(face)}`);
+
         // Same lazy medium-zoom wiring as post images ([...slug].astro), for
         // the diagram <img>s created below. Separate memoized instance since
         // these elements don't exist at page load.
@@ -161,7 +200,7 @@ const isRootPath = Astro.url.pathname === rootPath;
         const renderAll = () => {
           if (loaded) return;
           loaded = true;
-          import("mermaid").then(({ default: mermaid }) => {
+          Promise.all([import("mermaid"), fontFace]).then(([{ default: mermaid }, face]) => {
             mermaid.initialize({
               startOnLoad: false,
               theme: "neutral",
@@ -179,12 +218,11 @@ const isRootPath = Astro.url.pathname === rootPath;
                   const figure = document.createElement("figure");
                   figure.className = "mermaid-diagram";
                   // Serve the SVG through an <img> (blob URL) so medium-zoom
-                  // can attach — it only supports IMG elements. Inside an
-                  // SVG-image the page's webfont is unavailable, but Georgia
-                  // (the metric-matched fallback already in the diagram font
-                  // stack) renders instead — visually near-identical. The blob
-                  // URL is intentionally never revoked: medium-zoom keeps
-                  // using the src for the zoomed view.
+                  // can attach — it only supports IMG elements. The embedded
+                  // @font-face + background (see withEmbeddedStyle) travel with
+                  // the blob, so the image and its zoomed clone render exactly
+                  // as measured. The blob URL is intentionally never revoked:
+                  // medium-zoom keeps using the src for the zoomed view.
                   const img = document.createElement("img");
                   const viewBox = svg.match(/viewBox="([^"]+)"/);
                   if (viewBox) {
@@ -194,7 +232,9 @@ const isRootPath = Astro.url.pathname === rootPath;
                       img.height = Math.round(height);
                     }
                   }
-                  img.src = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+                  img.src = URL.createObjectURL(
+                    new Blob([withEmbeddedStyle(svg, face)], { type: "image/svg+xml" })
+                  );
                   img.alt = `Diagram ${i + 1}`;
                   figure.appendChild(img);
                   pre.replaceWith(figure);

@@ -2,6 +2,7 @@
 import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../lib/fonts";
 import "../styles/global.css";
 import ChatWidget from "../components/chat/ChatWidget.astro";
+import Particles from "../components/Particles.astro";
 import { sameAs, skillsCategories } from "../data/portfolio";
 
 interface Props {
@@ -279,6 +280,9 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
     </script>
   </head>
   <body>
+    <!-- Drifting starfield behind every portfolio page (the blog's BaseLayout
+         mounts the same component), not just the landing page. -->
+    <Particles />
     <slot />
     <ChatWidget />
   </body>

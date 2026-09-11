@@ -118,6 +118,9 @@ try {
   }
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: "networkidle0" });
+  // The page sets in Fira Code (webfont): print only once it has applied, or
+  // the PDF gets the fallback face and different line breaks.
+  await page.evaluate(() => document.fonts.ready);
   await page.pdf({
     path: OUT_PATH,
     format: "Letter",

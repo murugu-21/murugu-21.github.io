@@ -440,8 +440,14 @@ export function ListenControls({ slug }: { slug: string }) {
 
   // Spotify-shaped transport: round primary play button, thin seek bar with
   // the thumb revealed on hover, times in tabular figures, speed as a pill.
+  // Surface is the island's card + border (same idiom as the chat tooltip):
+  // the page canvas is the portfolio gradient with the starfield behind it,
+  // and a translucent muted fill disappeared into it in both themes.
   return (
-    <div ref={setRoot} className="flex items-center gap-3 rounded-lg bg-muted/60 py-2 pr-2 pl-2">
+    <div
+      ref={setRoot}
+      className="flex items-center gap-3 rounded-lg border border-border bg-card py-2 pr-2 pl-2 shadow-sm"
+    >
       <Button
         onClick={onToggle}
         disabled={busy || !supported}

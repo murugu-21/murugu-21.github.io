@@ -22,7 +22,10 @@ const SearchBar = ({ query, onChange }: SearchBarProps) => {
       id="search"
       type="search"
       aria-label="search article by tag or title"
-      className="search w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text focus:shadow-[0_0_5px_var(--color-blue)] focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:focus:shadow-[0_0_5px_var(--color-box-dark)]"
+      placeholder="Search by title or tag"
+      // Island surface in both themes (white / #282c35) so the field reads as a
+      // control on the gradient canvas; focus adds a ring on top of the glow.
+      className="search w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text placeholder:text-subtitle focus:shadow-[0_0_5px_var(--color-blue)] focus:ring-2 focus:ring-blue/40 focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:placeholder:text-accent-grey-dark dark:focus:shadow-[0_0_5px_var(--color-box-dark)] dark:focus:ring-box-dark/50"
       value={query}
       onInput={onChange}
     />

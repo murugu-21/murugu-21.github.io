@@ -52,9 +52,10 @@ const Post = ({ post }: { post: SerializedPost }) => {
           <div className="flex flex-row flex-wrap gap-[10px]">
             {post.tags.map((tag, idx) => {
               return (
-                // --fontSize-0 / --color-box, both gone with style.css.
+                // --fontSize-0 gone with style.css; the outline is the
+                // portfolio's chip token, shared with the filter chips (Tag.tsx).
                 <div
-                  className="border border-blue p-[2px] text-[0.833rem] dark:border-box-dark"
+                  className="border border-chip-outline p-[2px] text-[0.833rem] dark:border-chip-outline-dark"
                   key={idx}
                 >
                   {tag}

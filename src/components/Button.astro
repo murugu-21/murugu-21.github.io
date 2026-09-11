@@ -12,7 +12,7 @@ const { text, href, download, newTab, event } = Astro.props;
 ---
 
 <a
-  class="main-button block w-max mt-5 mr-[50px] rounded-md border border-navy bg-navy px-[22px] py-[13px] text-center text-[1rem] font-bold uppercase text-white no-underline cursor-pointer transition-all duration-300 ease-in-out hover:-translate-y-[3px] hover:bg-white hover:text-navy max-md:mr-0 max-md:px-[18px] max-md:py-3 max-md:text-[0.938rem] max-xs:text-[0.75rem]"
+  class="main-button block w-max mt-5 mr-[50px] rounded-md border border-navy bg-navy px-[22px] py-[13px] text-center text-[1rem] font-bold uppercase text-white no-underline cursor-pointer transition-all duration-300 ease-in-out hover:-translate-y-[3px] hover:bg-white hover:text-navy dark:border-blue-light dark:bg-blue-light dark:text-navy dark:hover:bg-transparent dark:hover:text-blue-light max-md:mr-0 max-md:px-[18px] max-md:py-3 max-md:text-[0.938rem] max-xs:text-[0.75rem]"
   href={href}
   download={download}
   target={newTab ? "_blank" : undefined}

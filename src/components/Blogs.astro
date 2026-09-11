@@ -36,7 +36,7 @@ import { accentTitle } from "../lib/accent";
                 width: 30 by default, 40 at 481–675px / 1025–1405px / ≥1551px,
                 50 at 675–860px, 60 at 860–925px. */}
             <a
-              class="blog-card group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:-top-4 before:-right-4 before:-z-1 before:size-8 before:origin-center before:scale-100 before:rounded-[32px] before:bg-navy before:transition-transform before:duration-[400ms] before:ease-out before:content-[''] hover:before:scale-[30] min-[481px]:max-[675px]:before:duration-[450ms] min-[481px]:max-[675px]:hover:before:scale-[40] min-[675px]:max-[925px]:before:duration-[500ms] min-[675px]:max-[860px]:hover:before:scale-[50] min-[860px]:max-[925px]:hover:before:scale-[60] min-[1025px]:max-[1405px]:before:duration-[450ms] min-[1025px]:max-[1405px]:hover:before:scale-[40] min-[1551px]:before:duration-[450ms] min-[1551px]:hover:before:scale-[40]"
+              class="blog-card group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:-top-4 before:-right-4 before:-z-1 before:size-8 before:origin-center before:scale-100 before:rounded-[32px] before:bg-navy dark:before:bg-blue-light before:transition-transform before:duration-[400ms] before:ease-out before:content-[''] hover:before:scale-[30] min-[481px]:max-[675px]:before:duration-[450ms] min-[481px]:max-[675px]:hover:before:scale-[40] min-[675px]:max-[925px]:before:duration-[500ms] min-[675px]:max-[860px]:hover:before:scale-[50] min-[860px]:max-[925px]:hover:before:scale-[60] min-[1025px]:max-[1405px]:before:duration-[450ms] min-[1025px]:max-[1405px]:hover:before:scale-[40] min-[1551px]:before:duration-[450ms] min-[1551px]:hover:before:scale-[40]"
               href={blog.url}
               data-ph-event="blog_card_click"
               data-ph-prop="post"
@@ -44,17 +44,19 @@ import { accentTitle } from "../lib/accent";
             >
               {/* dark:text-white! mirrors the old `.small-dark` !important, which
                   kept the hover recolour from re-tinting the text in dark mode */}
-              <h3 class="blog-title mx-5 mt-8 mb-[14px] line-clamp-2 text-[1.375rem] leading-6 font-bold text-blog-title group-hover:text-white group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white! min-[300px]:max-[481px]:text-[1.125rem]">
+              <h3 class="blog-title mx-5 mt-8 mb-[14px] line-clamp-2 text-[1.375rem] leading-6 font-bold text-blog-title group-hover:text-white group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white! dark:group-hover:text-navy! min-[300px]:max-[481px]:text-[1.125rem]">
                 {blog.title}
               </h3>
-              <p class="small line-clamp-4 px-5 text-[1.063rem] leading-6 font-normal text-card-subtitle group-hover:text-blog-hover-small group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white!">
+              <p class="small line-clamp-4 px-5 text-[1.063rem] leading-6 font-normal text-card-subtitle group-hover:text-blog-hover-small group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white! dark:group-hover:text-navy!">
                 {blog.description}
               </p>
               <div
-                class="go-corner absolute top-0 right-0 flex size-8 items-center justify-center overflow-hidden rounded-tr-sm rounded-bl-[32px] bg-navy"
+                class="go-corner absolute top-0 right-0 flex size-8 items-center justify-center overflow-hidden rounded-tr-sm rounded-bl-[32px] bg-navy dark:bg-blue-light"
                 aria-hidden="true"
               >
-                <div class="go-arrow -mt-1 -mr-1 font-[courier,sans] text-white">→</div>
+                <div class="go-arrow -mt-1 -mr-1 font-[courier,sans] text-white dark:text-navy">
+                  →
+                </div>
               </div>
             </a>
           </div>

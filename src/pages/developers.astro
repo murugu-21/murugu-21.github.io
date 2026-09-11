@@ -205,11 +205,10 @@ const h3Cls = "mt-7 mb-2 scroll-mt-24 text-[1.15rem] font-bold";
 const codeFont = "font-[family-name:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace]";
 const codeCls = `${codeFont} rounded-sm bg-[rgba(6,3,141,0.08)] px-[0.35em] py-[0.1em] text-[0.9em] wrap-anywhere dark:bg-[rgba(76,125,255,0.12)]`;
 // Inside a <pre> the chip styling comes off again (no padding, no wrapping —
-// the <pre> scrolls instead). The chip background comes off in light mode
-// only: the old `html.dark-mode .dev-page code` rule outweighed
-// `.dev-page pre code { background: none }`, so the baseline keeps the blue
-// chip behind code inside a <pre> on dark. Reproduced here verbatim.
-const preCodeCls = `${codeFont} rounded-sm text-[0.9em] dark:bg-[rgba(76,125,255,0.12)]`;
+// the <pre> scrolls instead), in both themes. The old stylesheet kept the blue
+// chip behind <pre> code on dark by accident (a specificity leak), which
+// painted a lighter slab behind every line of a block; the UI audit dropped it.
+const preCodeCls = `${codeFont} rounded-sm text-[0.9em]`;
 // `font-[family-name:monospace]` is the UA default preflight overwrites with
 // the theme's Fira Code. The <pre> only ever contains a <code>, so the family
 // shows up solely in the line box strut — but with `line-height: normal` below
@@ -223,7 +222,9 @@ const tableCls = "w-full border-collapse text-[0.95rem]";
 const cellCls =
   "border-b border-border-soft px-3 py-[0.6rem] text-left align-top dark:border-[rgba(255,255,255,0.12)]";
 const thCls = `${cellCls} font-semibold whitespace-nowrap text-subtitle`;
-const tdCls = `${cellCls} leading-[1.6]`;
+// Chips in a cell never break mid-identifier ("getProfil|e"): the table scrolls
+// in its wrapper at narrow widths instead.
+const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[overflow-wrap:normal]`;
 ---
 
 <Layout
@@ -250,9 +251,9 @@ const tdCls = `${cellCls} leading-[1.6]`;
         class={linkCls}
         href="#versioning">versioning and deprecation</a
       >,
-      <a class={linkCls} href="#rate-limits">rate-limit headers</a>, the
-      <a class={linkCls} href="/openapi.json">OpenAPI 3.1.0 specification</a> and the
-      <a class={linkCls} href="#mcp">murugappan.dev MCP server</a>.
+      {" "}<a class={linkCls} href="#rate-limits">rate-limit headers</a>, the
+      {" "}<a class={linkCls} href="/openapi.json">OpenAPI 3.1.0 specification</a> and the
+      {" "}<a class={linkCls} href="#mcp">murugappan.dev MCP server</a>.
     </p>
     <ul class={linksUl}>
       <li class={proseLi}><a class={linkCls} href="/openapi.json">OpenAPI 3.1.0 spec</a></li>
@@ -387,9 +388,8 @@ curl -s {SITE}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</code></pr
         The version is a path segment: every endpoint lives under <code class={codeCls}
           >{VERSIONED_API_BASE}</code
         >. There is no version header and no version query parameter — the URL
-        <em>is</em> the version. The unversioned <code class={codeCls}>{API_BASE}/…</code> prefix is a{
-          " "
-        }
+        {" "}<em>is</em> the version. The unversioned <code class={codeCls}>{API_BASE}/…</code> prefix
+        is a{" "}
         <strong class="font-bold">permanent alias</strong> for <code class={codeCls}
           >{CURRENT_API_VERSION}</code
         > and will never be repointed at a later major version, so both forms are safe to hard-code.
@@ -414,7 +414,7 @@ Link: &lt;{API_PATHS.versions}&gt;; rel="version-history"</code></pre>
         > (<a class={linkCls} href="https://www.rfc-editor.org/rfc/rfc8594">RFC 8594</a>) and <code
           class={codeCls}>Link</code
         > relations <code class={codeCls}>deprecation</code> and
-        <code class={codeCls}>successor-version</code>:
+        {" "}<code class={codeCls}>successor-version</code>:
       </p>
       <pre
         class={preCls}><code class={preCodeCls}>Deprecation: @1798761600
@@ -422,10 +422,10 @@ Sunset: Thu, 01 Jul 2027 00:00:00 GMT
 Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;; rel="successor-version"</code></pre>
       <p class={proseP}>
         At least {DEPRECATION_NOTICE_DAYS} days pass between the first
-        <code class={codeCls}>Deprecation</code> header and the sunset date; after sunset the version
+        {" "}<code class={codeCls}>Deprecation</code> header and the sunset date; after sunset the version
         answers <code class={codeCls}>410</code> with the usual error envelope pointing at its successor.
         Nothing is deprecated today —
-        <code class={codeCls}>{CURRENT_VERSION_RECORD.version}</code> is
+        {" "}<code class={codeCls}>{CURRENT_VERSION_RECORD.version}</code> is
         {CURRENT_VERSION_RECORD.status}, released {CURRENT_VERSION_RECORD.releasedOn}. The whole of
         this section is served as data at <a class={linkCls} href={API_PATHS.versions}
           ><code class={codeCls}>{API_PATHS.versions}</code></a
@@ -442,16 +442,15 @@ Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;;
           href="https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/"
           >IETF <code class={codeCls}>RateLimit</code> header fields</a
         >, so a client can self-throttle without reading this page:
-        <code class={codeCls}>RateLimit-Policy</code> lists the quota policies that apply, and
-        <code class={codeCls}>RateLimit</code> is the live snapshot of the one closest to exhaustion —{
-          " "
-        }
+        {" "}<code class={codeCls}>RateLimit-Policy</code> lists the quota policies that apply, and
+        {" "}<code class={codeCls}>RateLimit</code> is the live snapshot of the one closest to exhaustion
+        —{" "}
         <code class={codeCls}>r</code> is what is left, <code class={codeCls}>t</code> is seconds until
         it resets. The de-facto <code class={codeCls}>X-RateLimit-Limit</code>,
-        <code class={codeCls}>X-RateLimit-Remaining</code> and <code class={codeCls}
+        {" "}<code class={codeCls}>X-RateLimit-Remaining</code> and <code class={codeCls}
           >X-RateLimit-Reset</code
         > trio mirrors the same numbers for tooling that only looks for those, and a
-        <code class={codeCls}>429</code> adds <code class={codeCls}>Retry-After</code>.
+        {" "}<code class={codeCls}>429</code> adds <code class={codeCls}>Retry-After</code>.
       </p>
       <pre
         class={preCls}><code class={preCodeCls}>RateLimit-Policy: {policyField([READ_QUOTA])}
@@ -471,8 +470,9 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
         real email, so it is genuinely metered:
         {CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day and {CONTACT_DAILY_GLOBAL} site-wide.
         Past either it answers
-        <code class={codeCls}>429</code> with code <code class={codeCls}>rate_limited</code>, a
-        <code class={codeCls}>Retry-After</code> counting down to 00:00 UTC, and the tier that ran out:
+        {" "}<code class={codeCls}>429</code> with code <code class={codeCls}>rate_limited</code>, a
+        {" "}<code class={codeCls}>Retry-After</code> counting down to 00:00 UTC, and the tier that ran
+        out:
       </p>
       <pre
         class={preCls}><code class={preCodeCls}>RateLimit-Policy: {policyField(CONTACT_QUOTAS)}
@@ -482,8 +482,8 @@ Retry-After: 39122</code></pre>
         A rejected request never spends a slot, and neither does a dry run — but a dry run still
         reports the allowance, so it is the cheapest way to size a real send. All of these headers
         are listed in
-        <code class={codeCls}>Access-Control-Expose-Headers</code>, so a browser-side agent can read
-        them too.
+        {" "}<code class={codeCls}>Access-Control-Expose-Headers</code>, so a browser-side agent can
+        read them too.
       </p>
     </section>
 
@@ -496,10 +496,11 @@ Retry-After: 39122</code></pre>
       </p>
       <p class={proseP}>
         The one endpoint with a side effect has a dry-run mode instead. Send
-        <code class={codeCls}>"dryRun": true</code> to <code class={codeCls}>POST /api/contact</code
+        {" "}<code class={codeCls}>"dryRun": true</code> to <code class={codeCls}
+          >POST /api/contact</code
         > and the request is validated exactly as a real one would be, then answered
-        <code class={codeCls}>200</code> with <code class={codeCls}>status: "validated"</code> — no email,
-        no rate-limit slot. Repeat until it validates, then resend without the flag.
+        {" "}<code class={codeCls}>200</code> with <code class={codeCls}>status: "validated"</code> —
+        no email, no rate-limit slot. Repeat until it validates, then resend without the flag.
       </p>
     </section>
 
@@ -516,11 +517,14 @@ Retry-After: 39122</code></pre>
         Codes: <code class={codeCls}>not_found</code>, <code class={codeCls}
           >method_not_allowed</code
         >,
-        <code class={codeCls}>invalid_request</code>, <code class={codeCls}
+        {" "}<code class={codeCls}>invalid_request</code>, <code class={codeCls}
           >unsupported_media_type</code
         >,
-        <code class={codeCls}>payload_too_large</code>, <code class={codeCls}>rate_limited</code>,
-        <code class={codeCls}>service_unavailable</code>, <code class={codeCls}>internal_error</code
+        {" "}<code class={codeCls}>payload_too_large</code>, <code class={codeCls}
+          >rate_limited</code
+        >,
+        {" "}<code class={codeCls}>service_unavailable</code>, <code class={codeCls}
+          >internal_error</code
         >. Field-level validation failures add a <code class={codeCls}>details</code> array naming each
         offending field and what it must satisfy, so a function-calling model can repair its own arguments
         and retry.
@@ -542,9 +546,9 @@ Retry-After: 39122</code></pre>
         the site redeploys, so poll instead — read endpoints are cacheable for five minutes, the <a
           class={linkCls}
           href="/blog/rss.xml">blog RSS feed</a
-        >
+        >{" "}
         announces new posts, and <code class={codeCls}>GET {API_PATHS.posts}</code> is one cheap call.
-        <code class={codeCls}>POST {API_PATHS.contact}</code> delivers by email and returns no callback;
+        {" "}<code class={codeCls}>POST {API_PATHS.contact}</code> delivers by email and returns no callback;
         Murugappan replies to the address you supply.
       </p>
     </section>
@@ -557,7 +561,7 @@ Retry-After: 39122</code></pre>
         directly convertible to tool definitions. Point your OpenAPI-to-tools converter at <code
           class={codeCls}>{SITE}/openapi.json</code
         >; the
-        <code class={codeCls}>operationId</code> becomes the tool name. For example, <code
+        {" "}<code class={codeCls}>operationId</code> becomes the tool name. For example, <code
           class={codeCls}>getBlogPost</code
         > yields:
       </p>
@@ -579,8 +583,8 @@ Retry-After: 39122</code></pre>
         Frames in: <code class={codeCls}>&#123;"type":"chat","text":"…"&#125;</code>. Frames out: <code
           class={codeCls}>history</code
         >, <code class={codeCls}>visitor</code>, <code class={codeCls}>delta</code>,
-        <code class={codeCls}>done</code>, <code class={codeCls}>limit</code>, <code class={codeCls}
-          >error</code
+        {" "}<code class={codeCls}>done</code>, <code class={codeCls}>limit</code>, <code
+          class={codeCls}>error</code
         >. Prefer the REST API when you want structured data, and the socket when you want a
         conversation.
       </p>
@@ -601,7 +605,7 @@ Retry-After: 39122</code></pre>
           >initialize</code
         >-based revisions ({LEGACY_PROTOCOL_VERSIONS.join(", ")}) that most clients still speak.
         Call <code class={codeCls}>server/discover</code> to see what a given deployment supports. There
-        is no <code class={codeCls}>GET</code>
+        is no <code class={codeCls}>GET</code>{" "}
         stream and nothing to <code class={codeCls}>DELETE</code>; both answer <code class={codeCls}
           >405</code
         >.
@@ -631,19 +635,19 @@ Retry-After: 39122</code></pre>
       <p class={proseP}>
         It also serves <strong class="font-bold">resources</strong> — documents a client can attach as
         context directly, rather than calling a tool for them:
-        <code class={codeCls}>/llms.txt</code>, <code class={codeCls}>/AGENTS.md</code>, the OpenAPI
-        specification, the full blog text, and every post's markdown (URI template <code
+        {" "}<code class={codeCls}>/llms.txt</code>, <code class={codeCls}>/AGENTS.md</code>, the
+        OpenAPI specification, the full blog text, and every post's markdown (URI template <code
           class={codeCls}>{SITE}/blog/&#123;slug&#125;/index.md</code
         >). They use
-        <code class={codeCls}>https://</code> URIs because they really are fetchable straight from the
-        web, which is what that scheme is reserved for.
+        {" "}<code class={codeCls}>https://</code> URIs because they really are fetchable straight from
+        the web, which is what that scheme is reserved for.
       </p>
       <p class={proseP}>
-        Every tool declares a typed, self-contained <code class={codeCls}>outputSchema</code>
+        Every tool declares a typed, self-contained <code class={codeCls}>outputSchema</code>{" "}
         (the REST response schemas, inlined), so a client can validate
-        <code class={codeCls}>structuredContent</code> without fetching anything else. Recoverable problems
-        — an unknown slug, a bad email, a spent allowance — come back as tool execution errors with text
-        explaining the fix, not as protocol errors.
+        {" "}<code class={codeCls}>structuredContent</code> without fetching anything else. Recoverable
+        problems — an unknown slug, a bad email, a spent allowance — come back as tool execution errors
+        with text explaining the fix, not as protocol errors.
       </p>
       <pre class={preCls}><code class={preCodeCls}>{mcpExample}</code></pre>
       <h3 id="mcp-manifest" class={h3Cls}>Manifest</h3>
@@ -656,7 +660,7 @@ Retry-After: 39122</code></pre>
         It follows the <a class={linkCls} href={MCP_SERVER_SCHEMA}>published server.json schema</a>,
         names the server <code class={codeCls}>{MCP_SERVER_NAME}</code> in the reverse-DNS form the registry
         requires, and declares one
-        <code class={codeCls}>streamable-http</code> remote:
+        {" "}<code class={codeCls}>streamable-http</code> remote:
       </p>
       <pre
         class={preCls}><code class={preCodeCls}>{`{
@@ -679,11 +683,10 @@ Retry-After: 39122</code></pre>
       <p class={proseP}>
         Every page registers tools on <code class={codeCls}>navigator.modelContext</code> when the browser
         supports the
-        <a class={linkCls} href="https://webmachinelearning.github.io/webmcp/">WebMCP</a> draft: <code
-          class={codeCls}>get_profile</code
-        >, <code class={codeCls}>list_blog_posts</code>,
-        <code class={codeCls}>read_blog_post</code> and <code class={codeCls}>navigate_to</code>. A
-        browser agent already on the page can call those without any HTTP of its own.
+        {" "}<a class={linkCls} href="https://webmachinelearning.github.io/webmcp/">WebMCP</a> draft:
+        {" "}<code class={codeCls}>get_profile</code>, <code class={codeCls}>list_blog_posts</code>,
+        {" "}<code class={codeCls}>read_blog_post</code> and <code class={codeCls}>navigate_to</code
+        >. A browser agent already on the page can call those without any HTTP of its own.
       </p>
     </section>
 
@@ -731,7 +734,7 @@ Retry-After: 39122</code></pre>
           href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a
         > — cite <a class={linkCls} href={SITE + "/"}>murugappan.dev</a>. Questions, or something
         broken? <a class={linkCls} href="mailto:murugu2001@gmail.com">Email Murugappan</a> or use
-        <code class={codeCls}>POST /api/contact</code>.
+        {" "}<code class={codeCls}>POST /api/contact</code>.
       </p>
     </section>
   </main>

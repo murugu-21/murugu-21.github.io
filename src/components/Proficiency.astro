@@ -30,7 +30,11 @@ import Icon from "./Icon.astro";
               <ul class="chips m-0 flex list-none flex-wrap gap-2 p-0">
                 {exp.tools.map(tool => (
                   <li class="chip inline-flex items-center gap-2 rounded-[20px] border border-chip-outline px-3.5 py-1.5 text-[14px] whitespace-nowrap text-text shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:text-white dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
-                    <Icon name={tool.icon} size="1.1rem" class="shrink-0 text-navy" />
+                    <Icon
+                      name={tool.icon}
+                      size="1.1rem"
+                      class="shrink-0 text-navy dark:text-blue"
+                    />
                     <span>{tool.name}</span>
                   </li>
                 ))}

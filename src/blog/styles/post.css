@@ -160,7 +160,9 @@
   .blog-post ol {
     margin-left: 0;
     margin-right: 0;
-    padding: 0;
+    /* UI audit: a hanging indent so wrapped lines line up with the first word
+       instead of running back under the marker (the old blog had padding 0). */
+    padding: 0 0 0 1.25rem;
     /* preflight: `ol, ul { margin: 0 }` drops the UA `margin-block-start: 1em`
        the old rule left in place. It collapses away after a paragraph or a
        heading but is visible after a code block (Prism sets 0.5em). */
@@ -248,6 +250,10 @@
   .blog-post th,
   .blog-post td {
     text-align: left;
+    /* UI audit: tall rows had the first column centred and the rest
+       top-aligned (UA default `middle` on td vs preflight); pin every cell to
+       the top. */
+    vertical-align: top;
     padding: 0.5rem 1rem 0.5rem 0;
     border-bottom: 1px solid var(--color-accent-grey);
   }
@@ -395,9 +401,15 @@
       padding: 0 0 0 1rem;
       margin-left: 0;
     }
-    .blog-post ul,
-    .blog-post ol {
-      list-style-position: inside;
+    /* The old blog switched markers to `inside` here (it had no list padding
+       to hang them in); with the 1.25rem padding above they stay outside, so
+       wrapped lines keep a clean left edge on phones too. */
+    /* UI audit: a 3-column table squeezed into a 350px column wrapped cells
+       to one word per line; a minimum cell width lets the table's own
+       horizontal scroll (display:block above) take over instead. */
+    .blog-post th,
+    .blog-post td {
+      min-width: 9rem;
     }
   }
 }
