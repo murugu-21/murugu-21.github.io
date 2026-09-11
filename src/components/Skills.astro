@@ -6,8 +6,16 @@ import Tilt from "./Tilt.astro";
 import { accentTitle } from "../lib/accent";
 ---
 
-<div id="skills" class="skills-main-div section-animate">
-  <div class="skills-image-div">
+{
+  /* box-content: `width: 90%` + `padding: 20px 10px` was a content-box outer
+  width before Preflight switched everything to border-box (old `.main`
+  wrapper folded into this root). */
+}
+<div
+  id="skills"
+  class="skills-main-div section-animate mx-auto mt-16 box-content flex w-[90%] overflow-hidden px-2.5 py-5 max-md:flex-col max-xs:w-auto"
+>
+  <div class="skills-image-div mb-[30px] flex-1 max-md:order-2">
     <Tilt>
       <LottiePlayer
         src="/lottie-coding.json"
@@ -15,170 +23,55 @@ import { accentTitle } from "../lib/accent";
       />
     </Tilt>
   </div>
-  <div class="skills-text-div">
-    <h2 class="skills-heading" set:html={accentTitle(skillsSection.title)} />
-    <p class="subTitle skills-text-subtitle">{skillsSection.subTitle}</p>
+  <div class="skills-text-div ml-[50px] mb-[30px] flex-1 max-md:m-5">
+    {
+      /* my-[0.67em] pins the old h1 UA margin the heading kept after being
+      demoted to h2 (h2 UA default would be 0.83em); font-normal because the
+      old rule set weight 400, not the browser's bold h2 default. */
+    }
+    <h2
+      class="skills-heading my-[0.67em] text-[56px] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+      set:html={accentTitle(skillsSection.title)}
+    />
+    {/* my-[1em] restores the browser default <p> margin Preflight removes */}
+    <p
+      class="subTitle skills-text-subtitle my-[1em] dark:text-white max-md:text-center max-md:text-[16px]"
+    >
+      {skillsSection.subTitle}
+    </p>
     <div class="software-skills-main-div">
-      <ul class="dev-icons">
+      <ul class="dev-icons mb-2.5 flex flex-wrap gap-3">
         {
           skillsSection.softwareSkills.map(skill => (
-            <li class="software-skill-chip">
-              <Icon name={skill.iconName} />
-              <span>{skill.skillName}</span>
+            <li class="software-skill-chip inline-flex items-center gap-2.5 rounded-3xl border border-chip-outline px-[18px] py-2.5 shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
+              <Icon name={skill.iconName} size="1.6rem" class="shrink-0 text-navy dark:text-blue" />
+              <span class="text-[15px] whitespace-nowrap text-text dark:text-white">
+                {skill.skillName}
+              </span>
             </li>
           ))
         }
       </ul>
     </div>
     <div>
-      {skillsSection.skills.map(s => <p class="subTitle skills-text">{s}</p>)}
+      {
+        skillsSection.skills.map(s => (
+          <p class="subTitle skills-text my-[1em] dark:text-white max-md:text-[16px]">{s}</p>
+        ))
+      }
     </div>
   </div>
 </div>
 
-<style lang="scss">
-  @import "../styles/variables";
-
-  /* old `.main` wrapper (width/padding/margins) folded into the section root */
-  .skills-main-div {
-    display: flex;
-    width: 90%;
-    padding: 20px 10px;
-    margin: 0px auto;
-    margin-top: 4rem;
-    overflow: hidden;
-  }
-
-  .skills-text-div {
-    margin-left: 50px;
-  }
-
-  .skills-main-div > * {
-    flex: 1;
-    margin-bottom: 30px;
-  }
-
-  /* sizing for the lazy lottie holder (old `.skills-image-div > img` equivalent);
-     aspect-ratio reserves the animation's box (1600x1200) before load to avoid CLS */
+<style>
+  /* sizing for the lazy lottie holder (old `.skills-image-div > img`
+     equivalent); aspect-ratio reserves the animation's box (1600x1200)
+     before load to avoid CLS. Third-party DOM (lottie-web renders an <svg>
+     into this div at runtime), so it stays a plain global rule rather than
+     an Icon-style class prop. */
   .skills-image-div :global(.lottie-holder) {
     width: 100%;
     max-width: 100%;
     aspect-ratio: 1600 / 1200;
-  }
-
-  .skills-heading {
-    font-size: 56px;
-    font-weight: 400;
-    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
-    margin: 0.67em 0;
-  }
-
-  /* old conditional `dark-mode` classes on heading/subtitle/skills lines */
-  :global(html.dark-mode) .skills-heading,
-  :global(html.dark-mode) .skills-text-subtitle,
-  :global(html.dark-mode) .skills-text {
-    color: $textColorDark;
-  }
-
-  /* tech-stack chips (reference "Professional Skillset" grid: rounded outline
-     pills with logo + label, hover glow + brighter outline) */
-  .dev-icons {
-    padding-left: 0;
-    list-style: none;
-    margin: 0 0 10px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .software-skill-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 18px;
-    border: 1px solid $chipOutlineLight;
-    border-radius: 24px;
-    box-shadow: $glowShadowLight;
-    transition:
-      border-color 0.3s ease,
-      box-shadow 0.3s ease;
-  }
-
-  /* same hover as the Proficiency chips: glow + outline, no scale */
-  .software-skill-chip:hover {
-    border-color: $accentLight;
-    box-shadow: $glowShadowLightHover;
-  }
-
-  .software-skill-chip > :global(svg) {
-    color: $skillsColor;
-    width: 1.6rem;
-    height: 1.6rem;
-    flex: none;
-  }
-
-  .software-skill-chip > span {
-    color: $textColor;
-    font-size: 15px;
-    white-space: nowrap;
-  }
-
-  :global(html.dark-mode) .software-skill-chip {
-    border-color: $chipOutlineDark;
-    box-shadow: $glowShadowDark;
-  }
-
-  :global(html.dark-mode) .software-skill-chip:hover {
-    border-color: $accentDark;
-    box-shadow: $glowShadowDarkHover;
-  }
-
-  :global(html.dark-mode) .software-skill-chip > :global(svg) {
-    color: $accentDark;
-  }
-
-  :global(html.dark-mode) .software-skill-chip > span {
-    color: $textColorDark;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .software-skill-chip {
-      transition: none;
-    }
-  }
-
-  /* Media Query */
-  @media (max-width: 1380px) {
-    .skills-heading {
-      font-size: 40px;
-    }
-  }
-  @media (max-width: 768px) {
-    .skills-heading {
-      font-size: 30px;
-      text-align: center;
-    }
-    .skills-main-div {
-      flex-direction: column;
-    }
-    .skills-text-div {
-      margin-left: 0px;
-      margin: 20px;
-    }
-    .skills-text {
-      font-size: 16px;
-    }
-    .skills-text-subtitle {
-      font-size: 16px;
-      text-align: center;
-    }
-    .skills-image-div {
-      order: 2;
-    }
-  }
-  @media (max-width: 320px) {
-    .skills-main-div {
-      width: auto;
-    }
   }
 </style>

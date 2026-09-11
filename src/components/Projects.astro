@@ -30,15 +30,23 @@ const show = projectsSection.display && repos.length > 0;
 
 {
   show && (
-    <div class="projects-section section-animate" id="projects">
+    <div
+      class="projects-section section-animate mx-auto mt-16 box-content w-[90%] px-2.5 py-5"
+      id="projects"
+    >
       <div class="projects-header">
-        <h2 class="heading projects-heading" set:html={accentTitle(projectsSection.title)} />
-        <p class="subTitle projects-subtitle">{projectsSection.subtitle}</p>
+        <h2
+          class="heading projects-heading m-0 text-[56px] leading-[normal] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+          set:html={accentTitle(projectsSection.title)}
+        />
+        <p class="subTitle projects-subtitle m-0 mb-[50px] uppercase dark:text-white max-md:text-center max-md:text-[16px] max-md:leading-[normal]">
+          {projectsSection.subtitle}
+        </p>
       </div>
-      <div class="repo-cards-div-main">
+      <div class="repo-cards-div-main grid grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-4 max-md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
         {repos.map(repo => (
           <a
-            class="repo-card-div"
+            class="repo-card-div glow-card block cursor-pointer p-8 text-repo-text no-underline dark:text-white"
             href={repo.url}
             target="_blank"
             rel="noopener noreferrer"
@@ -46,37 +54,48 @@ const show = projectsSection.display && repos.length > 0;
             data-ph-prop="project"
             data-ph-value={repo.name}
           >
-            <div class="repo-name-div">
-              <svg class="repo-svg" aria-hidden="true" height="20" viewBox="0 0 12 16" width="14">
+            <div class="repo-name-div flex items-center">
+              {/* no fill utility in light mode: the path keeps the SVG default (black) */}
+              <svg
+                class="repo-svg mr-2 min-w-4 dark:fill-white"
+                aria-hidden="true"
+                height="20"
+                viewBox="0 0 12 16"
+                width="14"
+              >
                 <path
                   fill-rule="evenodd"
                   d="M4 9H3V8h1v1zm0-3H3v1h1V6zm0-2H3v1h1V4zm0-2H3v1h1V2zm8-1v12c0 .55-.45 1-1 1H6v2l-1.5-1.5L3 16v-2H1c-.55 0-1-.45-1-1V1c0-.55.45-1 1-1h10c.55 0 1 .45 1 1zm-1 10H1v2h2v-1h3v1h5v-2zm0-10H2v9h9V1z"
                 />
               </svg>
-              <p class="repo-name">{repo.name}</p>
+              <p class="repo-name m-0 h-[30px] overflow-hidden text-[25px] font-bold tracking-[-0.5px] overflow-ellipsis whitespace-nowrap text-repo-name dark:text-white">
+                {repo.name}
+              </p>
             </div>
-            <p class="repo-description">{repo.description}</p>
+            <p class="repo-description my-3 line-clamp-2">{repo.description}</p>
             {repo.topics.length > 0 && (
-              <div class="repo-topics">
+              <div class="repo-topics mb-4 flex flex-wrap gap-[0.4rem]">
                 {repo.topics.map(t => (
-                  <span class="repo-topic">{t}</span>
+                  <span class="repo-topic rounded-[999px] bg-[rgba(6,3,141,0.1)] px-[0.6rem] py-[0.1rem] text-[0.72rem] leading-[1.6] whitespace-nowrap text-navy dark:bg-[rgba(76,125,255,0.14)] dark:text-blue">
+                    {t}
+                  </span>
                 ))}
               </div>
             )}
-            <div class="repo-stats">
-              <div class="repo-left-stat">
+            <div class="repo-stats flex justify-between text-[13px] text-repo-stats dark:text-white">
+              <div class="repo-left-stat flex grow">
                 {repo.primaryLanguage && (
-                  <span>
+                  <span class="mr-3 flex items-center">
                     <div
-                      class="language-color"
+                      class="language-color mr-1 size-2.5 rounded-full bg-repo-lang"
                       style={`background-color:${repo.primaryLanguage.color}`}
                     />
-                    <p>{repo.primaryLanguage.name}</p>
+                    <p class="m-0">{repo.primaryLanguage.name}</p>
                   </span>
                 )}
-                <span>
+                <span class="mr-3 flex items-center">
                   <svg
-                    class="repo-star-svg"
+                    class="repo-star-svg mr-[0.3rem]"
                     aria-hidden="true"
                     height="20"
                     viewBox="0 0 10 16"
@@ -88,11 +107,11 @@ const show = projectsSection.display && repos.length > 0;
                       d="M8 1a1.993 1.993 0 0 0-1 3.72V6L5 8 3 6V4.72A1.993 1.993 0 0 0 2 1a1.993 1.993 0 0 0-1 3.72V6.5l3 3v1.78A1.993 1.993 0 0 0 5 15a1.993 1.993 0 0 0 1-3.72V9.5l3-3V4.72A1.993 1.993 0 0 0 8 1zM2 4.2C1.34 4.2.8 3.65.8 3c0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3 10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3-10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2z"
                     />
                   </svg>
-                  <p>{repo.forkCount}</p>
+                  <p class="m-0">{repo.forkCount}</p>
                 </span>
-                <span>
+                <span class="mr-3 flex items-center">
                   <svg
-                    class="repo-star-svg"
+                    class="repo-star-svg mr-[0.3rem]"
                     aria-hidden="true"
                     height="20"
                     viewBox="0 0 14 16"
@@ -104,11 +123,11 @@ const show = projectsSection.display && repos.length > 0;
                       d="M14 6l-4.9-.64L7 1 4.9 5.36 0 6l3.6 3.26L2.67 14 7 11.67 11.33 14l-.93-4.74L14 6z"
                     />
                   </svg>
-                  <p>{repo.stargazers.totalCount}</p>
+                  <p class="m-0">{repo.stargazers.totalCount}</p>
                 </span>
               </div>
               <div class="repo-right-stat">
-                <p>{formatRepoSize(repo.diskUsage)}</p>
+                <p class="m-0">{formatRepoSize(repo.diskUsage)}</p>
               </div>
             </div>
           </a>
@@ -123,188 +142,3 @@ const show = projectsSection.display && repos.length > 0;
     </div>
   )
 }
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  /* section wrapper mirrors OpenSource.astro (old `.main`) */
-  .projects-section {
-    width: 90%;
-    padding: 20px 10px;
-    margin: 0px auto;
-    margin-top: 4rem;
-  }
-
-  .projects-heading {
-    font-size: 56px;
-    font-weight: 400;
-    line-height: normal;
-    margin: 0px;
-  }
-
-  .projects-subtitle {
-    text-transform: uppercase;
-    margin: 0px;
-    margin-bottom: 50px;
-  }
-
-  /* from old containers/projects/Project.scss */
-  .repo-cards-div-main {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 1rem 1rem;
-  }
-
-  /* from old components/githubRepoCard/GithubRepoCard.scss — card is now an
-     anchor instead of a div with an onClick handler */
-  .repo-card-div {
-    display: block;
-    text-decoration: none;
-    color: $githubRepoCardColor;
-    padding: 2rem;
-    cursor: pointer;
-    @include glow-card-light;
-  }
-  .repo-card-div:hover {
-    @include glow-card-light-hover;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .repo-card-div,
-    .repo-card-div:hover,
-    :global(html.dark-mode) .repo-card-div:hover {
-      transition: none;
-      transform: none;
-    }
-  }
-
-  .repo-name-div {
-    display: flex;
-    align-items: center;
-  }
-
-  .repo-svg {
-    margin-right: 0.5rem;
-    min-width: 16px;
-  }
-
-  .repo-name {
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    color: $githubRepoCardRepoNameColor;
-    font-size: 25px;
-    font-weight: 700;
-    letter-spacing: -0.5px;
-    overflow: hidden;
-    margin: 0px;
-    height: 30px;
-  }
-
-  .repo-description {
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    margin: 0.75rem 0;
-  }
-
-  /* GitHub repo topics as subtle pill chips (non-interactive — the whole card
-     is already an anchor, so nesting links would be invalid) */
-  .repo-topics {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin: 0 0 1rem;
-  }
-
-  .repo-topic {
-    font-size: 0.72rem;
-    line-height: 1.6;
-    padding: 0.1rem 0.6rem;
-    border-radius: 999px;
-    background-color: rgba(6, 3, 141, 0.1);
-    color: $buttonColor;
-    white-space: nowrap;
-  }
-
-  .repo-stats {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    color: $githubRepoCardRepoCardStatsColor;
-  }
-
-  .repo-left-stat {
-    flex-grow: 1;
-    display: flex;
-  }
-
-  .repo-left-stat span {
-    display: flex;
-    align-items: center;
-    margin-right: 0.75rem;
-  }
-
-  .repo-left-stat p,
-  .repo-right-stat p {
-    margin: 0;
-  }
-
-  .language-color {
-    width: 10px;
-    height: 10px;
-    background-color: $githubRepoCardLanguageColorBG;
-    margin-right: 0.25rem;
-    border-radius: 100%;
-  }
-
-  .repo-star-svg {
-    margin-right: 0.3rem;
-  }
-
-  /* dark mode — heading/subtitle like OpenSource.astro; card from the old
-     `.dark-card-mode` rules */
-  :global(html.dark-mode) .projects-heading,
-  :global(html.dark-mode) .projects-subtitle {
-    color: $textColorDark;
-  }
-
-  :global(html.dark-mode) .repo-card-div {
-    @include glow-card-dark;
-  }
-  :global(html.dark-mode) .repo-card-div p,
-  :global(html.dark-mode) .repo-card-div .repo-name {
-    color: $textColorDark;
-  }
-  :global(html.dark-mode) .repo-card-div .repo-svg {
-    fill: $textColorDark;
-  }
-  :global(html.dark-mode) .repo-card-div:hover {
-    @include glow-card-dark-hover;
-  }
-  :global(html.dark-mode) .repo-topic {
-    background-color: rgba(76, 125, 255, 0.14);
-    color: $accentDark;
-  }
-
-  /* Media Query */
-  @media (max-width: 1380px) {
-    .projects-heading {
-      font-size: 40px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .projects-heading {
-      font-size: 30px;
-      text-align: center;
-    }
-    .projects-subtitle {
-      font-size: 16px;
-      line-height: normal;
-      text-align: center;
-    }
-    .repo-cards-div-main {
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-  }
-</style>

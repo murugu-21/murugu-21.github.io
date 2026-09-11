@@ -79,7 +79,6 @@
     "prettier": "^3.3.0",
     "prettier-plugin-astro": "^0.14.1",
     "puppeteer": "^25.6.0",
-    "sass": "^1.69.0",
     "sharp": "^0.33.5",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
@@ -95,7 +94,7 @@
       "oxlint --fix",
       "oxfmt"
     ],
-    "*.{json,jsonc,css,scss}": "oxfmt",
+    "*.{json,jsonc,css}": "oxfmt",
     "*.{astro,md}": "prettier --write --ignore-unknown"
   }
 }

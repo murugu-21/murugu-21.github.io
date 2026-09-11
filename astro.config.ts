@@ -174,12 +174,12 @@ export default defineConfig({
   server: { port: 4399 },
   build: {
     assets: "static",
-    // Both apps' stylesheets go into the page rather than out to <link>s: the
-    // portfolio shipped two (the site's SCSS and the chat island's Tailwind
-    // layer, ~6 KB gzipped each) and every external stylesheet blocks first
-    // paint for one more round trip after the HTML — 150 ms of the FCP/LCP
-    // Lighthouse measured on mobile. The pages are few and the HTML grows by
-    // ~12 KB gzipped, which is cheaper than the dependent request.
+    // The stylesheet goes into the page rather than out to a <link>: both apps
+    // now share one Tailwind entry (src/styles/global.css, which pulls in
+    // islands.css and chat.css), and an external stylesheet blocks first paint
+    // for one more round trip after the HTML — 150 ms of the FCP/LCP Lighthouse
+    // measured on mobile. The pages are few and the HTML grows by ~14 KB
+    // gzipped, which is cheaper than the dependent request.
     inlineStylesheets: "always"
   },
   integrations: [
@@ -210,22 +210,21 @@ export default defineConfig({
     blogNotFoundCopy()
   ],
   vite: {
-    // build.inlineStylesheets "auto" inlines a stylesheet into the page when
-    // Vite's assetsInlineLimit says so. Raise that to 8 KB for CSS only, so
-    // ScrollTop's ~7.6 KB scoped sheet rides in the HTML instead of costing a
-    // render-blocking request; the 30 KB+ sheets stay external. CSS only
-    // because the limit is otherwise global: as a plain number it also
-    // base64-inlined every sub-8 KB font subset into the stylesheets that
-    // reference them, which tripled the chat sheet's gzipped size (6 → 22
-    // KB) on the critical path. `undefined` keeps Vite's 4 KB default for
-    // everything else.
+    // Vite's own assetsInlineLimit, raised to 8 KB for CSS only. It has to stay
+    // a function rather than a plain number: as a number the limit is global,
+    // and it base64-inlined every sub-8 KB font subset into the stylesheets
+    // that reference them, which tripled the island sheet's gzipped size
+    // (6 → 22 KB) on the critical path. `undefined` keeps Vite's 4 KB default
+    // for everything else. (The page-level decision is build.inlineStylesheets
+    // "always" above — the one shared sheet never goes out as a <link>.)
     build: {
       assetsInlineLimit: (file, content) =>
         file.endsWith(".css") ? content.byteLength < 8192 : undefined
     },
     plugins: [
-      // Tailwind is scoped to the chat widget island (see chat.css — theme +
-      // utilities only, no preflight, so it can't touch the site's SCSS).
+      // One Tailwind v4 entry for the whole site: src/styles/global.css, full
+      // preflight, imported by src/layouts/Layout.astro (portfolio) and
+      // src/blog/layouts/BaseLayout.astro (blog). No Sass anywhere.
       tailwindcss()
     ]
   },

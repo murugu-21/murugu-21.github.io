@@ -13,7 +13,7 @@ declare const __ISLANDS_CSS__: string;
 const css = __ISLANDS_CSS__;
 
 // The two token blocks in islands.css: `.ui-island { … }` for light and
-// `html.dark-mode .ui-island, body.dark .ui-island { … }` for dark.
+// `html.dark-mode .ui-island { … }` for dark.
 const block = (selector: string): Record<string, string> => {
   const at = css.indexOf(selector);
   if (at === -1) throw new Error(`no ${selector} block in islands.css`);
@@ -24,7 +24,7 @@ const block = (selector: string): Record<string, string> => {
 };
 
 const LIGHT = block(".ui-island {");
-const DARK = block("html.dark-mode .ui-island,\nbody.dark .ui-island {");
+const DARK = block("html.dark-mode .ui-island {");
 
 // Dark mode inherits every token the dark block does not restate.
 const theme = (mode: "light" | "dark") => (mode === "light" ? LIGHT : { ...LIGHT, ...DARK });

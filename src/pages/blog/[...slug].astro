@@ -72,36 +72,55 @@ const jsonLd = {
       </p>
       <!-- Read-aloud controls: a shadcn island (src/blog/components). Renders
            nothing until hydrated, and nothing at all without a speech or
-           audio backend. -->
-      <div class="listen-island ui-island">
+           audio backend. `mb-4` is the old `.listen-island { margin-bottom:
+           var(--spacing-4) }`; both class names stay, `ui-island` being what
+           scopes the shadcn tokens the controls read. -->
+      <div class="listen-island ui-island mb-4">
         <ListenControls client:load slug={post.id} />
       </div>
     </header>
     <section itemprop="articleBody">
       <Content />
     </section>
+    <!-- The old global `hr { background: var(--color-accent); height: 1px;
+         border: 0 }` lives on as `.blog-post hr` in post.css (it also restores
+         the UA `margin: 0.5em auto`), so this element needs no utilities. -->
     <hr />
-    <footer>
+    <!-- The old global `footer { padding: 1.5rem 0 }`. -->
+    <footer class="py-6">
       <Bio />
     </footer>
   </article>
   <nav class="blog-post-nav">
-    <ul
-      style="display: flex; flex-wrap: wrap; justify-content: space-between; list-style: none; padding: 0;"
-    >
-      <li>
+    <!-- `.blog-post-nav ul { margin: 0 }` plus what used to be this element's
+         inline style attribute (flex row, wrapping, space-between, no markers,
+         no padding). -->
+    <ul class="m-0 flex list-none flex-wrap justify-between p-0">
+      <!-- The old global `ul li, ol li { padding-left: 0; margin-bottom:
+           calc(2rem / 2) }`, which preflight zeroes. -->
+      <li class="mb-4 pl-0">
         {
           previous && (
-            <a href={postPath(previous.id)} rel="prev">
+            // The old global `a { color: var(--color-primary) }` + the UA
+            // underline preflight drops; `a:hover, a:focus` removed it.
+            <a
+              href={postPath(previous.id)}
+              rel="prev"
+              class="text-navy underline hover:no-underline focus:no-underline dark:text-blue-light"
+            >
               ← {previous.data.title}
             </a>
           )
         }
       </li>
-      <li>
+      <li class="mb-4 pl-0">
         {
           next && (
-            <a href={postPath(next.id)} rel="next">
+            <a
+              href={postPath(next.id)}
+              rel="next"
+              class="text-navy underline hover:no-underline focus:no-underline dark:text-blue-light"
+            >
               {next.data.title} →
             </a>
           )

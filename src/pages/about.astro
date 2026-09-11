@@ -34,6 +34,22 @@ const links = [
     href: `mailto:${socialMediaLinks.gmail}`
   }
 ];
+
+// One <a> look for the whole page (was the `.about-page a` rule plus its
+// html.dark-mode override): navy, undecorated until hover, blue on dark.
+const linkCls = "text-navy no-underline hover:underline dark:text-blue";
+// Browser defaults Tailwind's preflight strips and this long-form page lived
+// on: paragraph/list block margins and disc bullets. The old SCSS set the
+// list indent of every list inside a <section> to 1.25rem (UA default: 40px).
+const proseP = "my-[1em] leading-[1.6]";
+const proseUl = "my-[1em] list-disc pl-5";
+const proseLi = "leading-[1.6]";
+// Repeated shapes on this page: section headings, company/school headings, the
+// grey date-and-place line under each of them, and the inline link rows.
+const h2Cls = "mt-9 mb-3 text-[1.5rem] font-bold";
+const h3Cls = "mt-5 mb-1 text-[1.1rem] font-bold";
+const metaP = "meta my-[1em] leading-[1.6] text-subtitle";
+const linksUl = "links my-[1em] flex list-none flex-wrap gap-x-5 gap-y-[0.4rem] p-0";
 ---
 
 <Layout
@@ -41,52 +57,56 @@ const links = [
   profilePage
 >
   <Header />
-  <main class="about-page">
-    <h1>About {resumeContact.name}</h1>
-    <p class="pitch">{greeting.subTitle}</p>
-    <p class="facts">
+  <main class="about-page box-content mx-auto max-w-[760px] px-5 pt-28 pb-16">
+    <h1 class="mt-[0.67em] mb-2 text-[clamp(1.7rem,6vw,2.2rem)] font-bold">
+      About {resumeContact.name}
+    </h1>
+    <p class="pitch my-[1em] text-[1.15rem] leading-[1.6]">{greeting.subTitle}</p>
+    <p class="facts my-[1em] leading-[1.6] text-subtitle">
       {resumeContact.title} · {resumeContact.location} · currently at{" "}
-      <a href="https://www.medmehealth.com">MedMe Health</a>
+      <a href="https://www.medmehealth.com" class={linkCls}>MedMe Health</a>
     </p>
 
-    <ul class="links">
+    <ul class={linksUl}>
       {
         links.map(l => (
-          <li>
-            <a href={l.href}>{l.label}</a>
+          <li class={proseLi}>
+            <a href={l.href} class={linkCls}>
+              {l.label}
+            </a>
           </li>
         ))
       }
     </ul>
 
     <section>
-      <h2>Experience</h2>
+      <h2 class={h2Cls}>Experience</h2>
       {
         stints.map(stint => (
           <article class="stint">
-            <h3>{stint.company}</h3>
-            <p class="meta">
+            <h3 class={h3Cls}>{stint.company}</h3>
+            <p class={metaP}>
               {stint.span}
               {stint.location && ` \u00b7 ${stint.location}`}
             </p>
             {stint.roles.map(job => (
-              <div class="job">
-                <h4>
+              <div class="job pl-4">
+                <h4 class="mt-4 mb-[0.15rem] text-[1rem] font-bold">
                   {job.role}
                   {job.partTime && " (Part-time)"}
                 </h4>
                 {/* a lone role's dates already sit under the company name */}
                 {stint.roles.length > 1 && (
-                  <p class="meta">
+                  <p class={metaP}>
                     {job.date}
                     {!stint.location && ` \u00b7 ${job.location}`}
                   </p>
                 )}
-                <p>{job.desc}</p>
+                <p class={proseP}>{job.desc}</p>
                 {job.descBullets && (
-                  <ul>
+                  <ul class={proseUl}>
                     {job.descBullets.map(b => (
-                      <li>{b}</li>
+                      <li class={proseLi}>{b}</li>
                     ))}
                   </ul>
                 )}
@@ -98,12 +118,12 @@ const links = [
     </section>
 
     <section>
-      <h2>Skills</h2>
-      <ul>
+      <h2 class={h2Cls}>Skills</h2>
+      <ul class={proseUl}>
         {
           skillsCategories.map(c => (
-            <li>
-              <strong>{c.category}:</strong> {c.items}
+            <li class={proseLi}>
+              <strong class="font-bold">{c.category}:</strong> {c.items}
             </li>
           ))
         }
@@ -111,17 +131,17 @@ const links = [
     </section>
 
     <section>
-      <h2>Education</h2>
+      <h2 class={h2Cls}>Education</h2>
       {
         educationInfo.map(school => (
           <article class="job">
-            <h3>{school.schoolName}</h3>
-            <p class="meta">
+            <h3 class={h3Cls}>{school.schoolName}</h3>
+            <p class={metaP}>
               {school.subHeader} · {school.duration}
             </p>
-            <ul>
+            <ul class={proseUl}>
               {school.descBullets.map(b => (
-                <li>{b}</li>
+                <li class={proseLi}>{b}</li>
               ))}
             </ul>
           </article>
@@ -130,13 +150,15 @@ const links = [
     </section>
 
     <section>
-      <h2>Open source</h2>
-      <p>{openSourceCard.subtitle}</p>
-      <ul class="links">
+      <h2 class={h2Cls}>Open source</h2>
+      <p class={proseP}>{openSourceCard.subtitle}</p>
+      <ul class={linksUl}>
         {
           openSourceCard.footerLink.map(l => (
-            <li>
-              <a href={l.url}>{l.name}</a>
+            <li class={proseLi}>
+              <a href={l.url} class={linkCls}>
+                {l.name}
+              </a>
             </li>
           ))
         }
@@ -144,105 +166,33 @@ const links = [
     </section>
 
     <section>
-      <h2>For AI agents</h2>
-      <p>
+      <h2 class={h2Cls}>For AI agents</h2>
+      <p class={proseP}>
         This page is the canonical source of truth about Murugappan M. A machine-readable version
         lives at{" "}
-        <a href="/llms.txt">/llms.txt</a>; every page on this site also serves markdown via <code
-          >Accept: text/markdown</code
-        >, and full blog content is at <a href="/blog/llms-full.txt">/blog/llms-full.txt</a>.
+        <a href="/llms.txt" class={linkCls}>/llms.txt</a>; every page on this site also serves
+        markdown via <code>Accept: text/markdown</code>, and full blog content is at <a
+          href="/blog/llms-full.txt"
+          class={linkCls}>/blog/llms-full.txt</a
+        >.
       </p>
-      <p>
+      <p class={proseP}>
         Everything on this page is also served as JSON by a public, unauthenticated API — start with{
           " "
         }
-        <a href="/api/v1/profile">
+        <a href="/api/v1/profile" class={linkCls}>
           <code>GET /api/v1/profile</code>
         </a>
         . The full contract is the{" "}
-        <a href="/openapi.json">OpenAPI 3.1.0 spec</a>, the endpoints, versioning policy and
-        rate-limit headers are documented in the{" "}
-        <a href="/developers/">developer portal</a>, there is an{" "}
-        <a href="/mcp">MCP server</a> with a{" "}
-        <a href="/.well-known/mcp.json">manifest</a>, and{" "}
-        <a href="/AGENTS.md">/AGENTS.md</a> says when to reach for this site and which call to make.
+        <a href="/openapi.json" class={linkCls}>OpenAPI 3.1.0 spec</a>, the endpoints, versioning
+        policy and rate-limit headers are documented in the{" "}
+        <a href="/developers/" class={linkCls}>developer portal</a>, there is an{" "}
+        <a href="/mcp" class={linkCls}>MCP server</a> with a{" "}
+        <a href="/.well-known/mcp.json" class={linkCls}>manifest</a>, and{" "}
+        <a href="/AGENTS.md" class={linkCls}>/AGENTS.md</a> says when to reach for this site and which
+        call to make.
       </p>
     </section>
   </main>
   <ScrollTop />
 </Layout>
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  .about-page {
-    max-width: 760px;
-    margin: 0 auto;
-    /* the fixed navbar overlaps the top of the page (same as the homepage) */
-    padding: 7rem 1.25rem 4rem;
-
-    h1 {
-      font-size: clamp(1.7rem, 6vw, 2.2rem);
-      margin-bottom: 0.5rem;
-    }
-
-    h2 {
-      font-size: 1.5rem;
-      margin: 2.25rem 0 0.75rem;
-    }
-
-    h3 {
-      font-size: 1.1rem;
-      margin: 1.25rem 0 0.25rem;
-    }
-
-    h4 {
-      font-size: 1rem;
-      margin: 1rem 0 0.15rem;
-    }
-
-    /* roles read as subsections of their company stint */
-    .stint .job {
-      padding-left: 1rem;
-    }
-
-    p,
-    li {
-      line-height: 1.6;
-    }
-
-    a {
-      color: $accentLight;
-      text-decoration: none;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-
-    .pitch {
-      font-size: 1.15rem;
-    }
-
-    .facts,
-    .meta {
-      color: $subTitle;
-    }
-
-    .links {
-      list-style: none;
-      padding: 0;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem 1.25rem;
-    }
-
-    section ul:not(.links) {
-      padding-left: 1.25rem;
-    }
-  }
-
-  :global(html.dark-mode) .about-page a {
-    color: $accentDark;
-  }
-</style>

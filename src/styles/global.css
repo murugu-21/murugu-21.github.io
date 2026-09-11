@@ -1,0 +1,201 @@
+/* The ONE Tailwind v4 entry for BOTH apps: the portfolio imports it from
+   src/layouts/Layout.astro and the blog from src/blog/layouts/BaseLayout.astro.
+   Full Tailwind incl. preflight: every component is styled with utilities in
+   its markup, in both apps. Dark mode is `html.dark-mode` everywhere. */
+
+@import "tailwindcss";
+
+/* shadcn island tokens (chat widget) + the `dark` custom variant bound to
+   html.dark-mode. The chat animations go in layer(components) so utilities
+   still beat them. */
+@import "./islands.css";
+@import "./chat.css" layer(components);
+
+/* No @source lines: Tailwind v4 auto-detects sources by walking up from this
+   file to the project root and scanning everything not gitignored, which
+   already covers all of src/ — including src/blog/, which the three explicit
+   `@source` lines this replaces (components, layouts, pages) left out even
+   though blog utilities compile. Add one back only for a directory OUTSIDE
+   that walk (a package in node_modules, say). */
+
+@theme {
+  /* the one text face; the layout inlines the @font-face (lib/fonts.ts) */
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --default-font-family: var(--font-mono);
+
+  /* palette (was src/styles/_variables.scss) — navy #06038d is the Ashoka
+     Chakra blue, #4c7dff the bright accent that reads on dark surfaces */
+  --color-navy: #06038d;
+  --color-blue: #4c7dff;
+  --color-title: #1a202c;
+  --color-text: #2e353f;
+  --color-subtitle: #6c757d;
+  --color-card-subtitle: #666666;
+  --color-blog-title: #262626;
+  --color-blog-container: #586069;
+  --color-surface-alt: #f5f2f4;
+  --color-dark-bg: #282c35;
+  --color-dark-base: rgb(20, 22, 34);
+  --color-nav-scrolled: rgba(255, 255, 255, 0.72);
+  --color-nav-scrolled-dark: rgba(17, 19, 30, 0.72);
+  --color-chip-outline: rgba(6, 3, 141, 0.45);
+  --color-chip-outline-dark: rgba(76, 125, 255, 0.55);
+  --color-border-soft: rgba(211, 211, 211, 0.397);
+  --color-shadow-darker: rgba(0, 0, 0, 0.3);
+  --color-repo-text: rgb(88, 96, 105);
+  --color-repo-stats: rgb(106, 115, 125);
+  --color-repo-name: rgb(36, 41, 46);
+  --color-repo-lang: #0000ff;
+  --color-contact-hover: #b5b5b5;
+  --color-blog-hover-small: rgba(255, 255, 255, 0.8);
+
+  /* blog palette, Phase 2 (was the :root/.dark block in the blog's own
+     style.css). Two different meanings of the suffixes share this list:
+     `-light` in `text-light` is a lighter SHADE used in LIGHT mode (it is not
+     a light-theme variant of `text-dark`), while every `*-dark` token here is
+     the DARK-THEME value of its base token. `box-dark` is the dark-theme
+     border blue for the tag chips — "box" is the legacy name of that variable
+     in the old blog (`--color-box`), kept so the port reads 1:1. */
+  --color-blue-light: #7da2ff;
+  --color-box-dark: #3d6ff0;
+  --color-accent-grey: #aaaaaa;
+  --color-accent-grey-dark: #818cab;
+  --color-heading-dark: #f4f4f4;
+  --color-text-dark: #cbcdcf;
+  --color-text-light: #4f5969;
+
+  /* glow shadows (reference card glow, navy-tinted) */
+  --shadow-glow: 0 4px 12px 2px rgba(6, 3, 141, 0.14);
+  --shadow-glow-hover: 0 6px 16px 4px rgba(6, 3, 141, 0.28);
+  --shadow-glow-dark: 0 4px 5px 3px rgba(6, 3, 141, 0.28);
+  --shadow-glow-dark-hover: 0 4px 4px 5px rgba(76, 125, 255, 0.42);
+
+  /* page background gradients */
+  --background-image-page: linear-gradient(to left, #ffffff, #f3f4fb);
+  --background-image-page-dark: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
+
+  /* Breakpoints for the old media queries. Tailwind's max-* variants are
+     EXCLUSIVE (`@media (width < X)`) while the old SCSS `max-width: X` was
+     inclusive, so each value is the old query + 1px — `max-md:` then means
+     exactly the old `(max-width: 768px)`, `max-xs:` the old `(max-width:
+     320px)`, `max-wide:` the old `(max-width: 1380px)`. md overrides Tailwind's
+     768px default for the same reason; a rule that needs the old
+     `(min-width: 768px)` must use `min-[768px]:`, not `md:`. */
+  --breakpoint-xs: 321px;
+  --breakpoint-md: 769px;
+  --breakpoint-wide: 1381px;
+
+  --animate-rise-fade: rise-fade 1s ease both;
+  /* Entrance animation. Transform only, deliberately no opacity fade: Chrome
+     never reports an element first painted at opacity 0 as an LCP candidate,
+     so with a fade the hero paragraph was invisible to LCP and the metric
+     landed on the typewriter line ~2 s later (0.27 s vs 2.1 s measured). */
+  @keyframes rise-fade {
+    from {
+      transform: translateY(40px);
+    }
+    to {
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  code {
+    font-family: inherit;
+    font-feature-settings: "calt" 1;
+  }
+  body {
+    font: 19px / 23px var(--font-mono);
+    /* Fira Code's programming ligatures (-> => ==) are wrong in prose; code
+       re-enables them above. */
+    font-feature-settings: "calt" 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--background-image-page);
+  }
+  @media (max-width: 1380px) {
+    html,
+    body {
+      line-height: normal;
+    }
+  }
+  html.dark-mode body {
+    background: var(--background-image-page-dark);
+    color: white;
+  }
+
+  /* Themed scrollbar in dark mode. Unlike the old setup these now apply to
+     BOTH apps (this is the one shared entry) — a deliberate unification; the
+     old blog kept the browser default scrollbar. */
+  html.dark-mode ::-webkit-scrollbar {
+    width: 10px;
+  }
+  html.dark-mode ::-webkit-scrollbar-track {
+    background: var(--color-dark-base);
+  }
+  html.dark-mode ::-webkit-scrollbar-thumb {
+    background: rgba(6, 3, 141, 0.85);
+    border-radius: 12px;
+  }
+  html.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: rgba(76, 125, 255, 0.85);
+  }
+  html.dark-mode {
+    scrollbar-color: rgba(6, 3, 141, 0.85) var(--color-dark-base);
+  }
+}
+
+@layer components {
+  /* Inline highlight for one word per heading (src/lib/accent.ts emits it) */
+  .accent {
+    color: var(--color-navy);
+    font-weight: 700;
+  }
+  html.dark-mode .accent {
+    color: var(--color-blue);
+  }
+  .subTitle {
+    color: var(--color-subtitle);
+  }
+  .section-animate {
+    animation: var(--animate-rise-fade);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .section-animate {
+      animation: none;
+    }
+  }
+}
+
+/* Glowing card (replaces the glow-card-light/-dark mixin pairs). Light: solid
+   surface with a soft blue shadow. Dark: transparent over the page gradient
+   with a blue glow. Hover lifts 2% in both. */
+@utility glow-card {
+  background-color: white;
+  border: 1px solid rgba(6, 3, 141, 0.18);
+  border-radius: 10px;
+  box-shadow: var(--shadow-glow);
+  transition:
+    transform 0.5s ease,
+    box-shadow 0.5s ease;
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-glow-hover);
+  }
+  :where(html.dark-mode) & {
+    background-color: transparent;
+    border-color: rgba(76, 125, 255, 0.25);
+    box-shadow: var(--shadow-glow-dark);
+    color: white;
+    &:hover {
+      box-shadow: var(--shadow-glow-dark-hover);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:hover {
+      transform: none;
+    }
+  }
+}

@@ -1,8 +1,18 @@
 ---
+// The h1/p utilities below restate the blog's old GLOBAL element rules from
+// style.css (h1: 3rem/1.5rem margins, 2.488rem, 1.1, -0.025em, 700, black;
+// p: 1.625 line-height, 0 0 2rem margins). This page is not a `.blog-post`,
+// so post.css — which scopes those rules to the article — does not cover it.
 import BaseLayout from "../../blog/layouts/BaseLayout.astro";
 ---
 
 <BaseLayout title="404: Not Found" noindex={true}>
-  <h1>404: Not Found</h1>
-  <p>You just hit a route that doesn&#39;t exist... the sadness.</p>
+  <h1
+    class="mt-12 mb-6 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-black dark:text-white"
+  >
+    404: Not Found
+  </h1>
+  <p class="mt-0 mb-8 p-0 leading-relaxed">
+    You just hit a route that doesn&#39;t exist... the sadness.
+  </p>
 </BaseLayout>

@@ -27,7 +27,6 @@ import {
 } from "../utils/audio-sync";
 import { matchWordSpans, tokenize, wordAt, wrapWords, type TimedWord } from "../utils/audio-words";
 import { parseRate, SPEECH_RATES, speechBlocks, type SpeechRate } from "../utils/speech";
-import "../../styles/islands.css";
 
 type State = "idle" | "loading" | "speaking" | "paused";
 

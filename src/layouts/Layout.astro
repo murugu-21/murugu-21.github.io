@@ -1,6 +1,6 @@
 ---
 import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../lib/fonts";
-import "../styles/global.scss";
+import "../styles/global.css";
 import ChatWidget from "../components/chat/ChatWidget.astro";
 import { sameAs, skillsCategories } from "../data/portfolio";
 
@@ -164,10 +164,16 @@ const jsonLd = { "@context": "https://schema.org", "@graph": graph };
 const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
 const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
 const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
+
+// Smooth scrolling and the anchor offset ride on THIS layout's <html>, not in
+// src/styles/global.css: that file is the ONE Tailwind entry for both apps, so
+// a base-layer `html { scroll-padding-top: 80px }` also applied to the blog,
+// which has no fixed header — its heading anchors landed 80px low, animated.
+// scroll-pt-20 = 5rem = 80px, clearing the ~70px fixed header here.
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth scroll-pt-20">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

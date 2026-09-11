@@ -12,58 +12,21 @@ const links = [
 ];
 ---
 
-<footer class="agent-footer">
-  <p class="label">For developers &amp; AI agents</p>
-  <ul>
+<footer
+  class="agent-footer mx-auto box-content max-w-[1200px] px-5 pt-8 pb-10 text-center text-[0.9rem]"
+>
+  <p class="mb-2 text-[0.75rem] tracking-[0.08em] text-subtitle uppercase">
+    For developers &amp; AI agents
+  </p>
+  <ul class="m-0 flex flex-wrap justify-center gap-x-5 gap-y-[0.4rem] p-0">
     {
       links.map(l => (
         <li>
-          <a href={l.href}>{l.label}</a>
+          <a href={l.href} class="text-navy no-underline hover:underline dark:text-blue">
+            {l.label}
+          </a>
         </li>
       ))
     }
   </ul>
 </footer>
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  .agent-footer {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1.25rem 2.5rem;
-    text-align: center;
-    font-size: 0.9rem;
-
-    .label {
-      color: $subTitle;
-      margin: 0 0 0.5rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-size: 0.75rem;
-    }
-
-    ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.4rem 1.25rem;
-    }
-
-    a {
-      color: $accentLight;
-      text-decoration: none;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-  }
-
-  :global(html.dark-mode) .agent-footer a {
-    color: $accentDark;
-  }
-</style>

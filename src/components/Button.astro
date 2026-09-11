@@ -12,52 +12,10 @@ const { text, href, download, newTab, event } = Astro.props;
 ---
 
 <a
-  class="main-button"
+  class="main-button block w-max mt-5 mr-[50px] rounded-md border border-navy bg-navy px-[22px] py-[13px] text-center text-[1rem] font-bold uppercase text-white no-underline cursor-pointer transition-all duration-300 ease-in-out hover:-translate-y-[3px] hover:bg-white hover:text-navy max-md:mr-0 max-md:px-[18px] max-md:py-3 max-md:text-[0.938rem] max-xs:text-[0.75rem]"
   href={href}
   download={download}
   target={newTab ? "_blank" : undefined}
   rel={newTab ? "noopener noreferrer" : undefined}
   data-ph-event={event}>{text}</a
 >
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  .main-button {
-    background-color: $buttonColor;
-    border: solid 1px $buttonColor;
-    color: $textColorDark;
-    font-weight: 700;
-    width: max-content;
-    padding: 13px 22px;
-    margin-right: 50px;
-    text-transform: uppercase;
-    border-radius: 6px;
-    text-align: center;
-    text-decoration: none;
-    display: block;
-    margin-top: 20px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.3s ease-in-out 0s;
-  }
-  .main-button:hover {
-    background-color: $darkBoxShadow2;
-    color: $buttonColor;
-    transition: all 0.3s ease 0s;
-    transform: translateY(-3px);
-  }
-  /* Media Query */
-  @media (max-width: 768px) {
-    .main-button {
-      font-size: 0.938rem;
-      padding: 12px 18px;
-      margin-right: 0px;
-    }
-  }
-  @media (max-width: 320px) {
-    .main-button {
-      font-size: 0.75rem;
-    }
-  }
-</style>

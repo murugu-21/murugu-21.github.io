@@ -1,0 +1,403 @@
+/* Rendered-markdown rules for blog posts.
+   Imported by src/blog/layouts/BaseLayout.astro ONLY — never by the portfolio
+   layout — and every selector is scoped under `.blog-post` (the post page's
+   `<article class="blog-post">`) so nothing leaks into the portfolio app.
+   Dark mode is `html.dark-mode`, the one theme class for both apps.
+
+   This is the 1:1 port of the element/markdown rules that used to live in
+   src/blog/styles/style.css (deleted with normalize/tag/search in the same
+   commit). A handful of declarations are NOT in that file — they restore what
+   the old blog inherited from normalize.css + the UA stylesheet and Tailwind's
+   preflight now zeroes (list markers, link underline, hr and list/blockquote
+   margins). Each is marked `preflight:` below.
+
+   Everything stays in @layer components so a utility class written on one of
+   these elements later still wins. */
+
+@layer components {
+  /* --- Article root -------------------------------------------------------
+     The old `html { line-height: 1.5; font-size: 16px }` + `body { font-size:
+     1rem; color: var(--color-text) }`. */
+  .blog-post {
+    /* Belt and braces: BaseLayout's <body> already carries `text-base
+       leading-normal` (16px/1.5), which beats the shared entry's base-layer
+       `font: 19px/23px` and its `(max-width: 1380px) { line-height: normal }`,
+       so the article inherits the right type without these. They are kept as
+       a local restatement so the article root is self-describing and stays
+       correct if that body class ever changes. */
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--color-text);
+  }
+  html.dark-mode .blog-post {
+    color: var(--color-text-dark);
+  }
+
+  /* Inline `code` (and any un-highlighted `pre`) is Fira Code with its
+     ligatures on; the body turns `calt` off for prose. FENCED code blocks are
+     NOT affected: prism.css is imported unlayered, so its Consolas stack still
+     wins for `[class*="language-"]` — exactly as it did when these rules lived
+     in style.css. */
+  .blog-post code,
+  .blog-post pre,
+  /* INERT (kept for 1:1 parity with the old style.css): prism.css is imported
+     unlayered, so its `code[class*="language-"]` / `pre[class*="language-"]`
+     rules out-cascade anything in `@layer components` regardless of
+     specificity. These two `[class*="language-"]` halves therefore never win;
+     the plain `code` / `pre` selectors above are what actually applies. */
+  .blog-post code[class*="language-"],
+  .blog-post pre[class*="language-"] {
+    font-family: var(--font-mono);
+    font-feature-settings: "calt" 1;
+  }
+
+  /* INERT for the same reason — prism.css sets `pre[class*="language-"]`'s
+     margin unlayered. Kept because the old style.css carried it. */
+  .blog-post pre[class*="language-"] {
+    margin-bottom: 2rem;
+  }
+
+  .blog-post hr {
+    background: var(--color-accent-grey);
+    height: 1px;
+    border: 0;
+    /* preflight: `hr { margin: 0 }`. The old blog kept the UA rule's
+       `0.5em auto`, and the bottom half of it is visible — it does not collapse
+       through the article footer's padding. */
+    margin: 0.5em auto;
+  }
+  html.dark-mode .blog-post hr {
+    background: var(--color-accent-grey-dark);
+  }
+
+  /* --- Headings ----------------------------------------------------------- */
+
+  .blog-post h1,
+  .blog-post h2,
+  .blog-post h3,
+  .blog-post h4,
+  .blog-post h5,
+  .blog-post h6 {
+    margin-top: 3rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    /* anchor icons are absolutely positioned against the heading */
+    position: relative;
+  }
+
+  .blog-post h2,
+  .blog-post h3,
+  .blog-post h4,
+  .blog-post h5,
+  .blog-post h6 {
+    font-weight: 700;
+    color: var(--color-title);
+  }
+  html.dark-mode .blog-post h2,
+  html.dark-mode .blog-post h3,
+  html.dark-mode .blog-post h4,
+  html.dark-mode .blog-post h5,
+  html.dark-mode .blog-post h6 {
+    color: var(--color-heading-dark);
+  }
+
+  /* 700 is Fira Code's heaviest weight; was Montserrat 900 */
+  .blog-post h1 {
+    font-weight: 700;
+    font-size: 2.488rem;
+    color: var(--color-black);
+  }
+  html.dark-mode .blog-post h1 {
+    color: var(--color-white);
+  }
+
+  .blog-post h2 {
+    font-size: 2.074rem;
+  }
+  .blog-post h3 {
+    font-size: 1.728rem;
+  }
+  .blog-post h4 {
+    font-size: 1.44rem;
+  }
+  .blog-post h5 {
+    font-size: 1.2rem;
+  }
+  .blog-post h6 {
+    font-size: 1rem;
+  }
+
+  .blog-post h1 > a,
+  .blog-post h2 > a,
+  .blog-post h3 > a,
+  .blog-post h4 > a,
+  .blog-post h5 > a,
+  .blog-post h6 > a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* The post header (inside <article class="blog-post">) */
+  .blog-post header h1 {
+    margin: 0 0 1rem 0;
+  }
+  .blog-post header p {
+    font-size: 1.2rem;
+  }
+
+  /* --- Prose -------------------------------------------------------------- */
+
+  .blog-post p {
+    line-height: 1.625;
+    --baseline-multiplier: 0.179;
+    --x-height-multiplier: 0.35;
+    margin: 0 0 2rem 0;
+    padding: 0;
+  }
+
+  .blog-post ul,
+  .blog-post ol {
+    margin-left: 0;
+    margin-right: 0;
+    padding: 0;
+    /* preflight: `ol, ul { margin: 0 }` drops the UA `margin-block-start: 1em`
+       the old rule left in place. It collapses away after a paragraph or a
+       heading but is visible after a code block (Prism sets 0.5em). */
+    margin-top: 1em;
+    margin-bottom: 2rem;
+    list-style-position: outside;
+    list-style-image: none;
+  }
+  /* preflight: Tailwind's `ol, ul { list-style: none }` removes the markers the
+     blog relied on from the UA stylesheet. */
+  .blog-post ul {
+    list-style-type: disc;
+  }
+  .blog-post ol {
+    list-style-type: decimal;
+  }
+  /* preflight: the UA's nested-list markers (`ul ul` circle, `ul ul ul` square)
+     go with it, so they are restated too. */
+  .blog-post ul ul {
+    list-style-type: circle;
+  }
+  .blog-post ul ul ul {
+    list-style-type: square;
+  }
+
+  .blog-post ul li,
+  .blog-post ol li {
+    padding-left: 0;
+    margin-bottom: 1rem;
+  }
+
+  .blog-post li > p {
+    margin-bottom: 1rem;
+  }
+
+  .blog-post li *:last-child {
+    margin-bottom: 0;
+  }
+
+  .blog-post li > ul {
+    margin-left: 2rem;
+    margin-top: 1rem;
+  }
+
+  .blog-post blockquote {
+    color: var(--color-text-light);
+    /* preflight: as for lists, the UA `margin-block-start: 1em` the old rule
+       never overrode. */
+    margin-top: 1em;
+    margin-left: -1.5rem;
+    margin-right: 2rem;
+    padding: 0 0 0 1.5rem;
+    border-left: 0.25rem solid var(--color-navy);
+    font-size: 1.2rem;
+    font-style: italic;
+    margin-bottom: 2rem;
+  }
+  html.dark-mode .blog-post blockquote {
+    color: var(--color-neutral-100);
+    border-left-color: var(--color-blue-light);
+  }
+
+  .blog-post blockquote > :last-child {
+    margin-bottom: 0;
+  }
+
+  .blog-post blockquote > ul,
+  .blog-post blockquote > ol {
+    list-style-position: inside;
+  }
+
+  /* --- Tables -------------------------------------------------------------
+     Restores the Gatsby-era styling lost in the Astro port (cell padding
+     approximates the old typography.js defaults). Wide tables scroll
+     horizontally instead of blowing out the column. */
+  .blog-post table {
+    width: 100%;
+    margin-bottom: 2rem;
+    border-collapse: collapse;
+    border-spacing: 0.25rem;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .blog-post th,
+  .blog-post td {
+    text-align: left;
+    padding: 0.5rem 1rem 0.5rem 0;
+    border-bottom: 1px solid var(--color-accent-grey);
+  }
+  html.dark-mode .blog-post th,
+  html.dark-mode .blog-post td {
+    border-bottom-color: var(--color-accent-grey-dark);
+  }
+
+  .blog-post thead tr th {
+    border-bottom: 1px solid var(--color-accent-grey);
+  }
+  html.dark-mode .blog-post thead tr th {
+    border-bottom-color: var(--color-accent-grey-dark);
+  }
+
+  .blog-post thead th {
+    color: var(--color-title);
+  }
+  html.dark-mode .blog-post thead th {
+    color: var(--color-heading-dark);
+  }
+
+  /* --- Links --------------------------------------------------------------
+     preflight: `a { color: inherit; text-decoration: inherit }` drops the UA
+     underline the old blog kept, so it is restated here. */
+  .blog-post a {
+    color: var(--color-navy);
+    text-decoration: underline;
+  }
+  html.dark-mode .blog-post a {
+    color: var(--color-blue-light);
+  }
+
+  .blog-post a:hover,
+  .blog-post a:focus {
+    text-decoration: none;
+  }
+
+  /* --- Post-body images ---------------------------------------------------
+     Constrained to the column (width/height attrs keep the aspect ratio, so no
+     CLS) and hinted as click-to-zoomable. Scoped to the articleBody <section>
+     so the Bio avatar / social icons in the article footer stay plain links.
+     preflight: `img { display: block }` would left-align the centred diagrams
+     and drop the baseline strut the old inline images sat on. */
+  .blog-post section img {
+    display: inline;
+    vertical-align: baseline;
+    max-width: 100%;
+    height: auto;
+    cursor: zoom-in;
+  }
+
+  /* --- Heading anchors ----------------------------------------------------
+     Position/reveal behaviour matching the styles
+     gatsby-remark-autolink-headers used to inject: the icon sits to the left
+     of the heading and only appears on hover/focus. */
+  .blog-post a.anchor {
+    position: absolute;
+    top: calc(50% - 8px);
+    left: 0;
+    transform: translateX(-100%);
+    padding-right: 4px;
+    line-height: 0;
+  }
+
+  .blog-post a.anchor svg[aria-hidden="true"] {
+    stroke: var(--color-navy);
+  }
+  html.dark-mode .blog-post a.anchor svg[aria-hidden="true"] {
+    stroke: var(--color-blue-light);
+  }
+
+  .blog-post a.anchor svg {
+    visibility: hidden;
+  }
+
+  .blog-post h1:hover a.anchor svg,
+  .blog-post h2:hover a.anchor svg,
+  .blog-post h3:hover a.anchor svg,
+  .blog-post h4:hover a.anchor svg,
+  .blog-post h5:hover a.anchor svg,
+  .blog-post h6:hover a.anchor svg,
+  .blog-post a.anchor:focus svg {
+    visibility: visible;
+  }
+
+  /* --- Mermaid diagrams (rendered client-side from ```mermaid blocks) ------ */
+
+  .blog-post .mermaid-diagram {
+    margin: 2rem 0;
+    text-align: center;
+  }
+
+  .blog-post .mermaid-diagram svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Diagrams render with mermaid's light "neutral" theme; give them a solid
+     light card so labels outside node boxes (sequence-diagram text, edge
+     labels) stay readable in dark mode — and stay correct if the user toggles
+     theme after the SVGs were rendered. */
+  .blog-post .mermaid-diagram img {
+    display: inline;
+    vertical-align: baseline;
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px;
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* --- Read-aloud highlight ----------------------------------------------- */
+
+  /* The block currently being read aloud. */
+  .blog-post .is-speaking {
+    background: color-mix(in srgb, var(--color-blue) 14%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-blue) 14%, transparent);
+    border-radius: 4px;
+    transition:
+      background 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  html.dark-mode .blog-post .is-speaking {
+    background: color-mix(in srgb, var(--color-box-dark) 14%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-box-dark) 14%, transparent);
+  }
+
+  /* The word currently being spoken, inside the highlighted block. Spans are
+     inserted lazily by the read-aloud island (src/blog/utils/audio-words.ts). */
+  .blog-post .is-speaking .rw.is-word {
+    background: color-mix(in srgb, var(--color-blue) 45%, transparent);
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-blue) 45%, transparent);
+  }
+  html.dark-mode .blog-post .is-speaking .rw.is-word {
+    background: color-mix(in srgb, var(--color-box-dark) 45%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-box-dark) 45%, transparent);
+  }
+
+  /* --- Narrow column (the old `@media (max-width: 42rem)`) ----------------- */
+
+  @media (max-width: 42rem) {
+    .blog-post blockquote {
+      padding: 0 0 0 1rem;
+      margin-left: 0;
+    }
+    .blog-post ul,
+    .blog-post ol {
+      list-style-position: inside;
+    }
+  }
+}

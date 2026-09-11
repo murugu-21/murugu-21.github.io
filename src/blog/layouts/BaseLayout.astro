@@ -1,13 +1,13 @@
 ---
 // The blog sets in the site's one text face, Fira Code, declared inline by
 // BaseHead (see ../../lib/fonts.ts) — no second font family to ship.
-// normalize CSS across browsers
-import "../styles/normalize.css";
-// custom CSS styles
-import "../styles/style.css";
+// The one Tailwind entry, shared with the portfolio app
+import "../../styles/global.css";
 import Icon from "../../components/Icon.astro";
 // Highlighting for code blocks
 import "prismjs/themes/prism.css";
+// Rendered-markdown rules for post bodies (every selector under .blog-post)
+import "../styles/post.css";
 
 import BaseHead from "../components/BaseHead.astro";
 import ThemeToggle from "../../components/ThemeToggle.astro";
@@ -17,6 +17,13 @@ import { SITE_TITLE } from "../consts";
 // title/description plus SEO passthroughs for BaseHead (ogType,
 // publishedTime, tags, noindex, jsonLd).
 const { title, description, ...seo } = Astro.props;
+
+// The <body> utilities below are the blog's own page canvas and body type,
+// which used to come from style.css (`html { line-height: 1.5; font-size: 16px }`
+// + `body { font-size: 1rem; color; background-color }`). The shared entry's
+// base layer paints the PORTFOLIO gradient and sets 19px/23px, so the blog has
+// to restate both: `bg-none` clears the gradient that the base `background`
+// shorthand sets, `text-base leading-normal` restores 16px/1.5.
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
 const base = "/blog";
@@ -29,7 +36,9 @@ const isRootPath = Astro.url.pathname === rootPath;
   <head>
     <BaseHead title={title} description={description} {...seo} />
   </head>
-  <body>
+  <body
+    class="bg-none bg-white text-base leading-normal text-text dark:bg-dark-bg dark:text-text-dark"
+  >
     <!-- Theme bootstrap, ported from gatsby-ssr.js. Runs before first paint so
          there is no light/dark flash; exposes window.__theme (the current
          value) and window.__setPreferredTheme, and fires a `themechange` event
@@ -45,11 +54,9 @@ const isRootPath = Astro.url.pathname === rootPath;
       } catch (err) {}
 
       function setTheme(newTheme) {
-        if (preferredTheme && document.body.classList.contains(preferredTheme)) {
-          document.body.classList.replace(preferredTheme, newTheme);
-        } else {
-          document.body.classList.add(newTheme);
-        }
+        // One theme class for both apps: html.dark-mode (see ThemeToggle.astro
+        // and the `dark` custom variant in ../../styles/islands.css).
+        document.documentElement.classList.toggle("dark-mode", newTheme === "dark");
         window.__theme = newTheme;
         preferredTheme = newTheme;
         window.dispatchEvent(new Event("themechange"));
@@ -67,22 +74,34 @@ const isRootPath = Astro.url.pathname === rootPath;
       };
       setTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"));
     </script>
-    <div class="global-wrapper" data-is-root-path={isRootPath}>
-      <header class="global-header">
+    <!-- `data-[is-root-path=true]:[&_.bio]:mb-5` is the old
+         `.global-wrapper[data-is-root-path="true"] .bio { margin-bottom: 1.25rem }`:
+         the Bio sits in the page slot, so the override has to be written from
+         the wrapper. Its (0,3,0) specificity beats Bio's own `mb-16`. -->
+    <div
+      class="global-wrapper mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:[&_.bio]:mb-5"
+      data-is-root-path={isRootPath}
+    >
+      <header class="global-header mb-12 flex flex-row items-center justify-between">
         {
           isRootPath ? (
-            <h1 class="main-heading">
-              <a href={rootPath}>{SITE_TITLE}</a>
+            <h1 class="main-heading m-0 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-black dark:text-white">
+              <a class="text-inherit no-underline" href={rootPath}>
+                {SITE_TITLE}
+              </a>
             </h1>
           ) : (
-            <a class="header-link-home" href={rootPath}>
+            <a
+              class="header-link-home text-[1.2rem] font-bold text-navy no-underline dark:text-blue-light"
+              href={rootPath}
+            >
               {SITE_TITLE}
             </a>
           )
         }
-        <div class="header-actions">
+        <div class="header-actions flex items-center gap-4">
           <a
-            class="rss-link"
+            class="rss-link inline-flex items-center text-text hover:text-navy dark:text-text-dark dark:hover:text-blue-light"
             href={`${rootPath}rss.xml`}
             target="_blank"
             rel="noopener noreferrer"

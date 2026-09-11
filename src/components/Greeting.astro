@@ -11,24 +11,53 @@ import { Image } from "astro:assets";
 import portrait from "../assets/images/portrait.webp";
 ---
 
-<div class="greet-main section-animate" id="greeting">
-  <div class="greeting-main">
-    <div class="greeting-text-div">
+{
+  /* box-content: `width: 90%` + `padding: 20px 10px` was a content-box outer
+  width of `90vw + 20px` before Preflight switched everything to border-box. */
+}
+<div class="greet-main section-animate mx-auto mt-8 box-content w-[90%] px-2.5 py-5" id="greeting">
+  <div class="greeting-main flex max-md:block">
+    <div class="greeting-text-div mb-[30px] flex-1">
       <div>
-        <h1 class="greeting-text">
-          <span class="greeting-hi">
+        {
+          /* my-[0.67em] / my-[1em] below restore the browser default h1 and p
+          margins that Preflight removes; the pre-Tailwind site relied on them. */
+        }
+        <h1
+          class="greeting-text my-[0.67em] text-[70px] font-bold leading-[1.1] text-text dark:text-white max-wide:text-[50px] max-md:text-center max-md:text-[30px]"
+        >
+          <span class="greeting-hi mb-3 block text-[0.55em]">
             Hi There!
-            <span class="wave-emoji">👋</span>
+            <span
+              class="wave-emoji inline-block origin-[70%_70%] animate-[wave_1.8s_infinite] motion-reduce:animate-none"
+              >👋</span
+            >
           </span>
-          <span class="greeting-name">
+          <span class="greeting-name block">
             I'm <span class="accent">{greeting.nickname}</span>
           </span>
         </h1>
-        <p class="greeting-roles"><Typewriter roles={typewriterRoles} /></p>
-        <p class="greeting-text-p subTitle">{greeting.subTitle}</p>
-        <div id="resume" class="empty-div"></div>
+        {/* min-h reserves the line while the roles type/delete */}
+        <p
+          class="greeting-roles mt-3 mb-[1em] min-h-[1.3em] text-[34px] leading-[1.3] max-wide:text-[26px] max-md:text-center max-md:text-[20px]"
+        >
+          <Typewriter roles={typewriterRoles} />
+        </p>
+        <p
+          class="greeting-text-p subTitle my-[1em] text-[30px] leading-[40px] dark:text-white max-wide:text-[20px] max-md:text-center max-md:text-[16px] max-md:leading-[normal]"
+        >
+          {greeting.subTitle}
+        </p>
+        <div id="resume" class="empty-div mb-10"></div>
         <SocialMedia />
-        <div class="button-greeting-div">
+        {
+          /* the buttons' desktop margin-right is zeroed at 768px (legacy
+          developerFolio rule in Button.astro); without a gap they touch when
+          the wrapped row is full */
+        }
+        <div
+          class="button-greeting-div mt-10 flex max-md:flex-wrap max-md:justify-around max-md:gap-3"
+        >
           <Button text="Contact me" href="#contact" event="contact_click" />
           <Button
             text="Download my resume"
@@ -39,15 +68,17 @@ import portrait from "../assets/images/portrait.webp";
         </div>
       </div>
     </div>
-    <div class="greeting-image-div">
+    <div class="greeting-image-div mb-[30px] flex flex-1 items-center justify-center">
       {
         /* Rendered at up to 440px (2x → the 880px source) on wide screens and
           240px on phones (the 768px breakpoint below), so the srcset lets a
           phone take the 480px file instead of the full one. Eager + high
-          priority: it is above the fold on every viewport. */
+          priority: it is above the fold on every viewport.
+          Round portrait with the site's navy ring and glow; box-content keeps
+          the old content-box sizing so the 6px ring sits outside the 440px. */
       }
       <Image
-        class="portrait"
+        class="box-content aspect-square w-full max-w-[440px] rounded-full border-6 border-navy object-cover shadow-glow dark:border-blue dark:shadow-glow-dark max-md:max-w-[240px]"
         src={portrait}
         widths={[240, 480, 880]}
         sizes="(max-width: 768px) 240px, 440px"
@@ -59,110 +90,8 @@ import portrait from "../assets/images/portrait.webp";
   </div>
 </div>
 
-<style lang="scss">
-  @import "../styles/variables";
-
-  .greet-main {
-    width: 90%;
-    padding: 20px 10px;
-    margin: 0px auto;
-    margin-top: 2rem;
-  }
-
-  .greeting-main {
-    display: flex;
-  }
-
-  .greeting-main > * {
-    flex: 1;
-    margin-bottom: 30px;
-  }
-
-  .empty-div {
-    margin-bottom: 40px;
-  }
-
-  .button-greeting-div {
-    display: flex;
-    margin-top: 40px;
-  }
-
-  .greeting-text {
-    font-size: 70px;
-    line-height: 1.1;
-    color: $textColor;
-  }
-
-  /* reference hero: "Hi There! 👋" on its own line, then the name line with
-     the accent highlight */
-  .greeting-hi,
-  .greeting-name {
-    display: block;
-  }
-
-  .greeting-hi {
-    font-size: 0.55em;
-    margin-bottom: 12px;
-  }
-
-  .greeting-roles {
-    font-size: 34px;
-    line-height: 1.3;
-    margin-top: 12px;
-    min-height: 1.3em; /* reserve the line while roles type/delete */
-  }
-
-  .greeting-text-p {
-    font-size: 30px;
-    line-height: 40px;
-  }
-
-  /* old conditional `dark-mode greeting-text` classes, now driven by html.dark-mode */
-  :global(html.dark-mode) .greeting-text,
-  :global(html.dark-mode) .greeting-text-p {
-    color: $textColorDark;
-  }
-
-  /* hero illustration (static img, the page's LCP element; width/height
-     attributes reserve the box before load to avoid CLS) */
-  .greeting-image-div {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  /* round portrait with the site's navy ring and glow. :global(): the <Image>
-     component's <img> does not carry this component's scoped attribute */
-  .greeting-image-div :global(img) {
-    width: 100%;
-    max-width: 440px;
-    height: auto;
-    aspect-ratio: 1;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 6px solid $buttonColor;
-    box-shadow: $glowShadowLight;
-  }
-
-  :global(html.dark-mode) .greeting-image-div :global(img) {
-    border-color: $buttonHover;
-    box-shadow: $glowShadowDark;
-  }
-
-  .wave-emoji {
-    animation-duration: 1.8s;
-    animation-iteration-count: infinite;
-    animation-name: wave;
-    display: inline-block;
-    transform-origin: 70% 70%;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .wave-emoji {
-      animation: none;
-    }
-  }
-
+<style>
+  /* referenced by the `animate-[wave_1.8s_infinite]` utility on .wave-emoji */
   @keyframes wave {
     0% {
       transform: rotate(0deg);
@@ -184,47 +113,6 @@ import portrait from "../assets/images/portrait.webp";
     }
     100% {
       transform: rotate(0deg);
-    }
-  }
-
-  /* Media Query */
-  @media (max-width: 1380px) {
-    .greeting-text {
-      font-size: 50px;
-    }
-    .greeting-roles {
-      font-size: 26px;
-    }
-    .greeting-text-p {
-      font-size: 20px;
-    }
-  }
-  @media (max-width: 768px) {
-    .greeting-roles {
-      font-size: 20px;
-      text-align: center;
-    }
-    .button-greeting-div {
-      justify-content: space-around;
-      /* the buttons' desktop margin-right is zeroed at this width (legacy
-         developerFolio rule); without a gap they touch when the row is full */
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .greeting-text {
-      font-size: 30px;
-      text-align: center;
-    }
-    .greeting-text-p {
-      font-size: 16px;
-      line-height: normal;
-      text-align: center;
-    }
-    .greeting-main {
-      display: block;
-    }
-    .greeting-image-div :global(img) {
-      max-width: 240px;
     }
   }
 </style>

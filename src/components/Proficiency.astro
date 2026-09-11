@@ -4,19 +4,33 @@ import { accentTitle } from "../lib/accent";
 import Icon from "./Icon.astro";
 ---
 
-<div class="proficiency-container section-animate" id="proficiency">
-  <div>
-    <h2 class="proficiency-heading" set:html={accentTitle("Proficiency")} />
-    <dl class="areas">
+{
+  /* box-content: old `.proficiency-container` was `width: 90%` + `padding:
+  20px 10px` under content-box; keep that outer width now Preflight is
+  border-box. */
+}
+<div
+  class="proficiency-container section-animate box-content mx-auto mt-8 flex w-[90%] px-2.5 py-5"
+  id="proficiency"
+>
+  <div class="flex-1">
+    {/* my-[0.67em] pins the old h1 UA margin kept after demotion to h2 */}
+    <h2
+      class="proficiency-heading my-[0.67em] text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+      set:html={accentTitle("Proficiency")}
+    />
+    <dl class="areas m-0 flex flex-col gap-4">
       {
         techStack.experience.map(exp => (
-          <div class="area">
-            <dt class="area-name">{exp.stack}</dt>
-            <dd class="area-tools">
-              <ul class="chips">
+          <div class="area grid grid-cols-[12rem_1fr] items-center gap-x-6 gap-y-2 max-md:grid-cols-1 max-md:gap-[0.4rem]">
+            <dt class="area-name m-0 text-[18px] font-semibold text-text max-md:text-[16px] dark:text-white">
+              {exp.stack}
+            </dt>
+            <dd class="area-tools m-0">
+              <ul class="chips m-0 flex list-none flex-wrap gap-2 p-0">
                 {exp.tools.map(tool => (
-                  <li class="chip">
-                    <Icon name={tool.icon} />
+                  <li class="chip inline-flex items-center gap-2 rounded-[20px] border border-chip-outline px-3.5 py-1.5 text-[14px] whitespace-nowrap text-text shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:text-white dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
+                    <Icon name={tool.icon} size="1.1rem" class="shrink-0 text-navy" />
                     <span>{tool.name}</span>
                   </li>
                 ))}
@@ -28,131 +42,3 @@ import Icon from "./Icon.astro";
     </dl>
   </div>
 </div>
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  .proficiency-heading {
-    font-size: 56px;
-    font-weight: 400;
-    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
-    margin: 0.67em 0;
-  }
-
-  .proficiency-container {
-    display: flex;
-    width: 90%;
-    padding: 20px 10px;
-    margin: 0px auto;
-    margin-top: 2rem;
-  }
-
-  .proficiency-container > * {
-    flex: 1;
-  }
-
-  .areas {
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  /* name column + chips column; the name column is sized to the longest
-     name so the chips line up down the page */
-  .area {
-    display: grid;
-    grid-template-columns: 12rem 1fr;
-    align-items: center;
-    gap: 0.5rem 1.5rem;
-  }
-
-  .area-name {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: $textColor;
-  }
-
-  .area-tools {
-    margin: 0;
-  }
-
-  .chips {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  /* same outline + glow language as the Skills chips, at a smaller size */
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 14px;
-    border: 1px solid $chipOutlineLight;
-    border-radius: 20px;
-    box-shadow: $glowShadowLight;
-    font-size: 14px;
-    color: $textColor;
-    white-space: nowrap;
-    transition:
-      border-color 0.3s ease,
-      box-shadow 0.3s ease;
-  }
-
-  .chip:hover {
-    border-color: $accentLight;
-    box-shadow: $glowShadowLightHover;
-  }
-
-  .chip > :global(svg) {
-    color: $skillsColor;
-    width: 1.1rem;
-    height: 1.1rem;
-    flex: none;
-  }
-
-  :global(html.dark-mode) .area-name,
-  :global(html.dark-mode) .chip {
-    color: $textColorDark;
-  }
-  :global(html.dark-mode) .chip {
-    border-color: $chipOutlineDark;
-    box-shadow: $glowShadowDark;
-  }
-  :global(html.dark-mode) .chip:hover {
-    border-color: $accentDark;
-    box-shadow: $glowShadowDarkHover;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .chip {
-      transition: none;
-    }
-  }
-
-  /* Media Query */
-  @media (max-width: 1380px) {
-    .proficiency-heading {
-      font-size: 40px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .proficiency-heading {
-      font-size: 30px;
-      text-align: center;
-    }
-    .area {
-      grid-template-columns: 1fr;
-      gap: 0.4rem;
-    }
-    .area-name {
-      font-size: 16px;
-    }
-  }
-</style>

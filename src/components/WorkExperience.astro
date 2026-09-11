@@ -43,26 +43,39 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
 ---
 
 <div id="experience">
-  <div class="experience-container section-animate" id="workExperience">
-    <div>
-      <div class="experience-head">
-        <h2 class="experience-heading" set:html={accentTitle("Experiences")} />
-        <p class="experience-total subTitle">
-          <span class="experience-total-value" data-periods={JSON.stringify(allPeriods)}
-            >{total}</span
+  <div
+    class="experience-container section-animate mx-auto mt-8 box-content flex w-[90%] px-2.5 py-5"
+    id="workExperience"
+  >
+    <div class="flex-1">
+      <div
+        class="experience-head mb-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 max-md:flex-col max-md:items-center"
+      >
+        <h2
+          class="experience-heading mt-[0.67em] mb-0 text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+          set:html={accentTitle("Experiences")}
+        />
+        <p class="experience-total subTitle text-right text-[18px] max-md:text-center">
+          <span
+            class="experience-total-value font-semibold text-navy dark:text-blue"
+            data-periods={JSON.stringify(allPeriods)}>{total}</span
           > of experience across {companyCount}{" "}
           {companyCount === 1 ? "company" : "companies"}
         </p>
       </div>
-      <ol class="stints">
+      <ol class="stints flex flex-col gap-5">
         {
           stints.map(stint => (
-            <li class="stint">
-              <header class="stint-header">
+            /* `[&:hover]:` instead of `hover:`: Tailwind wraps `hover:` in
+                @media (hover: hover), so a plain `hover:transform-none` would not
+                exist on touch — where `glow-card`'s own :hover scale still fires
+                on tap. The bare selector cancels it everywhere. */
+            <li class="stint glow-card px-7 py-6 text-text [&:hover]:transform-none max-md:px-4 max-md:py-5 dark:text-white">
+              <header class="stint-header mb-5 flex items-center gap-5">
                 {/* Rendered at 4.5rem (3rem on phones): 72px + a 2x variant
                     as WebP, instead of the 256px source PNG. */}
                 <Image
-                  class="stint-logo"
+                  class="stint-logo size-18 flex-none rounded-full object-cover shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-md:size-12"
                   src={stint.logo}
                   width={72}
                   height={72}
@@ -71,8 +84,10 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                   loading="lazy"
                 />
                 <div>
-                  <h3 class="stint-company">{stint.company}</h3>
-                  <p class="stint-meta subTitle">
+                  <h3 class="stint-company text-[25px] leading-[1.2] font-bold max-md:text-[21px]">
+                    {stint.company}
+                  </h3>
+                  <p class="stint-meta subTitle mt-1 mb-0 text-[16px] dark:text-white/65">
                     {stint.span}
                     {stint.duration && (
                       <span
@@ -90,14 +105,16 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                 </div>
               </header>
 
-              <ol class="roles">
+              <ol class="roles ml-[1.9rem] flex flex-col gap-5 pl-[1.6rem] max-md:ml-[1.15rem] max-md:pl-[1.4rem]">
                 {stint.roles.map(role => (
-                  <li class="role">
-                    <div class="role-head">
-                      <h4 class="role-title">{role.role}</h4>
+                  <li class="role relative before:absolute before:top-[0.45rem] before:-left-[1.6rem] before:size-[0.7rem] before:rounded-full before:bg-navy before:shadow-[0_0_0_3px_rgba(6,3,141,0.18)] before:content-[''] after:absolute after:top-[1.15rem] after:-bottom-5 after:left-[calc(-1.6rem_+_0.35rem_-_1px)] after:w-0.5 after:bg-[rgba(6,3,141,0.25)] after:content-[''] last:after:hidden max-md:before:-left-[1.4rem] max-md:after:left-[calc(-1.4rem_+_0.35rem_-_1px)] dark:before:bg-blue dark:before:shadow-[0_0_0_3px_rgba(76,125,255,0.2)] dark:after:bg-[rgba(76,125,255,0.3)]">
+                    <div class="role-head flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <h4 class="role-title text-[20px] leading-[1.3] font-bold max-md:text-[18px]">
+                        {role.role}
+                      </h4>
                       {/* a lone role's date already sits in the card header */}
                       {stint.roles.length > 1 && (
-                        <p class="role-date subTitle">
+                        <p class="role-date subTitle text-[15px] whitespace-nowrap max-md:whitespace-normal dark:text-white/65">
                           {role.date}
                           {role.duration && (
                             <span
@@ -114,17 +131,22 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                         </p>
                       )}
                     </div>
-                    <p class="role-desc">{role.desc}</p>
+                    <p class="role-desc mt-[0.4rem] mb-0 text-[16px] leading-[1.5]">{role.desc}</p>
                     {role.descBullets?.length ? (
-                      <details class="role-details">
-                        <summary class="role-summary">
-                          <span class="role-summary-chevron" aria-hidden="true" />
+                      /* `group` is load-bearing: the chevron below reads it
+                          through `group-open:rotate-45`. */
+                      <details class="role-details group mt-2">
+                        <summary class="role-summary inline-flex cursor-pointer list-none items-center gap-[0.4rem] text-[15px] font-semibold text-navy select-none [&::-webkit-details-marker]:hidden hover:text-blue focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-blue dark:text-blue dark:hover:text-white">
+                          <span
+                            class="role-summary-chevron mb-0.5 inline-block box-content size-[0.45rem] -rotate-45 border-r-2 border-b-2 border-current transition-transform duration-200 ease-[ease] group-open:mt-[-2px] group-open:mb-0 group-open:rotate-45 motion-reduce:transition-none"
+                            aria-hidden="true"
+                          />
                           {role.descBullets.length}{" "}
                           {role.descBullets.length === 1 ? "highlight" : "highlights"}
                         </summary>
-                        <ul class="role-bullets">
+                        <ul class="role-bullets mt-[0.6rem] mb-0 list-disc pl-5 text-[16px] leading-[1.55]">
                           {role.descBullets.map(item => (
-                            <li>{item}</li>
+                            <li class="mt-[0.4rem] first:mt-0">{item}</li>
                           ))}
                         </ul>
                       </details>
@@ -166,325 +188,3 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     total.textContent = formatDuration(totalExperienceMonths(JSON.parse(periods) as string[], now));
   }
 </script>
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  /* title on the left, the total flush right on the same baseline */
-  .experience-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.5rem 2rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .experience-head .experience-heading {
-    margin-bottom: 0;
-  }
-
-  .experience-total {
-    margin: 0;
-    font-size: 18px;
-    text-align: right;
-  }
-
-  .experience-total-value {
-    font-weight: 600;
-    color: $buttonColor;
-  }
-
-  :global(html.dark-mode) .experience-total-value {
-    color: $buttonHover;
-  }
-
-  .experience-heading {
-    font-size: 56px;
-    font-weight: 400;
-    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
-    margin: 0.67em 0;
-  }
-
-  .experience-container {
-    display: flex;
-    width: 90%;
-    padding: 20px 10px;
-    margin: 0px auto;
-    margin-top: 2rem;
-  }
-
-  .experience-container > * {
-    flex: 1;
-  }
-
-  .stints,
-  .roles,
-  .role-bullets {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .stints {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  /* ---- company card ---- */
-
-  .stint {
-    padding: 1.5rem 1.75rem;
-    color: $textColor;
-    @include glow-card-light;
-  }
-
-  /* glow only on hover: a full-width card scaling up reads as a jump */
-  .stint:hover {
-    @include glow-card-light-hover;
-    transform: none;
-  }
-
-  .stint-header {
-    display: flex;
-    align-items: center;
-    gap: 1.25rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .stint-logo {
-    flex: none;
-    width: 4.5rem;
-    height: 4.5rem;
-    object-fit: cover;
-    border-radius: 50%;
-    box-shadow: 0 0.5rem 1rem $lightBoxShadowDarker;
-  }
-
-  .stint-company {
-    margin: 0;
-    font-size: 25px;
-    font-weight: 700;
-    line-height: 1.2;
-  }
-
-  .stint-meta {
-    margin: 0.25rem 0 0;
-    font-size: 16px;
-  }
-
-  /* ---- promotion ladder ---- */
-
-  .roles {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    /* room for the rail: dot column + gap */
-    margin-left: calc(4.5rem / 2 - 0.35rem);
-    padding-left: 1.6rem;
-  }
-
-  .role {
-    position: relative;
-  }
-
-  /* dot */
-  .role::before {
-    content: "";
-    position: absolute;
-    left: -1.6rem;
-    top: 0.45rem;
-    width: 0.7rem;
-    height: 0.7rem;
-    border-radius: 50%;
-    background: $buttonColor;
-    box-shadow: 0 0 0 3px rgba(6, 3, 141, 0.18);
-  }
-
-  /* connector from this dot down to the next role's dot */
-  .role::after {
-    content: "";
-    position: absolute;
-    left: calc(-1.6rem + 0.35rem - 1px);
-    top: 1.15rem;
-    bottom: -1.25rem;
-    width: 2px;
-    background: rgba(6, 3, 141, 0.25);
-  }
-
-  .role:last-child::after {
-    display: none;
-  }
-
-  .role-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.25rem 1rem;
-  }
-
-  .role-title {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1.3;
-  }
-
-  .role-date {
-    margin: 0;
-    font-size: 15px;
-    white-space: nowrap;
-  }
-
-  .role-desc {
-    margin: 0.4rem 0 0;
-    font-size: 16px;
-    line-height: 1.5;
-  }
-
-  /* ---- highlights disclosure ---- */
-
-  .role-details {
-    margin-top: 0.5rem;
-  }
-
-  .role-summary {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
-    list-style: none;
-    font-size: 15px;
-    font-weight: 600;
-    color: $buttonColor;
-    user-select: none;
-  }
-
-  .role-summary::-webkit-details-marker {
-    display: none;
-  }
-
-  .role-summary:hover {
-    color: $buttonHover;
-  }
-
-  .role-summary:focus-visible {
-    outline: 2px solid $buttonHover;
-    outline-offset: 3px;
-    border-radius: 4px;
-  }
-
-  .role-summary-chevron {
-    display: inline-block;
-    width: 0.45rem;
-    height: 0.45rem;
-    border-right: 2px solid currentColor;
-    border-bottom: 2px solid currentColor;
-    transform: rotate(-45deg);
-    transition: transform 0.2s ease;
-    margin-bottom: 2px;
-  }
-
-  .role-details[open] .role-summary-chevron {
-    transform: rotate(45deg);
-    margin-bottom: 0;
-    margin-top: -2px;
-  }
-
-  .role-bullets {
-    margin: 0.6rem 0 0;
-    padding-left: 1.25rem;
-    list-style: disc;
-    font-size: 16px;
-    line-height: 1.55;
-  }
-
-  .role-bullets li + li {
-    margin-top: 0.4rem;
-  }
-
-  /* ---- dark mode ---- */
-
-  :global(html.dark-mode) .stint {
-    @include glow-card-dark;
-  }
-  :global(html.dark-mode) .stint:hover {
-    @include glow-card-dark-hover;
-    transform: none;
-  }
-  :global(html.dark-mode) .stint-meta,
-  :global(html.dark-mode) .role-date {
-    color: rgba(255, 255, 255, 0.65);
-  }
-  :global(html.dark-mode) .role-summary {
-    color: $buttonHover;
-  }
-  :global(html.dark-mode) .role-summary:hover {
-    color: $textColorDark;
-  }
-  :global(html.dark-mode) .role::before {
-    background: $buttonHover;
-    box-shadow: 0 0 0 3px rgba(76, 125, 255, 0.2);
-  }
-  :global(html.dark-mode) .role::after {
-    background: rgba(76, 125, 255, 0.3);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .stint,
-    .stint:hover,
-    .role-summary-chevron {
-      transition: none;
-    }
-  }
-
-  /* ---- responsive ---- */
-
-  @media (max-width: 1380px) {
-    .experience-heading {
-      font-size: 40px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .experience-heading {
-      font-size: 30px;
-      text-align: center;
-    }
-    .experience-head {
-      flex-direction: column;
-      align-items: center;
-    }
-    .experience-total {
-      text-align: center;
-    }
-    .stint {
-      padding: 1.25rem 1rem;
-    }
-    .stint-logo {
-      width: 3rem;
-      height: 3rem;
-    }
-    .stint-company {
-      font-size: 21px;
-    }
-    .roles {
-      margin-left: calc(3rem / 2 - 0.35rem);
-      padding-left: 1.4rem;
-    }
-    .role::before {
-      left: -1.4rem;
-    }
-    .role::after {
-      left: calc(-1.4rem + 0.35rem - 1px);
-    }
-    .role-title {
-      font-size: 18px;
-    }
-    .role-date {
-      white-space: normal;
-    }
-  }
-</style>

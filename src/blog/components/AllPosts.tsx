@@ -60,12 +60,18 @@ const AllPosts = ({ posts }: { posts: SerializedPost[] }) => {
         )}
       />
       <TagBar tags={tags} onTagSelect={handleTagSelect} selectedTags={selectedTags} />
-      <ol style={{ listStyle: `none` }}>
+      {/* `ul, ol { margin: 1em 0 2rem; padding: 0; list-style: none }` — the
+          2rem bottom came from style.css, the 1em top from the UA sheet. */}
+      <ol className="mt-4 mb-8 list-none p-0">
         {filteredPosts.map(post => {
           return <Post post={post} key={post.href} />;
         })}
       </ol>
-      {filteredPosts.length === 0 && <p className="post-list-item h2">No matching article found</p>}
+      {filteredPosts.length === 0 && (
+        // `.post-list-item` margins (2rem top and bottom) beat the `p` rule's
+        // `margin: 0 0 2rem`; `p` still supplies line-height 1.625.
+        <p className="post-list-item h2 my-8 leading-relaxed">No matching article found</p>
+      )}
     </>
   );
 };

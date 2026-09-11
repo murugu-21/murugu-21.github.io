@@ -1,11 +1,6 @@
 import Tag, { type TagCount } from "./Tag";
 import React from "react";
 
-const WRAPPER_STYLES: React.CSSProperties = {
-  display: "flex",
-  flexWrap: "wrap"
-};
-
 interface TagBarProps {
   tags: TagCount[];
   onTagSelect: React.ChangeEventHandler<HTMLInputElement>;
@@ -14,7 +9,8 @@ interface TagBarProps {
 
 const TagBar = ({ tags, onTagSelect, selectedTags }: TagBarProps) => {
   return (
-    <div style={WRAPPER_STYLES}>
+    // Was an inline `display: flex; flex-wrap: wrap` style object.
+    <div className="flex flex-wrap">
       {tags.map(tag => {
         return (
           <Tag

@@ -1,15 +1,4 @@
 import React from "react";
-import "../styles/search.css";
-
-const SEARCH_STYLE: React.CSSProperties = {
-  width: "100%",
-  padding: ".25em .5em",
-  fontSize: "1.25rem",
-  borderRadius: "0.5rem",
-  border: "0.1rem solid var(--color-primary)",
-  backgroundColor: "var(--color-background)",
-  color: "var(--color-text)"
-};
 
 interface SearchBarProps {
   query: string;
@@ -18,12 +7,22 @@ interface SearchBarProps {
 
 const SearchBar = ({ query, onChange }: SearchBarProps) => {
   return (
+    // The inline style object's width/padding/font-size/radius plus the three
+    // dangling vars (--color-primary / --color-background / --color-text).
+    // `leading-[1.15]` restores normalize.css's `input { line-height: 1.15 }`,
+    // which set the field's height; preflight's `font: inherit` would take the
+    // body's 1.5 instead and make the box 7px taller.
+    // search.css's `.search:focus { outline: none; border: 0.1rem solid
+    // var(--color-box); box-shadow: 0 0 5px var(--color-box) }` — but the
+    // border half of that rule never took effect: the old `border` lived in the
+    // element's inline `style`, which outranks any stylesheet rule, so a focused
+    // field kept its --color-primary border and only gained the glow. Hence no
+    // `focus:border-*` here.
     <input
       id="search"
       type="search"
       aria-label="search article by tag or title"
-      className="search"
-      style={SEARCH_STYLE}
+      className="search w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text focus:shadow-[0_0_5px_var(--color-blue)] focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:focus:shadow-[0_0_5px_var(--color-box-dark)]"
       value={query}
       onInput={onChange}
     />
