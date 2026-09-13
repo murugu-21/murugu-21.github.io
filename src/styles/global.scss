@@ -1,17 +1,13 @@
 @import "variables";
 
-/* Fonts */
-@font-face {
-  font-family: "Agustina Regular";
-  font-style: normal;
-  font-weight: normal;
-  src: url("../assets/fonts/Agustina.woff") format("woff");
-  font-display: swap;
-}
+/* Fonts: the one text face (Fira Code) is declared inline by the layout — see
+   lib/fonts.ts. Nothing else is shipped; the header logo sets in it too. */
 
 /* Global rules (from old index.css) */
+/* Body text is already Fira Code; code just gets its ligatures back. */
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-family: inherit;
+  font-feature-settings: "calt" 1;
 }
 html,
 body {
@@ -21,10 +17,15 @@ body {
 body {
   margin: 0;
   font:
-    19px / 23px Montserrat,
-    "Montserrat",
-    "Montserrat fallback",
-    sans-serif;
+    19px / 23px "Fira Code",
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  /* Fira Code's programming ligatures (-> => ==) are wrong in prose; inherited
+     by everything, code re-enables them above. */
+  font-feature-settings: "calt" 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -78,14 +79,16 @@ html.dark-mode {
   scrollbar-color: rgba(6, 3, 141, 0.85) $darkPageBase;
 }
 
-/* Entrance animation utility */
+/* Entrance animation utility. Transform only, deliberately no opacity fade:
+   Chrome never reports an element first painted at opacity 0 as a Largest
+   Contentful Paint candidate, so with the old fade the hero paragraph was
+   invisible to LCP and the metric landed on the typewriter line instead,
+   ~2 s later (measured: LCP 0.27 s without the fade, 2.1 s with it). */
 @keyframes rise-fade {
   from {
-    opacity: 0;
     transform: translateY(40px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }

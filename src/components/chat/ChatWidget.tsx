@@ -1,6 +1,7 @@
 // Jarvis chat widget — React island on vendored shadcn/ui primitives, shared
-// by the portfolio and the blog (the blog imports ./mount via a relative
-// path). Idle-mounted by ChatWidget.astro so it never affects initial load.
+// by the portfolio and the blog through ChatWidget.astro, which hydrates it on
+// the visitor's first input (client:interaction) so a page that is only loaded
+// never pays for React or this bundle.
 import React, { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { PartySocket } from "partysocket";
@@ -115,6 +116,7 @@ export function ChatWidget() {
   const greetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const launcherRef = useRef<HTMLButtonElement | null>(null);
 
   const commitStream = () => {
     const text = streamRef.current;
@@ -227,14 +229,20 @@ export function ChatWidget() {
     }, 4000);
   };
 
-  const toggleOpen = () => {
-    const next = !open;
-    setOpen(next);
+  const openPanel = () => {
+    setOpen(true);
     setTooltip("hidden");
-    if (next) {
-      track("chat_open");
-      connect();
-      beginLoading();
+    track("chat_open");
+    connect();
+    beginLoading();
+  };
+
+  const toggleOpen = () => {
+    if (open) {
+      setOpen(false);
+      setTooltip("hidden");
+    } else {
+      openPanel();
     }
   };
 
@@ -321,13 +329,24 @@ export function ChatWidget() {
     URL.revokeObjectURL(url);
   };
 
+  // A tap on the server-rendered launcher while this bundle was still loading
+  // is recorded on the island by the client:interaction directive
+  // (src/directives/interaction.ts); honour it now that the widget exists.
+  useEffect(() => {
+    const island = launcherRef.current?.closest("astro-island");
+    if (island instanceof HTMLElement && island.dataset.openOnHydrate) {
+      delete island.dataset.openOnHydrate;
+      // oxlint-disable-next-line react/set-state-in-effect
+      openPanel();
+    }
+  }, []);
+
   // One-time quiet tooltip.
   useEffect(() => {
     if (localStorage.getItem(TOOLTIP_KEY)) return;
     localStorage.setItem(TOOLTIP_KEY, "1");
-    // Deliberately setState-in-effect: this island is client:idle, so it is
-    // server-rendered and then hydrated, and localStorage is unreadable in
-    // both of those passes. Seeding "shown" from a lazy initializer instead
+    // Deliberately setState-in-effect: this island is server-rendered and
+    // then hydrated, and localStorage is unreadable in both of those passes. Seeding "shown" from a lazy initializer instead
     // would make the server and hydration renders disagree.
     // oxlint-disable-next-line react/set-state-in-effect
     setTooltip("shown");
@@ -397,6 +416,7 @@ export function ChatWidget() {
         aria-label="Chat with Jarvis, Murugappan's AI assistant"
         aria-expanded={open}
         onClick={toggleOpen}
+        ref={launcherRef}
       >
         {open ? <X /> : <MessageCircle />}
       </Button>
@@ -479,12 +499,13 @@ export function ChatWidget() {
           )}
 
           <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
-            {/* data-clarity-mask: Clarity masks <input> contents in every
-                masking mode, but a sent message is re-rendered as a bubble
-                <div>, which is not covered — mask the whole transcript so
-                nothing a visitor typed reaches a recording. Matches the
-                no-PII rule the events follow. */}
-            <div className="flex flex-col gap-2 p-3" aria-live="polite" data-clarity-mask="true">
+            {/* Session replay masks <input> contents by default, but a sent
+                message is re-rendered as a bubble <div>, which is not covered —
+                mask the whole transcript so nothing a visitor typed reaches a
+                recording. data-ph-mask is the maskTextSelector PostHog is
+                configured with (see lib/analytics.ts). Matches the no-PII rule
+                the events follow. */}
+            <div className="flex flex-col gap-2 p-3" aria-live="polite" data-ph-mask="true">
               {greeted && <BubbleView kind="assistant" text={GREETING} />}
               {bubbles.map((b, i) => (
                 <BubbleView key={i} kind={b.kind} text={b.text} />
@@ -521,9 +542,6 @@ export function ChatWidget() {
 
           <CardFooter className="border-t p-2.5">
             <form className="flex w-full items-end gap-2" onSubmit={onSubmit}>
-              {/* data-clarity-mask: the transcript comment above reasons about
-                  Clarity's built-in <input> masking; don't assume it extends
-                  to <textarea> — mask the composer explicitly. */}
               <Textarea
                 ref={inputRef}
                 id="chat-input"
@@ -533,7 +551,6 @@ export function ChatWidget() {
                 placeholder="Ask a question…"
                 aria-label="Your message"
                 autoComplete="off"
-                data-clarity-mask="true"
                 onInput={e => autoGrow(e.currentTarget)}
                 onKeyDown={onKeyDown}
                 style={{ maxHeight: MAX_INPUT_HEIGHT }}

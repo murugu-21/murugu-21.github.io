@@ -3,6 +3,7 @@ import { greeting, typewriterRoles } from "../data/portfolio";
 import SocialMedia from "./SocialMedia.astro";
 import Button from "./Button.astro";
 import Typewriter from "./Typewriter.astro";
+import { Image } from "astro:assets";
 // Developer-at-desk illustration from soumyajit4419/Portfolio (home-main.svg),
 // used with the credit its README asks for — see the Credits section in this
 // repo's README. Recolored purple → theme accent at pixel level (selective hue
@@ -39,12 +40,19 @@ import portrait from "../assets/images/portrait.webp";
       </div>
     </div>
     <div class="greeting-image-div">
-      <img
+      {
+        /* Rendered at up to 440px (2x → the 880px source) on wide screens and
+          240px on phones (the 768px breakpoint below), so the srcset lets a
+          phone take the 480px file instead of the full one. Eager + high
+          priority: it is above the fold on every viewport. */
+      }
+      <Image
         class="portrait"
-        src={portrait.src}
-        width={portrait.width}
-        height={portrait.height}
+        src={portrait}
+        widths={[240, 480, 880]}
+        sizes="(max-width: 768px) 240px, 440px"
         alt="Murugappan M smiling on a hilltop with arms outstretched"
+        loading="eager"
         fetchpriority="high"
       />
     </div>
@@ -123,8 +131,9 @@ import portrait from "../assets/images/portrait.webp";
     justify-content: center;
   }
 
-  /* round portrait with the site's navy ring and glow */
-  .greeting-image-div img {
+  /* round portrait with the site's navy ring and glow. :global(): the <Image>
+     component's <img> does not carry this component's scoped attribute */
+  .greeting-image-div :global(img) {
     width: 100%;
     max-width: 440px;
     height: auto;
@@ -135,7 +144,7 @@ import portrait from "../assets/images/portrait.webp";
     box-shadow: $glowShadowLight;
   }
 
-  :global(html.dark-mode) .greeting-image-div img {
+  :global(html.dark-mode) .greeting-image-div :global(img) {
     border-color: $buttonHover;
     box-shadow: $glowShadowDark;
   }
@@ -214,7 +223,7 @@ import portrait from "../assets/images/portrait.webp";
     .greeting-main {
       display: block;
     }
-    .greeting-image-div img {
+    .greeting-image-div :global(img) {
       max-width: 240px;
     }
   }

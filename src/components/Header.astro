@@ -131,10 +131,7 @@ const links = [
   }
 
   .header .logo-name {
-    font-family: "Agustina Regular", "Agustina Regular fallback";
     font-weight: bold;
-    font-variant-ligatures: no-common-ligatures;
-    -webkit-font-variant-ligatures: no-common-ligatures;
     padding: 0 10px;
     color: $buttonColor; // theme navy (was inheriting the browser's violet visited-link color)
   }
@@ -174,7 +171,11 @@ const links = [
      width. Anchored to the fixed header, just clear of the hamburger. */
   .header .theme-slot {
     position: absolute;
-    top: 8px;
+    /* vertically centred on the bar, like the hamburger (whose 28px padding
+       centres its bars on the same line); a fixed top offset sat the 48px
+       button ~8px too high */
+    top: 50%;
+    transform: translateY(-50%);
     /* the hamburger's box is 62px wide (22px bars + 20px padding each side)
        and sits 20px off the edge — clear it plus a small gap */
     right: 86px;
@@ -328,7 +329,11 @@ const links = [
     }
     .header .theme-slot {
       position: static;
+      transform: none; /* the mobile centring above would lift it 24px here */
       margin-left: 4px;
+    }
+    .header .logo {
+      margin-top: 0; /* flex centres it; the 10px was tuned for the old script font */
     }
   }
   @media (max-width: 960px) and (min-width: 768px) {

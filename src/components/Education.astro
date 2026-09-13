@@ -1,4 +1,5 @@
 ---
+import { Image } from "astro:assets";
 import { educationInfo } from "../data/portfolio";
 import { accentTitle } from "../lib/accent";
 ---
@@ -11,11 +12,14 @@ import { accentTitle } from "../lib/accent";
         <div>
           <div class="education-card">
             <div class="education-card-left">
-              <img
+              {/* Rendered at 6rem (4rem on phones): 96px + a 2x variant as
+                  WebP, instead of the 256px source PNG. */}
+              <Image
                 class="education-roundedimg"
-                src={school.logo.src}
-                width={school.logo.width}
-                height={school.logo.height}
+                src={school.logo}
+                width={96}
+                height={96}
+                densities={[1, 2]}
                 alt={school.schoolName + " logo"}
                 loading="lazy"
               />

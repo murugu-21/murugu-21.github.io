@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
 
-import { initClickTracking, tag, track } from "./analytics";
+import { initClickTracking, scheduleSdkLoad, tag, track } from "./analytics";
 
 // The real snippet defines window.posthog as a stub whose methods queue until
 // array.js loads (see ../layouts/Layout.astro); tests stand in spies and
@@ -116,21 +116,28 @@ describe("initClickTracking", () => {
   });
 });
 
+// The real loader dynamic-imports posthog-js on idle; tests inject a fake so
+// the browser SDK never has to run here.
+const fakeSdk = () => {
+  const capture = vi.fn();
+  const register = vi.fn();
+  const init = vi.fn();
+  const startSessionRecording = vi.fn();
+  return {
+    sdk: { capture, register, init, startSessionRecording },
+    capture,
+    register,
+    init,
+    startSessionRecording
+  };
+};
+
 describe("initAnalytics", () => {
   // initAnalytics keeps module state (the booted SDK, the replay buffer), so
   // each test gets a fresh module instance rather than leaking into the next.
   const fresh = async () => {
     vi.resetModules();
     return await import("./analytics");
-  };
-
-  // The real loader dynamic-imports posthog-js on idle; tests inject a fake so
-  // the browser SDK never has to run here.
-  const fakeSdk = () => {
-    const capture = vi.fn();
-    const register = vi.fn();
-    const init = vi.fn();
-    return { sdk: { capture, register, init }, capture, register, init };
   };
 
   it("initialises the SDK with the token and the proxy host", async () => {
@@ -144,14 +151,42 @@ describe("initAnalytics", () => {
     expect(config.ui_host).toBe("https://us.posthog.com");
   });
 
-  // PostHog owns events; Clarity owns replay (see the layouts). Recording in
-  // both would double the client cost and burn PostHog's replay quota on
-  // footage nobody watches.
-  it("leaves session replay to Clarity", async () => {
+  // The recorder is the SDK's heaviest extension; loading it in the idle
+  // window right after paint is what Lighthouse scores as blocking time, so
+  // replay waits for the visitor's first input (see ./first-interaction.ts).
+  it("starts session replay on the first interaction, not at boot", async () => {
+    const { sdk, init, startSessionRecording } = fakeSdk();
+    const win = new EventTarget();
+    vi.stubGlobal("window", win);
+    try {
+      const ph = await fresh();
+      await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+      expect(init.mock.calls[0][1].disable_session_recording).toBe(true);
+      expect(startSessionRecording).not.toHaveBeenCalled();
+      win.dispatchEvent(new Event("pointermove"));
+      win.dispatchEvent(new Event("scroll"));
+      expect(startSessionRecording).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("masks the chat transcript in recordings, not just inputs", async () => {
     const { sdk, init } = fakeSdk();
     const ph = await fresh();
     await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
-    expect(init.mock.calls[0][1].disable_session_recording).toBe(true);
+    const recording = init.mock.calls[0][1].session_recording;
+    expect(recording.maskAllInputs).toBe(true);
+    expect(recording.maskTextSelector).toBe("[data-ph-mask]");
+  });
+
+  it("switches off the extensions this site does not use", async () => {
+    const { sdk, init } = fakeSdk();
+    const ph = await fresh();
+    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+    const config = init.mock.calls[0][1];
+    expect(config.disable_surveys).toBe(true);
+    expect(config.capture_dead_clicks).toBe(false);
   });
 
   it("replays events captured before the SDK finished loading", async () => {
@@ -206,29 +241,55 @@ describe("bootAnalytics", () => {
     parseHTML(`<html><head>${metas}</head><body></body></html>`).document;
 
   it("reads the token and host from the page's meta tags", async () => {
-    const init = vi.fn();
+    const { sdk, init } = fakeSdk();
     const doc = docWith(
       `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`
     );
     const ph = await fresh();
-    await ph.bootAnalytics(doc as unknown as Document, async () => ({
-      capture: vi.fn(),
-      register: vi.fn(),
-      init
-    }));
+    await ph.bootAnalytics(doc as unknown as Document, async () => sdk);
     expect(init).toHaveBeenCalledTimes(1);
     expect(init.mock.calls[0][0]).toBe("phc_test");
     expect(init.mock.calls[0][1].api_host).toBe("https://e.example.dev");
   });
 
   it("no-ops when the meta tags are absent (local dev, CI)", async () => {
-    const init = vi.fn();
+    const { sdk, init } = fakeSdk();
     const ph = await fresh();
-    await ph.bootAnalytics(docWith("") as unknown as Document, async () => ({
-      capture: vi.fn(),
-      register: vi.fn(),
-      init
-    }));
+    await ph.bootAnalytics(docWith("") as unknown as Document, async () => sdk);
     expect(init).not.toHaveBeenCalled();
+  });
+});
+
+// The SDK is ~90 KB gzipped and loaded it on idle, so a Lighthouse run — which
+// never interacts — still fetched and evaluated it inside the measured window.
+// It now waits for the visitor's first input, with a timer as the fallback so
+// a visitor who only reads is still counted as a pageview.
+describe("scheduleSdkLoad", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("loads on the first interaction and cancels the fallback timer", () => {
+    vi.useFakeTimers();
+    const target = new EventTarget();
+    const load = vi.fn();
+    scheduleSdkLoad(load, target, 10_000);
+    expect(load).not.toHaveBeenCalled();
+    target.dispatchEvent(new Event("pointermove"));
+    expect(load).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(20_000);
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to the timer for a visitor who never interacts", () => {
+    vi.useFakeTimers();
+    const target = new EventTarget();
+    const load = vi.fn();
+    scheduleSdkLoad(load, target, 10_000);
+    vi.advanceTimersByTime(9_999);
+    expect(load).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(load).toHaveBeenCalledTimes(1);
+    // Input after the timer must not load it a second time.
+    target.dispatchEvent(new Event("keydown"));
+    expect(load).toHaveBeenCalledTimes(1);
   });
 });

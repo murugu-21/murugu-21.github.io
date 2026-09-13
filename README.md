@@ -35,16 +35,9 @@ GITHUB_TOKEN=ghp_xxx bun run build
 
 Ingestion goes through **`https://e.murugappan.dev`** — PostHog's _managed_ reverse proxy, a CNAME to their infrastructure (`…cf-prod-us-proxy.proxyhog.com`, US region). Nothing in this repo proxies it; the Worker is not in that request path, and the host is just the SDK's `api_host`. If the CNAME is ever re-added in Cloudflare DNS it must be **DNS only (grey cloud)** — proxying it breaks PostHog's cert issuance and SNI. `ui_host` stays `https://us.posthog.com` so the PostHog toolbar works.
 
-**Session replay is Microsoft Clarity's job, not PostHog's** — the two tools split the work:
+**Session replay is PostHog's too, started on the visitor's first interaction.** The recorder is the SDK's heaviest extension, and loading it in the idle window right after paint put its evaluation inside what Lighthouse scores as blocking time — so `initAnalytics` boots with `disable_session_recording: true` and calls `startSessionRecording()` from `onFirstInteraction` (`src/lib/first-interaction.ts`: the first pointer, touch, key or wheel event, once — not `scroll`, which Chrome fires during load without any input). A visitor who never touches the page has nothing worth replaying; a Lighthouse run never interacts, so it never pays for the recorder. Recording must also be switched on in the PostHog project's replay settings. The extensions this site does not use (`disable_surveys`, `capture_dead_clicks: false`) are off, since each is a separate script the SDK would otherwise fetch after boot.
 
-|                                                | tool                  |
-| ---------------------------------------------- | --------------------- |
-| Custom events, pageviews, autocapture, funnels | **PostHog**           |
-| Session recordings, heatmaps                   | **Microsoft Clarity** |
-
-PostHog is therefore initialised with `disable_session_recording: true`; recording in both would double the client cost and burn PostHog's quota on footage nobody watches. Clarity's recording UI is the better tool for watching a session back and is unmetered. Clarity is injected at build time when `PUBLIC_CLARITY_PROJECT_ID` is set, on idle so it stays off the initial load waterfall, and it is _only_ a tag — **there are no `clarity()` calls anywhere in the app**; `src/lib/analytics.ts` talks to PostHog exclusively.
-
-Privacy: Clarity masks `<input>` contents in every masking mode and that is not configurable, so the Jarvis chat box and the blog search are covered automatically. A _sent_ chat message is re-rendered as a bubble `<div>` though, which masking modes do not cover, so the transcript container carries `data-clarity-mask="true"` — nothing a visitor typed reaches a recording, matching the no-PII rule the events follow.
+Privacy: replay masks every `<input>` and `<textarea>` (`maskAllInputs`), which covers the Jarvis chat box and the blog search. A _sent_ chat message is re-rendered as a bubble `<div>` though, so the transcript container carries `data-ph-mask="true"`, the `maskTextSelector` PostHog is configured with — nothing a visitor typed reaches a recording, matching the no-PII rule the events follow.
 
 ### Custom events
 
@@ -118,7 +111,7 @@ Workers Builds settings, for reference (dashboard → Workers → this applicati
 
 - **Build command:** `bun run build:site`. Workers Builds picks the package manager from the lockfile and installs before the build command runs; it has recognised Bun's text `bun.lock` since May 2025 (earlier it only knew the binary `bun.lockb`, which is why older guides prepend `bun install &&`).
 - **Deploy command:** `bun run deploy` (not `bunx wrangler deploy` — see above).
-- **Build env vars:** `BUN_VERSION` (match `packageManager` in `package.json`; the image's default Bun is older), `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `POST_HOG_TOKEN`, `POST_HOG_URL`, `PUBLIC_CLARITY_PROJECT_ID`, `RESUME_PHONE` (optional — see "Resume generation" below). Node's version comes from `.nvmrc`.
+- **Build env vars:** `BUN_VERSION` (match `packageManager` in `package.json`; the image's default Bun is older), `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `POST_HOG_TOKEN`, `POST_HOG_URL`, `RESUME_PHONE` (optional — see "Resume generation" below). Node's version comes from `.nvmrc`.
 - **Worker secrets:** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `bunx wrangler secret put <name>`.
 
 ## Resume generation
@@ -369,6 +362,13 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   contact detail. qwen3-30b was reverted on 2026-08-17 for narrating captures
   it never made — unit tests cannot catch that, only the live model can. Needs
   `.dev.vars` and a built `dist/llms.txt`; costs a fraction of a cent.
+- **Loading:** the widget is a React island hydrated with `client:interaction`,
+  a custom directive (`src/directives/interaction.ts`, registered in
+  `astro.config.ts`) that loads React + the widget on the visitor's first
+  input anywhere on the page instead of on idle. A page that is only loaded —
+  a Lighthouse run — never downloads it; a tap on the server-rendered launcher
+  while the bundle is in flight is remembered on the island and the panel
+  opens itself once mounted.
 - **Widget:** `src/components/chat/` (shared by the blog via relative import).
   While a turn is in flight the panel shows `ActivityRow` instead of the three
   dots: a rotating playful label ("Discombobulating…") with an elapsed counter

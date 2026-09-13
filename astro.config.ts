@@ -3,7 +3,6 @@ import path from "node:path";
 import type { AstroIntegration } from "astro";
 import { defineConfig } from "astro/config";
 import { unified } from "@astrojs/markdown-remark";
-import { FontaineTransform } from "fontaine";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
@@ -87,13 +86,106 @@ function blogNotFoundCopy(): AstroIntegration {
   };
 }
 
+// `client:interaction` — hydrate an island on the visitor's first input rather
+// than on idle. The reasoning lives with the directive itself,
+// src/directives/interaction.ts; the attribute is typed in
+// src/client-directives.d.ts.
+function clientInteractionDirective(): AstroIntegration {
+  return {
+    name: "client-interaction-directive",
+    hooks: {
+      "astro:config:setup": ({ addClientDirective }) => {
+        addClientDirective({
+          name: "interaction",
+          entrypoint: "./src/directives/interaction.ts"
+        });
+      }
+    }
+  };
+}
+
+// Every hoisted <script type="module" src> statically imports a few shared
+// chunks (rolldown-runtime, preload-helper, first-interaction, analytics,
+// webmcp — each under 2 KB) that the browser only discovers once the parent
+// script has arrived: a second dependent round trip that Lighthouse reports as
+// the longest network chain. Astro emits no modulepreload hints for them, so
+// walk each page's module scripts, follow their static imports transitively
+// and declare the lot up front. Dynamic import() targets (the chat island,
+// the Lottie player, the PostHog SDK) are deliberately left out — they are
+// interaction-gated and must not be fetched at load.
+function modulePreloadHints(): AstroIntegration {
+  const STATIC_IMPORT = /\b(?:from|import)\s*"(\.\/[^"]+\.js)"/g;
+  const MODULE_SCRIPT = /<script type="module" src="(\/[^"]+\.js)"/g;
+  const htmlFiles = (dir: string): string[] =>
+    fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) return htmlFiles(full);
+      return entry.name.endsWith(".html") ? [full] : [];
+    });
+  return {
+    name: "module-preload-hints",
+    hooks: {
+      "astro:build:done": ({ dir, logger }) => {
+        const root = new URL(dir).pathname;
+        const imports = new Map<string, string[]>();
+        const staticImportsOf = (href: string): string[] => {
+          let found = imports.get(href);
+          if (found) return found;
+          const file = path.join(root, href);
+          found = fs.existsSync(file)
+            ? Array.from(fs.readFileSync(file, "utf8").matchAll(STATIC_IMPORT), m =>
+                path.posix.join(path.posix.dirname(href), m[1])
+              )
+            : [];
+          imports.set(href, found);
+          return found;
+        };
+        let hinted = 0;
+        for (const file of htmlFiles(root)) {
+          const html = fs.readFileSync(file, "utf8");
+          const entries = Array.from(html.matchAll(MODULE_SCRIPT), m => m[1]);
+          if (!entries.length) continue;
+          const deps = new Set<string>();
+          const walk = (href: string) => {
+            for (const dep of staticImportsOf(href)) {
+              if (deps.has(dep) || entries.includes(dep)) continue;
+              deps.add(dep);
+              walk(dep);
+            }
+          };
+          entries.forEach(walk);
+          if (!deps.size) continue;
+          const links = Array.from(deps, d => `<link rel="modulepreload" href="${d}">`).join("");
+          // Ahead of the first module script, so the preload scanner sees the
+          // hints in the same pass as the script that needs them.
+          const at = html.indexOf('<script type="module" src="');
+          fs.writeFileSync(file, html.slice(0, at) + links + html.slice(at));
+          hinted += 1;
+        }
+        logger.info(`modulepreload hints added to ${hinted} page(s)`);
+      }
+    }
+  };
+}
+
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
   server: { port: 4399 },
-  build: { assets: "static" },
+  build: {
+    assets: "static",
+    // Both apps' stylesheets go into the page rather than out to <link>s: the
+    // portfolio shipped two (the site's SCSS and the chat island's Tailwind
+    // layer, ~6 KB gzipped each) and every external stylesheet blocks first
+    // paint for one more round trip after the HTML — 150 ms of the FCP/LCP
+    // Lighthouse measured on mobile. The pages are few and the HTML grows by
+    // ~12 KB gzipped, which is cheaper than the dependent request.
+    inlineStylesheets: "always"
+  },
   integrations: [
     react(),
+    clientInteractionDirective(),
+    modulePreloadHints(),
     sitemap({
       // The integration only recognises a top-level /404 as a status-code
       // page, so /blog/404/ has to be excluded by hand.
@@ -118,20 +210,23 @@ export default defineConfig({
     blogNotFoundCopy()
   ],
   vite: {
+    // build.inlineStylesheets "auto" inlines a stylesheet into the page when
+    // Vite's assetsInlineLimit says so. Raise that to 8 KB for CSS only, so
+    // ScrollTop's ~7.6 KB scoped sheet rides in the HTML instead of costing a
+    // render-blocking request; the 30 KB+ sheets stay external. CSS only
+    // because the limit is otherwise global: as a plain number it also
+    // base64-inlined every sub-8 KB font subset into the stylesheets that
+    // reference them, which tripled the chat sheet's gzipped size (6 → 22
+    // KB) on the critical path. `undefined` keeps Vite's 4 KB default for
+    // everything else.
+    build: {
+      assetsInlineLimit: (file, content) =>
+        file.endsWith(".css") ? content.byteLength < 8192 : undefined
+    },
     plugins: [
       // Tailwind is scoped to the chat widget island (see chat.css — theme +
       // utilities only, no preflight, so it can't touch the site's SCSS).
-      tailwindcss(),
-      // Generates metric-tuned fallback @font-face rules (size-adjust /
-      // ascent-override etc.) for Agustina and the @fontsource fonts
-      // (Merriweather, Montserrat) so the swap from the system fallback to
-      // the real face causes no layout shift (fixes the ~0.2 CLS from font
-      // swap). One instance covers every stylesheet in the build now that
-      // there's a single Vite pipeline; the fallback stack is the union of
-      // what the two former instances used.
-      FontaineTransform.vite({
-        fallbacks: ["Arial", "Georgia", "Times New Roman"]
-      })
+      tailwindcss()
     ]
   },
   markdown: {

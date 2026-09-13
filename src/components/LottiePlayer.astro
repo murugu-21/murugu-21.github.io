@@ -17,6 +17,8 @@ const { src, label, eager } = Astro.props;
 </div>
 
 <script>
+  import { onFirstInteraction } from "../lib/first-interaction";
+
   // Astro deduplicates this script: it runs once and initializes every holder.
   const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const holders = document.querySelectorAll<HTMLElement>(".lottie-holder");
@@ -55,9 +57,16 @@ const { src, label, eager } = Astro.props;
     },
     { rootMargin: "120px" }
   );
-  holders.forEach(h => {
-    if (h.dataset.eager)
-      initHolder(h); // hero: start chain immediately at script eval
-    else io.observe(h);
+  // Decoration waits for the visitor's first input (see lib/first-interaction.ts):
+  // the player is 170 KB and the coding illustration a 430 KB JSON whose parse
+  // and SVG build are a ~450 ms main-thread task — on a desktop viewport the
+  // Skills section is already in range at load, so it landed inside what
+  // Lighthouse scores as blocking time. A pointer move, key or touch (which
+  // reaching the section on a phone requires anyway) starts the observer.
+  onFirstInteraction(() => {
+    holders.forEach(h => {
+      if (h.dataset.eager) initHolder(h);
+      else io.observe(h);
+    });
   });
 </script>
