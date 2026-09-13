@@ -1,14 +1,14 @@
 // Renders each published blog post to MP3 in the blog's designed voice and
 // uploads it, with per-paragraph timings, to R2. Runs on the author's laptop:
 //
-//   npm run build                # dist/ must be current
-//   npm run audio                # every post whose spoken text changed
-//   npm run audio first-post     # one post
-//   npm run audio -- --force     # regenerate even if unchanged
-//   npm run audio -- --local     # target `wrangler dev`'s local R2
-//   npm run audio -- --dry-run   # extract + hash only, no synthesis/upload
-//   npm run audio -- --keep      # leave the temp dir behind for inspection
-//   npm run audio -- --upload-voice   # push .voice/* to R2 once
+//   bun run build                # dist/ must be current
+//   bun run audio                # every post whose spoken text changed
+//   bun run audio first-post     # one post
+//   bun run audio --force     # regenerate even if unchanged
+//   bun run audio --local     # target `wrangler dev`'s local R2
+//   bun run audio --dry-run   # extract + hash only, no synthesis/upload
+//   bun run audio --keep      # leave the temp dir behind for inspection
+//   bun run audio --upload-voice   # push .voice/* to R2 once
 //
 // Pipeline per post: dist HTML → speechBlocks (same function the page uses) →
 // normalise → pack into ≤300-char sentence groups → Python worker (Breeze TTS 2
@@ -94,7 +94,7 @@ const wranglerArgs = (extra: string[]) => [
 // (expired login, network) throws, so a broken session can never be mistaken
 // for "nothing there yet".
 function r2Get(key: string, file: string): boolean {
-  const r = spawnSync("npx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
+  const r = spawnSync("bunx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
     encoding: "utf8"
   });
   if (r.status === 0 && existsSync(file)) return true;
@@ -107,17 +107,17 @@ function r2Get(key: string, file: string): boolean {
 // after minutes (or hours) of local work.
 function checkWranglerLogin() {
   if (local) return;
-  const r = spawnSync("npx", ["wrangler", "whoami"], { encoding: "utf8" });
+  const r = spawnSync("bunx", ["wrangler", "whoami"], { encoding: "utf8" });
   if (r.status !== 0 || /not logged in|expired/i.test(`${r.stderr}${r.stdout}`)) {
     fail(
-      "wrangler is not logged in (or the OAuth token expired) — run `npx wrangler login` in an interactive terminal, then retry"
+      "wrangler is not logged in (or the OAuth token expired) — run `bunx wrangler login` in an interactive terminal, then retry"
     );
   }
 }
 
 function r2Put(key: string, file: string, contentType: string) {
   run(
-    "npx",
+    "bunx",
     wranglerArgs(["put", `${BUCKET}/${key}`, "--file", file, "--content-type", contentType])
   );
 }
@@ -125,7 +125,7 @@ function r2Put(key: string, file: string, contentType: string) {
 // ---- preconditions ---------------------------------------------------------
 
 function checkPreconditions(): { audio: string; text: string } {
-  if (!existsSync(DIST)) fail("dist/blog missing — run `npm run build` first");
+  if (!existsSync(DIST)) fail("dist/blog missing — run `bun run build` first");
   for (const tool of ["ffmpeg", "ffprobe"]) {
     if (spawnSync(tool, ["-version"]).status !== 0) {
       fail(`${tool} not on PATH (brew install ffmpeg)`);

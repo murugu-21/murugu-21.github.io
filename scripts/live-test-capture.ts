@@ -4,7 +4,7 @@
 // capture_opportunity, silently losing leads. Unit tests can't catch that —
 // only the live model can.
 //
-//   npm run test:capture [-- <model>]
+//   bun run test:capture [<model>]
 //
 // Needs DEEPSEEK_API_KEY in .dev.vars and a built dist/llms.txt (the real
 // grounding). Costs a few tenths of a cent. Exits non-zero if the model fails

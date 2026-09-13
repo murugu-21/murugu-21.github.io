@@ -14,23 +14,33 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      # Bun installs dependencies and runs the package scripts; Node stays the
+      # runtime for Astro, Wrangler and the Workers Vitest pool (see README
+      # "Development").
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+      - run: bun install --frozen-lockfile
       # Secrets live in gitignored .dev.vars locally; wrangler types needs the
       # keys present so the generated Env includes them.
       - run: printf 'OPPORTUNITY_INBOX=ci@example.com\nDEEPSEEK_API_KEY=placeholder-key\n' > .dev.vars
-      - run: npx wrangler types
-      - run: npm run check-format
-      - run: npm run lint
-      - run: npm run check:astro
-      - run: npm run check:src
-      - run: npm run check:worker
-      - run: npm test
-      - run: npm run build:site
+      - run: bunx wrangler types
+      - run: bun run check-format
+      - run: bun run lint
+      - run: bun run check:astro
+      - run: bun run check:src
+      - run: bun run check:worker
+      # `bun run test`, not `bun test` — the latter is Bun's own runner, and the
+      # suite must run under Vitest's Workers pool.
+      - run: bun run test
+      - run: bun run build:site
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
