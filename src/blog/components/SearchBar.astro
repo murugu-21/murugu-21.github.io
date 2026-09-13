@@ -1,0 +1,20 @@
+---
+// The blog index search field (was SearchBar.tsx). Uncontrolled: PostList.astro's
+// script reads its value on `input`.
+//
+// The inline style object's width/padding/font-size/radius plus the three
+// dangling vars (--color-primary / --color-background / --color-text).
+// `leading-[1.15]` restores normalize.css's `input { line-height: 1.15 }`,
+// which set the field's height; preflight's `font: inherit` would take the
+// body's 1.5 instead and make the box 7px taller. Island surface in both
+// themes (white / #282c35) so the field reads as a control on the gradient
+// canvas; focus adds a ring on top of the old glow.
+---
+
+<input
+  id="search"
+  type="search"
+  aria-label="search article by tag or title"
+  placeholder="Search by title or tag"
+  class="search w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text placeholder:text-subtitle focus:shadow-[0_0_5px_var(--color-blue)] focus:ring-2 focus:ring-blue/40 focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:placeholder:text-accent-grey-dark dark:focus:shadow-[0_0_5px_var(--color-box-dark)] dark:focus:ring-box-dark/50"
+/>

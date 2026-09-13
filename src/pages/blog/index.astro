@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../../blog/layouts/BaseLayout.astro";
-import AllPosts from "../../blog/components/AllPosts";
+import PostList from "../../blog/components/PostList.astro";
 import Bio from "../../blog/components/Bio.astro";
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, PERSON } from "../../blog/consts";
 import {
@@ -8,16 +8,17 @@ import {
   postPath,
   formatDate,
   timeToRead,
-  excerpt
+  excerpt,
+  type SerializedPost
 } from "../../blog/utils/posts";
 
 // Newest first, like the old index page query (sort: date DESC).
 const posts = (await getPublishedPosts()).reverse();
 
-// Serializable shape for the AllPosts React island (replaces the page GraphQL
-// query). `description` is intentionally left undefined when missing so the
-// island's search falls back to the excerpt, same as before.
-const serialized = posts.map(post => ({
+// Flattened shape for PostList (replaces the page GraphQL query). `description`
+// is intentionally left undefined when missing so the search falls back to the
+// excerpt, same as before.
+const serialized: SerializedPost[] = posts.map(post => ({
   href: postPath(post.id),
   title: post.data.title,
   dateFormatted: formatDate(post.data.date),
@@ -43,6 +44,6 @@ const jsonLd = {
 <!-- No title prop: the homepage gets the keyword-rich
      "SDE Journey — <description>" title from BaseHead. -->
 <BaseLayout jsonLd={jsonLd}>
-  <AllPosts client:load posts={serialized} />
+  <PostList posts={serialized} />
   <Bio />
 </BaseLayout>

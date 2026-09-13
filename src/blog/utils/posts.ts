@@ -3,6 +3,19 @@ import getReadingTime from "reading-time";
 
 export type Post = CollectionEntry<"blog">;
 
+// The flattened shape the blog index builds for PostList.astro / Post.astro
+// (`description` stays undefined when a post has none, so the search falls
+// back to the excerpt).
+export interface SerializedPost {
+  href: string;
+  title: string;
+  dateFormatted: string;
+  minutes: number;
+  tags: string[];
+  description?: string;
+  excerpt: string;
+}
+
 // All posts, sorted by date ASC (the order gatsby-node.js used to wire up
 // previous/next links). Drafts (content/blog/draft/**) are excluded from
 // production builds, matching the old gatsby-source-filesystem ignore rule.

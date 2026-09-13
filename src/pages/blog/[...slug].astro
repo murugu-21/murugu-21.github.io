@@ -76,7 +76,17 @@ const jsonLd = {
            var(--spacing-4) }`; both class names stay, `ui-island` being what
            scopes the shadcn tokens the controls read. -->
       <div class="listen-island ui-island mb-4">
-        <ListenControls client:load slug={post.id} />
+        {
+          /* client:interaction (the chat island's directive, src/directives): the
+            controls ship disabled until hydrated anyway, so React + Radix
+            (~100 KB) load on the first pointer/touch/key/wheel input instead of
+            during page load. client:idle was not enough: on a fast device idle
+            fires before first paint, so Lighthouse still charged the bundle to
+            FCP/LCP (post pages 96-97 vs the index's 100). Trade-off: a tap on
+            Play as the very first touch lands on the disabled button and needs
+            a second tap ~300 ms later. */
+        }
+        <ListenControls client:interaction slug={post.id} />
       </div>
     </header>
     <section itemprop="articleBody">
