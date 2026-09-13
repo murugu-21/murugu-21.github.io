@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
 
-import { initClickTracking, scheduleSdkLoad, tag, track } from "./analytics";
+import { initClickTracking, reportError, scheduleSdkLoad, tag, track } from "./analytics";
 
 // The real snippet defines window.posthog as a stub whose methods queue until
 // array.js loads (see ../layouts/Layout.astro); tests stand in spies and
@@ -9,8 +9,9 @@ import { initClickTracking, scheduleSdkLoad, tag, track } from "./analytics";
 const withPostHog = () => {
   const capture = vi.fn();
   const register = vi.fn();
-  (globalThis as { posthog?: unknown }).posthog = { capture, register };
-  return { capture, register };
+  const captureException = vi.fn();
+  (globalThis as { posthog?: unknown }).posthog = { capture, register, captureException };
+  return { capture, register, captureException };
 };
 
 afterEach(() => {
@@ -53,6 +54,40 @@ describe("track", () => {
   it("ignores a half-initialised global", () => {
     (globalThis as { posthog?: unknown }).posthog = {};
     expect(() => track("resume_download")).not.toThrow();
+  });
+});
+
+// Caught errors (a malformed server frame, a failed render) would otherwise be
+// invisible: they never reach PostHog's autocapture, which only sees errors
+// that escape. reportError is the explicit channel for them.
+describe("reportError", () => {
+  it("reports the error with properties describing where it happened", () => {
+    const { captureException } = withPostHog();
+    const err = new Error("boom");
+    reportError(err, { surface: "chat" });
+    expect(captureException.mock.calls).toEqual([[err, { surface: "chat" }]]);
+  });
+
+  it("drops properties with a blank value", () => {
+    const { captureException } = withPostHog();
+    const err = new Error("boom");
+    reportError(err, { surface: "chat", tag: " " });
+    expect(captureException.mock.calls).toEqual([[err, { surface: "chat" }]]);
+  });
+
+  it("does nothing when the snippet was never loaded", () => {
+    expect(() => reportError(new Error("boom"))).not.toThrow();
+  });
+
+  it("swallows failures from inside posthog", () => {
+    (globalThis as { posthog?: unknown }).posthog = {
+      capture: () => {},
+      register: () => {},
+      captureException: () => {
+        throw new Error("blocked");
+      }
+    };
+    expect(() => reportError(new Error("boom"))).not.toThrow();
   });
 });
 
@@ -121,12 +156,14 @@ describe("initClickTracking", () => {
 const fakeSdk = () => {
   const capture = vi.fn();
   const register = vi.fn();
+  const captureException = vi.fn();
   const init = vi.fn();
   const startSessionRecording = vi.fn();
   return {
-    sdk: { capture, register, init, startSessionRecording },
+    sdk: { capture, register, captureException, init, startSessionRecording },
     capture,
     register,
+    captureException,
     init,
     startSessionRecording
   };
@@ -187,6 +224,13 @@ describe("initAnalytics", () => {
     const config = init.mock.calls[0][1];
     expect(config.disable_surveys).toBe(true);
     expect(config.capture_dead_clicks).toBe(false);
+  });
+
+  it("turns on exception autocapture", async () => {
+    const { sdk, init } = fakeSdk();
+    const ph = await fresh();
+    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+    expect(init.mock.calls[0][1].capture_exceptions).toBe(true);
   });
 
   it("replays events captured before the SDK finished loading", async () => {
@@ -257,6 +301,53 @@ describe("bootAnalytics", () => {
     const ph = await fresh();
     await ph.bootAnalytics(docWith("") as unknown as Document, async () => sdk);
     expect(init).not.toHaveBeenCalled();
+  });
+
+  // Errors during hydration or a chunk that failed to fetch happen before the
+  // SDK boots, and PostHog's autocapture only starts with the SDK — so these
+  // are held in the same buffer as track/tag and handed over on arrival.
+  it("buffers errors thrown before the SDK boots and replays them on arrival", async () => {
+    const { sdk, captureException } = fakeSdk();
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>(r => (release = r));
+    const doc = docWith(
+      `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`
+    );
+    const win = doc.defaultView!;
+    const ph = await fresh();
+    const booting = ph.bootAnalytics(doc as unknown as Document, async () => {
+      await gate;
+      return sdk;
+    });
+    const err = new Error("hydration failed");
+    const event = new win.Event("error") as Event & { error: unknown };
+    event.error = err;
+    win.dispatchEvent(event);
+    release!();
+    await booting;
+    expect(captureException.mock.calls).toEqual([[err, undefined]]);
+    // The early listener detaches once PostHog's autocapture takes over —
+    // otherwise every later uncaught error would be reported twice.
+    win.dispatchEvent(new win.Event("error"));
+    expect(captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports an unhandled rejection buffered before the SDK boots", async () => {
+    const { sdk, captureException } = fakeSdk();
+    const doc = docWith(
+      `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`
+    );
+    const win = doc.defaultView!;
+    const ph = await fresh();
+    // bootAnalytics attaches the listeners synchronously and only then awaits
+    // the SDK, so the dispatch below lands in the buffer.
+    const booting = ph.bootAnalytics(doc as unknown as Document, async () => sdk);
+    const reason = new Error("fetch failed");
+    const event = new win.Event("unhandledrejection") as Event & { reason: unknown };
+    event.reason = reason;
+    win.dispatchEvent(event);
+    await booting;
+    expect(captureException.mock.calls).toEqual([[reason, undefined]]);
   });
 });
 
