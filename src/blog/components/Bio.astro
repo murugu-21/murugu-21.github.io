@@ -4,8 +4,10 @@ import Icon from "../../components/Icon.astro";
 import { socialMediaLinks } from "../../data/portfolio";
 import { AUTHOR } from "../consts";
 // The same photo the portfolio landing shows (Greeting.astro), resized at
-// build time; .bio-avatar in style.css crops the 50px circle to head and
-// shoulders, so the blog keeps no second copy of the picture.
+// build time; the .bio-avatar utilities below crop it to a 50px circle, so the
+// blog keeps no second copy of the picture. The portrait is a full-body square
+// (face around x 21–79%, y 8–67%), hence the 171% scale-up plus the
+// translate(-20.8%, -8.5%) that brings head and shoulders into the circle.
 import portrait from "../../assets/images/portrait.webp";
 
 const links = [
@@ -20,13 +22,23 @@ const links = [
 ];
 ---
 
-<div class="bio">
-  <span class="bio-avatar">
-    <Image src={portrait} width={86} densities={[1, 2]} alt="Profile picture" loading="lazy" />
+<div class="bio mb-16 flex">
+  <span class="bio-avatar mr-4 h-[50px] w-[50px] flex-none overflow-hidden rounded-full">
+    <Image
+      class="h-[171%] w-[171%] max-w-none translate-x-[-20.8%] translate-y-[-8.5%]"
+      src={portrait}
+      width={86}
+      densities={[1, 2]}
+      alt="Profile picture"
+      loading="lazy"
+    />
   </span>
-  <p>
+  <!-- The old global `p` rule (line-height 1.625, margin 0 0 2rem) plus
+       `.bio p { margin-bottom: 0 }`. -->
+  <p class="m-0 p-0 leading-relaxed">
     technical blog by{" "}
     <a
+      class="text-navy underline hover:no-underline focus:no-underline dark:text-blue-light"
       href={socialMediaLinks.twitter}
       data-ph-event="social_click"
       data-ph-prop="social"
@@ -38,10 +50,11 @@ const links = [
     {AUTHOR.summary}
   </p>
 </div>
-<div class="bio-social">
+<div class="bio-social flex gap-4">
   {
     links.map(link => (
       <a
+        class="inline-flex text-text hover:text-navy dark:text-text-dark dark:hover:text-blue-light"
         href={link.href}
         aria-label={link.label}
         title={link.label}

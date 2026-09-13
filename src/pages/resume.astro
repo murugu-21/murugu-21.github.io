@@ -8,6 +8,10 @@ import { greeting, workExperiences, skillsCategories, educationInfo } from "../d
 import { resumeContact } from "../data/resume";
 import { groupByCompany } from "../lib/experience";
 import { fetchPinnedRepos } from "../lib/github";
+// The site's one text face, so the PDF matches the portfolio and blog; a
+// webfont also means the CF build image's Chromium prints the same glyphs as
+// local Chrome instead of its own wider system fallbacks.
+import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../lib/fonts";
 
 const repos = (await fetchPinnedRepos()).filter(r => r.description);
 // One block per company stint with the roles nested as a promotion ladder,
@@ -28,6 +32,8 @@ const stints = groupByCompany(workExperiences);
     <meta name="robots" content="noindex" />
     <title>Murugappan M — Resume</title>
     <meta name="description" content={`${resumeContact.title} resume — ${greeting.subTitle}`} />
+    <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
+    <style is:inline set:html={FIRA_CODE_FACE}></style>
   </head>
   <body>
     <main class="sheet">
@@ -172,7 +178,8 @@ const stints = groupByCompany(workExperiences);
         --bar: #4c7dff;
         --text: #1a1a1a;
         --gray: #595959;
-        --link: #1155cc;
+        /* the site accent, not the browser default link blue */
+        --link: #06038d;
       }
 
       * {
@@ -188,9 +195,11 @@ const stints = groupByCompany(workExperiences);
       }
 
       body {
-        font-family: Georgia, "Times New Roman", serif;
-        font-size: 9.8pt;
-        line-height: 1.38;
+        font-family: "Fira Code", ui-monospace, Menlo, monospace;
+        font-size: 9.5pt;
+        line-height: 1.36;
+        /* Fira Code's programming ligatures (-> => ==) are wrong in prose. */
+        font-feature-settings: "calt" 0;
       }
 
       a {
@@ -220,24 +229,24 @@ const stints = groupByCompany(workExperiences);
       }
 
       .name {
-        font-family: Georgia, "Times New Roman", serif;
-        font-size: 26pt;
+        font-family: "Fira Code", ui-monospace, Menlo, monospace;
+        font-size: 22pt;
         font-weight: 700;
         margin: 0 0 0.15em;
         letter-spacing: -0.5px;
       }
 
       .title {
-        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-family: "Fira Code", ui-monospace, Menlo, monospace;
         color: var(--accent);
-        font-size: 12pt;
+        font-size: 11pt;
         font-weight: 700;
         margin: 0 0 0.3em;
       }
 
       .contact-line {
-        font-family: "Helvetica Neue", Arial, sans-serif;
-        font-size: 8.5pt;
+        font-family: "Fira Code", ui-monospace, Menlo, monospace;
+        font-size: 8pt;
         color: var(--text);
         margin: 0;
       }
@@ -247,9 +256,9 @@ const stints = groupByCompany(workExperiences);
       }
 
       .resume-section h2 {
-        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-family: "Fira Code", ui-monospace, Menlo, monospace;
         color: var(--accent);
-        font-size: 11pt;
+        font-size: 10pt;
         font-weight: 700;
         letter-spacing: 0.5px;
         text-transform: uppercase;
@@ -293,7 +302,7 @@ const stints = groupByCompany(workExperiences);
 
       .stint-span,
       .role-span {
-        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-family: "Fira Code", ui-monospace, Menlo, monospace;
         font-size: 8pt;
         font-weight: 400;
         text-transform: uppercase;
@@ -345,7 +354,7 @@ const stints = groupByCompany(workExperiences);
       }
 
       .role-date {
-        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-family: "Fira Code", ui-monospace, Menlo, monospace;
         font-size: 8pt;
         text-transform: uppercase;
         letter-spacing: 0.5px;

@@ -3,32 +3,52 @@ import { openSourceSection, openSourceCard } from "../data/portfolio";
 import { accentTitle } from "../lib/accent";
 ---
 
-<div class="achievement-section section-animate" id="achievements">
+<div
+  class="achievement-section section-animate mx-auto mt-16 box-content w-[90%] px-2.5 py-5 max-xs:w-auto"
+  id="achievements"
+>
   <div class="achievement-header">
-    <h2 class="heading achievement-heading" set:html={accentTitle(openSourceSection.title)} />
-    <p class="subTitle achievement-subtitle">{openSourceSection.subtitle}</p>
+    <h2
+      class="heading achievement-heading m-0 text-[56px] leading-[normal] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+      set:html={accentTitle(openSourceSection.title)}
+    />
+    <p
+      class="subTitle achievement-subtitle m-0 mb-[50px] uppercase dark:text-white max-md:text-center max-md:text-[16px] max-md:leading-[normal]"
+    >
+      {openSourceSection.subtitle}
+    </p>
   </div>
-  <div class="achievement-cards-div">
-    <div class="certificate-card">
-      <div class="certificate-image-div">
+  <div class="achievement-cards-div grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
+    <div class="certificate-card glow-card p-6">
+      <div
+        class="certificate-image-div relative flex h-[250px] items-center justify-center overflow-hidden"
+      >
         <img
           src={openSourceCard.image}
           alt={openSourceCard.imageAlt}
-          class="card-image"
+          class="card-image h-auto w-[250px] max-w-full"
           width="250"
           height="250"
           loading="lazy"
         />
       </div>
-      <div class="certificate-detail-div">
-        <h3 class="card-title">{openSourceCard.title}</h3>
-        <p class="card-subtitle">{openSourceCard.subtitle}</p>
+      <div class="certificate-detail-div text-center">
+        <h3
+          class="card-title m-0 mt-[15px] text-[1.375rem] leading-[24px] font-bold text-title dark:text-white"
+        >
+          {openSourceCard.title}
+        </h3>
+        <p
+          class="card-subtitle my-[1em] text-[1.063rem] leading-[1.5rem] text-card-subtitle dark:text-white"
+        >
+          {openSourceCard.subtitle}
+        </p>
       </div>
-      <div class="certificate-card-footer">
+      <div class="certificate-card-footer flex flex-wrap items-center justify-center">
         {
           openSourceCard.footerLink.map(f => (
             <a
-              class="certificate-tag"
+              class="certificate-tag mr-2 mb-2 inline-flex h-[2em] items-center justify-center rounded bg-navy px-[0.75em] align-middle text-[0.75rem] leading-[1.5] whitespace-nowrap text-surface-alt no-underline transition-colors duration-200 ease-in hover:bg-blue"
               href={f.url}
               target="_blank"
               rel="noopener noreferrer"
@@ -44,161 +64,3 @@ import { accentTitle } from "../lib/accent";
     </div>
   </div>
 </div>
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  /* old `.main` wrapper (width/padding/margins) folded into the section root */
-  .achievement-section {
-    width: 90%;
-    padding: 20px 10px;
-    margin: 0px auto;
-    margin-top: 4rem;
-  }
-
-  /* from old containers/achievement/Achievement.scss */
-  .achievement-heading {
-    font-size: 56px;
-    font-weight: 400;
-    line-height: normal;
-    margin: 0px;
-  }
-
-  .achievement-subtitle {
-    text-transform: uppercase;
-    margin: 0px;
-    margin-bottom: 50px;
-  }
-
-  .achievement-cards-div {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 1rem 1rem;
-  }
-
-  /* from old components/achievementCard/AchievementCard.scss */
-  .card-image {
-    max-width: 100%;
-    height: auto;
-    width: 250px;
-  }
-
-  .card-title {
-    color: $titleColor;
-    font-size: 1.375rem;
-    line-height: 24px;
-    font-weight: 700;
-    margin: 15px 0 0 0;
-  }
-
-  .card-subtitle {
-    color: $cardSubtitle;
-    font-size: 1.063rem;
-    line-height: 1.5rem;
-  }
-
-  .certificate-card {
-    padding: 1.5rem;
-    @include glow-card-light;
-  }
-
-  .certificate-card:hover {
-    @include glow-card-light-hover;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .certificate-card,
-    .certificate-card:hover,
-    :global(html.dark-mode) .certificate-card:hover {
-      transition: none;
-      transform: none;
-    }
-  }
-
-  .certificate-detail-div {
-    text-align: center;
-  }
-
-  .certificate-image-div {
-    position: relative;
-    height: 250px;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .certificate-card-footer {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  /* the old footer "tags" were spans opened via JS window.open; they are real
-     anchors now, so the selectors target `a` and reset link decoration */
-  .certificate-card-footer a.certificate-tag {
-    background: $buttonColor;
-    color: $lightBackground3;
-    vertical-align: middle;
-    align-items: center;
-    border-radius: 4px;
-    display: inline-flex;
-    font-size: 0.75rem;
-    height: 2em;
-    justify-content: center;
-    white-space: nowrap;
-    line-height: 1.5;
-    margin: 0 0.5rem 0.5rem 0;
-    padding: 0 0.75em;
-    cursor: pointer;
-    text-decoration: none;
-    transition: 0.2s ease-in;
-  }
-
-  a.certificate-tag:hover {
-    background: $buttonHover;
-  }
-
-  /* old conditional `dark-mode` classes on heading/subtitle */
-  :global(html.dark-mode) .achievement-heading,
-  :global(html.dark-mode) .achievement-subtitle,
-  :global(html.dark-mode) .card-title,
-  :global(html.dark-mode) .card-subtitle {
-    color: $textColorDark;
-  }
-
-  /* old `dark-mode certificate-card` surface, now the reference glow-card */
-  :global(html.dark-mode) .certificate-card {
-    @include glow-card-dark;
-  }
-
-  :global(html.dark-mode) .certificate-card:hover {
-    @include glow-card-dark-hover;
-  }
-
-  /* Media Query */
-  @media (max-width: 1380px) {
-    .achievement-heading {
-      font-size: 40px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .achievement-heading {
-      font-size: 30px;
-      text-align: center;
-    }
-    .achievement-subtitle {
-      font-size: 16px;
-      line-height: normal;
-      text-align: center;
-    }
-  }
-
-  @media (max-width: 320px) {
-    .achievement-section {
-      width: auto;
-    }
-  }
-</style>

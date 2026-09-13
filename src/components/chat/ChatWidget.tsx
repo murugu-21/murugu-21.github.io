@@ -21,7 +21,6 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Textarea } from "../ui/textarea";
 import { cn } from "../../lib/utils";
 import { track } from "../../lib/analytics";
-import "../../styles/islands.css";
 
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";

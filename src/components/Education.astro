@@ -4,18 +4,29 @@ import { educationInfo } from "../data/portfolio";
 import { accentTitle } from "../lib/accent";
 ---
 
-<div class="education-section section-animate" id="education">
-  <h2 class="education-heading" set:html={accentTitle("Education")} />
-  <div class="education-card-container">
+<div
+  class="education-section section-animate mt-8 mx-auto flex w-[90%] flex-col py-5"
+  id="education"
+>
+  {
+    /* mt-[0.67em] pins the old h1 UA margin kept after demotion to h2 (h2 UA
+    would be 0.83em); mb-[30px] wins over that on the bottom edge (old
+    `.education-section > *` rule came after and shared specificity). */
+  }
+  <h2
+    class="education-heading mt-[0.67em] mb-[30px] flex-1 text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+    set:html={accentTitle("Education")}
+  />
+  <div class="education-card-container mb-[30px] flex flex-1 flex-col pt-5 max-wide:pt-0">
     {
       educationInfo.map(school => (
         <div>
-          <div class="education-card">
+          <div class="education-card peer flex max-wide:flex-col max-wide:pb-2.5 max-md:text-center">
             <div class="education-card-left">
               {/* Rendered at 6rem (4rem on phones): 96px + a 2x variant as
                   WebP, instead of the 256px source PNG. */}
               <Image
-                class="education-roundedimg"
+                class="education-roundedimg mr-8 inline h-24 w-24 rounded-full object-cover align-baseline shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-wide:mr-0 max-wide:mb-2 max-wide:h-16 max-wide:w-16 max-md:mt-2.5 max-md:mb-4"
                 src={school.logo}
                 width={96}
                 height={96}
@@ -24,16 +35,28 @@ import { accentTitle } from "../lib/accent";
                 loading="lazy"
               />
             </div>
-            <div class="education-card-right">
-              <h3 class="education-text-school">{school.schoolName}</h3>
+            <div class="education-card-right max-w-[70%] max-wide:max-w-[90%] max-md:max-w-full">
+              <h3 class="education-text-school m-0 h-[27px] overflow-hidden text-[28px] font-bold text-ellipsis whitespace-nowrap max-wide:h-[23px] max-wide:text-[20px]">
+                {school.schoolName}
+              </h3>
 
               <div class="education-text-details">
-                <h4 class="education-text-subHeader">{school.subHeader}</h4>
-                <p class="education-text-duration">{school.duration}</p>
-                {school.grade && <p class="education-text-grade">{school.grade}</p>}
-                <p class="education-text-desc">{school.desc}</p>
+                {/* leading-[normal] (not leading-normal, which is 1.5): the
+                    old rule set line-height: normal explicitly. */}
+                <h4 class="education-text-subHeader m-0 pt-[0.8rem] text-[19px] leading-[normal] font-bold text-text max-wide:pt-2 max-wide:text-[16px] dark:text-white">
+                  {school.subHeader}
+                </h4>
+                <p class="education-text-duration m-0 pt-2 text-[19px] text-title max-wide:text-[16px] dark:text-white">
+                  {school.duration}
+                </p>
+                {school.grade && (
+                  <p class="education-text-grade m-0 pt-2 text-[19px] text-title dark:text-white">
+                    {school.grade}
+                  </p>
+                )}
+                <p class="education-text-desc mt-2 mb-2">{school.desc}</p>
                 <div class="education-text-bullets">
-                  <ul>
+                  <ul class="mt-2 mb-[1em] box-content list-disc pl-10 max-md:my-0 max-md:mx-auto max-md:max-w-[80%]">
                     {school.descBullets.map(item => (
                       <li class="subTitle">{item}</li>
                     ))}
@@ -42,196 +65,11 @@ import { accentTitle } from "../lib/accent";
               </div>
             </div>
           </div>
-          <div class="education-card-border" />
+          {/* peer-hover on the card above: replaces
+              `.education-card:hover + .education-card-border`. */}
+          <div class="education-card-border box-content h-[30px] w-4/5 border-t-2 border-border-soft mb-5 transition-[width] duration-600 ease-in-out max-wide:w-[90%] max-md:w-full peer-hover:w-full peer-hover:border-blue max-wide:peer-hover:w-full max-md:peer-hover:w-full" />
         </div>
       ))
     }
   </div>
 </div>
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  /* from old containers/education/Education.scss */
-  .education-heading {
-    font-size: 56px;
-    font-weight: 400;
-    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
-    margin: 0.67em 0;
-  }
-
-  .education-section {
-    display: flex;
-    flex-direction: column;
-    width: 90%;
-    padding: 20px 0px;
-    margin: 0px auto;
-    margin-top: 2rem;
-  }
-
-  .education-section > * {
-    flex: 1;
-    margin-bottom: 30px;
-  }
-
-  .education-card-container {
-    display: flex;
-    flex-direction: column;
-    padding-top: 20px;
-  }
-
-  /* from old components/educationCard/EducationCard.scss */
-  .education-card {
-    display: flex;
-    flex-direction: row;
-  }
-
-  .education-card:hover + .education-card-border {
-    border-color: $educationCardBorder;
-    width: 100%;
-    -webkit-transition: width 0.6s ease-in-out;
-    -moz-transition: width 0.6s ease-in-out;
-    -o-transition: width 0.6s ease-in-out;
-    transition: width 0.6s ease-in-out;
-  }
-
-  .education-card-border {
-    height: 30px;
-    width: 80%;
-    border-top: 2px solid $lightBorder1;
-    margin-bottom: 20px;
-    -webkit-transition: width 0.6s ease-in-out;
-    -moz-transition: width 0.6s ease-in-out;
-    -o-transition: width 0.6s ease-in-out;
-    transition: width 0.6s ease-in-out;
-  }
-
-  .education-text-school {
-    margin: 0;
-    font-size: 28px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    white-space: nowrap;
-    height: 27px;
-  }
-
-  .education-roundedimg {
-    object-fit: cover;
-    margin-right: 2rem;
-    width: 6rem;
-    height: 6rem;
-    box-shadow: 0 0.5rem 1rem $lightBoxShadowDarker;
-    border-radius: 50%;
-  }
-
-  .education-card-right {
-    max-width: 70%;
-  }
-
-  .education-text-subHeader {
-    color: $textColor;
-    font-weight: 700;
-    font-size: 19px;
-    margin: 0px;
-    padding-top: 0.8rem;
-    line-height: normal;
-  }
-
-  .education-text-duration {
-    color: $titleColor;
-    font-size: 19px;
-    margin: 0px;
-    padding-top: 0.5rem;
-  }
-  .education-text-grade {
-    color: $titleColor;
-    font-size: 19px;
-    margin: 0px;
-    padding-top: 0.5rem;
-  }
-
-  .education-text-desc {
-    margin-top: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .education-text-bullets > ul {
-    margin-top: 0.5rem;
-  }
-
-  /* old conditional `dark-mode` classes on subHeader/duration */
-  :global(html.dark-mode) .education-text-subHeader,
-  :global(html.dark-mode) .education-text-duration,
-  :global(html.dark-mode) .education-text-grade {
-    color: $textColorDark;
-  }
-
-  /* Media Query */
-
-  @media (max-width: 1380px) {
-    .education-card-container {
-      padding-top: 0px;
-    }
-    .education-heading {
-      font-size: 40px;
-    }
-    .education-card {
-      flex-direction: column;
-      padding-bottom: 10px;
-    }
-    .education-card-right {
-      max-width: 90%;
-    }
-    .education-card-border {
-      width: 90%;
-    }
-    .education-text-subHeader {
-      padding-top: 0.5rem;
-      font-size: 16px;
-    }
-    .education-text-school {
-      font-size: 20px;
-      height: 23px;
-    }
-    .education-text-duration {
-      font-size: 16px;
-    }
-    .education-roundedimg {
-      width: 4rem;
-      height: 4rem;
-      margin-bottom: 0.5rem;
-      margin-right: 0px;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .education-card-container {
-      padding-top: 0px;
-    }
-    .education-heading {
-      font-size: 30px;
-      text-align: center;
-    }
-    .education-card {
-      text-align: center;
-    }
-    .education-card-right {
-      max-width: 100%;
-    }
-    .education-card-border {
-      width: 100%;
-    }
-    .education-roundedimg {
-      margin-top: 10px;
-      width: 4rem;
-      height: 4rem;
-      margin-bottom: 1rem;
-      margin-right: 0;
-    }
-    .education-text-bullets > ul {
-      max-width: 80%;
-      margin: auto;
-    }
-  }
-</style>

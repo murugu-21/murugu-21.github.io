@@ -8,9 +8,10 @@ interface Props {
 const { roles } = Astro.props;
 ---
 
-<span class="typewriter" data-roles={JSON.stringify(roles)}>
-  <span class="typewriter-text">{roles[0]}</span><span class="typewriter-cursor" aria-hidden="true"
-    >|</span
+<span class="typewriter text-navy dark:text-blue font-semibold" data-roles={JSON.stringify(roles)}>
+  <span class="typewriter-text">{roles[0]}</span><span
+    class="typewriter-cursor ml-0.5 font-normal animate-[typewriter-blink_1s_step-end_infinite] motion-reduce:animate-none max-[768px]:hidden"
+    aria-hidden="true">|</span
   >
 </span>
 
@@ -54,24 +55,7 @@ const { roles } = Astro.props;
   });
 </script>
 
-<style lang="scss">
-  @import "../styles/variables";
-
-  .typewriter {
-    color: $accentLight;
-    font-weight: 600;
-  }
-
-  :global(html.dark-mode) .typewriter {
-    color: $accentDark;
-  }
-
-  .typewriter-cursor {
-    font-weight: 400;
-    margin-left: 2px;
-    animation: typewriter-blink 1s step-end infinite;
-  }
-
+<style>
   @keyframes typewriter-blink {
     0%,
     100% {
@@ -79,19 +63,6 @@ const { roles } = Astro.props;
     }
     50% {
       opacity: 0;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .typewriter-cursor {
-      animation: none;
-    }
-  }
-
-  /* reference hides the blinking cursor on small screens */
-  @media (max-width: 767px) {
-    .typewriter-cursor {
-      display: none;
     }
   }
 </style>

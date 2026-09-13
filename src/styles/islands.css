@@ -1,28 +1,16 @@
-/* Tailwind v4 entry for the React islands that use the vendored shadcn/ui
-   primitives (src/components/ui): the chat widget and the blog's read-aloud
-   controls. Deliberately imports theme + utilities WITHOUT preflight so
-   Tailwind's global reset can never touch the host site's SCSS/CSS — each
-   island root carries the `ui-island` class, under which the design tokens
-   and a mini-reset below are scoped.
+/* shadcn/ui design tokens for the React islands (chat widget, blog read-aloud).
+   NOT a Tailwind entry: src/styles/global.css — the ONE entry for both apps
+   (portfolio Layout.astro and blog BaseLayout.astro) — imports this file into
+   its Tailwind graph. Token names (background, primary, muted, …) map to the
+   site palette. Dark mode is `html.dark-mode` in both apps.
+   src/styles/islands.test.ts guards the contrast ratios and string-matches the
+   two `.ui-island` blocks below — keep their selectors exactly as written.
+   Shared islands (chat, ui, blog components) must not use `md:`/`max-md:`: the
+   theme redefines --breakpoint-md to 769px rather than Tailwind's 768px, so a
+   class written against the default would split at the wrong width — use
+   `sm`/`lg` or an arbitrary value instead. */
 
-   shadcn/ui token names (background, primary, muted, …) are mapped to the
-   site palette from src/styles/_variables.scss. Dark mode follows the host
-   conventions: html.dark-mode (portfolio) and body.dark (blog). */
-
-@layer theme, base, components, utilities;
-
-@import "tailwindcss/theme.css" layer(theme);
-/* `important` so utilities beat the HOST apps' unlayered global element
-   styles (the blog styles raw h2/p/etc.) — layered CSS always loses to
-   unlayered otherwise. The widget's own mini-reset below is unlayered for
-   the same reason; !important utilities still win over it. */
-@import "tailwindcss/utilities.css" layer(utilities) important;
-
-@source "../components/chat/";
-@source "../components/ui/";
-@source "../blog/components/";
-
-@custom-variant dark (&:where(html.dark-mode *, body.dark *));
+@custom-variant dark (&:where(html.dark-mode *));
 
 .ui-island {
   --background: #ffffff;
@@ -45,12 +33,30 @@
   --input: rgba(0, 0, 0, 0.12);
   --ring: #06038d;
   --radius: 0.75rem;
+  /* shadcn radius scale, scoped to the islands: these override Tailwind's
+     default --radius-* custom properties (which its rounded-* utilities read
+     via var()) only inside an island, so the portfolio's own rounded-md etc.
+     keep Tailwind's default values. Previously these lived in @theme inline,
+     which inlined calc(var(--radius) …) into every utility site-wide and made
+     rounded-* resolve to 0 wherever --radius was undefined. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
   --shadow-color: rgba(0, 0, 0, 0.25);
   font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Pin the island's type to what shadcn assumes — preflight's 16px/1.5 base.
+     Without the pin each host's body type leaked in and the same component
+     rendered at a different size per app: the portfolio's `font: 19px/23px`
+     gave starter chips of 60px/48px against the blog's 53px. `font-family`
+     already set the precedent of pinning type here. This block is UNLAYERED,
+     so it outranks any type utility placed on the island ROOT element itself
+     (there are none today); utilities on descendants are unaffected. */
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
-html.dark-mode .ui-island,
-body.dark .ui-island {
+html.dark-mode .ui-island {
   --background: #282c35;
   --foreground: #ffffff;
   --card: #282c35;
@@ -59,7 +65,7 @@ body.dark .ui-island {
      `color: var(--primary)` accents — the thinking row's spark, the tool dot,
      the starter-chip borders, the focus ring — at 1.1:1 on these surfaces,
      which is invisible. #7da2ff is the same lightened blue the blog already
-     uses in its own .dark block (../blog/styles/style.css), so the two apps
+     uses for its dark links (--color-blue-light in global.css), so the two apps
      agree on one dark accent. Foreground flips to the navy: white on this
      blue is only 2.5:1. src/styles/islands.test.ts holds the ratios. */
   --primary: #7da2ff;
@@ -95,172 +101,4 @@ body.dark .ui-island {
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-}
-
-/* Mini-reset: the pieces of Tailwind preflight the shadcn primitives rely
-   on, scoped so the host site is untouched. Unlayered on purpose — it must
-   out-cascade the host apps' own unlayered element styles (blog h2/p
-   margins etc.); the !important utilities above still win over it. */
-.ui-island *,
-.ui-island *::before,
-.ui-island *::after {
-  box-sizing: border-box;
-  border-width: 0;
-  border-style: solid;
-  border-color: var(--border);
-  margin: 0;
-}
-
-.ui-island button {
-  background-color: transparent;
-  background-image: none;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  text-transform: none;
-  -webkit-appearance: button;
-  appearance: button;
-}
-
-/* No Tailwind preflight here, so form controls keep their UA font and
-   `color: fieldtext` (black) unless reset — which is invisible on a dark
-   surface. textarea also defaults to monospace. */
-.ui-island input,
-.ui-island textarea {
-  font: inherit;
-  color: inherit;
-  padding: 0;
-}
-
-.ui-island h2,
-.ui-island p {
-  font-size: inherit;
-  font-weight: inherit;
-  font-family: inherit;
-  color: inherit;
-  line-height: 1.4;
-}
-
-.ui-island svg {
-  display: block;
-}
-
-/* Typing indicator — no shadcn primitive for this. */
-.chat-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--muted-foreground);
-  animation: chat-dot 1.2s infinite;
-}
-
-.chat-dot:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.chat-dot:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes chat-dot {
-  0%,
-  100% {
-    opacity: 0.25;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/* Activity row — the waiting state while Jarvis reasons or runs a tool.
-   `.chat-shimmer` sweeps a highlight across the label so a long pause still
-   looks alive; the spark marks a thinking beat and the primary-coloured dot
-   marks a real tool call, so flavour is never mistaken for activity. */
-.chat-shimmer {
-  background-image: linear-gradient(
-    90deg,
-    var(--muted-foreground) 35%,
-    var(--foreground) 50%,
-    var(--muted-foreground) 65%
-  );
-  background-size: 220% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-  animation: chat-shimmer 2.4s linear infinite;
-}
-
-@keyframes chat-shimmer {
-  from {
-    background-position: 130% 0;
-  }
-  to {
-    background-position: -30% 0;
-  }
-}
-
-.chat-spark {
-  font-size: 12px;
-  line-height: 1;
-  color: var(--primary);
-  animation: chat-spark 1.8s ease-in-out infinite;
-}
-
-@keyframes chat-spark {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: scale(0.9);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-}
-
-.chat-tool-dot {
-  width: 7px;
-  height: 7px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--primary);
-  animation: chat-tool-dot 1.4s ease-out infinite;
-}
-
-@keyframes chat-tool-dot {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent);
-  }
-  70%,
-  100% {
-    box-shadow: 0 0 0 6px transparent;
-  }
-}
-
-/* Visitors who asked for less motion keep the words and lose the movement —
-   the gradient must be undone too, or the label stays transparent. */
-@media (prefers-reduced-motion: reduce) {
-  .chat-shimmer,
-  .chat-spark,
-  .chat-tool-dot,
-  .chat-dot {
-    animation: none;
-  }
-
-  .chat-shimmer {
-    background-image: none;
-    color: var(--muted-foreground);
-    -webkit-text-fill-color: currentColor;
-  }
-}
-
-/* Body scroll lock while the panel is full-screen on mobile. */
-html.chat-panel-locked,
-html.chat-panel-locked body {
-  overflow: hidden;
 }

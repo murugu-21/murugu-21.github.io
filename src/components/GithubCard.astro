@@ -13,17 +13,35 @@ const location = resumeContact.location;
 
 {
   prof ? (
-    <div class="main section-animate" id="contact">
-      <h2 class="prof-title" set:html={accentTitle("Reach Out to me!")} />
-      <div class="main-content-profile">
+    <div class="main section-animate box-content mx-auto mt-16 w-[90%] px-2.5 py-5" id="contact">
+      <h2
+        class="prof-title m-0 text-[40px] font-normal max-md:pb-4 max-md:text-center max-md:text-[32px]"
+        set:html={accentTitle("Reach Out to me!")}
+      />
+      <div class="main-content-profile max-md:text-center">
         <div class="blog-header">
-          <p class="subTitle blog-subtitle">{contactInfo.subtitle}</p>
+          {/* .subTitle is the shared global class (color only); the rest of
+              the old .blog-subtitle rule (recreated from the old app's leaked
+              global) is inlined here. my-[1em] restores the UA <p> margin
+              preflight removes. */}
+          <p class="subTitle blog-subtitle my-[1em] uppercase max-md:text-center max-md:text-[16px]">
+            {contactInfo.subtitle}
+          </p>
         </div>
-        {prof.bio && <h2 class="bio-text">"{prof.bio}"</h2>}
+        {prof.bio && (
+          <h2 class="bio-text text-[22px] font-bold leading-[30px] max-md:text-[16px] my-[0.83em]">
+            "{prof.bio}"
+          </h2>
+        )}
         {location && (
           <div class="location-div">
-            <span class="desc-prof">
+            <span class="desc-prof text-[19px] leading-[45px] max-md:text-[16px] max-md:leading-[30px]">
+              {/* old CSS never set a `display` on this svg and relied on it
+                  staying inline (baseline for .desc-prof's text) — preflight
+                  makes svg a block, so restore it here to keep the icon on
+                  the same line as the location text. */}
               <svg
+                class="inline align-baseline"
                 viewBox="-0.5 -2 20 19"
                 version="1.1"
                 width="22"
@@ -52,16 +70,21 @@ const location = resumeContact.location;
       </div>
     </div>
   ) : (
-    <div class="main contact-margin-top section-animate" id="contact">
-      <div class="contact-div-main">
+    <div class="main section-animate box-content mx-auto mt-16 w-[90%] px-2.5 py-5" id="contact">
+      <div class="contact-div-main flex [&>*]:flex-1">
         <div class="contact-header">
-          <h2 class="heading contact-title" set:html={accentTitle(contactInfo.title)} />
-          <p class="subTitle contact-subtitle">{contactInfo.subtitle}</p>
-          <div class="contact-text-div">
+          <h2
+            class="heading contact-title my-[0.67em] text-[65px] font-normal max-wide:text-center max-wide:text-[40px]"
+            set:html={accentTitle(contactInfo.title)}
+          />
+          <p class="subTitle contact-subtitle my-[1em] uppercase dark:text-white max-wide:text-center max-wide:text-[16px] max-wide:leading-[normal]">
+            {contactInfo.subtitle}
+          </p>
+          <div class="contact-text-div mt-6 max-wide:text-center dark:text-white">
             {contactInfo.number && (
               <>
                 <a
-                  class="contact-detail"
+                  class="contact-detail mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] hover:transition-all hover:duration-300 hover:ease-[ease] dark:text-white max-wide:text-[20px]"
                   href={"tel:" + contactInfo.number}
                   data-ph-event="social_click"
                   data-ph-prop="social"
@@ -74,7 +97,7 @@ const location = resumeContact.location;
               </>
             )}
             <a
-              class="contact-detail-email"
+              class="contact-detail-email mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] hover:transition-all hover:duration-300 hover:ease-[ease] dark:text-white max-wide:text-[20px]"
               href={"mailto:" + contactInfo.emailAddress}
               data-ph-event="social_click"
               data-ph-prop="social"
@@ -94,162 +117,3 @@ const location = resumeContact.location;
     </div>
   )
 }
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  /* old global `.main` wrapper folded into the section root */
-  .main {
-    width: 90%;
-    padding: 20px 10px;
-    margin: 0px auto;
-    margin-top: 4rem;
-  }
-
-  /* from old components/githubProfileCard/GithubProfileCard.scss */
-  .prof-title {
-    margin: 0;
-    font-size: 40px;
-    font-weight: 400;
-  }
-
-  .location-div {
-    text-shadow: $githubProfileCardLocationTS;
-  }
-
-  .opp-div {
-    padding-bottom: 1rem;
-  }
-
-  .bio-text {
-    line-height: 30px;
-    font-size: 22px;
-  }
-
-  .desc-prof {
-    line-height: 45px;
-    font-size: 19px;
-  }
-
-  .subTitle {
-    color: $subTitle;
-  }
-
-  /* .blog-subtitle leaked globally from Blog.scss in the old app; recreated here */
-  .blog-subtitle {
-    text-transform: uppercase;
-  }
-
-  @media (max-width: 768px) {
-    .main-content-profile {
-      text-align: center;
-    }
-
-    .bio-text {
-      font-size: 16px;
-    }
-
-    .desc-prof {
-      line-height: 30px;
-      font-size: 16px;
-    }
-
-    .prof-title {
-      padding-bottom: 1rem;
-      font-size: 32px;
-      text-align: center;
-    }
-
-    .blog-subtitle {
-      font-size: 16px;
-      text-align: center;
-    }
-  }
-
-  /* from old containers/contact/Contact.scss (fallback branch) */
-  .contact-div-main {
-    display: flex;
-  }
-
-  .contact-div-main > * {
-    flex: 1;
-  }
-
-  .contact-title {
-    font-size: 65px;
-    font-weight: 400;
-    /* pin old h1 UA margin after demotion to h2 (h2 UA would be 0.83em) */
-    margin: 0.67em 0;
-  }
-
-  .contact-detail,
-  .contact-detail-email {
-    margin-top: 20px;
-    font-size: 40px;
-    font-weight: 400;
-    color: $subTitle;
-    text-decoration: none;
-  }
-
-  .contact-detail:hover,
-  .contact-detail-email:hover {
-    color: $textColor;
-    text-shadow: 2px 1px 2px $contactDetailHoverTS;
-    transition: all 0.3s;
-  }
-
-  .contact-subtitle {
-    text-transform: uppercase;
-  }
-
-  .contact-text-div {
-    margin-top: 1.5rem;
-  }
-
-  .contact-margin-top {
-    margin-top: 4rem;
-  }
-
-  /* old conditional `dark-mode` classes on the subtitle and text div
-     (subTitle grey -> white text; `.dark-mode a` link color) */
-  :global(html.dark-mode) .contact-subtitle {
-    color: white;
-  }
-
-  :global(html.dark-mode) .contact-text-div {
-    color: white;
-  }
-
-  :global(html.dark-mode) .contact-text-div a {
-    color: $textColorDark;
-  }
-
-  @media (max-width: 1380px), (max-width: 768px) {
-    .contact-title {
-      font-size: 56px;
-      font-weight: 400;
-      text-align: center;
-    }
-
-    .contact-title {
-      font-size: 40px;
-      text-align: center;
-    }
-
-    .contact-subtitle {
-      font-size: 16px;
-      line-height: normal;
-      text-align: center;
-    }
-
-    .contact-text-div {
-      text-align: center;
-      margin-top: 1.5rem;
-    }
-
-    .contact-detail,
-    .contact-detail-email {
-      font-size: 20px;
-    }
-  }
-</style>

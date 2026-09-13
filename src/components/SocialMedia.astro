@@ -43,7 +43,7 @@ const links = [
 ];
 ---
 
-<div class="social-media-div">
+<div class="social-media-div max-md:text-center">
   {
     links.map(link => (
       <a
@@ -51,62 +51,19 @@ const links = [
         data-ph-event="social_click"
         data-ph-prop="social"
         data-ph-value={link.value}
-        class="icon-button"
+        class="icon-button inline-flex items-center justify-center w-[2.6rem] h-[2.6rem] mx-[5px] mb-2.5 text-text no-underline cursor-pointer align-middle select-none transition-colors duration-200 ease-in hover:text-navy dark:text-white dark:hover:text-blue"
         target={link.external ? "_blank" : undefined}
         rel={link.external ? "noopener noreferrer" : undefined}
         aria-label={link.label}
         title={link.label}
       >
-        <Icon name={link.icon} />
+        {/* The anchor keeps a 2.6rem hit target; the svg is a plain glyph
+            inside it. Putting padding + border-radius on the <svg> itself
+            (the old FA <i> translation) made Chrome clip the glyph to the
+            radius inset by the padding, which shaved the corners off the
+            LinkedIn "i" dot. */}
+        <Icon name={link.icon} class="block" size="1.6rem" />
       </a>
     ))
   }
 </div>
-
-<style lang="scss">
-  @import "../styles/variables";
-
-  /* The anchor keeps a 2.6rem hit target; the svg is a plain glyph inside it.
-     Putting padding + border-radius on the <svg> itself (the old FA <i>
-     translation) made Chrome clip the glyph to the radius inset by the
-     padding, which shaved the corners off the LinkedIn "i" dot. */
-  .icon-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.6rem;
-    height: 2.6rem;
-    margin: 0 5px 10px;
-    color: $textColor;
-    text-decoration: none;
-    cursor: pointer;
-    vertical-align: middle;
-    user-select: none;
-    transition: color 0.2s ease-in;
-  }
-
-  .icon-button :global(svg) {
-    display: block;
-    width: 1.6rem;
-    height: 1.6rem;
-  }
-
-  .icon-button:hover {
-    color: $buttonColor;
-  }
-
-  :global(html.dark-mode) .icon-button {
-    color: $textColorDark;
-  }
-
-  :global(html.dark-mode) .icon-button:hover {
-    color: $buttonHover;
-  }
-
-  /* Media Query */
-  @media (max-width: 768px) {
-    .social-media-div {
-      text-align: center;
-    }
-  }
-</style>

@@ -3,9 +3,14 @@
 // react-tsparticles: tiny dots drifting slowly with pulsing opacity, fixed
 // behind all content. Idle-loaded so it can never affect LCP; paused while
 // the tab is hidden; never started under prefers-reduced-motion.
+// Rendered by both apps (landing page and the blog's BaseLayout). `z-[-1]`
+// puts the canvas under the page content but over the body background,
+// which propagates to the root canvas and so always paints beneath it.
 ---
 
-<canvas class="particles-canvas" aria-hidden="true"></canvas>
+<canvas
+  class="particles-canvas pointer-events-none fixed inset-0 z-[-1] h-full w-full"
+  aria-hidden="true"></canvas>
 
 <script>
   const canvas = document.querySelector<HTMLCanvasElement>(".particles-canvas");
@@ -75,14 +80,3 @@
     }
   }
 </script>
-
-<style>
-  .particles-canvas {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    pointer-events: none;
-  }
-</style>

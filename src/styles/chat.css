@@ -1,0 +1,134 @@
+/* Island border default + chat-widget animations, shared by both apps.
+   src/styles/global.css — the one Tailwind entry for the portfolio and the
+   blog — imports this in layer(components), so utilities still out-cascade it.
+   The island mini-reset that used to live here is gone: preflight now applies
+   in both apps. Island tokens live in islands.css. */
+
+/* The one mini-reset rule preflight does NOT replace. Preflight writes
+   `border: 0 solid` and leaves border-color at its initial `currentColor`, and
+   Tailwind's width-only utilities (`border`, `border-b`, `border-t`) set no
+   colour — so the chat card's frame and its header/footer rules would paint in
+   the text colour (measured: #2e353f light / #ffffff dark) instead of the
+   hairline token. layer(components) keeps `border-input`/`border-primary` and
+   every other colour utility winning over this. */
+.ui-island *,
+.ui-island *::before,
+.ui-island *::after {
+  border-color: var(--border);
+}
+
+/* Typing indicator — no shadcn primitive for this. */
+.chat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  animation: chat-dot 1.2s infinite;
+}
+
+.chat-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.chat-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes chat-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Activity row — the waiting state while Jarvis reasons or runs a tool.
+   `.chat-shimmer` sweeps a highlight across the label so a long pause still
+   looks alive; the spark marks a thinking beat and the primary-coloured dot
+   marks a real tool call, so flavour is never mistaken for activity. */
+.chat-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--muted-foreground) 35%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 65%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: chat-shimmer 2.4s linear infinite;
+}
+
+@keyframes chat-shimmer {
+  from {
+    background-position: 130% 0;
+  }
+  to {
+    background-position: -30% 0;
+  }
+}
+
+.chat-spark {
+  font-size: 12px;
+  line-height: 1;
+  color: var(--primary);
+  animation: chat-spark 1.8s ease-in-out infinite;
+}
+
+@keyframes chat-spark {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+.chat-tool-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: chat-tool-dot 1.4s ease-out infinite;
+}
+
+@keyframes chat-tool-dot {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+/* Visitors who asked for less motion keep the words and lose the movement —
+   the gradient must be undone too, or the label stays transparent. */
+@media (prefers-reduced-motion: reduce) {
+  .chat-shimmer,
+  .chat-spark,
+  .chat-tool-dot,
+  .chat-dot {
+    animation: none;
+  }
+
+  .chat-shimmer {
+    background-image: none;
+    color: var(--muted-foreground);
+    -webkit-text-fill-color: currentColor;
+  }
+}
+
+/* Body scroll lock while the panel is full-screen on mobile. */
+html.chat-panel-locked,
+html.chat-panel-locked body {
+  overflow: hidden;
+}

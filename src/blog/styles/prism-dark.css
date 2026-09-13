@@ -1,0 +1,98 @@
+/* Code-block surface + dark palette for the blog's Prism highlighting.
+
+   prism.css (the light "default" theme) is imported UNLAYERED by
+   BaseLayout.astro, so nothing in post.css's `@layer components` can override
+   it — unlayered styles win over layered ones regardless of specificity. This
+   file is imported unlayered right after it, so plain source order wins.
+
+   Light: the theme's warm #f5f2f0 fence sat at ~1.02:1 against the gradient
+   canvas (#f3f4fb → #fff) with no edge, so it read as a colour cast rather
+   than a panel. The fence now uses the same surface as the developers page's
+   code blocks (white, soft navy-tinted border).
+
+   Dark: the light theme leaked through — a white slab per code block on the
+   dark canvas. Palette below is Prism's "tomorrow night eighties"
+   (prism-tomorrow.css) scoped under html.dark-mode, on the developers page's
+   dark fence surface (4% white, 12% white border). */
+
+.blog-post pre[class*="language-"] {
+  background: #ffffff;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 0.5rem;
+}
+
+html.dark-mode .blog-post pre[class*="language-"],
+html.dark-mode .blog-post :not(pre) > code[class*="language-"] {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+html.dark-mode .blog-post code[class*="language-"],
+html.dark-mode .blog-post pre[class*="language-"] {
+  color: #cccccc;
+  /* prism.css paints a 1px white text-shadow for the light theme */
+  text-shadow: none;
+}
+
+/* prism.css gives these a 50% white background as an underline effect —
+   on dark it is a grey slab behind every operator. */
+html.dark-mode .blog-post .token.operator,
+html.dark-mode .blog-post .token.entity,
+html.dark-mode .blog-post .token.url,
+html.dark-mode .blog-post .language-css .token.string,
+html.dark-mode .blog-post .style .token.string {
+  background: none;
+}
+
+html.dark-mode .blog-post .token.comment,
+html.dark-mode .blog-post .token.block-comment,
+html.dark-mode .blog-post .token.prolog,
+html.dark-mode .blog-post .token.doctype,
+html.dark-mode .blog-post .token.cdata {
+  color: #999999;
+}
+html.dark-mode .blog-post .token.punctuation {
+  color: #cccccc;
+}
+html.dark-mode .blog-post .token.tag,
+html.dark-mode .blog-post .token.attr-name,
+html.dark-mode .blog-post .token.namespace,
+html.dark-mode .blog-post .token.deleted {
+  color: #e2777a;
+}
+html.dark-mode .blog-post .token.function-name {
+  color: #6196cc;
+}
+html.dark-mode .blog-post .token.boolean,
+html.dark-mode .blog-post .token.number,
+html.dark-mode .blog-post .token.function {
+  color: #f08d49;
+}
+html.dark-mode .blog-post .token.property,
+html.dark-mode .blog-post .token.class-name,
+html.dark-mode .blog-post .token.constant,
+html.dark-mode .blog-post .token.symbol {
+  color: #f8c555;
+}
+html.dark-mode .blog-post .token.selector,
+html.dark-mode .blog-post .token.important,
+html.dark-mode .blog-post .token.atrule,
+html.dark-mode .blog-post .token.keyword,
+html.dark-mode .blog-post .token.builtin {
+  color: #cc99cd;
+}
+html.dark-mode .blog-post .token.string,
+html.dark-mode .blog-post .token.char,
+html.dark-mode .blog-post .token.attr-value,
+html.dark-mode .blog-post .token.regex,
+html.dark-mode .blog-post .token.variable {
+  color: #7ec699;
+}
+html.dark-mode .blog-post .token.operator,
+html.dark-mode .blog-post .token.entity,
+html.dark-mode .blog-post .token.url {
+  color: #67cdcc;
+}
+html.dark-mode .blog-post .token.inserted {
+  color: #7ec699;
+}

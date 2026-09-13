@@ -114,9 +114,9 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 
   // PostHog custom events for annotated links (data-ph-event), plus the theme
   // as a super property. The bootstrap script in ../layouts/BaseLayout.astro
-  // puts the theme on <body> as a class before first paint; this module is
-  // deferred, so it has already run.
+  // puts html.dark-mode on the root before first paint (the same class the
+  // portfolio uses); this module is deferred, so it has already run.
   initClickTracking();
-  tag("theme", document.body.classList.contains("dark") ? "dark" : "light");
+  tag("theme", document.documentElement.classList.contains("dark-mode") ? "dark" : "light");
   bootAnalytics();
 </script>

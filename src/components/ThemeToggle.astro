@@ -3,12 +3,12 @@
 // button showing the theme you'd switch TO (sun while dark, moon while light)
 // rather than a slider. Icons are the lucide sun/moon paths, inlined.
 //
-// Shared by BOTH apps, which have different theme contracts (the same split
-// islands.css encodes as `html.dark-mode` vs `body.dark`):
-//   portfolio — owns the class itself, writes localStorage directly
+// Shared by BOTH apps. The theme class is `html.dark-mode` in both; who owns
+// it differs:
+//   portfolio — this script owns it and writes localStorage directly
 //   blog      — a pre-paint bootstrap owns it and exposes __setPreferredTheme
-// The script below detects which is present. Being plain Astro, it is server
-// rendered at full size, so unlike a hydrated island it can't shift the
+// The click handler below detects which is present. Being plain Astro, it is
+// server rendered at full size, so unlike a hydrated island it can't shift the
 // header after paint.
 ---
 
@@ -61,8 +61,7 @@
   const btn = document.getElementById("theme-toggle") as HTMLButtonElement;
   const root = document.documentElement;
 
-  const isDark = () =>
-    root.classList.contains("dark-mode") || document.body.classList.contains("dark");
+  const isDark = () => root.classList.contains("dark-mode");
 
   // The label names the action, so it tracks the theme rather than the state.
   const label = () => btn.setAttribute("aria-label", isDark() ? "Use light mode" : "Use dark mode");
@@ -131,13 +130,11 @@
     display: none;
   }
 
-  :global(html.dark-mode) .sun,
-  :global(body.dark) .sun {
+  :global(html.dark-mode) .sun {
     display: block;
   }
 
-  :global(html.dark-mode) .moon,
-  :global(body.dark) .moon {
+  :global(html.dark-mode) .moon {
     display: none;
   }
 
