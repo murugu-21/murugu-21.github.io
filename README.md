@@ -21,9 +21,9 @@ directly. Node (version in `.nvmrc`) stays the runtime underneath: Astro, Wrangl
 and Vitest ship `node` shebangs, which Bun honours, and the Workers Vitest pool only
 drives workerd from a Node host — so never `bun --bun` those, and run the suite with
 `bun run test`, not `bun test` (Bun's own runner). Bun blocks the install scripts of
-packages outside its default trust list; the two it blocks here (`@parcel/watcher`
-builds from source only when its prebuilt binary is missing, `core-js` prints a
-funding banner) are safe to leave blocked.
+packages outside its default trust list; the two it blocks here are safe to leave
+blocked: `@posthog/cli` downloads its Rust binary the first time a source map
+upload actually runs (production builds), and `core-js` prints a funding banner.
 
 The GitHub profile card is fetched at **build time** from the GitHub GraphQL API. Set a `GITHUB_TOKEN` environment variable locally (any token with public read scope) to render it; without one the site builds fine and shows a contact fallback instead.
 
@@ -40,6 +40,8 @@ Ingestion goes through **`https://e.murugappan.dev`** — PostHog's _managed_ re
 Privacy: replay masks every `<input>` and `<textarea>` (`maskAllInputs`), which covers the Jarvis chat box and the blog search. A _sent_ chat message is re-rendered as a bubble `<div>` though, so the transcript container carries `data-ph-mask="true"`, the `maskTextSelector` PostHog is configured with — nothing a visitor typed reaches a recording, matching the no-PII rule the events follow.
 
 **Error tracking is PostHog's, on the same SDK.** `initAnalytics` turns on `capture_exceptions: true`, so uncaught errors and unhandled promise rejections become `$exception` events (the SDK fetches its small `exception-autocapture` script once it boots). Because the SDK itself waits for the first interaction, `bootAnalytics` attaches its own `error` / `unhandledrejection` listeners at page load and buffers everything thrown in between — the hydration and chunk-load window, where client errors actually happen — replaying it through `captureException` once the SDK arrives, then detaching so PostHog's autocapture is the only listener. Failures the code catches on purpose (a malformed chat frame, a Mermaid diagram that failed to render) go through `reportError(error, { ... })`, which no-ops without the SDK and buffers while it loads like `track`/`tag`. Error tracking must also be switched on in the PostHog project settings.
+
+**Source maps go up with each production build, so those stack traces are unminified.** The Vite build runs `@posthog/rollup-plugin` (`astro.config.ts`): it switches the build to hidden source maps, injects the chunk-id comments PostHog's symbol-set lookup keys on, uploads chunks and maps, then deletes the `.map` files — nothing extra is served, and an upload that fails fails the build instead of deploying unmapped. It activates only when `POSTHOG_API_KEY` (a personal API key with error-tracking write) and `POSTHOG_PROJECT_ID` are set, which is true in the Workers Builds production env vars and false for local dev and the GitHub checks, so those builds stay map-free and self-contained.
 
 ### Custom events
 

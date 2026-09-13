@@ -6,6 +6,7 @@ import { unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
+import posthog from "@posthog/rollup-plugin";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
@@ -168,6 +169,16 @@ function modulePreloadHints(): AstroIntegration {
   };
 }
 
+// PostHog source maps for error tracking. The plugin makes the production
+// build emit hidden source maps, uploads them and deletes them again, so a
+// .map is never served; the chunk-id comments it injects into each chunk are
+// what tie a stack frame back to a symbol set. Gated on the personal API key
+// and project id being present — they only are in the Workers Builds
+// production env — so local dev and the GitHub checks build without it and
+// stay map-free and self-contained.
+const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
+const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
+
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
@@ -225,7 +236,18 @@ export default defineConfig({
       // One Tailwind v4 entry for the whole site: src/styles/global.css, full
       // preflight, imported by src/layouts/Layout.astro (portfolio) and
       // src/blog/layouts/BaseLayout.astro (blog). No Sass anywhere.
-      tailwindcss()
+      tailwindcss(),
+      // Source maps for PostHog's error tracking (see above). The host default
+      // (us.i.posthog.com) matches the US project the SDK reports to.
+      ...(POSTHOG_API_KEY && POSTHOG_PROJECT_ID
+        ? [
+            posthog({
+              personalApiKey: POSTHOG_API_KEY,
+              projectId: POSTHOG_PROJECT_ID,
+              sourcemaps: { enabled: true, deleteAfterUpload: true }
+            })
+          ]
+        : [])
     ]
   },
   markdown: {
