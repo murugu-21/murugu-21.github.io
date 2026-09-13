@@ -20,7 +20,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Textarea } from "../ui/textarea";
 import { cn } from "../../lib/utils";
-import { track } from "../../lib/analytics";
+import { track, reportError } from "../../lib/analytics";
 
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
@@ -199,8 +199,10 @@ export function ChatWidget() {
     socket.addEventListener("message", event => {
       try {
         handleServerMessage(JSON.parse(event.data as string) as ServerMessage);
-      } catch {
-        /* ignore malformed frames */
+      } catch (err) {
+        // A malformed frame is a protocol bug, not a visitor's mistake —
+        // worth seeing in error tracking. Nothing a visitor typed is passed.
+        reportError(err, { surface: "chat" });
       }
     });
     socket.addEventListener("close", () => {

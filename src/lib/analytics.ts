@@ -15,11 +15,16 @@
 //
 // Event names are snake_case `<surface>_<action>`. Never pass anything a
 // visitor typed (chat messages, search queries) — no PII goes to PostHog.
+//
+// The same SDK does error tracking (see initAnalytics and bootAnalytics):
+// uncaught errors and rejections are captured automatically, and reportError
+// is the explicit channel for failures the code catches itself.
 
 import { onFirstInteraction } from "./first-interaction";
 
 interface PostHog {
   capture(event: string, properties?: Record<string, string>): void;
+  captureException(error: unknown, properties?: Record<string, string>): void;
   register(properties: Record<string, string>): void;
   init(token: string, config: Record<string, unknown>): void;
   startSessionRecording(): void;
@@ -38,6 +43,11 @@ let sdk: PostHog | null = null;
 // here and replayed on arrival. Null when analytics was never initialised
 // (local dev, CI), so nothing accumulates.
 let pending: Array<(ph: PostHog) => void> | null = null;
+
+// Detaches the listeners bootAnalytics attaches for errors thrown before the
+// SDK boots. Set only in the browser; cleared by initAnalytics (success or
+// failure) so PostHog's own exception autocapture owns them from then on.
+let stopEarlyErrors: (() => void) | null = null;
 
 const client = (): PostHog | null => {
   if (sdk) return sdk;
@@ -82,6 +92,20 @@ export function tag(key: string, value: string): void {
 export function track(event: string, props?: Record<string, string>): void {
   const cleaned = clean(props);
   send(ph => ph.capture(event, cleaned));
+}
+
+/**
+ * Report an error the code caught itself — a malformed server frame, a
+ * diagram that failed to render. Uncaught errors and unhandled promise
+ * rejections are captured automatically (see `capture_exceptions` in
+ * initAnalytics, and the buffering listeners bootAnalytics attaches), so this
+ * is only for failures swallowed on purpose that should not be invisible.
+ *
+ * Like track/tag it no-ops without the SDK and buffers while it loads.
+ */
+export function reportError(error: unknown, props?: Record<string, string>): void {
+  const cleaned = clean(props);
+  send(ph => ph.captureException(error, cleaned));
 }
 
 const TRACKED = new WeakSet<object>();
@@ -155,10 +179,19 @@ export async function initAnalytics(
       // and a 67 ms task in the Lighthouse trace).
       disable_surveys: true,
       capture_dead_clicks: false,
+      // Error tracking: unhandled errors and unhandled promise rejections are
+      // captured as $exception events. The SDK fetches one more small script
+      // to wrap the handlers, which is why this rides the delayed SDK load
+      // rather than page start — the listeners bootAnalytics attaches cover
+      // the window before it, and are detached here so nothing is captured
+      // twice. Error tracking must also be switched on in the project.
+      capture_exceptions: true,
       persistence: "localStorage+cookie",
       capture_pageview: true
     });
     sdk = ph;
+    stopEarlyErrors?.();
+    stopEarlyErrors = null;
     const win = (globalThis as { window?: EventTarget }).window;
     if (win) {
       onFirstInteraction(() => {
@@ -182,6 +215,8 @@ export async function initAnalytics(
     }
   } catch {
     // SDK chunk blocked or offline: stop buffering and let calls no-op.
+    stopEarlyErrors?.();
+    stopEarlyErrors = null;
     pending = null;
   }
 }
@@ -223,6 +258,13 @@ export function scheduleSdkLoad(
  * SDK load (scheduleSdkLoad). A meta tag rather than a data attribute on the
  * script element: Astro bundles `<script>` as a module, and
  * `document.currentScript` is null in module scope.
+ *
+ * This also starts error tracking. The SDK waits for the first interaction, so
+ * its own exception autocapture misses everything before it — hydration
+ * failures, a chunk that would not fetch — which is exactly the window the
+ * errors worth seeing come from. Uncaught errors and unhandled rejections are
+ * buffered through reportError from here, replayed the moment the SDK boots,
+ * then these listeners are detached in favour of PostHog's (initAnalytics).
  */
 export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> {
   const doc = root ?? (globalThis as { document?: Document }).document;
@@ -233,8 +275,23 @@ export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> 
   const token = meta("ph-token");
   const host = meta("ph-host");
   if (!token || !host) return Promise.resolve();
+  const win = doc.defaultView as (Window & typeof globalThis) | null;
+  if (win && !stopEarlyErrors) {
+    // Buffering has to start now, not when the SDK load is scheduled: onError
+    // fires straight into pending (see send), which nothing resets until the
+    // SDK arrives or fails.
+    pending ??= [];
+    const onError = (event: ErrorEvent) => reportError(event.error ?? new Error(event.message));
+    const onRejection = (event: PromiseRejectionEvent) => reportError(event.reason);
+    win.addEventListener("error", onError);
+    win.addEventListener("unhandledrejection", onRejection);
+    stopEarlyErrors = () => {
+      win.removeEventListener("error", onError);
+      win.removeEventListener("unhandledrejection", onRejection);
+    };
+  }
   // Tests drive this synchronously; the browser waits for the visitor.
   if (root || load) return initAnalytics(token, host, load);
-  scheduleSdkLoad(() => void initAnalytics(token, host), window);
+  scheduleSdkLoad(() => void initAnalytics(token, host), win ?? window);
   return Promise.resolve();
 }
