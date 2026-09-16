@@ -12,6 +12,7 @@ export interface SerializedPost {
   dateFormatted: string;
   minutes: number;
   tags: string[];
+  keywords: string[];
   description?: string;
   excerpt: string;
 }
@@ -32,6 +33,13 @@ export async function getPublishedPosts(): Promise<Post[]> {
 // route's position under src/pages/blog/, not from an Astro `base` setting.
 export const postPath = (id: string) => `/blog/${id}/`;
 
+// Site-relative URL for the index filtered to one tag, e.g.
+// /blog/?tag=system-design. This is the same URL the index's own chips write
+// (see PostList.astro), so a post-page chip and a chip click land on the same
+// view — controlled vocabulary means no escaping surprises, encodeURIComponent
+// is just hygiene.
+export const tagPath = (tag: string) => `/blog/?tag=${encodeURIComponent(tag)}`;
+
 // Matches Gatsby's date(formatString: "MMMM DD, YYYY"), e.g. "August 09, 2021"
 export function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
@@ -41,6 +49,11 @@ export function formatDate(date: Date): string {
     timeZone: "UTC"
   });
 }
+
+// Tags + keywords are one SEO vocabulary: precise terms live in `keywords` so
+// they don't clutter the visible filter chips (see content.config.ts). JSON-LD,
+// OG `article:tag` and the index's search haystack all use the union.
+export const postKeywords = (post: Post): string[] => [...post.data.tags, ...post.data.keywords];
 
 // Reading time in whole minutes from the raw markdown body (replaces
 // Gatsby's MarkdownRemark.timeToRead).

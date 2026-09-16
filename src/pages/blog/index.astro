@@ -24,6 +24,7 @@ const serialized: SerializedPost[] = posts.map(post => ({
   dateFormatted: formatDate(post.data.date),
   minutes: timeToRead(post.body),
   tags: post.data.tags,
+  keywords: post.data.keywords,
   description: post.data.description,
   excerpt: excerpt(post.body)
 }));

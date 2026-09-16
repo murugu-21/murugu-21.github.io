@@ -1,8 +1,9 @@
 ---
 // One entry in the blog index list (was Post.tsx). The data-* attributes feed
 // PostList.astro's filter script: `data-search` is the lower-cased haystack
-// (title + description, or the excerpt when there is no description — the
-// same fallback the old island's search used), `data-tags` the JSON tag list.
+// (title + description, or the excerpt when there is no description, plus the
+// post's tags and keywords — the demoted SEO terms stay searchable), `data-tags`
+// the JSON tag list.
 import type { SerializedPost } from "../utils/posts";
 import { formatReadingTime } from "../utils/helpers";
 
@@ -10,7 +11,9 @@ interface Props {
   post: SerializedPost;
 }
 const { post } = Astro.props;
-const haystack = `${post.title}\n${post.description ?? post.excerpt}`.toLowerCase();
+const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ...post.keywords]
+  .join("\n")
+  .toLowerCase();
 ---
 
 {/* The old `ol li { padding-left: 0; margin-bottom: calc(2rem / 2) }`. */}

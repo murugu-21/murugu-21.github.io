@@ -1,7 +1,9 @@
 ---
 title: Coin Change Problem
 date: "2021-08-09T23:46:37.121Z"
-tags: ["DP", "recursion"]
+tags: ["algorithms"]
+
+keywords: ["dynamic-programming", "recursion", "dp"]
 description: Find minimum number of coins that make a given value.
 ---
 

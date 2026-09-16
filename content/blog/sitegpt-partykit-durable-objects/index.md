@@ -3,7 +3,10 @@ title: Why SiteGPT's chat runs on PartyKit, not socket.io + Redis
 
 date: "2026-08-16T09:00:00.000Z"
 
-tags: ["websockets", "durable-objects", "partykit", "architecture", "cloudflare"]
+tags: ["system-design", "backend"]
+
+keywords:
+  ["websockets", "realtime", "durable-objects", "partykit", "cloudflare", "socket-io", "redis"]
 
 description: How one-process-per-room replaces socket.io + Redis for realtime chat — production code, cost math and actor-model tradeoffs from the chatbot on this site.
 ---

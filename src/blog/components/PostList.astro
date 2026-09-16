@@ -6,6 +6,10 @@
 // mobile. Filtering is the same as before — case-insensitive substring match
 // on title + description (or the excerpt when there is no description), AND
 // "has at least one checked tag" — applied by toggling `hidden` on the <li>s.
+//
+// The filter state also mirrors into the URL (`?q=`, one `?tag=` per checked
+// chip) so a filtered view can be shared, bookmarked and reloaded. The URL is
+// the source of truth on load; see the script at the bottom.
 import type { SerializedPost } from "../utils/posts";
 import SearchBar from "./SearchBar.astro";
 import TagBar from "./TagBar.astro";
@@ -66,9 +70,53 @@ const tags: TagCount[] = [...totals]
       if (empty) empty.hidden = shown > 0;
     };
 
-    search?.addEventListener("input", apply);
-    for (const input of tagInputs) input.addEventListener("change", apply);
-    // A query restored by the browser (back/forward, form restore) applies too.
-    if (search?.value || tagInputs.some(t => t.checked)) apply();
+    // Mirror the state into the URL: `?q=` for the query and one `?tag=` per
+    // checked chip (repeated, not comma-joined, so no escaping games). Params
+    // this script does not own (utm_*) are preserved. replaceState rather than
+    // pushState: the address bar is always current, but typing does not pile up
+    // history entries, and Back still leaves /blog/ from the first navigation.
+    const syncUrl = () => {
+      const params = new URLSearchParams(location.search);
+      const query = search?.value ?? "";
+      if (query) params.set("q", query);
+      else params.delete("q");
+      params.delete("tag");
+      for (const input of tagInputs) if (input.checked) params.append("tag", input.value);
+      const qs = params.toString();
+      history.replaceState(null, "", `${location.pathname}${qs ? `?${qs}` : ""}${location.hash}`);
+    };
+
+    // URL → DOM. Runs on load and again on back/forward (popstate) and bfcache
+    // restores (pageshow — those do not fire popstate). Re-reading the URL also
+    // beats the browser's own form restoration, so a shared link's params win
+    // over whatever the input held before.
+    const readUrl = () => {
+      const params = new URLSearchParams(location.search);
+      if (search) search.value = params.get("q") ?? "";
+      const tags = new Set(params.getAll("tag"));
+      for (const input of tagInputs) input.checked = tags.has(input.value);
+    };
+
+    search?.addEventListener("input", () => {
+      apply();
+      syncUrl();
+    });
+    for (const input of tagInputs) {
+      input.addEventListener("change", () => {
+        apply();
+        syncUrl();
+      });
+    }
+    addEventListener("popstate", () => {
+      readUrl();
+      apply();
+    });
+    addEventListener("pageshow", () => {
+      readUrl();
+      apply();
+    });
+
+    readUrl();
+    apply();
   }
 </script>

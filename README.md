@@ -45,7 +45,7 @@ Privacy: replay masks every `<input>` and `<textarea>` (`maskAllInputs`), which 
 
 ### Custom events
 
-`src/lib/analytics.ts` wraps PostHog for both apps — `track(event, props?)`, `tag(key, value)`, `reportError(error, props?)`, `initClickTracking()` and `bootAnalytics()`. `track` captures an event; `tag` registers a _super property_ (session context like `theme`, correct for anonymous visitors rather than person properties); `reportError` sends a caught error to error tracking. Every one no-ops when the SDK was never loaded and swallows failures, so calls are safe anywhere; anything captured while the SDK is still loading is buffered and replayed. Pageviews, autocapture and heatmaps come from PostHog itself and are not re-instrumented here. **Nothing a visitor typed** (chat messages, blog search queries) is ever sent.
+`src/lib/analytics.ts` wraps PostHog for both apps — `track(event, props?)`, `tag(key, value)`, `reportError(error, props?)`, `initClickTracking()` and `bootAnalytics()`. `track` captures an event; `tag` registers a _super property_ (session context like `theme`, correct for anonymous visitors rather than person properties); `reportError` sends a caught error to error tracking. Every one no-ops when the SDK was never loaded and swallows failures, so calls are safe anywhere; anything captured while the SDK is still loading is buffered and replayed. Pageviews, autocapture and heatmaps come from PostHog itself and are not re-instrumented here. **Nothing a visitor typed** (chat messages, blog search queries) is ever sent: blog filter params (`?q=`, `?tag=`) are stripped from captured URLs before they leave the browser (`redactBlogFilters` / `sanitize_properties`), so even a reloaded or shared filtered link does not leak the query.
 
 The SDK is the `posthog-js` npm package, `import()`ed on idle so it is a separate chunk outside the initial bundle. The token and host reach the client through `<meta name="ph-token">` / `<meta name="ph-host">` rendered from frontmatter — a meta tag rather than a `data-` attribute on the script because Astro bundles `<script>` as a module, where `document.currentScript` is `null`. This is also why the env vars need no `PUBLIC_` prefix: they are read at build time, never in a client bundle.
 
@@ -134,6 +134,11 @@ The blog (["SDE Journey"](https://murugappan.dev/blog/), migrated from Gatsby) l
     src/content.config.ts  # blog content collection schema
     public/blog/           # static files served verbatim (og-image, sw.js)
 
+The index mirrors its search box and tag chips into the URL (`/blog/?q=…&tag=…`, one `tag` per checked chip),
+so a filtered list is shareable, bookmarkable and survives a reload. Post pages link their tags to the same
+URLs, so a reader can jump from an article straight into its filtered view. A `tag` is a controlled vocabulary
+term from the schema (see "Tag vocabulary") — unknown ones are ignored.
+
 ### Writing a post
 
 Create `content/blog/<slug>/index.md` with frontmatter:
@@ -142,7 +147,8 @@ Create `content/blog/<slug>/index.md` with frontmatter:
 ---
 title: My post title
 date: "2026-06-10T10:00:00.000Z"
-tags: ["tag-one", "tag-two"]
+tags: ["system-design"]
+keywords: ["kafka", "outbox"] # optional: SEO/search terms, never shown as chips
 description: One-line description shown in lists, search and feeds.
 ---
 ```
@@ -151,6 +157,30 @@ Images placed next to `index.md` can be referenced relatively (`![alt](image.png
 time. ` ```mermaid ` code blocks are rendered to diagrams client-side. The directory name is the URL slug, so
 the post is published at `/blog/<slug>/` and picked up automatically by the sitemap, RSS feed, both `llms.txt`
 files and the markdown renditions.
+
+### Tag vocabulary
+
+Tags are the filter chips on the blog index, so they must be broad reader intents that recur across posts — not
+labels for a single article. They are constrained in `src/content.config.ts` (an unknown tag fails the build)
+and must follow: **1–3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`,
+`debezium`, `partykit`, `floating-point`) belong in `keywords`, which feeds JSON-LD, `article:tag` and the
+index's search haystack but never renders as a chip.
+
+| Tag             | What it covers                                          |
+| --------------- | ------------------------------------------------------- |
+| `ai`            | LLM agents, AI-assisted development                     |
+| `algorithms`    | DSA and interview-style problem solving                 |
+| `backend`       | Server-side engineering, APIs                           |
+| `career`        | Learning, tooling, becoming a developer                 |
+| `databases`     | Postgres, streaming, CDC, data plumbing                 |
+| `fundamentals`  | First-principles posts: floating point, closures, scope |
+| `javascript`    | Applied JS and language deep dives                      |
+| `react`         | React mental models and the ecosystem                   |
+| `system-design` | Distributed architecture: queues, scaling, event-driven |
+
+Adding a tag is a deliberate act: add it to `BLOG_TAGS` in `src/content.config.ts`, document it here, and tag
+the posts it covers. A tag with no posts yet is fine — chips are derived from post counts, so it stays
+invisible until used.
 
 ### Read-aloud audio
 
