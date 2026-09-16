@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1500, initial-scale=1" />
+    <title>Murugappan M — X cover</title>
+    <link rel="icon" href="data:," />
+    <style>
+      /* The site's one text face: Fira Code, the same latin variable file the
+         layouts preload (src/lib/fonts.ts). */
+      @font-face {
+        font-family: "Fira Code";
+        font-style: normal;
+        font-weight: 300 700;
+        font-display: block;
+        src: url("../node_modules/@fontsource-variable/fira-code/files/fira-code-latin-wght-normal.woff2")
+          format("woff2-variations");
+      }
+
+      /* Both skies are the site's own tokens (src/styles/global.css).
+         Night keeps the blue identity; blue hour takes the ambers. */
+      :root[data-theme="dark"] {
+        --sky: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
+        --name: #ffffff;
+        --bracket: rgba(255, 255, 255, 0.65);
+        --accent: #4c7dff;
+        --muted: rgba(255, 255, 255, 0.65);
+        --star: #dbe3ff;
+        --star-close: #eef2ff;
+      }
+      :root[data-theme="light"] {
+        --sky: linear-gradient(to left, #a3aae0, #cfd3ef 52%, #f6e3cb);
+        --name: #06038d;
+        --bracket: #413b58;
+        --accent: #8a4406;
+        --muted: #413b58;
+        --star: #2f2a4d;
+        --star-close: #b45309;
+      }
+      [data-theme="light"] .only-dark,
+      [data-theme="dark"] .only-light {
+        display: none;
+      }
+
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        width: 1500px;
+        height: 500px;
+        background: var(--sky);
+        font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+        /* prose keeps ligatures off on the site (global.css base body) */
+        font-feature-settings: "calt" 0;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .cover {
+        position: relative;
+        width: 1500px;
+        height: 500px;
+        overflow: hidden;
+      }
+      .stars {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      .stars .s {
+        fill: var(--star);
+      }
+      .stars .close {
+        fill: var(--star-close);
+      }
+
+      /* The header lockup: muted < />, bold name (Header.astro) */
+      .lockup {
+        position: absolute;
+        top: 132px;
+        left: 104px;
+      }
+      .wordmark {
+        font-size: 86px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--name);
+      }
+      .wordmark .br {
+        padding: 0 0.28em;
+        font-weight: 400;
+        color: var(--bracket);
+      }
+      .tagline {
+        margin-top: 34px;
+        font-size: 48px;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--accent);
+      }
+      .subline {
+        margin-top: 22px;
+        font-size: 28px;
+        line-height: 1.35;
+        color: var(--muted);
+      }
+      .url {
+        position: absolute;
+        right: 104px;
+        bottom: 44px;
+        font-size: 23px;
+        font-weight: 700;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="cover">
+      <!-- The site's signature starfield, still: a few close stars with halos,
+           the rest faint specks. Light mode's close stars are the amber ones. -->
+      <svg class="stars" viewBox="0 0 1500 500" aria-hidden="true">
+        <defs>
+          <radialGradient id="halo-blue">
+            <stop offset="0" stop-color="#9db4ff" stop-opacity="0.22" />
+            <stop offset="1" stop-color="#9db4ff" stop-opacity="0" />
+          </radialGradient>
+          <radialGradient id="halo-amber">
+            <stop offset="0" stop-color="#b45309" stop-opacity="0.35" />
+            <stop offset="1" stop-color="#b45309" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+
+        <g class="only-dark">
+          <circle cx="1224" cy="118" r="22" fill="url(#halo-blue)" />
+          <circle cx="1345" cy="334" r="16" fill="url(#halo-blue)" />
+          <circle cx="1152" cy="358" r="14" fill="url(#halo-blue)" />
+        </g>
+        <g class="only-light">
+          <circle cx="1224" cy="118" r="24" fill="url(#halo-amber)" />
+          <circle cx="1345" cy="334" r="18" fill="url(#halo-amber)" />
+          <circle cx="1152" cy="358" r="16" fill="url(#halo-amber)" />
+        </g>
+
+        <!-- close stars -->
+        <circle class="close" cx="1224" cy="118" r="3" />
+        <circle class="close" cx="1345" cy="334" r="2.4" />
+        <circle class="close" cx="1152" cy="358" r="2.3" />
+        <circle class="close" cx="1092" cy="188" r="2.1" />
+        <circle class="close" cx="1236" cy="56" r="1.7" />
+        <circle class="close" cx="1351" cy="238" r="1.6" />
+        <circle class="close" cx="1301" cy="452" r="1.5" />
+
+        <!-- faint specks -->
+        <circle class="s" cx="238" cy="72" r="0.9" opacity="0.45" />
+        <circle class="s" cx="452" cy="48" r="1.2" opacity="0.6" />
+        <circle class="s" cx="611" cy="103" r="0.8" opacity="0.35" />
+        <circle class="s" cx="812" cy="42" r="1.4" opacity="0.65" />
+        <circle class="s" cx="1041" cy="84" r="1" opacity="0.4" />
+        <circle class="s" cx="1421" cy="110" r="1" opacity="0.45" />
+        <circle class="s" cx="1332" cy="30" r="0.9" opacity="0.3" />
+        <circle class="s" cx="331" cy="118" r="0.7" opacity="0.28" />
+        <circle class="s" cx="958" cy="126" r="0.9" opacity="0.38" />
+        <circle class="s" cx="150" cy="40" r="0.8" opacity="0.25" />
+        <circle class="s" cx="1180" cy="252" r="1" opacity="0.45" />
+        <circle class="s" cx="1276" cy="166" r="0.8" opacity="0.32" />
+        <circle class="s" cx="1442" cy="188" r="1.1" opacity="0.45" />
+        <circle class="s" cx="1042" cy="308" r="1.3" opacity="0.55" />
+        <circle class="s" cx="1262" cy="328" r="0.9" opacity="0.35" />
+        <circle class="s" cx="1391" cy="378" r="1.2" opacity="0.5" />
+        <circle class="s" cx="1451" cy="298" r="0.8" opacity="0.28" />
+        <circle class="s" cx="1001" cy="418" r="0.7" opacity="0.28" />
+        <circle class="s" cx="1121" cy="438" r="1.1" opacity="0.42" />
+        <circle class="s" cx="1432" cy="428" r="0.9" opacity="0.35" />
+        <circle class="s" cx="518" cy="408" r="0.8" opacity="0.28" />
+        <circle class="s" cx="641" cy="448" r="1.2" opacity="0.45" />
+        <circle class="s" cx="761" cy="394" r="0.7" opacity="0.22" />
+        <circle class="s" cx="881" cy="452" r="1" opacity="0.35" />
+      </svg>
+
+      <div class="lockup">
+        <div class="wordmark">
+          <span class="br">&lt;</span>Murugappan M<span class="br">/&gt;</span>
+        </div>
+        <div class="tagline">Full Stack Engineer</div>
+        <div class="subline">Cloud-native, event-driven systems on AWS</div>
+      </div>
+
+      <div class="url">murugappan.dev</div>
+    </div>
+
+    <script>
+      // ?theme=light renders blue hour; anything else is the night sky.
+      const theme =
+        new URLSearchParams(location.search).get("theme") === "light" ? "light" : "dark";
+      document.documentElement.dataset.theme = theme;
+    </script>
+  </body>
+</html>
