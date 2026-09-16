@@ -45,7 +45,7 @@ Privacy: replay masks every `<input>` and `<textarea>` (`maskAllInputs`), which 
 
 ### Custom events
 
-`src/lib/analytics.ts` wraps PostHog for both apps — `track(event, props?)`, `tag(key, value)`, `reportError(error, props?)`, `initClickTracking()` and `bootAnalytics()`. `track` captures an event; `tag` registers a _super property_ (session context like `theme`, correct for anonymous visitors rather than person properties); `reportError` sends a caught error to error tracking. Every one no-ops when the SDK was never loaded and swallows failures, so calls are safe anywhere; anything captured while the SDK is still loading is buffered and replayed. Pageviews, autocapture and heatmaps come from PostHog itself and are not re-instrumented here. **Nothing a visitor typed** (chat messages, blog search queries) is ever sent.
+`src/lib/analytics.ts` wraps PostHog for both apps — `track(event, props?)`, `tag(key, value)`, `reportError(error, props?)`, `initClickTracking()` and `bootAnalytics()`. `track` captures an event; `tag` registers a _super property_ (session context like `theme`, correct for anonymous visitors rather than person properties); `reportError` sends a caught error to error tracking. Every one no-ops when the SDK was never loaded and swallows failures, so calls are safe anywhere; anything captured while the SDK is still loading is buffered and replayed. Pageviews, autocapture and heatmaps come from PostHog itself and are not re-instrumented here. **Nothing a visitor typed** (chat messages, blog search queries) is ever sent: blog filter params (`?q=`, `?tag=`) are stripped from captured URLs before they leave the browser (`redactBlogFilters` / `sanitize_properties`), so even a reloaded or shared filtered link does not leak the query.
 
 The SDK is the `posthog-js` npm package, `import()`ed on idle so it is a separate chunk outside the initial bundle. The token and host reach the client through `<meta name="ph-token">` / `<meta name="ph-host">` rendered from frontmatter — a meta tag rather than a `data-` attribute on the script because Astro bundles `<script>` as a module, where `document.currentScript` is `null`. This is also why the env vars need no `PUBLIC_` prefix: they are read at build time, never in a client bundle.
 
@@ -133,6 +133,10 @@ The blog (["SDE Journey"](https://murugappan.dev/blog/), migrated from Gatsby) l
                            # styles, post helpers, consts.ts site metadata
     src/content.config.ts  # blog content collection schema
     public/blog/           # static files served verbatim (og-image, sw.js)
+
+The index mirrors its search box and tag chips into the URL (`/blog/?q=…&tag=…`, one `tag` per checked chip),
+so a filtered list is shareable, bookmarkable and survives a reload. A `tag` is a controlled vocabulary term
+from the schema (see "Tag vocabulary") — unknown ones are ignored.
 
 ### Writing a post
 

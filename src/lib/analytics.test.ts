@@ -1,7 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
 
-import { initClickTracking, reportError, scheduleSdkLoad, tag, track } from "./analytics";
+import {
+  initClickTracking,
+  redactBlogFilters,
+  reportError,
+  scheduleSdkLoad,
+  tag,
+  track
+} from "./analytics";
 
 // The real snippet defines window.posthog as a stub whose methods queue until
 // array.js loads (see ../layouts/Layout.astro); tests stand in spies and
@@ -151,6 +158,27 @@ describe("initClickTracking", () => {
   });
 });
 
+describe("redactBlogFilters", () => {
+  it("strips the blog's filter params and keeps the rest", () => {
+    expect(
+      redactBlogFilters(
+        "https://murugappan.dev/blog/?q=closures&tag=javascript&tag=fundamentals&utm_source=x"
+      )
+    ).toBe("https://murugappan.dev/blog/?utm_source=x");
+  });
+
+  it("leaves other URLs, query-less URLs and non-URLs alone", () => {
+    expect(redactBlogFilters("https://www.google.com/search?q=secret")).toBe(
+      "https://www.google.com/search?q=secret"
+    );
+    expect(redactBlogFilters("https://murugappan.dev/blog/")).toBe("https://murugappan.dev/blog/");
+    expect(redactBlogFilters("https://murugappan.dev/resume/?q=x")).toBe(
+      "https://murugappan.dev/resume/?q=x"
+    );
+    expect(redactBlogFilters("not a url?q=x")).toBe("not a url?q=x");
+  });
+});
+
 // The real loader dynamic-imports posthog-js on idle; tests inject a fake so
 // the browser SDK never has to run here.
 const fakeSdk = () => {
@@ -231,6 +259,21 @@ describe("initAnalytics", () => {
     const ph = await fresh();
     await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
     expect(init.mock.calls[0][1].capture_exceptions).toBe(true);
+  });
+
+  it("scrubs blog filter params from captured URLs", async () => {
+    const { sdk, init } = fakeSdk();
+    const ph = await fresh();
+    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+    const sanitize = init.mock.calls[0][1].sanitize_properties;
+    const properties = sanitize({
+      $current_url: "https://murugappan.dev/blog/?q=socket&tag=backend",
+      $referrer: "https://murugappan.dev/blog/?q=oauth",
+      distinct_id: "abc"
+    });
+    expect(properties.$current_url).toBe("https://murugappan.dev/blog/");
+    expect(properties.$referrer).toBe("https://murugappan.dev/blog/");
+    expect(properties.distinct_id).toBe("abc");
   });
 
   it("replays events captured before the SDK finished loading", async () => {

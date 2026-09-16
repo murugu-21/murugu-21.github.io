@@ -139,6 +139,29 @@ export function initClickTracking(root?: Document): void {
 }
 
 /**
+ * Blog filter params (`?q=`, one `?tag=` per chip — see PostList.astro) make a
+ * filtered index shareable, but `q` is also the visitor's own search text. Any
+ * URL captured by analytics (the initial pageview on a reloaded/shared link,
+ * for example) is passed through here first so the query never leaves the
+ * browser. Only /blog URLs are touched; other query params pass through.
+ * Exported for tests.
+ */
+export const redactBlogFilters = (url: string): string => {
+  if (!url.includes("?")) return url;
+  try {
+    const parsed = new URL(url);
+    if (!parsed.pathname.startsWith("/blog")) return url;
+    if (!parsed.searchParams.has("q") && !parsed.searchParams.has("tag")) return url;
+    parsed.searchParams.delete("q");
+    parsed.searchParams.delete("tag");
+    return parsed.toString();
+  } catch {
+    // Not an absolute URL (some captured property that merely looks like one).
+    return url;
+  }
+};
+
+/**
  * Load posthog-js and point it at the proxy. Called from the layouts with the
  * build-time POST_HOG_TOKEN / POST_HOG_URL; with either missing (local dev,
  * CI) it no-ops and every track/tag call is dropped.
@@ -187,7 +210,17 @@ export async function initAnalytics(
       // twice. Error tracking must also be switched on in the project.
       capture_exceptions: true,
       persistence: "localStorage+cookie",
-      capture_pageview: true
+      capture_pageview: true,
+      // The blog's filter params are the one place a visitor's search text can
+      // appear in an event (a pageview on a reloaded or shared `/blog/?q=…`
+      // link). Scrub them from every URL-valued property the SDK captures.
+      sanitize_properties: (properties: Record<string, unknown>) => {
+        for (const key of Object.keys(properties)) {
+          const value = properties[key];
+          if (typeof value === "string") properties[key] = redactBlogFilters(value);
+        }
+        return properties;
+      }
     });
     sdk = ph;
     stopEarlyErrors?.();
