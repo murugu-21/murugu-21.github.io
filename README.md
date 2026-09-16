@@ -135,8 +135,9 @@ The blog (["SDE Journey"](https://murugappan.dev/blog/), migrated from Gatsby) l
     public/blog/           # static files served verbatim (og-image, sw.js)
 
 The index mirrors its search box and tag chips into the URL (`/blog/?q=…&tag=…`, one `tag` per checked chip),
-so a filtered list is shareable, bookmarkable and survives a reload. A `tag` is a controlled vocabulary term
-from the schema (see "Tag vocabulary") — unknown ones are ignored.
+so a filtered list is shareable, bookmarkable and survives a reload. Post pages link their tags to the same
+URLs, so a reader can jump from an article straight into its filtered view. A `tag` is a controlled vocabulary
+term from the schema (see "Tag vocabulary") — unknown ones are ignored.
 
 ### Writing a post
 

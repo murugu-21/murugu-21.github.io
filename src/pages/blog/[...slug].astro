@@ -7,6 +7,7 @@ import {
   getPublishedPosts,
   postPath,
   postKeywords,
+  tagPath,
   formatDate,
   timeToRead,
   excerpt
@@ -71,6 +72,27 @@ const jsonLd = {
         {formatDate(post.data.date)}
         {` • ${formatReadingTime(timeToRead(post.body))}`}
       </p>
+      {
+        /* The post's tags, each linking into the index filtered by that tag
+           (/blog/?tag=…, the same URL the index's own chips write — the index
+           script checks the matching chip on load). Chips match the index's
+           per-post chips (Post.astro) but read as links: `no-underline` beats
+           `.blog-post a`'s restated UA underline, while the shared navy /
+           blue-light `a` colours and the amber hover stay. */
+      }
+      <div class="mb-4 flex flex-row flex-wrap gap-[10px]">
+        {
+          post.data.tags.map(tag => (
+            <a
+              href={tagPath(tag)}
+              aria-label={`All posts tagged ${tag}`}
+              class="border border-chip-outline p-[2px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
+            >
+              {tag}
+            </a>
+          ))
+        }
+      </div>
       <!-- Read-aloud controls: a shadcn island (src/blog/components). Renders
            nothing until hydrated, and nothing at all without a speech or
            audio backend. `mb-4` is the old `.listen-island { margin-bottom:
