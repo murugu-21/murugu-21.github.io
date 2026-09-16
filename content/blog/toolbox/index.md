@@ -3,7 +3,9 @@ title: The developer toolbox
 
 date: "2022-02-05T13:03:37.121Z"
 
-tags: ["general"]
+tags: ["career"]
+
+keywords: ["learning", "developer-tools", "advice"]
 
 description: A guide to becoming a developer from my experience becoming one.
 ---

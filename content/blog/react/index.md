@@ -1,7 +1,9 @@
 ---
 title: React Hooks
 date: "2021-09-26T23:46:37.121Z"
-tags: ["React"]
+tags: ["react", "javascript"]
+
+keywords: ["hooks", "redux", "state-management", "history-of-javascript"]
 description: My mental models about Different React Hooks and Redux pattern.
 ---
 

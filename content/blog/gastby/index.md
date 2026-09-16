@@ -1,7 +1,9 @@
 ---
 title: why i chose gatsby for my blog?
 date: "2021-08-15T23:46:37.121Z"
-tags: ["React", "gatsby"]
+tags: ["react"]
+
+keywords: ["gatsby", "static-site-generation", "ssg", "ssr", "graphql"]
 description: TL;DR Static Site Generator using graphQl React stack.
 ---
 

@@ -142,7 +142,8 @@ Create `content/blog/<slug>/index.md` with frontmatter:
 ---
 title: My post title
 date: "2026-06-10T10:00:00.000Z"
-tags: ["tag-one", "tag-two"]
+tags: ["system-design"]
+keywords: ["kafka", "outbox"] # optional: SEO/search terms, never shown as chips
 description: One-line description shown in lists, search and feeds.
 ---
 ```
@@ -151,6 +152,30 @@ Images placed next to `index.md` can be referenced relatively (`![alt](image.png
 time. ` ```mermaid ` code blocks are rendered to diagrams client-side. The directory name is the URL slug, so
 the post is published at `/blog/<slug>/` and picked up automatically by the sitemap, RSS feed, both `llms.txt`
 files and the markdown renditions.
+
+### Tag vocabulary
+
+Tags are the filter chips on the blog index, so they must be broad reader intents that recur across posts — not
+labels for a single article. They are constrained in `src/content.config.ts` (an unknown tag fails the build)
+and must follow: **1–3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`,
+`debezium`, `partykit`, `floating-point`) belong in `keywords`, which feeds JSON-LD, `article:tag` and the
+index's search haystack but never renders as a chip.
+
+| Tag             | What it covers                                          |
+| --------------- | ------------------------------------------------------- |
+| `ai`            | LLM agents, AI-assisted development                     |
+| `algorithms`    | DSA and interview-style problem solving                 |
+| `backend`       | Server-side engineering, APIs                           |
+| `career`        | Learning, tooling, becoming a developer                 |
+| `databases`     | Postgres, streaming, CDC, data plumbing                 |
+| `fundamentals`  | First-principles posts: floating point, closures, scope |
+| `javascript`    | Applied JS and language deep dives                      |
+| `react`         | React mental models and the ecosystem                   |
+| `system-design` | Distributed architecture: queues, scaling, event-driven |
+
+Adding a tag is a deliberate act: add it to `BLOG_TAGS` in `src/content.config.ts`, document it here, and tag
+the posts it covers. A tag with no posts yet is fine — chips are derived from post counts, so it stays
+invisible until used.
 
 ### Read-aloud audio
 

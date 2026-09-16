@@ -3,7 +3,20 @@ title: Forms in, webhooks out — what I learned building an event-driven pipeli
 
 date: "2026-06-12T18:30:00.000Z"
 
-tags: ["event-driven", "kafka", "debezium", "postgres", "oauth", "system-design", "claude-code"]
+tags: ["system-design", "databases", "ai"]
+
+keywords:
+  [
+    "event-driven",
+    "kafka",
+    "debezium",
+    "postgres",
+    "outbox",
+    "cdc",
+    "oauth",
+    "claude-code",
+    "webhooks",
+  ]
 
 description: I built EventForm, a multi-tenant form builder with a transactional outbox, Debezium CDC and idempotent webhook delivery, pair-programming with Claude.
 ---

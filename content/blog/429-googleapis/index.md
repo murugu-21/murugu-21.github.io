@@ -3,7 +3,9 @@ title: Rate limit api requests in nodejs
 
 date: "2022-10-28T18:25:48.121Z"
 
-tags: ["googleapis", "nodejs", "concurrency"]
+tags: ["backend"]
+
+keywords: ["nodejs", "concurrency", "google-api", "rate-limiting"]
 
 description: How to query external apis without hitting 429 rate limit in nodejs
 ---

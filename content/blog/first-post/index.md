@@ -3,7 +3,9 @@ title: 0.1+0.2 not equal to 0.3???😕
 
 date: "2021-08-21T23:46:37.121Z"
 
-tags: ["floating-point", "javascript"]
+tags: ["fundamentals"]
+
+keywords: ["floating-point", "ieee754", "binary", "precision", "javascript"]
 
 description: The limitations of floating point math and weighing tradeoffs.
 ---

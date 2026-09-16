@@ -12,6 +12,7 @@ export interface SerializedPost {
   dateFormatted: string;
   minutes: number;
   tags: string[];
+  keywords: string[];
   description?: string;
   excerpt: string;
 }
@@ -41,6 +42,11 @@ export function formatDate(date: Date): string {
     timeZone: "UTC"
   });
 }
+
+// Tags + keywords are one SEO vocabulary: precise terms live in `keywords` so
+// they don't clutter the visible filter chips (see content.config.ts). JSON-LD,
+// OG `article:tag` and the index's search haystack all use the union.
+export const postKeywords = (post: Post): string[] => [...post.data.tags, ...post.data.keywords];
 
 // Reading time in whole minutes from the raw markdown body (replaces
 // Gatsby's MarkdownRemark.timeToRead).

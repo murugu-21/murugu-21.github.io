@@ -6,6 +6,7 @@ import { SITE_TITLE, SITE_URL, PERSON } from "../../blog/consts";
 import {
   getPublishedPosts,
   postPath,
+  postKeywords,
   formatDate,
   timeToRead,
   excerpt
@@ -42,7 +43,7 @@ const jsonLd = {
   mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
   datePublished: post.data.date.toISOString(),
   dateModified: post.data.date.toISOString(),
-  keywords: post.data.tags.join(", "),
+  keywords: postKeywords(post).join(", "),
   image: `${SITE_URL}/og-image.png`,
   author: PERSON,
   publisher: PERSON,
@@ -60,7 +61,7 @@ const jsonLd = {
   description={description}
   ogType="article"
   publishedTime={post.data.date}
-  tags={post.data.tags}
+  tags={postKeywords(post)}
   jsonLd={jsonLd}
 >
   <article class="blog-post" itemscope itemtype="http://schema.org/Article">
