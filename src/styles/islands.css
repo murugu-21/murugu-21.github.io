@@ -13,24 +13,28 @@
 @custom-variant dark (&:where(html.dark-mode *));
 
 .ui-island {
-  --background: #ffffff;
-  --foreground: #2e353f;
-  --card: #ffffff;
-  --card-foreground: #2e353f;
+  /* Blue-hour surfaces: the island floats over the sky gradient, so its panels
+     are the same dusk-white the cards use (global.css glow-card) and its greys
+     are violet-slates. The primary/ink pair is unchanged, so the ratios
+     islands.test.ts guards below still hold. */
+  --background: #faf9ff;
+  --foreground: #2f2a4d;
+  --card: #faf9ff;
+  --card-foreground: #2f2a4d;
   --primary: #06038d;
   --primary-foreground: #ffffff;
   /* Darker than the #4c7dff bright accent so the white label keeps AA on
      hover (that value gave 3.7:1). */
   --primary-hover: #3b6fe0;
-  --secondary: #f5f2f4;
-  --secondary-foreground: #2e353f;
-  --muted: #f5f2f4;
-  --muted-foreground: #6c757d;
-  --accent: #f5f2f4;
-  --accent-foreground: #2e353f;
+  --secondary: #f1eff8;
+  --secondary-foreground: #2f2a4d;
+  --muted: #f1eff8;
+  --muted-foreground: #56506e;
+  --accent: #f1eff8;
+  --accent-foreground: #2f2a4d;
   --destructive: #dc2626;
-  --border: rgba(0, 0, 0, 0.12);
-  --input: rgba(0, 0, 0, 0.12);
+  --border: rgba(34, 27, 61, 0.14);
+  --input: rgba(34, 27, 61, 0.14);
   --ring: #06038d;
   --radius: 0.75rem;
   /* shadcn radius scale, scoped to the islands: these override Tailwind's
@@ -43,7 +47,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --shadow-color: rgba(0, 0, 0, 0.25);
+  --shadow-color: rgba(34, 27, 61, 0.25);
   font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   /* Pin the island's type to what shadcn assumes — preflight's 16px/1.5 base.
      Without the pin each host's body type leaked in and the same component

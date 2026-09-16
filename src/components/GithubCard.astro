@@ -24,7 +24,7 @@ const location = resumeContact.location;
               the old .blog-subtitle rule (recreated from the old app's leaked
               global) is inlined here. my-[1em] restores the UA <p> margin
               preflight removes. */}
-          <p class="subTitle blog-subtitle my-[1em] uppercase max-md:text-center max-md:text-[16px]">
+          <p class="subTitle blog-subtitle my-[1em] uppercase dark:text-white max-md:text-center max-md:text-[16px]">
             {contactInfo.subtitle}
           </p>
         </div>
@@ -84,7 +84,7 @@ const location = resumeContact.location;
             {contactInfo.number && (
               <>
                 <a
-                  class="contact-detail mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] hover:transition-all hover:duration-300 hover:ease-[ease] dark:text-white max-wide:text-[20px]"
+                  class="contact-detail mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] hover:transition-all hover:duration-300 hover:ease-[ease] dark:text-white dark:hover:[text-shadow:2px_1px_2px_var(--color-contact-hover-dark)] max-wide:text-[20px]"
                   href={"tel:" + contactInfo.number}
                   data-ph-event="social_click"
                   data-ph-prop="social"
@@ -97,7 +97,7 @@ const location = resumeContact.location;
               </>
             )}
             <a
-              class="contact-detail-email mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] hover:transition-all hover:duration-300 hover:ease-[ease] dark:text-white max-wide:text-[20px]"
+              class="contact-detail-email mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] hover:transition-all hover:duration-300 hover:ease-[ease] dark:text-white dark:hover:[text-shadow:2px_1px_2px_var(--color-contact-hover-dark)] max-wide:text-[20px]"
               href={"mailto:" + contactInfo.emailAddress}
               data-ph-event="social_click"
               data-ph-prop="social"

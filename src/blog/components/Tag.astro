@@ -32,8 +32,12 @@ const labelClass = [
   // `.tag:hover + label { outline: none; box-shadow: … }`
   "[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline)] [.tag:hover+&]:outline-none",
   "dark:[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline-dark)]",
-  // keyboard focus on the (offscreen) checkbox shows on its label
-  "[.tag:focus-visible+&]:ring-2 [.tag:focus-visible+&]:ring-blue/50",
+  // keyboard focus on the (offscreen) checkbox shows on its label, in the
+  // light theme's warm accent: the old blue/50 ring sat right next to the navy
+  // chip outline it wraps, so focus and border read as the same colour. Dark
+  // keeps the blue.
+  "[.tag:focus-visible+&]:ring-2 [.tag:focus-visible+&]:ring-amber/50",
+  "dark:[.tag:focus-visible+&]:ring-blue/50",
   // `.tag:focus + label { border-radius: .25em }` — inert, kept for parity
   "[.tag:focus+&]:rounded-[0.25em]"
 ].join(" ");
