@@ -1,8 +1,17 @@
 ---
 // Lightweight canvas "starfield" standing in for the reference's
-// react-tsparticles: tiny dots drifting slowly with pulsing opacity, fixed
-// behind all content. Idle-loaded so it can never affect LCP; paused while
-// the tab is hidden; never started under prefers-reduced-motion.
+// react-tsparticles. A field of stars rather than uniform dots: mostly faint
+// distant specks with a scattering of larger, brighter ones that carry a soft
+// halo, each twinkling at its own pace. Depth is sold with parallax — the
+// nearer (bigger) a star is, the faster it drifts.
+//
+// The colours follow the two skies: at night the field is the blue ink washing
+// to white, and at dusk (the light theme's blue hour, global.css) faint stars
+// are the page's violet ink while the close ones carry the palette's amber —
+// the same warm end the sky gradient settles into.
+//
+// Fixed behind all content. Idle-loaded so it can never affect LCP; paused
+// while the tab is hidden; never started under prefers-reduced-motion.
 // Rendered by both apps (landing page and the blog's BaseLayout). `z-[-1]`
 // puts the canvas under the page content but over the body background,
 // which propagates to the root canvas and so always paints beneath it.
@@ -21,43 +30,126 @@
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      const COUNT = 90;
+      // Cap the backing store at 2x: enough to keep the small stars crisp,
+      // not enough to quadruple fill cost on 3x phones.
+      const DPR = Math.min(window.devicePixelRatio || 1, 2);
       let width = 0;
       let height = 0;
 
       const resize = () => {
         width = window.innerWidth;
         height = window.innerHeight;
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = Math.round(width * DPR);
+        canvas.height = Math.round(height * DPR);
+        // Draw in CSS pixels; the transform scales up to the backing store.
+        ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       };
       resize();
       window.addEventListener("resize", resize, { passive: true });
 
-      const particles = Array.from({ length: COUNT }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        r: 0.6 + Math.random() * 1.2,
-        vx: 0.05 + Math.random() * 0.2,
-        vy: (Math.random() - 0.5) * 0.05,
-        phase: Math.random() * Math.PI * 2
-      }));
+      // Roughly a star per 12000 CSS px² so big displays don't look empty,
+      // bounded so phones stay cheap and ultrawides don't turn to noise.
+      const COUNT = Math.min(220, Math.max(90, Math.round((width * height) / 12000)));
+
+      // Theme inks, plus the tone a bright star washes towards: white against
+      // the night, amber against the blue-hour sky.
+      const INK = { dark: [76, 125, 255], light: [47, 42, 77] };
+      const BRIGHT = { dark: [255, 255, 255], light: [180, 83, 9] };
+      const WARM = [255, 214, 170];
+      const COOL = [180, 214, 255];
+
+      const blend = (a: number[], b: number[], t: number) =>
+        a.map((c, i) => Math.round(c + (b[i] - c) * t));
+      const rgb = (c: number[]) => `${c[0]}, ${c[1]}, ${c[2]}`;
+
+      // Sizes follow a power curve: mostly small distant specks and only a
+      // handful of big close stars. Size drives everything else — brightness,
+      // drift speed and whether the star gets a halo — so the field reads as
+      // one depth of space rather than flat confetti.
+      const particles = Array.from({ length: COUNT }, () => {
+        const r = 0.4 + Math.random() ** 3 * 2.3;
+        // How far each theme washes the star towards its bright tone. Night:
+        // any bright star. Dusk: only the close ones — a distant ink star must
+        // stay the page's violet ink, or it reads as a speck of dust on the
+        // warm end of the sky.
+        const far = Math.round(Math.min(1, Math.max(0, (r - 1.2) / 1.4)) * 5) / 5;
+        const near = Math.max(0, Math.min(1, (r - 1.9) / 0.8));
+        const tint = Math.random() < 0.12 ? (Math.random() < 0.5 ? WARM : COOL) : null;
+        // Pre-mix each star's colour per theme once so the frame loop only
+        // varies alpha. The warm/cool tints are a dark-mode touch — at dusk
+        // the amber wash is the warm end already.
+        const colour = (ink: number[], bright: number[], w: number, t: number[] | null) => {
+          let c = blend(ink, bright, w);
+          if (t) c = blend(c, t, 0.35);
+          return rgb(c);
+        };
+        return {
+          x: Math.random() * width,
+          y: Math.random() * height,
+          r,
+          base: Math.min(0.85, 0.18 + r * 0.3),
+          halo: r > 1.7 ? Math.min(1, (r - 1.7) / 1.2) : 0,
+          warm: near,
+          vx: 0.03 + r * 0.09 + Math.random() * 0.04,
+          vy: (Math.random() - 0.5) * 0.05,
+          twinkle: 0.8 + Math.random() * 1.6,
+          phase: Math.random() * Math.PI * 2,
+          colour: {
+            dark: colour(INK.dark, BRIGHT.dark, far, tint),
+            light: colour(INK.light, BRIGHT.light, near, null)
+          }
+        };
+      });
+
+      // Soft halo sprites, built once per distinct star colour and scaled per
+      // draw, so a glowing star costs one drawImage instead of a fresh
+      // gradient every frame.
+      const HALO = 64;
+      const sprites = new Map<string, HTMLCanvasElement>();
+      const haloFor = (colour: string) => {
+        const cached = sprites.get(colour);
+        if (cached) return cached;
+        const sprite = document.createElement("canvas");
+        sprite.width = sprite.height = HALO;
+        const sctx = sprite.getContext("2d");
+        if (!sctx) return null;
+        const g = sctx.createRadialGradient(HALO / 2, HALO / 2, 0, HALO / 2, HALO / 2, HALO / 2);
+        g.addColorStop(0, `rgba(${colour}, 0.65)`);
+        g.addColorStop(0.25, `rgba(${colour}, 0.22)`);
+        g.addColorStop(1, `rgba(${colour}, 0)`);
+        sctx.fillStyle = g;
+        sctx.fillRect(0, 0, HALO, HALO);
+        sprites.set(colour, sprite);
+        return sprite;
+      };
 
       let raf = 0;
       const draw = (t: number) => {
         ctx.clearRect(0, 0, width, height);
         const dark = document.documentElement.classList.contains("dark-mode");
-        const rgb = dark ? "76, 125, 255" : "6, 3, 141";
         for (const p of particles) {
           p.x += p.vx;
           p.y += p.vy;
-          if (p.x > width + 2) p.x = -2;
-          if (p.y > height + 2) p.y = -2;
-          if (p.y < -2) p.y = height + 2;
-          const alpha = 0.15 + 0.35 * Math.abs(Math.sin(p.phase + t / 3000));
+          if (p.x > width + 4) p.x = -4;
+          if (p.y > height + 4) p.y = -4;
+          if (p.y < -4) p.y = height + 4;
+          const colour = p.colour[dark ? "dark" : "light"];
+          const alpha = p.base * (0.62 + 0.38 * Math.sin(p.phase + (t / 1000) * p.twinkle));
+          // Dusk only haloes the amber stars: an ink star's glow would read as
+          // a smudge on a light sky.
+          const halo = dark ? p.halo : p.halo * p.warm;
+          if (halo > 0.02) {
+            const sprite = haloFor(colour);
+            if (sprite) {
+              const s = p.r * 6;
+              ctx.globalAlpha = halo * alpha * (dark ? 1 : 0.55);
+              ctx.drawImage(sprite, p.x - s / 2, p.y - s / 2, s, s);
+              ctx.globalAlpha = 1;
+            }
+          }
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${rgb}, ${alpha})`;
+          ctx.fillStyle = `rgba(${colour}, ${alpha})`;
           ctx.fill();
         }
         raf = requestAnimationFrame(draw);
