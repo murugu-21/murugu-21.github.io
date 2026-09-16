@@ -24,29 +24,51 @@
   --default-font-family: var(--font-mono);
 
   /* palette (was src/styles/_variables.scss) — navy #06038d is the Ashoka
-     Chakra blue, #4c7dff the bright accent that reads on dark surfaces */
+     Chakra blue, #4c7dff the bright accent that reads on dark surfaces.
+
+     The light theme is blue hour (see --background-image-page below), so its
+     "greys" are violet-slates rather than neutral and the two ambers are the
+     hour's warm end: --color-amber-ink carries text (.accent in headings,
+     hover accents) while --color-amber is for glows, borders and the
+     starfield's close stars, where nothing depends on reading it.
+     src/styles/palette.test.ts holds every light ink at its AA bar against the
+     deepest stop of the sky. */
   --color-navy: #06038d;
   --color-blue: #4c7dff;
-  --color-title: #1a202c;
-  --color-text: #2e353f;
-  --color-subtitle: #6c757d;
-  --color-card-subtitle: #666666;
-  --color-blog-title: #262626;
-  --color-blog-container: #586069;
-  --color-surface-alt: #f5f2f4;
+  /* Interactive fills under the blue-hour light theme: the sky's deep end,
+     deepened until dusk-white text clears AA on it. The blog cards' hover wipe
+     and corner tab use it (Blogs.astro); dark mode keeps its blue-light.
+     Interactive feedback that used to be the old light theme's bright blue —
+     the Education underline, focus rings and glows, the read-aloud highlight —
+     is the warm end of the day: --color-amber / --color-amber-ink. Only light
+     mode takes the amber; the night keeps its blue accents (see the `dark:`
+     variant on each of those), and links, titles, fills and the chip hovers
+     stay navy/blue in both themes. */
+  --color-dusk-violet: #443c8f;
+  --color-amber: #b45309;
+  --color-amber-ink: #8a4406;
+  --color-title: #221b3d;
+  --color-text: #2f2a4d;
+  --color-subtitle: #413b58;
+  --color-card-subtitle: #56506e;
+  --color-blog-title: #241f3f;
+  --color-blog-container: #4f4a6b;
+  --color-surface: #faf9ff;
+  --color-surface-alt: #f1eff8;
   --color-dark-bg: #282c35;
   --color-dark-base: rgb(20, 22, 34);
-  --color-nav-scrolled: rgba(255, 255, 255, 0.72);
+  --color-nav-scrolled: rgba(248, 247, 255, 0.72);
   --color-nav-scrolled-dark: rgba(17, 19, 30, 0.72);
   --color-chip-outline: rgba(6, 3, 141, 0.45);
   --color-chip-outline-dark: rgba(76, 125, 255, 0.55);
-  --color-border-soft: rgba(211, 211, 211, 0.397);
-  --color-shadow-darker: rgba(0, 0, 0, 0.3);
-  --color-repo-text: rgb(88, 96, 105);
-  --color-repo-stats: rgb(106, 115, 125);
-  --color-repo-name: rgb(36, 41, 46);
-  --color-repo-lang: #0000ff;
-  --color-contact-hover: #b5b5b5;
+  --color-border-soft: rgba(112, 104, 150, 0.32);
+  --color-border-soft-dark: rgba(255, 255, 255, 0.25);
+  --color-shadow-darker: rgba(34, 27, 61, 0.3);
+  --color-repo-text: rgb(84, 78, 110);
+  --color-repo-stats: rgb(104, 98, 128);
+  --color-repo-name: rgb(34, 27, 61);
+  --color-contact-hover: rgba(180, 83, 9, 0.35);
+  --color-contact-hover-dark: #b5b5b5;
   --color-blog-hover-small: rgba(255, 255, 255, 0.8);
 
   /* blog palette, Phase 2 (was the :root/.dark block in the blog's own
@@ -70,8 +92,11 @@
   --shadow-glow-dark: 0 4px 5px 3px rgba(6, 3, 141, 0.28);
   --shadow-glow-dark-hover: 0 4px 4px 5px rgba(76, 125, 255, 0.42);
 
-  /* page background gradients */
-  --background-image-page: linear-gradient(to left, #ffffff, #f3f4fb);
+  /* page background gradients. Light is blue hour: the deep periwinkle of the
+     sky's dark end settles through lavender into a warm horizon glow, and the
+     starfield's close stars (Particles.astro) carry the same amber down the
+     page. Dark is the night that follows it. */
+  --background-image-page: linear-gradient(to left, #a3aae0, #cfd3ef 52%, #f6e3cb);
   --background-image-page-dark: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
 
   /* Breakpoints for the old media queries. Tailwind's max-* variants are
@@ -139,9 +164,10 @@
 }
 
 @layer components {
-  /* Inline highlight for one word per heading (src/lib/accent.ts emits it) */
+  /* Inline highlight for one word per heading (src/lib/accent.ts emits it).
+     Blue hour lights it amber; the night keeps it blue. */
   .accent {
-    color: var(--color-navy);
+    color: var(--color-amber-ink);
     font-weight: 700;
   }
   html.dark-mode .accent {
@@ -149,6 +175,14 @@
   }
   .subTitle {
     color: var(--color-subtitle);
+  }
+  /* "Muted" is a relationship to the body text, not one colour: the light
+     theme's violet-slate (--color-subtitle) sits too close to the night canvas
+     to read there, so the night gets its own value. The dark-mode component
+     subtitles that want full contrast still override it with `dark:text-white*`
+     (utilities outrank this layer). */
+  html.dark-mode .subTitle {
+    color: rgba(255, 255, 255, 0.65);
   }
   .section-animate {
     animation: var(--animate-rise-fade);
@@ -160,11 +194,11 @@
   }
 }
 
-/* Glowing card (replaces the glow-card-light/-dark mixin pairs). Light: solid
-   surface with a soft blue shadow. Dark: transparent over the page gradient
-   with a blue glow. Hover lifts 2% in both. */
+/* Glowing card (replaces the glow-card-light/-dark mixin pairs). Light: a pane
+   of dusk-white over the blue-hour sky, with a soft blue shadow. Dark:
+   transparent over the page gradient with a blue glow. Hover lifts 2% in both. */
 @utility glow-card {
-  background-color: white;
+  background-color: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(6, 3, 141, 0.18);
   border-radius: 10px;
   box-shadow: var(--shadow-glow);

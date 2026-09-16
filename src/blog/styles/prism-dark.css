@@ -6,9 +6,9 @@
    file is imported unlayered right after it, so plain source order wins.
 
    Light: the theme's warm #f5f2f0 fence sat at ~1.02:1 against the gradient
-   canvas (#f3f4fb → #fff) with no edge, so it read as a colour cast rather
-   than a panel. The fence now uses the same surface as the developers page's
-   code blocks (white, soft navy-tinted border).
+   canvas (then #f3f4fb → #fff, now the blue-hour sky) with no edge, so it read
+   as a colour cast rather than a panel. The fence now uses the same surface as
+   the developers page's code blocks (white, soft violet-tinted border).
 
    Dark: the light theme leaked through — a white slab per code block on the
    dark canvas. Palette below is Prism's "tomorrow night eighties"

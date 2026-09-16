@@ -30,7 +30,7 @@ const headerClass = [
   "header fixed top-0 right-0 left-0 z-[999] mx-auto max-w-full bg-transparent px-5 py-2.5",
   "transition-all duration-300 ease-out motion-reduce:transition-none",
   "[&.scrolled]:backdrop-blur-[15px]",
-  "max-[768px]:bg-white max-[768px]:shadow-[0_4px_10px_0_rgba(3,5,40,0.12)]",
+  "max-[768px]:bg-surface max-[768px]:shadow-[0_4px_10px_0_rgba(3,5,40,0.12)]",
   "dark:max-[768px]:bg-dark-base",
   "min-[768px]:flex min-[768px]:items-center min-[768px]:justify-between",
   "min-[768px]:[&.scrolled]:bg-nav-scrolled",
@@ -100,9 +100,9 @@ const menu = [
 
 <header class:list={headerClass} id="site-header">
   <a href="/" class:list={logo}>
-    <span class="text-subtitle">&lt;</span>
+    <span class="text-subtitle dark:text-white/65">&lt;</span>
     <span class="logo-name px-2.5 font-bold text-navy dark:text-white">Murugappan M</span>
-    <span class="text-subtitle">/&gt;</span>
+    <span class="text-subtitle dark:text-white/65">/&gt;</span>
   </a>
   <!-- Kept over the icon (48px, opacity 0 — not sr-only) for hit area + focus order. -->
   <input

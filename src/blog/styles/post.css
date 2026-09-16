@@ -287,9 +287,17 @@
     color: var(--color-blue-light);
   }
 
+  /* Blue hour warms a link on hover; the night keeps its blue (the unlayered
+     `html.dark-mode` rule above sets the resting colour, so the hover needs
+     its own dark pairing or it would paint the light theme's amber at night). */
   .blog-post a:hover,
   .blog-post a:focus {
+    color: var(--color-amber-ink);
     text-decoration: none;
+  }
+  html.dark-mode .blog-post a:hover,
+  html.dark-mode .blog-post a:focus {
+    color: var(--color-blue-light);
   }
 
   /* --- Post-body images ---------------------------------------------------
@@ -368,10 +376,12 @@
 
   /* --- Read-aloud highlight ----------------------------------------------- */
 
-  /* The block currently being read aloud. */
+  /* The block currently being read aloud. Warm under the light theme — the old
+     blue tint read as a colour cast on the blue-hour sky — and the blog's blue
+     at night. */
   .blog-post .is-speaking {
-    background: color-mix(in srgb, var(--color-blue) 14%, transparent);
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-blue) 14%, transparent);
+    background: color-mix(in srgb, var(--color-amber) 14%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-amber) 14%, transparent);
     border-radius: 4px;
     transition:
       background 0.2s ease,
@@ -385,9 +395,9 @@
   /* The word currently being spoken, inside the highlighted block. Spans are
      inserted lazily by the read-aloud island (src/blog/utils/audio-words.ts). */
   .blog-post .is-speaking .rw.is-word {
-    background: color-mix(in srgb, var(--color-blue) 45%, transparent);
+    background: color-mix(in srgb, var(--color-amber) 45%, transparent);
     border-radius: 3px;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-blue) 45%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-amber) 45%, transparent);
   }
   html.dark-mode .blog-post .is-speaking .rw.is-word {
     background: color-mix(in srgb, var(--color-box-dark) 45%, transparent);
