@@ -86,9 +86,12 @@ const jsonLd = {
             <a
               href={tagPath(tag)}
               aria-label={`All posts tagged ${tag}`}
-              class="border border-chip-outline p-[2px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
+              class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
             >
-              {tag}
+              {/* The label sits in its own span so the selection highlight (and
+                  therefore a copy) hugs the text: painted straight on the chip,
+                  the selection covers its padding and runs to the border. */}
+              <span>{tag}</span>
             </a>
           ))
         }
