@@ -288,7 +288,7 @@ export function ListenControls({ slug }: { slug: string }) {
       );
       // Per block: its timed words (version 2 JSON) and, once wrapped, the
       // rendered spans they map onto. `null` spans = mismatch, paragraph only.
-      const words = timings.blocks.map(b => b.words ?? null);
+      const words = timings.blocks.map(b => b.words);
       const spansByBlock: Array<HTMLElement[][] | null | undefined> = [];
       const wordSpan = (i: number, t: number): HTMLElement[] | null => {
         const w = words[i];

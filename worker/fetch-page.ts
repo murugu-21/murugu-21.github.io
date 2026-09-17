@@ -4,10 +4,10 @@
 // static build), so it physically cannot reach other hosts. Results are
 // tool-result strings either way — errors are phrased for the model to relay.
 
+import { readAsset, type AssetsLike } from "./api/store";
+
 const SITE_HOST = "murugappan.dev";
 const MAX_CHARS = 24_000;
-
-type AssetsLike = { fetch(input: string): Promise<Response> };
 
 function normalize(url: string): string {
   return url.endsWith("/") ? url : `${url}/`;
@@ -48,7 +48,7 @@ export async function fetchSitePage(assets: AssetsLike, rawUrl: string): Promise
   // Blog posts live pre-extracted in the full-text llms file — cleaner than
   // stripping HTML, and it covers every post section by its URL marker.
   if (url.pathname.startsWith("/blog/")) {
-    const full = await assetText(assets, "/blog/llms-full.txt");
+    const full = await readAsset(assets, "/blog/llms-full.txt");
     if (full) {
       const target = normalize(`https://${SITE_HOST}${url.pathname}`);
       const section = full
@@ -58,20 +58,10 @@ export async function fetchSitePage(assets: AssetsLike, rawUrl: string): Promise
     }
   }
 
-  const res = await assets.fetch(`https://assets.local${url.pathname}`).catch(() => null);
-  if (!res || !res.ok) {
+  const body = await readAsset(assets, url.pathname);
+  if (body === null) {
     return "That page was not found on the site.";
   }
-  const body = await res.text();
   const text = url.pathname.endsWith(".txt") ? body : htmlToText(body);
   return text.slice(0, MAX_CHARS) || "That page has no readable text.";
-}
-
-async function assetText(assets: AssetsLike, path: string): Promise<string | null> {
-  try {
-    const res = await assets.fetch(`https://assets.local${path}`);
-    return res.ok ? await res.text() : null;
-  } catch {
-    return null;
-  }
 }

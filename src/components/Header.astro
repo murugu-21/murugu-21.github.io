@@ -14,13 +14,11 @@ const links = [
   { href: "/#contact", label: "Contact Me" }
 ];
 
-// Breakpoints. Tailwind's max-* variants are exclusive (`width < X`) while the
-// SCSS this replaces used the inclusive `max-width: X`, so every max band here
-// is the old bound + 1px. This file's old queries were `max-width: 47.99em`
-// (767.84px) and `min-width: 48em` (768px), so the mobile/desktop split is
-// written as `max-[768px]:` / `min-[768px]:` — a literal pair that meets at 768
-// with no overlap and no gap. `md:` is deliberately NOT used: the theme now
-// puts md at 769px, which would leave 768px in neither band.
+// Breakpoints. This file's old queries were `max-width: 47.99em` (767.84px)
+// and `min-width: 48em` (768px), so the mobile/desktop split is the literal
+// pair `max-[768px]:` / `min-[768px]:` — it meets at 768 with no overlap and
+// no gap. `md:` is deliberately NOT used: the theme puts md at 769px
+// (see global.css), which would leave 768px in neither band.
 
 // Reference navbar: fixed on top, transparent at rest, translucent + blurred
 // once scrolled (`.scrolled` is added by the inline script below). Below 768px

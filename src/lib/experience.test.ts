@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { countCompanies, groupByCompany } from "./experience";
+import {
+  countCompanies,
+  formatDuration,
+  groupByCompany,
+  monthsBetween,
+  parseMonth,
+  periodBounds,
+  totalExperienceMonths
+} from "./experience";
 
 // Minimal shape: the helper is generic over anything carrying company, date
 // and location, so the component can pass the full WorkExperience objects.
@@ -69,14 +77,6 @@ describe("groupByCompany", () => {
     expect(stint.location).toBeNull();
   });
 });
-
-import {
-  formatDuration,
-  monthsBetween,
-  parseMonth,
-  periodBounds,
-  totalExperienceMonths
-} from "./experience";
 
 describe("parseMonth", () => {
   it("reads a 'Month YYYY' label", () => {

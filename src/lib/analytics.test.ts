@@ -25,6 +25,14 @@ afterEach(() => {
   delete (globalThis as { posthog?: unknown }).posthog;
 });
 
+// initAnalytics and bootAnalytics keep module state (the booted SDK, the replay
+// buffer), so each test gets a fresh module instance rather than leaking into
+// the next.
+const fresh = async () => {
+  vi.resetModules();
+  return await import("./analytics");
+};
+
 describe("track", () => {
   it("captures the event", () => {
     const { capture } = withPostHog();
@@ -198,13 +206,6 @@ const fakeSdk = () => {
 };
 
 describe("initAnalytics", () => {
-  // initAnalytics keeps module state (the booted SDK, the replay buffer), so
-  // each test gets a fresh module instance rather than leaking into the next.
-  const fresh = async () => {
-    vi.resetModules();
-    return await import("./analytics");
-  };
-
   it("initialises the SDK with the token and the proxy host", async () => {
     const { sdk, init } = fakeSdk();
     const ph = await fresh();
@@ -320,10 +321,6 @@ describe("initAnalytics", () => {
 });
 
 describe("bootAnalytics", () => {
-  const fresh = async () => {
-    vi.resetModules();
-    return await import("./analytics");
-  };
   const docWith = (metas: string) =>
     parseHTML(`<html><head>${metas}</head><body></body></html>`).document;
 

@@ -19,6 +19,8 @@ const repos = (await fetchPinnedRepos()).filter(r => r.description);
 // company, so returning to a former employer after a gap stays two blocks
 // rather than collapsing years apart into one run.
 const stints = groupByCompany(workExperiences);
+// Display form of a profile URL: no scheme, no trailing slash.
+const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 ---
 
 <!doctype html>
@@ -55,15 +57,15 @@ const stints = groupByCompany(workExperiences);
           <a href={`mailto:${resumeContact.email}`}>{resumeContact.email}</a>
           {" | "}
           <a href={resumeContact.linkedin} target="_blank" rel="noopener noreferrer">
-            {resumeContact.linkedin.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+            {displayUrl(resumeContact.linkedin)}
           </a>
           {" | "}
           <a href={resumeContact.github} target="_blank" rel="noopener noreferrer">
-            {resumeContact.github.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+            {displayUrl(resumeContact.github)}
           </a>
           {" | "}
           <a href={resumeContact.site} target="_blank" rel="noopener noreferrer">
-            {resumeContact.site.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+            {displayUrl(resumeContact.site)}
           </a>
         </p>
       </header>
@@ -136,7 +138,7 @@ const stints = groupByCompany(workExperiences);
                     <>
                       {" — "}
                       <a href={repo.homepageUrl} target="_blank" rel="noopener noreferrer">
-                        {repo.homepageUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                        {displayUrl(repo.homepageUrl)}
                       </a>
                     </>
                   )}

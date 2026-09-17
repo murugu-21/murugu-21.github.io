@@ -11,9 +11,8 @@
 // matched against one of those two shapes first.
 
 import { buildOpenApiDocument } from "../api/openapi";
-import { loadPosts } from "../api/store";
+import { loadPosts, readAsset, type AssetsLike } from "../api/store";
 import { postMarkdownPath } from "../api/posts";
-import type { AssetsLike } from "../api/store";
 
 export const RESOURCE_ORIGIN = "https://murugappan.dev";
 
@@ -123,15 +122,6 @@ export async function listResources(ctx: ResourceContext): Promise<ResourceDescr
 
 const BLOG_URI = new RegExp(`^${RESOURCE_ORIGIN}/blog/([^/]+)/index\\.md$`);
 
-async function readAsset(ctx: ResourceContext, path: string): Promise<string | null> {
-  try {
-    const res = await ctx.assets.fetch(`https://assets.local${path}`);
-    return res.ok ? await res.text() : null;
-  } catch {
-    return null;
-  }
-}
-
 /** null means "no such resource" — never an empty contents array, per the spec. */
 export async function readResource(
   uri: string,
@@ -148,7 +138,7 @@ export async function readResource(
         }
       ];
     }
-    const text = await readAsset(ctx, known.assetPath);
+    const text = await readAsset(ctx.assets, known.assetPath);
     return text === null ? null : [{ uri, mimeType: known.mimeType, text }];
   }
 
@@ -160,6 +150,6 @@ export async function readResource(
   // cannot be reached by guessing a slug.
   const posts = await loadPosts(ctx.assets);
   if (!posts.some(post => post.slug === slug)) return null;
-  const text = await readAsset(ctx, postMarkdownPath(slug)!);
+  const text = await readAsset(ctx.assets, postMarkdownPath(slug)!);
   return text === null ? null : [{ uri, mimeType: "text/markdown", text }];
 }

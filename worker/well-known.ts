@@ -14,7 +14,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { publicOrigin } from "./api";
-import { API_PATHS, VERSIONED_API_BASE } from "./api/routes";
+import { API_PATHS, READ_METHODS, VERSIONED_API_BASE } from "./api/routes";
 import { API_VERSION } from "./api/versioning";
 import { LATEST_PROTOCOL_VERSION, SERVER_NAME } from "./mcp/protocol";
 import { MCP_TOOLS } from "./mcp/tools";
@@ -142,18 +142,16 @@ export function buildMcpManifest(origin: string): Record<string, unknown> {
   };
 }
 
-const READ: string[] = ["GET", "HEAD"];
-
 /** Mounted at /.well-known — see server.ts. */
 export const wellKnown = new Hono<{ Bindings: Env }>();
 
 wellKnown.use("*", cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 }));
 
-wellKnown.on(READ, "/api-catalog", c =>
+wellKnown.on(READ_METHODS, "/api-catalog", c =>
   document(buildApiCatalog(publicOrigin(c.req.url)), LINKSET_MEDIA_TYPE)
 );
 
-wellKnown.on(READ, "/mcp.json", c =>
+wellKnown.on(READ_METHODS, "/mcp.json", c =>
   document(buildMcpManifest(publicOrigin(c.req.url)), "application/json")
 );
 
@@ -165,6 +163,6 @@ mcpManifest.use(
   cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 })
 );
 
-mcpManifest.on(READ, "/", c =>
+mcpManifest.on(READ_METHODS, "/", c =>
   document(buildMcpManifest(publicOrigin(c.req.url)), "application/json")
 );

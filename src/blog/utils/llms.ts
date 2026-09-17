@@ -8,9 +8,9 @@ export async function postLines(): Promise<string[]> {
   const posts = (await getPublishedPosts()).reverse();
   const base = SITE_URL.replace(/\/$/, "");
   return posts.map(post => {
-    const title = post.data.title || post.id;
+    const title = post.data.title;
     const url = `${base}/${post.id}/`;
-    const desc = (post.data.description || excerpt(post.body) || ``).replace(/\s+/g, ` `).trim();
+    const desc = (post.data.description || excerpt(post.body)).replace(/\s+/g, ` `).trim();
     return desc ? `- [${title}](${url}): ${desc}` : `- [${title}](${url})`;
   });
 }

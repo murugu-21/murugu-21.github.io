@@ -52,7 +52,6 @@ export function groupByCompany<T extends RoleLike>(roles: T[]): Stint<T>[] {
   return stints;
 }
 
-// ---- durations -------------------------------------------------------------
 // The site writes ranges as "Month YYYY – Month YYYY" or "Month YYYY – Present".
 // Months are counted inclusively at both ends (LinkedIn's convention), so
 // "April 2025 – December 2025" is 9 months. Open ranges are measured to the

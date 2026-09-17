@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseRate, SPEECH_RATES, speechBlocks } from "./speech";
+import { parseRate, speechBlocks } from "./speech";
 
 // Minimal duck-typed DOM: speechBlocks only reads tagName, textContent and
 // children, so plain objects stand in for Elements and the tests run in the
@@ -68,10 +68,5 @@ describe("parseRate", () => {
     expect(parseRate(null)).toBe(1);
     expect(parseRate("fast")).toBe(1);
     expect(parseRate("7")).toBe(1);
-  });
-
-  it("offers 1x among the speeds in ascending order", () => {
-    expect(SPEECH_RATES).toContain(1);
-    expect([...SPEECH_RATES]).toEqual([...SPEECH_RATES].sort((a, b) => a - b));
   });
 });

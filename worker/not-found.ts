@@ -19,10 +19,9 @@ const SITE_ORIGIN = "https://murugappan.dev";
 
 /**
  * Whether to answer with markdown rather than the HTML page. A client that
- * asks for HTML gets HTML; everything else — no Accept header at all, `*​/*`
- * from curl and the fetch default, an explicit `text/markdown` — gets markdown,
- * because for those the styled page is strictly less useful than a list of
- * links.
+ * asks for HTML gets HTML; everything else — no Accept header at all, curl's
+ * wildcard default, an explicit `text/markdown` — gets markdown, because for
+ * those the styled page is strictly less useful than a list of links.
  */
 export function prefersMarkdown(accept: string | null): boolean {
   if (!accept) return true;

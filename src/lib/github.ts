@@ -7,22 +7,20 @@ export interface GithubProfile {
   location: string | null;
 }
 
-/** Build-time fetch of the GitHub profile. Returns null on any failure so the build never breaks. */
-export async function fetchGithubProfile(): Promise<GithubProfile | null> {
-  // Astro/Vite surfaces .env (and build-time env) via import.meta.env, not
-  // process.env, for SSR — check it first so a token in .env works in dev and
-  // in the production build; fall back to process.env for plain-node contexts.
+// Astro/Vite surfaces .env (and build-time env) via import.meta.env, not
+// process.env, for SSR — check it first so a token in .env works in dev and
+// in the production build; fall back to process.env for plain-node contexts.
+function githubToken(): string | undefined {
   const meta = import.meta.env as unknown as Record<string, string | undefined>;
-  const token =
+  return (
     meta.GITHUB_TOKEN ??
     meta.REACT_APP_GITHUB_TOKEN ??
     process.env.GITHUB_TOKEN ??
-    process.env.REACT_APP_GITHUB_TOKEN;
-  if (!token) {
-    console.warn("[github] no GITHUB_TOKEN — rendering contact fallback");
-    if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
-    return null;
-  }
+    process.env.REACT_APP_GITHUB_TOKEN
+  );
+}
+
+async function fetchProfile(token: string): Promise<GithubProfile | null> {
   try {
     const res = await fetch("https://api.github.com/graphql", {
       method: "POST",
@@ -36,7 +34,6 @@ export async function fetchGithubProfile(): Promise<GithubProfile | null> {
     });
     if (!res.ok) {
       console.warn(`[github] GraphQL HTTP ${res.status} — rendering contact fallback`);
-      if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
       return null;
     }
     const json = await res.json();
@@ -45,19 +42,23 @@ export async function fetchGithubProfile(): Promise<GithubProfile | null> {
         "[github] GraphQL errors — rendering contact fallback",
         json.errors.map((e: { message: string }) => e.message)
       );
-      if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
       return null;
     }
-    const user = json?.data?.user ?? null;
-    if (!user && REQUIRED)
-      throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
-    return user;
+    return json?.data?.user ?? null;
   } catch (e) {
-    if (e instanceof Error && e.message.includes("REQUIRE_GITHUB_PROFILE")) throw e;
     console.warn("[github] fetch failed — rendering contact fallback", e);
-    if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
     return null;
   }
+}
+
+/** Build-time fetch of the GitHub profile. Returns null on any failure so the build never breaks. */
+export async function fetchGithubProfile(): Promise<GithubProfile | null> {
+  const token = githubToken();
+  if (!token) console.warn("[github] no GITHUB_TOKEN — rendering contact fallback");
+  const profile = token ? await fetchProfile(token) : null;
+  if (profile) return profile;
+  if (REQUIRED) throw new Error("[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1");
+  return null;
 }
 
 export interface GithubRepo {
@@ -81,15 +82,7 @@ export function formatRepoSize(kb: number): string {
 
 /** Build-time fetch of pinned repositories. Returns [] on any failure so the build never breaks. */
 export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
-  // Astro/Vite surfaces .env (and build-time env) via import.meta.env, not
-  // process.env, for SSR — check it first so a token in .env works in dev and
-  // in the production build; fall back to process.env for plain-node contexts.
-  const meta = import.meta.env as unknown as Record<string, string | undefined>;
-  const token =
-    meta.GITHUB_TOKEN ??
-    meta.REACT_APP_GITHUB_TOKEN ??
-    process.env.GITHUB_TOKEN ??
-    process.env.REACT_APP_GITHUB_TOKEN;
+  const token = githubToken();
   if (!token) {
     console.warn("[github] no GITHUB_TOKEN — skipping pinned repos");
     return [];
@@ -131,7 +124,6 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
     // reads repo.topics.
     return edges
       .map(e => e.node)
-      .filter(Boolean)
       .map(({ repositoryTopics, ...rest }) => ({
         ...rest,
         topics: (repositoryTopics?.nodes ?? []).map(t => t.topic.name)

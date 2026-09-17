@@ -49,6 +49,11 @@ let pending: Array<(ph: PostHog) => void> | null = null;
 // failure) so PostHog's own exception autocapture owns them from then on.
 let stopEarlyErrors: (() => void) | null = null;
 
+const stopEarlyErrorCapture = () => {
+  stopEarlyErrors?.();
+  stopEarlyErrors = null;
+};
+
 const client = (): PostHog | null => {
   if (sdk) return sdk;
   const p = (globalThis as { posthog?: Partial<PostHog> }).posthog;
@@ -88,7 +93,6 @@ export function tag(key: string, value: string): void {
   send(ph => ph.register({ [key]: value }));
 }
 
-/** Capture a custom event, with optional properties describing it. */
 export function track(event: string, props?: Record<string, string>): void {
   const cleaned = clean(props);
   send(ph => ph.capture(event, cleaned));
@@ -223,8 +227,7 @@ export async function initAnalytics(
       }
     });
     sdk = ph;
-    stopEarlyErrors?.();
-    stopEarlyErrors = null;
+    stopEarlyErrorCapture();
     const win = (globalThis as { window?: EventTarget }).window;
     if (win) {
       onFirstInteraction(() => {
@@ -248,8 +251,7 @@ export async function initAnalytics(
     }
   } catch {
     // SDK chunk blocked or offline: stop buffering and let calls no-op.
-    stopEarlyErrors?.();
-    stopEarlyErrors = null;
+    stopEarlyErrorCapture();
     pending = null;
   }
 }

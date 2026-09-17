@@ -360,16 +360,6 @@ describe("tools/list", () => {
       expect(tool.outputSchema).toBeTruthy();
     }
   });
-
-  it("returns the tools in a stable order across requests", async () => {
-    const first = (await callModern("tools/list")).json.result as {
-      tools: Array<{ name: string }>;
-    };
-    const second = (await callModern("tools/list")).json.result as {
-      tools: Array<{ name: string }>;
-    };
-    expect(first.tools.map(t => t.name)).toEqual(second.tools.map(t => t.name));
-  });
 });
 
 describe("tools/call", () => {

@@ -17,6 +17,7 @@ import {
 } from "../data/portfolio";
 import { resumeContact } from "../data/resume";
 import { groupByCompany } from "../lib/experience";
+import { linkCls, linksUl, proseLi, proseP, proseUl } from "../lib/prose";
 
 // Roles are grouped into company stints so a promotion ladder reads as one
 // employer rather than three. Grouping is by *consecutive* company, so a
@@ -35,21 +36,11 @@ const links = [
   }
 ];
 
-// One <a> look for the whole page (was the `.about-page a` rule plus its
-// html.dark-mode override): navy, undecorated until hover, blue on dark.
-const linkCls = "text-navy no-underline hover:underline dark:text-blue";
-// Browser defaults Tailwind's preflight strips and this long-form page lived
-// on: paragraph/list block margins and disc bullets. The old SCSS set the
-// list indent of every list inside a <section> to 1.25rem (UA default: 40px).
-const proseP = "my-[1em] leading-[1.6]";
-const proseUl = "my-[1em] list-disc pl-5";
-const proseLi = "leading-[1.6]";
-// Repeated shapes on this page: section headings, company/school headings, the
-// grey date-and-place line under each of them, and the inline link rows.
+// Repeated shapes on this page: section headings, company/school headings, and
+// the grey date-and-place line under each of them.
 const h2Cls = "mt-9 mb-3 text-[1.5rem] font-bold";
 const h3Cls = "mt-5 mb-1 text-[1.1rem] font-bold";
 const metaP = "meta my-[1em] leading-[1.6] text-subtitle dark:text-white/65";
-const linksUl = "links my-[1em] flex list-none flex-wrap gap-x-5 gap-y-[0.4rem] p-0";
 ---
 
 <Layout

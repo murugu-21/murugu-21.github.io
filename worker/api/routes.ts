@@ -34,7 +34,8 @@ export const API_PATHS = {
   openapiRoot: "/openapi.json"
 } as const;
 
-export type ApiPath = (typeof API_PATHS)[keyof typeof API_PATHS];
+/** The methods every read endpoint answers. */
+export const READ_METHODS = ["GET", "HEAD"];
 
 export const ALLOWED_METHODS: Record<string, readonly string[]> = {
   [API_PATHS.profile]: ["GET"],
@@ -74,9 +75,12 @@ const POST_PATH = new RegExp(`^${VERSIONED_API_BASE}/posts/[^/]+$`);
  * no version and no endpoint.
  */
 export function toVersionedPath(pathname: string): string {
-  if (pathname === API_BASE) return pathname;
-  if (pathname.startsWith(`${VERSIONED_API_BASE}/`)) return pathname;
-  if (pathname === VERSIONED_API_BASE) return pathname;
+  if (
+    pathname === API_BASE ||
+    pathname === VERSIONED_API_BASE ||
+    pathname.startsWith(`${VERSIONED_API_BASE}/`)
+  )
+    return pathname;
   if (pathname.startsWith(`${API_BASE}/`))
     return `${VERSIONED_API_BASE}${pathname.slice(API_BASE.length)}`;
   return pathname;

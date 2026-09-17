@@ -1,6 +1,6 @@
 ---
 import SocialMedia from "./SocialMedia.astro";
-import { contactInfo, isHireable } from "../data/portfolio";
+import { contactInfo } from "../data/portfolio";
 import { fetchGithubProfile } from "../lib/github";
 import { accentTitle } from "../lib/accent";
 import { resumeContact } from "../data/resume";
@@ -58,14 +58,6 @@ const location = resumeContact.location;
             </span>
           </div>
         )}
-        {/* "Open for opportunities" intentionally hidden — avoids signalling
-              job-seeking to visitors landing here from LinkedIn/X. Uncomment to
-              restore (`isHireable` still drives the Yes/No). */}
-        {/* <div class="opp-div">
-            <span class="desc-prof">
-              Open for opportunities: {isHireable ? "Yes" : "No"}
-            </span>
-          </div> */}
         <SocialMedia />
       </div>
     </div>

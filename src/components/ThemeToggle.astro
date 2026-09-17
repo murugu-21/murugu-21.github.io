@@ -76,7 +76,9 @@
       root.classList.toggle("dark-mode", next === "dark");
       try {
         localStorage.setItem("isDark", JSON.stringify(next === "dark"));
-      } catch {}
+      } catch {
+        // storage blocked (private mode) — the class is still toggled for this visit
+      }
     }
     label();
     // A super property, not an event: the point is segmenting by the theme
@@ -125,7 +127,6 @@
     display: block;
   }
 
-  /* Show the theme you'd switch TO: sun while dark, moon while light. */
   .sun {
     display: none;
   }

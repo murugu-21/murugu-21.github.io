@@ -37,9 +37,7 @@ const labelClass = [
   // chip outline it wraps, so focus and border read as the same colour. Dark
   // keeps the blue.
   "[.tag:focus-visible+&]:ring-2 [.tag:focus-visible+&]:ring-amber/50",
-  "dark:[.tag:focus-visible+&]:ring-blue/50",
-  // `.tag:focus + label { border-radius: .25em }` — inert, kept for parity
-  "[.tag:focus+&]:rounded-[0.25em]"
+  "dark:[.tag:focus-visible+&]:ring-blue/50"
 ].join(" ");
 ---
 
