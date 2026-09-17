@@ -21,3 +21,7 @@ Out of these, if your content doesn’t change for every user and different timi
 https://www.gatsbyjs.com/starters/gatsbyjs/gatsby-starter-blog
 
 The blog consistently achieves 90+ performance in lighthouse for mobile devices.
+
+---
+
+**Update (September 2026):** I've since migrated this blog from Gatsby to Astro — [why I migrated from Gatsby to Astro](https://murugappan.dev/blog/gatsby-to-astro/).
