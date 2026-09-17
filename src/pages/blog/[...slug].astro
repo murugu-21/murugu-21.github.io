@@ -93,25 +93,40 @@ const jsonLd = {
           ))
         }
       </div>
-      <!-- Read-aloud controls: a shadcn island (src/blog/components). Renders
-           nothing until hydrated, and nothing at all without a speech or
-           audio backend. `mb-4` is the old `.listen-island { margin-bottom:
-           var(--spacing-4) }`; both class names stay, `ui-island` being what
-           scopes the shadcn tokens the controls read. -->
-      <div class="listen-island ui-island mb-4">
-        {
-          /* client:interaction (the chat island's directive, src/directives): the
-            controls ship disabled until hydrated anyway, so React + Radix
-            (~100 KB) load on the first pointer/touch/key/wheel input instead of
-            during page load. client:idle was not enough: on a fast device idle
-            fires before first paint, so Lighthouse still charged the bundle to
-            FCP/LCP (post pages 96-97 vs the index's 100). Trade-off: a tap on
-            Play as the very first touch lands on the disabled button and needs
-            a second tap ~300 ms later. */
-        }
-        <ListenControls client:interaction slug={post.id} />
-      </div>
     </header>
+    <!-- Read-aloud controls: a shadcn island (src/blog/components). Renders
+         nothing until hydrated, and nothing at all without a speech or audio
+         backend. `mb-4` is the old `.listen-island { margin-bottom:
+         var(--spacing-4) }`; both class names stay, `ui-island` being what
+         scopes the shadcn tokens the controls read.
+         Sticky, outside the post header: the page's own header scrolls away and
+         the chat launcher owns the bottom-right corner, so the transport pins
+         to the top edge and follows the reader down the page. Sticky only
+         travels inside its parent, which is why the wrapper is a direct child
+         of the article, not a child of <header>. `pt-3` is the visible gap
+         between viewport top and card while pinned — always present so the
+         layout never shifts when the state flips. The script at the bottom of
+         this file toggles `.pinned` once the 1px sentinel above has scrolled
+         out, which paints the frosted band behind that gap (same surface as the
+         portfolio nav's `.scrolled`). Headings and the read-aloud highlight
+         carry scroll-margin-top in post.css so nothing lands under the 12+58px
+         the pinned bar occupies. -->
+    <div class="listen-sentinel h-px -mb-px" aria-hidden="true"></div>
+    <div
+      class="listen-island ui-island sticky top-0 z-30 mb-4 pt-3 [&.pinned]:bg-nav-scrolled [&.pinned]:backdrop-blur-[15px] dark:[&.pinned]:bg-nav-scrolled-dark"
+    >
+      {
+        /* client:interaction (the chat island's directive, src/directives): the
+          controls ship disabled until hydrated anyway, so React + Radix
+          (~100 KB) load on the first pointer/touch/key/wheel input instead of
+          during page load. client:idle was not enough: on a fast device idle
+          fires before first paint, so Lighthouse still charged the bundle to
+          FCP/LCP (post pages 96-97 vs the index's 100). Trade-off: a tap on
+          Play as the very first touch lands on the disabled button and needs
+          a second tap ~300 ms later. */
+      }
+      <ListenControls client:interaction slug={post.id} />
+    </div>
     <section itemprop="articleBody">
       <Content />
     </section>
@@ -162,6 +177,21 @@ const jsonLd = {
     </ul>
   </nav>
 </BaseLayout>
+
+<script>
+  // Pin state for the sticky read-aloud transport. A 1px sentinel sits just
+  // above the bar; once it leaves the top of the viewport the bar is pinned,
+  // and `.pinned` paints the frosted band behind the gap (see the wrapper in
+  // this file and post.css). Styling only: without it the bar still sticks,
+  // just with a transparent gap.
+  const sentinel = document.querySelector<HTMLElement>(".listen-sentinel");
+  const island = document.querySelector<HTMLElement>(".listen-island");
+  if (sentinel && island) {
+    new IntersectionObserver(([entry]) => {
+      island.classList.toggle("pinned", !entry.isIntersecting && entry.boundingClientRect.top < 0);
+    }).observe(sentinel);
+  }
+</script>
 
 <script>
   // Notion-style image zoom, loaded lazily: zero zoom JS ships unless the

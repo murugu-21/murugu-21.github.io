@@ -363,6 +363,18 @@
 
   /* --- Read-aloud highlight ----------------------------------------------- */
 
+  /* The read-aloud transport is sticky (src/pages/blog/[...slug].astro): while
+     the reader scrolls, a 12px gap plus the 58px bar sit over the top of the
+     viewport. scrollIntoView() honours scroll-margin-top: without this, a block
+     taller than the screen (scrolled with `block: "start"`) and every heading
+     anchor would land underneath it. 5rem clears 12 + 58 with room to spare. */
+  .blog-post .is-speaking,
+  .blog-post h2,
+  .blog-post h3,
+  .blog-post h4 {
+    scroll-margin-top: 5rem;
+  }
+
   /* The block currently being read aloud. Warm under the light theme — the old
      blue tint read as a colour cast on the blue-hour sky — and the blog's blue
      at night. */
