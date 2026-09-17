@@ -363,11 +363,12 @@
 
   /* --- Read-aloud highlight ----------------------------------------------- */
 
-  /* The read-aloud transport is sticky (src/pages/blog/[...slug].astro): while
-     the reader scrolls, a 12px gap plus the 58px bar sit over the top of the
-     viewport. scrollIntoView() honours scroll-margin-top: without this, a block
-     taller than the screen (scrolled with `block: "start"`) and every heading
-     anchor would land underneath it. 5rem clears 12 + 58 with room to spare. */
+  /* The read-aloud transport is sticky while a session is live
+     (src/pages/blog/[...slug].astro): while the reader scrolls, a 12px gap plus
+     the 58px bar sit over the top of the viewport. scrollIntoView() honours
+     scroll-margin-top: without this, a block taller than the screen (scrolled
+     with `block: "start"`) and every heading anchor would land underneath it.
+     5rem clears 12 + 58 with room to spare. */
   .blog-post .is-speaking,
   .blog-post h2,
   .blog-post h3,

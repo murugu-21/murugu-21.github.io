@@ -97,26 +97,30 @@ const jsonLd = {
         }
       </div>
     </header>
-    <!-- Read-aloud controls: a shadcn island (src/blog/components). Renders
-         nothing until hydrated, and nothing at all without a speech or audio
-         backend. `mb-4` is the old `.listen-island { margin-bottom:
-         var(--spacing-4) }`; both class names stay, `ui-island` being what
-         scopes the shadcn tokens the controls read.
-         Sticky, outside the post header: the page's own header scrolls away and
-         the chat launcher owns the bottom-right corner, so the transport pins
-         to the top edge and follows the reader down the page. Sticky only
-         travels inside its parent, which is why the wrapper is a direct child
-         of the article, not a child of <header>. `pt-3` is the visible gap
-         between viewport top and card while pinned — always present so the
-         layout never shifts when the state flips. The script at the bottom of
-         this file toggles `.pinned` once the 1px sentinel above has scrolled
-         out, which paints the frosted band behind that gap (same surface as the
-         portfolio nav's `.scrolled`). Headings and the read-aloud highlight
+    <!-- Read-aloud controls: a shadcn island (src/blog/components). Ships a
+         full-size disabled control in the server HTML — hydration only enables
+         it, so nothing shifts — and stays disabled where the page has neither
+         speech synthesis nor audio. `mb-4` is the old `.listen-island {
+         margin-bottom: var(--spacing-4) }`; both class names stay, `ui-island`
+         being what scopes the shadcn tokens the controls read.
+         Sticky only while a session is live: the island toggles `.listening`
+         on this wrapper from the first press of Play through every pause, and
+         drops it when the reading finishes, so an unused (or finished) player
+         stays in the page flow instead of following the reader. A docked
+         transport pins to the top edge — the page's own header scrolls away and
+         the chat launcher owns the bottom-right corner. Sticky only travels
+         inside its parent, which is why the wrapper is a direct child of the
+         article, not a child of <header>. `pt-3` is the visible gap between
+         viewport top and card while pinned — always present so the layout never
+         shifts when the state flips. The script at the bottom of this file
+         toggles `.pinned` once the 1px sentinel above has scrolled out; for a
+         docked bar that paints the frosted band behind the gap (same surface as
+         the portfolio nav's `.scrolled`). Headings and the read-aloud highlight
          carry scroll-margin-top in post.css so nothing lands under the 12+58px
          the pinned bar occupies. -->
     <div class="listen-sentinel h-px -mb-px" aria-hidden="true"></div>
     <div
-      class="listen-island ui-island sticky top-0 z-30 mb-4 pt-3 [&.pinned]:bg-nav-scrolled [&.pinned]:backdrop-blur-[15px] dark:[&.pinned]:bg-nav-scrolled-dark"
+      class="listen-island ui-island mb-4 pt-3 [&.listening]:sticky [&.listening]:top-0 [&.listening]:z-30 [&.listening.pinned]:bg-nav-scrolled [&.listening.pinned]:backdrop-blur-[15px] dark:[&.listening.pinned]:bg-nav-scrolled-dark"
     >
       {
         /* client:interaction (the chat island's directive, src/directives): the
@@ -182,11 +186,11 @@ const jsonLd = {
 </BaseLayout>
 
 <script>
-  // Pin state for the sticky read-aloud transport. A 1px sentinel sits just
-  // above the bar; once it leaves the top of the viewport the bar is pinned,
-  // and `.pinned` paints the frosted band behind the gap (see the wrapper in
-  // this file and post.css). Styling only: without it the bar still sticks,
-  // just with a transparent gap.
+  // Pin state for the read-aloud transport. A 1px sentinel sits just above the
+  // bar; once it leaves the top of the viewport `.pinned` is set, and for a
+  // docked bar (`.listening`, toggled by the island) that paints the frosted
+  // band behind the gap — see the wrapper in this file and post.css. Styling
+  // only: without it a docked bar still sticks, just with a transparent gap.
   const sentinel = document.querySelector<HTMLElement>(".listen-sentinel");
   const island = document.querySelector<HTMLElement>(".listen-island");
   if (sentinel && island) {
