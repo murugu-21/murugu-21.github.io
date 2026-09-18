@@ -12,12 +12,7 @@ export interface GithubProfile {
 // in the production build; fall back to process.env for plain-node contexts.
 function githubToken(): string | undefined {
   const meta = import.meta.env as unknown as Record<string, string | undefined>;
-  return (
-    meta.GITHUB_TOKEN ??
-    meta.REACT_APP_GITHUB_TOKEN ??
-    process.env.GITHUB_TOKEN ??
-    process.env.REACT_APP_GITHUB_TOKEN
-  );
+  return meta.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN ?? process.env.REACT_APP_GITHUB_TOKEN;
 }
 
 async function fetchProfile(token: string): Promise<GithubProfile | null> {
