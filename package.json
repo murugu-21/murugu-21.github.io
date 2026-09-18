@@ -18,7 +18,7 @@
     "db:migrate": "wrangler d1 migrations apply jarvis-chats --remote",
     "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",
     "deploy": "bun run db:migrate && wrangler deploy",
-    "test": "vitest run",
+    "test": "bun --bun vitest run",
     "test:capture": "bun scripts/live-test-capture.ts",
     "check:astro": "bun --preload ./scripts/ts-alias.cjs node_modules/.bin/astro check",
     "check:src": "node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",

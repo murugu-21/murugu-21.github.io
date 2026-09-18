@@ -4,10 +4,10 @@ import { cloudflareTest } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
 
 // Tests run on the Workers pool, which has no filesystem, and Vite's CSS
-// pipeline swallows `?raw` for stylesheets. This config runs in Node, so read
-// the stylesheets here and inline them — islands.css and global.css stay the
-// one source of truth for the palette, and src/styles/*.test.ts assert their
-// contrast.
+// pipeline swallows `?raw` for stylesheets. This config runs on the host
+// (Bun), so read the stylesheets here and inline them — islands.css and
+// global.css stay the one source of truth for the palette, and
+// src/styles/*.test.ts assert their contrast.
 const islandsCss = readFileSync("./src/styles/islands.css", "utf8");
 const globalCss = readFileSync("./src/styles/global.css", "utf8");
 

@@ -17,17 +17,17 @@ bun run preview   # preview the production build
 
 [Bun](https://bun.sh) (version pinned in `package.json` → `packageManager`)
 installs dependencies, runs the package scripts and executes the TypeScript in
-`scripts/` directly. Astro runs on Bun too: the `dev`, `build` and `preview`
-scripts call it with `bun --bun`, and `check:astro` uses Bun's `--preload` for
-the TypeScript-7 alias in `scripts/ts-alias.cjs` (Bun 1.3.x breaks the
-production build and `astro check`, so 1.4.2 is the pinned floor). Node
-(version in `.nvmrc`) stays the runtime for Wrangler, `tsc` and Vitest: the
-Workers Vitest pool only drives workerd from a Node host, so run the suite with
-`bun run test`, not `bun test` (Bun's own runner). Bun blocks the install
-scripts of packages outside its default trust list; the two it blocks here are
-safe to leave blocked: `@posthog/cli` downloads its Rust binary the first time
-a source map upload actually runs (production builds), and `core-js` prints a
-funding banner.
+`scripts/` directly. Astro and Vitest both run on Bun: the `dev`, `build` and
+`preview` scripts call Astro with `bun --bun`, `test` is `bun --bun vitest run`
+(the tests still execute inside workerd via `@cloudflare/vitest-plugin` — only
+the host moved), and `check:astro` uses Bun's `--preload` for the TypeScript-7
+alias in `scripts/ts-alias.cjs` (Bun 1.3.x breaks the production build and
+`astro check`, so 1.4.2 is the pinned floor). Run the suite with `bun run test`,
+not `bun test` (Bun's own runner). Node (version in `.nvmrc`) stays the runtime
+for Wrangler and `tsc`. Bun blocks the install scripts of packages outside its
+default trust list; the two it blocks here are safe to leave blocked:
+`@posthog/cli` downloads its Rust binary the first time a source map upload
+actually runs (production builds), and `core-js` prints a funding banner.
 
 The GitHub profile card is fetched at **build time** from the GitHub GraphQL API. Set a `GITHUB_TOKEN` environment variable locally (any token with public read scope) to render it; without one the site builds fine and shows a contact fallback instead.
 
