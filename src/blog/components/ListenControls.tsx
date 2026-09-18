@@ -189,6 +189,17 @@ export function ListenControls({ slug }: { slug: string }) {
     return () => window.removeEventListener("pagehide", onPageHide);
   }, []);
 
+  // The transport bar only sticks while a listen session is live: it docks on
+  // the first press of Play and stays docked through pauses, then returns to
+  // the page flow when the reading finishes (or a start fails). The wrapper
+  // around this island reads the class with its `[&.listening]` utilities
+  // (src/pages/blog/[...slug].astro); `loading` counts so the bar doesn't slip
+  // back to the top while the player loads.
+  useEffect(() => {
+    const island = root?.closest(".listen-island");
+    island?.classList.toggle("listening", state !== "idle");
+  }, [root, state]);
+
   // ---- browser speech synthesis (fallback) ----------------------------------
   // One block per utterance: Chrome silently stops long utterances after
   // ~15 s, and per-block utterances give the highlight and a resume point.
@@ -340,17 +351,28 @@ export function ListenControls({ slug }: { slug: string }) {
         track("listen_complete");
         setState("idle");
       });
+      let fellBack = false;
       audio.addEventListener("error", () => {
         cancelAnimationFrame(raf);
         console.warn("Read-aloud audio failed, falling back to speech synthesis");
         track("listen_audio_fallback");
+        fellBack = true;
         const fallback = window.speechSynthesis ? speechPlayer() : null;
         playerRef.current = fallback;
         if (fallback) fallback.play();
         else setState("idle");
       });
       return {
-        play: () => void audio.play().catch(() => setState("idle")),
+        // The media error event fires before play() rejects; by then the
+        // fallback above owns the state, so the stale rejection must not force
+        // it back to idle — that would undock the bar and drop the highlight
+        // in the middle of an utterance. (Without a fallback the error handler
+        // has already set idle; a rejection with no error event — blocked
+        // playback — still undocks.)
+        play: () =>
+          void audio.play().catch(() => {
+            if (!fellBack) setState("idle");
+          }),
         pause: () => audio.pause(),
         setRate: r => {
           audio.playbackRate = r;

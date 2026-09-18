@@ -60,9 +60,14 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
         {
           post.tags.map(tag => (
             // --fontSize-0 gone with style.css; the outline is the portfolio's
-            // chip token, shared with the filter chips (Tag.astro).
-            <div class="border border-chip-outline p-[2px] text-[0.833rem] dark:border-chip-outline-dark">
-              {tag}
+            // chip token, shared with the filter chips (Tag.astro). `px-[.5em]`
+            // matches the filter chips' text inset — `p-[2px]` left the glyph
+            // edges (monospace side bearings are tight) sitting on the border.
+            // `py-[3px]` keeps the descenders clear of the bottom border. The
+            // label is wrapped in a span so selecting it to copy hugs the text
+            // instead of painting the chip's padding out to the border.
+            <div class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] dark:border-chip-outline-dark">
+              <span>{tag}</span>
             </div>
           ))
         }
