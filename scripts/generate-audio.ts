@@ -15,7 +15,7 @@
 // 8-bit via mlx-audio, plain clone of .voice/reference.wav) → per-chunk
 // atempo=1.08 → sample-accurate assembly with gaps → loudnorm → 64 kbps MP3 +
 // timing JSON → wrangler r2 object put under blog/breeze/.
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import type { Buffer } from "node:buffer";
 import {
   copyFileSync,
@@ -23,7 +23,6 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
-  readdirSync,
   rmSync,
   writeFileSync
 } from "node:fs";
@@ -33,6 +32,9 @@ import { parseHTML } from "linkedom";
 
 import { speechBlocks } from "../src/blog/utils/speech.ts";
 import { normalizeSpeechText, packSentences, spokenHash } from "../src/blog/utils/audio-prep.ts";
+import { fail, log, publishedSlugs, run, runEach } from "./tts/cli.ts";
+import { startJsonLines } from "./tts/json-lines.ts";
+import { r2Store } from "./tts/r2.ts";
 import { assemble, readWav, writeWav } from "./tts/wav.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
@@ -47,7 +49,6 @@ const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   : join(ROOT, ".voice");
 const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "synth.py");
-const BUCKET = "murugappan-dev-audio";
 // Object keys are namespaced per voice generation so a new voice never
 // overwrites the previous one; worker/audio.ts and align-audio.ts read the
 // same prefix. The Fish clone of 2026-09-05 lives at blog/<slug>.*.
@@ -67,60 +68,7 @@ const flags = new Set(args.filter(a => a.startsWith("--")));
 const slugs = args.filter(a => !a.startsWith("--"));
 const local = flags.has("--local");
 
-const log = (...m: unknown[]) => console.error(...m);
-const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
-const fail = (msg: string): never => {
-  log(`error: ${msg}`);
-  process.exit(1);
-};
-
-function run(cmd: string, cmdArgs: string[]): string {
-  const r = spawnSync(cmd, cmdArgs, { encoding: "utf8" });
-  if (r.status !== 0) {
-    throw new Error(`${cmd} ${cmdArgs.join(" ")}\n${r.stderr || r.stdout}`);
-  }
-  return r.stdout;
-}
-
-const wranglerArgs = (extra: string[]) => [
-  "wrangler",
-  "r2",
-  "object",
-  ...extra,
-  local ? "--local" : "--remote"
-];
-
-// False only when the object is genuinely absent. Any other wrangler failure
-// (expired login, network) throws, so a broken session can never be mistaken
-// for "nothing there yet".
-function r2Get(key: string, file: string): boolean {
-  const r = spawnSync("bunx", wranglerArgs(["get", `${BUCKET}/${key}`, "--file", file]), {
-    encoding: "utf8"
-  });
-  if (r.status === 0 && existsSync(file)) return true;
-  const err = `${r.stderr}\n${r.stdout}`;
-  if (/not found|does not exist|NoSuchKey|10007/i.test(err)) return false;
-  throw new Error(`wrangler r2 object get ${key} failed:\n${err.trim()}`);
-}
-
-// Fail fast when wrangler cannot talk to Cloudflare, instead of finding out
-// after minutes (or hours) of local work.
-function checkWranglerLogin() {
-  if (local) return;
-  const r = spawnSync("bunx", ["wrangler", "whoami"], { encoding: "utf8" });
-  if (r.status !== 0 || /not logged in|expired/i.test(`${r.stderr}${r.stdout}`)) {
-    fail(
-      "wrangler is not logged in (or the OAuth token expired) — run `bunx wrangler login` in an interactive terminal, then retry"
-    );
-  }
-}
-
-function r2Put(key: string, file: string, contentType: string) {
-  run(
-    "bunx",
-    wranglerArgs(["put", `${BUCKET}/${key}`, "--file", file, "--content-type", contentType])
-  );
-}
+const r2 = r2Store(local);
 
 // ---- preconditions ---------------------------------------------------------
 
@@ -147,8 +95,8 @@ function checkPreconditions(): { audio: string; text: string } {
     log("no .voice/ reference locally, fetching from R2 …");
     mkdirSync(VOICE_DIR, { recursive: true });
     if (
-      !r2Get(`${VOICE_KEY_PREFIX}/reference.wav`, wav) ||
-      !r2Get(`${VOICE_KEY_PREFIX}/reference.txt`, txt)
+      !r2.get(`${VOICE_KEY_PREFIX}/reference.wav`, wav) ||
+      !r2.get(`${VOICE_KEY_PREFIX}/reference.txt`, txt)
     ) {
       fail("voice reference missing locally and in R2 — restore .voice/reference.{wav,txt}");
     }
@@ -157,21 +105,6 @@ function checkPreconditions(): { audio: string; text: string } {
 }
 
 // ---- extraction ------------------------------------------------------------
-
-// Every dist/blog/<dir>/index.html that is a post. The blog's own 404 page
-// lives there too and has no article body.
-function publishedSlugs(): string[] {
-  return readdirSync(DIST, { withFileTypes: true })
-    .filter(d => {
-      const page = join(DIST, d.name, "index.html");
-      return (
-        d.isDirectory() &&
-        existsSync(page) &&
-        readFileSync(page, "utf8").includes('itemprop="articleBody"')
-      );
-    })
-    .map(d => d.name);
-}
 
 function extractBlocks(slug: string): string[] {
   const html = readFileSync(join(DIST, slug, "index.html"), "utf8");
@@ -200,46 +133,18 @@ interface Chunk {
 }
 
 function startWorker() {
-  const proc = spawn(PYTHON, [WORKER], { stdio: ["pipe", "pipe", "inherit"] });
-  // Lines are queued, not dropped: two lines often arrive in one data event
-  // (the last chunk report and the "done" line), and the consumer only has a
-  // waiter registered for the first of them.
-  let buffer = "";
-  const pending: unknown[] = [];
-  const waiters: ((msg: unknown) => void)[] = [];
-  proc.stdout.on("data", d => {
-    buffer += d;
-    let nl;
-    while ((nl = buffer.indexOf("\n")) >= 0) {
-      const line = buffer.slice(0, nl).trim();
-      buffer = buffer.slice(nl + 1);
-      if (!line) continue;
-      const msg: unknown = JSON.parse(line);
-      const waiter = waiters.shift();
-      if (waiter) waiter(msg);
-      else pending.push(msg);
-    }
-  });
-  const next = () =>
-    pending.length
-      ? Promise.resolve(pending.shift())
-      : new Promise<unknown>(res => waiters.push(res));
-  const exited = new Promise<void>(res => proc.on("exit", () => res()));
+  const { next, send, close } = startJsonLines(PYTHON, [WORKER]);
   return {
     ready: next() as Promise<ReadyMsg>,
     async runJob(jobPath: string, onChunk: (msg: ChunkMsg) => void) {
-      proc.stdin.write(`${jobPath}\n`);
+      send(jobPath);
       for (;;) {
         const msg = (await next()) as JobMsg;
         if (msg.done) return;
         onChunk(msg);
       }
     },
-    async close() {
-      proc.stdin.write("quit\n");
-      proc.stdin.end();
-      await exited;
-    }
+    close
   };
 }
 
@@ -249,7 +154,7 @@ type Worker = ReturnType<typeof startWorker>;
 
 function existingHash(slug: string, tmp: string): string | null {
   const file = join(tmp, "existing.json");
-  if (!r2Get(`${KEY_PREFIX}/${slug}.json`, file)) return null;
+  if (!r2.get(`${KEY_PREFIX}/${slug}.json`, file)) return null;
   try {
     const { hash } = JSON.parse(readFileSync(file, "utf8")) as { hash?: string };
     return hash ?? null;
@@ -371,8 +276,8 @@ async function renderPost(
         }))
       })
     );
-    r2Put(`${KEY_PREFIX}/${slug}.mp3`, mp3, "audio/mpeg");
-    r2Put(`${KEY_PREFIX}/${slug}.json`, json, "application/json");
+    r2.put(`${KEY_PREFIX}/${slug}.mp3`, mp3, "audio/mpeg");
+    r2.put(`${KEY_PREFIX}/${slug}.json`, json, "application/json");
     log(`${slug}: uploaded ${(duration / 60).toFixed(1)} min`);
     return "rendered";
   } finally {
@@ -390,14 +295,14 @@ async function main() {
     if (!existsSync(wav) || !existsSync(txt)) {
       fail("put reference.wav and reference.txt in .voice/ first");
     }
-    r2Put(`${VOICE_KEY_PREFIX}/reference.wav`, wav, "audio/wav");
-    r2Put(`${VOICE_KEY_PREFIX}/reference.txt`, txt, "text/plain");
+    r2.put(`${VOICE_KEY_PREFIX}/reference.wav`, wav, "audio/wav");
+    r2.put(`${VOICE_KEY_PREFIX}/reference.txt`, txt, "text/plain");
     log("voice reference uploaded");
     return;
   }
-  checkWranglerLogin();
+  r2.checkLogin();
   const reference = checkPreconditions();
-  const targets = slugs.length ? slugs : publishedSlugs();
+  const targets = slugs.length ? slugs : publishedSlugs(DIST);
   for (const s of targets) {
     if (!existsSync(join(DIST, s, "index.html"))) {
       fail(`no built post for slug "${s}"`);
@@ -409,22 +314,12 @@ async function main() {
     const ready = await worker.ready;
     log(`model loaded in ${ready.loadSeconds}s`);
   }
-  const failures: string[] = [];
-  const t0 = Date.now();
+  let failures: string[];
   try {
-    for (const slug of targets) {
-      try {
-        await renderPost(slug, worker, reference);
-      } catch (err) {
-        failures.push(slug);
-        log(`${slug}: FAILED — ${message(err)}`);
-      }
-    }
+    failures = await runEach(targets, slug => renderPost(slug, worker, reference));
   } finally {
     if (worker) await worker.close();
   }
-  const minutes = ((Date.now() - t0) / 60000).toFixed(1);
-  log(`done in ${minutes} min${failures.length ? `, failed: ${failures.join(", ")}` : ""}`);
   if (failures.length) process.exit(1);
 }
 

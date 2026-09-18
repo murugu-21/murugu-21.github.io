@@ -149,8 +149,8 @@ export function ChatWidget() {
         setBubbles(b => [...b, { kind: "user", text: msg.text }]);
         break;
       case "delta": {
-        // Left-trim the first chunk — Qwen's no-think mode leads with blank
-        // lines; keep showing the typing dots until real text arrives.
+        // Left-trim the first chunk — model replies can lead with blank lines;
+        // keep showing the typing dots until real text arrives.
         const text = streamRef.current === null ? msg.text.replace(/^\s+/, "") : msg.text;
         if (streamRef.current === null && text === "") break;
         setTyping(false);

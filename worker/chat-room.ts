@@ -169,8 +169,8 @@ export class ChatRoom extends Server<Env> {
       reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
     }
 
-    // Qwen3's no-think mode can prefix replies with stray blank lines, and
-    // fetch rounds can leave gaps where content spans exchanges.
+    // Model replies can be prefixed with stray blank lines, and fetch rounds
+    // can leave gaps where content spans exchanges.
     reply = reply.replace(/\n{3,}/g, "\n\n").trim();
     if (reply) this.persist("assistant", reply);
     this.broadcastMsg({ type: "done" });

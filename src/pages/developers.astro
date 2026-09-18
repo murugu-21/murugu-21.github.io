@@ -6,6 +6,8 @@
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import ScrollTop from "../components/ScrollTop.astro";
+import { SITE_ORIGIN } from "../lib/site";
+import { linkCls, linksUl, proseLi, proseP, proseUl } from "../lib/prose";
 import { buildOpenApiDocument } from "../../worker/api/openapi";
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "../../worker/api/contact";
 import { LATEST_PROTOCOL_VERSION, LEGACY_PROTOCOL_VERSIONS } from "../../worker/mcp/protocol";
@@ -26,8 +28,7 @@ import {
 import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "../../worker/api/ratelimit";
 import { MCP_SERVER_NAME, MCP_SERVER_SCHEMA } from "../../worker/well-known";
 
-const SITE = "https://murugappan.dev";
-const spec = buildOpenApiDocument(SITE);
+const spec = buildOpenApiDocument(SITE_ORIGIN);
 
 type Operation = {
   operationId: string;
@@ -46,7 +47,8 @@ const operations = Object.entries(spec.paths).flatMap(([path, item]) =>
 
 // A function-calling tool definition derived straight from the spec, so the
 // example on the page is exactly what the spec yields.
-const exampleOp = operations.find(o => o.operationId === "getBlogPost")!;
+const exampleOp = operations.find(o => o.operationId === "getBlogPost");
+if (!exampleOp) throw new Error("getBlogPost is missing from the OpenAPI document");
 const toolExample = {
   name: exampleOp.operationId,
   description: exampleOp.description,
@@ -63,9 +65,9 @@ const toolExample = {
   }
 };
 
-const curlProfile = `curl -s ${SITE}${API_PATHS.profile}`;
-const curlPost = `curl -s ${SITE}${API_PATHS.posts}?q=rate+limiting`;
-const curlDryRun = `curl -s ${SITE}${API_PATHS.contact} \\
+const curlProfile = `curl -s ${SITE_ORIGIN}${API_PATHS.profile}`;
+const curlPost = `curl -s ${SITE_ORIGIN}${API_PATHS.posts}?q=rate+limiting`;
+const curlDryRun = `curl -s ${SITE_ORIGIN}${API_PATHS.contact} \\
   -H 'Content-Type: application/json' \\
   -d '{
     "name": "Ada Lovelace",
@@ -82,7 +84,7 @@ const errorExample = `{
     "documentation_url": "https://murugappan.dev/developers/"
   }
 }`;
-const mcpExample = `curl -s ${SITE}/mcp \\
+const mcpExample = `curl -s ${SITE_ORIGIN}/mcp \\
   -H 'Content-Type: application/json' \\
   -H 'Accept: application/json, text/event-stream' \\
   -H 'MCP-Protocol-Version: ${LATEST_PROTOCOL_VERSION}' \\
@@ -158,7 +160,7 @@ const apiJsonLd = {
   "@graph": [
     {
       "@type": "WebAPI",
-      "@id": `${SITE}/developers/#api`,
+      "@id": `${SITE_ORIGIN}/developers/#api`,
       name: "murugappan.dev API",
       alternateName: [
         "murugappan.dev REST API",
@@ -166,9 +168,9 @@ const apiJsonLd = {
         "murugappan.dev MCP server"
       ],
       description: spec.info.summary,
-      documentation: `${SITE}/developers/`,
+      documentation: `${SITE_ORIGIN}/developers/`,
       termsOfService: "https://creativecommons.org/licenses/by/4.0/",
-      provider: { "@id": `${SITE}/#person` },
+      provider: { "@id": `${SITE_ORIGIN}/#person` },
       potentialAction: spec.tags.map(tag => ({
         "@type": "ConsumeAction",
         name: tag.name,
@@ -177,27 +179,17 @@ const apiJsonLd = {
     },
     {
       "@type": "TechArticle",
-      "@id": `${SITE}/developers/#docs`,
+      "@id": `${SITE_ORIGIN}/developers/#docs`,
       headline: "murugappan.dev API — developer portal and agent documentation",
       description:
         "API reference, authentication, versioning and deprecation policy, rate-limit headers, sandbox, OpenAPI 3.1.0 specification and MCP server for murugappan.dev.",
-      url: `${SITE}/developers/`,
-      about: { "@id": `${SITE}/developers/#api` },
-      author: { "@id": `${SITE}/#person` },
+      url: `${SITE_ORIGIN}/developers/`,
+      about: { "@id": `${SITE_ORIGIN}/developers/#api` },
+      author: { "@id": `${SITE_ORIGIN}/#person` },
       inLanguage: "en"
     }
   ]
 };
-// One <a> look for the whole page (was the `.dev-page a` rule plus its
-// html.dark-mode override): navy, undecorated until hover, blue on dark.
-const linkCls = "text-navy no-underline hover:underline dark:text-blue";
-// Browser defaults Tailwind's preflight strips and this long-form reference
-// page lived on: block margins on p/ul/pre, disc bullets, bold headings.
-const proseP = "my-[1em] leading-[1.6]";
-const proseLi = "leading-[1.6]";
-// `section ul:not(.links)` set the indent to 1.25rem (UA default: 40px).
-const proseUl = "my-[1em] list-disc pl-5";
-const linksUl = "links my-[1em] flex list-none flex-wrap gap-x-5 gap-y-[0.4rem] p-0";
 const h2Cls = "mt-9 mb-3 scroll-mt-24 text-[1.5rem] font-bold";
 const h3Cls = "mt-7 mb-2 scroll-mt-24 text-[1.15rem] font-bold";
 // The page deliberately sets code in a real monospace face rather than the
@@ -317,7 +309,7 @@ const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[ove
       <h2 id="quickstart" class={h2Cls}>Quickstart</h2>
       <p class={proseP}>
         No signup, no key, no client library. Base URL <code class={codeCls}
-          >{SITE}{VERSIONED_API_BASE}</code
+          >{SITE_ORIGIN}{VERSIONED_API_BASE}</code
         > — see <a class={linkCls} href="#versioning">Versioning</a> for why the version is in the path
         and why <code class={codeCls}>{API_BASE}/…</code> works too. Every response is JSON with permissive
         CORS, so a browser-side agent can call it directly.
@@ -326,7 +318,7 @@ const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[ove
       <p class={proseP}>Search the blog and read one post:</p>
       <pre
         class={preCls}><code class={preCodeCls}>{curlPost}
-curl -s {SITE}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</code></pre>
+curl -s {SITE_ORIGIN}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</code></pre>
       <p class={proseP}>
         Validate a contact payload without sending anything (see <a class={linkCls} href="#sandbox"
           >Sandbox</a
@@ -559,7 +551,7 @@ Retry-After: 39122</code></pre>
         Every operation in the spec carries a unique <code class={codeCls}>operationId</code>, a
         description, typed parameters and a response schema, which is what makes the document
         directly convertible to tool definitions. Point your OpenAPI-to-tools converter at <code
-          class={codeCls}>{SITE}/openapi.json</code
+          class={codeCls}>{SITE_ORIGIN}/openapi.json</code
         >; the
         {" "}<code class={codeCls}>operationId</code> becomes the tool name. For example, <code
           class={codeCls}>getBlogPost</code
@@ -574,7 +566,7 @@ Retry-After: 39122</code></pre>
       <p class={proseP}>
         The site also runs an AI assistant, Jarvis, grounded on this same content. It speaks
         WebSocket at <code class={codeCls}
-          >wss://{SITE.replace("https://", "")}/parties/chat-room/&#123;roomId&#125;</code
+          >wss://{SITE_ORIGIN.replace("https://", "")}/parties/chat-room/&#123;roomId&#125;</code
         >, which OpenAPI cannot describe — so it is documented here instead. Pick any room id; the
         room persists its history.
       </p>
@@ -597,7 +589,7 @@ Retry-After: 39122</code></pre>
           >Model Context Protocol</a
         > server. Add it to any MCP client as:
       </p>
-      <pre class={preCls}><code class={preCodeCls}>{SITE}/mcp</code></pre>
+      <pre class={preCls}><code class={preCodeCls}>{SITE_ORIGIN}/mcp</code></pre>
       <p class={proseP}>
         Streamable HTTP, <code class={codeCls}>POST</code> only, no authentication and no session. It
         implements protocol revision <code class={codeCls}>{LATEST_PROTOCOL_VERSION}</code> — stateless,
@@ -637,7 +629,7 @@ Retry-After: 39122</code></pre>
         context directly, rather than calling a tool for them:
         {" "}<code class={codeCls}>/llms.txt</code>, <code class={codeCls}>/AGENTS.md</code>, the
         OpenAPI specification, the full blog text, and every post's markdown (URI template <code
-          class={codeCls}>{SITE}/blog/&#123;slug&#125;/index.md</code
+          class={codeCls}>{SITE_ORIGIN}/blog/&#123;slug&#125;/index.md</code
         >). They use
         {" "}<code class={codeCls}>https://</code> URIs because they really are fetchable straight from
         the web, which is what that scheme is reserved for.
@@ -667,7 +659,7 @@ Retry-After: 39122</code></pre>
   "$schema": "${MCP_SERVER_SCHEMA}",
   "name": "${MCP_SERVER_NAME}",
   "version": "${API_VERSION}",
-  "remotes": [{"type": "streamable-http", "url": "${SITE}/mcp"}]
+  "remotes": [{"type": "streamable-http", "url": "${SITE_ORIGIN}/mcp"}]
 }`}</code></pre>
       <p class={proseP}>
         The server is also listed in the site's <a class={linkCls} href="/.well-known/api-catalog"
@@ -732,8 +724,9 @@ Retry-After: 39122</code></pre>
         what may change inside a version and how a deprecation is announced. Data is licensed <a
           class={linkCls}
           href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a
-        > — cite <a class={linkCls} href={SITE + "/"}>murugappan.dev</a>. Questions, or something
-        broken? <a class={linkCls} href="mailto:murugu2001@gmail.com">Email Murugappan</a> or use
+        > — cite <a class={linkCls} href={SITE_ORIGIN + "/"}>murugappan.dev</a>. Questions, or
+        something broken? <a class={linkCls} href="mailto:murugu2001@gmail.com">Email Murugappan</a> or
+        use
         {" "}<code class={codeCls}>POST /api/contact</code>.
       </p>
     </section>

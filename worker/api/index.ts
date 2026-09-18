@@ -7,20 +7,22 @@
 // Data comes from the site's own build artifacts (see store.ts) — there is no
 // second copy of the profile anywhere in this directory.
 
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 
 import { sendContactEmail, type EmailLike } from "../email";
 import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "./contact";
-import { apiError, type FieldIssue } from "./errors";
+import type { Dataset } from "./dataset";
+import { apiError } from "./errors";
 import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "./openapi";
+import { POSTS_LIMIT_MAX } from "./posts";
 import {
   contactRateLimitHeaders,
   RATE_LIMIT_EXPOSED_HEADERS,
   secondsUntilUtcMidnight
 } from "./ratelimit";
-import { ALLOWED_METHODS, API_PATHS, matchApiPath } from "./routes";
+import { ALLOWED_METHODS, API_PATHS, matchApiPath, READ_METHODS } from "./routes";
 import { loadDataset, loadPostMarkdown, loadPosts } from "./store";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
@@ -28,7 +30,6 @@ import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 // cache; five minutes keeps a redeploy visible quickly.
 const READ_CACHE = "public, max-age=300";
 const MAX_CONTACT_BODY_BYTES = 16 * 1024;
-const POSTS_LIMIT_MAX = 100;
 
 const SPEC_HINT = "Fetch https://murugappan.dev/openapi.json for the full list of endpoints.";
 
@@ -108,39 +109,46 @@ api.use(
 
 api.use("*", apiHeaders({ enforceReads: true }));
 
-const READ: string[] = ["GET", "HEAD"];
+// The dataset-backed reads share one shape: load the build artifact, answer
+// 503 when it is missing, project the slice the endpoint documents.
+const datasetRoute = <T>(project: (data: Dataset) => T) => {
+  return async (c: Context<{ Bindings: Env }>) => {
+    const data = await loadDataset(c.env.ASSETS);
+    return data ? json(project(data)) : datasetUnavailable();
+  };
+};
 
-api.on(READ, "/profile", async c => {
-  const data = await loadDataset(c.env.ASSETS);
-  if (!data) return datasetUnavailable();
-  return json({ person: data.person, links: data.links });
-});
+api.on(
+  READ_METHODS,
+  "/profile",
+  datasetRoute(d => ({ person: d.person, links: d.links }))
+);
 
-api.on(READ, "/experience", async c => {
-  const data = await loadDataset(c.env.ASSETS);
-  if (!data) return datasetUnavailable();
-  return json({ experience: data.experience });
-});
+api.on(
+  READ_METHODS,
+  "/experience",
+  datasetRoute(d => ({ experience: d.experience }))
+);
 
-api.on(READ, "/skills", async c => {
-  const data = await loadDataset(c.env.ASSETS);
-  if (!data) return datasetUnavailable();
-  return json({ skills: data.skills, proficiencies: data.proficiencies });
-});
+api.on(
+  READ_METHODS,
+  "/skills",
+  datasetRoute(d => ({ skills: d.skills, proficiencies: d.proficiencies }))
+);
 
-api.on(READ, "/education", async c => {
-  const data = await loadDataset(c.env.ASSETS);
-  if (!data) return datasetUnavailable();
-  return json({ education: data.education });
-});
+api.on(
+  READ_METHODS,
+  "/education",
+  datasetRoute(d => ({ education: d.education }))
+);
 
-api.on(READ, "/open-source", async c => {
-  const data = await loadDataset(c.env.ASSETS);
-  if (!data) return datasetUnavailable();
-  return json({ openSource: data.openSource });
-});
+api.on(
+  READ_METHODS,
+  "/open-source",
+  datasetRoute(d => ({ openSource: d.openSource }))
+);
 
-api.on(READ, "/posts", async c => {
+api.on(READ_METHODS, "/posts", async c => {
   const rawLimit = c.req.query("limit");
   let limit: number | undefined;
   if (rawLimit !== undefined) {
@@ -173,7 +181,7 @@ api.on(READ, "/posts", async c => {
   return json({ posts, count: posts.length });
 });
 
-api.on(READ, "/posts/:slug", async c => {
+api.on(READ_METHODS, "/posts/:slug", async c => {
   const slug = c.req.param("slug");
   const notFound = () =>
     apiError({
@@ -192,9 +200,9 @@ api.on(READ, "/posts/:slug", async c => {
 
 // Version and deprecation metadata. Served under both prefixes, so a client
 // that knows no version yet can still ask which ones exist.
-api.on(READ, "/versions", c => json(buildVersionsDocument(publicOrigin(c.req.url))));
+api.on(READ_METHODS, "/versions", c => json(buildVersionsDocument(publicOrigin(c.req.url))));
 
-api.on(READ, "/openapi.json", c => specResponse(c.req.url));
+api.on(READ_METHODS, "/openapi.json", c => specResponse(c.req.url));
 
 api.post("/contact", async c => {
   const contentType = c.req.header("Content-Type") ?? "";
@@ -245,7 +253,7 @@ api.post("/contact", async c => {
       code: "invalid_request",
       message: "One or more fields in the request body are invalid.",
       hint: "Correct the fields listed in details and send the request again.",
-      details: parsed.issues as FieldIssue[]
+      details: parsed.issues
     });
   }
 
@@ -367,7 +375,7 @@ specRoutes.use(
 // has just been throttled, so the ceiling is advertised here but not enforced.
 specRoutes.use("*", apiHeaders({ enforceReads: false }));
 
-specRoutes.on(READ, "/", c => specResponse(c.req.url));
+specRoutes.on(READ_METHODS, "/", c => specResponse(c.req.url));
 
 specRoutes.all("*", c =>
   apiError({

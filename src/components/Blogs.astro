@@ -31,12 +31,10 @@ import { accentTitle } from "../lib/accent";
             {/* the old card opened blog.url via JS window.open; the whole
                 card is now a real anchor to the post. `group` drives the
                 ::before wipe and the text recolour the old
-                `.blog-card:hover > *` rules did. The wipe grows from the
-                corner dot to cover the card, so its scale tracks the card
-                width: 30 by default, 40 at 481–675px / 1025–1405px / ≥1551px,
-                50 at 675–860px, 60 at 860–925px. Its fill is the dusk violet
-                under the blue-hour light theme (a navy slab read as the old
-                palette sitting on the evening sky) and the night's blue in
+                `.blog-card:hover > *` rules did; the wipe's scale is tuned per
+                breakpoint so it always covers the card. Its fill is the dusk
+                violet under the blue-hour light theme (a navy slab read as the
+                old palette sitting on the evening sky) and the night's blue in
                 dark mode. */}
             <a
               class="blog-card group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:-top-4 before:-right-4 before:-z-1 before:size-8 before:origin-center before:scale-100 before:rounded-[32px] before:bg-dusk-violet dark:before:bg-blue-light before:transition-transform before:duration-[400ms] before:ease-out before:content-[''] hover:before:scale-[30] min-[481px]:max-[675px]:before:duration-[450ms] min-[481px]:max-[675px]:hover:before:scale-[40] min-[675px]:max-[925px]:before:duration-[500ms] min-[675px]:max-[860px]:hover:before:scale-[50] min-[860px]:max-[925px]:hover:before:scale-[60] min-[1025px]:max-[1405px]:before:duration-[450ms] min-[1025px]:max-[1405px]:hover:before:scale-[40] min-[1551px]:before:duration-[450ms] min-[1551px]:hover:before:scale-[40]"

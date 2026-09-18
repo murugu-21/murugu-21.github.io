@@ -11,6 +11,7 @@
 
 import { API_SCHEMAS } from "../api/openapi";
 import { parseContactRequest, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
+import { POSTS_LIMIT_MAX } from "../api/posts";
 import { loadDataset, loadPostMarkdown, loadPosts, type AssetsLike } from "../api/store";
 import { sendContactEmail, type EmailLike } from "../email";
 import { resolveSchema, type JsonSchema } from "./schema";
@@ -46,8 +47,6 @@ export type McpTool = {
   annotations: ToolAnnotations;
   run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
 };
-
-const POSTS_LIMIT_MAX = 100;
 
 const READ_ONLY: ToolAnnotations = {
   readOnlyHint: true,

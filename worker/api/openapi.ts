@@ -15,6 +15,7 @@ import {
   VERSIONED_API_BASE as VERSIONED_BASE
 } from "./routes";
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT, CONTACT_LIMITS } from "./contact";
+import { POSTS_LIMIT_MAX } from "./posts";
 import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "./ratelimit";
 import { API_VERSION, DEPRECATION_NOTICE_DAYS, VERSIONS } from "./versioning";
 
@@ -243,7 +244,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
               required: false,
               description:
                 "Maximum number of posts to return, newest first. Defaults to all of them.",
-              schema: { type: "integer", minimum: 1, maximum: 100 }
+              schema: { type: "integer", minimum: 1, maximum: POSTS_LIMIT_MAX }
             }
           ],
           responses: {

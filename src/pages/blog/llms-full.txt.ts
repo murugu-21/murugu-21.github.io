@@ -12,14 +12,14 @@ export async function GET() {
   const lines = [
     `# ${SITE_TITLE} — full content`,
     ``,
-    `> ${SITE_DESCRIPTION}${AUTHOR.name ? ` — by ${AUTHOR.name}` : ``}.`
+    `> ${SITE_DESCRIPTION} — by ${AUTHOR.name}.`
   ];
 
   posts.forEach(post => {
-    const title = post.data.title || post.id;
+    const title = post.data.title;
     const url = `${base}/${post.id}/`;
     const date = post.data.date.toISOString().slice(0, 10);
-    const desc = (post.data.description || excerpt(post.body) || ``).replace(/\s+/g, ` `).trim();
+    const desc = (post.data.description || excerpt(post.body)).replace(/\s+/g, ` `).trim();
     lines.push(
       ``,
       `---`,

@@ -203,7 +203,7 @@ export function buildDataset(input: DatasetInput): Dataset {
   }));
   const currentJob = experience.find(job => job.current) ?? null;
 
-  const [project, role] = openSourceCard.title.split(/\s+—\s+/);
+  const [project = openSourceCard.title, role = ""] = openSourceCard.title.split(/\s+—\s+/);
 
   return {
     person: {
@@ -249,19 +249,23 @@ export function buildDataset(input: DatasetInput): Dataset {
       tools: [...e.tools],
       level: Number.parseInt(e.progressPercentage, 10)
     })),
-    education: educationInfo.map(school => ({
-      institution: school.schoolName,
-      credential: school.subHeader,
-      location: school.desc.replace(/\.$/, ""),
-      period: school.duration,
-      ...(({ current: _current, ...dates }) => dates)(parsePeriod(school.duration)),
-      grade: school.grade ?? null,
-      highlights: school.descBullets
-    })),
+    education: educationInfo.map(school => {
+      const { startDate, endDate } = parsePeriod(school.duration);
+      return {
+        institution: school.schoolName,
+        credential: school.subHeader,
+        location: school.desc.replace(/\.$/, ""),
+        period: school.duration,
+        startDate,
+        endDate,
+        grade: school.grade ?? null,
+        highlights: school.descBullets
+      };
+    }),
     openSource: [
       {
-        project: (project ?? openSourceCard.title).trim(),
-        role: (role ?? "").trim(),
+        project: project.trim(),
+        role: role.trim(),
         description: openSourceCard.subtitle,
         links: openSourceCard.footerLink.map(l => ({
           label: l.name,

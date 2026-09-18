@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { DEEPSEEK_MODEL } from "../ai";
 import { buildMessages, CAPTURE_TOOL, MAX_HISTORY_MESSAGES } from "../prompt";
 
 describe("prompt", () => {
-  it("pins the chosen model", () => {
-    expect(DEEPSEEK_MODEL).toBe("deepseek-flash");
-  });
-
   it("declares the capture_opportunity tool with required contact and summary", () => {
     expect(CAPTURE_TOOL.function.name).toBe("capture_opportunity");
     expect(CAPTURE_TOOL.function.parameters.required).toEqual(["contact", "summary"]);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { blockAt, matchBlocks, scrollTarget } from "./audio-sync";
+import { blockAt, matchBlocks, scrollTarget, WORD_BAND } from "./audio-sync";
 
 const timed = [
   { text: "Title", start: 0, end: 2 },
@@ -95,10 +95,9 @@ describe("scrollTarget", () => {
   });
 
   it("takes a wider band for words, so a word only pulls the page when it nears the bottom", () => {
-    const words = { top: 0, bottom: 0.8 };
-    expect(scrollTarget(rect(0, 24), vh, words)).toBeNull();
-    expect(scrollTarget(rect(700, 24), vh, words)).toBeNull();
-    expect(scrollTarget(rect(850, 24), vh, words)).toBe("center");
-    expect(scrollTarget(rect(-30, 24), vh, words)).toBe("center");
+    expect(scrollTarget(rect(0, 24), vh, WORD_BAND)).toBeNull();
+    expect(scrollTarget(rect(700, 24), vh, WORD_BAND)).toBeNull();
+    expect(scrollTarget(rect(850, 24), vh, WORD_BAND)).toBe("center");
+    expect(scrollTarget(rect(-30, 24), vh, WORD_BAND)).toBe("center");
   });
 });

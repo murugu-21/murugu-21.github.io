@@ -8,6 +8,8 @@
 // island tokens. A palette edit should fail here, not ship as unreadable text.
 import { describe, expect, it } from "vitest";
 
+import { channels, contrast, luminance } from "./contrast";
+
 // Inlined from global.css by vitest.config.ts (the Workers pool has no
 // filesystem).
 declare const __GLOBAL_CSS__: string;
@@ -17,26 +19,6 @@ const token = (name: string): string => {
   const m = new RegExp(`--${name}:\\s*([^;]+);`).exec(css);
   if (!m) throw new Error(`no --${name} in global.css`);
   return m[1].trim();
-};
-
-const channels = (c: string): number[] => {
-  const m = /^#([0-9a-f]{6})$/i.exec(c);
-  if (!m) throw new Error(`not a 6-digit hex colour: ${c}`);
-  return [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16));
-};
-
-const luminance = (c: string): number => {
-  const channel = (v: number) => {
-    const s = v / 255;
-    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-  };
-  const [r, g, b] = channels(c).map(channel);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-const contrast = (a: string, b: string): number => {
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
 };
 
 // A translucent surface composited over an opaque backdrop.

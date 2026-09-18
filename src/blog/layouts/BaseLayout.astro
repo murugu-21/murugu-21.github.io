@@ -161,9 +161,8 @@ const isRootPath = Astro.url.pathname === rootPath;
         // Baked into the SVG (not just CSS on the <img>) so the zoomed copy —
         // which medium-zoom clones outside the article, over its dark overlay —
         // keeps a solid light card behind edge labels and sequence text too.
-        const svgStyle = (face: string) => `<style>${face}svg{background:#fff}</style>`;
         const withEmbeddedStyle = (svg: string, face: string) =>
-          svg.replace(/<svg\b[^>]*>/, open => `${open}${svgStyle(face)}`);
+          svg.replace(/<svg\b[^>]*>/, open => `${open}<style>${face}svg{background:#fff}</style>`);
 
         // Same lazy medium-zoom wiring as post images ([...slug].astro), for
         // the diagram <img>s created below. Separate memoized instance since

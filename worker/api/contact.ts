@@ -4,6 +4,8 @@
 // reach Murugappan. Every rejection names the offending fields so a
 // function-calling model can repair its own arguments and retry.
 
+import type { FieldIssue } from "./errors";
+
 // Two-tier daily allowance, enforced by the RateLimiter Durable Object. Both
 // tiers are deliberately small: the endpoint exists so an agent can pass along
 // one genuine opportunity, not so it can be used as a mailer.
@@ -23,8 +25,6 @@ export type ContactRequest = {
   company?: string;
   message: string;
 };
-
-export type FieldIssue = { field: string; issue: string };
 
 export type ContactParseResult =
   // `dryRun` is a request option, not part of the message, so it is reported

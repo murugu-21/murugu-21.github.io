@@ -17,6 +17,10 @@ const POST_LINE = /^- \[(.+?)\]\((https?:\/\/[^\s)]+)\)(?::\s*(.*))?$/;
 const POST_PATH = /^\/blog\/([a-z0-9-]+)\/?$/;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+// Ceiling shared by the REST `limit` query param, the MCP tool schema and the
+// OpenAPI document, so the three contracts cannot drift.
+export const POSTS_LIMIT_MAX = 100;
+
 const SECTION_HEADING = "## Blog posts";
 
 // The list section is preferred; a whole-document scan is the fallback so a

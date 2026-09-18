@@ -39,22 +39,9 @@
      wins for `[class*="language-"]` — exactly as it did when these rules lived
      in style.css. */
   .blog-post code,
-  .blog-post pre,
-  /* INERT (kept for 1:1 parity with the old style.css): prism.css is imported
-     unlayered, so its `code[class*="language-"]` / `pre[class*="language-"]`
-     rules out-cascade anything in `@layer components` regardless of
-     specificity. These two `[class*="language-"]` halves therefore never win;
-     the plain `code` / `pre` selectors above are what actually applies. */
-  .blog-post code[class*="language-"],
-  .blog-post pre[class*="language-"] {
+  .blog-post pre {
     font-family: var(--font-mono);
     font-feature-settings: "calt" 1;
-  }
-
-  /* INERT for the same reason — prism.css sets `pre[class*="language-"]`'s
-     margin unlayered. Kept because the old style.css carried it. */
-  .blog-post pre[class*="language-"] {
-    margin-bottom: 2rem;
   }
 
   .blog-post hr {

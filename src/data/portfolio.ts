@@ -5,8 +5,6 @@ import hypervergeLogo from "../assets/images/hypervergeLogo.png";
 import samsungLogo from "../assets/images/samsungLogo.png";
 import kumaraguruLogo from "../assets/images/kumaraguruLogo.png";
 
-// Summary And Greeting Section
-
 export const greeting = {
   username: "Murugappan M",
   // short, candid form used only by the hero line ("I'm Muru")
@@ -26,8 +24,6 @@ export const typewriterRoles = [
   "Tech Blogger"
 ];
 
-// Social Media Links
-
 export const socialMediaLinks = {
   github: "https://github.com/murugu-21",
   linkedin: "https://www.linkedin.com/in/murugappan-m-56920a192/",
@@ -43,8 +39,6 @@ export const sameAs = [
   socialMediaLinks.linkedin,
   socialMediaLinks.twitter
 ];
-
-// Skills Section
 
 export interface SoftwareSkill {
   skillName: string;
@@ -144,8 +138,6 @@ export const techStack: {
     }
   ]
 };
-
-// Work experience section
 
 export interface WorkExperience {
   role: string;
@@ -253,8 +245,6 @@ export const skillsCategories: { category: string; items: string }[] = [
   }
 ];
 
-// Education Section
-
 export interface Education {
   schoolName: string;
   logo: ImageMetadata;
@@ -295,8 +285,6 @@ export const projectsSection: {
   display: true
 };
 
-// Open Source Contributions Section (formerly achievementSection)
-
 export const openSourceSection: { title: string; subtitle: string } = {
   title: "Open Source Contributions 🌐",
   subtitle: "Code I've contributed to projects used by people around the world."
@@ -334,8 +322,6 @@ export const openSourceCard: {
   ]
 };
 
-// Blogs Section
-
 export const blogSection: {
   title: string;
   subtitle: string;
@@ -370,8 +356,6 @@ export const blogSection: {
     }
   ]
 };
-
-// Contact Section
 
 export const contactInfo = {
   title: "Contact Me ☎️",

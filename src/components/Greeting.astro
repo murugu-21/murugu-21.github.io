@@ -12,8 +12,8 @@ import portrait from "../assets/images/portrait.webp";
 ---
 
 {
-  /* box-content: `width: 90%` + `padding: 20px 10px` was a content-box outer
-  width of `90vw + 20px` before Preflight switched everything to border-box. */
+  /* box-content: keep the old content-box outer width of `90vw + 20px` (see
+  Skills.astro). */
 }
 <div class="greet-main section-animate mx-auto mt-8 box-content w-[90%] px-2.5 py-5" id="greeting">
   <div class="greeting-main flex max-md:block">
@@ -91,7 +91,6 @@ import portrait from "../assets/images/portrait.webp";
 </div>
 
 <style>
-  /* referenced by the `animate-[wave_1.8s_infinite]` utility on .wave-emoji */
   @keyframes wave {
     0% {
       transform: rotate(0deg);

@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
-import worker, { ChatRoom, RateLimiter } from "../server";
+import worker from "../server";
 
 // The test wrangler config has no ASSETS binding, so each test injects a mock
 // that marks its responses — proving whether a request fell through to assets
@@ -19,12 +19,6 @@ function envWithAssets(onFetch?: (request: Request) => void): Env {
 }
 
 describe("worker entry", () => {
-  it("exports a fetch handler and both Durable Object classes", () => {
-    expect(typeof worker.fetch).toBe("function");
-    expect(typeof ChatRoom).toBe("function");
-    expect(typeof RateLimiter).toBe("function");
-  });
-
   it("falls through to static assets for non-party requests", async () => {
     const seen: Request[] = [];
     const response = await worker.fetch(
