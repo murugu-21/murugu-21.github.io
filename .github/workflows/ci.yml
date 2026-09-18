@@ -14,8 +14,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # Bun installs dependencies and runs the package scripts; Node stays the
-      # runtime for Astro, Wrangler and the Workers Vitest pool (see README
+      # Bun installs dependencies and runs the package scripts; the Astro
+      # scripts run Astro itself on Bun (`bun --bun`). Node stays the runtime
+      # for Wrangler, tsc and the Workers Vitest pool (see README
       # "Development").
       - uses: oven-sh/setup-bun@v2
         with:
