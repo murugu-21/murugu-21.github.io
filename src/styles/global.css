@@ -47,8 +47,12 @@
   --color-dusk-violet: #443c8f;
   --color-amber: #b45309;
   --color-amber-ink: #8a4406;
-  --color-title: #221b3d;
-  --color-text: #2f2a4d;
+  /* Light-theme text inks, deepened a step when the blue-hour horizon was
+     toned down (--background-image-page): on the near-paper warm end the old
+     values read thin, so body, headings and the blockquote ink each moved one
+     step darker. palette.test.ts holds them at AA on the sky's stops. */
+  --color-title: #1c1633;
+  --color-text: #292444;
   --color-subtitle: #413b58;
   --color-card-subtitle: #56506e;
   --color-blog-title: #241f3f;
@@ -84,7 +88,11 @@
   --color-accent-grey-dark: #818cab;
   --color-heading-dark: #f4f4f4;
   --color-text-dark: #cbcdcf;
-  --color-text-light: #4f5969;
+  /* The post blockquote ink. Blue hour darkened it: the old #4f5969 was mixed
+     for a white canvas and read at 3.2:1 on the sky's periwinkle end, so the
+     light theme's prose blockquotes washed out. palette.test.ts holds it at AA
+     against that stop now, like the other light inks. */
+  --color-text-light: #322d44;
 
   /* glow shadows (reference card glow, navy-tinted) */
   --shadow-glow: 0 4px 12px 2px rgba(6, 3, 141, 0.14);
@@ -95,8 +103,11 @@
   /* page background gradients. Light is blue hour: the deep periwinkle of the
      sky's dark end settles through lavender into a warm horizon glow, and the
      starfield's close stars (Particles.astro) carry the same amber down the
-     page. Dark is the night that follows it. */
-  --background-image-page: linear-gradient(to left, #a3aae0, #cfd3ef 52%, #f6e3cb);
+     page. The horizon was deepened (#f6e3cb → #eed6b4) because the old stop
+     sat at paper-white luminance: ink over it read thin and the white
+     code/diagram panels lost their edge against it. Dark is the night that
+     follows it. */
+  --background-image-page: linear-gradient(to left, #a3aae0, #cfd3ef 52%, #eed6b4);
   --background-image-page-dark: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
 
   /* Breakpoints for the old media queries. Tailwind's max-* variants are

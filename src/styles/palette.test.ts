@@ -13,6 +13,9 @@ import { channels, contrast, luminance } from "./contrast";
 // Inlined from global.css by vitest.config.ts (the Workers pool has no
 // filesystem).
 declare const __GLOBAL_CSS__: string;
+// Inlined from the blog's src/blog/styles/prism-dark.css, whose `--- Light
+// palette` section darkens Prism's default light inks for the blog's fence.
+declare const __PRISM_CSS__: string;
 const css = __GLOBAL_CSS__;
 
 const token = (name: string): string => {
@@ -59,9 +62,10 @@ const card = (() => {
 const ink = (name: string) => token(`color-${name}`);
 
 describe("blue-hour light palette", () => {
-  // Body copy, headings and section subtitles can cross any part of the sky,
-  // including its deepest stop — normal text (19px) needs 4.5:1.
-  it.each(["text", "title", "subtitle"])(
+  // Body copy, headings, section subtitles and the post blockquote ink can
+  // cross any part of the sky, including its deepest stop — normal text
+  // (19px, and the 19.2px blockquote) needs 4.5:1.
+  it.each(["text", "title", "subtitle", "text-light"])(
     "keeps --color-%s readable on the sky's deep stop",
     name => {
       expect(contrast(ink(name), sky.deep)).toBeGreaterThanOrEqual(4.5);
@@ -70,10 +74,12 @@ describe("blue-hour light palette", () => {
 
   // The .accent word is bold display type in every heading (>= 24px), so it
   // answers to the large-text bar on the sky, and to normal text on the card,
-  // where the hover accents live.
+  // where the hover accents live. It also lands on the sky's WARM end — every
+  // link hovers to it, at 16px — so the horizon needs the normal-text bar.
   it("keeps --color-amber-ink legible as the accent word (>= 3:1 on the sky)", () => {
     expect(contrast(ink("amber-ink"), sky.deep)).toBeGreaterThanOrEqual(3);
     expect(contrast(ink("amber-ink"), sky.mid)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(ink("amber-ink"), sky.warm)).toBeGreaterThanOrEqual(4.5);
   });
 
   // The brighter amber is graphics-only (chip outlines, glows, the starfield's
@@ -101,5 +107,24 @@ describe("blue-hour light palette", () => {
   // itself must not vanish.
   it("separates the card surface from the sky it sits on (>= 1.8:1)", () => {
     expect(contrast(card, sky.deep)).toBeGreaterThanOrEqual(1.8);
+  });
+});
+
+describe("blog light code palette", () => {
+  // Prism's default light inks were written for a plain white page, and
+  // several sit under AA on the blog's white fence (#999 punctuation at
+  // 2.85:1, #690 strings at 3.43, …). prism-dark.css re-inks them in its
+  // `--- Light palette` section; every colour there must clear 4.5:1 on the
+  // fence. The dark overrides that follow the section are the night palette
+  // and are not parsed here — they answer to the dark fence, not white.
+  const lightSection = __PRISM_CSS__.split("/* --- Dark palette")[0];
+  const inks = [...lightSection.matchAll(/(?<![\w-])color:\s*(#[0-9a-f]{6})/gi)].map(m => m[1]);
+
+  it("finds the light palette's inks", () => {
+    expect(inks.length).toBeGreaterThan(0);
+  });
+
+  it.each(inks)("keeps %s readable on the white fence", hex => {
+    expect(contrast(hex, "#ffffff")).toBeGreaterThanOrEqual(4.5);
   });
 });

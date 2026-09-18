@@ -1,4 +1,4 @@
-/* Code-block surface + dark palette for the blog's Prism highlighting.
+/* Code-block surface + both palettes for the blog's Prism highlighting.
 
    prism.css (the light "default" theme) is imported UNLAYERED by
    BaseLayout.astro, so nothing in post.css's `@layer components` can override
@@ -20,6 +20,50 @@
   border: 1px solid var(--color-border-soft);
   border-radius: 0.5rem;
 }
+
+/* --- Light palette (guarded by palette.test.ts) ---------------------------
+   Prism's default light inks were authored for a plain white page, and
+   several sit under AA on this fence: #999 punctuation (2.85:1), the #690
+   strings / attr names / builtins (3.43), #dd4a68 functions and class names
+   (4.0), slategray #708090 comments (4.05), #e90 regexes and variables
+   (2.28). Same hue families, darkened until each clears 4.5:1 on #ffffff.
+   Operators (#9a6e3a) and keywords / attr-values (#07a) already clear it and
+   are untouched. The dark palette below re-colours all of these for night. */
+.blog-post .token.comment,
+.blog-post .token.block-comment,
+.blog-post .token.prolog,
+.blog-post .token.doctype,
+.blog-post .token.cdata {
+  color: #5b6675;
+}
+
+.blog-post .token.punctuation {
+  color: #6b7280;
+}
+
+.blog-post .token.selector,
+.blog-post .token.attr-name,
+.blog-post .token.string,
+.blog-post .token.char,
+.blog-post .token.builtin,
+.blog-post .token.inserted {
+  color: #4d6b00;
+}
+
+.blog-post .token.function,
+.blog-post .token.class-name {
+  color: #c02a4d;
+}
+
+.blog-post .token.regex,
+.blog-post .token.important,
+.blog-post .token.variable {
+  color: #8f6200;
+}
+
+/* --- Dark palette ---------------------------------------------------------
+   Prism's "tomorrow night eighties" on the developers page's dark fence
+   surface (4% white, 12% white border). */
 
 html.dark-mode .blog-post pre[class*="language-"],
 html.dark-mode .blog-post :not(pre) > code[class*="language-"] {
