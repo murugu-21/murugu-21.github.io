@@ -11,19 +11,19 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           persist-credentials: false
-      # Bun installs dependencies and runs the package scripts; Node stays the
-      # runtime for Astro, Wrangler and the Workers Vitest pool (see README
-      # "Development").
+      # Bun installs dependencies and runs the package scripts; Astro and
+      # Vitest both run on Bun (`bun --bun`). Node stays the runtime for
+      # Wrangler and tsc (see README "Development").
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.bun/install/cache
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
