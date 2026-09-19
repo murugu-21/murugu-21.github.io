@@ -110,6 +110,11 @@
      holds it at 2:1). The name is the old blog's; only post.css uses it. */
   --color-accent-grey: rgba(6, 3, 141, 0.4);
   --color-accent-grey-dark: #818cab;
+  /* The post's table-of-contents rail (src/blog/components/TableOfContents.astro):
+     the collapsed heading bars, drawn straight on the sky. A UI component, so
+     3:1 on every stop (palette.test.ts), which accent-grey above does not
+     reach on the deep end. At night the rail reuses accent-grey-dark. */
+  --color-toc-bar: rgba(6, 3, 141, 0.6);
   --color-heading-dark: #f4f4f4;
   --color-text-dark: #cbcdcf;
   /* The post blockquote ink. Blue hour darkened it: the old #4f5969 was mixed

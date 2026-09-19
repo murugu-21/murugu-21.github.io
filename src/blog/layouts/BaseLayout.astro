@@ -38,7 +38,13 @@ const isRootPath = Astro.url.pathname === rootPath;
 ---
 
 <!doctype html>
-<html lang="en">
+<!-- Anchor jumps glide (the heading anchors and the post's table-of-contents
+     rail). On the layout's <html>, as the portfolio's Layout.astro does, not in
+     global.css, which both apps share. No scroll-padding here: the blog has no
+     fixed header, and the headings carry their own scroll-margin (post.css) for
+     the pinned read-aloud bar. The read-aloud auto-scroll passes its own
+     `behavior` and is unaffected. -->
+<html lang="en" class="scroll-smooth motion-reduce:scroll-auto">
   <head>
     <BaseHead title={title} description={description} {...seo} />
   </head>

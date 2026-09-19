@@ -168,7 +168,9 @@ description: One-line description shown in lists, search and feeds.
 ```
 
 Images placed next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build
-time. ` ```mermaid ` code blocks are rendered to diagrams client-side. The directory name is the URL slug, so
+time. ` ```mermaid ` code blocks are rendered to diagrams client-side. On wide screens the post's `##` and
+`###` headings feed a Notion-style table-of-contents rail at the right edge (`TableOfContents.astro`); a post
+with fewer than two shows no rail, and a separator should be `---`, never an empty `##`. The directory name is the URL slug, so
 the post is published at `/blog/<slug>/` and picked up automatically by the sitemap, RSS feed, both `llms.txt`
 files and the markdown renditions.
 

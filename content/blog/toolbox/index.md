@@ -18,7 +18,7 @@ The next tool is learning any mainstream language. This is covered well by most 
 
 > I recommend learning C first(only the very basics of it with pointers and structs) . Then learn any OOPS language (I prefer kotlin, but even typescript is great) and data structures in C (not OOPS). then learn python/js as a quick to prototype model.
 
-##
+---
 
 ## The world of huge codebases
 
@@ -32,7 +32,7 @@ The best way to do this is by contributing to open-source projects. find a platf
 
 > I am also a undergrad in CS in my 3<sup>rd</sup> year and until very recently, I too hadn't worked with pr's. I feel this should be thought in uni alongside git during sophomore before we are asked to do projects (typically 3<sup>rd</sup> year).
 
-##
+---
 
 ## Test Driven Development (TDD)
 
