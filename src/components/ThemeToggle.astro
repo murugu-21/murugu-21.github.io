@@ -3,13 +3,12 @@
 // button showing the theme you'd switch TO (sun while dark, moon while light)
 // rather than a slider. Icons are the lucide sun/moon paths, inlined.
 //
-// Shared by BOTH apps. The theme class is `html.dark-mode` in both; who owns
-// it differs:
-//   portfolio — this script owns it and writes localStorage directly
-//   blog      — a pre-paint bootstrap owns it and exposes __setPreferredTheme
-// The click handler below detects which is present. Being plain Astro, it is
-// server rendered at full size, so unlike a hydrated island it can't shift the
-// header after paint.
+// Shared by BOTH apps. A click goes through setTheme (../lib/theme.ts), which
+// knows which app owns `html.dark-mode`; the label follows `themechange`, which
+// both apps fire on every switch — clicks here, an OS change on the blog, and
+// the layouts' catch-up after a back/forward-cache restore. Being plain Astro,
+// it is server rendered at full size, so unlike a hydrated island it can't
+// shift the header after paint.
 ---
 
 <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
@@ -56,37 +55,16 @@
 </button>
 
 <script>
-  import { tag } from "../lib/analytics";
+  import { currentTheme, setTheme } from "../lib/theme";
 
   const btn = document.getElementById("theme-toggle") as HTMLButtonElement;
-  const root = document.documentElement;
-
-  const isDark = () => root.classList.contains("dark-mode");
 
   // The label names the action, so it tracks the theme rather than the state.
-  const label = () => btn.setAttribute("aria-label", isDark() ? "Use light mode" : "Use dark mode");
+  const label = () =>
+    btn.setAttribute("aria-label", currentTheme() === "dark" ? "Use light mode" : "Use dark mode");
   label();
 
-  btn.addEventListener("click", () => {
-    const next = isDark() ? "light" : "dark";
-    if (window.__setPreferredTheme) {
-      // Blog: the bootstrap owns the class, persistence and `themechange`.
-      window.__setPreferredTheme(next);
-    } else {
-      root.classList.toggle("dark-mode", next === "dark");
-      try {
-        localStorage.setItem("isDark", JSON.stringify(next === "dark"));
-      } catch {
-        // storage blocked (private mode) — the class is still toggled for this visit
-      }
-    }
-    label();
-    // A super property, not an event: the point is segmenting by the theme
-    // the visitor actually read the site in.
-    tag("theme", next);
-  });
-
-  // The blog can change theme from elsewhere (OS preference); keep up.
+  btn.addEventListener("click", () => setTheme(currentTheme() === "dark" ? "light" : "dark"));
   window.addEventListener("themechange", label);
 </script>
 

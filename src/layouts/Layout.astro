@@ -241,6 +241,9 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
     <style is:inline set:html={FIRA_CODE_FACE}></style>
 
     <script is:inline>
+      // Theme bootstrap: html.dark-mode before first paint, so no light/dark
+      // flash. Inline so it can run this early, which means it cannot import;
+      // the key and the rule are ../lib/theme.ts (resolveTheme) — keep in step.
       (function () {
         var dark = false;
         try {
@@ -268,15 +271,29 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
     <script>
       import "../lib/webmcp";
       import { bootAnalytics, initClickTracking, tag } from "../lib/analytics";
+      import {
+        currentTheme,
+        documentThemeSource,
+        setTheme,
+        syncThemeOnRestore
+      } from "../lib/theme";
+
+      // Boot first: it reads the meta tags above and opens the buffer that
+      // holds anything captured before the SDK loads on the first interaction.
+      // A tag or event sent before this call is dropped, not buffered (see
+      // send in ../lib/analytics.ts).
+      bootAnalytics();
 
       // PostHog custom events for the annotated links in the sections below
-      // (data-ph-event), plus the theme as a super property. Both no-op until
-      // the SDK boots, buffering anything captured in between.
+      // (data-ph-event), plus the theme as a super property: the theme the
+      // visitor actually read the site in, so re-tagged on every switch.
       initClickTracking();
-      tag("theme", document.documentElement.classList.contains("dark-mode") ? "dark" : "light");
+      tag("theme", currentTheme());
+      window.addEventListener("themechange", () => tag("theme", currentTheme()));
 
-      // Reads the meta tags above and loads the SDK on the first interaction.
-      bootAnalytics();
+      // The bootstrap above does not run again when this page comes back out
+      // of the back/forward cache; see syncThemeOnRestore.
+      syncThemeOnRestore(window, documentThemeSource, setTheme);
     </script>
   </head>
   <body>

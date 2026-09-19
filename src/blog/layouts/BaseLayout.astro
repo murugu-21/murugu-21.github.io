@@ -56,14 +56,18 @@ const isRootPath = Astro.url.pathname === rootPath;
     <script is:inline>
       // Shared persistence contract with the portfolio app: key "isDark",
       // value is a JSON bool. Derive the blog's "dark"/"light" string from it.
+      // Inline so it runs before paint, which means it cannot import; the key
+      // and the rule are ../../lib/theme.ts (resolveTheme) — keep in step.
       var preferredTheme = null;
       try {
         var stored = localStorage.getItem("isDark");
         if (stored !== null) preferredTheme = JSON.parse(stored) ? "dark" : "light";
       } catch (err) {}
 
-      function setTheme(newTheme) {
-        // One theme class for both apps: html.dark-mode (see ThemeToggle.astro
+      // Paint and announce, without persisting — unlike setTheme in
+      // ../../lib/theme.ts, which remembers the choice too.
+      function applyTheme(newTheme) {
+        // One theme class for both apps: html.dark-mode (see ../../lib/theme.ts
         // and the `dark` custom variant in ../../styles/islands.css).
         document.documentElement.classList.toggle("dark-mode", newTheme === "dark");
         window.__theme = newTheme;
@@ -72,7 +76,7 @@ const isRootPath = Astro.url.pathname === rootPath;
       }
 
       window.__setPreferredTheme = function (newTheme) {
-        setTheme(newTheme);
+        applyTheme(newTheme);
         try {
           localStorage.setItem("isDark", JSON.stringify(newTheme === "dark"));
         } catch (err) {}
@@ -81,7 +85,7 @@ const isRootPath = Astro.url.pathname === rootPath;
       darkQuery.onchange = function (e) {
         window.__setPreferredTheme(e.matches ? "dark" : "light");
       };
-      setTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"));
+      applyTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"));
     </script>
     <!-- `data-[is-root-path=true]:[&_.bio]:mb-5` is the old
          `.global-wrapper[data-is-root-path="true"] .bio { margin-bottom: 1.25rem }`:

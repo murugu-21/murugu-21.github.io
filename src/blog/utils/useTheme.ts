@@ -1,12 +1,12 @@
 import { useSyncExternalStore } from "react";
 
+import type { Theme } from "../../lib/theme";
+
 // The theme is owned by the blocking script in ../layouts/BaseLayout.astro,
 // which runs before first paint and re-fires `themechange` on every switch.
 // That makes it an external store rather than React state, so read it with
 // useSyncExternalStore: no setState-in-effect, and the listener is actually
 // torn down on unmount.
-
-type Theme = "light" | "dark";
 
 const subscribe = (onStoreChange: () => void) => {
   window.addEventListener("themechange", onStoreChange);
