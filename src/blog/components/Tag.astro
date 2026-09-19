@@ -56,20 +56,32 @@ const labelClass = [
 <label for={`tag-${tag.name}`} class={labelClass}>
   {
     /* Chip outline is the portfolio's chip token (navy 45% / blue 55%), the same
-      outline the per-post tag chips use. */
+      outline the per-post tag chips use.
+      The name (and the count below) sits in its own inline-block span so a
+      selection highlight, and therefore a copy, hugs the text. Both cells are
+      flex items (blocks) with padding, and text sitting straight on a block's
+      line box gets a selection painted out to the cell's edges: Chrome paints
+      a line-end marker one space wide after the text whenever the selection
+      continues into the next cell or chip. An atomic inline keeps the text off
+      the cell's own line box, so no marker is painted (same fix as the
+      per-post chips in Post.astro and pages/blog/[...slug].astro). */
   }
   <span
     class="rounded-[.25em_0_0_.25em] border border-chip-outline px-[.5em] dark:border-chip-outline-dark"
   >
-    {tag.name}
+    <span class="inline-block">{tag.name}</span>
   </span>
   {
     /* Count badge: tonal accent (was #aaa with white numerals, 2.3:1); on a
-      checked chip it sits on the navy fill, so it flips to white. */
+      checked chip it sits on the navy fill, so it flips to white.
+      Not a flex box: a flex container would blockify the inner span again and
+      bring the line-end marker back, so the numeral is centred in the
+      stretched badge with `content-center` (align-content on a block, in
+      every evergreen browser since 2024). */
   }
   <div
-    class="flex items-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy [.tag:checked+label_&]:bg-white/20 [.tag:checked+label_&]:text-white dark:bg-blue-light/20 dark:text-blue-light"
+    class="content-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy [.tag:checked+label_&]:bg-white/20 [.tag:checked+label_&]:text-white dark:bg-blue-light/20 dark:text-blue-light"
   >
-    {tag.count}
+    <span class="inline-block">{tag.count}</span>
   </div>
 </label>

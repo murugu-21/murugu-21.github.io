@@ -64,10 +64,16 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
             // matches the filter chips' text inset — `p-[2px]` left the glyph
             // edges (monospace side bearings are tight) sitting on the border.
             // `py-[3px]` keeps the descenders clear of the bottom border. The
-            // label is wrapped in a span so selecting it to copy hugs the text
-            // instead of painting the chip's padding out to the border.
+            // label is wrapped in an inline-block span so selecting it to copy
+            // hugs the text instead of painting the chip's padding out to the
+            // border. Inline-block, not a plain span: each chip is a flex item
+            // (a block), and a selection that continues into the next chip makes
+            // Chrome paint a line-end marker one space wide after the text, out
+            // into the padding. An atomic inline keeps the text off the chip's
+            // own line box, so no marker is painted there (same fix as the
+            // article page's chips in pages/blog/[...slug].astro).
             <div class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] dark:border-chip-outline-dark">
-              <span>{tag}</span>
+              <span class="inline-block">{tag}</span>
             </div>
           ))
         }
