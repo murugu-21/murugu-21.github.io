@@ -12,7 +12,21 @@
    margins). Each is marked `preflight:` below.
 
    Everything stays in @layer components so a utility class written on one of
-   these elements later still wins. */
+   these elements later still wins; the one thing outside it is the keyframes
+   definition below, which is not a cascaded rule. */
+
+/* The table scroll hint (`.blog-post table` below): the mask is drawn 3rem
+   wider than the table so its transparent tail sits off the right edge (no
+   fade); the animation pulls it back to the table's width (fade showing) at
+   scroll start and lets it out again as the table scrolls to its end. */
+@keyframes table-scroll-hint {
+  from {
+    mask-size: 100% 100%;
+  }
+  to {
+    mask-size: calc(100% + 3rem) 100%;
+  }
+}
 
 @layer components {
   /* --- Article root -------------------------------------------------------
@@ -42,6 +56,26 @@
   .blog-post pre {
     font-family: var(--font-mono);
     font-feature-settings: "calt" 1;
+  }
+
+  /* Inline code gets a surface. The whole site sets in Fira Code, so without
+     one an identifier in a sentence is indistinguishable from the prose around
+     it (the ligatures are the only tell). Same family as the fence: a pane of
+     white with the soft violet border, kept translucent so it still sits in
+     the sky. `break-word` lets a long identifier break instead of widening
+     the page; not `anywhere`, which would also let table columns compress
+     below their code cells and break identifiers mid-token. `:not(pre) >`
+     keeps this off Prism's fenced code, which scrolls instead. */
+  .blog-post :not(pre) > code {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--color-border-soft);
+    border-radius: 0.25rem;
+    padding: 0.05em 0.35em;
+    overflow-wrap: break-word;
+  }
+  html.dark-mode .blog-post :not(pre) > code {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--color-border-soft-dark);
   }
 
   .blog-post hr {
@@ -232,6 +266,38 @@
     border-spacing: 0.25rem;
     display: block;
     overflow-x: auto;
+    /* Scroll hint. Overlay scrollbars (macOS, iOS) give no sign that a wide
+       table scrolls, so on a phone the last column just looks cut off. The
+       right edge fades while there is more to the right, driven by the
+       table's own horizontal scroll progress (keyframes at the top of this
+       file). The resting mask is the no-fade state, so a table that does not
+       overflow (inactive timeline, animation never applies) is not faded, and
+       an engine without scroll timelines runs the shorthand as a 0s animation
+       that lands on its `to` frame — also no fade. */
+    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+    mask-repeat: no-repeat;
+    mask-size: calc(100% + 3rem) 100%;
+    animation: table-scroll-hint linear both;
+  }
+  /* Separate block on purpose: written next to the shorthand, Lightning CSS
+     folds the timeline into it (`animation: … scroll(self inline)`), which
+     Chrome rejects, dropping the whole animation. It also has to follow the
+     shorthand in source order, since `animation` resets animation-timeline
+     to auto. The duration is what a scroll timeline implies; spelled out so
+     the fallback's 0s above is visibly not relied on here. */
+  @supports (animation-timeline: scroll()) {
+    .blog-post table {
+      animation-timeline: scroll(self inline);
+      animation-duration: auto;
+    }
+  }
+  /* Paper cannot scroll: a wide table prints at scroll position 0, which is
+     the faded state, so the hint comes off for print. */
+  @media print {
+    .blog-post table {
+      mask-image: none;
+      animation: none;
+    }
   }
 
   .blog-post th,
@@ -269,6 +335,9 @@
   .blog-post a {
     color: var(--color-navy);
     text-decoration: underline;
+    /* A bare URL as link text has no break opportunity and would widen the
+       page on a phone. */
+    overflow-wrap: break-word;
   }
   html.dark-mode .blog-post a {
     color: var(--color-blue-light);
@@ -276,10 +345,12 @@
 
   /* Blue hour warms a link on hover; the night keeps its blue (the unlayered
      `html.dark-mode` rule above sets the resting colour, so the hover needs
-     its own dark pairing or it would paint the light theme's amber at night). */
+     its own dark pairing or it would paint the light theme's amber at night).
+     The deep amber, not amber-ink: 16px links cross the sky's deep stop, where
+     amber-ink is only large-text AA (see the token in global.css). */
   .blog-post a:hover,
   .blog-post a:focus {
-    color: var(--color-amber-ink);
+    color: var(--color-amber-ink-deep);
     text-decoration: none;
   }
   html.dark-mode .blog-post a:hover,
@@ -393,11 +464,13 @@
   }
 
   /* The word currently being spoken, inside the highlighted block. Spans are
-     inserted lazily by the read-aloud island (src/blog/utils/audio-words.ts). */
+     inserted lazily by the read-aloud island (src/blog/utils/audio-words.ts).
+     25%, not the night's 45%: the word sits on the 14% block, and the body ink
+     over both washes has to stay AA on the sky's deep stop (palette.test.ts). */
   .blog-post .is-speaking .rw.is-word {
-    background: color-mix(in srgb, var(--color-amber) 45%, transparent);
+    background: color-mix(in srgb, var(--color-amber) 25%, transparent);
     border-radius: 3px;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-amber) 45%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-amber) 25%, transparent);
   }
   html.dark-mode .blog-post .is-speaking .rw.is-word {
     background: color-mix(in srgb, var(--color-box-dark) 45%, transparent);

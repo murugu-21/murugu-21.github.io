@@ -34,9 +34,11 @@ const labelClass = [
   "dark:[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline-dark)]",
   // keyboard focus on the (offscreen) checkbox shows on its label, in the
   // light theme's warm accent: the old blue/50 ring sat right next to the navy
-  // chip outline it wraps, so focus and border read as the same colour. Dark
-  // keeps the blue.
-  "[.tag:focus-visible+&]:ring-2 [.tag:focus-visible+&]:ring-amber/50",
+  // chip outline it wraps, so focus and border read as the same colour. Solid
+  // amber-ink, not amber/50: a half-alpha ring does not clear the 3:1 a focus
+  // indicator needs on the sky, amber-ink does on every stop. Dark keeps the
+  // blue.
+  "[.tag:focus-visible+&]:ring-2 [.tag:focus-visible+&]:ring-amber-ink",
   "dark:[.tag:focus-visible+&]:ring-blue/50"
 ].join(" ");
 ---
@@ -55,8 +57,8 @@ const labelClass = [
 />
 <label for={`tag-${tag.name}`} class={labelClass}>
   {
-    /* Chip outline is the portfolio's chip token (navy 45% / blue 55%), the same
-      outline the per-post tag chips use.
+    /* Chip outline is the portfolio's chip token (--color-chip-outline), the
+      same outline the per-post tag chips use.
       The name (and the count below) sits in its own inline-block span so a
       selection highlight, and therefore a copy, hugs the text. Both cells are
       flex items (blocks) with padding, and text sitting straight on a block's

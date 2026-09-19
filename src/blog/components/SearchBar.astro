@@ -10,7 +10,9 @@
 // themes (white / #282c35) so the field reads as a control on the gradient
 // canvas; focus adds a ring on top of the old glow — in the light theme's warm
 // accent rather than the old bright blue, which sat under 3:1 on the blue-hour
-// sky. Dark keeps its own focus colours (--color-box-dark).
+// sky. The ring is solid amber-ink, not amber at 40%: a half-alpha ring does
+// not clear the 3:1 a focus indicator needs against the sky (same fix as the
+// tag chips). Dark keeps its own focus colours (--color-box-dark).
 ---
 
 <input
@@ -18,5 +20,5 @@
   type="search"
   aria-label="search article by tag or title"
   placeholder="Search by title or tag"
-  class="search w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text placeholder:text-subtitle focus:shadow-[0_0_5px_var(--color-amber)] focus:ring-2 focus:ring-amber/40 focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:placeholder:text-accent-grey-dark dark:focus:shadow-[0_0_5px_var(--color-box-dark)] dark:focus:ring-box-dark/50"
+  class="search w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text placeholder:text-subtitle focus:shadow-[0_0_5px_var(--color-amber)] focus:ring-2 focus:ring-amber-ink focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:placeholder:text-accent-grey-dark dark:focus:shadow-[0_0_5px_var(--color-box-dark)] dark:focus:ring-box-dark/50"
 />

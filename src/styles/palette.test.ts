@@ -50,6 +50,7 @@ const sky = (() => {
   const byLight = [...stops].sort((a, b) => luminance(a) - luminance(b));
   return { deep: byLight[0], mid: byLight[1], warm: byLight[byLight.length - 1] };
 })();
+const stops = [sky.deep, sky.mid, sky.warm];
 
 // The dusk-white card surface (glow-card) that most body-level light-theme text
 // actually sits on, composited over the darkest sky it can float above.
@@ -94,6 +95,44 @@ describe("blue-hour light palette", () => {
     const fill = ink("dusk-violet");
     expect(contrast("#ffffff", fill)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(over("rgba(255, 255, 255, 0.8)", fill), fill)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // The blog's link hover/focus ink (post.css `.blog-post a:hover`). It sits
+  // on 16px links that can cross the sky's deep stop, so it needs the
+  // normal-text bar there — the plain amber-ink only clears 3:1 on it.
+  it("keeps --color-amber-ink-deep readable as 16px link hover on every stop", () => {
+    for (const stop of stops) {
+      expect(contrast(ink("amber-ink-deep"), stop)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  // Chip outlines (tag filter chips, per-post tags, the portfolio's skill
+  // chips) are the boundary of a UI component: 3:1 against the sky they sit on.
+  it("shows the chip outline against every sky stop (>= 3:1)", () => {
+    for (const stop of stops) {
+      expect(contrast(over(token("color-chip-outline"), stop), stop)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  // The blog's hr and table rules. Not a WCAG bar (separators are exempt), but
+  // the old #aaaaaa vanished at ~1.1:1 on the sky; hold them where a row rule
+  // still reads as a line.
+  it("keeps the blog's rules visible on every sky stop (>= 2:1)", () => {
+    for (const stop of stops) {
+      expect(contrast(over(token("color-accent-grey"), stop), stop)).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  // The read-aloud highlight (post.css): the spoken word is --color-amber at
+  // 25% inside its block at 14%, and body ink over both washes must stay AA on
+  // the deep stop. The alphas are restated here rather than parsed from
+  // post.css, so a change there must be mirrored in this test.
+  it("keeps body ink readable through the read-aloud highlight (>= 4.5:1)", () => {
+    const amber = channels(ink("amber"));
+    const wash = (alpha: number) => `rgba(${amber[0]}, ${amber[1]}, ${amber[2]}, ${alpha})`;
+    const block = over(wash(0.14), sky.deep);
+    const word = over(wash(0.25), block);
+    expect(contrast(ink("text"), word)).toBeGreaterThanOrEqual(4.5);
   });
 
   it("keeps text readable on the dusk-white card surface (>= 4.5:1)", () => {

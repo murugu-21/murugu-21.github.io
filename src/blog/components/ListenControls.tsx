@@ -491,8 +491,11 @@ export function ListenControls({ slug }: { slug: string }) {
             : "0:00"}
       </span>
 
+      {/* Track at 30% foreground rather than the primitive's 15%, in both
+          themes: on the island card the default track all but vanished before
+          playback filled it. Tuned here so the vendored slider stays pristine. */}
       <Slider
-        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 **:data-[slot=slider-thumb]:hover:opacity-100 **:data-[slot=slider-track]:h-1 hover:**:data-[slot=slider-thumb]:opacity-100 focus-within:**:data-[slot=slider-thumb]:opacity-100"
+        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 **:data-[slot=slider-thumb]:hover:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 hover:**:data-[slot=slider-thumb]:opacity-100 focus-within:**:data-[slot=slider-thumb]:opacity-100"
         value={[progress.position]}
         max={progress.length || 1}
         step={seekable ? 0.1 : 1}

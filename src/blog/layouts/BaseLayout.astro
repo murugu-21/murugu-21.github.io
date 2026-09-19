@@ -43,7 +43,10 @@ const isRootPath = Astro.url.pathname === rootPath;
     <BaseHead title={title} description={description} {...seo} />
   </head>
   <body class="text-base leading-normal text-text dark:text-text-dark">
-    <Particles />
+    <!-- Half strength at dusk: the blog is a reading surface, and the close
+         amber stars landing between words read as stray bullets. The landing
+         page and the night are untouched. -->
+    <Particles class="not-dark:opacity-50" />
     <!-- Theme bootstrap, ported from gatsby-ssr.js. Runs before first paint so
          there is no light/dark flash; exposes window.__theme (the current
          value) and window.__setPreferredTheme, and fires a `themechange` event
