@@ -88,10 +88,15 @@ const jsonLd = {
               aria-label={`All posts tagged ${tag}`}
               class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
             >
-              {/* The label sits in its own span so the selection highlight (and
-                  therefore a copy) hugs the text: painted straight on the chip,
-                  the selection covers its padding and runs to the border. */}
-              <span>{tag}</span>
+              {/* The label sits in its own inline-block span so the selection
+                  highlight (and therefore a copy) hugs the text. Painted straight
+                  on the chip, the selection covers its padding and runs to the
+                  border; and each chip being a flex item (a block), a selection
+                  that continues into the next chip makes Chrome paint a line-end
+                  marker one space wide after the text, out into the padding.
+                  An atomic inline keeps the text off the chip's own line box,
+                  so no marker is painted there. */}
+              <span class="inline-block">{tag}</span>
             </a>
           ))
         }

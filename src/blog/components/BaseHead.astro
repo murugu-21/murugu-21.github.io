@@ -111,12 +111,24 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
   // import pattern as the chat widget).
   import "../../lib/webmcp";
   import { bootAnalytics, initClickTracking, tag } from "../../lib/analytics";
+  import { currentTheme, documentThemeSource, setTheme, syncThemeOnRestore } from "../../lib/theme";
+
+  // Boot first: it reads the meta tags above and opens the buffer that holds
+  // anything captured before the SDK loads on the first interaction. A tag or
+  // event sent before this call is dropped, not buffered (see send in
+  // ../../lib/analytics.ts).
+  bootAnalytics();
 
   // PostHog custom events for annotated links (data-ph-event), plus the theme
-  // as a super property. The bootstrap script in ../layouts/BaseLayout.astro
+  // as a super property: the theme the visitor actually read the site in, so
+  // re-tagged on every switch. The bootstrap script in ../layouts/BaseLayout.astro
   // puts html.dark-mode on the root before first paint (the same class the
   // portfolio uses); this module is deferred, so it has already run.
   initClickTracking();
-  tag("theme", document.documentElement.classList.contains("dark-mode") ? "dark" : "light");
-  bootAnalytics();
+  tag("theme", currentTheme());
+  window.addEventListener("themechange", () => tag("theme", currentTheme()));
+
+  // The bootstrap does not run again when this page comes back out of the
+  // back/forward cache; see syncThemeOnRestore.
+  syncThemeOnRestore(window, documentThemeSource, setTheme);
 </script>

@@ -15,10 +15,16 @@
 // Rendered by both apps (landing page and the blog's BaseLayout). `z-[-1]`
 // puts the canvas under the page content but over the body background,
 // which propagates to the root canvas and so always paints beneath it.
+// `class` passes through so a host layout can tune the field (the blog dims
+// it at dusk).
+const { class: className } = Astro.props;
 ---
 
 <canvas
-  class="particles-canvas pointer-events-none fixed inset-0 z-[-1] h-full w-full"
+  class:list={[
+    "particles-canvas pointer-events-none fixed inset-0 z-[-1] h-full w-full",
+    className
+  ]}
   aria-hidden="true"></canvas>
 
 <script>
