@@ -12,7 +12,9 @@
 // accent rather than the old bright blue, which sat under 3:1 on the blue-hour
 // sky. The ring is solid amber-ink, not amber at 40%: a half-alpha ring does
 // not clear the 3:1 a focus indicator needs against the sky (same fix as the
-// tag chips). Dark keeps its own focus colours (--color-box-dark).
+// tag chips). Night: the glow stays box-dark and the ring is solid blue-light
+// (box-dark at 50% was 1.8:1 on the field). The night placeholder is the body
+// ink at 75% — the rules' grey (#818cab) sat at 4.2:1 on the field.
 ---
 
 <input
@@ -20,5 +22,5 @@
   type="search"
   aria-label="search article by tag or title"
   placeholder="Search by title or tag"
-  class="search w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text placeholder:text-subtitle focus:shadow-[0_0_5px_var(--color-amber)] focus:ring-2 focus:ring-amber-ink focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:placeholder:text-accent-grey-dark dark:focus:shadow-[0_0_5px_var(--color-box-dark)] dark:focus:ring-box-dark/50"
+  class="search w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text placeholder:text-subtitle focus:shadow-[0_0_5px_var(--color-amber)] focus:ring-2 focus:ring-amber-ink focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:placeholder:text-text-dark/75 dark:focus:shadow-[0_0_5px_var(--color-box-dark)] dark:focus:ring-blue-light"
 />

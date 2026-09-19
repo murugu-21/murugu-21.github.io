@@ -464,11 +464,13 @@ export function ListenControls({ slug }: { slug: string }) {
   // the thumb revealed on hover, times in tabular figures, speed as a pill.
   // Surface is the island's card + border (same idiom as the chat tooltip):
   // the page canvas is the portfolio gradient with the starfield behind it,
-  // and a translucent muted fill disappeared into it in both themes.
+  // and a translucent muted fill disappeared into it in both themes. At night
+  // the border is lifted to white/40: the island `--border` (16%) is tuned for
+  // the chat widget's own panels and vanished on the canvas.
   return (
     <div
       ref={setRoot}
-      className="flex items-center gap-3 rounded-lg border border-border bg-card py-2 pr-2 pl-2 shadow-sm"
+      className="flex items-center gap-3 rounded-lg border border-border bg-card py-2 pr-2 pl-2 shadow-sm dark:border-white/40"
     >
       <Button
         onClick={onToggle}
@@ -491,11 +493,11 @@ export function ListenControls({ slug }: { slug: string }) {
             : "0:00"}
       </span>
 
-      {/* Track at 30% foreground rather than the primitive's 15%, in both
-          themes: on the island card the default track all but vanished before
+      {/* Track at 30% foreground (40% at night) rather than the primitive's
+          15%: on the island card the default track all but vanished before
           playback filled it. Tuned here so the vendored slider stays pristine. */}
       <Slider
-        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 **:data-[slot=slider-thumb]:hover:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 hover:**:data-[slot=slider-thumb]:opacity-100 focus-within:**:data-[slot=slider-thumb]:opacity-100"
+        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 **:data-[slot=slider-thumb]:hover:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 dark:**:data-[slot=slider-track]:bg-foreground/40 hover:**:data-[slot=slider-thumb]:opacity-100 focus-within:**:data-[slot=slider-thumb]:opacity-100"
         value={[progress.position]}
         max={progress.length || 1}
         step={seekable ? 0.1 : 1}

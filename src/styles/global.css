@@ -73,7 +73,9 @@
      sky, under the 3:1 a component boundary needs; 60% clears it on every
      stop (palette.test.ts). */
   --color-chip-outline: rgba(6, 3, 141, 0.6);
-  --color-chip-outline-dark: rgba(76, 125, 255, 0.55);
+  /* Blue-light, not blue: the blue at 55% sat at 2.2–2.4:1 on the night
+     canvas, under the 3:1 a component boundary needs (palette.test.ts). */
+  --color-chip-outline-dark: rgba(125, 162, 255, 0.6);
   --color-border-soft: rgba(112, 104, 150, 0.32);
   --color-border-soft-dark: rgba(255, 255, 255, 0.25);
   --color-shadow-darker: rgba(34, 27, 61, 0.3);
@@ -89,12 +91,19 @@
      `-light` in `text-light` is a lighter SHADE used in LIGHT mode (it is not
      a light-theme variant of `text-dark`), while every `*-dark` token here is
      the DARK-THEME value of its base token. `box-dark` is the dark-theme
-     border blue for the tag chips — "box" is the legacy name of that variable
+     accent fill for the tag chips (the checked chip, the read-aloud highlight,
+     the search field's focus glow) — "box" is the legacy name of that variable
      in the old blog (`--color-box`), kept so the port reads 1:1. (`-deep` in
      `amber-ink-deep` above is a third meaning: a DARKER SHADE of the same
      light-mode ink.) */
   --color-blue-light: #7da2ff;
-  --color-box-dark: #3d6ff0;
+  /* Deepened from #3d6ff0 so white on the checked chip clears AA
+     (palette.test.ts). */
+  --color-box-dark: #2a56c8;
+  /* The night edge of the blog's code fence and inline code chips (prism-dark.css,
+     post.css): 3:1 on the canvas so they read as panels. The shared
+     --color-border-soft-dark (25%) stays softer for the portfolio's card rules. */
+  --color-fence-edge-dark: rgba(255, 255, 255, 0.35);
   /* The blog's hr and table rules (post.css). The legacy #aaaaaa was mixed
      for a white canvas and vanished on the sky (1.0–1.6:1); a translucent
      navy keeps the rule reading as a line on every stop (palette.test.ts

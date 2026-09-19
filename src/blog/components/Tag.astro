@@ -36,10 +36,11 @@ const labelClass = [
   // light theme's warm accent: the old blue/50 ring sat right next to the navy
   // chip outline it wraps, so focus and border read as the same colour. Solid
   // amber-ink, not amber/50: a half-alpha ring does not clear the 3:1 a focus
-  // indicator needs on the sky, amber-ink does on every stop. Dark keeps the
-  // blue.
+  // indicator needs on the sky, amber-ink does on every stop. Night: solid
+  // blue-light for the same reason (blue at 50% was 2.1:1 on the canvas and
+  // read as the chip's own outline).
   "[.tag:focus-visible+&]:ring-2 [.tag:focus-visible+&]:ring-amber-ink",
-  "dark:[.tag:focus-visible+&]:ring-blue/50"
+  "dark:[.tag:focus-visible+&]:ring-blue-light"
 ].join(" ");
 ---
 
@@ -75,14 +76,17 @@ const labelClass = [
   </span>
   {
     /* Count badge: tonal accent (was #aaa with white numerals, 2.3:1); on a
-      checked chip it sits on the navy fill, so it flips to white.
+      checked chip it sits on the fill at white 10%, so it flips to white (20%
+      lifted the night fill until white sat under AA). The night badge is
+      blue-light on blue-light at 12% — 20% left the numerals at 4.46:1 on the
+      lighter edge of the canvas. palette.test.ts guards both night cases.
       Not a flex box: a flex container would blockify the inner span again and
       bring the line-end marker back, so the numeral is centred in the
       stretched badge with `content-center` (align-content on a block, in
       every evergreen browser since 2024). */
   }
   <div
-    class="content-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy [.tag:checked+label_&]:bg-white/20 [.tag:checked+label_&]:text-white dark:bg-blue-light/20 dark:text-blue-light"
+    class="content-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy [.tag:checked+label_&]:bg-white/10 [.tag:checked+label_&]:text-white dark:bg-blue-light/12 dark:text-blue-light"
   >
     <span class="inline-block">{tag.count}</span>
   </div>

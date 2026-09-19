@@ -13,7 +13,7 @@
    Dark: the light theme leaked through — a white slab per code block on the
    dark canvas. Palette below is Prism's "tomorrow night eighties"
    (prism-tomorrow.css) scoped under html.dark-mode, on the developers page's
-   dark fence surface (4% white, 12% white border). */
+   dark fence surface (4% white, --color-fence-edge-dark). */
 
 .blog-post pre[class*="language-"] {
   background: #ffffff;
@@ -63,12 +63,13 @@
 
 /* --- Dark palette ---------------------------------------------------------
    Prism's "tomorrow night eighties" on the developers page's dark fence
-   surface (4% white, 12% white border). */
+   surface (4% white, --color-fence-edge-dark). */
 
 html.dark-mode .blog-post pre[class*="language-"],
 html.dark-mode .blog-post :not(pre) > code[class*="language-"] {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.12);
+  /* 12% read as a tint, not a panel edge, on the night canvas. */
+  border-color: var(--color-fence-edge-dark);
 }
 
 html.dark-mode .blog-post code[class*="language-"],

@@ -43,10 +43,11 @@ const isRootPath = Astro.url.pathname === rootPath;
     <BaseHead title={title} description={description} {...seo} />
   </head>
   <body class="text-base leading-normal text-text dark:text-text-dark">
-    <!-- Half strength at dusk: the blog is a reading surface, and the close
-         amber stars landing between words read as stray bullets. The landing
-         page and the night are untouched. -->
-    <Particles class="not-dark:opacity-50" />
+    <!-- Dimmed: the blog is a reading surface. At dusk the close amber stars
+         landing between words read as stray bullets (half strength); at night
+         the bright white ones land inside code fences (70%). The landing page
+         is untouched. -->
+    <Particles class="opacity-50 dark:opacity-70" />
     <!-- Theme bootstrap, ported from gatsby-ssr.js. Runs before first paint so
          there is no light/dark flash; exposes window.__theme (the current
          value) and window.__setPreferredTheme, and fires a `themechange` event
@@ -163,9 +164,17 @@ const isRootPath = Astro.url.pathname === rootPath;
 
         // Baked into the SVG (not just CSS on the <img>) so the zoomed copy —
         // which medium-zoom clones outside the article, over its dark overlay —
-        // keeps a solid light card behind edge labels and sequence text too.
-        const withEmbeddedStyle = (svg: string, face: string) =>
-          svg.replace(/<svg\b[^>]*>/, open => `${open}<style>${face}svg{background:#fff}</style>`);
+        // keeps a solid card behind edge labels and sequence text too. The card
+        // follows the theme, as the diagram does: mermaid's "neutral" theme on
+        // white at dusk, its "dark" theme on #282c35 (--color-dark-bg) at night
+        // — a white slab was the brightest thing on the night page, at 16:1.
+        // post.css paints the same colour behind the <img>'s padding.
+        const isDark = () => document.documentElement.classList.contains("dark-mode");
+        const withEmbeddedStyle = (svg: string, face: string, dark: boolean) =>
+          svg.replace(
+            /<svg\b[^>]*>/,
+            open => `${open}<style>${face}svg{background:${dark ? "#282c35" : "#fff"}}</style>`
+          );
 
         // Same lazy medium-zoom wiring as post images ([...slug].astro), for
         // the diagram <img>s created below. Separate memoized instance since
@@ -199,34 +208,51 @@ const isRootPath = Astro.url.pathname === rootPath;
           );
         };
 
-        let loaded = false;
-        const renderAll = () => {
-          if (loaded) return;
-          loaded = true;
+        // One <img> per fence, created on the first render and repainted on
+        // every theme toggle after it (the element stays, so medium-zoom's
+        // attachment and the reader's scroll position survive). The fences'
+        // <code> nodes keep the source once detached. Renders are chained on
+        // `queue`: mermaid.initialize() is global, so two themes must never
+        // render at once. `painted` is the theme of the last completed pass,
+        // so a burst of toggles settles to one repaint (or none).
+        const images: HTMLImageElement[] = [];
+        let pass = 0;
+        let painted: boolean | undefined;
+        const render = () =>
           Promise.all([import("mermaid"), fontFace]).then(([{ default: mermaid }, face]) => {
+            const dark = isDark();
+            if (dark === painted) return;
+            painted = dark;
             mermaid.initialize({
               startOnLoad: false,
-              theme: "neutral",
+              theme: dark ? "dark" : "neutral",
               securityLevel: "loose",
               fontFamily: "Fira Code, ui-monospace, monospace"
             });
-            blocks.forEach((block, i) => {
-              const pre = block.closest("pre") || block;
-              const source = block.textContent || "";
-              const id = `mermaid-svg-${i}`;
-
-              mermaid
-                .render(id, source)
-                .then(({ svg }) => {
-                  const figure = document.createElement("figure");
-                  figure.className = "mermaid-diagram";
-                  // Serve the SVG through an <img> (blob URL) so medium-zoom
-                  // can attach — it only supports IMG elements. The embedded
-                  // @font-face + background (see withEmbeddedStyle) travel with
-                  // the blob, so the image and its zoomed clone render exactly
-                  // as measured. The blob URL is intentionally never revoked:
-                  // medium-zoom keeps using the src for the zoomed view.
-                  const img = document.createElement("img");
+            const id = ++pass;
+            return Promise.all(
+              [...blocks].map(async (block, i) => {
+                try {
+                  const { svg } = await mermaid.render(
+                    `mermaid-svg-${i}-${id}`,
+                    block.textContent || ""
+                  );
+                  let img = images[i];
+                  if (!img) {
+                    // Serve the SVG through an <img> (blob URL) so medium-zoom
+                    // can attach — it only supports IMG elements. The embedded
+                    // @font-face + background (see withEmbeddedStyle) travel
+                    // with the blob, so the image and its zoomed clone render
+                    // exactly as measured.
+                    img = document.createElement("img");
+                    img.alt = `Diagram ${i + 1}`;
+                    const figure = document.createElement("figure");
+                    figure.className = "mermaid-diagram";
+                    figure.appendChild(img);
+                    (block.closest("pre") || block).replaceWith(figure);
+                    wireZoom(img);
+                    images[i] = img;
+                  }
                   const viewBox = svg.match(/viewBox="([^"]+)"/);
                   if (viewBox) {
                     const [, , width, height] = viewBox[1].trim().split(/\s+/).map(Number);
@@ -235,22 +261,52 @@ const isRootPath = Astro.url.pathname === rootPath;
                       img.height = Math.round(height);
                     }
                   }
-                  img.src = URL.createObjectURL(
-                    new Blob([withEmbeddedStyle(svg, face)], { type: "image/svg+xml" })
+                  // medium-zoom clones the <img> when a zoom opens, so the
+                  // previous blob can go once the repaint has loaded — unless a
+                  // zoom is showing it right now (then the ~100 KB stays).
+                  const previous = img.src;
+                  img.addEventListener(
+                    "load",
+                    () => {
+                      if (previous && !document.querySelector(".medium-zoom-image--opened")) {
+                        URL.revokeObjectURL(previous);
+                      }
+                    },
+                    { once: true }
                   );
-                  img.alt = `Diagram ${i + 1}`;
-                  figure.appendChild(img);
-                  pre.replaceWith(figure);
-                  wireZoom(img);
-                })
-                .catch(err => {
+                  img.src = URL.createObjectURL(
+                    new Blob([withEmbeddedStyle(svg, face, dark)], { type: "image/svg+xml" })
+                  );
+                } catch (err) {
                   // Leave the source block in place so the page still renders.
                   console.error("Mermaid render failed:", err);
                   reportError(err, { surface: "mermaid" });
-                });
-            });
+                }
+              })
+            );
+          });
+
+        // A pass that fails outright (the mermaid chunk did not load) leaves
+        // the fences in place and is reported; the catch keeps the chain alive
+        // so the next toggle tries again instead of piling up rejections.
+        let queue: Promise<unknown> = Promise.resolve();
+        const enqueue = () => {
+          queue = queue.then(render).catch(err => {
+            console.error("Mermaid render failed:", err);
+            reportError(err, { surface: "mermaid" });
           });
         };
+        let loaded = false;
+        const renderAll = () => {
+          if (loaded) return;
+          loaded = true;
+          enqueue();
+        };
+        // A toggle before the first render needs nothing: render reads the
+        // theme when it runs.
+        window.addEventListener("themechange", () => {
+          if (loaded) enqueue();
+        });
 
         const io = new IntersectionObserver(
           (entries, obs) => {

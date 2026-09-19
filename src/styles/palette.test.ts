@@ -6,6 +6,8 @@
 // ink is therefore held to its WCAG bar against the stops it actually lands on
 // (and against the dusk-white card surface), the way islands.test.ts holds the
 // island tokens. A palette edit should fail here, not ship as unreadable text.
+// The night palette that follows is held the same way against both stops of
+// --background-image-page-dark.
 import { describe, expect, it } from "vitest";
 
 import { channels, contrast, luminance } from "./contrast";
@@ -146,6 +148,91 @@ describe("blue-hour light palette", () => {
   // itself must not vanish.
   it("separates the card surface from the sky it sits on (>= 1.8:1)", () => {
     expect(contrast(card, sky.deep)).toBeGreaterThanOrEqual(1.8);
+  });
+});
+
+// The night that follows: --background-image-page-dark runs `to left` from
+// rgb(30, 33, 48) at the right edge to rgb(20, 22, 34). The two stops are
+// close, so every guard runs on both rather than picking a deepest one.
+const night = (() => {
+  const m = /--background-image-page-dark:\s*linear-gradient\(([^\n]+)\)/.exec(css);
+  if (!m) throw new Error("no --background-image-page-dark gradient in global.css");
+  const stops = [...m[1].matchAll(/rgb\(\d+,\s*\d+,\s*\d+\)/g)].map(s => s[0]);
+  if (stops.length < 2) throw new Error("expected two night stops");
+  return stops;
+})();
+
+describe("night palette", () => {
+  // Body copy and the blog's links / post titles on the canvas.
+  it.each(["text-dark", "blue-light"])("keeps --color-%s readable on the night canvas", name => {
+    for (const stop of night) expect(contrast(ink(name), stop)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // The checked tag chip: white numerals and label on the box-dark fill
+  // (Tag.astro). The old #3d6ff0 sat at 4.44:1.
+  it("keeps white text readable on the checked chip fill (>= 4.5:1)", () => {
+    expect(contrast("#ffffff", ink("box-dark"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // Chip boundaries against the night, as for the light token.
+  it("shows the dark chip outline against the night canvas (>= 3:1)", () => {
+    for (const stop of night) {
+      expect(contrast(over(token("color-chip-outline-dark"), stop), stop)).toBeGreaterThanOrEqual(
+        3
+      );
+    }
+  });
+
+  // The code fence's and inline code's night edge (prism-dark.css, post.css).
+  it("shows the blog's dark panel edges against the night canvas (>= 3:1)", () => {
+    for (const stop of night) {
+      expect(contrast(over(token("color-fence-edge-dark"), stop), stop)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  // Tag.astro's count badge at night: blue-light numerals on blue-light at 12%
+  // over the canvas; on a checked chip, white on white at 10% over the fill.
+  // Alphas restated from the utilities, as below.
+  it("keeps the tag count badge readable at night (>= 4.5:1)", () => {
+    const wash = (name: string, alpha: number) => {
+      const c = channels(ink(name));
+      return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha})`;
+    };
+    for (const stop of night) {
+      expect(
+        contrast(ink("blue-light"), over(wash("blue-light", 0.12), stop))
+      ).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(
+      contrast("#ffffff", over("rgba(255, 255, 255, 0.1)", ink("box-dark")))
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // SearchBar.astro's night placeholder: body ink at 75% on the dark-bg field.
+  it("keeps the search placeholder readable on the night field (>= 4.5:1)", () => {
+    const c = channels(ink("text-dark"));
+    const placeholder = over(`rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.75)`, ink("dark-bg"));
+    expect(contrast(placeholder, ink("dark-bg"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // The blog's dark hr and table rules.
+  it("keeps the blog's dark rules visible on the night canvas (>= 2:1)", () => {
+    for (const stop of night)
+      expect(contrast(ink("accent-grey-dark"), stop)).toBeGreaterThanOrEqual(2);
+  });
+
+  // The dark read-aloud highlight (post.css): box-dark at 20% for the word
+  // inside its block at 14%. A LINK inside the spoken word (blue-light) is
+  // the tight case; body ink has more room. Alphas restated, as for the light
+  // guard above.
+  it("keeps a link readable through the dark read-aloud highlight (>= 4.5:1)", () => {
+    const fill = channels(ink("box-dark"));
+    const wash = (alpha: number) => `rgba(${fill[0]}, ${fill[1]}, ${fill[2]}, ${alpha})`;
+    for (const stop of night) {
+      const word = over(wash(0.2), over(wash(0.14), stop));
+      expect(contrast(ink("blue-light"), word)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(ink("text-dark"), word)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
 

@@ -1,9 +1,11 @@
 // Shared WCAG contrast maths for the palette guards (palette.test.ts and
 // islands.test.ts). Test-only — nothing in the app imports this.
 export const channels = (c: string): number[] => {
-  const m = /^#([0-9a-f]{6})$/i.exec(c);
-  if (!m) throw new Error(`not a 6-digit hex colour: ${c}`);
-  return [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16));
+  const hex = /^#([0-9a-f]{6})$/i.exec(c);
+  if (hex) return [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16));
+  const rgb = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(c);
+  if (rgb) return [1, 2, 3].map(i => Number(rgb[i]));
+  throw new Error(`not a hex or rgb() colour: ${c}`);
 };
 
 const linear = (v: number): number => {

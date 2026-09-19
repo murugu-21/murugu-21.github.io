@@ -75,7 +75,7 @@
   }
   html.dark-mode .blog-post :not(pre) > code {
     background: rgba(255, 255, 255, 0.06);
-    border-color: var(--color-border-soft-dark);
+    border-color: var(--color-fence-edge-dark);
   }
 
   .blog-post hr {
@@ -418,10 +418,9 @@
     height: auto;
   }
 
-  /* Diagrams render with mermaid's light "neutral" theme; give them a solid
-     light card so labels outside node boxes (sequence-diagram text, edge
-     labels) stay readable in dark mode — and stay correct if the user toggles
-     theme after the SVGs were rendered. */
+  /* Backdrop for labels outside node boxes (sequence text, edge labels). Same
+     colour per theme as the background BaseLayout bakes into the SVG itself
+     (withEmbeddedStyle), so the padding ring matches the image. */
   .blog-post .mermaid-diagram img {
     display: inline;
     vertical-align: baseline;
@@ -430,6 +429,9 @@
     padding: 12px;
     max-width: 100%;
     height: auto;
+  }
+  html.dark-mode .blog-post .mermaid-diagram img {
+    background: var(--color-dark-bg);
   }
 
   /* --- Read-aloud highlight ----------------------------------------------- */
@@ -465,16 +467,17 @@
 
   /* The word currently being spoken, inside the highlighted block. Spans are
      inserted lazily by the read-aloud island (src/blog/utils/audio-words.ts).
-     25%, not the night's 45%: the word sits on the 14% block, and the body ink
-     over both washes has to stay AA on the sky's deep stop (palette.test.ts). */
+     Light 25% / night 20%: the word sits on the 14% block, and the ink over
+     both washes has to stay AA — body ink on the sky's deep stop, and at night
+     a LINK inside the spoken word (palette.test.ts guards both). */
   .blog-post .is-speaking .rw.is-word {
     background: color-mix(in srgb, var(--color-amber) 25%, transparent);
     border-radius: 3px;
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-amber) 25%, transparent);
   }
   html.dark-mode .blog-post .is-speaking .rw.is-word {
-    background: color-mix(in srgb, var(--color-box-dark) 45%, transparent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-box-dark) 45%, transparent);
+    background: color-mix(in srgb, var(--color-box-dark) 20%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-box-dark) 20%, transparent);
   }
 
   /* --- Narrow column (the old `@media (max-width: 42rem)`) ----------------- */
