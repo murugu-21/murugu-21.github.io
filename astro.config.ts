@@ -10,6 +10,8 @@ import posthog from "@posthog/rollup-plugin";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
+import remarkMermaid from "./src/blog/utils/remark-mermaid";
+import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
 
 // slug -> ISO publish date from each post's frontmatter, used as the sitemap
 // <lastmod> so crawlers can prioritize recently-updated pages.
@@ -47,6 +49,55 @@ function singleFileSitemap(): AstroIntegration {
         fs.renameSync(chunk, new URL("sitemap.xml", dir));
         fs.rmSync(new URL("sitemap-index.xml", dir), { force: true });
         logger.info("`sitemap.xml` created at `dist`");
+      }
+    }
+  };
+}
+
+// A post whose markdown fails to render (the remark-mermaid guard throwing
+// for a missing diagram file, say) does NOT fail the build: the content
+// layer's glob loader logs the error, caches the empty result in
+// node_modules/.astro and the page ships with an empty <section
+// itemprop="articleBody">. Seen in review: exit 0, "17 page(s) built", blank
+// article. So check the output, like blogNotFoundCopy above: every published
+// post has a non-empty body and exactly one diagram figure per ```mermaid
+// fence in its source. Counting figures also catches a stale cached render
+// after the file is restored.
+function blogPostBodies(): AstroIntegration {
+  return {
+    name: "blog-post-bodies",
+    hooks: {
+      "astro:build:done": ({ dir, logger }) => {
+        const root = path.join(process.cwd(), "content/blog");
+        let checked = 0;
+        for (const slug of fs.readdirSync(root)) {
+          const source = path.join(root, slug, "index.md");
+          if (!fs.existsSync(source)) continue; // draft/ holds nested posts, unpublished
+          const page = new URL(`blog/${slug}/index.html`, dir);
+          if (!fs.existsSync(page)) {
+            throw new Error(`blog-post-bodies: dist/blog/${slug}/index.html was not built`);
+          }
+          const html = fs.readFileSync(page, "utf8");
+          const body = html.match(/<section itemprop="articleBody">([\s\S]*?)<\/section>/);
+          if (!body || body[1].trim() === "") {
+            throw new Error(
+              `blog-post-bodies: dist/blog/${slug}/index.html has an empty article body — ` +
+                "its markdown failed to render (see the [glob-loader] error above); " +
+                "fix it and clear node_modules/.astro, the empty render is cached"
+            );
+          }
+          const fences = findMermaidFences(fs.readFileSync(source, "utf8")).length;
+          const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
+          if (fences !== figures) {
+            throw new Error(
+              `blog-post-bodies: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in dist — ` +
+                "run `bun run diagrams` and clear node_modules/.astro"
+            );
+          }
+          checked++;
+        }
+        if (checked === 0) throw new Error("blog-post-bodies: no blog posts checked");
+        logger.info(`${checked} post bodies checked`);
       }
     }
   };
@@ -218,7 +269,8 @@ export default defineConfig({
       }
     }),
     singleFileSitemap(),
-    blogNotFoundCopy()
+    blogNotFoundCopy(),
+    blogPostBodies()
   ],
   vite: {
     // Vite's own assetsInlineLimit, raised to 8 KB for CSS only. It has to stay
@@ -254,13 +306,17 @@ export default defineConfig({
     // Astro 7 defaults to the satteri processor, which doesn't run unified
     // plugins; the heading-anchor pair below needs the remark/rehype
     // pipeline, so opt back into it explicitly.
+    // remarkMermaid swaps each ```mermaid fence for the SVGs `bun run
+    // diagrams` committed next to the post (src/blog/utils/remark-mermaid.ts)
+    // and fails the build when one is missing; no diagram code ships to the
+    // browser.
     processor: unified({
+      remarkPlugins: [remarkMermaid],
       rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig]]
     }),
     // PrismJS class-based highlighting, matching gatsby-remark-prismjs; the
     // theme CSS (prismjs/themes/prism.css) is imported in the blog's
-    // BaseLayout. Mermaid blocks stay as plain
-    // <code class="language-mermaid"> and are rendered client-side.
+    // BaseLayout.
     syntaxHighlight: "prism"
   }
 });

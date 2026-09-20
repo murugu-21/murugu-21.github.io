@@ -406,21 +406,20 @@
     visibility: visible;
   }
 
-  /* --- Mermaid diagrams (rendered client-side from ```mermaid blocks) ------ */
+  /* --- Mermaid diagrams ---------------------------------------------------- */
 
+  /* ```mermaid fences are rendered at build time into a <figure> holding one
+     <img> per theme (src/blog/utils/remark-mermaid.ts); the rules below show
+     the one for the current theme. The hidden one is lazy-loaded and has no
+     box, so it is never fetched. */
   .blog-post .mermaid-diagram {
     margin: 2rem 0;
     text-align: center;
   }
 
-  .blog-post .mermaid-diagram svg {
-    max-width: 100%;
-    height: auto;
-  }
-
   /* Backdrop for labels outside node boxes (sequence text, edge labels). Same
-     colour per theme as the background BaseLayout bakes into the SVG itself
-     (withEmbeddedStyle), so the padding ring matches the image. */
+     colour per theme as the background scripts/render-mermaid.ts bakes into
+     the SVG itself, so the padding ring matches the image. */
   .blog-post .mermaid-diagram img {
     display: inline;
     vertical-align: baseline;
@@ -430,7 +429,12 @@
     max-width: 100%;
     height: auto;
   }
-  html.dark-mode .blog-post .mermaid-diagram img {
+  .blog-post .mermaid-diagram img.mermaid-dark,
+  html.dark-mode .blog-post .mermaid-diagram img.mermaid-light {
+    display: none;
+  }
+  html.dark-mode .blog-post .mermaid-diagram img.mermaid-dark {
+    display: inline;
     background: var(--color-dark-bg);
   }
 

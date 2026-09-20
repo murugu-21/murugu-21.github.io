@@ -5,6 +5,7 @@ import sanitizeHtml from "sanitize-html";
 
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "../../blog/consts";
 import { getPublishedPosts, excerpt } from "../../blog/utils/posts";
+import { replaceMermaidFences } from "../../blog/utils/mermaid-diagrams";
 
 const parser = new MarkdownIt();
 
@@ -43,24 +44,33 @@ function absolutizeAssets(html: string, postId: string): string {
 
 // Feed at /blog/rss.xml, ported from gatsby-plugin-feed: newest first, with
 // the rendered post body in <content:encoded>.
+// This route runs markdown-it, not Astro's remark pipeline, so the ```mermaid
+// fences are swapped for their rendered SVGs here (the light theme; feed
+// readers and mirrors such as dev.to have no theme toggle) — as post-relative
+// images, which absolutizeAssets then points at the emitted files like any
+// other post image. Left as fences they would reach readers as diagram source.
 export async function GET() {
   const posts = (await getPublishedPosts()).reverse();
 
-  return rss({
-    title: `${SITE_TITLE} RSS Feed`,
-    description: SITE_DESCRIPTION,
-    site: SITE_URL,
-    items: posts.map(post => ({
+  const items = await Promise.all(
+    posts.map(async post => ({
       title: post.data.title,
       pubDate: post.data.date,
       link: `${SITE_URL}/${post.id}/`,
       description: post.data.description || excerpt(post.body),
       content: absolutizeAssets(
-        sanitizeHtml(parser.render(post.body || ""), {
+        sanitizeHtml(parser.render(await replaceMermaidFences(post.body || "")), {
           allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"])
         }),
         post.id
       )
     }))
+  );
+
+  return rss({
+    title: `${SITE_TITLE} RSS Feed`,
+    description: SITE_DESCRIPTION,
+    site: SITE_URL,
+    items
   });
 }
