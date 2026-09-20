@@ -149,6 +149,28 @@ describe("blue-hour light palette", () => {
   it("separates the card surface from the sky it sits on (>= 1.8:1)", () => {
     expect(contrast(card, sky.deep)).toBeGreaterThanOrEqual(1.8);
   });
+
+  // The post's table-of-contents rail (src/blog/components/TableOfContents.astro).
+  // Collapsed, each heading is a bar drawn straight on the sky: a UI component
+  // at 3:1 on every stop. The hr/table rule (accent-grey, 2:1 above) is too
+  // faint for that, so the rail has its own translucent navy.
+  it("shows the ToC bars against every sky stop (>= 3:1)", () => {
+    for (const stop of stops) {
+      expect(contrast(over(token("color-toc-bar"), stop), stop)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  // Expanded, the heading labels (14px) sit on the frosted nav surface
+  // (nav-scrolled, the same band the pinned read-aloud bar paints): normal
+  // text, 4.5:1. The rail is pinned to the right edge, which is the sky's
+  // deep stop (the gradient runs `to left`), so only that stop is checked.
+  // text-light is the inactive label, title the active one.
+  it("keeps the ToC labels readable on the frosted surface (>= 4.5:1)", () => {
+    const surface = over(token("color-nav-scrolled"), sky.deep);
+    for (const name of ["text-light", "title"]) {
+      expect(contrast(ink(name), surface)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
 });
 
 // The night that follows: --background-image-page-dark runs `to left` from
@@ -232,6 +254,24 @@ describe("night palette", () => {
       const word = over(wash(0.2), over(wash(0.14), stop));
       expect(contrast(ink("blue-light"), word)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(ink("text-dark"), word)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  // The ToC rail at night: bars are accent-grey-dark straight on the canvas
+  // (3:1 as a UI component), labels are text-dark / heading-dark on the dark
+  // frosted band (nav-scrolled-dark) over each stop.
+  it("shows the ToC bars against the night canvas (>= 3:1)", () => {
+    for (const stop of night) {
+      expect(contrast(ink("accent-grey-dark"), stop)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("keeps the ToC labels readable on the dark frosted surface (>= 4.5:1)", () => {
+    for (const stop of night) {
+      const surface = over(token("color-nav-scrolled-dark"), stop);
+      for (const name of ["text-dark", "heading-dark"]) {
+        expect(contrast(ink(name), surface)).toBeGreaterThanOrEqual(4.5);
+      }
     }
   });
 });

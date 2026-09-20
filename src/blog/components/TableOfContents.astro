@@ -1,0 +1,279 @@
+---
+// Notion-style table of contents for a post: a rail of thin bars pinned to
+// the viewport's right edge, one per h2/h3, that expands into the heading
+// list on hover or keyboard focus. The section being read is highlighted;
+// the script at the bottom keeps that in step with scrolling.
+//
+// Mounted by src/pages/blog/[...slug].astro AFTER `</article>`, on purpose:
+// outside `.blog-post` none of post.css's link / list rules apply, keyboard
+// users reach the article's own links before the rail's, and with no
+// z-index of its own the medium-zoom overlay (appended to <body> later in
+// the DOM, also unlayered) still paints over it.
+//
+// Where it shows — see the media queries below:
+// - `lg` (64rem) and up, on devices with a hover pointer: the collapsed rail.
+//   The expanded panel overlays the article column's right margin at these
+//   widths; it is a transient hover surface, so that is by design.
+// - Without a hover pointer (an iPad in landscape) the first tap would follow
+//   the link before the labels were ever seen, so the rail only appears
+//   there once the panel fits beside the column with no overlap, and stays
+//   expanded. The article wrapper is 42rem wide with its padding inside
+//   (BaseLayout: max-w-2xl px-5), so the prose ends 19.75rem right of
+//   centre; the panel (20rem) plus the rail's padding (2.25rem) needs
+//   22.25rem from the right edge; no overlap from 2 × (19.75 + 22.25) =
+//   84rem, and 87rem leaves a 1.5rem gap.
+// - Below that: nothing. Phones get the article, as on Notion.
+import type { MarkdownHeading } from "astro";
+import { tocEntries } from "../utils/toc";
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const { headings } = Astro.props;
+const entries = tocEntries(headings);
+---
+
+{
+  entries.length > 0 && (
+    <nav class="toc" aria-label="On this page">
+      <ol>
+        {entries.map(entry => (
+          <li class:list={[{ sub: entry.depth === 3 }]}>
+            {/* The label stays in the accessibility tree while collapsed
+                (clipped, not display:none), so each link keeps its name and
+                the bar is decoration. */}
+            <a href={`#${entry.slug}`}>
+              <span class="bar" aria-hidden="true" />
+              <span class="label">{entry.text}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}
+
+<style>
+  .toc {
+    display: none;
+  }
+
+  /* ---- The expanded panel: the default styling of the list ------------- */
+
+  .toc ol {
+    list-style: none;
+    margin: 0;
+    padding: 0.75rem 1rem;
+    max-width: 20rem;
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
+    border-radius: 0.75rem;
+    /* The frosted band the pinned read-aloud bar paints. */
+    background: var(--color-nav-scrolled);
+    -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(15px);
+    box-shadow: var(--shadow-glow);
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  :global(html.dark-mode) .toc ol {
+    background: var(--color-nav-scrolled-dark);
+    box-shadow: var(--shadow-glow-dark);
+  }
+
+  .toc a {
+    display: flex;
+    align-items: center;
+    padding: 0.3rem 0;
+    font-size: 0.875rem;
+    line-height: 1.35;
+    color: var(--color-text-light);
+    text-decoration: none;
+  }
+  /* h3s indent under their h2, as in Notion's open list. */
+  .toc li.sub a {
+    padding-left: 1rem;
+    font-size: 0.8125rem;
+  }
+  .toc a:hover,
+  .toc a:focus-visible {
+    color: var(--color-title);
+  }
+  .toc a[aria-current] {
+    color: var(--color-title);
+    font-weight: 700;
+  }
+  .toc a:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 0.25rem;
+  }
+  :global(html.dark-mode) .toc a {
+    color: var(--color-text-dark);
+  }
+  :global(html.dark-mode) .toc a:hover,
+  :global(html.dark-mode) .toc a:focus-visible,
+  :global(html.dark-mode) .toc a[aria-current] {
+    color: var(--color-heading-dark);
+  }
+
+  /* Long headings wrap inside the 20rem panel rather than widening it. */
+  .toc .label {
+    overflow-wrap: anywhere;
+  }
+
+  /* Only shown in the collapsed state, below. */
+  .toc .bar {
+    display: none;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--color-toc-bar);
+  }
+  :global(html.dark-mode) .toc .bar {
+    background: var(--color-accent-grey-dark);
+  }
+  .toc a[aria-current] .bar {
+    background: var(--color-title);
+  }
+  :global(html.dark-mode) .toc a[aria-current] .bar {
+    background: var(--color-heading-dark);
+  }
+
+  /* ---- Placement --------------------------------------------------------- */
+
+  @media (min-width: 64rem) and (hover: hover), (min-width: 87rem) and (hover: none) {
+    .toc {
+      display: block;
+      position: fixed;
+      /* `right`, not `100vw`: fixed is measured inside a classic scrollbar. */
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      /* The padding is the hover target around 2px bars — entering this
+         strip expands the rail — and keeps the panel, a descendant, under
+         the pointer as it grows leftward. Clear of the chat launcher's
+         corner (bottom 20px + 56px) via the list's max-height above. */
+      padding: 1rem 0.75rem 1rem 1.5rem;
+    }
+  }
+
+  /* ---- The collapsed rail: bars only, while neither hovered nor focused ---
+     `:has(:focus-visible)`, not `:focus-within`: a mouse click leaves the
+     clicked link focused, and focus-within would then hold the panel open
+     over the prose until the reader clicked elsewhere. Keyboard focus is
+     focus-visible, so tabbing in still expands it. */
+
+  /* Flat, not nested under one `.toc:not(...)` rule: Astro leaves nested
+     selectors unscoped, which drops these to the same specificity as the
+     panel rules above and makes the collapsed state depend on source order.
+     Scoped flat selectors outrank the panel rules outright. */
+  @media (hover: hover) {
+    .toc:not(:hover, :has(:focus-visible)) ol {
+      background: transparent;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+      box-shadow: none;
+      padding: 0;
+      /* No scrollbar beside the bars; a post with more headings than the
+         panel's max-height holds lets its bars run past it instead. */
+      overflow: visible;
+    }
+    .toc:not(:hover, :has(:focus-visible)) a {
+      justify-content: flex-end;
+      padding: 0.35rem 0;
+    }
+    .toc:not(:hover, :has(:focus-visible)) .bar {
+      display: block;
+      width: 1rem;
+    }
+    .toc:not(:hover, :has(:focus-visible)) li.sub .bar {
+      width: 0.625rem;
+    }
+    /* Visually hidden, still announced. */
+    .toc:not(:hover, :has(:focus-visible)) .label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .toc ol {
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  // Scroll spy. Every scroll re-measures the headings, at most once per
+  // frame, and the pure picker (../utils/toc) decides which is active; a
+  // resize does the same, since reflow moves headings without a scroll.
+  // Not an IntersectionObserver: with the root's top edge pulled down to the
+  // reading line, an observer only fires when a heading's BOTTOM leaves the
+  // root, so after a hash jump parked a heading on the line its top had
+  // crossed but nothing fired, and the previous section stayed lit until the
+  // reader scrolled another heading-height. A dozen getBoundingClientRect
+  // calls per scrolled frame is cheap. Listeners live as long as the page:
+  // the rail is server-rendered once per static page, nothing unmounts it.
+  import { TOC_LINE_SLACK, activeIndex } from "../utils/toc";
+
+  const nav = document.querySelector<HTMLElement>("nav.toc");
+  if (nav) {
+    const pairs = [...nav.querySelectorAll<HTMLAnchorElement>("a[href^='#']")].flatMap(link => {
+      const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
+      return heading ? [{ link, heading }] : [];
+    });
+
+    // The reading line: a hash jump parks its heading at the scroll margin
+    // post.css gives it (clearing the pinned read-aloud bar), so read that
+    // margin from the live heading rather than restate it here.
+    const scrollMargin = pairs.length
+      ? parseFloat(getComputedStyle(pairs[0].heading).scrollMarginTop) || 0
+      : 0;
+    const line = scrollMargin + TOC_LINE_SLACK;
+
+    // A heading with no box (inside a closed <details>, say) reports a top of
+    // 0, which would read as reached; give it Infinity instead.
+    const topOf = (heading: HTMLElement) => {
+      const rects = heading.getClientRects();
+      return rects.length ? rects[0].top : Infinity;
+    };
+
+    const update = () => {
+      const tops = pairs.map(p => topOf(p.heading));
+      const root = document.documentElement;
+      const atEnd = Math.ceil(window.scrollY + window.innerHeight) >= root.scrollHeight - 1;
+      const active = activeIndex(tops, line, atEnd);
+      pairs.forEach((p, i) => {
+        if (i === active) p.link.setAttribute("aria-current", "location");
+        else p.link.removeAttribute("aria-current");
+      });
+    };
+
+    // Escape collapses a panel opened from the keyboard, the way leaving with
+    // the pointer collapses a hovered one; the link keeps working from the
+    // article's tab position afterwards.
+    nav.addEventListener("keydown", event => {
+      if (event.key === "Escape" && nav.contains(document.activeElement)) {
+        (document.activeElement as HTMLElement).blur();
+      }
+    });
+
+    let frame = 0;
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        update();
+      });
+    };
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule, { passive: true });
+    update();
+  }
+</script>

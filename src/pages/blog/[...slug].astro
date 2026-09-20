@@ -14,6 +14,7 @@ import {
 } from "../../blog/utils/posts";
 import { formatReadingTime } from "../../blog/utils/helpers";
 import { ListenControls } from "../../blog/components/ListenControls";
+import TableOfContents from "../../blog/components/TableOfContents.astro";
 
 // One page per post; prev/next wired in date-ASC order, exactly like the old
 // gatsby-node.js createPages loop.
@@ -30,7 +31,9 @@ export async function getStaticPaths() {
 }
 
 const { post, previous, next } = Astro.props;
-const { Content } = await render(post);
+// `headings` carries the ids rehype-slug wrote: user rehype plugins run before
+// Astro's heading collector, which keeps an existing id.
+const { Content, headings } = await render(post);
 
 const description = post.data.description || excerpt(post.body);
 
@@ -151,7 +154,10 @@ const jsonLd = {
       <Bio />
     </footer>
   </article>
-  <nav class="blog-post-nav">
+  <!-- The heading rail. After the article, not inside it — see the component
+       header for why (post.css scope, tab order, zoom overlay stacking). -->
+  <TableOfContents headings={headings} />
+  <nav class="blog-post-nav" aria-label="Previous and next posts">
     <!-- `.blog-post-nav ul { margin: 0 }` plus what used to be this element's
          inline style attribute (flex row, wrapping, space-between, no markers,
          no padding). -->
@@ -202,6 +208,30 @@ const jsonLd = {
     new IntersectionObserver(([entry]) => {
       island.classList.toggle("pinned", !entry.isIntersecting && entry.boundingClientRect.top < 0);
     }).observe(sentinel);
+  }
+</script>
+
+<script>
+  // Re-land a shared heading link once the web font is in. The browser jumps
+  // to the fragment before Fira Code has loaded, then the swap reflows the
+  // prose above the target and Chrome does not re-scroll, so a heading opened
+  // from a link sat ~240px below its scroll margin (and the table of contents
+  // lit the previous section). Skipped if the reader has already scrolled by
+  // themselves, so a jump never yanks the page back under them.
+  if (location.hash) {
+    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target) {
+      let readerMoved = false;
+      const noteIntent = () => {
+        readerMoved = true;
+      };
+      for (const type of ["wheel", "touchstart", "keydown", "pointerdown"]) {
+        window.addEventListener(type, noteIntent, { passive: true, once: true });
+      }
+      document.fonts.ready.then(() => {
+        if (!readerMoved) target.scrollIntoView({ block: "start", behavior: "instant" });
+      });
+    }
   }
 </script>
 
