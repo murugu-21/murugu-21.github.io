@@ -170,16 +170,17 @@ description: One-line description shown in lists, search and feeds.
 Images placed next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build
 time. ` ```mermaid ` code blocks become diagrams at build time, not in the browser: `bun run diagrams` renders
 each fence to two SVGs (light and dark theme, with a subset of Fira Code embedded so labels measure the same
-through `<img>`) under `content/blog/<slug>/diagrams/`, named by a hash of the fence, and prunes renderings no
-fence uses any more; commit them with the post. Every file carries the mermaid version it was rendered with, so
+through `<img>`) plus a light PNG for the feed, under `content/blog/<slug>/diagrams/`, named by a hash of the
+fence, and prunes renderings no fence uses any more; commit them with the post. Every file carries the mermaid version it was rendered with, so
 a mermaid upgrade makes them all stale and the next run re-renders them (`--force` does the same on demand; a
 change to the renderer's own output — theme, font — needs a `RENDERER_VERSION` bump in
 `src/blog/utils/mermaid-diagrams.ts` so the hashes change). An edited diagram can never ship stale: `bun run
 build` runs `bun run diagrams --check` first (no browser needed) and stops with the command to run, and a
 post-build integration (`blogPostBodies` in `astro.config.ts`) asserts every post body rendered with one figure
 per fence — needed because the content layer only logs a post whose markdown failed to render, caches the empty
-result in `node_modules/.astro` and ships a blank article. The RSS feed carries the light rendering as a plain
-image, so feed readers and mirrors (dev.to, Hashnode) show the diagram instead of its source. On wide screens the post's `##` and
+result in `node_modules/.astro` and ships a blank article. The RSS feed carries the PNG, not the SVG: feed readers and
+mirrors (dev.to, Hashnode) rasterize images server-side, with no HTML engine for mermaid's `foreignObject` labels
+and no web fonts, so the SVGs come out blank there while the PNG shows the diagram. On wide screens the post's `##` and
 `###` headings feed a Notion-style table-of-contents rail at the right edge (`TableOfContents.astro`); a post
 with fewer than two shows no rail, and a separator should be `---`, never an empty `##`. The directory name is the URL slug, so
 the post is published at `/blog/<slug>/` and picked up automatically by the sitemap, RSS feed, both `llms.txt`

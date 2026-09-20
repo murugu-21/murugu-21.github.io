@@ -5,6 +5,7 @@ import {
   diagramAlt,
   diagramFile,
   diagramHash,
+  diagramRaster,
   findMermaidFences,
   replaceMermaidFences
 } from "./mermaid-diagrams";
@@ -116,6 +117,7 @@ describe("diagramFile / diagramAlt", () => {
   it("names one file per theme under the post's diagrams directory", () => {
     expect(diagramFile("abc123def456", "light")).toBe(`${DIAGRAMS_DIR}/abc123def456.light.svg`);
     expect(diagramFile("abc123def456", "dark")).toBe(`${DIAGRAMS_DIR}/abc123def456.dark.svg`);
+    expect(diagramRaster("abc123def456")).toBe(`${DIAGRAMS_DIR}/abc123def456.png`);
   });
 
   it("numbers diagrams from one", () => {
@@ -125,13 +127,13 @@ describe("diagramFile / diagramAlt", () => {
 });
 
 describe("replaceMermaidFences", () => {
-  it("swaps each fence for a markdown image of the light rendering and leaves the rest untouched", async () => {
+  it("swaps each fence for a markdown image of the PNG rendering and leaves the rest untouched", async () => {
     const out = await replaceMermaidFences(post);
     const fences = findMermaidFences(post);
     const first = await diagramHash(fences[0].source);
     const second = await diagramHash(fences[1].source);
-    expect(out).toContain(`![Diagram 1](${DIAGRAMS_DIR}/${first}.light.svg)`);
-    expect(out).toContain(`![Diagram 2](${DIAGRAMS_DIR}/${second}.light.svg)`);
+    expect(out).toContain(`![Diagram 1](${DIAGRAMS_DIR}/${first}.png)`);
+    expect(out).toContain(`![Diagram 2](${DIAGRAMS_DIR}/${second}.png)`);
     expect(out).not.toContain("```mermaid\nflowchart LR");
     expect(out).not.toContain("~~~mermaid");
     // Untouched: the js fence, the nested sample and the prose.

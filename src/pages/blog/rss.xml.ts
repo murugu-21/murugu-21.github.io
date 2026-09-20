@@ -45,10 +45,12 @@ function absolutizeAssets(html: string, postId: string): string {
 // Feed at /blog/rss.xml, ported from gatsby-plugin-feed: newest first, with
 // the rendered post body in <content:encoded>.
 // This route runs markdown-it, not Astro's remark pipeline, so the ```mermaid
-// fences are swapped for their rendered SVGs here (the light theme; feed
-// readers and mirrors such as dev.to have no theme toggle) — as post-relative
-// images, which absolutizeAssets then points at the emitted files like any
-// other post image. Left as fences they would reach readers as diagram source.
+// fences are swapped for their rendered PNGs here (light theme; feed readers
+// and mirrors such as dev.to have no theme toggle, and their image proxies
+// cannot rasterize the SVGs the page uses — see diagramRaster) — as
+// post-relative images, which absolutizeAssets then points at the emitted
+// files like any other post image. Left as fences they would reach readers as
+// diagram source.
 export async function GET() {
   const posts = (await getPublishedPosts()).reverse();
 

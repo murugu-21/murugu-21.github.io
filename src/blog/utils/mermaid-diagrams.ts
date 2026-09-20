@@ -81,12 +81,18 @@ export async function diagramHash(source: string): Promise<string> {
 export const diagramFile = (hash: string, theme: DiagramTheme) =>
   `${DIAGRAMS_DIR}/${hash}.${theme}.svg`;
 
+// The light rendering as a PNG, for the feed only: dev.to and Hashnode pass
+// every image through a server-side rasterizer, which has no HTML engine for
+// the foreignObject labels mermaid emits and no web fonts for the embedded
+// face, so the SVGs come out blank there. The site never uses this file.
+export const diagramRaster = (hash: string) => `${DIAGRAMS_DIR}/${hash}.png`;
+
 export const diagramAlt = (index: number) => `Diagram ${index + 1}`;
 
 // The raw-markdown counterpart of the remark plugin, for pipelines that never
 // see an mdast (the RSS route runs markdown-it): each fence becomes a plain
-// image of the light rendering, relative to the post directory like any other
-// post image.
+// image of the light rendering's PNG, relative to the post directory like any
+// other post image.
 export async function replaceMermaidFences(markdown: string): Promise<string> {
   const fences = findMermaidFences(markdown);
   if (fences.length === 0) return markdown;
@@ -95,7 +101,7 @@ export async function replaceMermaidFences(markdown: string): Promise<string> {
   for (const [i, fence] of fences.entries()) {
     const hash = await diagramHash(fence.source);
     out += markdown.slice(cursor, fence.start);
-    out += `![${diagramAlt(i)}](${diagramFile(hash, "light")})`;
+    out += `![${diagramAlt(i)}](${diagramRaster(hash)})`;
     cursor = fence.end;
   }
   return out + markdown.slice(cursor);

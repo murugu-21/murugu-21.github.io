@@ -2,19 +2,22 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import puppeteer, { type Browser, type Page } from "puppeteer";
+import sharp from "sharp";
 import subsetFont from "subset-font";
 
 import {
-  DIAGRAM_THEMES,
   DIAGRAMS_DIR,
   diagramFile,
   diagramHash,
+  diagramRaster,
   findMermaidFences,
   type DiagramTheme
 } from "../src/blog/utils/mermaid-diagrams";
 
 // Renders every ```mermaid fence under content/blog to SVG, one file per
 // theme, next to its post (content/blog/<slug>/diagrams/<hash>.<theme>.svg),
+// plus a 2x PNG of the light theme for the RSS feed (<hash>.png — mirrors
+// rasterize images server-side and cannot draw the SVGs, see diagramRaster),
 // and deletes renderings no fence refers to any more. The build never runs
 // mermaid: src/blog/utils/remark-mermaid.ts swaps each fence for these files
 // and fails when one is missing, so this is a dev-time step — run it after
@@ -64,6 +67,23 @@ const stampOf = (path: string): string | undefined =>
     .match(new RegExp(`\\b${STAMP_ATTR}="([^"]*)"`))?.[1];
 const upToDate = (path: string) => existsSync(path) && stampOf(path) === STAMP;
 
+// One output file of one diagram. The PNG is a screenshot of the light SVG,
+// so it is current exactly when that SVG is (a PNG cannot carry the stamp).
+type Variant = { kind: "svg"; theme: DiagramTheme } | { kind: "png" };
+const VARIANTS: readonly Variant[] = [
+  { kind: "svg", theme: "light" },
+  { kind: "svg", theme: "dark" },
+  { kind: "png" }
+];
+const variantPath = (job: Job, variant: Variant) =>
+  join(
+    dirname(job.post),
+    variant.kind === "png" ? diagramRaster(job.hash) : diagramFile(job.hash, variant.theme)
+  );
+const variantLabel = (variant: Variant) => (variant.kind === "png" ? "png" : variant.theme);
+// PNG padding, matching the card post.css draws around the page's <img>.
+const PNG_PADDING = 12;
+
 // Per theme: mermaid's theme name and the card colour behind the diagram
 // (post.css paints the same colour behind the <img>'s padding; the dark one
 // is --color-dark-bg).
@@ -102,8 +122,9 @@ async function expectedFiles(): Promise<{ jobs: Job[]; expected: Map<string, Set
     const files = new Set<string>();
     for (const [index, fence] of fences.entries()) {
       const hash = await diagramHash(fence.source);
-      jobs.push({ post, index, source: fence.source, hash });
-      for (const theme of DIAGRAM_THEMES) files.add(join(dirname(post), diagramFile(hash, theme)));
+      const job: Job = { post, index, source: fence.source, hash };
+      jobs.push(job);
+      for (const variant of VARIANTS) files.add(variantPath(job, variant));
     }
     expected.set(dirname(post), files);
   }
@@ -153,6 +174,9 @@ async function embedStyle(svg: string, theme: DiagramTheme, font: Buffer): Promi
 async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Page }> {
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
+  // 2x so the PNG stays sharp on high-density screens; the viewport is
+  // widened per screenshot for diagrams wider than this.
+  await page.setViewport({ width: 1200, height: 900, deviceScaleFactor: 2 });
   page.on("pageerror", err => console.error("[render-mermaid] page error:", err));
   // The full font goes into the measuring page so every glyph measures in the
   // face the SVG will embed.
@@ -197,16 +221,49 @@ async function renderOne(
   );
 }
 
+// Screenshot of the styled light SVG at its natural size, on the same white
+// card the page draws, quantized to a palette (line art compresses to a
+// fraction of a truecolour PNG with no visible loss).
+async function rasterize(page: Page, styledSvg: string): Promise<Buffer> {
+  const size = await page.evaluate(svgMarkup => {
+    document.body.innerHTML = `<div id="shot" style="display:inline-block;background:#fff">${svgMarkup}</div>`;
+    const svg = document.querySelector<SVGSVGElement>("#shot svg");
+    if (!svg) throw new Error("rasterize: no <svg> in the rendering");
+    const [, , width, height] = (svg.getAttribute("viewBox") || "").split(/\s+/).map(Number);
+    if (!(width > 0 && height > 0)) throw new Error("rasterize: rendering has no viewBox");
+    svg.setAttribute("width", String(width));
+    svg.setAttribute("height", String(height));
+    svg.style.maxWidth = "none";
+    return { width, height };
+  }, styledSvg);
+  await page.setViewport({
+    width: Math.ceil(size.width) + 2 * PNG_PADDING + 40,
+    height: Math.ceil(size.height) + 2 * PNG_PADDING + 40,
+    deviceScaleFactor: 2
+  });
+  await page.evaluate(padding => {
+    (document.getElementById("shot") as HTMLElement).style.padding = `${padding}px`;
+  }, PNG_PADDING);
+  await page.evaluate(() => document.fonts.ready);
+  const card = await page.$("#shot");
+  if (!card) throw new Error("rasterize: card element missing");
+  const shot = await card.screenshot({ type: "png" });
+  await page.evaluate(() => {
+    document.body.innerHTML = "";
+  });
+  return sharp(shot).png({ palette: true, compressionLevel: 9 }).toBuffer();
+}
+
 async function main(): Promise<void> {
   const { jobs, expected } = await expectedFiles();
   const stale = orphans(expected);
-  const missing = jobs.flatMap(job =>
-    DIAGRAM_THEMES.map(theme => ({
-      job,
-      theme,
-      path: join(dirname(job.post), diagramFile(job.hash, theme))
-    })).filter(({ path }) => force || !upToDate(path))
-  );
+  const missing = jobs.flatMap(job => {
+    const lightStale = force || !upToDate(variantPath(job, VARIANTS[0]));
+    return VARIANTS.map(variant => ({ job, variant, path: variantPath(job, variant) })).filter(
+      ({ variant, path }) =>
+        force || (variant.kind === "png" ? lightStale || !existsSync(path) : !upToDate(path))
+    );
+  });
 
   if (check) {
     for (const { path } of missing) {
@@ -241,11 +298,24 @@ async function main(): Promise<void> {
   const font = readFileSync(FONT_FILE);
   const { browser, page } = await openRenderer(font);
   try {
-    for (const { job, theme, path } of missing) {
-      const svg = await renderOne(page, job.source, theme, job.hash);
+    // Styled light SVGs rendered this run, so the PNG (listed after the SVGs
+    // for the same job) reuses the exact markup just written.
+    const lightSvgs = new Map<string, string>();
+    for (const { job, variant, path } of missing) {
       mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, await embedStyle(svg, theme, font));
-      console.log(`rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${theme})`);
+      if (variant.kind === "svg") {
+        const svg = await renderOne(page, job.source, variant.theme, job.hash);
+        const styled = await embedStyle(svg, variant.theme, font);
+        if (variant.theme === "light") lightSvgs.set(job.hash, styled);
+        writeFileSync(path, styled);
+      } else {
+        const styled =
+          lightSvgs.get(job.hash) ?? readFileSync(variantPath(job, VARIANTS[0]), "utf8");
+        writeFileSync(path, await rasterize(page, styled));
+      }
+      console.log(
+        `rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${variantLabel(variant)})`
+      );
     }
   } finally {
     await browser.close();
