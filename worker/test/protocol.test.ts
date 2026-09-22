@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_MESSAGE_LENGTH, parseClientMessage, toolFrame } from "../protocol";
+import {
+  MAX_MESSAGE_LENGTH,
+  parseClientMessage,
+  parseVisitorContext,
+  toolFrame,
+  VISITOR_COUNTRY_HEADER,
+  VISITOR_IP_HEADER
+} from "../protocol";
 
 describe("parseClientMessage", () => {
   it("accepts a valid chat message and trims it", () => {
@@ -36,6 +43,34 @@ describe("parseClientMessage", () => {
     expect(parseClientMessage(JSON.stringify({ type: "chat", text: "   " }))).toBeNull();
     const big = "x".repeat(MAX_MESSAGE_LENGTH + 1);
     expect(parseClientMessage(JSON.stringify({ type: "chat", text: big }))).toBeNull();
+  });
+});
+
+describe("parseVisitorContext", () => {
+  it("returns the country and IP the edge attached, trimmed", () => {
+    const headers = new Headers({
+      [VISITOR_COUNTRY_HEADER]: " IN ",
+      [VISITOR_IP_HEADER]: " 203.0.113.7 "
+    });
+    expect(parseVisitorContext(headers)).toEqual({
+      country: "IN",
+      ip: "203.0.113.7"
+    });
+  });
+
+  it("keeps the half it has when the other header is missing", () => {
+    const headers = new Headers({ [VISITOR_IP_HEADER]: "203.0.113.7" });
+    expect(parseVisitorContext(headers)).toEqual({ country: null, ip: "203.0.113.7" });
+  });
+
+  it("returns null when the edge learned nothing (or sent blanks)", () => {
+    expect(parseVisitorContext(new Headers())).toBeNull();
+    expect(parseVisitorContext(new Headers({ [VISITOR_COUNTRY_HEADER]: "  " }))).toBeNull();
+  });
+
+  it("caps a forged value instead of storing it whole", () => {
+    const headers = new Headers({ [VISITOR_IP_HEADER]: "x".repeat(200) });
+    expect(parseVisitorContext(headers)?.ip).toHaveLength(64);
   });
 });
 

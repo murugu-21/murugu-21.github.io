@@ -441,6 +441,16 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   The row is `aria-hidden` with a stable `sr-only` "Jarvis is typing", so the
   rotating words don't spam the panel's live region.
 - **Email:** `send_email` binding → `OPPORTUNITY_INBOX` (Worker secret).
+- **Visitor context:** the Worker edge reads the country off the WebSocket
+  upgrade (`request.cf.country`, falling back to `CF-IPCountry`) and the
+  address off `CF-Connecting-IP`, and carries both to the room as headers —
+  a Durable Object never sees `request.cf`, and the client's own copy of
+  those headers is deleted first, so a spoofed value can never be read.
+  `ChatRoom.onConnect` records them under `visitor_*` meta keys and mirrors
+  one `rooms` row per room to D1 (`migrations/0002_rooms.sql`), refreshed on
+  every reconnect with `first_seen` preserved, so the dash shows where a
+  conversation came from without joining transcripts. IPs are personal data:
+  they live only in the room and that mirror, never in analytics.
 - **Limits:** 20 msgs/day per conversation, 300/day globally, 1000 chars/msg.
   Chat runs until the DeepSeek account is actually out of credit — the
   `RateLimiter` DO reads `GET /user/balance` on the same key (cached 10 min,

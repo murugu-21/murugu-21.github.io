@@ -6,6 +6,7 @@ import { audio } from "./audio";
 import { ChatRoom } from "./chat-room";
 import { mcp } from "./mcp";
 import { serveAsset } from "./not-found";
+import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "./protocol";
 import { RateLimiter } from "./rate-limiter";
 import { mcpManifest, wellKnown } from "./well-known";
 
@@ -15,7 +16,31 @@ const app = new Hono<{ Bindings: Env }>();
 
 // Claims /parties/:party/:room (WebSocket upgrades and HTTP) for the Durable
 // Objects; everything else falls through to the next handler.
-app.use("*", partyserverMiddleware());
+app.use(
+  "*",
+  partyserverMiddleware<{ Bindings: Env }>({
+    options: {
+      // The chat room records where its visitor connected from, and this is
+      // the only place that context exists: `request.cf` is populated on the
+      // edge request and nowhere downstream, so the room would see nothing.
+      // Copy country and IP onto the upgrade as headers instead. Delete
+      // first, set second — a client-sent value under the same name must
+      // never be mistaken for Cloudflare's.
+      onBeforeConnect: (req, _lobby, c) => {
+        const cf = c.req.raw.cf as IncomingRequestCfProperties | undefined;
+        const country = cf?.country ?? c.req.header("CF-IPCountry");
+        const ip = c.req.header("CF-Connecting-IP");
+
+        const headers = new Headers(req.headers);
+        headers.delete(VISITOR_COUNTRY_HEADER);
+        headers.delete(VISITOR_IP_HEADER);
+        if (country) headers.set(VISITOR_COUNTRY_HEADER, country);
+        if (ip) headers.set(VISITOR_IP_HEADER, ip);
+        return new Request(req, { headers });
+      }
+    }
+  })
+);
 
 // The public JSON API. Claimed by the Worker (not static assets) so that
 // every /api/* failure is a JSON error envelope instead of the HTML 404 page
