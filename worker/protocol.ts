@@ -16,6 +16,31 @@ const PAGE_PATH = /^\/[^\s]{0,199}$/;
 
 export type ChatHistoryEntry = { role: "user" | "assistant"; content: string };
 
+// Visitor context travels from the edge to the room as headers on the
+// WebSocket upgrade: a Durable Object never sees `request.cf`, and only the
+// Worker in front of it can resolve the country. server.ts drops any
+// client-supplied copy of these before setting its own, so a value read here
+// always came from Cloudflare.
+export const VISITOR_COUNTRY_HEADER = "x-visitor-country";
+export const VISITOR_IP_HEADER = "x-visitor-ip";
+
+export type VisitorContext = { country: string | null; ip: string | null };
+
+/** Both values as `string | null`; null when the edge learned neither. */
+export function parseVisitorContext(headers: Headers): VisitorContext | null {
+  const country = cleanHeader(headers.get(VISITOR_COUNTRY_HEADER));
+  const ip = cleanHeader(headers.get(VISITOR_IP_HEADER));
+  if (!country && !ip) return null;
+  return { country, ip };
+}
+
+// A country code is two characters and an address at most 45; the cap only
+// has to stop a forged value from bloating a row.
+function cleanHeader(value: string | null): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.slice(0, 64) : null;
+}
+
 // Tools the widget knows how to narrate in its activity row.
 export type ToolName = "fetch_page" | "capture_opportunity";
 

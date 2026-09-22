@@ -43,8 +43,9 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }],
   "send_email": [{ "name": "EMAIL" }],
-  // Read-only analytics mirror of every room's messages — DO SQLite stays the
-  // serving source of truth; D1 exists so chats are browsable in the dash
+  // Read-only analytics mirror of every room: its messages plus the country
+  // and IP of the connection that opened it. DO SQLite stays the serving
+  // source of truth; D1 exists so chats are browsable in the dash
   // (Storage & Databases → D1 → jarvis-chats). Writes are fire-and-forget.
   //
   // Schema lives in ./migrations (the default `migrations_dir`); apply it with

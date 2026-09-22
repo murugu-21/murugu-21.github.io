@@ -1,6 +1,8 @@
-import { env } from "cloudflare:test";
+import { env, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
+import { ChatRoom } from "../chat-room";
+import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "../protocol";
 import worker from "../server";
 
 // The test wrangler config has no ASSETS binding, so each test injects a mock
@@ -109,5 +111,57 @@ describe("worker entry", () => {
     expect(response.webSocket).not.toBeNull();
     response.webSocket?.accept();
     response.webSocket?.close();
+  });
+
+  it("passes the visitor's country and IP to the room on upgrade", async () => {
+    const response = await worker.fetch(
+      new Request("https://example.com/parties/chat-room/geo-room-ws", {
+        headers: {
+          Upgrade: "websocket",
+          "CF-Connecting-IP": "198.51.100.42",
+          "CF-IPCountry": "IN"
+        }
+      }),
+      envWithAssets()
+    );
+    expect(response.status).toBe(101);
+    response.webSocket?.accept();
+    response.webSocket?.close();
+
+    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("geo-room-ws"));
+    await runInDurableObject(stub, async (instance: ChatRoom) => {
+      const meta = Object.fromEntries(
+        instance.ctx.storage.sql
+          .exec(`SELECT key, value FROM meta WHERE key LIKE 'visitor_%'`)
+          .toArray()
+          .map(r => [r.key as string, r.value])
+      );
+      expect(meta.visitor_country).toBe("IN");
+      expect(meta.visitor_ip).toBe("198.51.100.42");
+    });
+  });
+
+  it("drops a client-supplied visitor header when Cloudflare knows nothing", async () => {
+    const response = await worker.fetch(
+      new Request("https://example.com/parties/chat-room/spoof-room-ws", {
+        headers: {
+          Upgrade: "websocket",
+          [VISITOR_COUNTRY_HEADER]: "XX",
+          [VISITOR_IP_HEADER]: "203.0.113.66"
+        }
+      }),
+      envWithAssets()
+    );
+    expect(response.status).toBe(101);
+    response.webSocket?.accept();
+    response.webSocket?.close();
+
+    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("spoof-room-ws"));
+    await runInDurableObject(stub, async (instance: ChatRoom) => {
+      const rows = instance.ctx.storage.sql
+        .exec(`SELECT key FROM meta WHERE key LIKE 'visitor_%'`)
+        .toArray();
+      expect(rows).toEqual([]);
+    });
   });
 });

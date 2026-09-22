@@ -1,4 +1,4 @@
-import { Server, type Connection } from "partyserver";
+import { Server, type Connection, type ConnectionContext } from "partyserver";
 
 import { isInsufficientBalance, runDeepseekExchange } from "./ai";
 import { parseLeadArguments, sendOpportunityEmail, type Lead } from "./email";
@@ -9,6 +9,7 @@ import { type StreamResult } from "./sse";
 import {
   GREETING,
   parseClientMessage,
+  parseVisitorContext,
   toolFrame,
   type ChatHistoryEntry,
   type ServerMessage
@@ -49,12 +50,13 @@ export class ChatRoom extends Server<Env> {
     );
   }
 
-  onConnect(connection: Connection): void {
+  onConnect(connection: Connection, ctx: ConnectionContext): void {
     // Seed the greeting as the room's first persisted message so history
     // replays and transcript downloads always include the opener. The check
     // and insert are synchronous — no interleaving, no double seed.
     const count = this.ctx.storage.sql.exec(`SELECT COUNT(*) AS n FROM messages`).one().n as number;
     if (count === 0) this.persist("assistant", GREETING);
+    this.recordVisitor(ctx.request);
     this.send(connection, { type: "history", messages: this.history() });
   }
 
@@ -267,6 +269,53 @@ export class ChatRoom extends Server<Env> {
 
   private limiter() {
     return this.env.RateLimiter.get(this.env.RateLimiter.idFromName("global"));
+  }
+
+  // Where the visitor connected from, attached to the upgrade by the Worker
+  // edge (see server.ts) — a Durable Object never gets `request.cf` itself.
+  // The room keeps its own record under `visitor_*` meta keys and mirrors one
+  // `rooms` row per room to D1, so the dash can show where a conversation
+  // came from without joining the transcript. Reconnects refresh the country
+  // and IP and bump last_seen; a missing value never erases a known one.
+  private recordVisitor(request: Request): void {
+    const visitor = parseVisitorContext(request.headers);
+    if (!visitor) return;
+
+    const now = Date.now();
+    const existing = this.ctx.storage.sql
+      .exec(`SELECT value FROM meta WHERE key = 'visitor_first_seen'`)
+      .toArray();
+    const firstSeen = existing.length ? Number(existing[0].value) : now;
+
+    this.upsertMeta("visitor_country", visitor.country);
+    this.upsertMeta("visitor_ip", visitor.ip);
+    this.upsertMeta("visitor_last_seen", String(now));
+    if (!existing.length) this.upsertMeta("visitor_first_seen", String(now));
+
+    // Same fire-and-forget contract as the message mirror: the room's SQLite
+    // is the record, D1 is a view of it, and losing the view must not touch
+    // the conversation.
+    this.env.CHAT_DB?.prepare(
+      `INSERT INTO rooms (room_id, country, ip, first_seen, last_seen)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (room_id) DO UPDATE SET
+         country = COALESCE(excluded.country, rooms.country),
+         ip = COALESCE(excluded.ip, rooms.ip),
+         last_seen = excluded.last_seen`
+    )
+      .bind(this.name, visitor.country, visitor.ip, firstSeen, now)
+      .run()
+      .catch((err: unknown) => console.error("d1 mirror failed", err));
+  }
+
+  private upsertMeta(key: string, value: string | null): void {
+    if (value === null) return;
+    this.ctx.storage.sql.exec(
+      `INSERT INTO meta (key, value) VALUES (?, ?)
+       ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
+      key,
+      value
+    );
   }
 
   private storeLead(lead: Lead): void {
