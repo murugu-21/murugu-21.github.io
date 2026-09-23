@@ -101,7 +101,13 @@
   .blog-post h6 {
     margin-top: 3rem;
     margin-bottom: 1.5rem;
-    line-height: 1.1;
+    /* At least Fira Code's content box, which Chrome lays out at 1.306em
+       (52px at the post title's 39.8px). Any tighter and the boxes of a
+       wrapped heading's lines overlap, and the selection highlight — painted
+       over the content box — doubles up in a darker strip between them.
+       Rounded up to whole pixels so the seam lands on a pixel boundary. */
+    line-height: 1.32;
+    line-height: round(up, 1.32em, 1px);
     letter-spacing: -0.025em;
     /* anchor icons are absolutely positioned against the heading */
     position: relative;
@@ -482,6 +488,27 @@
   html.dark-mode .blog-post .is-speaking .rw.is-word {
     background: color-mix(in srgb, var(--color-box-dark) 20%, transparent);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-box-dark) 20%, transparent);
+  }
+
+  /* Headings' line boxes (1.32) only just clear Fira Code's content box
+     (1.306em), so the word's 2px shadow would still spill into the next line of
+     a wrapped heading. Paint the wash as a gradient band at most one line box
+     (1lh) tall, less a 1px gap, and drop the shadow. */
+  .blog-post .is-speaking:is(h1, h2, h3, h4, h5, h6) .rw.is-word {
+    --word-wash: color-mix(in srgb, var(--color-amber) 25%, transparent);
+  }
+  html.dark-mode .blog-post .is-speaking:is(h1, h2, h3, h4, h5, h6) .rw.is-word {
+    --word-wash: color-mix(in srgb, var(--color-box-dark) 20%, transparent);
+  }
+  .blog-post .is-speaking:is(h1, h2, h3, h4, h5, h6) .rw.is-word,
+  html.dark-mode .blog-post .is-speaking:is(h1, h2, h3, h4, h5, h6) .rw.is-word {
+    background: linear-gradient(
+      transparent calc(50% - 0.5lh + 1px),
+      var(--word-wash) calc(50% - 0.5lh + 1px),
+      var(--word-wash) calc(50% + 0.5lh - 1px),
+      transparent calc(50% + 0.5lh - 1px)
+    );
+    box-shadow: none;
   }
 
   /* --- Narrow column (the old `@media (max-width: 42rem)`) ----------------- */
