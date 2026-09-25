@@ -103,16 +103,6 @@ so `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's
 `overrides` entry in `package.json`. All three come out together once
 `@astrojs/check` supports TypeScript 7.
 
-The other `overrides` entry, `htmlparser2`, is for `linkedom` (the DOM in the
-test files). linkedom still declares `htmlparser2@^10`, whose `domutils` and
-`entities` dependencies ship source maps rooted at raw.githubusercontent.com.
-Vite can't resolve those roots locally and warns "points to a source file
-outside its package" for every file in a test run. htmlparser2 12 uses the
-fixed majors (domutils 4, entities 8), which ship their `src/` and resolve
-locally; both Vite and Bun load linkedom's ESM entry, so htmlparser2 12 being
-ESM-only is not a problem here. Revisit when linkedom moves past
-htmlparser2 10.
-
 Two consequences of having both compilers in the tree. `@typescript/typescript6`
 pulls its own TypeScript 6, and that copy wins `node_modules/.bin/tsc` — so bare
 `bunx tsc` reports 6.0.3, and the `check:*` scripts invoke
