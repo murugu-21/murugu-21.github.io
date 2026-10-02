@@ -8,15 +8,40 @@ import {
   contactRateLimitHeaders,
   policyField,
   rateLimitField,
-  RATE_LIMIT_EXPOSED_HEADERS,
   READ_QUOTA,
   readRateLimitHeaders,
   resetReadWindows,
   secondsUntilUtcMidnight,
   takeReadSlot
 } from "../api/ratelimit";
+import worker from "../server";
+import { testEnv } from "./fixtures";
 
 beforeEach(() => resetReadWindows());
+
+const get = async (path: string, ip?: string): Promise<Response> =>
+  await worker.fetch(
+    new Request(
+      `https://murugappan.dev${path}`,
+      ip ? { headers: { "CF-Connecting-IP": ip } } : undefined
+    ),
+    testEnv()
+  );
+
+const postContact = async (body: unknown, ip: string): Promise<Response> =>
+  await worker.fetch(
+    new Request("https://murugappan.dev/api/v1/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "CF-Connecting-IP": ip },
+      body: JSON.stringify(body)
+    }),
+    testEnv()
+  );
+
+const validMessage = {
+  email: "ada@example.com",
+  message: "We are hiring a senior backend engineer for healthcare."
+};
 
 describe("field serialisation", () => {
   // draft-ietf-httpapi-ratelimit-headers: a list of quota policies, each a
@@ -50,22 +75,12 @@ describe("field serialisation", () => {
     expect(headers["X-RateLimit-Remaining"]).toBe("7");
     expect(headers["X-RateLimit-Reset"]).toBe("30");
   });
-
-  it("exposes every header a browser client needs to self-throttle", () => {
-    expect([...RATE_LIMIT_EXPOSED_HEADERS].sort()).toEqual([
-      "RateLimit",
-      "RateLimit-Policy",
-      "Retry-After",
-      "X-RateLimit-Limit",
-      "X-RateLimit-Remaining",
-      "X-RateLimit-Reset"
-    ]);
-  });
 });
 
 describe("takeReadSlot", () => {
+  const now = 1_000_000;
+
   it("spends one slot per call and counts down", () => {
-    const now = 1_000_000;
     expect(takeReadSlot("1.1.1.1", now)).toMatchObject({
       allowed: true,
       remaining: READ_QUOTA.quota - 1
@@ -77,7 +92,6 @@ describe("takeReadSlot", () => {
   });
 
   it("counts each client separately", () => {
-    const now = 1_000_000;
     takeReadSlot("1.1.1.1", now);
     expect(takeReadSlot("2.2.2.2", now)).toMatchObject({
       remaining: READ_QUOTA.quota - 1
@@ -85,7 +99,6 @@ describe("takeReadSlot", () => {
   });
 
   it("refuses once the window's quota is spent, and says for how long", () => {
-    const now = 1_000_000;
     for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot("3.3.3.3", now);
     const blocked = takeReadSlot("3.3.3.3", now);
     expect(blocked.allowed).toBe(false);
@@ -94,14 +107,12 @@ describe("takeReadSlot", () => {
   });
 
   it("counts down the reset as the window elapses", () => {
-    const now = 1_000_000;
     takeReadSlot("4.4.4.4", now);
     const later = takeReadSlot("4.4.4.4", now + 30_000);
     expect(later.resetSeconds).toBe(READ_QUOTA.windowSeconds - 30);
   });
 
   it("starts a fresh window once the old one has passed", () => {
-    const now = 1_000_000;
     for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot("5.5.5.5", now);
     expect(takeReadSlot("5.5.5.5", now).allowed).toBe(false);
     const next = takeReadSlot("5.5.5.5", now + READ_QUOTA.windowSeconds * 1000 + 1);
@@ -126,16 +137,6 @@ describe("contactRateLimitHeaders", () => {
     });
     expect(globalTight.RateLimit).toBe(`"${CONTACT_GLOBAL_QUOTA.name}";r=0;t=3600`);
   });
-
-  it("always advertises both contact policies", () => {
-    const headers = contactRateLimitHeaders({
-      clientRemaining: 2,
-      globalRemaining: 19,
-      resetSeconds: 10
-    });
-    expect(headers["RateLimit-Policy"]).toContain('"contact-client"');
-    expect(headers["RateLimit-Policy"]).toContain('"contact-site"');
-  });
 });
 
 describe("secondsUntilUtcMidnight", () => {
@@ -145,5 +146,92 @@ describe("secondsUntilUtcMidnight", () => {
 
   it("is never zero, so Retry-After always asks for a real wait", () => {
     expect(secondsUntilUtcMidnight(new Date("2026-08-25T23:59:59.999Z"))).toBeGreaterThan(0);
+  });
+});
+
+describe("read limiting through the worker", () => {
+  it("reports the live read allowance on a read", async () => {
+    const res = await get("/api/v1/profile", "198.51.100.1");
+    expect(res.headers.get("RateLimit-Policy")).toBe(
+      `"reads";q=${READ_QUOTA.quota};w=${READ_QUOTA.windowSeconds}`
+    );
+    expect(res.headers.get("RateLimit")).toMatch(
+      new RegExp(`^"reads";r=${READ_QUOTA.quota - 1};t=\\d+$`)
+    );
+    expect(res.headers.get("X-RateLimit-Remaining")).toBe(String(READ_QUOTA.quota - 1));
+  });
+
+  it("advertises the policy even when there is no client address to count", async () => {
+    const res = await get("/api/v1/profile");
+    expect(res.headers.get("RateLimit-Policy")).toContain('"reads"');
+    expect(res.headers.get("RateLimit")).toBeNull();
+  });
+
+  it("429s a client past the read ceiling, with Retry-After", async () => {
+    const ip = "198.51.100.3";
+    for (let i = 0; i < READ_QUOTA.quota; i++) await get("/api/v1/profile", ip);
+    const res = await get("/api/v1/profile", ip);
+    expect(res.status).toBe(429);
+    expect(Number(res.headers.get("Retry-After"))).toBeGreaterThan(0);
+    expect(res.headers.get("RateLimit")).toMatch(/^"reads";r=0;t=\d+$/);
+    const body = (await res.json()) as {
+      error: { code: string; hint: string };
+    };
+    expect(body.error.code).toBe("rate_limited");
+    expect(body.error.hint).toContain("RateLimit");
+  });
+
+  it("keeps the spec reachable for a client that has been throttled", async () => {
+    const ip = "198.51.100.4";
+    for (let i = 0; i < READ_QUOTA.quota + 5; i++) await get("/api/v1/profile", ip);
+    const res = await get("/openapi.json", ip);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("RateLimit")).toMatch(/^"reads";r=0;t=\d+$/);
+  });
+});
+
+describe("contact limiting through the worker", () => {
+  it("advertises the contact policies, not the read one, on the write endpoint", async () => {
+    const res = await get("/api/v1/contact");
+    expect(res.status).toBe(405);
+    const policy = res.headers.get("RateLimit-Policy") ?? "";
+    expect(policy).toContain('"contact-client"');
+    expect(policy).toContain('"contact-site"');
+    expect(policy).not.toContain('"reads"');
+  });
+
+  it("reports the remaining daily allowance on an accepted message", async () => {
+    const res = await postContact(validMessage, "198.51.100.30");
+    expect(res.status).toBe(202);
+    expect(res.headers.get("RateLimit")).toBe(
+      `"contact-client";r=${CONTACT_DAILY_PER_CLIENT - 1};t=${res.headers.get("X-RateLimit-Reset")}`
+    );
+  });
+
+  it("429s a client once its daily allowance is spent", async () => {
+    for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
+      expect((await postContact(validMessage, "198.51.100.7")).status).toBe(202);
+    }
+    const res = await postContact(validMessage, "198.51.100.7");
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toMatch(/^\d+$/);
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe("rate_limited");
+  });
+
+  it("does not spend a slot on an invalid request", async () => {
+    for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 1; i++) {
+      const res = await postContact({ email: "nope", message: "hi" }, "198.51.100.8");
+      expect(res.status).toBe(422);
+    }
+    expect((await postContact(validMessage, "198.51.100.8")).status).toBe(202);
+  });
+
+  it("does not spend a slot on a dry run", async () => {
+    for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 2; i++) {
+      const res = await postContact({ ...validMessage, dryRun: true }, "198.51.100.21");
+      expect(res.status).toBe(200);
+      expect(res.headers.get("X-RateLimit-Remaining")).toBe(String(CONTACT_DAILY_PER_CLIENT));
+    }
+    expect((await postContact(validMessage, "198.51.100.21")).status).toBe(202);
   });
 });

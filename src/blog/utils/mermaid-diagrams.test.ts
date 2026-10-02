@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DIAGRAMS_DIR,
-  diagramAlt,
-  diagramFile,
   diagramHash,
-  diagramRaster,
   findMermaidFences,
   replaceMermaidFences
 } from "./mermaid-diagrams";
@@ -42,28 +39,21 @@ flowchart TD
 End.
 `;
 
+const postFences = findMermaidFences(post);
+
 describe("findMermaidFences", () => {
-  it("finds every top-level mermaid fence, in order, with the body trimmed", () => {
-    const fences = findMermaidFences(post);
-    expect(fences.map(f => f.source)).toEqual([
+  it("finds only top-level mermaid fences, in order, with the body trimmed", () => {
+    // A naive regex would also match the "```mermaid" inside the js fence and
+    // the ````md sample.
+    expect(postFences.map(f => f.source)).toEqual([
       "flowchart LR\n    A --> B",
       "sequenceDiagram\n    A->>B: hi"
     ]);
   });
 
-  it("ignores fences of other languages and fences nested inside a longer fence", () => {
-    // The js fence and the ````md sample above must not produce entries; a
-    // naive regex would match the "```mermaid" inside both.
-    expect(findMermaidFences(post)).toHaveLength(2);
-  });
-
   it("reports the exact span of each fence, opening line through closing line", () => {
-    const [first] = findMermaidFences(post);
+    const [first] = postFences;
     expect(post.slice(first.start, first.end)).toBe("```mermaid\nflowchart LR\n    A --> B\n```");
-  });
-
-  it("returns nothing for a post without diagrams", () => {
-    expect(findMermaidFences("# Hi\n\n```js\nlet x = 1;\n```\n")).toEqual([]);
   });
 
   it("treats an unterminated fence as running to the end of the document", () => {
@@ -113,38 +103,23 @@ describe("diagramHash", () => {
   });
 });
 
-describe("diagramFile / diagramAlt", () => {
-  it("names one file per theme under the post's diagrams directory", () => {
-    expect(diagramFile("abc123def456", "light")).toBe(`${DIAGRAMS_DIR}/abc123def456.light.svg`);
-    expect(diagramFile("abc123def456", "dark")).toBe(`${DIAGRAMS_DIR}/abc123def456.dark.svg`);
-    expect(diagramRaster("abc123def456")).toBe(`${DIAGRAMS_DIR}/abc123def456.png`);
-  });
-
-  it("numbers diagrams from one", () => {
-    expect(diagramAlt(0)).toBe("Diagram 1");
-    expect(diagramAlt(2)).toBe("Diagram 3");
-  });
-});
-
 describe("replaceMermaidFences", () => {
   it("swaps each fence for a markdown image of the PNG rendering and leaves the rest untouched", async () => {
     const out = await replaceMermaidFences(post);
-    const fences = findMermaidFences(post);
-    const first = await diagramHash(fences[0].source);
-    const second = await diagramHash(fences[1].source);
+    const [first, second] = await Promise.all(postFences.map(f => diagramHash(f.source)));
     expect(out).toContain(`![Diagram 1](${DIAGRAMS_DIR}/${first}.png)`);
     expect(out).toContain(`![Diagram 2](${DIAGRAMS_DIR}/${second}.png)`);
     expect(out).not.toContain("```mermaid\nflowchart LR");
     expect(out).not.toContain("~~~mermaid");
-    // Untouched: the js fence, the nested sample and the prose.
+    // the js fence, the nested sample and the prose survive
     expect(out).toContain('const notADiagram = "```mermaid";');
     expect(out).toContain("```mermaid\nflowchart TD\n    X --> Y\n```\n````");
     expect(out).toContain("Text between.");
     expect(out.endsWith("End.\n")).toBe(true);
   });
 
-  it("returns the input unchanged when there is nothing to replace", async () => {
-    const md = "# Hi\n\nplain\n";
+  it("returns a post without diagrams unchanged", async () => {
+    const md = "# Hi\n\n```js\nlet x = 1;\n```\n";
     expect(await replaceMermaidFences(md)).toBe(md);
   });
 });

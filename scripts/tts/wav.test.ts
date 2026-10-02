@@ -42,19 +42,11 @@ describe("assemble", () => {
       SR,
       { intra: 0.5, inter: 1 }
     );
-    // block 0: 1 + 0.5 + 1 = 2.5 s; gap 1 s; block 1: 2 s → total 5.5 s
+    // 1 + 0.5 + 1 = 2.5 s, a 1 s gap, then 2 s: no gap trails the last block
     expect(pcm.length).toBe(SR * 5.5 * 2);
     expect(timings).toEqual([
       { start: 0, end: 2.5 },
       { start: 3.5, end: 5.5 }
     ]);
-  });
-
-  it("adds no trailing gap after the last block", () => {
-    const { pcm } = assemble([[{ pcm: tone(1) }]], SR, {
-      intra: 0.5,
-      inter: 1
-    });
-    expect(pcm.length).toBe(SR * 1 * 2);
   });
 });

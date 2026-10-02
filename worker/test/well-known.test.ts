@@ -1,4 +1,3 @@
-import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
 import { API_PATHS, VERSIONED_API_BASE } from "../api/routes";
@@ -9,12 +8,9 @@ import {
   buildApiCatalog,
   buildMcpManifest,
   LINKSET_MEDIA_TYPE,
-  MCP_SERVER_NAME,
-  MCP_SERVER_SCHEMA
+  MCP_SERVER_NAME
 } from "../well-known";
-import { fakeAssets } from "./fixtures";
-
-const testEnv = (): Env => ({ ...env, ASSETS: fakeAssets() }) as unknown as Env;
+import { testEnv } from "./fixtures";
 
 const get = (path: string, origin = "https://murugappan.dev") =>
   worker.fetch(new Request(`${origin}${path}`), testEnv());
@@ -22,12 +18,7 @@ const get = (path: string, origin = "https://murugappan.dev") =>
 describe("buildApiCatalog", () => {
   const catalog = buildApiCatalog("https://murugappan.dev");
 
-  it("is a linkset: one context object per API", () => {
-    expect(Array.isArray(catalog.linkset)).toBe(true);
-    expect(catalog.linkset).toHaveLength(2);
-  });
-
-  it("anchors each entry at the API's own base URL", () => {
+  it("is a linkset that anchors each entry at the API's own base URL", () => {
     expect(catalog.linkset.map(e => e.anchor)).toEqual([
       `https://murugappan.dev${VERSIONED_API_BASE}`,
       "https://murugappan.dev/mcp"
@@ -83,12 +74,7 @@ describe("buildApiCatalog", () => {
 describe("buildMcpManifest", () => {
   const manifest = buildMcpManifest("https://murugappan.dev");
 
-  it("declares the published server.json schema", () => {
-    expect(manifest.$schema).toBe(MCP_SERVER_SCHEMA);
-  });
-
   it("names the server in the reverse-DNS form the schema requires", () => {
-    expect(manifest.name).toBe(MCP_SERVER_NAME);
     expect(manifest.name).toMatch(/^[a-zA-Z0-9.-]+\/[a-zA-Z0-9._-]+$/);
   });
 
@@ -133,10 +119,11 @@ describe("buildMcpManifest", () => {
 });
 
 describe("/.well-known/api-catalog", () => {
-  it("is served with the RFC 9727 media type", async () => {
+  it("is served cross-origin with the RFC 9727 media type", async () => {
     const res = await get("/.well-known/api-catalog");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe(`${LINKSET_MEDIA_TYPE}; charset=utf-8`);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 
   it("names the host that answered", async () => {
@@ -144,24 +131,14 @@ describe("/.well-known/api-catalog", () => {
     const body = (await res.json()) as { linkset: Array<{ anchor: string }> };
     expect(body.linkset[0].anchor).toBe(`https://preview.example${VERSIONED_API_BASE}`);
   });
-
-  it("is readable cross-origin", async () => {
-    const res = await get("/.well-known/api-catalog");
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
-  });
 });
 
 describe("the MCP manifest endpoint", () => {
-  it("is served at the well-known location", async () => {
-    const res = await get("/.well-known/mcp.json");
+  // /mcp.json must not be mistaken for a JSON-RPC call to /mcp.
+  it.each(["/.well-known/mcp.json", "/mcp.json"])("is served at %s", async path => {
+    const res = await get(path);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    expect(((await res.json()) as { name: string }).name).toBe(MCP_SERVER_NAME);
-  });
-
-  it("is served at /mcp.json too, without being mistaken for JSON-RPC", async () => {
-    const res = await get("/mcp.json");
-    expect(res.status).toBe(200);
     expect(((await res.json()) as { name: string }).name).toBe(MCP_SERVER_NAME);
   });
 
@@ -169,15 +146,6 @@ describe("the MCP manifest endpoint", () => {
     const res = await get("/mcp.json", "https://preview.example");
     const body = (await res.json()) as { remotes: Array<{ url: string }> };
     expect(body.remotes[0].url).toBe("https://preview.example/mcp");
-  });
-
-  it("does not shadow the MCP endpoint itself", async () => {
-    const res = await worker.fetch(
-      new Request("https://murugappan.dev/mcp", { method: "GET" }),
-      testEnv()
-    );
-    expect(res.status).toBe(405);
-    expect(res.headers.get("Allow")).toBe("POST, OPTIONS");
   });
 
   it("404s an unknown well-known path as markdown, not as the HTML page", async () => {

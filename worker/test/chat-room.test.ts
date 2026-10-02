@@ -2,10 +2,17 @@ import { env, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
 
 import { ChatRoom } from "../chat-room";
-import { GREETING, VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "../protocol";
+import {
+  GREETING,
+  MAX_MESSAGE_LENGTH,
+  parseClientMessage,
+  parseVisitorContext,
+  toolFrame,
+  VISITOR_COUNTRY_HEADER,
+  VISITOR_IP_HEADER
+} from "../protocol";
 
-// `ConnectionContext` is only the upgrade request to the room; importing one
-// URL keeps every call site honest about that.
+// `ConnectionContext` is only the upgrade request to the room.
 function connectContext(headers: Record<string, string> = {}): { request: Request } {
   return {
     request: new Request("https://example.com/parties/chat-room/x", { headers })
@@ -30,31 +37,13 @@ describe("ChatRoom storage", () => {
       const conn = { send: (d: string) => sent.push(d) } as never;
       const ctx = connectContext();
       instance.onConnect(conn, ctx);
-      instance.onConnect(conn, ctx); // reconnect must not seed again
+      // A reconnect must not seed again.
+      instance.onConnect(conn, ctx);
       const rows = instance.ctx.storage.sql
         .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
         .toArray();
       expect(rows).toEqual([{ role: "assistant", content: GREETING }]);
-      // both history frames include the greeting
-      const last = JSON.parse(sent[1]);
-      expect(last.messages).toEqual([{ role: "assistant", content: GREETING }]);
-    });
-  });
-
-  it("creates tables on start and persists/reads messages in order", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-a"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      instance.ctx.storage.sql.exec(
-        `INSERT INTO messages (role, content, created_at) VALUES ('user', 'q', 1), ('assistant', 'a', 2)`
-      );
-      const rows = instance.ctx.storage.sql
-        .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
-        .toArray();
-      expect(rows).toEqual([
-        { role: "user", content: "q" },
-        { role: "assistant", content: "a" }
-      ]);
+      expect(JSON.parse(sent[1]).messages).toEqual([{ role: "assistant", content: GREETING }]);
     });
   });
 
@@ -145,7 +134,7 @@ describe("ChatRoom storage", () => {
           expect(found).toMatchObject(expected);
           return found as RoomRow;
         },
-        { timeout: 2000 }
+        { timeout: 2000, interval: 5 }
       );
 
     await connect({
@@ -160,5 +149,90 @@ describe("ChatRoom storage", () => {
     const second = await mirrored({ country: "DE", ip: "203.0.113.9" });
     expect(second.first_seen).toBe(first.first_seen);
     expect(second.last_seen).toBeGreaterThanOrEqual(first.last_seen);
+  });
+});
+
+describe("parseClientMessage", () => {
+  it("accepts a valid chat message and trims it", () => {
+    const msg = parseClientMessage(JSON.stringify({ type: "chat", text: "  hi there  " }));
+    expect(msg).toEqual({ type: "chat", text: "hi there" });
+  });
+
+  it("accepts a valid page path and drops invalid ones", () => {
+    expect(
+      parseClientMessage(JSON.stringify({ type: "chat", text: "hi", page: "/blog/react/" }))?.page
+    ).toBe("/blog/react/");
+    for (const bad of ["blog/react", "https://evil.example/x", "/a b", "x"]) {
+      expect(
+        parseClientMessage(JSON.stringify({ type: "chat", text: "hi", page: bad }))?.page
+      ).toBeUndefined();
+    }
+  });
+
+  it.each<[string, string | ArrayBuffer]>([
+    ["binary frames", new ArrayBuffer(8)],
+    ["malformed JSON", "{nope"],
+    ["unknown types", JSON.stringify({ type: "ping" })],
+    ["missing text", JSON.stringify({ type: "chat" })],
+    ["blank text", JSON.stringify({ type: "chat", text: "   " })],
+    ["oversized text", JSON.stringify({ type: "chat", text: "x".repeat(MAX_MESSAGE_LENGTH + 1) })]
+  ])("rejects %s", (_label, raw) => {
+    expect(parseClientMessage(raw)).toBeNull();
+  });
+});
+
+describe("parseVisitorContext", () => {
+  it("returns the country and IP the edge attached, trimmed", () => {
+    const headers = new Headers({
+      [VISITOR_COUNTRY_HEADER]: " IN ",
+      [VISITOR_IP_HEADER]: " 203.0.113.7 "
+    });
+    expect(parseVisitorContext(headers)).toEqual({
+      country: "IN",
+      ip: "203.0.113.7"
+    });
+  });
+
+  it("keeps the half it has when the other header is missing", () => {
+    const headers = new Headers({ [VISITOR_IP_HEADER]: "203.0.113.7" });
+    expect(parseVisitorContext(headers)).toEqual({ country: null, ip: "203.0.113.7" });
+  });
+
+  it("returns null when the edge learned nothing (or sent blanks)", () => {
+    expect(parseVisitorContext(new Headers())).toBeNull();
+    expect(parseVisitorContext(new Headers({ [VISITOR_COUNTRY_HEADER]: "  " }))).toBeNull();
+  });
+
+  it("caps a forged value instead of storing it whole", () => {
+    const headers = new Headers({ [VISITOR_IP_HEADER]: "x".repeat(200) });
+    expect(parseVisitorContext(headers)?.ip).toHaveLength(64);
+  });
+});
+
+describe("toolFrame", () => {
+  it("reports a page fetch as the site path, not the full url", () => {
+    expect(toolFrame("fetch_page", "https://murugappan.dev/blog/react/")).toEqual({
+      type: "tool",
+      name: "fetch_page",
+      detail: "/blog/react/"
+    });
+  });
+
+  it("omits the detail when the url is missing or unparseable", () => {
+    expect(toolFrame("fetch_page", null)).toEqual({
+      type: "tool",
+      name: "fetch_page"
+    });
+    expect(toolFrame("fetch_page", "not a url")).toEqual({
+      type: "tool",
+      name: "fetch_page"
+    });
+  });
+
+  it("never carries a detail for a capture — contact details stay server-side", () => {
+    expect(toolFrame("capture_opportunity")).toEqual({
+      type: "tool",
+      name: "capture_opportunity"
+    });
   });
 });

@@ -1,27 +1,12 @@
-import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
 import { DOCS_URL } from "../api/errors";
-import { CONTACT_DAILY_PER_CLIENT } from "../api/contact";
+import { API_PATHS, CURRENT_API_VERSION } from "../api/routes";
+import { API_VERSION } from "../api/versioning";
 import worker from "../server";
-import { fakeAssets, POST_MARKDOWN } from "./fixtures";
+import { POST_MARKDOWN, testEnv, type TestEnvOptions } from "./fixtures";
 
-type Options = {
-  assets?: Record<string, string | null>;
-  inbox?: string | null;
-  email?: { send(msg: unknown): Promise<unknown> } | null;
-};
-
-function testEnv(options: Options = {}): Env {
-  return {
-    ...env,
-    ASSETS: fakeAssets(options.assets),
-    OPPORTUNITY_INBOX: options.inbox === undefined ? "inbox@example.com" : options.inbox,
-    EMAIL: options.email === undefined ? { send: () => Promise.resolve() } : options.email
-  } as unknown as Env;
-}
-
-async function get(path: string, options?: Options): Promise<Response> {
+async function get(path: string, options?: TestEnvOptions): Promise<Response> {
   return await worker.fetch(new Request(`https://murugappan.dev${path}`), testEnv(options));
 }
 
@@ -29,7 +14,7 @@ async function post(
   path: string,
   body: unknown,
   init: { ip?: string; contentType?: string | null } = {},
-  options?: Options
+  options?: TestEnvOptions
 ): Promise<Response> {
   const headers: Record<string, string> = {
     "CF-Connecting-IP": init.ip ?? "203.0.113.1"
@@ -59,10 +44,12 @@ async function errorBody(res: Response) {
 }
 
 describe("GET /api/profile", () => {
-  it("returns the person and links as JSON", async () => {
+  it("returns the person and links as cacheable, cross-origin JSON", async () => {
     const res = await get("/api/profile");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(res.headers.get("Cache-Control")).toMatch(/max-age=\d+/);
     const body = (await res.json()) as {
       person: { name: string; currentRole: { company: string } };
       links: Array<{ label: string }>;
@@ -70,16 +57,6 @@ describe("GET /api/profile", () => {
     expect(body.person.name).toBe("Murugappan M");
     expect(body.person.currentRole.company).toBe("MedMe Health");
     expect(body.links.map(l => l.label)).toContain("OpenAPI spec");
-  });
-
-  it("allows cross-origin reads so browser agents can call it", async () => {
-    const res = await get("/api/profile");
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
-  });
-
-  it("is cacheable", async () => {
-    const res = await get("/api/profile");
-    expect(res.headers.get("Cache-Control")).toMatch(/max-age=\d+/);
   });
 
   it("answers 503 with a hint when the dataset is not deployed", async () => {
@@ -102,48 +79,72 @@ describe("GET /api/profile", () => {
   });
 });
 
-describe("the other read endpoints", () => {
-  it("returns dated work experience", async () => {
-    const body = (await (await get("/api/experience")).json()) as {
-      experience: Array<{
-        company: string;
-        startDate: string;
-        current: boolean;
-      }>;
-    };
-    expect(body.experience[0]).toMatchObject({
-      company: "MedMe Health",
-      startDate: "2025-12",
-      current: true
-    });
+describe("path versioning", () => {
+  it.each([
+    ["/profile", "person"],
+    ["/experience", "experience"],
+    ["/skills", "skills"],
+    ["/education", "education"],
+    ["/open-source", "openSource"],
+    ["/posts", "posts"],
+    ["/posts/coin-change-problem", "markdown"]
+  ])(
+    "serves %s under the versioned prefix and the same body under the alias",
+    async (endpoint, key) => {
+      const versioned = await get(`/api/${CURRENT_API_VERSION}${endpoint}`);
+      expect(versioned.status).toBe(200);
+      const text = await versioned.text();
+      expect(JSON.parse(text)).toHaveProperty(key);
+      expect(await (await get(`/api${endpoint}`)).text()).toBe(text);
+    }
+  );
+
+  it("serves the version catalogue under both prefixes", async () => {
+    for (const path of [API_PATHS.versions, "/api/versions"]) {
+      const res = await get(path);
+      expect(res.status, path).toBe(200);
+      const body = (await res.json()) as { current: string };
+      expect(body.current, path).toBe(CURRENT_API_VERSION);
+    }
   });
 
-  it("returns skills and proficiencies", async () => {
-    const body = (await (await get("/api/skills")).json()) as {
-      skills: Array<{ category: string; skills: string[] }>;
-      proficiencies: Array<{ area: string; tools: string[]; level: number }>;
-    };
-    expect(body.skills[0].skills).toEqual(["TypeScript", "Python"]);
-    expect(body.proficiencies[0]).toEqual({
-      area: "Backend",
-      tools: ["Node.js"],
-      level: 90
-    });
+  it("stamps the version and discovery headers on every response", async () => {
+    for (const path of [
+      "/api/v1/profile",
+      "/api/profile",
+      "/api/v1/versions",
+      "/api/nope",
+      "/openapi.json"
+    ]) {
+      const res = await get(path);
+      expect(res.headers.get("API-Version"), path).toBe(API_VERSION);
+      expect(res.headers.get("API-Supported-Versions"), path).toBe(CURRENT_API_VERSION);
+      expect(res.headers.get("Link"), path).toContain('rel="version-history"');
+    }
   });
 
-  it("returns education", async () => {
-    const body = (await (await get("/api/education")).json()) as {
-      education: Array<{ institution: string }>;
-    };
-    expect(body.education[0].institution).toBe("Kumaraguru College of Technology");
-  });
-
-  it("returns open-source contributions with verifiable links", async () => {
-    const body = (await (await get("/api/open-source")).json()) as {
-      openSource: Array<{ project: string; links: Array<{ url: string }> }>;
-    };
-    expect(body.openSource[0].project).toBe("AnkiDroid");
-    expect(body.openSource[0].links[0].url).toBe("https://gh.example/1");
+  it("exposes the signalling headers to a browser client", async () => {
+    const res = await worker.fetch(
+      new Request("https://murugappan.dev/api/v1/profile", {
+        headers: { Origin: "https://agent.example" }
+      }),
+      testEnv()
+    );
+    const exposed = res.headers.get("Access-Control-Expose-Headers") ?? "";
+    for (const name of [
+      "RateLimit",
+      "RateLimit-Policy",
+      "Retry-After",
+      "X-RateLimit-Limit",
+      "X-RateLimit-Remaining",
+      "X-RateLimit-Reset",
+      "API-Version",
+      "Deprecation",
+      "Sunset",
+      "Link"
+    ]) {
+      expect(exposed, name).toContain(name);
+    }
   });
 });
 
@@ -235,52 +236,43 @@ describe("GET /api/posts/{slug}", () => {
 });
 
 describe("the OpenAPI spec", () => {
-  it("is served at the site root", async () => {
-    const res = await get("/openapi.json");
+  it.each(["/openapi.json", "/api/openapi.json"])("is served at %s", async path => {
+    const res = await get(path);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    const body = (await res.json()) as {
-      openapi: string;
-      servers: Array<{ url: string }>;
-    };
-    expect(body.openapi).toBe("3.1.0");
-    expect(body.servers[0].url).toBe("https://murugappan.dev");
-  });
-
-  it("is served under the API prefix too", async () => {
-    const res = await get("/api/openapi.json");
-    expect(res.status).toBe(200);
     expect(((await res.json()) as { openapi: string }).openapi).toBe("3.1.0");
   });
 
-  it("reports the requesting origin as the server", async () => {
-    const res = await worker.fetch(new Request("https://preview.example/openapi.json"), testEnv());
+  // The server URL follows the host that was asked, upgraded to https except
+  // on a local dev origin, where https would make the spec unusable.
+  it.each([
+    ["https://preview.example", "https://preview.example"],
+    ["http://murugappan.dev", "https://murugappan.dev"],
+    ["http://localhost:8787", "http://localhost:8787"]
+  ])("names %s as %s in servers", async (origin, server) => {
+    const res = await worker.fetch(new Request(`${origin}/openapi.json`), testEnv());
     const body = (await res.json()) as { servers: Array<{ url: string }> };
-    expect(body.servers[0].url).toBe("https://preview.example");
-  });
-
-  it("advertises https even when the request arrived over http", async () => {
-    const res = await worker.fetch(new Request("http://murugappan.dev/openapi.json"), testEnv());
-    const body = (await res.json()) as { servers: Array<{ url: string }> };
-    expect(body.servers[0].url).toBe("https://murugappan.dev");
-  });
-
-  it("leaves a local dev origin on http so the spec stays usable there", async () => {
-    const res = await worker.fetch(new Request("http://localhost:8787/openapi.json"), testEnv());
-    const body = (await res.json()) as { servers: Array<{ url: string }> };
-    expect(body.servers[0].url).toBe("http://localhost:8787");
+    expect(body.servers[0].url).toBe(server);
   });
 });
 
 describe("error handling under /api", () => {
-  it("404s an unknown endpoint as JSON, never as the HTML 404 page", async () => {
-    const res = await get("/api/nope");
-    expect(res.status).toBe(404);
-    expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    const error = await errorBody(res);
-    expect(error.code).toBe("not_found");
-    expect(error.hint).toContain("/openapi.json");
-  });
+  it.each(["/api/nope", "/api/v1/nope", "/api/v9/profile"])(
+    "404s %s as JSON, never as the HTML 404 page",
+    async path => {
+      const res = await get(path);
+      expect(res.status).toBe(404);
+      expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
+      expect(await res.json()).toEqual({
+        error: {
+          code: "not_found",
+          message: expect.stringContaining(path),
+          hint: expect.stringContaining("/openapi.json"),
+          documentation_url: DOCS_URL
+        }
+      });
+    }
+  );
 
   it("404s the internal dataset artifact rather than serving it raw", async () => {
     const res = await get("/api/dataset.json");
@@ -320,6 +312,11 @@ describe("error handling under /api", () => {
 });
 
 describe("POST /api/contact", () => {
+  const valid = {
+    email: "ada@example.com",
+    message: "A perfectly valid message body."
+  };
+
   it("accepts a valid message and emails it to the inbox", async () => {
     const sent: Array<{ to: string; subject: string; text: string }> = [];
     const res = await post(
@@ -389,12 +386,7 @@ describe("POST /api/contact", () => {
   });
 
   it("answers 503 when no inbox is configured", async () => {
-    const res = await post(
-      "/api/contact",
-      { email: "ada@example.com", message: "A perfectly valid message body." },
-      { ip: "203.0.113.15" },
-      { inbox: null }
-    );
+    const res = await post("/api/contact", valid, { ip: "203.0.113.15" }, { inbox: null });
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
   });
@@ -402,51 +394,16 @@ describe("POST /api/contact", () => {
   it("answers 503 when the email send fails", async () => {
     const res = await post(
       "/api/contact",
-      { email: "ada@example.com", message: "A perfectly valid message body." },
+      valid,
       { ip: "203.0.113.16" },
       { email: { send: () => Promise.reject(new Error("relay down")) } }
     );
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
   });
-
-  it("rate-limits a client once its daily allowance is spent", async () => {
-    const body = {
-      email: "ada@example.com",
-      message: "A perfectly valid message body for the rate limit test."
-    };
-    for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
-      const ok = await post("/api/contact", body, { ip: "198.51.100.7" });
-      expect(ok.status).toBe(202);
-    }
-    const res = await post("/api/contact", body, { ip: "198.51.100.7" });
-    expect(res.status).toBe(429);
-    expect(res.headers.get("Retry-After")).toMatch(/^\d+$/);
-    expect((await errorBody(res)).code).toBe("rate_limited");
-  });
-
-  it("does not spend a rate-limit slot on an invalid request", async () => {
-    for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 1; i++) {
-      const res = await post(
-        "/api/contact",
-        { email: "nope", message: "hi" },
-        { ip: "198.51.100.8" }
-      );
-      expect(res.status).toBe(422);
-    }
-    const res = await post(
-      "/api/contact",
-      {
-        email: "ada@example.com",
-        message: "A perfectly valid message body after the failures."
-      },
-      { ip: "198.51.100.8" }
-    );
-    expect(res.status).toBe(202);
-  });
 });
 
-describe("POST /api/contact?dryRun", () => {
+describe("POST /api/contact with dryRun", () => {
   const body = {
     email: "ada@example.com",
     message: "A perfectly valid message body for the dry run.",
@@ -471,19 +428,6 @@ describe("POST /api/contact?dryRun", () => {
     expect(sent).toEqual([]);
   });
 
-  it("does not spend a rate-limit slot", async () => {
-    for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 2; i++) {
-      const res = await post("/api/contact", body, { ip: "198.51.100.21" });
-      expect(res.status).toBe(200);
-    }
-    const real = await post(
-      "/api/contact",
-      { email: body.email, message: body.message },
-      { ip: "198.51.100.21" }
-    );
-    expect(real.status).toBe(202);
-  });
-
   it("still reports invalid fields", async () => {
     const res = await post(
       "/api/contact",
@@ -494,14 +438,7 @@ describe("POST /api/contact?dryRun", () => {
   });
 
   it("validates even when no inbox is configured", async () => {
-    const res = await post(
-      "/api/contact",
-      body,
-      { ip: "198.51.100.23" },
-      {
-        inbox: null
-      }
-    );
+    const res = await post("/api/contact", body, { ip: "198.51.100.23" }, { inbox: null });
     expect(res.status).toBe(200);
   });
 });

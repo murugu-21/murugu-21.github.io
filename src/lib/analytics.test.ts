@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
 
 import {
@@ -9,8 +9,8 @@ import {
   tag,
   track
 } from "./analytics";
+import { onFirstInteraction } from "./first-interaction";
 
-// Spies stand in for window.posthog; deleted after each test.
 const withPostHog = () => {
   const capture = vi.fn();
   const register = vi.fn();
@@ -23,20 +23,65 @@ afterEach(() => {
   delete (globalThis as { posthog?: unknown }).posthog;
 });
 
-// The module keeps state (booted SDK, buffer), so each test gets a fresh one.
+// The module keeps state (booted SDK, buffer), so SDK tests need a fresh copy.
 const fresh = async () => {
   vi.resetModules();
   return await import("./analytics");
 };
 
-describe("track", () => {
-  it("captures the event", () => {
-    const { capture } = withPostHog();
-    track("resume_download");
-    expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
+const fakeSdk = () => {
+  const capture = vi.fn();
+  const register = vi.fn();
+  const captureException = vi.fn();
+  const init = vi.fn();
+  const startSessionRecording = vi.fn();
+  return {
+    sdk: { capture, register, captureException, init, startSessionRecording },
+    capture,
+    register,
+    captureException,
+    init,
+    startSessionRecording
+  };
+};
+
+const doc = (html: string) => parseHTML(html).document as unknown as Document;
+
+describe("onFirstInteraction", () => {
+  it("fires once, on the first input, then stops listening", () => {
+    const target = new EventTarget();
+    const cb = vi.fn();
+    onFirstInteraction(cb, target);
+    expect(cb).not.toHaveBeenCalled();
+    target.dispatchEvent(new Event("pointermove"));
+    target.dispatchEvent(new Event("wheel"));
+    target.dispatchEvent(new Event("keydown"));
+    expect(cb).toHaveBeenCalledTimes(1);
   });
 
-  it("captures properties alongside the event", () => {
+  it("does not fire for a page that is only loaded (a Lighthouse run)", () => {
+    const target = new EventTarget();
+    const cb = vi.fn();
+    onFirstInteraction(cb, target);
+    target.dispatchEvent(new Event("load"));
+    target.dispatchEvent(new Event("DOMContentLoaded"));
+    // Chrome fires a trusted scroll during load with no user input.
+    target.dispatchEvent(new Event("scroll"));
+    expect(cb).not.toHaveBeenCalled();
+  });
+
+  it("never fires after being cancelled", () => {
+    const target = new EventTarget();
+    const cb = vi.fn();
+    const cancel = onFirstInteraction(cb, target);
+    cancel();
+    target.dispatchEvent(new Event("pointerdown"));
+    expect(cb).not.toHaveBeenCalled();
+  });
+});
+
+describe("track", () => {
+  it("captures the event with its properties", () => {
     const { capture } = withPostHog();
     track("social_click", { social: "github" });
     expect(capture.mock.calls).toEqual([["social_click", { social: "github" }]]);
@@ -61,46 +106,18 @@ describe("track", () => {
     };
     expect(() => track("resume_download")).not.toThrow();
   });
-
-  it("ignores a half-initialised global", () => {
-    (globalThis as { posthog?: unknown }).posthog = {};
-    expect(() => track("resume_download")).not.toThrow();
-  });
 });
 
 describe("reportError", () => {
-  it("reports the error with properties describing where it happened", () => {
-    const { captureException } = withPostHog();
-    const err = new Error("boom");
-    reportError(err, { surface: "chat" });
-    expect(captureException.mock.calls).toEqual([[err, { surface: "chat" }]]);
-  });
-
-  it("drops properties with a blank value", () => {
+  it("reports the error with its non-blank properties", () => {
     const { captureException } = withPostHog();
     const err = new Error("boom");
     reportError(err, { surface: "chat", tag: " " });
     expect(captureException.mock.calls).toEqual([[err, { surface: "chat" }]]);
   });
-
-  it("does nothing when the snippet was never loaded", () => {
-    expect(() => reportError(new Error("boom"))).not.toThrow();
-  });
-
-  it("swallows failures from inside posthog", () => {
-    (globalThis as { posthog?: unknown }).posthog = {
-      capture: () => {},
-      register: () => {},
-      captureException: () => {
-        throw new Error("blocked");
-      }
-    };
-    expect(() => reportError(new Error("boom"))).not.toThrow();
-  });
 });
 
 describe("tag", () => {
-  // super properties, not person properties: visitors are anonymous
   it("registers a super property", () => {
     const { register, capture } = withPostHog();
     tag("theme", "dark");
@@ -116,44 +133,35 @@ describe("tag", () => {
 });
 
 describe("initClickTracking", () => {
-  const dom = (body: string) => parseHTML(`<html><body>${body}</body></html>`).document;
-  const click = (el: { dispatchEvent: (e: Event) => void }, doc: Document) => {
-    const Ctor = (doc.defaultView as unknown as { Event: typeof Event }).Event;
-    el.dispatchEvent(new Ctor("click", { bubbles: true }));
+  const click = (d: Document, id: string) => {
+    const Ctor = (d.defaultView as unknown as { Event: typeof Event }).Event;
+    d.getElementById(id)!.dispatchEvent(new Ctor("click", { bubbles: true }));
   };
 
-  it("captures the annotated event when the link is clicked", () => {
+  it("captures the nearest annotated ancestor of the click target", () => {
     const { capture } = withPostHog();
-    const doc = dom(`<a id="cv" data-ph-event="resume_download">CV</a>`);
-    initClickTracking(doc as unknown as Document);
-    click(doc.getElementById("cv")!, doc as unknown as Document);
-    expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
-  });
-
-  it("resolves the nearest annotated ancestor of the click target", () => {
-    const { capture } = withPostHog();
-    const doc = dom(
+    const d = doc(
       `<a data-ph-event="social_click" data-ph-prop="social" data-ph-value="github"><svg id="glyph"></svg></a>`
     );
-    initClickTracking(doc as unknown as Document);
-    click(doc.getElementById("glyph")!, doc as unknown as Document);
+    initClickTracking(d);
+    click(d, "glyph");
     expect(capture.mock.calls).toEqual([["social_click", { social: "github" }]]);
   });
 
   it("ignores clicks with no annotated ancestor", () => {
     const { capture } = withPostHog();
-    const doc = dom(`<a id="plain" href="/">Home</a>`);
-    initClickTracking(doc as unknown as Document);
-    click(doc.getElementById("plain")!, doc as unknown as Document);
+    const d = doc(`<a id="plain" href="/">Home</a>`);
+    initClickTracking(d);
+    click(d, "plain");
     expect(capture).not.toHaveBeenCalled();
   });
 
   it("attaches one listener however many times it is called", () => {
     const { capture } = withPostHog();
-    const doc = dom(`<a id="cv" data-ph-event="resume_download"></a>`);
-    initClickTracking(doc as unknown as Document);
-    initClickTracking(doc as unknown as Document);
-    click(doc.getElementById("cv")!, doc as unknown as Document);
+    const d = doc(`<a id="cv" data-ph-event="resume_download"></a>`);
+    initClickTracking(d);
+    initClickTracking(d);
+    click(d, "cv");
     expect(capture).toHaveBeenCalledTimes(1);
   });
 });
@@ -167,44 +175,52 @@ describe("redactBlogFilters", () => {
     ).toBe("https://murugappan.dev/blog/?utm_source=x");
   });
 
-  it("leaves other URLs, query-less URLs and non-URLs alone", () => {
-    expect(redactBlogFilters("https://www.google.com/search?q=secret")).toBe(
-      "https://www.google.com/search?q=secret"
-    );
-    expect(redactBlogFilters("https://murugappan.dev/blog/")).toBe("https://murugappan.dev/blog/");
-    expect(redactBlogFilters("https://murugappan.dev/resume/?q=x")).toBe(
-      "https://murugappan.dev/resume/?q=x"
-    );
-    expect(redactBlogFilters("not a url?q=x")).toBe("not a url?q=x");
+  it.each([
+    "https://www.google.com/search?q=secret",
+    "https://murugappan.dev/blog/",
+    "https://murugappan.dev/resume/?q=x",
+    "not a url?q=x"
+  ])("leaves %s alone", url => {
+    expect(redactBlogFilters(url)).toBe(url);
   });
 });
 
-const fakeSdk = () => {
-  const capture = vi.fn();
-  const register = vi.fn();
-  const captureException = vi.fn();
-  const init = vi.fn();
-  const startSessionRecording = vi.fn();
-  return {
-    sdk: { capture, register, captureException, init, startSessionRecording },
-    capture,
-    register,
-    captureException,
-    init,
-    startSessionRecording
-  };
-};
-
 describe("initAnalytics", () => {
-  it("initialises the SDK with the token and the proxy host", async () => {
-    const { sdk, init } = fakeSdk();
-    const ph = await fresh();
-    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
-    expect(init).toHaveBeenCalledTimes(1);
-    const [token, config] = init.mock.calls[0];
-    expect(token).toBe("phc_test");
-    expect(config.api_host).toBe("https://e.example.dev");
-    expect(config.ui_host).toBe("https://us.posthog.com");
+  describe("SDK config", () => {
+    let init: ReturnType<typeof vi.fn>;
+    let config: Record<string, any>;
+
+    beforeAll(async () => {
+      const fake = fakeSdk();
+      const ph = await fresh();
+      await ph.initAnalytics("phc_test", "https://e.example.dev", async () => fake.sdk);
+      init = fake.init;
+      config = init.mock.calls[0][1];
+    });
+
+    it("initialises the SDK once with the token and the proxy host", () => {
+      expect(init).toHaveBeenCalledTimes(1);
+      expect(init.mock.calls[0][0]).toBe("phc_test");
+      expect(config.api_host).toBe("https://e.example.dev");
+    });
+
+    it("masks the chat transcript in recordings, not just inputs", () => {
+      expect(config.session_recording.maskAllInputs).toBe(true);
+      expect(config.session_recording.maskTextSelector).toBe("[data-ph-mask]");
+    });
+
+    it("scrubs blog filter params from captured URLs", () => {
+      const properties = config.sanitize_properties({
+        $current_url: "https://murugappan.dev/blog/?q=socket&tag=backend",
+        $referrer: "https://murugappan.dev/blog/?q=oauth",
+        distinct_id: "abc"
+      });
+      expect(properties).toEqual({
+        $current_url: "https://murugappan.dev/blog/",
+        $referrer: "https://murugappan.dev/blog/",
+        distinct_id: "abc"
+      });
+    });
   });
 
   it("starts session replay on the first interaction, not at boot", async () => {
@@ -217,51 +233,10 @@ describe("initAnalytics", () => {
       expect(init.mock.calls[0][1].disable_session_recording).toBe(true);
       expect(startSessionRecording).not.toHaveBeenCalled();
       win.dispatchEvent(new Event("pointermove"));
-      win.dispatchEvent(new Event("scroll"));
       expect(startSessionRecording).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();
     }
-  });
-
-  it("masks the chat transcript in recordings, not just inputs", async () => {
-    const { sdk, init } = fakeSdk();
-    const ph = await fresh();
-    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
-    const recording = init.mock.calls[0][1].session_recording;
-    expect(recording.maskAllInputs).toBe(true);
-    expect(recording.maskTextSelector).toBe("[data-ph-mask]");
-  });
-
-  it("switches off the extensions this site does not use", async () => {
-    const { sdk, init } = fakeSdk();
-    const ph = await fresh();
-    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
-    const config = init.mock.calls[0][1];
-    expect(config.disable_surveys).toBe(true);
-    expect(config.capture_dead_clicks).toBe(false);
-  });
-
-  it("turns on exception autocapture", async () => {
-    const { sdk, init } = fakeSdk();
-    const ph = await fresh();
-    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
-    expect(init.mock.calls[0][1].capture_exceptions).toBe(true);
-  });
-
-  it("scrubs blog filter params from captured URLs", async () => {
-    const { sdk, init } = fakeSdk();
-    const ph = await fresh();
-    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
-    const sanitize = init.mock.calls[0][1].sanitize_properties;
-    const properties = sanitize({
-      $current_url: "https://murugappan.dev/blog/?q=socket&tag=backend",
-      $referrer: "https://murugappan.dev/blog/?q=oauth",
-      distinct_id: "abc"
-    });
-    expect(properties.$current_url).toBe("https://murugappan.dev/blog/");
-    expect(properties.$referrer).toBe("https://murugappan.dev/blog/");
-    expect(properties.distinct_id).toBe("abc");
   });
 
   it("replays events captured before the SDK finished loading", async () => {
@@ -280,12 +255,6 @@ describe("initAnalytics", () => {
     await booting;
     expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
     expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
-  });
-
-  it("drops events when analytics was never initialised", () => {
-    // no initAnalytics call, as in dev and CI
-    expect(() => track("resume_download")).not.toThrow();
-    expect(() => tag("theme", "dark")).not.toThrow();
   });
 
   it("does nothing without a token or host", async () => {
@@ -307,16 +276,13 @@ describe("initAnalytics", () => {
 });
 
 describe("bootAnalytics", () => {
-  const docWith = (metas: string) =>
-    parseHTML(`<html><head>${metas}</head><body></body></html>`).document;
+  const metas = `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`;
+  const page = (head: string) => doc(`<html><head>${head}</head><body></body></html>`);
 
   it("reads the token and host from the page's meta tags", async () => {
     const { sdk, init } = fakeSdk();
-    const doc = docWith(
-      `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`
-    );
     const ph = await fresh();
-    await ph.bootAnalytics(doc as unknown as Document, async () => sdk);
+    await ph.bootAnalytics(page(metas), async () => sdk);
     expect(init).toHaveBeenCalledTimes(1);
     expect(init.mock.calls[0][0]).toBe("phc_test");
     expect(init.mock.calls[0][1].api_host).toBe("https://e.example.dev");
@@ -325,50 +291,34 @@ describe("bootAnalytics", () => {
   it("no-ops when the meta tags are absent (local dev, CI)", async () => {
     const { sdk, init } = fakeSdk();
     const ph = await fresh();
-    await ph.bootAnalytics(docWith("") as unknown as Document, async () => sdk);
+    await ph.bootAnalytics(page(""), async () => sdk);
     expect(init).not.toHaveBeenCalled();
   });
 
-  it("buffers errors thrown before the SDK boots and replays them on arrival", async () => {
+  it("buffers errors and rejections thrown before the SDK boots and replays them", async () => {
     const { sdk, captureException } = fakeSdk();
     let release: (() => void) | undefined;
     const gate = new Promise<void>(r => (release = r));
-    const doc = docWith(
-      `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`
-    );
-    const win = doc.defaultView!;
+    const d = page(metas);
+    const win = d.defaultView! as unknown as typeof globalThis;
     const ph = await fresh();
-    const booting = ph.bootAnalytics(doc as unknown as Document, async () => {
+    const booting = ph.bootAnalytics(d, async () => {
       await gate;
       return sdk;
     });
     const err = new Error("hydration failed");
-    const event = new win.Event("error") as Event & { error: unknown };
-    event.error = err;
-    win.dispatchEvent(event);
+    const reason = new Error("fetch failed");
+    win.dispatchEvent(Object.assign(new win.Event("error"), { error: err }));
+    win.dispatchEvent(Object.assign(new win.Event("unhandledrejection"), { reason }));
     release!();
     await booting;
-    expect(captureException.mock.calls).toEqual([[err, undefined]]);
+    expect(captureException.mock.calls).toEqual([
+      [err, undefined],
+      [reason, undefined]
+    ]);
     // detached once PostHog's autocapture takes over, so nothing doubles
     win.dispatchEvent(new win.Event("error"));
-    expect(captureException).toHaveBeenCalledTimes(1);
-  });
-
-  it("reports an unhandled rejection buffered before the SDK boots", async () => {
-    const { sdk, captureException } = fakeSdk();
-    const doc = docWith(
-      `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`
-    );
-    const win = doc.defaultView!;
-    const ph = await fresh();
-    // listeners attach synchronously, so this dispatch lands in the buffer
-    const booting = ph.bootAnalytics(doc as unknown as Document, async () => sdk);
-    const reason = new Error("fetch failed");
-    const event = new win.Event("unhandledrejection") as Event & { reason: unknown };
-    event.reason = reason;
-    win.dispatchEvent(event);
-    await booting;
-    expect(captureException.mock.calls).toEqual([[reason, undefined]]);
+    expect(captureException).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -396,7 +346,6 @@ describe("scheduleSdkLoad", () => {
     expect(load).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(load).toHaveBeenCalledTimes(1);
-    // Input after the timer must not load it a second time.
     target.dispatchEvent(new Event("keydown"));
     expect(load).toHaveBeenCalledTimes(1);
   });

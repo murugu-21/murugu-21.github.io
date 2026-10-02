@@ -1,6 +1,8 @@
 // Shared site fixture for the API and MCP tests: one description of what the
 // deployed build looks like, so the two surfaces are exercised against the
 // same content instead of drifting fixtures.
+import { env } from "cloudflare:test";
+
 import { buildDataset, type DatasetInput } from "../api/dataset";
 
 export const DATASET_INPUT: DatasetInput = {
@@ -126,4 +128,22 @@ export function fakeAssets(overrides: Record<string, string | null> = {}) {
       );
     }
   };
+}
+
+export type TestEnvOptions = {
+  assets?: Record<string, string | null>;
+  /** null unsets the binding. */
+  inbox?: string | null;
+  /** null unsets the binding. */
+  email?: { send(msg: unknown): Promise<unknown> } | null;
+};
+
+/** The pool's env plus the bindings the test wrangler config leaves out. */
+export function testEnv(options: TestEnvOptions = {}): Env {
+  return {
+    ...env,
+    ASSETS: fakeAssets(options.assets),
+    OPPORTUNITY_INBOX: options.inbox === undefined ? "inbox@example.com" : options.inbox,
+    EMAIL: options.email === undefined ? { send: () => Promise.resolve() } : options.email
+  } as unknown as Env;
 }

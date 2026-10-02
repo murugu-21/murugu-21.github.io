@@ -1,5 +1,9 @@
+// The parsers and projections behind the read and write endpoints: the
+// dataset built from src/data/portfolio.ts, the post list read from llms.txt
+// and the contact form body.
 import { describe, expect, it } from "vitest";
 
+import { CONTACT_LIMITS, parseContactRequest } from "../api/contact";
 import {
   buildDataset,
   parseDataset,
@@ -7,6 +11,7 @@ import {
   splitSkillItems,
   type DatasetInput
 } from "../api/dataset";
+import { parsePostList, postMarkdownPath } from "../api/posts";
 
 // Minimal stand-in for src/data/portfolio.ts: buildDataset is a pure
 // projection, so one entry per collection pins the output contract.
@@ -115,36 +120,13 @@ describe("splitSkillItems", () => {
 });
 
 describe("parsePeriod", () => {
-  it("reads an en-dash range into ISO year-months", () => {
-    expect(parsePeriod("April 2025 – December 2025")).toEqual({
-      startDate: "2025-04",
-      endDate: "2025-12",
-      current: false
-    });
-  });
-
-  it("reads a hyphen range", () => {
-    expect(parsePeriod("June 2019 - April 2023")).toEqual({
-      startDate: "2019-06",
-      endDate: "2023-04",
-      current: false
-    });
-  });
-
-  it("marks an open-ended range as current with a null endDate", () => {
-    expect(parsePeriod("December 2025 – Present")).toEqual({
-      startDate: "2025-12",
-      endDate: null,
-      current: true
-    });
-  });
-
-  it("returns nulls for an unparseable period", () => {
-    expect(parsePeriod("some time ago")).toEqual({
-      startDate: null,
-      endDate: null,
-      current: false
-    });
+  it.each([
+    ["April 2025 – December 2025", "2025-04", "2025-12", false],
+    ["June 2019 - April 2023", "2019-06", "2023-04", false],
+    ["December 2025 – Present", "2025-12", null, true],
+    ["some time ago", null, null, false]
+  ])("reads %s", (period, startDate, endDate, current) => {
+    expect(parsePeriod(period)).toEqual({ startDate, endDate, current });
   });
 });
 
@@ -289,5 +271,136 @@ describe("parseDataset", () => {
   it("rejects a document with a missing collection", () => {
     const { experience: _dropped, ...rest } = buildDataset(input());
     expect(parseDataset(rest)).toBeNull();
+  });
+});
+
+describe("parsePostList", () => {
+  const LLMS = `# Murugappan M — Full Stack Engineer
+
+> Full-stack engineer.
+
+## Machine-readable feeds
+- [Blog RSS](https://murugappan.dev/blog/rss.xml)
+- [Full blog content for LLMs](https://murugappan.dev/blog/llms-full.txt)
+
+## Blog posts
+- [Why SiteGPT's chat runs on PartyKit](https://murugappan.dev/blog/sitegpt-partykit-durable-objects/): How one-process-per-room replaces socket.io + Redis.
+- [Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/): Find minimum number of coins.
+`;
+  const slugs = ["sitegpt-partykit-durable-objects", "coin-change-problem"];
+
+  it("reads only the blog posts section, skipping the feed links", () => {
+    expect(parsePostList(LLMS)).toEqual([
+      {
+        slug: "sitegpt-partykit-durable-objects",
+        title: "Why SiteGPT's chat runs on PartyKit",
+        url: "https://murugappan.dev/blog/sitegpt-partykit-durable-objects/",
+        description: "How one-process-per-room replaces socket.io + Redis."
+      },
+      {
+        slug: "coin-change-problem",
+        title: "Coin Change Problem",
+        url: "https://murugappan.dev/blog/coin-change-problem/",
+        description: "Find minimum number of coins."
+      }
+    ]);
+  });
+
+  it("falls back to scanning the whole document when the section heading is missing", () => {
+    const withoutHeading = LLMS.replace("## Blog posts\n", "");
+    expect(parsePostList(withoutHeading).map(p => p.slug)).toEqual(slugs);
+  });
+
+  it("stops at the next section heading", () => {
+    const withTrailer = `${LLMS}\n## Something else\n- [Nope](https://murugappan.dev/blog/nope/): no.\n`;
+    expect(parsePostList(withTrailer).map(p => p.slug)).toEqual(slugs);
+  });
+
+  it("tolerates a post line with no description", () => {
+    const line = "## Blog posts\n- [Bare](https://murugappan.dev/blog/bare/)\n";
+    expect(parsePostList(line)).toEqual([
+      {
+        slug: "bare",
+        title: "Bare",
+        url: "https://murugappan.dev/blog/bare/",
+        description: ""
+      }
+    ]);
+  });
+
+  it("returns nothing for text with no post links", () => {
+    expect(parsePostList("# Nothing here\n")).toEqual([]);
+  });
+});
+
+describe("postMarkdownPath", () => {
+  it("maps a slug to its built markdown rendition", () => {
+    expect(postMarkdownPath("coin-change-problem")).toBe("/blog/coin-change-problem/index.md");
+  });
+
+  it.each(["../secrets", "Mixed_Case", ""])("rejects %j, which is not a kebab-case token", slug => {
+    expect(postMarkdownPath(slug)).toBeNull();
+  });
+});
+
+describe("parseContactRequest", () => {
+  const valid = {
+    name: "Ada Lovelace",
+    email: "ada@example.com",
+    company: "Analytical Engines Ltd",
+    message: "We are hiring a senior backend engineer for a healthcare data platform."
+  };
+  const minimal = { email: valid.email, message: valid.message };
+
+  it("accepts a complete request", () => {
+    expect(parseContactRequest(valid)).toEqual({ ok: true, value: valid, dryRun: false });
+  });
+
+  it.each([
+    ["only email and message", minimal],
+    [
+      "surrounding whitespace, trimmed",
+      { email: `  ${valid.email}  `, message: `  ${valid.message}  ` }
+    ],
+    ["blank optional fields, dropped", { ...valid, name: "   ", company: "" }]
+  ])("accepts %s", (_, raw) => {
+    expect(parseContactRequest(raw)).toEqual({ ok: true, value: minimal, dryRun: false });
+  });
+
+  it("reports a dryRun request separately from the message itself", () => {
+    expect(parseContactRequest({ ...valid, dryRun: true })).toEqual({
+      ok: true,
+      value: valid,
+      dryRun: true
+    });
+  });
+
+  it.each<[string, unknown, string[]]>([
+    ["a non-boolean dryRun", { ...valid, dryRun: "yes" }, ["dryRun"]],
+    ["a string body", "hello", ["body"]],
+    ["a null body", null, ["body"]],
+    ["an array body", [], ["body"]],
+    ["a missing email", { message: valid.message }, ["email"]],
+    ["an email with no @", { ...minimal, email: "not-an-email" }, ["email"]],
+    ["an email with no TLD", { ...minimal, email: "a@b" }, ["email"]],
+    ["a non-string email", { ...minimal, email: 42 }, ["email"]],
+    ["a too-short message", { ...minimal, message: "hi" }, ["message"]],
+    [
+      "a too-long message",
+      { ...minimal, message: "x".repeat(CONTACT_LIMITS.message.max + 1) },
+      ["message"]
+    ],
+    ["an over-long name", { ...valid, name: "x".repeat(CONTACT_LIMITS.name + 1) }, ["name"]],
+    [
+      "an over-long company",
+      { ...valid, company: "x".repeat(CONTACT_LIMITS.company + 1) },
+      ["company"]
+    ],
+    ["a non-string name", { ...valid, name: 42 }, ["name"]],
+    ["every invalid field at once", { email: "nope", message: "hi" }, ["email", "message"]]
+  ])("rejects %s", (_, raw, fields) => {
+    const result = parseContactRequest(raw);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.issues.map(i => i.field)).toEqual(fields);
   });
 });

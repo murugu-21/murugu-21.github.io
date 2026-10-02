@@ -1,13 +1,17 @@
+// The worker entry: which requests it claims, which fall through to static
+// assets, and how a miss is answered.
 import { env, runInDurableObject } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { parseRange } from "../audio";
 import { ChatRoom } from "../chat-room";
+import { markdownNotFound, notFoundMarkdown, prefersMarkdown, serveAsset } from "../not-found";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "../protocol";
 import worker from "../server";
+import { BLOG_NOT_FOUND_HTML, fakeAssets, LLMS_TXT, NOT_FOUND_HTML, testEnv } from "./fixtures";
 
-// The test wrangler config has no ASSETS binding, so each test injects a mock
-// that marks its responses — proving whether a request fell through to assets
-// or was claimed by the party route.
+// Every response from this ASSETS stub is marked, proving whether a request
+// fell through to assets or was claimed by the worker.
 function envWithAssets(onFetch?: (request: Request) => void): Env {
   return {
     ...env,
@@ -20,8 +24,11 @@ function envWithAssets(onFetch?: (request: Request) => void): Env {
   } as unknown as Env;
 }
 
-describe("worker entry", () => {
-  it("falls through to static assets for non-party requests", async () => {
+const fetchPath = (path: string, init?: RequestInit) =>
+  worker.fetch(new Request(`https://murugappan.dev${path}`, init), testEnv());
+
+describe("routing", () => {
+  it("falls through to static assets for a request it does not claim", async () => {
     const seen: Request[] = [];
     const response = await worker.fetch(
       new Request("https://example.com/blog/some-post"),
@@ -32,78 +39,33 @@ describe("worker entry", () => {
     expect(new URL(seen[0].url).pathname).toBe("/blog/some-post");
   });
 
-  it("routes /parties/chat-room/:room to the Durable Object, not assets", async () => {
+  // /mcp is 405 because this revision of Streamable HTTP defines POST only;
+  // a plain GET on the WebSocket-only party is answered by partyserver itself.
+  it.each([
+    ["/api/nope", 404],
+    ["/api/v1/nope", 404],
+    ["/openapi.json", 200],
+    ["/mcp", 405],
+    ["/.well-known/api-catalog", 200],
+    ["/.well-known/mcp.json", 200],
+    ["/mcp.json", 200],
+    ["/parties/chat-room/test-room", 404]
+  ])("claims %s itself rather than serving an asset", async (path, status) => {
     let assetHits = 0;
     const response = await worker.fetch(
-      new Request("https://example.com/parties/chat-room/test-room"),
-      envWithAssets(() => assetHits++)
-    );
-    // A plain HTTP GET on a WebSocket-only party is not an asset fallthrough:
-    // partyserver answers it itself (404 Not Found by default).
-    expect(assetHits).toBe(0);
-    expect(await response.text()).not.toBe("asset");
-  });
-
-  it("claims /api/* itself so failures are JSON, not the HTML 404 page", async () => {
-    let assetHits = 0;
-    const response = await worker.fetch(
-      new Request("https://example.com/api/nope"),
-      envWithAssets(() => assetHits++)
-    );
-    expect(assetHits).toBe(0);
-    expect(response.status).toBe(404);
-    expect(response.headers.get("Content-Type")).toMatch(/^application\/json/);
-  });
-
-  it("claims /openapi.json itself rather than serving it as an asset", async () => {
-    let assetHits = 0;
-    const response = await worker.fetch(
-      new Request("https://example.com/openapi.json"),
+      new Request(`https://example.com${path}`),
       envWithAssets(() => assetHits++)
     );
     expect(assetHits).toBe(0);
-    expect(((await response.json()) as { openapi: string }).openapi).toBe("3.1.0");
+    expect(response.status).toBe(status);
   });
+});
 
-  it("claims /mcp itself so the MCP endpoint is not a static 404", async () => {
-    let assetHits = 0;
+describe("the chat-room WebSocket", () => {
+  const upgrade = async (room: string, headers: Record<string, string> = {}) => {
     const response = await worker.fetch(
-      new Request("https://example.com/mcp", { method: "GET" }),
-      envWithAssets(() => assetHits++)
-    );
-    expect(assetHits).toBe(0);
-    // This revision of Streamable HTTP defines POST only.
-    expect(response.status).toBe(405);
-    expect(response.headers.get("Allow")).toBe("POST, OPTIONS");
-  });
-
-  it("claims the versioned API prefix itself", async () => {
-    let assetHits = 0;
-    const response = await worker.fetch(
-      new Request("https://example.com/api/v1/nope"),
-      envWithAssets(() => assetHits++)
-    );
-    expect(assetHits).toBe(0);
-    expect(response.status).toBe(404);
-    expect(response.headers.get("Content-Type")).toMatch(/^application\/json/);
-  });
-
-  it("claims the discovery documents rather than serving them as assets", async () => {
-    for (const path of ["/.well-known/api-catalog", "/.well-known/mcp.json", "/mcp.json"]) {
-      let assetHits = 0;
-      const response = await worker.fetch(
-        new Request(`https://example.com${path}`),
-        envWithAssets(() => assetHits++)
-      );
-      expect(assetHits, path).toBe(0);
-      expect(response.status, path).toBe(200);
-    }
-  });
-
-  it("upgrades WebSocket connections on the party route", async () => {
-    const response = await worker.fetch(
-      new Request("https://example.com/parties/chat-room/test-room-ws", {
-        headers: { Upgrade: "websocket" }
+      new Request(`https://example.com/parties/chat-room/${room}`, {
+        headers: { Upgrade: "websocket", ...headers }
       }),
       envWithAssets()
     );
@@ -111,24 +73,14 @@ describe("worker entry", () => {
     expect(response.webSocket).not.toBeNull();
     response.webSocket?.accept();
     response.webSocket?.close();
-  });
+    return env.ChatRoom.get(env.ChatRoom.idFromName(room));
+  };
 
   it("passes the visitor's country and IP to the room on upgrade", async () => {
-    const response = await worker.fetch(
-      new Request("https://example.com/parties/chat-room/geo-room-ws", {
-        headers: {
-          Upgrade: "websocket",
-          "CF-Connecting-IP": "198.51.100.42",
-          "CF-IPCountry": "IN"
-        }
-      }),
-      envWithAssets()
-    );
-    expect(response.status).toBe(101);
-    response.webSocket?.accept();
-    response.webSocket?.close();
-
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("geo-room-ws"));
+    const stub = await upgrade("geo-room-ws", {
+      "CF-Connecting-IP": "198.51.100.42",
+      "CF-IPCountry": "IN"
+    });
     await runInDurableObject(stub, async (instance: ChatRoom) => {
       const meta = Object.fromEntries(
         instance.ctx.storage.sql
@@ -142,26 +94,230 @@ describe("worker entry", () => {
   });
 
   it("drops a client-supplied visitor header when Cloudflare knows nothing", async () => {
-    const response = await worker.fetch(
-      new Request("https://example.com/parties/chat-room/spoof-room-ws", {
-        headers: {
-          Upgrade: "websocket",
-          [VISITOR_COUNTRY_HEADER]: "XX",
-          [VISITOR_IP_HEADER]: "203.0.113.66"
-        }
-      }),
-      envWithAssets()
-    );
-    expect(response.status).toBe(101);
-    response.webSocket?.accept();
-    response.webSocket?.close();
-
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("spoof-room-ws"));
+    const stub = await upgrade("spoof-room-ws", {
+      [VISITOR_COUNTRY_HEADER]: "XX",
+      [VISITOR_IP_HEADER]: "203.0.113.66"
+    });
     await runInDurableObject(stub, async (instance: ChatRoom) => {
       const rows = instance.ctx.storage.sql
         .exec(`SELECT key FROM meta WHERE key LIKE 'visitor_%'`)
         .toArray();
       expect(rows).toEqual([]);
     });
+  });
+});
+
+describe("prefersMarkdown", () => {
+  it.each([
+    [null, true],
+    // curl and the fetch default send */*.
+    ["*/*", true],
+    ["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", false],
+    ["application/xhtml+xml", false],
+    ["text/markdown, text/html;q=0.5", true],
+    ["TEXT/MARKDOWN", true],
+    ["application/json", true],
+    ["text/plain", true]
+  ])("answers Accept: %s with markdown: %s", (accept, expected) => {
+    expect(prefersMarkdown(accept)).toBe(expected);
+  });
+});
+
+describe("notFoundMarkdown", () => {
+  const body = notFoundMarkdown("/some-path-that-does-not-exist");
+
+  it("opens with a heading and names the path that was missed", () => {
+    expect(body.startsWith("# 404 Not Found")).toBe(true);
+    expect(body).toContain("`/some-path-that-does-not-exist`");
+  });
+
+  it("points at the pages and machine-readable entry points that do exist", () => {
+    for (const url of [
+      "https://murugappan.dev/sitemap.xml",
+      "https://murugappan.dev/llms.txt",
+      "https://murugappan.dev/AGENTS.md",
+      "https://murugappan.dev/developers/",
+      "https://murugappan.dev/openapi.json",
+      "https://murugappan.dev/.well-known/api-catalog",
+      "https://murugappan.dev/.well-known/mcp.json",
+      "https://murugappan.dev/mcp",
+      "https://murugappan.dev/api/v1/profile",
+      "https://murugappan.dev/about/",
+      "https://murugappan.dev/blog/",
+      "https://murugappan.dev/resume/"
+    ]) {
+      expect(body).toContain(url);
+    }
+  });
+});
+
+describe("markdownNotFound", () => {
+  it("is an unindexed, uncached 404 that declares the negotiation", async () => {
+    const res = markdownNotFound("/nope", "GET");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
+    expect(res.headers.get("Vary")).toBe("Accept");
+    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    const link = res.headers.get("Link") ?? "";
+    expect(link).toContain('rel="service-desc"');
+    expect(link).toContain('rel="api-catalog"');
+    expect(link).toContain("/sitemap.xml");
+    expect(await res.text()).toContain("# 404 Not Found");
+  });
+
+  it("sends no body for a HEAD", async () => {
+    const res = markdownNotFound("/nope", "HEAD");
+    expect(res.status).toBe(404);
+    expect(await res.text()).toBe("");
+  });
+});
+
+describe("serveAsset", () => {
+  const serve = (path: string, init?: RequestInit) =>
+    serveAsset(new Request(`https://murugappan.dev${path}`, init), fakeAssets() as never);
+
+  it("passes a hit through untouched", async () => {
+    const res = await serve("/llms.txt");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe(LLMS_TXT);
+  });
+
+  it("answers a miss with markdown for a machine client", async () => {
+    const res = await serve("/nope");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
+  });
+
+  it("serves the styled page to a browser, and declares the negotiation", async () => {
+    const res = await serve("/nope", {
+      headers: { Accept: "text/html,application/xhtml+xml" }
+    });
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Content-Type")).toMatch(/^text\/html/);
+    expect(res.headers.get("Vary")).toBe("Accept");
+    expect(res.headers.get("Link")).toContain('rel="service-desc"');
+    expect(await res.text()).toBe(NOT_FOUND_HTML);
+  });
+
+  it("serves the blog's own 404 page for a miss under /blog/", async () => {
+    const res = await serve("/blog/no-such-post/", { headers: { Accept: "text/html" } });
+    expect(res.status).toBe(404);
+    expect(await res.text()).toBe(BLOG_NOT_FOUND_HTML);
+  });
+
+  it("falls back to markdown when the build has no 404 page", async () => {
+    const emptyAssets = {
+      fetch: () => Promise.resolve(new Response(null, { status: 404 }))
+    };
+    const res = await serveAsset(
+      new Request("https://murugappan.dev/nope", {
+        headers: { Accept: "text/html" }
+      }),
+      emptyAssets as never
+    );
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
+    expect(await res.text()).toContain("# 404 Not Found");
+  });
+
+  it("sends the page's headers but no body for a HEAD", async () => {
+    const res = await serve("/nope", { method: "HEAD", headers: { Accept: "text/html" } });
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Content-Type")).toMatch(/^text\/html/);
+    expect(await res.text()).toBe("");
+  });
+
+  it("is what the worker answers a miss with", async () => {
+    const res = await fetchPath("/some-path-that-does-not-exist");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
+  });
+});
+
+describe("GET /blog/audio/:file", () => {
+  const MP3 = new Uint8Array(1000).map((_, i) => i % 251);
+  const JSON_BODY = JSON.stringify({
+    version: 1,
+    slug: "first-post",
+    blocks: []
+  });
+
+  beforeEach(async () => {
+    await env.AUDIO.put("blog/breeze/first-post.mp3", MP3, {
+      httpMetadata: { contentType: "audio/mpeg" }
+    });
+    await env.AUDIO.put("blog/breeze/first-post.json", JSON_BODY, {
+      httpMetadata: { contentType: "application/json" }
+    });
+  });
+
+  it("serves the mp3 with content type, etag and cache headers", async () => {
+    const res = await fetchPath("/blog/audio/first-post.mp3");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("audio/mpeg");
+    expect(res.headers.get("Accept-Ranges")).toBe("bytes");
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=3600");
+    expect(res.headers.get("ETag")).toMatch(/^(W\/)?".+"$/);
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(MP3);
+  });
+
+  it("serves the timing json", async () => {
+    const res = await fetchPath("/blog/audio/first-post.json");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/json");
+    expect(await res.json()).toEqual(JSON.parse(JSON_BODY));
+  });
+
+  it("honours a byte range", async () => {
+    const res = await fetchPath("/blog/audio/first-post.mp3", {
+      headers: { Range: "bytes=100-199" }
+    });
+    expect(res.status).toBe(206);
+    expect(res.headers.get("Content-Range")).toBe("bytes 100-199/1000");
+    expect(res.headers.get("Content-Length")).toBe("100");
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(MP3.slice(100, 200));
+  });
+
+  it("rejects an unsatisfiable range", async () => {
+    const res = await fetchPath("/blog/audio/first-post.mp3", {
+      headers: { Range: "bytes=5000-6000" }
+    });
+    expect(res.status).toBe(416);
+    expect(res.headers.get("Content-Range")).toBe("bytes */1000");
+  });
+
+  it("answers 304 to a matching If-None-Match", async () => {
+    const first = await fetchPath("/blog/audio/first-post.mp3");
+    const etag = first.headers.get("ETag")!;
+    const res = await fetchPath("/blog/audio/first-post.mp3", {
+      headers: { "If-None-Match": etag }
+    });
+    expect(res.status).toBe(304);
+  });
+
+  it.each(["/blog/audio/nope.mp3", "/blog/audio/..%2Fsecret.mp3", "/blog/audio/first-post.wav"])(
+    "falls through to the negotiated 404 for %s",
+    async path => {
+      const res = await fetchPath(path);
+      expect(res.status).toBe(404);
+      expect(res.headers.get("Content-Type")).toContain("text/markdown");
+    }
+  );
+});
+
+describe("parseRange", () => {
+  it.each([
+    ["bytes=0-9", { offset: 0, length: 10 }],
+    ["bytes=90-", { offset: 90, length: 10 }],
+    ["bytes=-5", { offset: 95, length: 5 }],
+    // An end past the object is clamped to it.
+    ["bytes=95-500", { offset: 95, length: 5 }],
+    ["bytes=100-", "unsatisfiable"],
+    ["bytes=-0", "unsatisfiable"],
+    ["items=0-1", null],
+    [null, null]
+  ])("parses %s against a 100-byte object", (header, expected) => {
+    expect(parseRange(header, 100)).toEqual(expected);
   });
 });

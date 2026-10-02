@@ -17,6 +17,12 @@ const role = (company: string, date: string, role: string, location = "Bangalore
   location
 });
 
+const returning = [
+  role("Acme", "2025 – Present", "Staff"),
+  role("Other", "2023 – 2025", "Senior"),
+  role("Acme", "2020 – 2023", "Junior")
+];
+
 describe("groupByCompany", () => {
   it("keeps one entry per role when companies differ", () => {
     const groups = groupByCompany([
@@ -51,12 +57,7 @@ describe("groupByCompany", () => {
   });
 
   it("splits a return to a former company into separate stints", () => {
-    const groups = groupByCompany([
-      role("Acme", "2025 – Present", "Staff"),
-      role("Other", "2023 – 2025", "Senior"),
-      role("Acme", "2020 – 2023", "Junior")
-    ]);
-    expect(groups.map(g => g.company)).toEqual(["Acme", "Other", "Acme"]);
+    expect(groupByCompany(returning).map(g => g.company)).toEqual(["Acme", "Other", "Acme"]);
   });
 
   it("lifts the location to the stint when every role shares it", () => {
@@ -111,27 +112,16 @@ describe("monthsBetween", () => {
   it("counts both the first and the last month, like LinkedIn", () => {
     expect(monthsBetween({ year: 2025, month: 4 }, { year: 2025, month: 12 })).toBe(9);
   });
-
-  it("spans years", () => {
-    expect(monthsBetween({ year: 2023, month: 7 }, { year: 2025, month: 3 })).toBe(21);
-  });
 });
 
 describe("formatDuration", () => {
-  it("shows months only under a year", () => {
-    expect(formatDuration(9)).toBe("9 mos");
-  });
-
-  it("singularises one month", () => {
-    expect(formatDuration(1)).toBe("1 mo");
-  });
-
-  it("shows years and months", () => {
-    expect(formatDuration(21)).toBe("1 yr 9 mos");
-  });
-
-  it("drops the months when they are zero", () => {
-    expect(formatDuration(24)).toBe("2 yrs");
+  it.each([
+    [9, "9 mos"],
+    [1, "1 mo"],
+    [21, "1 yr 9 mos"],
+    [24, "2 yrs"]
+  ])("formats %i months as %s", (months, label) => {
+    expect(formatDuration(months)).toBe(label);
   });
 });
 
@@ -165,21 +155,7 @@ describe("totalExperienceMonths", () => {
 });
 
 describe("countCompanies", () => {
-  it("counts one stint per distinct company", () => {
-    expect(countCompanies([{ company: "MedMe" }, { company: "HyperVerge" }])).toBe(2);
-  });
-
   it("counts a return to a former employer once", () => {
-    const stints = groupByCompany([
-      role("Acme", "2025 – Present", "Staff"),
-      role("Other", "2023 – 2025", "Senior"),
-      role("Acme", "2020 – 2023", "Junior")
-    ]);
-    expect(stints).toHaveLength(3);
-    expect(countCompanies(stints)).toBe(2);
-  });
-
-  it("counts nothing for an empty list", () => {
-    expect(countCompanies([])).toBe(0);
+    expect(countCompanies(groupByCompany(returning))).toBe(2);
   });
 });

@@ -1,13 +1,12 @@
-// Contrast guards: every light ink against the sky gradient's stops and the
-// card surface, and every night ink against both dark stops.
+// WCAG contrast guards for the design tokens: global.css (sky, card, night),
+// code.css's light palette and islands.css. The CSS is inlined by vitest.config.ts.
 import { describe, expect, it } from "vitest";
 
 import { channels, contrast, luminance } from "./contrast";
 
-// Inlined by vitest.config.ts.
 declare const __GLOBAL_CSS__: string;
-// src/blog/styles/code.css, inlined by vitest.config.ts.
 declare const __CODE_CSS__: string;
+declare const __ISLANDS_CSS__: string;
 const css = __GLOBAL_CSS__;
 
 const token = (name: string): string => {
@@ -184,7 +183,6 @@ describe("night palette", () => {
     expect(contrast("#ffffff", ink("box-dark"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // Chip boundaries against the night, as for the light token.
   it("shows the dark chip outline against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
       expect(contrast(over(token("color-chip-outline-dark"), stop), stop)).toBeGreaterThanOrEqual(
@@ -225,12 +223,6 @@ describe("night palette", () => {
     expect(contrast(placeholder, ink("dark-bg"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The blog's dark hr and table rules.
-  it("keeps the blog's dark rules visible on the night canvas (>= 2:1)", () => {
-    for (const stop of night)
-      expect(contrast(ink("accent-grey-dark"), stop)).toBeGreaterThanOrEqual(2);
-  });
-
   // The dark read-aloud highlight (post.css): box-dark at 20% for the word
   // inside its block at 14%. A LINK inside the spoken word (blue-light) is
   // the tight case; body ink has more room. Alphas restated, as for the light
@@ -246,7 +238,8 @@ describe("night palette", () => {
   });
 
   // The ToC rail at night: bars are accent-grey-dark straight on the canvas
-  // (3:1 as a UI component), labels are text-dark / heading-dark on the dark
+  // (3:1 as a UI component, which also covers the blog's dark hr and table
+  // rules in the same token), labels are text-dark / heading-dark on the dark
   // frosted band (nav-scrolled-dark) over each stop.
   it("shows the ToC bars against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
@@ -276,5 +269,33 @@ describe("blog light code palette", () => {
 
   it.each(inks)("keeps %s readable on the white fence", hex => {
     expect(contrast(hex, "#ffffff")).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe.each(["light", "dark"] as const)("%s island tokens", mode => {
+  const block = (selector: string): Record<string, string> => {
+    const at = __ISLANDS_CSS__.indexOf(selector);
+    if (at === -1) throw new Error(`no ${selector} block in islands.css`);
+    const body = __ISLANDS_CSS__.slice(at + selector.length, __ISLANDS_CSS__.indexOf("}", at));
+    return Object.fromEntries(
+      [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(m => [m[1], m[2].trim()])
+    );
+  };
+  const light = block(".ui-island {");
+  // Dark mode inherits every token the dark block does not restate.
+  const t = mode === "light" ? light : { ...light, ...block("html.dark-mode .ui-island {") };
+
+  // 3:1 is WCAG 1.4.11 for non-text UI; 4.5:1 is 1.4.3 AA for normal text
+  // (the panel header title is 16px semibold).
+  it.each([
+    // the ✦ spark and the tool dot on the bg-muted activity row
+    ["activity-row indicators", "--primary", "--muted", 3],
+    ["primary button against the panel", "--primary", "--card", 3],
+    ["primary button label", "--primary-foreground", "--primary", 4.5],
+    ["primary button label on hover", "--primary-foreground", "--primary-hover", 4.5],
+    ["focus ring against the panel", "--ring", "--card", 3],
+    ["body text on the panel", "--foreground", "--card", 4.5]
+  ] as const)("keeps the %s at contrast (%s on %s >= %d:1)", (_, fg, bg, min) => {
+    expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(min);
   });
 });

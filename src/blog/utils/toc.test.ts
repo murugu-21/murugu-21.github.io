@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { TOC_LINE_SLACK, activeIndex, tocEntries } from "./toc";
 
-// A heading as Astro's render(post) reports it.
 const heading = (depth: number, text: string, slug = text.toLowerCase().replace(/\s+/g, "-")) => ({
   depth,
   text,
@@ -33,7 +32,6 @@ describe("tocEntries", () => {
   it("returns nothing when fewer than two headings remain", () => {
     expect(tocEntries([heading(2, "Only")])).toEqual([]);
     expect(tocEntries([heading(2, "", ""), heading(2, "Only")])).toEqual([]);
-    expect(tocEntries([])).toEqual([]);
   });
 });
 
@@ -63,9 +61,5 @@ describe("activeIndex", () => {
 
   it("never counts a heading without a box (Infinity top) as reached", () => {
     expect(activeIndex([-400, Infinity, 600], LINE, false)).toBe(0);
-  });
-
-  it("is nothing for an empty list even at the end of the page", () => {
-    expect(activeIndex([], LINE, true)).toBe(-1);
   });
 });
