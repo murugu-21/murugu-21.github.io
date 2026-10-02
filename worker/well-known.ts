@@ -1,14 +1,5 @@
-// Well-known discovery documents, so an agent that has never seen this site
-// can find its machine-readable surfaces by probing standard locations instead
-// of reading prose:
-//
-//   /.well-known/api-catalog  — RFC 9727, a linkset (RFC 9264) naming every
-//                               API here and where each one is described.
-//   /.well-known/mcp.json     — the MCP `server.json` document, also served at
-//   /mcp.json                   the shorter path clients tend to try first.
-//
-// Both are generated rather than shipped as static files, so the URLs they
-// contain name the host that actually answered.
+// /.well-known/api-catalog (RFC 9727) and the MCP server.json, also at /mcp.json.
+// Generated per request so their URLs name the host that answered.
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -41,11 +32,7 @@ function document(body: unknown, contentType: string): Response {
 
 type LinksetTarget = { href: string; type?: string; title?: string };
 
-/**
- * The API catalogue: one context object per API, anchored at the API's own
- * base URL. RFC 9727 requires at least one of `service-desc` or `service-doc`
- * per entry; both are given, plus `service-meta` for the version policy.
- */
+/** RFC 9727 requires `service-desc` or `service-doc` per entry. */
 export function buildApiCatalog(origin: string): {
   linkset: Array<Record<string, unknown>>;
 } {
@@ -111,11 +98,7 @@ export function buildApiCatalog(origin: string): {
   };
 }
 
-/**
- * The MCP `server.json` manifest. Fields and their names come from the
- * published schema; the tool list rides in `_meta` under a reverse-DNS key,
- * which is the only place the schema allows extra data.
- */
+/** The tool list rides in `_meta`, the only place the schema allows extra data. */
 export function buildMcpManifest(origin: string): Record<string, unknown> {
   const base = origin.replace(/\/$/, "");
   return {
@@ -142,7 +125,6 @@ export function buildMcpManifest(origin: string): Record<string, unknown> {
   };
 }
 
-/** Mounted at /.well-known — see server.ts. */
 export const wellKnown = new Hono<{ Bindings: Env }>();
 
 wellKnown.use("*", cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 }));
@@ -155,7 +137,7 @@ wellKnown.on(READ_METHODS, "/mcp.json", c =>
   document(buildMcpManifest(publicOrigin(c.req.url)), "application/json")
 );
 
-/** The same manifest at the site root, which is where clients look first. */
+/** The same manifest at the site root, where clients look first. */
 export const mcpManifest = new Hono<{ Bindings: Env }>();
 
 mcpManifest.use(

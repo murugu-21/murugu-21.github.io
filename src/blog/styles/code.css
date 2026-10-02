@@ -1,23 +1,6 @@
-/* The blog's fenced code blocks: the fence surface and both Prism palettes.
-   Astro highlights at build time (markdown.syntaxHighlight: "prism") and
-   emits `<pre class="language-*">` + `.token.*` spans; this file is the whole
-   theme for them — no Prism theme stylesheet is imported. Inline `code` has
-   no language class and is styled by post.css.
-
-   It began as prism.css (Prism's light "default" theme) plus overrides; the
-   rules that still mattered were folded in and the rest dropped: the theme's
-   Consolas stack (fences now set in Fira Code like the rest of the site, via
-   post.css), its 1px white text-shadow, and the 50% white backdrop behind
-   operators, which dark mode had to undo. Like post.css, everything is in
-   @layer components so a utility class on a fence still wins.
-
-   Light: the fence uses the developers page's code-block surface (white, soft
-   violet-tinted border); Prism's warm #f5f2f0 sat at ~1.02:1 against the sky
-   and read as a colour cast rather than a panel.
-
-   Dark: Prism's "tomorrow night eighties" (prism-tomorrow.css) scoped under
-   html.dark-mode, on the developers page's dark fence surface (4% white,
-   --color-fence-edge-dark). */
+/* The whole theme for Astro's build-time Prism output (`pre.language-*` and
+   `.token.*`); no Prism stylesheet is imported. In @layer components so a
+   utility class on a fence still wins. Dark is "tomorrow night eighties". */
 
 @layer components {
   .blog-post pre[class*="language-"],
@@ -64,14 +47,7 @@
   }
 
   /* --- Light palette (guarded by palette.test.ts) -------------------------
-     Prism's default light inks were authored for a plain white page, and
-     several sat under AA on this fence: #999 punctuation (2.85:1), the #690
-     strings / attr names / builtins (3.43), #dd4a68 functions and class names
-     (4.0), slategray #708090 comments (4.05), #e90 regexes and variables
-     (2.28). Same hue families, darkened until each clears 4.5:1 on #ffffff.
-     Properties / tags (#905), operators (#9a6e3a) and keywords / attr-values
-     (#07a) already cleared it and keep the theme's values. The dark palette
-     below re-colours all of these for night. */
+     Prism's default hues, darkened where needed to clear 4.5:1 on #ffffff. */
   .blog-post .token.comment,
   .blog-post .token.block-comment,
   .blog-post .token.prolog,
@@ -128,9 +104,7 @@
     color: #8f6200;
   }
 
-  /* --- Dark palette -------------------------------------------------------
-     Prism's "tomorrow night eighties" on the developers page's dark fence
-     surface (4% white, --color-fence-edge-dark). */
+  /* --- Dark palette ------------------------------------------------------- */
 
   html.dark-mode .blog-post pre[class*="language-"] {
     background: rgba(255, 255, 255, 0.04);

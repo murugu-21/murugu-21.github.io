@@ -1,14 +1,9 @@
-// Validation for POST /api/contact — the one write endpoint on the API. It is
-// the HTTP equivalent of the capture_opportunity tool Jarvis already calls
-// over the chat socket, so an agent that cannot open a WebSocket can still
-// reach Murugappan. Every rejection names the offending fields so a
-// function-calling model can repair its own arguments and retry.
+// Validation for POST /api/contact, the HTTP twin of Jarvis's capture_opportunity tool. Every
+// rejection names its fields so a function-calling model can repair its arguments and retry.
 
 import type { FieldIssue } from "./errors";
 
-// Two-tier daily allowance, enforced by the RateLimiter Durable Object. Both
-// tiers are deliberately small: the endpoint exists so an agent can pass along
-// one genuine opportunity, not so it can be used as a mailer.
+// Daily allowances enforced by the RateLimiter DO; small on purpose so this is not a mailer.
 export const CONTACT_DAILY_GLOBAL = 20;
 export const CONTACT_DAILY_PER_CLIENT = 3;
 
@@ -27,13 +22,10 @@ export type ContactRequest = {
 };
 
 export type ContactParseResult =
-  // `dryRun` is a request option, not part of the message, so it is reported
-  // alongside the payload rather than inside it — the email formatter never
-  // has to know the flag exists.
+  // `dryRun` sits beside the payload so the email formatter never sees it.
   { ok: true; value: ContactRequest; dryRun: boolean } | { ok: false; issues: FieldIssue[] };
 
-// Deliberately loose: a local part, an "@", and a dotted domain. Anything
-// stricter rejects addresses that are perfectly deliverable.
+// Deliberately loose: stricter patterns reject deliverable addresses.
 const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 function optional(
@@ -82,14 +74,10 @@ export function parseContactRequest(raw: unknown): ContactParseResult {
 
   const company = optional(body.company, "company", CONTACT_LIMITS.company, issues);
 
-  // The sandbox for the one write endpoint: validate the exact payload an
-  // agent is about to send, with no email and no rate-limit slot spent.
-  let dryRun = false;
-  if (body.dryRun !== undefined && body.dryRun !== null) {
-    if (typeof body.dryRun !== "boolean")
-      issues.push({ field: "dryRun", issue: "must be a boolean" });
-    else dryRun = body.dryRun;
-  }
+  // Validates the payload without sending an email or spending a rate-limit slot.
+  const rawDryRun = body.dryRun ?? false;
+  if (typeof rawDryRun !== "boolean") issues.push({ field: "dryRun", issue: "must be a boolean" });
+  const dryRun = rawDryRun === true;
 
   let message: string | undefined;
   if (typeof body.message !== "string") {

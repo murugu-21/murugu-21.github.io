@@ -6,10 +6,7 @@ import { accentTitle } from "../lib/accent";
 
 let repos = await fetchPinnedRepos();
 
-// Dev-only preview. Until a repo is pinned on GitHub (and a token is present)
-// the live fetch is empty, so `astro dev` shows one sample card to make the
-// layout reviewable. Production renders only real pinned repos — and nothing
-// at all if none are pinned — so this sample never ships.
+// Dev-only sample card for when no repos are pinned (or no token); never ships.
 const SAMPLE_REPO: GithubRepo = {
   id: "sample-eventform",
   name: "eventform",

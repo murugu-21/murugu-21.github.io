@@ -1,8 +1,5 @@
-// One error envelope for every /api/* failure. Agents can't parse an HTML
-// error page, so the Worker owns /api/* (see run_worker_first in
-// wrangler.jsonc) and answers with this shape instead of falling through to
-// the static 404 page: a stable machine-readable `code`, a human `message`,
-// a `hint` saying what to do next, and a link to the docs.
+// The JSON error envelope for every /api/* failure. The Worker owns /api/* (run_worker_first in
+// wrangler.jsonc) so agents never get the HTML 404 page.
 
 export type ApiErrorCode =
   | "not_found"

@@ -4,14 +4,13 @@ import { accentTitle } from "../lib/accent";
 import Icon from "./Icon.astro";
 ---
 
-{/* box-content: keep the old content-box outer width of `.proficiency-container`
-  (see Skills.astro). */}
+{/* box-content: see Skills.astro */}
 <div
   class="proficiency-container section-animate box-content mx-auto mt-8 flex w-[90%] px-2.5 py-5"
   id="proficiency"
 >
   <div class="flex-1">
-    {/* my-[0.67em] pins the old h1 UA margin kept after demotion to h2 */}
+    {/* my-[0.67em]: h1 UA margin, kept after demotion to h2 */}
     <h2
       class="proficiency-heading my-[0.67em] text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
       set:html={accentTitle("Proficiency")}

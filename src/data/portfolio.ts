@@ -15,8 +15,7 @@ export const greeting = {
   resumePath: "/resume.pdf"
 };
 
-// Roles looped by the hero typewriter (reference-look migration)
-
+// Roles looped by the hero typewriter
 export const typewriterRoles = [
   "Full Stack Engineer",
   "TypeScript · Node.js · React",
@@ -32,8 +31,7 @@ export const socialMediaLinks = {
   rss: "https://murugappan.dev/blog/rss.xml"
 };
 
-// schema.org Person.sameAs — the public profiles, shared by the portfolio
-// layout and the blog so the two JSON-LD graphs describe one entity.
+// schema.org Person.sameAs, shared so both apps' JSON-LD describe one entity.
 export const sameAs = [
   socialMediaLinks.github,
   socialMediaLinks.linkedin,
@@ -74,10 +72,7 @@ export const skillsSection: {
   ]
 };
 
-// Proficiency section: broad areas with the tools inside each. The page
-// renders the tools as chips with their marks (icon = <symbol id> in
-// src/assets/icons.svg); progressPercentage is kept for the dataset API's
-// self-reported `level` and is not shown on the site.
+// progressPercentage feeds the dataset API's `level`; the site doesn't show it.
 
 export interface ProficiencyTool {
   name: string;
@@ -222,9 +217,7 @@ export const workExperiences: WorkExperience[] = [
   }
 ];
 
-// Resume-only skills taxonomy — categorized for the printed resume's SKILLS
-// section (see src/data/resume.ts) and folded into Layout.astro's JSON-LD
-// knowsAbout. The portfolio's own Skills section keeps its own curated list.
+// Resume SKILLS taxonomy, also folded into Layout.astro's JSON-LD knowsAbout.
 
 export const skillsCategories: { category: string; items: string }[] = [
   { category: "Languages", items: "TypeScript, Python, SQL, Bash, YAML" },
@@ -270,10 +263,8 @@ export const educationInfo: Education[] = [
   }
 ];
 
-// Projects Section — pinned GitHub repositories, fetched at build time.
-// Set display:false to hide the section entirely. When display is true the
-// section renders only if there are pinned repos to show (so pinning a repo on
-// GitHub is what makes it appear in production).
+// Pinned GitHub repos, fetched at build time; the section renders only when
+// some exist.
 
 export const projectsSection: {
   title: string;
@@ -360,12 +351,8 @@ export const blogSection: {
 export const contactInfo = {
   title: "Contact Me ☎️",
   subtitle: "Want to discuss a project, a role, or just say hi? My inbox is open.",
-  // No phone number is hardcoded in source — set RESUME_PHONE (build env /
-  // local .env) to populate it. This value only ever renders in
-  // GithubCard.astro's no-GitHub-profile fallback contact view (production
-  // renders the profile branch instead, which never reads contactInfo.number
-  // — see GithubCard.astro). The resume page (src/data/resume.ts) reads the
-  // same env var independently for its contact line.
+  // Never hardcoded: comes from RESUME_PHONE. Renders only in GithubCard's
+  // no-profile fallback.
   number: import.meta.env.RESUME_PHONE ?? "",
   emailAddress: "murugu2001@gmail.com"
 };

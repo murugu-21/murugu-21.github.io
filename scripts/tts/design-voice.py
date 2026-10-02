@@ -10,9 +10,8 @@ the one you like:
   cp .voice/candidates/reference.txt .voice/reference.txt
   npm run audio -- --upload-voice
 
-Every post is then a plain clone of that clip (scripts/tts/synth.py), which is
-what keeps the identity fixed across paragraphs. Voice design is sampled, so
-candidates differ; the prompt below produced the clip in use on 2026-09-09.
+Posts are plain clones of that clip (synth.py), which keeps the voice fixed
+across paragraphs. Design is sampled, so candidates differ.
 """
 import contextlib
 import sys
@@ -34,7 +33,7 @@ PERSONA = (
     "on key terms, brief pauses between ideas."
 )
 
-# ~10 s when spoken: long enough to anchor a clone, short enough to design fast.
+# ~10 s spoken: long enough to anchor a clone, short enough to design fast.
 SENTENCE = (
     "Hey there, if you are reading this in a desktop, press ctrl + shift + i and "
     "open console and paste the below code."

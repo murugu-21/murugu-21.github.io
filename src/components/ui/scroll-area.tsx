@@ -1,4 +1,4 @@
-// shadcn/ui scroll-area (new-york, Tailwind v4), vendored — relative imports.
+// shadcn/ui scroll-area (new-york, Tailwind v4), vendored.
 import * as React from "react";
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 

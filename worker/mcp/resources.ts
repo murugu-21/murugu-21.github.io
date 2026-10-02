@@ -1,14 +1,5 @@
-// MCP resources: the site's machine-readable documents, offered as
-// application-selectable context rather than as model-invoked tools.
-//
-// All URIs use the `https://` scheme, which the spec reserves for resources the
-// client "is able to fetch and load ... directly from the web on its own" — and
-// these genuinely are: every one is a public URL on murugappan.dev. A client
-// that would rather not go through the MCP server can just GET them.
-//
-// The read side is an explicit allowlist plus a slug-validated blog path; no
-// part of an incoming URI is ever used to build an asset path without being
-// matched against one of those two shapes first.
+// MCP resources. `https://` URIs because each is also a public URL a client
+// can GET directly. Reads accept only the allowlist or a validated blog slug.
 
 import { buildOpenApiDocument } from "../api/openapi";
 import { loadPosts, readAsset, type AssetsLike } from "../api/store";
@@ -43,9 +34,7 @@ const forAssistant = (priority: number): ResourceAnnotations => ({
   priority
 });
 
-// Static documents, in the order a client should prefer them. `assetPath` is
-// null for the OpenAPI document, which the Worker generates rather than serves
-// from the build.
+// In preference order. `assetPath` is null for the generated OpenAPI document.
 const STATIC_RESOURCES: Array<ResourceDescriptor & { assetPath: string | null }> = [
   {
     uri: `${RESOURCE_ORIGIN}/llms.txt`,
@@ -100,11 +89,7 @@ export const BLOG_POST_TEMPLATE = {
 
 const postUri = (slug: string) => `${RESOURCE_ORIGIN}/blog/${slug}/index.md`;
 
-/**
- * The static documents followed by one entry per published post. A missing
- * post list degrades to the static documents rather than failing the call —
- * `resources/list` is how a client discovers the server at all.
- */
+/** A missing post list degrades to the static documents rather than failing. */
 export async function listResources(ctx: ResourceContext): Promise<ResourceDescriptor[]> {
   const posts = await loadPosts(ctx.assets);
   return [
@@ -143,11 +128,9 @@ export async function readResource(
   }
 
   const slug = uri.match(BLOG_URI)?.[1];
-  // postMarkdownPath re-validates the slug shape, so nothing from the URI
-  // reaches an asset path unchecked.
+  // postMarkdownPath re-validates the slug shape.
   if (!slug || postMarkdownPath(slug) === null) return null;
-  // Only posts the site actually publishes, so an unlisted markdown file
-  // cannot be reached by guessing a slug.
+  // Published posts only, so an unlisted markdown file can't be guessed.
   const posts = await loadPosts(ctx.assets);
   if (!posts.some(post => post.slug === slug)) return null;
   const text = await readAsset(ctx.assets, postMarkdownPath(slug)!);

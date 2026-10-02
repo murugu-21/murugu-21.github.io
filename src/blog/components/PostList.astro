@@ -1,15 +1,7 @@
 ---
-// The blog index's searchable, tag-filterable post list — server-rendered
-// Astro plus ~30 lines of inline script. Replaces the AllPosts React island
-// (a Gatsby leftover): the list, chips and search box never needed React, and
-// hydrating them pulled ~70 KB of script ahead of the largest paint on
-// mobile. Filtering is the same as before — case-insensitive substring match
-// on title + description (or the excerpt when there is no description), AND
-// "has at least one checked tag" — applied by toggling `hidden` on the <li>s.
-//
-// The filter state also mirrors into the URL (`?q=`, one `?tag=` per checked
-// chip) so a filtered view can be shared, bookmarked and reloaded. The URL is
-// the source of truth on load; see the script at the bottom.
+// The blog index's searchable, tag-filterable post list. Plain script, no
+// React island: hydration cost ~70 KB ahead of LCP on mobile. Filter state
+// mirrors into the URL (`?q=`, one `?tag=` per chip), which wins on load.
 import type { SerializedPost } from "../utils/posts";
 import SearchBar from "./SearchBar.astro";
 import TagBar from "./TagBar.astro";
@@ -21,7 +13,7 @@ interface Props {
 }
 const { posts } = Astro.props;
 
-// Tag counts, most-used first, ties alphabetical (the old React useMemo).
+// Most-used first, ties alphabetical.
 const totals = new Map<string, number>();
 for (const post of posts) {
   for (const tag of post.tags) totals.set(tag, (totals.get(tag) ?? 0) + 1);
@@ -34,8 +26,6 @@ const tags: TagCount[] = [...totals]
 <div data-post-list>
   <SearchBar />
   <TagBar tags={tags} />
-  {/* `ul, ol { margin: 1em 0 2rem; padding: 0; list-style: none }` — the 2rem
-      bottom came from style.css, the 1em top from the UA sheet. */}
   <ol class="mt-4 mb-8 list-none p-0">
     {posts.map(post => (
       <Post post={post} />
@@ -72,11 +62,8 @@ const tags: TagCount[] = [...totals]
       if (empty) empty.hidden = shown > 0;
     };
 
-    // Mirror the state into the URL: `?q=` for the query and one `?tag=` per
-    // checked chip (repeated, not comma-joined, so no escaping games). Params
-    // this script does not own (utm_*) are preserved. replaceState rather than
-    // pushState: the address bar is always current, but typing does not pile up
-    // history entries, and Back still leaves /blog/ from the first navigation.
+    // Other params (utm_*) are preserved. replaceState so typing doesn't pile
+    // up history entries.
     const syncUrl = () => {
       const params = new URLSearchParams(location.search);
       const query = search?.value ?? "";
@@ -88,10 +75,8 @@ const tags: TagCount[] = [...totals]
       history.replaceState(null, "", `${location.pathname}${qs ? `?${qs}` : ""}${location.hash}`);
     };
 
-    // URL → DOM. Runs on load and again on back/forward (popstate) and bfcache
-    // restores (pageshow — those do not fire popstate). Re-reading the URL also
-    // beats the browser's own form restoration, so a shared link's params win
-    // over whatever the input held before.
+    // URL → DOM, on load, popstate and pageshow (bfcache restores don't fire
+    // popstate). Also overrides the browser's form restoration.
     const readUrl = () => {
       const params = new URLSearchParams(location.search);
       if (search) search.value = params.get("q") ?? "";

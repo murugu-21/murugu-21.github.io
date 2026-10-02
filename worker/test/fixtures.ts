@@ -98,7 +98,7 @@ export function siteFiles(
   };
 }
 
-/** The real ASSETS binding takes a string, a URL or a Request — so does this. */
+/** Accepts a string, URL or Request, like the real ASSETS binding. */
 function assetPath(input: RequestInfo | URL): string {
   if (typeof input === "string") return new URL(input).pathname;
   if (input instanceof URL) return input.pathname;

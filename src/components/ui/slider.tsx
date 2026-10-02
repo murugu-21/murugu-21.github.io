@@ -1,6 +1,5 @@
-// shadcn/ui slider (new-york, Tailwind v4), vendored — relative imports and
-// the scoped @radix-ui package instead of the CLI's "@/" alias and the
-// "radix-ui" umbrella; vertical orientation trimmed (unused).
+// shadcn/ui slider (new-york, Tailwind v4), vendored; uses the scoped
+// @radix-ui package, vertical orientation trimmed.
 import * as React from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 

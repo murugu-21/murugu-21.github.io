@@ -1,21 +1,12 @@
 // Contrast guards for the island design tokens.
-//
-// These exist because of a real regression: switching the palette from green
-// to Ashoka Chakra navy (a5d4eb2) moved --primary from #057b01 to #06038d, and
-// the dark block never defined a --primary of its own. The thinking row's ✦
-// spark is `color: var(--primary)` on `bg-muted`, which went from a marginal
-// 3.11:1 to 1.14:1 — invisible. Nothing failed, because nothing checked.
 import { describe, expect, it } from "vitest";
 
 import { contrast } from "./contrast";
 
-// Inlined from islands.css by vitest.config.ts — the Workers pool has no
-// filesystem and Vite's CSS pipeline swallows `?raw` for stylesheets.
+// Inlined by vitest.config.ts.
 declare const __ISLANDS_CSS__: string;
 const css = __ISLANDS_CSS__;
 
-// The two token blocks in islands.css: `.ui-island { … }` for light and
-// `html.dark-mode .ui-island { … }` for dark.
 const block = (selector: string): Record<string, string> => {
   const at = css.indexOf(selector);
   if (at === -1) throw new Error(`no ${selector} block in islands.css`);

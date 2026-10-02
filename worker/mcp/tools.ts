@@ -1,13 +1,6 @@
-// The MCP tool surface. Every tool is a thin adapter over the same loaders the
-// REST API uses (worker/api/store.ts), and its outputSchema is the API's own
-// response schema inlined into a self-contained document — so /mcp, /api/* and
-// the OpenAPI spec describe one implementation rather than three.
-//
-// Error convention follows the spec's two mechanisms: "unknown tool" and
-// malformed requests are protocol errors raised by the dispatcher, while
-// everything a model could plausibly fix by retrying with different arguments
-// — bad slug, out-of-range limit, invalid email, spent allowance — comes back
-// as a tool execution error (`isError: true`) with text that says what to do.
+// MCP tools: thin adapters over the REST API's loaders, with its response
+// schemas inlined as outputSchema. Anything a model could fix by retrying with
+// other arguments is an `isError` result, not a protocol error.
 
 import { API_SCHEMAS } from "../api/openapi";
 import { parseContactRequest, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
@@ -19,7 +12,7 @@ import { resolveSchema, type JsonSchema } from "./schema";
 export type ToolContext = {
   assets: AssetsLike;
   env: Env;
-  /** Caller IP, used for the send_message allowance. */
+  /** Keys the send_message allowance. */
   clientIp: string;
 };
 
@@ -63,7 +56,7 @@ const NO_ARGS: JsonSchema = {
 
 const out = (name: string) => resolveSchema(name, API_SCHEMAS);
 
-/** Success: structured data plus the serialized JSON the spec asks for. */
+/** The spec asks for the serialized JSON alongside structuredContent. */
 function ok(data: unknown): ToolResult {
   return {
     content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
@@ -71,7 +64,6 @@ function ok(data: unknown): ToolResult {
   };
 }
 
-/** A failure the calling model can act on. */
 function fail(text: string): ToolResult {
   return { content: [{ type: "text", text }], isError: true };
 }
@@ -79,7 +71,6 @@ function fail(text: string): ToolResult {
 const DATASET_UNAVAILABLE =
   "The site's content dataset is not available right now — this is a transient deployment state. Retry in a minute, or read https://murugappan.dev/llms.txt instead.";
 
-// Shared body of the five dataset-backed read tools.
 function datasetTool(
   name: string,
   title: string,
@@ -277,7 +268,6 @@ export const MCP_TOOLS: McpTool[] = [
       readOnlyHint: false,
       destructiveHint: false,
       idempotentHint: false,
-      // Sends email to a third party outside this server.
       openWorldHint: true
     },
     async run(args, ctx) {
@@ -330,7 +320,7 @@ export const MCP_TOOLS: McpTool[] = [
 
 const BY_NAME = new Map(MCP_TOOLS.map(tool => [tool.name, tool]));
 
-/** Exact, case-sensitive lookup, as the spec specifies for tool names. */
+/** Case-sensitive, as the spec requires for tool names. */
 export function findTool(name: string): McpTool | undefined {
   return BY_NAME.get(name);
 }

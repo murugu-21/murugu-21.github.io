@@ -1,8 +1,6 @@
-// shadcn/ui dropdown-menu (new-york, Tailwind v4), vendored — relative
-// imports, trimmed to the pieces the islands use. The content is portaled
-// into the calling island's root (`container`), not document.body, so the
-// menu stays inside the element the islands.css tokens are scoped under.
-// Without a container it falls back to the chat widget's root.
+// shadcn/ui dropdown-menu (new-york, Tailwind v4), vendored and trimmed.
+// Portals into the island root (`container`, else the chat widget root), not
+// document.body, so the islands.css tokens scoped there still apply.
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 

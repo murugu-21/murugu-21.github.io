@@ -24,8 +24,7 @@ const LIMIT_MESSAGE =
 export class ChatRoom extends Server<Env> {
   static options = { hibernate: true };
 
-  // Widen `ctx` from the base DurableObject's `protected` to `public` so
-  // tests can drive `ctx.storage.sql` directly via `runInDurableObject`.
+  // Public so tests can drive `ctx.storage.sql` via `runInDurableObject`.
   declare public ctx: DurableObjectState<Record<string, unknown>>;
 
   onStart(): void {
@@ -51,19 +50,15 @@ export class ChatRoom extends Server<Env> {
   }
 
   onConnect(connection: Connection, ctx: ConnectionContext): void {
-    // Seed the greeting as the room's first persisted message so history
-    // replays and transcript downloads always include the opener. The check
-    // and insert are synchronous — no interleaving, no double seed.
+    // Synchronous check-and-insert, so the greeting can't be seeded twice.
     const count = this.ctx.storage.sql.exec(`SELECT COUNT(*) AS n FROM messages`).one().n as number;
     if (count === 0) this.persist("assistant", GREETING);
     this.recordVisitor(ctx.request);
     this.send(connection, { type: "history", messages: this.history() });
   }
 
-  // Serializes turns: two tabs of the same room can send concurrently, and
-  // although the DO is single-threaded, two onMessage invocations would
-  // interleave across await points — garbling the broadcast streams. Each
-  // turn waits for the previous one to finish.
+  // Serializes turns: concurrent tabs would otherwise interleave across awaits
+  // and garble the broadcast stream.
   private pendingTurn: Promise<void> = Promise.resolve();
 
   async onMessage(connection: Connection, raw: unknown): Promise<void> {
@@ -89,9 +84,7 @@ export class ChatRoom extends Server<Env> {
       this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
       return;
     }
-    // No key means no chat at all — DeepSeek is the only provider. Gate the
-    // same way as an empty account rather than surfacing a fault the visitor
-    // can do nothing about.
+    // A missing key gates like an empty account; the visitor can't fix either.
     const key = this.deepseekKey();
     if (!key || !(await this.limiter().chatAvailable(key))) {
       this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
@@ -99,16 +92,14 @@ export class ChatRoom extends Server<Env> {
     }
 
     this.persist("user", msg.text);
-    // Keep other open tabs of this room in sync — the sender already
-    // rendered its own bubble optimistically, so it is excluded.
+    // The sender already rendered its bubble optimistically.
     this.broadcastMsg({ type: "visitor", text: msg.text }, [connection.id]);
 
     try {
       await this.generate(key, msg.page);
     } catch (err) {
       console.error("chat generation failed", err);
-      // DeepSeek says the account is empty. That verdict beats the cached
-      // balance, so park the cache and gate every room until the next check.
+      // A 402 beats the cached balance: gate every room until the next check.
       if (isInsufficientBalance(err)) {
         await this.limiter().markChatExhausted();
         this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
@@ -121,12 +112,9 @@ export class ChatRoom extends Server<Env> {
     }
   }
 
-  // One full reply turn: grounded exchange with an on-demand fetch_page loop
-  // (the model may pull a site page's full text before answering), optional
-  // opportunity capture (one more exchange), persist. Everything it emits is
-  // broadcast to the room, so it needs no particular connection.
+  // One reply turn: exchange with up to MAX_FETCH_ROUNDS fetch_page rounds, an
+  // optional capture exchange, then persist. Everything is broadcast to the room.
   private async generate(key: string, page?: string): Promise<void> {
-    // Replies stream to every open tab of the room, not just the sender.
     const onDelta = (text: string) => this.broadcastMsg({ type: "delta", text });
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
     const messages: ModelMessage[] = buildMessages(grounding, this.history(), page);
@@ -143,8 +131,7 @@ export class ChatRoom extends Server<Env> {
       if (!fetchCall || round >= MAX_FETCH_ROUNDS) break;
 
       const url = parseFetchArguments(fetchCall.arguments);
-      // Tell the room what is happening before the await: a page fetch plus
-      // the follow-up exchange is the longest silence in a turn.
+      // Announce before the await: fetch plus follow-up is a turn's longest silence.
       this.broadcastMsg(toolFrame("fetch_page", url));
       const pageText = url
         ? await fetchSitePage(this.env.ASSETS, url)
@@ -171,8 +158,7 @@ export class ChatRoom extends Server<Env> {
       reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
     }
 
-    // Model replies can be prefixed with stray blank lines, and fetch rounds
-    // can leave gaps where content spans exchanges.
+    // Collapse stray blank lines left between exchanges.
     reply = reply.replace(/\n{3,}/g, "\n\n").trim();
     if (reply) this.persist("assistant", reply);
     this.broadcastMsg({ type: "done" });
@@ -184,21 +170,20 @@ export class ChatRoom extends Server<Env> {
     onDelta: (text: string) => void
   ): Promise<StreamResult> {
     const result = await runDeepseekExchange(key, messages, onDelta);
-    // Paid tokens — keep spend visible in `wrangler tail`. Nothing is
-    // metered locally any more; DeepSeek's balance is the meter.
+    // Keeps spend visible in `wrangler tail`.
     console.log("deepseek usage", JSON.stringify(result.usage));
     return result;
   }
 
-  // Typed non-optional by `wrangler types`, but a deploy can still be missing
-  // the secret — and `.dev.vars` carries a placeholder locally.
+  // Typed non-optional, but a deploy can lack the secret and `.dev.vars` holds
+  // a placeholder.
   private deepseekKey(): string | null {
     const trimmed = (this.env.DEEPSEEK_API_KEY as string | undefined)?.trim();
     return trimmed && !trimmed.startsWith("placeholder") ? trimmed : null;
   }
 
-  // Records the lead, emails once per conversation, and asks the model to
-  // phrase the confirmation using the tool result.
+  // Stores the lead, emails once per room, and has the model phrase the
+  // confirmation.
   private async handleCapture(
     capture: { id: string; name: string; arguments: string },
     key: string,
@@ -231,9 +216,7 @@ export class ChatRoom extends Server<Env> {
       }
     }
 
-    // Second model pass so the visitor gets a natural confirmation. Strict
-    // OpenAI shape (assistant.tool_calls → tool with tool_call_id) so any
-    // chat-completions provider accepts the transcript.
+    // Strict OpenAI shape (assistant.tool_calls → tool) so any provider accepts it.
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
     const followUp = await this.exchange(
       key,
@@ -271,12 +254,8 @@ export class ChatRoom extends Server<Env> {
     return this.env.RateLimiter.get(this.env.RateLimiter.idFromName("global"));
   }
 
-  // Where the visitor connected from, attached to the upgrade by the Worker
-  // edge (see server.ts) — a Durable Object never gets `request.cf` itself.
-  // The room keeps its own record under `visitor_*` meta keys and mirrors one
-  // `rooms` row per room to D1, so the dash can show where a conversation
-  // came from without joining the transcript. Reconnects refresh the country
-  // and IP and bump last_seen; a missing value never erases a known one.
+  // Stored under `visitor_*` meta keys and mirrored to one D1 `rooms` row.
+  // A missing value never erases a known one.
   private recordVisitor(request: Request): void {
     const visitor = parseVisitorContext(request.headers);
     if (!visitor) return;
@@ -292,9 +271,6 @@ export class ChatRoom extends Server<Env> {
     this.upsertMeta("visitor_last_seen", String(now));
     if (!existing.length) this.upsertMeta("visitor_first_seen", String(now));
 
-    // Same fire-and-forget contract as the message mirror: the room's SQLite
-    // is the record, D1 is a view of it, and losing the view must not touch
-    // the conversation.
     this.env.CHAT_DB?.prepare(
       `INSERT INTO rooms (room_id, country, ip, first_seen, last_seen)
        VALUES (?, ?, ?, ?, ?)
@@ -353,10 +329,8 @@ export class ChatRoom extends Server<Env> {
       content,
       createdAt
     );
-    // Fire-and-forget mirror to D1 so every room's chat is browsable in the
-    // Cloudflare dash (rooms aren't enumerable, so this is the only global
-    // view). The DO's own SQLite stays the serving source of truth; a mirror
-    // failure logs and never touches the conversation.
+    // Fire-and-forget D1 mirror: rooms aren't enumerable, so it is the only
+    // global view. The DO's SQLite stays the source of truth.
     this.env.CHAT_DB?.prepare(
       `INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)`
     )

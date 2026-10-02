@@ -1,14 +1,6 @@
-// The public API's data comes from the site's own content build, not from a
-// second copy of it: `src/pages/api/dataset.json.ts` is an Astro static
-// endpoint that feeds `src/data/portfolio.ts` + `src/data/resume.ts` through
-// `buildDataset()` and prerenders the result to `dist/api/dataset.json`. The
-// Worker reads that file back through the ASSETS binding (same pattern as
-// grounding.ts), so /api/*, the rendered pages and the resume PDF can never
-// drift from each other.
-//
-// Only the fields the API projects are declared as input, structurally — that
-// keeps this module free of any `astro` import (portfolio.ts types its logos
-// as ImageMetadata) so the Worker and its tests can use it directly.
+// `src/pages/api/dataset.json.ts` prerenders `buildDataset()` over the site's own data to
+// `dist/api/dataset.json`, which the Worker reads via ASSETS, so the API cannot drift from the site.
+// Input is typed structurally to keep `astro` imports (ImageMetadata) out of the Worker.
 
 export type Link = { label: string; url: string };
 
@@ -16,7 +8,7 @@ export type ExperienceEntry = {
   role: string;
   company: string;
   location: string;
-  /** Human-readable range exactly as it appears on the site. */
+  /** As displayed on the site. */
   period: string;
   /** ISO 8601 year-month, or null when the period could not be parsed. */
   startDate: string | null;
@@ -122,9 +114,7 @@ export type DatasetInput = {
   isHireable: boolean;
 };
 
-// Same splitting rule the JSON-LD `knowsAbout` list uses in Layout.astro:
-// break on semicolons and em dashes, and on commas that are NOT inside a
-// parenthesised group (so "(AWS SQS, EventBridge)" survives as one item).
+// Same rule as `knowsAbout` in Layout.astro: commas inside parentheses do not split.
 export function splitSkillItems(items: string): string[] {
   return items
     .split(/;|—|,(?![^()]*\))/)
@@ -163,9 +153,8 @@ export type Period = {
 
 const OPEN_ENDED = /^(present|current|now)$/i;
 
-// The site writes ranges as "December 2025 – Present" / "June 2019 - April
-// 2023" (en dash, em dash or hyphen). Anything else yields nulls rather than
-// a guess — a wrong date is worse for an agent than an absent one.
+// Parses "December 2025 – Present" / "June 2019 - April 2023". Anything else yields nulls: a
+// wrong date is worse for an agent than an absent one.
 export function parsePeriod(period: string): Period {
   const parts = period.split(/\s+[–—-]\s+/);
   if (parts.length !== 2) return { startDate: null, endDate: null, current: false };
@@ -285,10 +274,7 @@ const COLLECTIONS = [
   "openSource"
 ] as const;
 
-// The dataset arrives over the ASSETS binding, i.e. from a build artifact
-// rather than from this module's own memory — so it is validated before use.
-// A stale or truncated file must surface as a 503 with a hint, never as
-// `undefined` leaking into a 200 response body.
+// A stale or truncated build artifact must surface as a 503, not as `undefined` in a 200 body.
 export function parseDataset(raw: unknown): Dataset | null {
   if (typeof raw !== "object" || raw === null) return null;
   const doc = raw as Record<string, unknown>;

@@ -1,6 +1,4 @@
-// Shared command-line scaffolding for the two TTS pipeline scripts
-// (generate-audio.ts, align-audio.ts): logging, process helpers and the
-// per-target failure loop.
+// Shared CLI helpers for generate-audio.ts and align-audio.ts.
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -20,8 +18,7 @@ export function run(cmd: string, cmdArgs: string[]): string {
   return r.stdout;
 }
 
-// Every <built site>/blog/<dir>/index.html that is a post. The blog's own 404 page
-// lives there too and has no article body.
+// Post dirs under the built blog; the articleBody check skips the blog's 404.
 export function publishedSlugs(dist: string): string[] {
   if (!existsSync(dist)) fail(`${dist} missing — run \`bun run build\` first`);
   return readdirSync(dist, { withFileTypes: true })
@@ -36,8 +33,7 @@ export function publishedSlugs(dist: string): string[] {
     .map(d => d.name);
 }
 
-// Runs `fn` for each slug, logging failures instead of stopping, and returns
-// the failed slugs. Callers close their workers before exiting on failure.
+// Logs failures instead of stopping; returns the failed slugs.
 export async function runEach(
   slugs: string[],
   fn: (slug: string) => Promise<unknown>

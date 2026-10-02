@@ -10,8 +10,6 @@ import {
   totalExperienceMonths
 } from "./experience";
 
-// Minimal shape: the helper is generic over anything carrying company, date
-// and location, so the component can pass the full WorkExperience objects.
 const role = (company: string, date: string, role: string, location = "Bangalore") => ({
   company,
   date,

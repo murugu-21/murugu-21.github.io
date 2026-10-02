@@ -1,20 +1,12 @@
 import type { ChatHistoryEntry } from "./protocol";
 
 export const MAX_HISTORY_MESSAGES = 20;
-// Per-visitor fairness cap (rolling 24h). This is the only PACING on spend:
-// the site-wide gate is the DeepSeek balance itself, which stops chat when
-// the credit is gone rather than rationing it by the day.
-//
-// The model itself lives in ai.ts (DEEPSEEK_MODEL). Swapping it? LIVE-TEST
-// the capture flow first with `bun run test:capture` — a previous swap
-// (qwen3-30b, 2026-08-17) was reverted for narrating lead captures ("I've
-// noted it") without ever calling capture_opportunity, through two prompt
-// hardenings, silently losing leads.
+// Per-room cap over a rolling 24h; the only pacing on spend.
+// Before swapping DEEPSEEK_MODEL, run `bun run test:capture`: some models
+// narrate a lead capture without calling capture_opportunity, losing the lead.
 export const ROOM_DAILY_LIMIT = 40;
 
-// OpenAI-compatible message shapes throughout, so the transport can point at
-// any chat-completions provider (DeepSeek today; Kimi/etc. later) without
-// touching the conversation-building code.
+// OpenAI-compatible, so any chat-completions provider can serve them.
 export type ModelToolCall = {
   id: string;
   type: "function";
@@ -133,19 +125,17 @@ export function buildMessages(
     { role: "system", content: buildSystemPrompt(grounding) },
     ...history.slice(-MAX_HISTORY_MESSAGES)
   ];
-  // Ephemeral context, never persisted: lets "this post"/"this page" resolve
-  // (and pair with fetch_page) without fragmenting the conversation per page.
-  // "this post" is only hard-bound on actual post pages — off a post, the
-  // conversation history is the right way to resolve it.
-  if (page) {
-    const url = `https://murugappan.dev${page}`;
-    const isPost = /^\/blog\/.+/.test(page);
-    messages.push({
-      role: "system",
-      content: isPost
-        ? `The visitor is currently reading the blog post at ${url} — if they ask about "this post" or "this page", that is the one they mean; use fetch_page on it when the summary isn't enough.`
-        : `The visitor is currently browsing ${url} — if they ask about "this page", that is the page they mean. If they ask about "this post" here, they mean whichever post the conversation was about.`
-    });
-  }
+  if (!page) return messages;
+
+  // Ephemeral, never persisted, so "this page" resolves without splitting the
+  // conversation per page. "this post" binds to the page only on a post.
+  const url = `https://murugappan.dev${page}`;
+  const isPost = /^\/blog\/.+/.test(page);
+  messages.push({
+    role: "system",
+    content: isPost
+      ? `The visitor is currently reading the blog post at ${url} — if they ask about "this post" or "this page", that is the one they mean; use fetch_page on it when the summary isn't enough.`
+      : `The visitor is currently browsing ${url} — if they ask about "this page", that is the page they mean. If they ask about "this post" here, they mean whichever post the conversation was about.`
+  });
   return messages;
 }

@@ -1,12 +1,5 @@
-// The published OpenAPI 3.1.0 description of this site's API, served at
-// /openapi.json (canonical) and /api/openapi.json. It is generated rather
-// than hand-maintained as a file so the origin in `servers` matches whatever
-// host answered the request, and so api-openapi.test.ts can hold it to the
-// contract the router actually implements (see api/routes.ts).
-//
-// Every operation carries a unique operationId, a description, typed
-// parameters and a response schema — that is what makes the document usable
-// as a function-calling tool definition without hand-editing.
+// OpenAPI 3.1.0 document served at /openapi.json and /api/openapi.json. Generated per request
+// so `servers` names the host that answered; api-openapi.test.ts checks it against routes.ts.
 
 import {
   API_BASE,
@@ -80,17 +73,14 @@ const rateLimited = errorResponse(
   "The client's read allowance for the current window is spent (`rate_limited`). `Retry-After` and the `RateLimit` header say when to come back — see the Rate limits section above."
 );
 
-// Shared failure modes for the read endpoints: the dataset is a build
-// artifact read through the ASSETS binding, so "not deployed yet" is a real
-// state and gets its own status rather than a 500.
+// The dataset is a build artifact, so "not deployed yet" is a real state: 503, not 500.
 const readFailures = {
   "429": rateLimited,
   "500": errorResponse("Unexpected server error."),
   "503": errorResponse("The site's content dataset is missing or unreadable — retry shortly.")
 };
 
-// The two self-describing endpoints read nothing from the build, so they have
-// no 503 — but they are still read requests and share the read allowance.
+// Self-describing endpoints read nothing from the build (no 503) but share the read allowance.
 const metaFailures = {
   "429": rateLimited,
   "500": errorResponse("Unexpected server error.")
@@ -364,8 +354,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
   };
 }
 
-// Response and request shapes, shared by the OpenAPI document and the MCP
-// tools (worker/mcp/tools.ts inlines them into self-contained tool schemas).
+// Shared with worker/mcp/tools.ts, which inlines them into self-contained tool schemas.
 export const API_SCHEMAS: Record<string, unknown> = {
   Error: {
     type: "object",

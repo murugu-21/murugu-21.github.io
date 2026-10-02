@@ -1,5 +1,5 @@
-// Pure helpers that keep the paragraph highlight in step with pre-rendered
-// audio. Types mirror the timing JSON written by scripts/generate-audio.ts.
+// Keeps the paragraph highlight in step with pre-rendered audio. Types mirror
+// the timing JSON written by scripts/generate-audio.ts.
 
 import type { TimedWord } from "./audio-words";
 
@@ -53,21 +53,17 @@ export function blockAt(timed: ReadonlyArray<{ start: number; end: number }>, t:
   return -1;
 }
 
-// Where to scroll so the reader keeps up with the highlight. `nearest` was
-// the earlier choice and it only moves once the block has left the screen,
-// then parks it on the bottom edge. Instead: do nothing while the block's top
-// sits in a reading band (10-50% of the viewport by default), centre it when
-// it drifts out, and for a block taller than the screen show its start.
+// Leave the block alone while its top sits in the reading band (fractions of
+// the viewport), centre it when it drifts out, and show the start of a block
+// taller than the screen.
 export interface ScrollBand {
   top: number;
   bottom: number;
 }
 
 const BLOCK_BAND: ScrollBand = { top: 0.1, bottom: 0.5 };
-// Words only pull the page when they get close to the bottom, so a long
-// paragraph scrolls in a few steps rather than on every line. The band
-// starts at 0 because a tall block is shown from its start, which puts its
-// first word at the very top of the viewport.
+// Words scroll only near the bottom, so a long paragraph moves in a few steps.
+// Top is 0 because a tall block is shown from its start.
 export const WORD_BAND: ScrollBand = { top: 0, bottom: 0.8 };
 
 export function scrollTarget(

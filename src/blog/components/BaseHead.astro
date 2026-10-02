@@ -1,14 +1,11 @@
 ---
 import { SITE_TITLE, SITE_DESCRIPTION, SOCIAL } from "../consts";
 
-// The text face, declared inline below and preloaded so it is usually in hand
-// by first paint (no metric-tuned fallback faces — the swap is what would
-// otherwise shift layout).
+// Declared inline and preloaded so the face is usually in hand by first paint.
 import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../../lib/fonts";
 
-// Ported from the old react-helmet Seo component (src/components/seo.js).
 // `title` omitted/null → homepage variant. `ogType: "article"` adds the
-// article:* tags. `jsonLd` is rendered as a JSON-LD structured-data block.
+// article:* tags.
 const {
   title = null,
   description = "",
@@ -23,11 +20,9 @@ const metaDescription = description || SITE_DESCRIPTION;
 const fullTitle = title ? `${title} | ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_DESCRIPTION}`;
 const ogTitle = title || SITE_TITLE;
 
-// Self-referencing canonical. The pathname already includes the base path
-// ("/blog/..."), so build it from the site ORIGIN to avoid doubling the prefix.
+// Built from the origin: the pathname already includes /blog.
 const origin = new URL(import.meta.env.SITE).origin;
-// Pages are served as directories (/blog/, /blog/<slug>/) — keep the
-// trailing slash in the canonical so it matches the served URL + sitemap.
+// Trailing slash to match the served directory URL and the sitemap.
 const pathname = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`;
 const canonical = `${origin}${pathname}`;
 
@@ -35,8 +30,7 @@ const canonical = `${origin}${pathname}`;
 const base = "/blog";
 const ogImage = `${origin}${base}/og-image.png`;
 
-// PostHog analytics, same setup as the portfolio app — see
-// ../../layouts/Layout.astro for why the values are passed through meta tags.
+// See ../../layouts/Layout.astro for why PostHog config goes through meta tags.
 const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
 const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
 const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
@@ -47,10 +41,8 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 <title>{fullTitle}</title>
 {noindex && <meta name="robots" content="noindex" />}
 <link rel="canonical" href={canonical} />
-{/* Agent discovery, same relations the portfolio layout emits (see
-    ../../layouts/Layout.astro): the site's OpenAPI description and the
-    developer portal that documents it. Absolute because the blog is served
-    under a base path. */}
+{/* Agent discovery, as in ../../layouts/Layout.astro. Absolute because the
+    blog is served under a base path. */}
 <link
   rel="service-desc"
   type="application/json"
@@ -101,28 +93,19 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 )}
 
 <script>
-  // Shared WebMCP tool registration from the portfolio app (same cross-app
-  // import pattern as the chat widget).
   import "../../lib/webmcp";
   import { bootAnalytics, initClickTracking, tag } from "../../lib/analytics";
   import { currentTheme, documentThemeSource, setTheme, syncThemeOnRestore } from "../../lib/theme";
 
-  // Boot first: it reads the meta tags above and opens the buffer that holds
-  // anything captured before the SDK loads on the first interaction. A tag or
-  // event sent before this call is dropped, not buffered (see send in
-  // ../../lib/analytics.ts).
+  // Must run first: tags or events sent before boot are dropped, not buffered.
   bootAnalytics();
 
-  // PostHog custom events for annotated links (data-ph-event), plus the theme
-  // as a super property: the theme the visitor actually read the site in, so
-  // re-tagged on every switch. The bootstrap script in ../layouts/BaseLayout.astro
-  // puts html.dark-mode on the root before first paint (the same class the
-  // portfolio uses); this module is deferred, so it has already run.
+  // The theme is a super property, re-tagged on every switch. This module is
+  // deferred, so BaseLayout's theme bootstrap has already run.
   initClickTracking();
   tag("theme", currentTheme());
   window.addEventListener("themechange", () => tag("theme", currentTheme()));
 
-  // The bootstrap does not run again when this page comes back out of the
-  // back/forward cache; see syncThemeOnRestore.
+  // The bootstrap doesn't re-run on a bfcache restore.
   syncThemeOnRestore(window, documentThemeSource, setTheme);
 </script>

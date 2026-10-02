@@ -2,15 +2,9 @@ import { defineCollection } from "astro:content";
 import { z } from "astro/zod";
 import { glob } from "astro/loaders";
 
-// The blog's controlled tag vocabulary — the visible filter chips on the
-// index. A tag is a broad reader intent that recurs across posts, not a label
-// for one article: `javascript` and `career` are tags, `kafka` and `debezium`
-// are not. Precise terms go in the optional `keywords` field instead, which
-// feeds JSON-LD, `article:tag` and the index's search haystack but never
-// renders as a chip. Keep this list in sync with the README's "Tag vocabulary"
-// section. Naming: lowercase, kebab-case, singular, 1-3 tags per post.
-// (A tag with no posts yet is fine: chips are derived from post counts, so it
-// stays invisible until used.)
+// Controlled tag vocabulary (the index's filter chips): broad, recurring
+// reader intents only; precise terms go in `keywords`. Keep in sync with the
+// README's "Tag vocabulary". Lowercase, kebab-case, singular, 1-3 per post.
 const BLOG_TAGS = [
   "ai",
   "algorithms",
@@ -23,10 +17,8 @@ const BLOG_TAGS = [
   "system-design"
 ] as const;
 
-// Posts live in content/blog/<slug>/index.md, same layout as the Gatsby site.
-// The id (= URL slug) is the directory name, matching Gatsby's createFilePath
-// slugs. Drafts under content/blog/draft/ are filtered out of production in
-// src/blog/utils/posts.ts.
+// content/blog/<slug>/index.md; the id (URL slug) is the directory name.
+// Drafts under content/blog/draft/ are filtered in src/blog/utils/posts.ts.
 const blog = defineCollection({
   loader: glob({
     pattern: "**/index.md",

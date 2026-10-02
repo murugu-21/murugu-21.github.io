@@ -11,20 +11,11 @@ import {
   type DiagramTheme
 } from "./mermaid-diagrams";
 
-// Build-time half of the Mermaid pipeline (see mermaid-diagrams.ts). Each
-// ```mermaid fence becomes
-//
-//   <figure class="mermaid-diagram">
-//     <img class="mermaid-light" src="diagrams/<hash>.light.svg" …>
-//     <img class="mermaid-dark"  src="diagrams/<hash>.dark.svg" …>
-//   </figure>
-//
-// post.css shows one per theme. The images are emitted as mdast `image` nodes
-// with post-relative paths, so Astro's own collector and image service handle
-// them exactly like a screenshot next to index.md: hashed, base-prefixed and
-// picked up by the RSS route's absolutizer. Both files must already exist —
-// `bun run diagrams` writes them — or the build stops here with the command
-// to run; a silently missing diagram would otherwise ship as a broken image.
+// Build-time half of the Mermaid pipeline (see mermaid-diagrams.ts): each
+// ```mermaid fence becomes a <figure class="mermaid-diagram"> with a light and
+// a dark <img> (post.css shows one per theme). Post-relative mdast images let
+// Astro's image pipeline and the RSS absolutizer treat them like any post
+// image. A missing rendering fails the build rather than shipping broken.
 
 interface Fence {
   node: Code;
@@ -42,9 +33,8 @@ function collectFences(node: Parent, out: Fence[]): void {
   });
 }
 
-// Intrinsic size from the SVG's viewBox, for width/height attributes that
-// reserve the space before the image loads (no layout shift) and give
-// medium-zoom its natural dimensions.
+// Intrinsic size from the viewBox: reserves layout space and gives medium-zoom
+// its natural dimensions.
 function svgSize(svg: string): { width: number; height: number } | undefined {
   const viewBox = svg.match(/\bviewBox="([^"]+)"/);
   if (!viewBox) return undefined;
@@ -64,8 +54,7 @@ export default function remarkMermaid() {
     }
     const postDir = dirname(file.path);
 
-    // Replace from the end so earlier indexes stay valid when siblings share a
-    // parent.
+    // Replace from the end so earlier sibling indexes stay valid.
     for (const [i, { node, parent, index }] of [...fences.entries()].reverse()) {
       const hash = await diagramHash(node.value);
       const paths = Object.fromEntries(

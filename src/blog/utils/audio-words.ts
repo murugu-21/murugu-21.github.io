@@ -1,6 +1,5 @@
-// Word-level timing for the read-aloud highlight. Shared by the alignment
-// script (alignWords: whisper output → per-word times) and the client
-// (wrapWords / matchWordSpans / wordAt: DOM spans ↔ those times).
+// Word-level timing for the read-aloud highlight: alignWords runs in the
+// alignment script, the rest maps DOM spans to those times in the client.
 
 import { normalizeSpeechText } from "./audio-prep.ts";
 
@@ -55,12 +54,10 @@ function lcsPairs(a: string[], b: string[]): Array<[number, number]> {
 
 const MIN_MATCH_RATIO = 0.6;
 
-// Assigns a time span to every token of `text` from whisper's word list for
-// the same audio. Matched tokens take whisper's times; the rest are spread
-// evenly across the gap between their matched neighbours (or the block
-// edges). Times are returned absolute (offset by block.start), clamped into
-// the block and monotonic. Null when fewer than 60% of tokens matched, in
-// which case the caller keeps the paragraph-level highlight for that block.
+// Times every token of `text` from whisper's words: matched tokens take
+// whisper's times, unmatched runs are spread evenly between their neighbours.
+// Absolute, clamped to the block and monotonic. Null below MIN_MATCH_RATIO,
+// so the caller keeps the paragraph highlight.
 export function alignWords(
   text: string,
   whisper: WhisperWord[],
@@ -119,12 +116,9 @@ export function alignWords(
 const WORD_CLASS = "rw";
 const WORD_ATTR = "data-w";
 
-// Wraps every whitespace-delimited word of `el`'s text in <span class="rw">
-// elements and returns them grouped per word, in document order. Words are
-// found over the block's full text, not per text node, so a word that
-// straddles an inline element boundary ("<a>SiteGPT</a>’s", "<b>place</b>.")
-// stays one word made of two spans. Idempotent: existing spans are regrouped
-// by their word index.
+// Wraps each word of `el` in <span class="rw">, grouped per word in document
+// order. Words span text nodes, so "<a>SiteGPT</a>’s" is one word of two
+// spans. Idempotent: existing spans are regrouped by word index.
 export function wrapWords(el: HTMLElement): HTMLElement[][] {
   const existing = Array.from(el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`));
   if (existing.length > 0) {
@@ -195,14 +189,10 @@ export function wrapWords(el: HTMLElement): HTMLElement[][] {
 const wordText = (pieces: ReadonlyArray<HTMLElement>) =>
   normalizeSpeechText(pieces.map(p => p.textContent ?? "").join(""));
 
-// Pairs rendered words (as span groups) with timed words by position,
-// mirroring the generator's normalisation: a word that normalises to nothing
-// (an emoji on its own) is skipped, and one that normalises to several
-// spoken tokens (0.30000000000000004 → "0.3, then zero repeated 15 times,
-// then 4") claims that many timed words, so the result has one entry per
-// timed word and the rendered word stays lit for the whole run. Null when
-// the sequences disagree, in which case the block keeps its paragraph
-// highlight.
+// Pairs rendered words with timed words by position, mirroring the
+// generator's normalisation: a word that normalises to nothing is skipped, one
+// that expands to several tokens claims that many timed words. One entry per
+// timed word; null when the sequences disagree.
 export function matchWordSpans(
   words: ReadonlyArray<ReadonlyArray<HTMLElement>>,
   timed: ReadonlyArray<TimedWord>
@@ -220,9 +210,8 @@ export function matchWordSpans(
   return k === timed.length ? out : null;
 }
 
-// Index of the word being spoken at time t: the word whose span contains t,
-// else the last word that has started (so the highlight holds across the
-// tiny gaps between words). -1 before the first word.
+// The last word that has started by t, so the highlight holds across gaps.
+// -1 before the first word.
 export function wordAt(words: ReadonlyArray<TimedWord>, t: number): number {
   let lo = 0;
   let hi = words.length - 1;

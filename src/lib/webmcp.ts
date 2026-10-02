@@ -1,9 +1,5 @@
-// WebMCP (https://webmachinelearning.github.io/webmcp/): expose the site's
-// key actions as tools that in-browser AI agents can call via
-// navigator.modelContext. Feature-detected — a no-op everywhere the API
-// doesn't exist, so regular visitors never pay for it beyond this check.
-// Loaded from both apps' layouts (the blog imports across the monorepo the
-// same way it does the chat widget).
+// WebMCP (https://webmachinelearning.github.io/webmcp/): site actions as tools
+// for in-browser agents via navigator.modelContext. No-op without the API.
 
 type ToolResult = { content: Array<{ type: "text"; text: string }> };
 
@@ -105,7 +101,7 @@ if (mc && typeof mc.registerTool === "function") {
     try {
       mc.registerTool(tool);
     } catch {
-      // draft API — shape may shift between engine versions; never break the page
+      // draft API: shape may shift between engine versions; never break the page
     }
   }
 }

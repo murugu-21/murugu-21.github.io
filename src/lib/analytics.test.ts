@@ -10,9 +10,7 @@ import {
   track
 } from "./analytics";
 
-// The real snippet defines window.posthog as a stub whose methods queue until
-// array.js loads (see ../layouts/Layout.astro); tests stand in spies and
-// delete the global again so the "not loaded" cases run on a clean slate.
+// Spies stand in for window.posthog; deleted after each test.
 const withPostHog = () => {
   const capture = vi.fn();
   const register = vi.fn();
@@ -25,9 +23,7 @@ afterEach(() => {
   delete (globalThis as { posthog?: unknown }).posthog;
 });
 
-// initAnalytics and bootAnalytics keep module state (the booted SDK, the replay
-// buffer), so each test gets a fresh module instance rather than leaking into
-// the next.
+// The module keeps state (booted SDK, buffer), so each test gets a fresh one.
 const fresh = async () => {
   vi.resetModules();
   return await import("./analytics");
@@ -72,9 +68,6 @@ describe("track", () => {
   });
 });
 
-// Caught errors (a malformed server frame, a failed render) would otherwise be
-// invisible: they never reach PostHog's autocapture, which only sees errors
-// that escape. reportError is the explicit channel for them.
 describe("reportError", () => {
   it("reports the error with properties describing where it happened", () => {
     const { captureException } = withPostHog();
@@ -107,8 +100,7 @@ describe("reportError", () => {
 });
 
 describe("tag", () => {
-  // Super properties, not person properties: visitors here are anonymous, and
-  // these describe the session rather than an identified user.
+  // super properties, not person properties: visitors are anonymous
   it("registers a super property", () => {
     const { register, capture } = withPostHog();
     tag("theme", "dark");
@@ -187,8 +179,6 @@ describe("redactBlogFilters", () => {
   });
 });
 
-// The real loader dynamic-imports posthog-js on idle; tests inject a fake so
-// the browser SDK never has to run here.
 const fakeSdk = () => {
   const capture = vi.fn();
   const register = vi.fn();
@@ -217,9 +207,6 @@ describe("initAnalytics", () => {
     expect(config.ui_host).toBe("https://us.posthog.com");
   });
 
-  // The recorder is the SDK's heaviest extension; loading it in the idle
-  // window right after paint is what Lighthouse scores as blocking time, so
-  // replay waits for the visitor's first input (see ./first-interaction.ts).
   it("starts session replay on the first interaction, not at boot", async () => {
     const { sdk, init, startSessionRecording } = fakeSdk();
     const win = new EventTarget();
@@ -286,7 +273,6 @@ describe("initAnalytics", () => {
       await gate;
       return sdk;
     });
-    // Nothing can have reached the SDK yet — it does not exist.
     ph.track("resume_download");
     ph.tag("theme", "dark");
     expect(capture).not.toHaveBeenCalled();
@@ -297,7 +283,7 @@ describe("initAnalytics", () => {
   });
 
   it("drops events when analytics was never initialised", () => {
-    // No initAnalytics call: local dev and CI, where there is no token.
+    // no initAnalytics call, as in dev and CI
     expect(() => track("resume_download")).not.toThrow();
     expect(() => tag("theme", "dark")).not.toThrow();
   });
@@ -343,9 +329,6 @@ describe("bootAnalytics", () => {
     expect(init).not.toHaveBeenCalled();
   });
 
-  // Errors during hydration or a chunk that failed to fetch happen before the
-  // SDK boots, and PostHog's autocapture only starts with the SDK — so these
-  // are held in the same buffer as track/tag and handed over on arrival.
   it("buffers errors thrown before the SDK boots and replays them on arrival", async () => {
     const { sdk, captureException } = fakeSdk();
     let release: (() => void) | undefined;
@@ -366,8 +349,7 @@ describe("bootAnalytics", () => {
     release!();
     await booting;
     expect(captureException.mock.calls).toEqual([[err, undefined]]);
-    // The early listener detaches once PostHog's autocapture takes over —
-    // otherwise every later uncaught error would be reported twice.
+    // detached once PostHog's autocapture takes over, so nothing doubles
     win.dispatchEvent(new win.Event("error"));
     expect(captureException).toHaveBeenCalledTimes(1);
   });
@@ -379,8 +361,7 @@ describe("bootAnalytics", () => {
     );
     const win = doc.defaultView!;
     const ph = await fresh();
-    // bootAnalytics attaches the listeners synchronously and only then awaits
-    // the SDK, so the dispatch below lands in the buffer.
+    // listeners attach synchronously, so this dispatch lands in the buffer
     const booting = ph.bootAnalytics(doc as unknown as Document, async () => sdk);
     const reason = new Error("fetch failed");
     const event = new win.Event("unhandledrejection") as Event & { reason: unknown };
@@ -391,10 +372,6 @@ describe("bootAnalytics", () => {
   });
 });
 
-// The SDK is ~90 KB gzipped and loaded it on idle, so a Lighthouse run — which
-// never interacts — still fetched and evaluated it inside the measured window.
-// It now waits for the visitor's first input, with a timer as the fallback so
-// a visitor who only reads is still counted as a pageview.
 describe("scheduleSdkLoad", () => {
   afterEach(() => vi.useRealTimers());
 

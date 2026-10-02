@@ -12,12 +12,9 @@ import {
   type SerializedPost
 } from "../../blog/utils/posts";
 
-// Newest first, like the old index page query (sort: date DESC).
 const posts = (await getPublishedPosts()).reverse();
 
-// Flattened shape for PostList (replaces the page GraphQL query). `description`
-// is intentionally left undefined when missing so the search falls back to the
-// excerpt, same as before.
+// `description` stays undefined when missing so search falls back to the excerpt.
 const serialized: SerializedPost[] = posts.map(post => ({
   href: postPath(post.id),
   title: post.data.title,
@@ -42,8 +39,7 @@ const jsonLd = {
 };
 ---
 
-<!-- No title prop: the homepage gets the keyword-rich
-     "SDE Journey — <description>" title from BaseHead. -->
+<!-- No title prop: BaseHead supplies the homepage title. -->
 <BaseLayout jsonLd={jsonLd}>
   <PostList posts={serialized} />
   <Bio />

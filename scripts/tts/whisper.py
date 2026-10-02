@@ -3,11 +3,8 @@
 Reads JSON lines from stdin: {"id", "wav", "text"} where wav is a 16 kHz mono
 slice of one block and text is what it says. Replies with one JSON line per
 job: {"id", "words": [{"word", "start", "end"}]} in seconds relative to the
-slice, or {"id", "error"}. The known text is passed as initial_prompt so
-whisper spells names and numbers the way the post does, which makes the
-sequence match in audio-words.ts far more forgiving. When the prompted pass
-returns far fewer words than the text has, it is retried without the prompt
-(see the comment in main).
+slice, or {"id", "error"}. The known text is the initial_prompt so whisper
+spells names and numbers like the post, easing the match in audio-words.ts.
 """
 import json
 import sys
@@ -44,18 +41,16 @@ def transcribe(wav: str, prompt: str | None) -> list[dict[str, Any]]:
 def main() -> int:
     for line in sys.stdin:
         line = line.strip()
-        if not line or line == "quit":
-            if line == "quit":
-                break
+        if line == "quit":
+            break
+        if not line:
             continue
         job = json.loads(line)
         t0 = time.time()
         try:
             words = transcribe(job["wav"], job.get("text"))
-            # Whisper sometimes treats the prompt as already-spoken text and
-            # answers with a closing phrase ("Thank you for your time.", 5
-            # words for a 60-word paragraph). Far too few words → retry without
-            # the prompt, which reads the audio on its own terms.
+            # Whisper sometimes treats the prompt as already spoken and returns
+            # a closing phrase; far too few words means retry unprompted.
             expected = len((job.get("text") or "").split())
             if expected and len(words) < 0.6 * expected:
                 retry = transcribe(job["wav"], None)

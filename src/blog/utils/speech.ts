@@ -1,6 +1,5 @@
-// Pure helpers behind the "Listen" control on blog posts. The DOM walking is
-// typed structurally (tagName / textContent / children) so it can be unit
-// tested with plain objects in the workers pool, where there is no DOM.
+// Pure helpers behind the blog "Listen" control. DOM access is typed
+// structurally so tests can use plain objects in the Workers pool (no DOM).
 
 export interface BlockLike {
   tagName: string;
@@ -13,11 +12,9 @@ export interface SpeechBlock<T extends BlockLike> {
   text: string;
 }
 
-// Hearing raw code, mermaid source or a flattened table read aloud is noise,
-// so those blocks are dropped rather than announced.
+// Code, mermaid source and tables are noise when read aloud.
 const SKIPPED_TAGS = new Set(["PRE", "FIGURE", "TABLE", "HR", "SCRIPT", "STYLE"]);
-// Lists are read item by item so the highlight and the resume point stay fine
-// grained on long lists.
+// Read lists item by item so the highlight and resume point stay fine-grained.
 const SPLIT_TAGS = new Set(["UL", "OL"]);
 
 const clean = (text: string | null) => (text ?? "").replace(/\s+/g, " ").trim();
@@ -38,8 +35,7 @@ export function speechBlocks<T extends BlockLike>(root: T): SpeechBlock<T>[] {
   return out;
 }
 
-// SpeechSynthesisUtterance.rate accepts 0.1–10; these are the values the picker
-// offers. 1 is the browser's normal speed.
+// Rates the picker offers (SpeechSynthesisUtterance.rate accepts 0.1–10).
 export const SPEECH_RATES = [0.75, 1, 1.25, 1.5, 2] as const;
 export type SpeechRate = (typeof SPEECH_RATES)[number];
 

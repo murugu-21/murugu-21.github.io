@@ -1,37 +1,23 @@
-# Email Routing enablement (MX/SPF DNS records) is a one-time dashboard click:
-# zone -> Email -> Email Routing -> Enable. The cloudflare_email_routing_settings
-# resource is unusable in provider ~5.23 (schema drift: "support_subaddress"
-# field mismatch -> Value Conversion Error on every apply), so it is deliberately
-# not managed here. Re-check the provider changelog before re-adopting it.
+# Email Routing enablement is a dashboard click (zone -> Email -> Email
+# Routing -> Enable): cloudflare_email_routing_settings fails every apply in
+# provider ~5.23 ("support_subaddress" Value Conversion Error).
 
-# Destination mailbox. Cloudflare emails a verification link on create —
-# the click is the one manual step; re-applying afterwards is a no-op.
+# Cloudflare emails a verification link on create; that click is manual.
 resource "cloudflare_email_routing_address" "opportunity_inbox" {
   account_id = var.account_id
   email      = var.opportunity_inbox
 }
 
-# The hello@murugappan.dev -> inbox forward rule is dashboard-managed, not
-# Terraform-managed: zone-level Email Routing writes returned 403 for the
-# account-owned API token used here (account-level writes worked fine), and a
-# single rule wasn't worth a second token type. Recreate via: Email ->
+# The hello@ -> inbox forward rule is dashboard-managed: zone-level Email
+# Routing writes 403 for this account-owned token. Recreate via Email ->
 # Email Routing -> Routing rules -> Create address.
 
-# Markdown for Agents: rewrite Accept: text/markdown page requests to the
-# build-time static renditions (**/index.md, see src/pages/**/index.md.ts)
-# at the zone edge — the Worker never runs, so
-# page views stay on the free unlimited asset path. Two rules because the
-# free plan has no regex rewrites (trailing-slash vs extensionless paths).
-# Pages without a rendition (only /resume/, which is noindexed) 404 to
-# markdown-requesting agents instead of falling back to HTML.
-#
-# Token scope needed: Zone -> Transform Rules -> Edit. If apply 403s (as
-# zone-level Email Routing writes did), add that permission to the token —
-# or create both rules by hand: Rules -> Create rule -> Rewrite URL, same
-# expressions, dynamic path rewrite.
-# NOTE: this manages the zone's http_request_transform phase entrypoint —
-# any URL-rewrite rules added via the dashboard would be overwritten on
-# apply; keep them all here.
+# Rewrite Accept: text/markdown page requests to the static **/index.md
+# renditions at the edge, so the Worker never runs. Two rules because the free
+# plan has no regex rewrites. Pages without a rendition (/resume/) 404.
+# Token needs Zone -> Transform Rules -> Edit.
+# This owns the zone's http_request_transform entrypoint: dashboard-added
+# rewrite rules get overwritten on apply, so keep them all here.
 resource "cloudflare_ruleset" "markdown_for_agents" {
   zone_id = var.zone_id
   name    = "Markdown for Agents"
@@ -68,10 +54,8 @@ resource "cloudflare_ruleset" "markdown_for_agents" {
   ]
 }
 
-# Private bucket for pre-rendered blog audio (blog/<slug>.mp3 + .json) and the
-# author's voice reference (voice/*). Only the Worker's /blog/audio/* route
-# reads blog/*; voice/* is never served. Objects are written from the author's
-# laptop by `npm run audio` (see README "Read-aloud audio").
+# Private bucket for blog audio (blog/*, served by the Worker's /blog/audio/*)
+# and the voice reference (voice/*, never served).
 resource "cloudflare_r2_bucket" "blog_audio" {
   account_id = var.account_id
   name       = "murugappan-dev-audio"

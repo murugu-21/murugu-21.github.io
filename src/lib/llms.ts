@@ -1,9 +1,5 @@
-// The site's text for language models, in the two shapes it is served: the
-// /llms.txt map and the markdown renditions of the homepage, /about/ and the
-// blog index that a zone Transform Rule serves for Accept: text/markdown
-// (see public/_headers). Built from the same post list, so none can drift.
-// The preamble is a .txt imported ?raw rather than a TS template literal — it
-// contains backticks.
+// /llms.txt and the markdown renditions served for Accept: text/markdown.
+// The preamble is a ?raw .txt because it contains backticks.
 import LLMS_PREAMBLE from "../data/llms-preamble.txt?raw";
 import { SITE_DESCRIPTION, SITE_TITLE } from "../blog/consts";
 import { postLines } from "../blog/utils/llms";

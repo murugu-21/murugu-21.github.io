@@ -1,5 +1,4 @@
-// Minimal 16-bit PCM WAV helpers so the orchestrator can join chunks with
-// sample-accurate gaps and derive block timings from byte counts, instead of
+// 16-bit PCM WAV helpers: sample-accurate joins and timings, instead of
 // trusting ffmpeg's rounded durations.
 import { Buffer } from "node:buffer";
 
@@ -72,9 +71,8 @@ export interface BlockTiming {
   end: number;
 }
 
-// Chunks inside a block are joined with `intra` seconds of silence, blocks
-// with `inter`. Returns the joined PCM and one {start, end} per block, in
-// seconds, exact from the sample counts.
+// Joins chunks with `intra` seconds of silence and blocks with `inter`;
+// timings are per block, in seconds.
 export function assemble(
   blocks: { pcm: Buffer }[][],
   sampleRate: number,

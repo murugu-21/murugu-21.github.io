@@ -16,8 +16,7 @@ import { formatReadingTime } from "../../blog/utils/helpers";
 import { ListenControls } from "../../blog/components/ListenControls";
 import TableOfContents from "../../blog/components/TableOfContents.astro";
 
-// One page per post; prev/next wired in date-ASC order, exactly like the old
-// gatsby-node.js createPages loop.
+// prev/next follow date-ascending order.
 export async function getStaticPaths() {
   const posts = await getPublishedPosts();
   return posts.map((post, index) => ({
@@ -75,12 +74,8 @@ const jsonLd = {
         {formatDate(post.data.date)}
         {` • ${formatReadingTime(timeToRead(post.body))}`}
       </p>
-      {/* The post's tags, each linking into the index filtered by that tag
-           (/blog/?tag=…, the same URL the index's own chips write — the index
-           script checks the matching chip on load). Chips match the index's
-           per-post chips (Post.astro) but read as links: `no-underline` beats
-           `.blog-post a`'s restated UA underline, while the shared navy /
-           blue-light `a` colours and the amber hover stay. */}
+      {/* Each tag links to /blog/?tag=…, the URL the index's own chips write.
+           `no-underline` beats `.blog-post a`'s underline. */}
       <div class="mb-4 flex flex-row flex-wrap gap-[10px]">
         {post.data.tags.map(tag => (
           <a
@@ -88,78 +83,41 @@ const jsonLd = {
             aria-label={`All posts tagged ${tag}`}
             class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
           >
-            {/* The label sits in its own inline-block span so the selection
-                  highlight (and therefore a copy) hugs the text. Painted straight
-                  on the chip, the selection covers its padding and runs to the
-                  border; and each chip being a flex item (a block), a selection
-                  that continues into the next chip makes Chrome paint a line-end
-                  marker one space wide after the text, out into the padding.
-                  An atomic inline keeps the text off the chip's own line box,
-                  so no marker is painted there. */}
+            {/* inline-block so the selection hugs the text; otherwise Chrome
+                  paints it over the chip padding plus a line-end marker. */}
             <span class="inline-block">{tag}</span>
           </a>
         ))}
       </div>
     </header>
-    <!-- Read-aloud controls: a shadcn island (src/blog/components). Ships a
-         full-size disabled control in the server HTML — hydration only enables
-         it, so nothing shifts — and stays disabled where the page has neither
-         speech synthesis nor audio. `mb-4` is the old `.listen-island {
-         margin-bottom: var(--spacing-4) }`; both class names stay, `ui-island`
-         being what scopes the shadcn tokens the controls read.
-         Sticky only while a session is live: the island toggles `.listening`
-         on this wrapper from the first press of Play through every pause, and
-         drops it when the reading finishes, so an unused (or finished) player
-         stays in the page flow instead of following the reader. A docked
-         transport pins to the top edge — the page's own header scrolls away and
-         the chat launcher owns the bottom-right corner. Sticky only travels
-         inside its parent, which is why the wrapper is a direct child of the
-         article, not a child of <header>. `pt-3` is the visible gap between
-         viewport top and card while pinned — always present so the layout never
-         shifts when the state flips. The script at the bottom of this file
-         toggles `.pinned` once the 1px sentinel above has scrolled out; for a
-         docked bar that paints the frosted band behind the gap (same surface as
-         the portfolio nav's `.scrolled`). Headings and the read-aloud highlight
-         carry scroll-margin-top in post.css so nothing lands under the 12+58px
-         the pinned bar occupies. -->
+    <!-- Read-aloud island; ships disabled at full size so hydration doesn't
+         shift layout. `ui-island` scopes the shadcn tokens. Sticky only while
+         `.listening` (set by the island), and a direct child of the article
+         because sticky only travels inside its parent. `pt-3` is always there
+         so the layout never shifts; post.css scroll-margin-top clears the
+         12+58px pinned bar. -->
     <div class="listen-sentinel h-px -mb-px" aria-hidden="true"></div>
     <div class="listen-island ui-island mb-4 pt-3 [&.listening]:sticky [&.listening]:top-0 [&.listening]:z-30 [&.listening.pinned]:bg-nav-scrolled [&.listening.pinned]:backdrop-blur-[15px] dark:[&.listening.pinned]:bg-nav-scrolled-dark">
-      {/* client:interaction (the chat island's directive, src/directives): the
-          controls ship disabled until hydrated anyway, so React + Radix
-          (~100 KB) load on the first pointer/touch/key/wheel input instead of
-          during page load. client:idle was not enough: on a fast device idle
-          fires before first paint, so Lighthouse still charged the bundle to
-          FCP/LCP (post pages 96-97 vs the index's 100). Trade-off: a tap on
-          Play as the very first touch lands on the disabled button and needs
-          a second tap ~300 ms later. */}
+      {/* client:interaction, not client:idle: idle can fire before first paint
+          and charge ~100 KB to FCP/LCP. Trade-off: a first-touch tap on Play
+          lands on the disabled button. */}
       <ListenControls client:interaction slug={post.id} />
     </div>
     <section itemprop="articleBody">
       <Content />
     </section>
-    <!-- The old global `hr { background: var(--color-accent); height: 1px;
-         border: 0 }` lives on as `.blog-post hr` in post.css (it also restores
-         the UA `margin: 0.5em auto`), so this element needs no utilities. -->
+    <!-- styled by `.blog-post hr` in post.css -->
     <hr />
-    <!-- The old global `footer { padding: 1.5rem 0 }`. -->
     <footer class="py-6">
       <Bio />
     </footer>
   </article>
-  <!-- The heading rail. After the article, not inside it — see the component
-       header for why (post.css scope, tab order, zoom overlay stacking). -->
+  <!-- After the article, not inside it: see the component header. -->
   <TableOfContents headings={headings} />
   <nav class="blog-post-nav" aria-label="Previous and next posts">
-    <!-- `.blog-post-nav ul { margin: 0 }` plus what used to be this element's
-         inline style attribute (flex row, wrapping, space-between, no markers,
-         no padding). -->
     <ul class="m-0 flex list-none flex-wrap justify-between p-0">
-      <!-- The old global `ul li, ol li { padding-left: 0; margin-bottom:
-           calc(2rem / 2) }`, which preflight zeroes. -->
       <li class="mb-4 pl-0">
         {previous && (
-          // The old global `a { color: var(--color-primary) }` + the UA
-          // underline preflight drops; `a:hover, a:focus` removed it.
           <a
             href={postPath(previous.id)}
             rel="prev"
@@ -185,11 +143,8 @@ const jsonLd = {
 </BaseLayout>
 
 <script>
-  // Pin state for the read-aloud transport. A 1px sentinel sits just above the
-  // bar; once it leaves the top of the viewport `.pinned` is set, and for a
-  // docked bar (`.listening`, toggled by the island) that paints the frosted
-  // band behind the gap — see the wrapper in this file and post.css. Styling
-  // only: without it a docked bar still sticks, just with a transparent gap.
+  // `.pinned` once the sentinel scrolls out: paints the frosted band behind a
+  // docked bar's gap. Styling only.
   const sentinel = document.querySelector<HTMLElement>(".listen-sentinel");
   const island = document.querySelector<HTMLElement>(".listen-island");
   if (sentinel && island) {
@@ -200,12 +155,8 @@ const jsonLd = {
 </script>
 
 <script>
-  // Re-land a shared heading link once the web font is in. The browser jumps
-  // to the fragment before Fira Code has loaded, then the swap reflows the
-  // prose above the target and Chrome does not re-scroll, so a heading opened
-  // from a link sat ~240px below its scroll margin (and the table of contents
-  // lit the previous section). Skipped if the reader has already scrolled by
-  // themselves, so a jump never yanks the page back under them.
+  // Re-land a heading link after the font swap reflows the prose (Chrome doesn't
+  // re-scroll). Skipped once the reader has scrolled, so it never yanks the page.
   if (location.hash) {
     const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
     if (target) {
@@ -224,10 +175,7 @@ const jsonLd = {
 </script>
 
 <script>
-  // Notion-style image zoom, loaded lazily: zero zoom JS ships unless the
-  // reader shows intent (hover or click on a post image).
-  // Scoped to the articleBody <section>: the Bio avatar in the article footer
-  // is not zoomable content.
+  // Image zoom, loaded on hover/click. Scoped to the body <section> to skip the Bio avatar.
   const imgs = document.querySelectorAll<HTMLImageElement>("article.blog-post section img");
   if (imgs.length > 0) {
     let zoomPromise: Promise<ReturnType<typeof import("medium-zoom").default>> | null = null;
@@ -242,14 +190,10 @@ const jsonLd = {
       img.addEventListener(
         "click",
         async event => {
-          // An image wrapped in a markdown link ([![alt](x.jpg)](x.jpg)) would
-          // navigate away before the zoom opens. Those hrefs point at the
-          // source file next to index.md, which is never emitted as a public
-          // asset, so following them 404s. Zoom is the click-to-view path.
+          // Linked images point at unemitted source files, so following them 404s.
           if (img.closest("a")) event.preventDefault();
           const zoom = await loadZoom();
-          // If the library's own click handler already opened it (it attaches
-          // on init after a hover preload), don't double-open.
+          // After a hover preload the library's own click handler may have opened it.
           if (!document.querySelector(".medium-zoom-image--opened")) {
             zoom.open({ target: img });
           }

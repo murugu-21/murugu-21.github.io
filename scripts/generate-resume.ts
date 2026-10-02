@@ -7,11 +7,8 @@ import { PDFParse } from "pdf-parse";
 
 import { SITE_DIR } from "./site-dir.ts";
 
-// Renders /resume as a PDF with headless Chromium and writes it to
-// resume.pdf in the built site. Runs last from the build-artifacts
-// integration in astro.config.ts, after the output is final, so the static
-// server below serves exactly what ships to production. The argument is the
-// built site's directory (default SITE_DIR).
+// Prints /resume to resume.pdf in the built site. Runs last from astro.config.ts
+// so it serves exactly what ships. Arg: the built site dir (default SITE_DIR).
 
 const DIST_DIR = resolve(process.argv[2] ?? SITE_DIR) + "/";
 const OUT_PATH = join(DIST_DIR, "resume.pdf");
@@ -35,7 +32,7 @@ const MIME_TYPES: Record<string, string> = {
   ".pdf": "application/pdf"
 };
 
-/** Minimal static file server over the built site, directory-index aware (foo/ -> foo/index.html). */
+/** Static server over the built site; foo/ -> foo/index.html. */
 function createStaticServer(rootDir: string): Server {
   return createServer(async (req, res) => {
     try {
@@ -74,8 +71,7 @@ function listen(server: Server, port: number): Promise<void> {
   });
 }
 
-// ATS text-extraction gate: every one of these must be present verbatim in
-// the text extracted from the printed PDF, or the build fails.
+// ATS gate: the build fails unless each token is in the PDF's extracted text.
 const MAX_PAGES = 2;
 
 const ATS_REQUIRED_TOKENS = [
@@ -99,15 +95,13 @@ try {
   if (!address || typeof address === "string") throw new Error("static server has no port");
   const url = `http://127.0.0.1:${address.port}/resume/`;
 
-  // --no-sandbox: CI runners (GitHub ubuntu-24.04 AppArmor, container builds)
-  // block Chrome's sandbox; safe here since we only render our own local page.
+  // --no-sandbox: CI AppArmor blocks Chrome's sandbox; safe for our own local page.
   const launchArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
   try {
     browser = await puppeteer.launch({ headless: true, args: launchArgs });
   } catch (err) {
-    // Cloudflare Workers Builds' image lacks Chrome's shared system libraries
-    // (libatk etc.), so puppeteer's own Chrome cannot start there. Fall back
-    // to @sparticuz/chromium — a self-contained build with everything bundled.
+    // Workers Builds' image lacks Chrome's system libraries (libatk etc.);
+    // @sparticuz/chromium bundles them.
     console.warn(
       `[generate-resume] system chrome failed (${(err instanceof Error ? err.message : String(err)).split("\n")[0]}); ` +
         "falling back to @sparticuz/chromium"
@@ -121,8 +115,7 @@ try {
   }
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: "networkidle0" });
-  // The page sets in Fira Code (webfont): print only once it has applied, or
-  // the PDF gets the fallback face and different line breaks.
+  // wait for the webfont, or the PDF gets fallback metrics and line breaks
   await page.evaluate(() => document.fonts.ready);
   await page.pdf({
     path: OUT_PATH,
@@ -146,9 +139,8 @@ try {
     );
     process.exitCode = 1;
   } else if (typeof pageCount === "number" && pageCount > MAX_PAGES) {
-    // The CF build image's chromium (@sparticuz) uses wider fallback fonts
-    // than local Chrome, so overflow can be environment-specific — fail the
-    // build rather than silently shipping a 3-page resume.
+    // @sparticuz's fallback fonts are wider than local Chrome's, so overflow
+    // can be CI-only.
     console.error(`[generate-resume] page gate FAILED — ${pageCount} pages (max ${MAX_PAGES})`);
     process.exitCode = 1;
   } else {

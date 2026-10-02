@@ -1,19 +1,6 @@
-// JSON-RPC framing and Streamable HTTP request validation for the MCP endpoint,
-// per the 2026-07-28 revision of the specification.
-//
-// Two eras are served on one endpoint, which the spec explicitly allows
-// ("Versioning: Backward Compatibility with Initialization-Based Versions"):
-//
-//   modern (2026-07-28+) — stateless. Every request carries its protocol
-//     version, client info and capabilities in `params._meta`, mirrored into
-//     HTTP headers that the server MUST validate against the body. Results
-//     carry `resultType`.
-//   legacy (2025-11-25 and earlier) — the `initialize` handshake. Still what
-//     most deployed clients speak, so it is answered too. No session is minted:
-//     this server holds no per-connection state either way.
-//
-// The era is chosen by how the client opens: a request carrying modern
-// per-request `_meta` is served as modern, anything else as legacy.
+// JSON-RPC framing and Streamable HTTP validation (MCP 2026-07-28). A request
+// with per-request `_meta` is served as modern (stateless, headers mirrored
+// from the body); anything else as legacy `initialize`. No sessions either way.
 
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
 export const MODERN_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION] as const;
@@ -60,8 +47,7 @@ export type RpcFailure = {
 export function parseMessage(
   raw: unknown
 ): { ok: true; message: JsonRpcMessage } | { ok: false; failure: RpcFailure } {
-  // "The body of the HTTP POST MUST be a single JSON-RPC request or
-  // notification" — a batch array is not a valid body on this transport.
+  // The transport forbids batch arrays.
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     return {
       ok: false,
@@ -108,7 +94,6 @@ export function parseMessage(
   };
 }
 
-/** True when the client is speaking the per-request-metadata era. */
 export function isModernRequest(message: JsonRpcMessage): boolean {
   const meta = message.params?._meta;
   if (typeof meta !== "object" || meta === null) return false;
@@ -117,11 +102,7 @@ export function isModernRequest(message: JsonRpcMessage): boolean {
 
 const BASE64_SENTINEL = /^=\?base64\?(.*)\?=$/;
 
-/**
- * Header values that cannot be represented as plain ASCII arrive Base64-encoded
- * behind the `=?base64?…?=` sentinel; the spec requires servers to decode
- * before comparing against the body.
- */
+/** Decodes the `=?base64?…?=` sentinel for non-ASCII header values; null if invalid. */
 export function decodeHeaderValue(value: string): string | null {
   const match = value.match(BASE64_SENTINEL);
   if (!match) return value;
@@ -140,11 +121,7 @@ function headerMismatch(message: string): RpcFailure {
   return { status: 400, code: MCP_HEADER_MISMATCH, message };
 }
 
-/**
- * The transport's header/body agreement rules. Mirrored headers let
- * intermediaries route without parsing the body, so a disagreement between the
- * two is a security problem, not a nicety — hence 400 + HeaderMismatch.
- */
+/** Intermediaries route on the mirrored headers, so a body mismatch is a 400. */
 export function validateModernHeaders(
   message: JsonRpcMessage,
   headers: { get(name: string): string | null }
@@ -171,31 +148,29 @@ export function validateModernHeaders(
     );
   }
 
-  if (NAME_REQUIRED_METHODS.has(message.method)) {
-    const bodyName = message.params?.name ?? message.params?.uri ?? undefined;
-    const nameHeader = headers.get("Mcp-Name");
-    if (!nameHeader) {
-      return headerMismatch(
-        `Header mismatch: the Mcp-Name header is required on ${message.method} requests.`
-      );
-    }
-    const decoded = decodeHeaderValue(nameHeader);
-    if (decoded === null) {
-      return headerMismatch(
-        "Header mismatch: the Mcp-Name header is not valid Base64-sentinel-encoded UTF-8."
-      );
-    }
-    if (decoded !== bodyName) {
-      return headerMismatch(
-        `Header mismatch: Mcp-Name header value '${decoded}' does not match the body value '${String(bodyName)}'.`
-      );
-    }
-  }
+  if (!NAME_REQUIRED_METHODS.has(message.method)) return null;
 
+  const bodyName = message.params?.name ?? message.params?.uri ?? undefined;
+  const nameHeader = headers.get("Mcp-Name");
+  if (!nameHeader) {
+    return headerMismatch(
+      `Header mismatch: the Mcp-Name header is required on ${message.method} requests.`
+    );
+  }
+  const decoded = decodeHeaderValue(nameHeader);
+  if (decoded === null) {
+    return headerMismatch(
+      "Header mismatch: the Mcp-Name header is not valid Base64-sentinel-encoded UTF-8."
+    );
+  }
+  if (decoded !== bodyName) {
+    return headerMismatch(
+      `Header mismatch: Mcp-Name header value '${decoded}' does not match the body value '${String(bodyName)}'.`
+    );
+  }
   return null;
 }
 
-/** The `_meta` fields the spec marks required on every modern request. */
 export function validateModernMeta(message: JsonRpcMessage): RpcFailure | null {
   const meta = (message.params?._meta ?? {}) as Record<string, unknown>;
   const capabilities = meta[META_CLIENT_CAPABILITIES];
@@ -223,12 +198,8 @@ export function checkModernVersion(message: JsonRpcMessage): RpcFailure | null {
 }
 
 /**
- * Origin validation is required to blunt DNS-rebinding attacks against local
- * MCP servers. This server is public, unauthenticated and carries no ambient
- * credentials, so any *web* origin is legitimate — browser-based agents are a
- * supported client. What is rejected is an Origin that is not a web origin at
- * all (`null` from an opaque context, a `file:` or app scheme, or an
- * unparseable value), which no ordinary client sends.
+ * DNS-rebinding guard. The server is public with no ambient credentials, so any
+ * web origin is allowed; an opaque "null", `file:`, app schemes and garbage are not.
  */
 export function isAllowedOrigin(origin: string | null): boolean {
   if (origin === null) return true; // non-browser client: no Origin header
@@ -240,7 +211,6 @@ export function isAllowedOrigin(origin: string | null): boolean {
   }
 }
 
-/** The legacy version to answer `initialize` with. */
 export function negotiateLegacyVersion(requested: unknown): string {
   return typeof requested === "string" &&
     (LEGACY_PROTOCOL_VERSIONS as readonly string[]).includes(requested)

@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseRate, speechBlocks } from "./speech";
 
-// Minimal duck-typed DOM: speechBlocks only reads tagName, textContent and
-// children, so plain objects stand in for Elements and the tests run in the
-// workers pool without a DOM shim.
+// Duck-typed DOM: speechBlocks only reads tagName, textContent and children.
 type Node = { tagName: string; textContent: string | null; children: Node[] };
 const el = (tagName: string, textContent: string, children: Node[] = []): Node => ({
   tagName,

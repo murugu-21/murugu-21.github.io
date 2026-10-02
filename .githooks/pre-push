@@ -1,8 +1,6 @@
 #!/bin/sh
-# Mirrors the CI "checks" job (everything except the full site build) so a
-# failing gate never reaches CI. Runs once per push instead of per commit;
-# commits themselves only pay for lint-staged (see pre-commit).
-# Emergency bypass: git push --no-verify
+# Mirrors the CI "checks" job (everything except the site build).
+# Bypass: git push --no-verify
 set -e
 
 echo "pre-push 1/6: format"

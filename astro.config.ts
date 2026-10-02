@@ -16,8 +16,7 @@ import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 import remarkMermaid from "./src/blog/utils/remark-mermaid";
 import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
 
-// slug -> ISO publish date from each post's frontmatter, used as the sitemap
-// <lastmod> so crawlers can prioritize recently-updated pages.
+// slug -> ISO publish date, for sitemap <lastmod>.
 function postDates(): Record<string, string> {
   const root = path.join(process.cwd(), "content/blog");
   const dates: Record<string, string> = {};
@@ -32,11 +31,9 @@ function postDates(): Record<string, string> {
 const POST_DATES = postDates();
 const NEWEST_POST = Object.values(POST_DATES).sort().pop();
 
-// @astrojs/sitemap always writes "<filenameBase>-index.xml" plus numbered
-// chunk files, but this site publishes one /sitemap.xml — robots.txt, the
-// negotiated 404 body (worker/not-found.ts), the developer portal and the
-// api-catalog all name that exact URL. Collapse the single chunk onto it.
-// entryLimit is 45000 and the site has ~14 URLs, so there is only ever one.
+// @astrojs/sitemap writes an index plus numbered chunks, but robots.txt,
+// worker/not-found.ts and the api-catalog all name /sitemap.xml. Collapse the
+// single chunk onto it.
 function singleFileSitemap(): AstroIntegration {
   return {
     name: "single-file-sitemap",
@@ -57,15 +54,10 @@ function singleFileSitemap(): AstroIntegration {
   };
 }
 
-// A post whose markdown fails to render (the remark-mermaid guard throwing
-// for a missing diagram file, say) does NOT fail the build: the content
-// layer's glob loader logs the error, caches the empty result in
-// node_modules/.astro and the page ships with an empty <section
-// itemprop="articleBody">. Seen in review: exit 0, "17 page(s) built", blank
-// article. So check the output: every published
-// post has a non-empty body and exactly one diagram figure per ```mermaid
-// fence in its source. Counting figures also catches a stale cached render
-// after the file is restored.
+// A markdown render error doesn't fail the build: the glob loader logs it,
+// caches the empty result in node_modules/.astro and ships a blank article.
+// So check every post has a body and one figure per ```mermaid fence
+// (which also catches a stale cached render).
 function blogPostBodies(): AstroIntegration {
   return {
     name: "blog-post-bodies",
@@ -106,12 +98,8 @@ function blogPostBodies(): AstroIntegration {
   };
 }
 
-// The build steps that used to wrap `astro build` in package.json, so that
-// `astro build` alone produces the complete site: the diagram check before
-// rendering, the resume PDF once the output is final. A deploy tool that runs
-// `astro build` itself (the cf CLI does) would otherwise skip them, and `dir`
-// follows the output wherever an adapter puts it. Each script stays a
-// standalone CLI.
+// Hooked into `astro build` itself so deploy tools that run it directly don't
+// skip these steps; `dir` follows the adapter's output location.
 function buildArtifacts(): AstroIntegration {
   const run = (script: string, ...args: string[]) => {
     const result = spawnSync("bun", [script, ...args], { stdio: "inherit" });
@@ -124,17 +112,13 @@ function buildArtifacts(): AstroIntegration {
     hooks: {
       // Fail before rendering when a committed diagram is missing or stale.
       "astro:build:start": () => run("scripts/render-mermaid.ts", "--check"),
-      // Registered last, so the site it prints from is final: the resume PDF,
-      // printed from /resume/ in headless Chromium.
+      // Registered last, so the site it prints from is final.
       "astro:build:done": ({ dir }) => run("scripts/generate-resume.ts", fileURLToPath(dir))
     }
   };
 }
 
-// `client:interaction` — hydrate an island on the visitor's first input rather
-// than on idle. The reasoning lives with the directive itself,
-// src/directives/interaction.ts; the attribute is typed in
-// src/client-directives.d.ts.
+// `client:interaction`: hydrate on first input (src/directives/interaction.ts).
 function clientInteractionDirective(): AstroIntegration {
   return {
     name: "client-interaction-directive",
@@ -149,15 +133,9 @@ function clientInteractionDirective(): AstroIntegration {
   };
 }
 
-// Every hoisted <script type="module" src> statically imports a few shared
-// chunks (rolldown-runtime, preload-helper, first-interaction, analytics,
-// webmcp — each under 2 KB) that the browser only discovers once the parent
-// script has arrived: a second dependent round trip that Lighthouse reports as
-// the longest network chain. Astro emits no modulepreload hints for them, so
-// walk each page's module scripts, follow their static imports transitively
-// and declare the lot up front. Dynamic import() targets (the chat island,
-// the Lottie player, the PostHog SDK) are deliberately left out — they are
-// interaction-gated and must not be fetched at load.
+// Astro emits no modulepreload hints for the small chunks module scripts
+// import, costing a dependent round trip. Hint static imports transitively;
+// dynamic import() targets are interaction-gated and deliberately left out.
 function modulePreloadHints(): AstroIntegration {
   const STATIC_IMPORT = /\b(?:from|import)\s*"(\.\/[^"]+\.js)"/g;
   const MODULE_SCRIPT = /<script type="module" src="(\/[^"]+\.js)"/g;
@@ -201,8 +179,7 @@ function modulePreloadHints(): AstroIntegration {
           entries.forEach(walk);
           if (!deps.size) continue;
           const links = Array.from(deps, d => `<link rel="modulepreload" href="${d}">`).join("");
-          // Ahead of the first module script, so the preload scanner sees the
-          // hints in the same pass as the script that needs them.
+          // before the first module script, so the preload scanner sees them together
           const at = html.indexOf('<script type="module" src="');
           fs.writeFileSync(file, html.slice(0, at) + links + html.slice(at));
           hinted += 1;
@@ -213,48 +190,31 @@ function modulePreloadHints(): AstroIntegration {
   };
 }
 
-// PostHog source maps for error tracking. The plugin makes the production
-// build emit hidden source maps, uploads them and deletes them again, so a
-// .map is never served; the chunk-id comments it injects into each chunk are
-// what tie a stack frame back to a symbol set. Gated on the personal API key
-// and project id being present — they only are in the Workers Builds
-// production env — so local dev and the GitHub checks build without it and
-// stay map-free and self-contained.
+// PostHog source maps: uploaded then deleted, so no .map is served. Set only in
+// the Workers Builds production env.
 const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
-  // Builds the Worker (worker/server.ts, the `main` in wrangler.jsonc)
-  // alongside the site, and makes `astro dev` run both in workerd with the
-  // real bindings. Every page is still prerendered; the adapter builds the
-  // Worker anyway because wrangler.jsonc names a custom `main`.
-  //
-  // Pinned to a pkg.pr.new preview of withastro/astro#18202, which fixes a
-  // fully static site with a custom entrypoint deploying without its Worker
-  // (withastro/astro#18201; 14.3.3 drops it silently). Move to the release
-  // that ships it.
+  // Builds the Worker (wrangler.jsonc `main`) alongside the prerendered site.
+  // Pinned to a pkg.pr.new preview of withastro/astro#18202: released
+  // versions silently drop a custom-entrypoint Worker from a static site
+  // (withastro/astro#18201). Move to the release that ships it.
   adapter: cloudflare({
-    // Images are optimized at build time with sharp, as before; nothing is
-    // transformed on request, so no Images binding.
+    // build-time sharp only, so no Images binding
     imageService: "compile",
-    // Prerender in Node, not workerd: the build hooks below and several pages
-    // read the filesystem at build time.
+    // Node, not workerd: build hooks and several pages read the filesystem.
     prerenderEnvironment: "node"
   }),
-  // No Astro sessions — without this the adapter provisions a SESSION KV
-  // namespace nothing reads.
+  // otherwise the adapter provisions an unused SESSION KV namespace
   session: false,
   server: { port: 4399 },
   build: {
     assets: "static",
-    // The stylesheet goes into the page rather than out to a <link>: both apps
-    // now share one Tailwind entry (src/styles/global.css, which pulls in
-    // islands.css and chat.css), and an external stylesheet blocks first paint
-    // for one more round trip after the HTML — 150 ms of the FCP/LCP Lighthouse
-    // measured on mobile. The pages are few and the HTML grows by ~14 KB
-    // gzipped, which is cheaper than the dependent request.
+    // An external sheet cost a render-blocking round trip (~150 ms mobile
+    // FCP); inlining adds ~14 KB gzipped per page, which is cheaper.
     inlineStylesheets: "always"
   },
   integrations: [
@@ -262,19 +222,16 @@ export default defineConfig({
     clientInteractionDirective(),
     modulePreloadHints(),
     sitemap({
-      // The integration only recognises a top-level /404 as a status-code
-      // page, so /blog/404/ has to be excluded by hand.
+      // only a top-level /404 is auto-excluded
       filter: page => !/\/404\/?$/.test(page),
       serialize(item) {
         const { pathname } = new URL(item.url);
-        // The blog index carries the newest post's date. NB /blog/ strips to
-        // "" below, not "blog" — hence the explicit check.
+        // explicit: /blog/ strips to "" below, not "blog"
         if (pathname === "/blog/") {
           item.lastmod = NEWEST_POST;
           return item;
         }
-        // Posts carry their own publish date; portfolio pages get no
-        // <lastmod> (nothing tracks when their hand-written copy changed).
+        // portfolio pages get no <lastmod>: nothing tracks their edits
         const slug = pathname.replace(/^\/blog\//, "").replace(/\/$/, "");
         const lastmod = POST_DATES[slug];
         if (lastmod) item.lastmod = lastmod;
@@ -287,31 +244,20 @@ export default defineConfig({
   ],
   vite: {
     server: {
-      // In dev the Worker's ASSETS binding is answered by this dev server, and
-      // the Worker addresses it as https://assets.local (worker/api/store.ts —
-      // production ignores the host). Without this Vite's host check rejects
-      // every such read with a 403, so the API, MCP and Jarvis's grounding
-      // come back empty in `astro dev`. Dev and preview servers only.
+      // In dev the Worker reads ASSETS via https://assets.local
+      // (worker/api/store.ts); Vite's host check would 403 it.
       allowedHosts: ["assets.local"]
     },
-    // Vite's own assetsInlineLimit, raised to 8 KB for CSS only. It has to stay
-    // a function rather than a plain number: as a number the limit is global,
-    // and it base64-inlined every sub-8 KB font subset into the stylesheets
-    // that reference them, which tripled the island sheet's gzipped size
-    // (6 → 22 KB) on the critical path. `undefined` keeps Vite's 4 KB default
-    // for everything else. (The page-level decision is build.inlineStylesheets
-    // "always" above — the one shared sheet never goes out as a <link>.)
+    // 8 KB for CSS only. A plain number would also inline font subsets into
+    // the stylesheets (tripled the island sheet). `undefined` keeps the default.
     build: {
       assetsInlineLimit: (file, content) =>
         file.endsWith(".css") ? content.byteLength < 8192 : undefined
     },
     plugins: [
-      // One Tailwind v4 entry for the whole site: src/styles/global.css, full
-      // preflight, imported by src/layouts/Layout.astro (portfolio) and
-      // src/blog/layouts/BaseLayout.astro (blog). No Sass anywhere.
+      // single entry: src/styles/global.css
       tailwindcss(),
-      // Source maps for PostHog's error tracking (see above). The host default
-      // (us.i.posthog.com) matches the US project the SDK reports to.
+      // the default host (us.i.posthog.com) matches the SDK's US project
       ...(POSTHOG_API_KEY && POSTHOG_PROJECT_ID
         ? [
             posthog({
@@ -324,19 +270,13 @@ export default defineConfig({
     ]
   },
   markdown: {
-    // Astro 7 defaults to the satteri processor, which doesn't run unified
-    // plugins; the heading-anchor pair below needs the remark/rehype
-    // pipeline, so opt back into it explicitly.
-    // remarkMermaid swaps each ```mermaid fence for the SVGs `bun run
-    // diagrams` committed next to the post (src/blog/utils/remark-mermaid.ts)
-    // and fails the build when one is missing; no diagram code ships to the
-    // browser.
+    // Astro 7's default satteri processor doesn't run unified plugins.
+    // remarkMermaid swaps fences for the committed SVGs; no diagram code ships.
     processor: unified({
       remarkPlugins: [remarkMermaid],
       rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig]]
     }),
-    // PrismJS class-based highlighting, matching gatsby-remark-prismjs; the
-    // token palettes live in src/blog/styles/code.css.
+    // token palettes live in src/blog/styles/code.css
     syntaxHighlight: "prism"
   }
 });

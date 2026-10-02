@@ -1,7 +1,5 @@
-// Pre-rendered blog audio from R2: /blog/audio/<slug>.mp3 and .json, stored
-// under the current voice's prefix (see KEY_PREFIX in
-// scripts/generate-audio.ts). Written from the author's laptop; the Worker
-// only reads. Range requests matter because <audio> seeks with them.
+// Read-only blog audio from R2; the prefix must match KEY_PREFIX in
+// scripts/generate-audio.ts. Supports Range because <audio> seeks with it.
 import { Hono } from "hono";
 
 import { serveAsset } from "./not-found";
@@ -18,9 +16,8 @@ interface ByteRange {
   length: number;
 }
 
-// Parses a single "bytes=a-b" / "bytes=a-" / "bytes=-n" header against a
-// known size. Returns null when absent or malformed, "unsatisfiable" when the
-// range lies entirely outside the object.
+// Single-range "bytes=a-b" / "bytes=a-" / "bytes=-n". null when absent or
+// malformed.
 export function parseRange(
   header: string | null,
   size: number

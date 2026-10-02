@@ -1,22 +1,12 @@
-// Contrast guards for the blue-hour light palette.
-//
-// Light mode's text no longer sits on near-white paper — it sits on the sky
-// gradient (--background-image-page), whose deepest stop is a periwinkle that
-// gives away a lot of the contrast the old #ffffff canvas provided. Every light
-// ink is therefore held to its WCAG bar against the stops it actually lands on
-// (and against the dusk-white card surface), the way islands.test.ts holds the
-// island tokens. A palette edit should fail here, not ship as unreadable text.
-// The night palette that follows is held the same way against both stops of
-// --background-image-page-dark.
+// Contrast guards: every light ink against the sky gradient's stops and the
+// card surface, and every night ink against both dark stops.
 import { describe, expect, it } from "vitest";
 
 import { channels, contrast, luminance } from "./contrast";
 
-// Inlined from global.css by vitest.config.ts (the Workers pool has no
-// filesystem).
+// Inlined by vitest.config.ts.
 declare const __GLOBAL_CSS__: string;
-// Inlined from the blog's src/blog/styles/code.css, whose `--- Light palette`
-// section holds the light inks for the blog's fence.
+// src/blog/styles/code.css, inlined by vitest.config.ts.
 declare const __CODE_CSS__: string;
 const css = __GLOBAL_CSS__;
 
@@ -116,9 +106,8 @@ describe("blue-hour light palette", () => {
     }
   });
 
-  // The blog's hr and table rules. Not a WCAG bar (separators are exempt), but
-  // the old #aaaaaa vanished at ~1.1:1 on the sky; hold them where a row rule
-  // still reads as a line.
+  // The blog's hr and table rules. Separators are WCAG-exempt; 2:1 keeps them
+  // reading as lines.
   it("keeps the blog's rules visible on every sky stop (>= 2:1)", () => {
     for (const stop of stops) {
       expect(contrast(over(token("color-accent-grey"), stop), stop)).toBeGreaterThanOrEqual(2);
@@ -190,8 +179,7 @@ describe("night palette", () => {
     for (const stop of night) expect(contrast(ink(name), stop)).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The checked tag chip: white numerals and label on the box-dark fill
-  // (Tag.astro). The old #3d6ff0 sat at 4.44:1.
+  // The checked tag chip: white text on the box-dark fill (Tag.astro).
   it("keeps white text readable on the checked chip fill (>= 4.5:1)", () => {
     expect(contrast("#ffffff", ink("box-dark"))).toBeGreaterThanOrEqual(4.5);
   });
@@ -277,12 +265,8 @@ describe("night palette", () => {
 });
 
 describe("blog light code palette", () => {
-  // Prism's default light inks were written for a plain white page, and
-  // several sit under AA on the blog's white fence (#999 punctuation at
-  // 2.85:1, #690 strings at 3.43, …). code.css re-inks them in its
-  // `--- Light palette` section, which holds every light ink; each must clear
-  // 4.5:1 on the fence. The dark overrides that follow the section are the night palette
-  // and are not parsed here — they answer to the dark fence, not white.
+  // Every ink in code.css's `--- Light palette` section must clear AA on the
+  // white fence; the dark section after it is not parsed here.
   const lightSection = __CODE_CSS__.split("/* --- Dark palette")[0];
   const inks = [...lightSection.matchAll(/(?<![\w-])color:\s*(#[0-9a-f]{6})/gi)].map(m => m[1]);
 

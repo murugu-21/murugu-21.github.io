@@ -1,7 +1,5 @@
-// The reference styles one word of every section heading in the accent color
-// ("My Recent Works", "Professional Skillset"). This wraps the last
-// letter-bearing word of a title in <span class="accent">, skipping trailing
-// emoji like "🛠️". Titles come from portfolio.ts but are escaped anyway.
+// Wraps the last letter-bearing word of a heading in <span class="accent">,
+// skipping trailing emoji like "🛠️".
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

@@ -1,62 +1,31 @@
-/* The ONE Tailwind v4 entry for BOTH apps: the portfolio imports it from
-   src/layouts/Layout.astro and the blog from src/blog/layouts/BaseLayout.astro.
-   Full Tailwind incl. preflight: every component is styled with utilities in
-   its markup, in both apps. Dark mode is `html.dark-mode` everywhere. */
+/* The one Tailwind v4 entry for both apps. Dark mode is `html.dark-mode`. */
 
 @import "tailwindcss";
 
-/* shadcn island tokens (chat widget) + the `dark` custom variant bound to
-   html.dark-mode. The chat animations go in layer(components) so utilities
-   still beat them. */
+/* chat.css goes in layer(components) so utilities still beat it. */
 @import "./islands.css";
 @import "./chat.css" layer(components);
 
-/* No @source lines: Tailwind v4 auto-detects sources by walking up from this
-   file to the project root and scanning everything not gitignored, which
-   already covers all of src/ — including src/blog/, which the three explicit
-   `@source` lines this replaces (components, layouts, pages) left out even
-   though blog utilities compile. Add one back only for a directory OUTSIDE
-   that walk (a package in node_modules, say). */
+/* No @source: auto-detection covers everything not gitignored. Add one only
+   for a directory outside the project (e.g. node_modules). */
 
 @theme {
-  /* the one text face; the layout inlines the @font-face (lib/fonts.ts) */
+  /* the layout inlines the @font-face (lib/fonts.ts) */
   --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --default-font-family: var(--font-mono);
 
-  /* palette (was src/styles/_variables.scss) — navy #06038d is the Ashoka
-     Chakra blue, #4c7dff the bright accent that reads on dark surfaces.
-
-     The light theme is blue hour (see --background-image-page below), so its
-     "greys" are violet-slates rather than neutral and the ambers are the
-     hour's warm end: --color-amber-ink carries text (.accent in headings,
-     hover accents), --color-amber-ink-deep the same hue held to normal-text
-     AA on the sky's deep stop, while --color-amber is for glows, borders and
-     the starfield's close stars, where nothing depends on reading it.
-     src/styles/palette.test.ts holds every light ink at its AA bar against the
-     deepest stop of the sky. */
+  /* Light theme is "blue hour": violet-slate greys, amber warm end.
+     amber-ink is for text, amber for non-text (glows, borders).
+     palette.test.ts holds every light ink at AA against the sky's deepest stop. */
   --color-navy: #06038d;
   --color-blue: #4c7dff;
-  /* Interactive fills under the blue-hour light theme: the sky's deep end,
-     deepened until dusk-white text clears AA on it. The blog cards' hover wipe
-     and corner tab use it (Blogs.astro); dark mode keeps its blue-light.
-     Interactive feedback that used to be the old light theme's bright blue —
-     the Education underline, focus rings and glows, the read-aloud highlight —
-     is the warm end of the day: --color-amber / --color-amber-ink. Only light
-     mode takes the amber; the night keeps its blue accents (see the `dark:`
-     variant on each of those), and links, titles, fills and the chip hovers
-     stay navy/blue in both themes. */
+  /* dusk-violet: deepened until dusk-white text clears AA on it. */
   --color-dusk-violet: #443c8f;
   --color-amber: #b45309;
   --color-amber-ink: #8a4406;
-  /* The blog's link hover/focus ink (post.css). amber-ink is display type on
-     the sky (3:1 on the deep stop) and normal text only on the mid/warm stops
-     and the card; a 16px link crosses the deep stop too, so its hover needs
-     the same hue held to 4.5:1 there. palette.test.ts asserts it. */
+  /* Blog link hover (post.css): amber-ink only reaches 3:1 on the deep stop;
+     this holds 4.5:1 for body-size links. */
   --color-amber-ink-deep: #663000;
-  /* Light-theme text inks, deepened a step when the blue-hour horizon was
-     toned down (--background-image-page): on the near-paper warm end the old
-     values read thin, so body, headings and the blockquote ink each moved one
-     step darker. palette.test.ts holds them at AA on the sky's stops. */
   --color-title: #1c1633;
   --color-text: #292444;
   --color-subtitle: #413b58;
@@ -69,12 +38,9 @@
   --color-dark-base: rgb(20, 22, 34);
   --color-nav-scrolled: rgba(248, 247, 255, 0.72);
   --color-nav-scrolled-dark: rgba(17, 19, 30, 0.72);
-  /* Chip boundaries (tag chips, skill chips). 45% sat at 2.5–2.9:1 on the
-     sky, under the 3:1 a component boundary needs; 60% clears it on every
-     stop (palette.test.ts). */
+  /* Chip boundaries: 60% is the least that clears 3:1 on every sky stop. */
   --color-chip-outline: rgba(6, 3, 141, 0.6);
-  /* Blue-light, not blue: the blue at 55% sat at 2.2–2.4:1 on the night
-     canvas, under the 3:1 a component boundary needs (palette.test.ts). */
+  /* blue-light, not blue: blue stays under 3:1 on the night canvas */
   --color-chip-outline-dark: rgba(125, 162, 255, 0.6);
   --color-border-soft: rgba(112, 104, 150, 0.32);
   --color-border-soft-dark: rgba(255, 255, 255, 0.25);
@@ -86,75 +52,43 @@
   --color-contact-hover-dark: #b5b5b5;
   --color-blog-hover-small: rgba(255, 255, 255, 0.8);
 
-  /* blog palette, Phase 2 (was the :root/.dark block in the blog's own
-     style.css). Two different meanings of the suffixes share this list:
-     `-light` in `text-light` is a lighter SHADE used in LIGHT mode (it is not
-     a light-theme variant of `text-dark`), while every `*-dark` token here is
-     the DARK-THEME value of its base token. `box-dark` is the dark-theme
-     accent fill for the tag chips (the checked chip, the read-aloud highlight,
-     the search field's focus glow) — "box" is the legacy name of that variable
-     in the old blog (`--color-box`), kept so the port reads 1:1. (`-deep` in
-     `amber-ink-deep` above is a third meaning: a DARKER SHADE of the same
-     light-mode ink.) */
+  /* Blog palette. Suffixes: `*-dark` is a token's dark-theme value; `-light`
+     in `text-light` is a light-mode shade, not a variant of `text-dark`.
+     `box-dark` is the dark-theme chip accent fill (legacy blog name). */
   --color-blue-light: #7da2ff;
-  /* Deepened from #3d6ff0 so white on the checked chip clears AA
-     (palette.test.ts). */
+  /* deep enough for white on the checked chip to clear AA */
   --color-box-dark: #2a56c8;
-  /* The night edge of the blog's code fence and inline code chips (code.css,
-     post.css): 3:1 on the canvas so they read as panels. The shared
-     --color-border-soft-dark (25%) stays softer for the portfolio's card rules. */
+  /* Night edge of code fences and inline code: 3:1 so they read as panels. */
   --color-fence-edge-dark: rgba(255, 255, 255, 0.35);
-  /* The blog's hr and table rules (post.css). The legacy #aaaaaa was mixed
-     for a white canvas and vanished on the sky (1.0–1.6:1); a translucent
-     navy keeps the rule reading as a line on every stop (palette.test.ts
-     holds it at 2:1). The name is the old blog's; only post.css uses it. */
+  /* Blog hr and table rules (post.css); held at 2:1 on every sky stop. */
   --color-accent-grey: rgba(6, 3, 141, 0.4);
   --color-accent-grey-dark: #818cab;
-  /* The post's table-of-contents rail (src/blog/components/TableOfContents.astro):
-     the collapsed heading bars, drawn straight on the sky. A UI component, so
-     3:1 on every stop (palette.test.ts), which accent-grey above does not
-     reach on the deep end. At night the rail reuses accent-grey-dark. */
+  /* TOC rail bars (TableOfContents.astro): a UI component, so 3:1 on every
+     stop, which accent-grey misses on the deep end. */
   --color-toc-bar: rgba(6, 3, 141, 0.6);
   --color-heading-dark: #f4f4f4;
   --color-text-dark: #cbcdcf;
-  /* The post blockquote ink. Blue hour darkened it: the old #4f5969 was mixed
-     for a white canvas and read at 3.2:1 on the sky's periwinkle end, so the
-     light theme's prose blockquotes washed out. palette.test.ts holds it at AA
-     against that stop now, like the other light inks. */
+  /* post blockquote ink */
   --color-text-light: #322d44;
 
-  /* glow shadows (reference card glow, navy-tinted) */
   --shadow-glow: 0 4px 12px 2px rgba(6, 3, 141, 0.14);
   --shadow-glow-hover: 0 6px 16px 4px rgba(6, 3, 141, 0.28);
   --shadow-glow-dark: 0 4px 5px 3px rgba(6, 3, 141, 0.28);
   --shadow-glow-dark-hover: 0 4px 4px 5px rgba(76, 125, 255, 0.42);
 
-  /* page background gradients. Light is blue hour: the deep periwinkle of the
-     sky's dark end settles through lavender into a warm horizon glow, and the
-     starfield's close stars (Particles.astro) carry the same amber down the
-     page. The horizon was deepened (#f6e3cb → #eed6b4) because the old stop
-     sat at paper-white luminance: ink over it read thin and the white
-     code/diagram panels lost their edge against it. Dark is the night that
-     follows it. */
+  /* Horizon stop kept below paper-white so white panels keep their edge. */
   --background-image-page: linear-gradient(to left, #a3aae0, #cfd3ef 52%, #eed6b4);
   --background-image-page-dark: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
 
-  /* Breakpoints for the old media queries. Tailwind's max-* variants are
-     EXCLUSIVE (`@media (width < X)`) while the old SCSS `max-width: X` was
-     inclusive, so each value is the old query + 1px — `max-md:` then means
-     exactly the old `(max-width: 768px)`, `max-xs:` the old `(max-width:
-     320px)`, `max-wide:` the old `(max-width: 1380px)`. md overrides Tailwind's
-     768px default for the same reason; a rule that needs the old
-     `(min-width: 768px)` must use `min-[768px]:`, not `md:`. */
+  /* +1px because Tailwind's max-* variants are exclusive: `max-md:` means
+     (max-width: 768px). For (min-width: 768px) use `min-[768px]:`, not `md:`. */
   --breakpoint-xs: 321px;
   --breakpoint-md: 769px;
   --breakpoint-wide: 1381px;
 
   --animate-rise-fade: rise-fade 1s ease both;
-  /* Entrance animation. Transform only, deliberately no opacity fade: Chrome
-     never reports an element first painted at opacity 0 as an LCP candidate,
-     so with a fade the hero paragraph was invisible to LCP and the metric
-     landed on the typewriter line ~2 s later (0.27 s vs 2.1 s measured). */
+  /* No opacity fade: Chrome skips elements first painted at opacity 0 as LCP
+     candidates, which pushed LCP ~2 s later. */
   @keyframes rise-fade {
     from {
       transform: translateY(40px);
@@ -172,8 +106,7 @@
   }
   body {
     font: 19px / 23px var(--font-mono);
-    /* Fira Code's programming ligatures (-> => ==) are wrong in prose; code
-       re-enables them above. */
+    /* ligatures (-> =>) are wrong in prose; code re-enables them above */
     font-feature-settings: "calt" 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -190,22 +123,15 @@
     color: white;
   }
 
-  /* Themed scrollbar in dark mode, for BOTH apps and EVERY scroller (page,
-     code blocks, tables, chat transcript): `scrollbar-color` is inherited, so
-     one declaration on the root covers them all with one renderer. The old
-     `::-webkit-scrollbar*` rules are gone on purpose — Chrome ignores them
-     wherever `scrollbar-color` applies, so the page scrollbar was drawn by
-     the standard path while the blog's code blocks got the 10px rounded
-     WebKit thumb: two different scrollbars on one site. Thumb is the
-     dark-theme button fill (blue-light); navy sat at ~1.1:1 on the track. */
+  /* Inherited, so this covers every scroller. No ::-webkit-scrollbar rules:
+     Chrome ignores them wherever scrollbar-color applies, mixing two styles. */
   html.dark-mode {
     scrollbar-color: var(--color-blue-light) var(--color-dark-base);
   }
 }
 
 @layer components {
-  /* Inline highlight for one word per heading (src/lib/accent.ts emits it).
-     Blue hour lights it amber; the night keeps it blue. */
+  /* emitted by src/lib/accent.ts */
   .accent {
     color: var(--color-amber-ink);
     font-weight: 700;
@@ -216,11 +142,7 @@
   .subTitle {
     color: var(--color-subtitle);
   }
-  /* "Muted" is a relationship to the body text, not one colour: the light
-     theme's violet-slate (--color-subtitle) sits too close to the night canvas
-     to read there, so the night gets its own value. The dark-mode component
-     subtitles that want full contrast still override it with `dark:text-white*`
-     (utilities outrank this layer). */
+  /* the light subtitle colour doesn't read on the night canvas */
   html.dark-mode .subTitle {
     color: rgba(255, 255, 255, 0.65);
   }
@@ -234,9 +156,6 @@
   }
 }
 
-/* Glowing card (replaces the glow-card-light/-dark mixin pairs). Light: a pane
-   of dusk-white over the blue-hour sky, with a soft blue shadow. Dark:
-   transparent over the page gradient with a blue glow. Hover lifts 2% in both. */
 @utility glow-card {
   background-color: rgba(255, 255, 255, 0.88);
   border: 1px solid rgba(6, 3, 141, 0.18);

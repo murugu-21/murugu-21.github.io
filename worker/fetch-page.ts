@@ -1,8 +1,5 @@
-// fetch_page tool backend: returns the full text of a murugappan.dev page so
-// the model can answer detail questions without carrying full-text grounding
-// in every prompt. Reads exclusively through the ASSETS binding (our own
-// static build), so it physically cannot reach other hosts. Results are
-// tool-result strings either way — errors are phrased for the model to relay.
+// fetch_page tool backend. Reads only through the ASSETS binding, so it cannot
+// reach other hosts. Errors are tool-result strings phrased for the model.
 
 import { readAsset, type AssetsLike } from "./api/store";
 
@@ -45,8 +42,7 @@ export async function fetchSitePage(assets: AssetsLike, rawUrl: string): Promise
     return `Only pages on ${SITE_HOST} can be fetched.`;
   }
 
-  // Blog posts live pre-extracted in the full-text llms file — cleaner than
-  // stripping HTML, and it covers every post section by its URL marker.
+  // Blog posts come pre-extracted from llms-full.txt, keyed by their URL marker.
   if (url.pathname.startsWith("/blog/")) {
     const full = await readAsset(assets, "/blog/llms-full.txt");
     if (full) {

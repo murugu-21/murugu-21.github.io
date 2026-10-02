@@ -1,14 +1,7 @@
 ---
-// Theme toggle: modelled on the react.dev header control — a round ghost icon
-// button showing the theme you'd switch TO (sun while dark, moon while light)
-// rather than a slider. Icons are the lucide sun/moon paths, inlined.
-//
-// Shared by BOTH apps. A click goes through setTheme (../lib/theme.ts), which
-// knows which app owns `html.dark-mode`; the label follows `themechange`, which
-// both apps fire on every switch — clicks here, an OS change on the blog, and
-// the layouts' catch-up after a back/forward-cache restore. Being plain Astro,
-// it is server rendered at full size, so unlike a hydrated island it can't
-// shift the header after paint.
+// Shows the theme you'd switch TO. Shared by both apps: clicks go through
+// setTheme (../lib/theme.ts); the label follows the `themechange` event.
+// Plain Astro, not an island, so it can't shift the header after paint.
 ---
 
 <button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
@@ -84,8 +77,7 @@
       background-color 0.15s ease;
   }
 
-  /* Tinted from the icon's own colour, so it works in both themes without a
-     second variable. */
+  /* Tinted from the icon's own colour, so one rule covers both themes. */
   .theme-toggle:hover {
     background-color: color-mix(in srgb, currentColor 10%, transparent);
   }

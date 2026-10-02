@@ -54,10 +54,7 @@ export async function sendOpportunityEmail(
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });
 }
 
-// POST /api/contact's payload. Separate from Lead (the chat's
-// capture_opportunity tool result) because there is no transcript to attach
-// and the sender chose their own wording — the email says which door the
-// message came through so replies can be triaged.
+// POST /api/contact's payload; unlike Lead it has no transcript.
 export type ContactMessage = {
   name?: string;
   email: string;

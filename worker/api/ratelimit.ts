@@ -1,24 +1,8 @@
-// Rate-limit signalling for the API, in the form agents can act on without
-// reading prose: draft-ietf-httpapi-ratelimit-headers ("RateLimit header
-// fields for HTTP") on every /api response, plus Retry-After on a 429.
-//
-// Field syntax, exactly as the draft defines it (Structured Fields, RFC 9651):
+// draft-ietf-httpapi-ratelimit-headers fields (RFC 9651 syntax), plus the de-facto X-RateLimit-*
+// trio that most tooling reads (`-Reset` is delta-seconds):
 //   RateLimit-Policy: "name";q=<quota>;w=<window seconds>   (a list)
-//   RateLimit:        "name";r=<remaining>;t=<seconds to reset>  (one policy)
-// `RateLimit` reports the single policy closest to exhaustion, which is what
-// a client has to obey.
-//
-// The de-facto X-RateLimit-Limit / -Remaining / -Reset trio is emitted
-// alongside, because a great deal of tooling only looks for those. `-Reset` is
-// delta-seconds, matching `t` above.
-//
-// Two quota families exist:
-//   reads   — a fair-use ceiling, counted in the edge location serving the
-//             request (see takeReadSlot). Generous enough that no legitimate
-//             client meets it; it exists so the numbers in the headers are
-//             real rather than a promise nothing enforces.
-//   contact — the daily allowance POST /api/contact really spends, counted in
-//             the RateLimiter Durable Object.
+//   RateLimit:        "name";r=<remaining>;t=<seconds to reset>  (the policy closest to exhaustion)
+// Reads have a per-edge fair-use ceiling; contact quotas are counted in the RateLimiter DO.
 
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./contact";
 
@@ -49,14 +33,13 @@ export const CONTACT_GLOBAL_QUOTA: Quota = {
 
 export const CONTACT_QUOTAS: readonly Quota[] = [CONTACT_CLIENT_QUOTA, CONTACT_GLOBAL_QUOTA];
 
-/** `RateLimit-Policy`: the quota policies that apply, in declaration order. */
+/** `RateLimit-Policy`, in declaration order. */
 export function policyField(quotas: readonly Quota[]): string {
   return quotas.map(q => `"${q.name}";q=${q.quota};w=${q.windowSeconds}`).join(", ");
 }
 
 const clamp = (n: number) => Math.max(0, Math.floor(n));
 
-/** `RateLimit`: the live snapshot of one policy. */
 export function rateLimitField(quota: Quota, remaining: number, resetSeconds: number): string {
   return `"${quota.name}";r=${clamp(remaining)};t=${clamp(resetSeconds)}`;
 }
@@ -83,15 +66,11 @@ export type ReadSlot = {
 
 type Window = { resetAt: number; used: number };
 
-// Fixed windows held in the isolate, not in a Durable Object: a read is a pure
-// function of the deployed build, so paying a cross-region round trip to count
-// it would cost more than the limit is worth. The consequence is that the
-// ceiling is per edge location — documented as such on /developers/ — which
-// only ever makes the effective allowance more generous than advertised.
+// Fixed windows in the isolate, not a DO: a cross-region round trip per read costs more than the
+// limit is worth. So the ceiling is per edge location, as /developers/ documents.
 const windows = new Map<string, Window>();
 
-// Bound the map so a flood of distinct client addresses cannot grow it without
-// limit; the oldest windows are the ones that have already reset.
+// Caps memory under a flood of distinct addresses; insertion order drops the oldest first.
 const MAX_TRACKED_CLIENTS = 20_000;
 
 function prune(now: number): void {
@@ -107,11 +86,7 @@ function prune(now: number): void {
   }
 }
 
-/**
- * Spend one read slot for `client` and report what is left. Called once per
- * read request, so the numbers in the headers describe the window the caller
- * is actually in.
- */
+/** Spends one read slot for `client` and reports what is left. */
 export function takeReadSlot(client: string, now = Date.now()): ReadSlot {
   const windowMs = READ_QUOTA.windowSeconds * 1000;
   let window = windows.get(client);
@@ -142,10 +117,7 @@ export const readRateLimitHeaders = (slot: ReadSlot): Record<string, string> =>
     resetSeconds: slot.resetSeconds
   });
 
-/**
- * Headers for a contact response. The reported policy is whichever tier has
- * less left, because that is the one that will stop the next request.
- */
+/** Reports whichever tier has less left: that is the one that stops the next request. */
 export function contactRateLimitHeaders(usage: {
   clientRemaining: number;
   globalRemaining: number;
@@ -165,7 +137,7 @@ export function secondsUntilUtcMidnight(now = new Date()): number {
   return Math.max(1, Math.ceil((midnight - now.getTime()) / 1000));
 }
 
-/** Headers exposed to browser clients so a page-side agent can read them. */
+/** Exposed via CORS so a page-side agent can read them. */
 export const RATE_LIMIT_EXPOSED_HEADERS: readonly string[] = [
   "RateLimit",
   "RateLimit-Policy",

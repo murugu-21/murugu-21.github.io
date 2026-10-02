@@ -4,11 +4,9 @@ Reads job-file paths from stdin, one per line. For each job, synthesises every
 chunk to <outDir>/<id>.wav as a plain clone of the voice reference and reports
 one JSON line per chunk plus a final {"done": true} line.
 
-Plain clone on purpose: the reference clip was *designed* once from a persona
-prompt (scripts/tts/design-voice.py), so passing an instruction here would only
-double the cost (classifier-free guidance runs the 3B backbone twice per frame)
-and let the delivery drift between paragraphs. The 8-bit build is 3x faster
-than bf16 on a 24 GB machine, which swaps on the 7 GB weights (2026-09-09).
+Plain clone on purpose: the reference was already designed (design-voice.py);
+an instruction here doubles the cost (CFG runs the backbone twice) and lets
+delivery drift. 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
 """
 import contextlib
 import json
@@ -23,14 +21,11 @@ import numpy as np
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"
 SAMPLE_RATE = 24000
 MAX_TOKENS = 1500  # 12.5 frames/s → 120 s; chunks are ≤300 chars (~30 s)
-# MLX keeps freed Metal buffers in a cache that otherwise grows with every
-# chunk: a full-blog run reached a 19 GB footprint on a 24 GB machine and slowed
-# 6x once the OS started swapping (2026-09-10). Cap the cache and drop it after
-# each chunk; the model's own weights are ~4 GB.
+# MLX's Metal buffer cache grows every chunk until the OS swaps; cap it and
+# clear it after each chunk.
 CACHE_LIMIT = 1 << 30
 
-# The JSON protocol owns real stdout; anything the model library prints
-# (download progress, warnings) is diverted to stderr.
+# The JSON protocol owns real stdout; library output goes to stderr.
 PROTOCOL = sys.stdout
 sys.stdout = sys.stderr
 

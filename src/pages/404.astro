@@ -1,8 +1,5 @@
 ---
-// The HTML 404. Non-browser clients never see this page: a request without
-// `Sec-Fetch-Mode: navigate` reaches the Worker, which answers the same 404
-// with a short markdown body instead (worker/not-found.ts). The recovery links
-// below are the human half of that same idea.
+// Browsers only: non-navigate requests get a markdown 404 from worker/not-found.ts.
 import Layout from "../layouts/Layout.astro";
 
 const recovery = [

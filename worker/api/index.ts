@@ -1,11 +1,5 @@
-// The public HTTP API. The Worker claims /api/* and /openapi.json ahead of
-// static assets (run_worker_first in wrangler.jsonc) for two reasons: so that
-// every failure under /api is the JSON `Error` envelope rather than the HTML
-// 404 page an agent cannot parse, and so the OpenAPI document can name the
-// host that actually answered.
-//
-// Data comes from the site's own build artifacts (see store.ts) — there is no
-// second copy of the profile anywhere in this directory.
+// The public HTTP API. The Worker claims /api/* and /openapi.json ahead of static assets
+// (run_worker_first) so failures are JSON and the spec can name the host that answered.
 
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
@@ -26,8 +20,7 @@ import { ALLOWED_METHODS, API_PATHS, matchApiPath, READ_METHODS } from "./routes
 import { loadDataset, loadPostMarkdown, loadPosts } from "./store";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
-// Read responses are pure functions of the deployed build, so they are safe to
-// cache; five minutes keeps a redeploy visible quickly.
+// Reads depend only on the deployed build; five minutes keeps a redeploy visible quickly.
 const READ_CACHE = "public, max-age=300";
 const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 
@@ -52,28 +45,20 @@ const datasetUnavailable = () =>
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
-/**
- * The origin to name in a self-describing document. The scheme is forced to
- * https for any real host: Cloudflare redirects http at the edge, so
- * advertising it would hand clients a URL that only ever redirects. Local dev
- * keeps whatever scheme it was reached on.
- */
+/** Forces https for real hosts, since Cloudflare redirects http at the edge. */
 export function publicOrigin(requestUrl: string): string {
   const url = new URL(requestUrl);
   if (!LOCAL_HOSTS.has(url.hostname)) url.protocol = "https:";
   return url.origin;
 }
 
-// The methods a client may use, including the two every endpoint answers.
+// Adds HEAD for GET endpoints and OPTIONS for all.
 function allowHeader(path: string): string {
   const declared = ALLOWED_METHODS[path] ?? ["GET"];
   return [...declared, ...(declared.includes("GET") ? ["HEAD"] : []), "OPTIONS"].join(", ");
 }
 
-/**
- * A successful contact response, carrying what is left of the daily allowance.
- * Never cached: the body confirms a side effect and the headers are a snapshot.
- */
+/** Never cached: the body confirms a side effect and the headers are a snapshot. */
 function contactResponse(
   status: 200 | 202,
   body: { status: string; message: string },
@@ -100,8 +85,7 @@ api.use(
     origin: "*",
     allowMethods: ["GET", "HEAD", "POST", "OPTIONS"],
     allowHeaders: ["Content-Type"],
-    // Without this a browser-side agent can read the body but none of the
-    // signalling headers, which is exactly the half it needs to self-throttle.
+    // A browser-side agent needs the signalling headers to self-throttle.
     exposeHeaders: [...RATE_LIMIT_EXPOSED_HEADERS, ...META_EXPOSED_HEADERS],
     maxAge: 86400
   })
@@ -109,8 +93,6 @@ api.use(
 
 api.use("*", apiHeaders({ enforceReads: true }));
 
-// The dataset-backed reads share one shape: load the build artifact, answer
-// 503 when it is missing, project the slice the endpoint documents.
 const datasetRoute = <T>(project: (data: Dataset) => T) => {
   return async (c: Context<{ Bindings: Env }>) => {
     const data = await loadDataset(c.env.ASSETS);
@@ -150,24 +132,20 @@ api.on(
 
 api.on(READ_METHODS, "/posts", async c => {
   const rawLimit = c.req.query("limit");
-  let limit: number | undefined;
-  if (rawLimit !== undefined) {
-    const parsed = Number(rawLimit);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > POSTS_LIMIT_MAX) {
-      return apiError({
-        status: 400,
-        code: "invalid_request",
-        message: "The limit query parameter is out of range.",
-        hint: `Pass an integer between 1 and ${POSTS_LIMIT_MAX}, or omit limit to get every post.`,
-        details: [
-          {
-            field: "limit",
-            issue: `must be an integer between 1 and ${POSTS_LIMIT_MAX}`
-          }
-        ]
-      });
-    }
-    limit = parsed;
+  const limit = rawLimit === undefined ? undefined : Number(rawLimit);
+  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > POSTS_LIMIT_MAX)) {
+    return apiError({
+      status: 400,
+      code: "invalid_request",
+      message: "The limit query parameter is out of range.",
+      hint: `Pass an integer between 1 and ${POSTS_LIMIT_MAX}, or omit limit to get every post.`,
+      details: [
+        {
+          field: "limit",
+          issue: `must be an integer between 1 and ${POSTS_LIMIT_MAX}`
+        }
+      ]
+    });
   }
 
   const query = c.req.query("q")?.trim().toLowerCase();
@@ -198,8 +176,7 @@ api.on(READ_METHODS, "/posts/:slug", async c => {
   return json({ ...post, markdown });
 });
 
-// Version and deprecation metadata. Served under both prefixes, so a client
-// that knows no version yet can still ask which ones exist.
+// Served under both prefixes so a client that knows no version yet can discover one.
 api.on(READ_METHODS, "/versions", c => json(buildVersionsDocument(publicOrigin(c.req.url))));
 
 api.on(READ_METHODS, "/openapi.json", c => specResponse(c.req.url));
@@ -215,8 +192,7 @@ api.post("/contact", async c => {
     });
   }
 
-  // Content-Length is the cheap check, but it is advisory — a chunked or
-  // header-less request still has to be measured after reading.
+  // Content-Length is advisory: chunked or header-less bodies are measured after reading.
   const tooLarge = (bytes: number) =>
     bytes > MAX_CONTACT_BODY_BYTES
       ? apiError({
@@ -261,8 +237,7 @@ api.post("/contact", async c => {
   const clientIp = c.req.header("CF-Connecting-IP") ?? "unknown";
 
   if (parsed.dryRun) {
-    // A dry run spends nothing, which is exactly why it has to report the
-    // allowance honestly: it is how a client sizes a real send.
+    // Reports the real allowance: it is how a client sizes a real send.
     const usage = await limiter.contactUsage(clientIp);
     return contactResponse(
       200,
@@ -285,8 +260,7 @@ api.post("/contact", async c => {
     });
   }
 
-  // A slot is only spent once the request is known to be well-formed and
-  // deliverable, so a confused caller retrying a bad body is not locked out.
+  // Spend a slot only after validation, so retrying a bad body cannot lock a caller out.
   const slot = await limiter.takeContactSlot(clientIp);
   if (!slot.allowed) {
     return apiError({
@@ -329,9 +303,7 @@ api.post("/contact", async c => {
   );
 });
 
-// Anything else under /api: a known path reached with the wrong method is a
-// 405 that names the methods that do work; everything else is a 404 that
-// points at the spec. Neither ever falls through to the HTML 404 page.
+// Known path, wrong method: 405 with Allow. Anything else: 404 pointing at the spec.
 api.all("*", c => {
   const pathname = new URL(c.req.url).pathname;
   const known = matchApiPath(pathname);
@@ -357,8 +329,7 @@ export function specResponse(requestUrl: string): Response {
   return json(buildOpenApiDocument(publicOrigin(requestUrl)));
 }
 
-// /openapi.json is the canonical, root-level spec location agents probe first;
-// it lives outside /api so it gets its own tiny app to mount.
+// /openapi.json lives outside /api, so it gets its own app.
 export const specRoutes = new Hono<{ Bindings: Env }>();
 
 specRoutes.use(
@@ -371,8 +342,7 @@ specRoutes.use(
   })
 );
 
-// The document describing the API must stay reachable even for a client that
-// has just been throttled, so the ceiling is advertised here but not enforced.
+// A throttled client must still reach the spec, so reads are advertised but not enforced.
 specRoutes.use("*", apiHeaders({ enforceReads: false }));
 
 specRoutes.on(READ_METHODS, "/", c => specResponse(c.req.url));

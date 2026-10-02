@@ -1,5 +1,4 @@
-// OpenAI-compatible tool call: `id` is required downstream (the tool-result
-// message must reference it), so one is synthesized when a provider omits it.
+// `id` is synthesized when missing: the tool-result message must reference it.
 export type ToolCall = { id: string; name: string; arguments: string };
 
 export type Usage = { promptTokens: number; completionTokens: number };
@@ -57,7 +56,7 @@ export async function consumeSse(
       return;
     }
 
-    // Usage arrives on the final event (both API shapes use snake_case).
+    // Usage arrives on the final event.
     if (
       typeof data.usage?.prompt_tokens === "number" &&
       typeof data.usage?.completion_tokens === "number"
@@ -91,12 +90,12 @@ export async function consumeSse(
         function?: { name?: string; arguments?: unknown };
       }[]) {
         const name = tc.name ?? tc.function?.name ?? "";
-        if (name)
-          whole.push({
-            id: toolCallId(tc.id, whole.length),
-            name,
-            arguments: asArgString(tc.arguments ?? tc.function?.arguments)
-          });
+        if (!name) continue;
+        whole.push({
+          id: toolCallId(tc.id, whole.length),
+          name,
+          arguments: asArgString(tc.arguments ?? tc.function?.arguments)
+        });
       }
     }
   };

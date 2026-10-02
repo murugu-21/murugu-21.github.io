@@ -1,28 +1,12 @@
 ---
-// Notion-style table of contents for a post: a rail of thin bars pinned to
-// the viewport's right edge, one per h2/h3, that expands into the heading
-// list on hover or keyboard focus. The section being read is highlighted;
-// the script at the bottom keeps that in step with scrolling.
+// Notion-style rail of bars on the right edge, one per h2/h3, expanding into
+// the heading list on hover or keyboard focus. Mounted after `</article>` so
+// post.css rules don't apply, the article's links come first in tab order,
+// and the medium-zoom overlay still paints over it.
 //
-// Mounted by src/pages/blog/[...slug].astro AFTER `</article>`, on purpose:
-// outside `.blog-post` none of post.css's link / list rules apply, keyboard
-// users reach the article's own links before the rail's, and with no
-// z-index of its own the medium-zoom overlay (appended to <body> later in
-// the DOM, also unlayered) still paints over it.
-//
-// Where it shows — see the media queries below:
-// - `lg` (64rem) and up, on devices with a hover pointer: the collapsed rail.
-//   The expanded panel overlays the article column's right margin at these
-//   widths; it is a transient hover surface, so that is by design.
-// - Without a hover pointer (an iPad in landscape) the first tap would follow
-//   the link before the labels were ever seen, so the rail only appears
-//   there once the panel fits beside the column with no overlap, and stays
-//   expanded. The article wrapper is 42rem wide with its padding inside
-//   (BaseLayout: max-w-2xl px-5), so the prose ends 19.75rem right of
-//   centre; the panel (20rem) plus the rail's padding (2.25rem) needs
-//   22.25rem from the right edge; no overlap from 2 × (19.75 + 22.25) =
-//   84rem, and 87rem leaves a 1.5rem gap.
-// - Below that: nothing. Phones get the article, as on Notion.
+// Hover pointers get the collapsed rail from 64rem. Touch devices only get it,
+// always expanded, from 87rem, where the panel clears the 42rem column:
+// 2 × (19.75rem prose half + 22.25rem panel) = 84rem, plus a 1.5rem gap.
 import type { MarkdownHeading } from "astro";
 import { tocEntries } from "../utils/toc";
 
@@ -39,9 +23,8 @@ const entries = tocEntries(headings);
     <ol>
       {entries.map(entry => (
         <li class:list={[{ sub: entry.depth === 3 }]}>
-          {/* The label stays in the accessibility tree while collapsed
-                (clipped, not display:none), so each link keeps its name and
-                the bar is decoration. */}
+          {/* Collapsed labels are clipped, not display:none, so links keep
+                their accessible name. */}
           <a href={`#${entry.slug}`}>
             <span class="bar" aria-hidden="true" />
             <span class="label">{entry.text}</span>
@@ -149,24 +132,18 @@ const entries = tocEntries(headings);
       right: 0;
       top: 50%;
       transform: translateY(-50%);
-      /* The padding is the hover target around 2px bars — entering this
-         strip expands the rail — and keeps the panel, a descendant, under
-         the pointer as it grows leftward. Clear of the chat launcher's
-         corner (bottom 20px + 56px) via the list's max-height above. */
+      /* The padding is the hover target around the 2px bars and keeps the
+         growing panel under the pointer. */
       padding: 1rem 0.75rem 1rem 1.5rem;
     }
   }
 
   /* ---- The collapsed rail: bars only, while neither hovered nor focused ---
-     `:has(:focus-visible)`, not `:focus-within`: a mouse click leaves the
-     clicked link focused, and focus-within would then hold the panel open
-     over the prose until the reader clicked elsewhere. Keyboard focus is
-     focus-visible, so tabbing in still expands it. */
+     `:has(:focus-visible)`, not `:focus-within`: a mouse click would leave
+     the panel held open over the prose. */
 
-  /* Flat, not nested under one `.toc:not(...)` rule: Astro leaves nested
-     selectors unscoped, which drops these to the same specificity as the
-     panel rules above and makes the collapsed state depend on source order.
-     Scoped flat selectors outrank the panel rules outright. */
+  /* Flat, not nested: Astro leaves nested selectors unscoped, which would
+     drop them to the panel rules' specificity. */
   @media (hover: hover) {
     .toc:not(:hover, :has(:focus-visible)) ol {
       background: transparent;
@@ -174,8 +151,7 @@ const entries = tocEntries(headings);
       backdrop-filter: none;
       box-shadow: none;
       padding: 0;
-      /* No scrollbar beside the bars; a post with more headings than the
-         panel's max-height holds lets its bars run past it instead. */
+      /* No scrollbar beside the bars; extra bars run past max-height. */
       overflow: visible;
     }
     .toc:not(:hover, :has(:focus-visible)) a {
@@ -208,16 +184,10 @@ const entries = tocEntries(headings);
 </style>
 
 <script>
-  // Scroll spy. Every scroll re-measures the headings, at most once per
-  // frame, and the pure picker (../utils/toc) decides which is active; a
-  // resize does the same, since reflow moves headings without a scroll.
-  // Not an IntersectionObserver: with the root's top edge pulled down to the
-  // reading line, an observer only fires when a heading's BOTTOM leaves the
-  // root, so after a hash jump parked a heading on the line its top had
-  // crossed but nothing fired, and the previous section stayed lit until the
-  // reader scrolled another heading-height. A dozen getBoundingClientRect
-  // calls per scrolled frame is cheap. Listeners live as long as the page:
-  // the rail is server-rendered once per static page, nothing unmounts it.
+  // Scroll spy: re-measure headings once per frame on scroll and resize. Not
+  // an IntersectionObserver: it fires on a heading's bottom edge, so after a
+  // hash jump parked a heading on the line nothing fired. Listeners live as
+  // long as the page.
   import { TOC_LINE_SLACK, activeIndex } from "../utils/toc";
 
   const nav = document.querySelector<HTMLElement>("nav.toc");
@@ -227,9 +197,7 @@ const entries = tocEntries(headings);
       return heading ? [{ link, heading }] : [];
     });
 
-    // The reading line: a hash jump parks its heading at the scroll margin
-    // post.css gives it (clearing the pinned read-aloud bar), so read that
-    // margin from the live heading rather than restate it here.
+    // Read the scroll margin from the live heading; post.css owns the value.
     const scrollMargin = pairs.length
       ? parseFloat(getComputedStyle(pairs[0].heading).scrollMarginTop) || 0
       : 0;
@@ -253,9 +221,7 @@ const entries = tocEntries(headings);
       });
     };
 
-    // Escape collapses a panel opened from the keyboard, the way leaving with
-    // the pointer collapses a hovered one; the link keeps working from the
-    // article's tab position afterwards.
+    // Escape collapses a keyboard-opened panel.
     nav.addEventListener("keydown", event => {
       if (event.key === "Escape" && nav.contains(document.activeElement)) {
         (document.activeElement as HTMLElement).blur();

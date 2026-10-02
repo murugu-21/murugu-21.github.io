@@ -1,5 +1,4 @@
-// shadcn/ui button (new-york, Tailwind v4), vendored — relative imports
-// instead of the CLI's "@/" alias; unused variants trimmed.
+// shadcn/ui button (new-york, Tailwind v4), vendored; unused variants trimmed.
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -7,9 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-  // `cursor-pointer` is deliberate: Tailwind v4 preflight dropped v3's
-  // `button { cursor: pointer }`, so the hand cursor has to be opted into here
-  // — this primitive backs every island button in both apps.
+  // cursor-pointer: Tailwind v4 preflight no longer sets it on buttons.
   "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 shrink-0 [&_svg]:shrink-0 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
   {
     variants: {

@@ -1,5 +1,5 @@
-// Renders each published blog post to MP3 in the blog's designed voice and
-// uploads it, with per-paragraph timings, to R2. Runs on the author's laptop:
+// Renders each published post to MP3 with per-paragraph timings and uploads
+// both to R2. Runs locally:
 //
 //   bun run build                # the built site (scripts/site-dir.ts) must be current
 //   bun run audio                # every post whose spoken text changed
@@ -10,11 +10,9 @@
 //   bun run audio --keep      # leave the temp dir behind for inspection
 //   bun run audio --upload-voice   # push .voice/* to R2 once
 //
-// Pipeline per post: built HTML → speechBlocks (same function the page uses) →
-// normalise → pack into ≤300-char sentence groups → Python worker (Breeze TTS 2
-// 8-bit via mlx-audio, plain clone of .voice/reference.wav) → per-chunk
-// atempo=1.08 → sample-accurate assembly with gaps → loudnorm → 64 kbps MP3 +
-// timing JSON → wrangler r2 object put under blog/breeze/.
+// Per post: built HTML → speechBlocks (same as the page) → ≤300-char sentence
+// chunks → synth.py (Breeze TTS 2 via mlx-audio) → per-chunk atempo →
+// sample-accurate assembly → loudnorm → 64 kbps MP3 + timing JSON → R2.
 import { spawnSync } from "node:child_process";
 import type { Buffer } from "node:buffer";
 import {
@@ -40,8 +38,7 @@ import { assemble, readWav, writeWav } from "./tts/wav.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const DIST = join(SITE_DIR, "blog");
-// Tuning knobs. The defaults are the settings the 2026-09-09 evaluation
-// settled on; the env overrides exist for A/B renders, not for production.
+// Env overrides are for A/B renders, not production.
 //   AUDIO_VOICE_DIR   directory holding reference.wav + reference.txt
 //   AUDIO_TEMPO       atempo factor, "1" disables the pass
 //   AUDIO_LOUDNORM    "0" disables the loudness pass
@@ -50,18 +47,15 @@ const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   : join(ROOT, ".voice");
 const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "synth.py");
-// Object keys are namespaced per voice generation so a new voice never
-// overwrites the previous one; worker/audio.ts and align-audio.ts read the
-// same prefix. The Fish clone of 2026-09-05 lives at blog/<slug>.*.
+// Namespaced per voice so a new one never overwrites the last; worker/audio.ts
+// and align-audio.ts read the same prefix.
 const KEY_PREFIX = "blog/breeze";
 const VOICE_KEY_PREFIX = "voice/breeze";
 const VOICE_ID = "breeze-tts-2-8bit/chennai-2026-09-09";
 const CHUNK_MAX = 300;
 const GAPS = { intra: 0.15, inter: 0.45 };
 const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
-// Whole-post chain, applied after assembly and before the MP3 encode: podcast
-// loudness only. Breeze output sits at about -60 dBFS between words, so the
-// denoise and gate the Fish clone needed are gone (measured 2026-09-09).
+// Loudness only: Breeze is ~-60 dBFS between words, so no denoise or gate.
 const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
 
 const args = process.argv.slice(2);
@@ -120,8 +114,7 @@ function extractBlocks(slug: string): string[] {
 
 // ---- synthesis worker -------------------------------------------------------
 
-// JSON lines from scripts/tts/synth.py: one after the model loads, one per
-// finished chunk, and a `done` marker at the end of each job.
+// synth.py replies: one after model load, one per chunk, `done` per job.
 interface ReadyMsg {
   loadSeconds: number;
 }
@@ -204,7 +197,7 @@ async function renderPost(
       throw new Error(`synthesis failed for ${errors.length} chunk(s):\n${errors.join("\n")}`);
     }
 
-    // Post-fx pass 1: tempo per chunk, so timings measured afterwards are exact.
+    // Tempo per chunk, so timings measured afterwards are exact.
     let sampleRate: number | undefined;
     const perBlock: { pcm: Buffer }[][] = chunkIds.map(ids =>
       ids.map(id => {
@@ -242,8 +235,7 @@ async function renderPost(
       throw new Error("block/timing count mismatch");
     }
 
-    // Post-fx pass 2: loudness-normalise the whole post, then encode MP3.
-    // Neither changes timing.
+    // Neither loudnorm nor the encode changes timing.
     const fullWav = join(tmp, `${slug}.wav`);
     const mp3 = join(tmp, `${slug}.mp3`);
     writeFileSync(fullWav, writeWav(sampleRate, pcm));

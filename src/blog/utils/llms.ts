@@ -1,9 +1,8 @@
 import { SITE_URL } from "../consts";
 import { excerpt, getPublishedPosts } from "./posts";
 
-// Newest-first "- [title](url): description" lines describing every published
-// post. Shared by /llms.txt (site-wide map) and /blog/llms.txt (blog-only map)
-// so the two can never drift.
+// Newest-first "- [title](url): description" lines, shared by /llms.txt and
+// /blog/llms.txt so the two can't drift.
 export async function postLines(): Promise<string[]> {
   const posts = (await getPublishedPosts()).reverse();
   const base = SITE_URL.replace(/\/$/, "");

@@ -1,13 +1,6 @@
 ---
-/**
- * Brand and UI glyphs from one SVG sprite (src/assets/icons.svg — see its
- * header for the Font Awesome / Simple Icons / Debezium attributions).
- * The sprite goes through the asset pipeline like an image: one hashed,
- * long-cached file that the browser fetches after the HTML instead of path
- * data repeated inline in every page. `fill="currentColor"` on the outer
- * <svg> cascades into the <use>d symbol, so every icon takes the surrounding
- * text color in both themes.
- */
+// Glyphs from one hashed SVG sprite (src/assets/icons.svg, attributions in its
+// header). fill="currentColor" cascades into the <use>d symbol.
 import sprite from "../assets/icons.svg?url";
 import spriteSource from "../assets/icons.svg?raw";
 
@@ -17,8 +10,7 @@ interface Props {
   size?: string;
 }
 const { name, class: cls, size = "1em" } = Astro.props;
-// Build-time guard: a typo in a data file fails the build instead of
-// shipping an empty icon.
+// A typo'd icon name fails the build instead of shipping an empty icon.
 if (!spriteSource.includes(`<symbol id="${name}"`)) {
   throw new Error(`Icon "${name}" not defined in src/assets/icons.svg`);
 }
