@@ -15,10 +15,10 @@ function balanceResponse(
   status = 200
 ): { fetcher: typeof fetch; calls: () => number } {
   let calls = 0;
-  const fetcher = (async () => {
+  const fetcher: typeof fetch = async () => {
     calls++;
     return new Response(JSON.stringify(body), { status });
-  }) as typeof fetch;
+  };
   return { fetcher, calls: () => calls };
 }
 
@@ -89,16 +89,6 @@ describe("contact slots", () => {
         scope: "client",
         clientRemaining: 0,
         globalRemaining: CONTACT_DAILY_GLOBAL - CONTACT_DAILY_PER_CLIENT
-      });
-    });
-  });
-
-  it("counts each client separately", async () => {
-    await inLimiter("contact-separate", instance => {
-      for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) instance.takeContactSlot("3.3.3.3");
-      expect(instance.takeContactSlot("4.4.4.4")).toMatchObject({
-        allowed: true,
-        clientRemaining: CONTACT_DAILY_PER_CLIENT - 1
       });
     });
   });

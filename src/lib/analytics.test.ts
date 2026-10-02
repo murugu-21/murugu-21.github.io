@@ -11,12 +11,21 @@ import {
 } from "./analytics";
 import { onFirstInteraction } from "./first-interaction";
 
+const fakeSdk = () => {
+  const sdk = {
+    capture: vi.fn(),
+    register: vi.fn(),
+    captureException: vi.fn(),
+    init: vi.fn(),
+    startSessionRecording: vi.fn()
+  };
+  return { sdk, ...sdk };
+};
+
 const withPostHog = () => {
-  const capture = vi.fn();
-  const register = vi.fn();
-  const captureException = vi.fn();
-  (globalThis as { posthog?: unknown }).posthog = { capture, register, captureException };
-  return { capture, register, captureException };
+  const fake = fakeSdk();
+  (globalThis as { posthog?: unknown }).posthog = fake.sdk;
+  return fake;
 };
 
 afterEach(() => {
@@ -27,22 +36,6 @@ afterEach(() => {
 const fresh = async () => {
   vi.resetModules();
   return await import("./analytics");
-};
-
-const fakeSdk = () => {
-  const capture = vi.fn();
-  const register = vi.fn();
-  const captureException = vi.fn();
-  const init = vi.fn();
-  const startSessionRecording = vi.fn();
-  return {
-    sdk: { capture, register, captureException, init, startSessionRecording },
-    capture,
-    register,
-    captureException,
-    init,
-    startSessionRecording
-  };
 };
 
 const doc = (html: string) => parseHTML(html).document as unknown as Document;

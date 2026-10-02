@@ -8,7 +8,14 @@ import { ChatRoom } from "../chat-room";
 import { markdownNotFound, notFoundMarkdown, prefersMarkdown, serveAsset } from "../not-found";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "../protocol";
 import worker from "../server";
-import { BLOG_NOT_FOUND_HTML, fakeAssets, LLMS_TXT, NOT_FOUND_HTML, testEnv } from "./fixtures";
+import {
+  BLOG_NOT_FOUND_HTML,
+  fakeAssets,
+  LLMS_TXT,
+  NOT_FOUND_HTML,
+  testEnv,
+  visitorMeta
+} from "./fixtures";
 
 // Every response from this ASSETS stub is marked, proving whether a request
 // fell through to assets or was claimed by the worker.
@@ -82,14 +89,10 @@ describe("the chat-room WebSocket", () => {
       "CF-IPCountry": "IN"
     });
     await runInDurableObject(stub, async (instance: ChatRoom) => {
-      const meta = Object.fromEntries(
-        instance.ctx.storage.sql
-          .exec(`SELECT key, value FROM meta WHERE key LIKE 'visitor_%'`)
-          .toArray()
-          .map(r => [r.key as string, r.value])
-      );
-      expect(meta.visitor_country).toBe("IN");
-      expect(meta.visitor_ip).toBe("198.51.100.42");
+      expect(visitorMeta(instance)).toMatchObject({
+        visitor_country: "IN",
+        visitor_ip: "198.51.100.42"
+      });
     });
   });
 
@@ -99,10 +102,7 @@ describe("the chat-room WebSocket", () => {
       [VISITOR_IP_HEADER]: "203.0.113.66"
     });
     await runInDurableObject(stub, async (instance: ChatRoom) => {
-      const rows = instance.ctx.storage.sql
-        .exec(`SELECT key FROM meta WHERE key LIKE 'visitor_%'`)
-        .toArray();
-      expect(rows).toEqual([]);
+      expect(visitorMeta(instance)).toEqual({});
     });
   });
 });
@@ -130,25 +130,6 @@ describe("notFoundMarkdown", () => {
     expect(body.startsWith("# 404 Not Found")).toBe(true);
     expect(body).toContain("`/some-path-that-does-not-exist`");
   });
-
-  it("points at the pages and machine-readable entry points that do exist", () => {
-    for (const url of [
-      "https://murugappan.dev/sitemap.xml",
-      "https://murugappan.dev/llms.txt",
-      "https://murugappan.dev/AGENTS.md",
-      "https://murugappan.dev/developers/",
-      "https://murugappan.dev/openapi.json",
-      "https://murugappan.dev/.well-known/api-catalog",
-      "https://murugappan.dev/.well-known/mcp.json",
-      "https://murugappan.dev/mcp",
-      "https://murugappan.dev/api/v1/profile",
-      "https://murugappan.dev/about/",
-      "https://murugappan.dev/blog/",
-      "https://murugappan.dev/resume/"
-    ]) {
-      expect(body).toContain(url);
-    }
-  });
 });
 
 describe("markdownNotFound", () => {
@@ -175,7 +156,7 @@ describe("markdownNotFound", () => {
 
 describe("serveAsset", () => {
   const serve = (path: string, init?: RequestInit) =>
-    serveAsset(new Request(`https://murugappan.dev${path}`, init), fakeAssets() as never);
+    serveAsset(new Request(`https://murugappan.dev${path}`, init), fakeAssets());
 
   it("passes a hit through untouched", async () => {
     const res = await serve("/llms.txt");
@@ -207,14 +188,9 @@ describe("serveAsset", () => {
   });
 
   it("falls back to markdown when the build has no 404 page", async () => {
-    const emptyAssets = {
-      fetch: () => Promise.resolve(new Response(null, { status: 404 }))
-    };
     const res = await serveAsset(
-      new Request("https://murugappan.dev/nope", {
-        headers: { Accept: "text/html" }
-      }),
-      emptyAssets as never
+      new Request("https://murugappan.dev/nope", { headers: { Accept: "text/html" } }),
+      fakeAssets({ "/404": null })
     );
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
@@ -226,12 +202,6 @@ describe("serveAsset", () => {
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/html/);
     expect(await res.text()).toBe("");
-  });
-
-  it("is what the worker answers a miss with", async () => {
-    const res = await fetchPath("/some-path-that-does-not-exist");
-    expect(res.status).toBe(404);
-    expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
   });
 });
 

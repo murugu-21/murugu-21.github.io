@@ -4,6 +4,8 @@
 import { env } from "cloudflare:test";
 
 import { buildDataset, type DatasetInput } from "../api/dataset";
+import type { ChatRoom } from "../chat-room";
+import type { EmailLike } from "../email";
 
 export const DATASET_INPUT: DatasetInput = {
   greeting: {
@@ -135,8 +137,26 @@ export type TestEnvOptions = {
   /** null unsets the binding. */
   inbox?: string | null;
   /** null unsets the binding. */
-  email?: { send(msg: unknown): Promise<unknown> } | null;
+  email?: EmailLike | null;
 };
+
+type SentEmail = Parameters<EmailLike["send"]>[0];
+
+/** An EMAIL binding that records every message instead of sending it. */
+export function recordingEmail(): { email: EmailLike; sent: SentEmail[] } {
+  const sent: SentEmail[] = [];
+  return { email: { send: async msg => void sent.push(msg) }, sent };
+}
+
+/** The visitor_* rows a ChatRoom keeps in its meta table. */
+export function visitorMeta(instance: ChatRoom): Record<string, unknown> {
+  return Object.fromEntries(
+    instance.ctx.storage.sql
+      .exec(`SELECT key, value FROM meta WHERE key LIKE 'visitor_%'`)
+      .toArray()
+      .map(r => [String(r.key), r.value])
+  );
+}
 
 /** The pool's env plus the bindings the test wrangler config leaves out. */
 export function testEnv(options: TestEnvOptions = {}): Env {

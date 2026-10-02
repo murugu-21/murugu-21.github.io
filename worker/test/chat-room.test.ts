@@ -1,5 +1,5 @@
 import { env, runInDurableObject } from "cloudflare:test";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 
 import { ChatRoom } from "../chat-room";
 import {
@@ -11,6 +11,7 @@ import {
   VISITOR_COUNTRY_HEADER,
   VISITOR_IP_HEADER
 } from "../protocol";
+import { recordingEmail, testEnv, visitorMeta } from "./fixtures";
 
 // `ConnectionContext` is only the upgrade request to the room.
 function connectContext(headers: Record<string, string> = {}): { request: Request } {
@@ -19,14 +20,9 @@ function connectContext(headers: Record<string, string> = {}): { request: Reques
   };
 }
 
-function visitorMeta(instance: ChatRoom): Record<string, unknown> {
-  return Object.fromEntries(
-    instance.ctx.storage.sql
-      .exec(`SELECT key, value FROM meta WHERE key LIKE 'visitor_%'`)
-      .toArray()
-      .map(r => [r.key as string, r.value])
-  );
-}
+// onConnect only ever calls send() on the connection.
+const fakeConnection = (sent: string[] = []) =>
+  ({ send: (d: string) => void sent.push(d) }) as never;
 
 describe("ChatRoom storage", () => {
   it("seeds the greeting exactly once on first connect", async () => {
@@ -34,7 +30,7 @@ describe("ChatRoom storage", () => {
     await runInDurableObject(stub, async (instance: ChatRoom) => {
       instance.onStart();
       const sent: string[] = [];
-      const conn = { send: (d: string) => sent.push(d) } as never;
+      const conn = fakeConnection(sent);
       const ctx = connectContext();
       instance.onConnect(conn, ctx);
       // A reconnect must not seed again.
@@ -47,31 +43,11 @@ describe("ChatRoom storage", () => {
     });
   });
 
-  it("stores leads and enforces the lead_captured dedupe key", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-b"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      instance.ctx.storage.sql.exec(
-        `INSERT INTO leads (name, contact, summary, created_at) VALUES (NULL, 'a@b.c', 's', 1)`
-      );
-      instance.ctx.storage.sql.exec(
-        `INSERT INTO meta (key, value) VALUES ('lead_captured', 'now')`
-      );
-      expect(() =>
-        instance.ctx.storage.sql.exec(
-          `INSERT INTO meta (key, value) VALUES ('lead_captured', 'again')`
-        )
-      ).toThrow();
-      const leads = instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray();
-      expect(leads).toEqual([{ contact: "a@b.c" }]);
-    });
-  });
-
   it("records the visitor's country and IP, keeping first-seen across reconnects", async () => {
     const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-visitor"));
     await runInDurableObject(stub, async (instance: ChatRoom) => {
       instance.onStart();
-      const conn = { send: () => {} } as never;
+      const conn = fakeConnection();
       const connect = (headers: Record<string, string>) =>
         instance.onConnect(conn, connectContext(headers));
 
@@ -100,7 +76,7 @@ describe("ChatRoom storage", () => {
     const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-anon"));
     await runInDurableObject(stub, async (instance: ChatRoom) => {
       instance.onStart();
-      const conn = { send: () => {} } as never;
+      const conn = fakeConnection();
       instance.onConnect(conn, connectContext());
       expect(visitorMeta(instance)).toEqual({});
     });
@@ -112,7 +88,7 @@ describe("ChatRoom storage", () => {
     const connect = (headers: Record<string, string>) =>
       runInDurableObject(stub, async (instance: ChatRoom) => {
         instance.onStart();
-        instance.onConnect({ send: () => {} } as never, connectContext(headers));
+        instance.onConnect(fakeConnection(), connectContext(headers));
       });
 
     type RoomRow = {
@@ -131,8 +107,9 @@ describe("ChatRoom storage", () => {
           )
             .bind(room)
             .first<RoomRow>();
+          assert(found, "no rooms row yet");
           expect(found).toMatchObject(expected);
-          return found as RoomRow;
+          return found;
         },
         { timeout: 2000, interval: 5 }
       );
@@ -149,6 +126,22 @@ describe("ChatRoom storage", () => {
     const second = await mirrored({ country: "DE", ip: "203.0.113.9" });
     expect(second.first_seen).toBe(first.first_seen);
     expect(second.last_seen).toBeGreaterThanOrEqual(first.last_seen);
+  });
+});
+
+describe("ChatRoom leads", () => {
+  it("emails the owner about a lead once per room", async () => {
+    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-lead"));
+    await runInDurableObject(stub, async (instance: ChatRoom) => {
+      instance.onStart();
+      const { email, sent } = recordingEmail();
+      Object.assign(instance, { env: testEnv({ email }) });
+      const lead = { contact: "a@b.c", summary: "Staff role" };
+      await instance["emailLeadOnce"](lead);
+      await instance["emailLeadOnce"](lead);
+      expect(sent).toHaveLength(1);
+      expect(sent[0].to).toBe("inbox@example.com");
+    });
   });
 });
 

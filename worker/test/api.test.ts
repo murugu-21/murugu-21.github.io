@@ -4,7 +4,7 @@ import { DOCS_URL } from "../api/errors";
 import { API_PATHS, CURRENT_API_VERSION } from "../api/routes";
 import { API_VERSION } from "../api/versioning";
 import worker from "../server";
-import { POST_MARKDOWN, testEnv, type TestEnvOptions } from "./fixtures";
+import { POST_MARKDOWN, recordingEmail, testEnv, type TestEnvOptions } from "./fixtures";
 
 async function get(path: string, options?: TestEnvOptions): Promise<Response> {
   return await worker.fetch(new Request(`https://murugappan.dev${path}`), testEnv(options));
@@ -318,7 +318,7 @@ describe("POST /api/contact", () => {
   };
 
   it("accepts a valid message and emails it to the inbox", async () => {
-    const sent: Array<{ to: string; subject: string; text: string }> = [];
+    const { email, sent } = recordingEmail();
     const res = await post(
       "/api/contact",
       {
@@ -329,7 +329,7 @@ describe("POST /api/contact", () => {
       },
       {
         ip: "203.0.113.10",
-        env: { email: { send: async msg => void sent.push(msg as (typeof sent)[number]) } }
+        env: { email }
       }
     );
     expect(res.status).toBe(202);
@@ -407,11 +407,8 @@ describe("POST /api/contact with dryRun", () => {
   };
 
   it("validates without sending an email", async () => {
-    const sent: unknown[] = [];
-    const res = await post("/api/contact", body, {
-      ip: "198.51.100.20",
-      env: { email: { send: async msg => void sent.push(msg) } }
-    });
+    const { email, sent } = recordingEmail();
+    const res = await post("/api/contact", body, { ip: "198.51.100.20", env: { email } });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       status: "validated",

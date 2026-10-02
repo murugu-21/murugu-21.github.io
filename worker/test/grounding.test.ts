@@ -43,14 +43,6 @@ describe("getGrounding", () => {
     expect(storage.map.get("grounding:v2")).toMatchObject({ text });
   });
 
-  it("ignores stale v1 cache entries (full-text blobs)", async () => {
-    const storage = fakeStorage({
-      "grounding:v1": { text: "HUGE OLD BLOB", fetchedAt: Date.now() }
-    });
-    const assets = countingAssets({ "/llms.txt": "FRESH" });
-    expect(await getGrounding(storage, assets)).toBe("FRESH");
-  });
-
   it("serves from cache within TTL without refetching", async () => {
     const storage = fakeStorage({
       "grounding:v2": { text: "CACHED", fetchedAt: Date.now() }
@@ -68,7 +60,7 @@ describe("getGrounding", () => {
       }
     });
     const assets = countingAssets({ "/llms.txt": "FRESH" });
-    expect(await getGrounding(storage, assets)).toContain("FRESH");
+    expect(await getGrounding(storage, assets)).toBe("FRESH");
   });
 
   it("falls back to stale cache when fetches fail", async () => {

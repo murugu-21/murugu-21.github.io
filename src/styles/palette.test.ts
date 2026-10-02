@@ -161,9 +161,8 @@ describe("blue-hour light palette", () => {
   });
 });
 
-// The night that follows: --background-image-page-dark runs `to left` from
-// rgb(30, 33, 48) at the right edge to rgb(20, 22, 34). The two stops are
-// close, so every guard runs on both rather than picking a deepest one.
+// The night gradient's stops are close in luminance, so every guard runs on
+// each stop rather than picking a deepest one.
 const night = (() => {
   const m = /--background-image-page-dark:\s*linear-gradient\(([^\n]+)\)/.exec(css);
   if (!m) throw new Error("no --background-image-page-dark gradient in global.css");

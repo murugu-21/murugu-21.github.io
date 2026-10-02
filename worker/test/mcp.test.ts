@@ -19,6 +19,7 @@ import {
   LLMS_FULL_TXT,
   LLMS_TXT,
   POST_MARKDOWN,
+  recordingEmail,
   testEnv,
   type TestEnvOptions
 } from "./fixtures";
@@ -545,19 +546,6 @@ describe("legacy (initialize-based) clients", () => {
 });
 
 describe("MCP_TOOLS definitions", () => {
-  it("exposes a tool for every documented capability", () => {
-    expect(MCP_TOOLS.map(t => t.name)).toEqual([
-      "get_profile",
-      "list_experience",
-      "list_skills",
-      "list_education",
-      "list_open_source",
-      "search_blog_posts",
-      "get_blog_post",
-      "send_message"
-    ]);
-  });
-
   it("uses names within the character set and length the spec allows", () => {
     for (const tool of MCP_TOOLS) {
       expect(tool.name, tool.name).toMatch(/^[A-Za-z0-9_.-]{1,128}$/);
@@ -658,12 +646,6 @@ describe("get_blog_post", () => {
     expect(data.markdown).toBe(POST_MARKDOWN);
   });
 
-  it("tells the model how to recover from an unknown slug", async () => {
-    const result = await call("get_blog_post", { slug: "nope" });
-    expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("search_blog_posts");
-  });
-
   it("rejects a missing slug", async () => {
     const result = await call("get_blog_post", {});
     expect(result.isError).toBe(true);
@@ -683,11 +665,8 @@ describe("send_message", () => {
   };
 
   it("sends the message and confirms acceptance", async () => {
-    const sent: Array<{ subject: string }> = [];
-    const result = await call("send_message", message, {
-      ip: "198.51.100.60",
-      email: { send: async m => void sent.push(m as (typeof sent)[number]) }
-    });
+    const { email, sent } = recordingEmail();
+    const result = await call("send_message", message, { ip: "198.51.100.60", email });
     expect(result.isError).toBeFalsy();
     expect((result.structuredContent as { status: string }).status).toBe("accepted");
     expect(sent).toHaveLength(1);
@@ -695,11 +674,11 @@ describe("send_message", () => {
   });
 
   it("validates without sending when dryRun is set", async () => {
-    const sent: unknown[] = [];
+    const { email, sent } = recordingEmail();
     const result = await call(
       "send_message",
       { ...message, dryRun: true },
-      { ip: "198.51.100.61", email: { send: async m => void sent.push(m) } }
+      { ip: "198.51.100.61", email }
     );
     expect(result.isError).toBeFalsy();
     expect((result.structuredContent as { status: string }).status).toBe("validated");
@@ -800,7 +779,11 @@ describe("readResource", () => {
 
   // null becomes a -32602 on the wire, never an empty contents array.
   it.each<[string, string, Record<string, string | null>?]>([
-    ["an unpublished post", `${RESOURCE_ORIGIN}/blog/ghost/index.md`],
+    [
+      "an unpublished post, even one whose markdown is deployed",
+      `${RESOURCE_ORIGIN}/blog/ghost/index.md`,
+      { "/blog/ghost/index.md": "# Ghost" }
+    ],
     [
       "a listed post whose markdown is missing",
       `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`

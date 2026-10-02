@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { API_PATHS, VERSIONED_API_BASE } from "../api/routes";
 import { API_VERSION } from "../api/versioning";
@@ -79,8 +79,10 @@ describe("buildMcpManifest", () => {
   });
 
   it("keeps the description inside the schema's 100-character limit", () => {
-    expect((manifest.description as string).length).toBeGreaterThan(0);
-    expect((manifest.description as string).length).toBeLessThanOrEqual(100);
+    const { description } = manifest;
+    assert(typeof description === "string", "the manifest has no description");
+    expect(description.length).toBeGreaterThan(0);
+    expect(description.length).toBeLessThanOrEqual(100);
   });
 
   it("advertises Streamable HTTP as a remote, at the real endpoint", () => {

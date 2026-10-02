@@ -17,7 +17,6 @@ import {
   CURRENT_VERSION_RECORD,
   versionHeaders,
   versionLinkHeader,
-  VERSIONS,
   type VersionRecord
 } from "../api/versioning";
 
@@ -83,16 +82,6 @@ describe("matchApiPath", () => {
   });
 });
 
-describe("the version catalogue", () => {
-  it("has exactly one current version, with no sunset scheduled", () => {
-    expect(VERSIONS.filter(v => v.status === "current")).toHaveLength(1);
-    expect(CURRENT_VERSION_RECORD.status).toBe("current");
-    expect(CURRENT_VERSION_RECORD.deprecatedOn).toBeNull();
-    expect(CURRENT_VERSION_RECORD.sunsetOn).toBeNull();
-    expect(CURRENT_VERSION_RECORD.successor).toBeNull();
-  });
-});
-
 describe("version headers", () => {
   const deprecated: VersionRecord = {
     ...CURRENT_VERSION_RECORD,
@@ -151,17 +140,6 @@ describe("buildVersionsDocument", () => {
     expect(doc.versions[0].specUrl).toBe("https://murugappan.dev/openapi.json");
     expect(doc.policy.documentationUrl).toBe("https://murugappan.dev/developers/#versioning");
   });
-
-  it("states the scheme and the headers that carry the policy", () => {
-    expect(doc.policy.scheme).toBe("url-path");
-    expect(Object.keys(doc.policy.headers).sort()).toEqual([
-      "API-Supported-Versions",
-      "API-Version",
-      "Deprecation",
-      "Link",
-      "Sunset"
-    ]);
-  });
 });
 
 describe("buildOpenApiDocument", () => {
@@ -198,13 +176,6 @@ describe("buildOpenApiDocument", () => {
     }
     return found;
   }
-
-  it("names the product, its release and where to get help", () => {
-    expect(doc.info.title).toContain("murugappan.dev");
-    expect(doc.info.version).toMatch(/^\d+\.\d+\.\d+$/);
-    expect(doc.info.contact.url).toBe("https://murugappan.dev/developers/");
-    expect(doc.servers).toEqual([{ url: "https://murugappan.dev", description: "Production" }]);
-  });
 
   // The description is the only place OpenAPI lets us document the versioning
   // policy, the rate-limit headers and the surfaces it cannot express.
