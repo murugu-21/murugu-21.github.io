@@ -75,23 +75,20 @@ const jsonLd = {
         {formatDate(post.data.date)}
         {` • ${formatReadingTime(timeToRead(post.body))}`}
       </p>
-      {
-        /* The post's tags, each linking into the index filtered by that tag
+      {/* The post's tags, each linking into the index filtered by that tag
            (/blog/?tag=…, the same URL the index's own chips write — the index
            script checks the matching chip on load). Chips match the index's
            per-post chips (Post.astro) but read as links: `no-underline` beats
            `.blog-post a`'s restated UA underline, while the shared navy /
-           blue-light `a` colours and the amber hover stay. */
-      }
+           blue-light `a` colours and the amber hover stay. */}
       <div class="mb-4 flex flex-row flex-wrap gap-[10px]">
-        {
-          post.data.tags.map(tag => (
-            <a
-              href={tagPath(tag)}
-              aria-label={`All posts tagged ${tag}`}
-              class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
-            >
-              {/* The label sits in its own inline-block span so the selection
+        {post.data.tags.map(tag => (
+          <a
+            href={tagPath(tag)}
+            aria-label={`All posts tagged ${tag}`}
+            class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
+          >
+            {/* The label sits in its own inline-block span so the selection
                   highlight (and therefore a copy) hugs the text. Painted straight
                   on the chip, the selection covers its padding and runs to the
                   border; and each chip being a flex item (a block), a selection
@@ -99,10 +96,9 @@ const jsonLd = {
                   marker one space wide after the text, out into the padding.
                   An atomic inline keeps the text off the chip's own line box,
                   so no marker is painted there. */}
-              <span class="inline-block">{tag}</span>
-            </a>
-          ))
-        }
+            <span class="inline-block">{tag}</span>
+          </a>
+        ))}
       </div>
     </header>
     <!-- Read-aloud controls: a shadcn island (src/blog/components). Ships a
@@ -127,19 +123,15 @@ const jsonLd = {
          carry scroll-margin-top in post.css so nothing lands under the 12+58px
          the pinned bar occupies. -->
     <div class="listen-sentinel h-px -mb-px" aria-hidden="true"></div>
-    <div
-      class="listen-island ui-island mb-4 pt-3 [&.listening]:sticky [&.listening]:top-0 [&.listening]:z-30 [&.listening.pinned]:bg-nav-scrolled [&.listening.pinned]:backdrop-blur-[15px] dark:[&.listening.pinned]:bg-nav-scrolled-dark"
-    >
-      {
-        /* client:interaction (the chat island's directive, src/directives): the
+    <div class="listen-island ui-island mb-4 pt-3 [&.listening]:sticky [&.listening]:top-0 [&.listening]:z-30 [&.listening.pinned]:bg-nav-scrolled [&.listening.pinned]:backdrop-blur-[15px] dark:[&.listening.pinned]:bg-nav-scrolled-dark">
+      {/* client:interaction (the chat island's directive, src/directives): the
           controls ship disabled until hydrated anyway, so React + Radix
           (~100 KB) load on the first pointer/touch/key/wheel input instead of
           during page load. client:idle was not enough: on a fast device idle
           fires before first paint, so Lighthouse still charged the bundle to
           FCP/LCP (post pages 96-97 vs the index's 100). Trade-off: a tap on
           Play as the very first touch lands on the disabled button and needs
-          a second tap ~300 ms later. */
-      }
+          a second tap ~300 ms later. */}
       <ListenControls client:interaction slug={post.id} />
     </div>
     <section itemprop="articleBody">
@@ -165,32 +157,28 @@ const jsonLd = {
       <!-- The old global `ul li, ol li { padding-left: 0; margin-bottom:
            calc(2rem / 2) }`, which preflight zeroes. -->
       <li class="mb-4 pl-0">
-        {
-          previous && (
-            // The old global `a { color: var(--color-primary) }` + the UA
-            // underline preflight drops; `a:hover, a:focus` removed it.
-            <a
-              href={postPath(previous.id)}
-              rel="prev"
-              class="text-navy underline hover:no-underline focus:no-underline dark:text-blue-light"
-            >
-              ← {previous.data.title}
-            </a>
-          )
-        }
+        {previous && (
+          // The old global `a { color: var(--color-primary) }` + the UA
+          // underline preflight drops; `a:hover, a:focus` removed it.
+          <a
+            href={postPath(previous.id)}
+            rel="prev"
+            class="text-navy underline hover:no-underline focus:no-underline dark:text-blue-light"
+          >
+            ← {previous.data.title}
+          </a>
+        )}
       </li>
       <li class="mb-4 pl-0">
-        {
-          next && (
-            <a
-              href={postPath(next.id)}
-              rel="next"
-              class="text-navy underline hover:no-underline focus:no-underline dark:text-blue-light"
-            >
-              {next.data.title} →
-            </a>
-          )
-        }
+        {next && (
+          <a
+            href={postPath(next.id)}
+            rel="next"
+            class="text-navy underline hover:no-underline focus:no-underline dark:text-blue-light"
+          >
+            {next.data.title} →
+          </a>
+        )}
       </li>
     </ul>
   </nav>

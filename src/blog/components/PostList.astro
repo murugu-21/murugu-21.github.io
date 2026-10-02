@@ -34,14 +34,16 @@ const tags: TagCount[] = [...totals]
 <div data-post-list>
   <SearchBar />
   <TagBar tags={tags} />
-  {
-    /* `ul, ol { margin: 1em 0 2rem; padding: 0; list-style: none }` — the 2rem
-      bottom came from style.css, the 1em top from the UA sheet. */
-  }
+  {/* `ul, ol { margin: 1em 0 2rem; padding: 0; list-style: none }` — the 2rem
+      bottom came from style.css, the 1em top from the UA sheet. */}
   <ol class="mt-4 mb-8 list-none p-0">
-    {posts.map(post => <Post post={post} />)}
+    {posts.map(post => (
+      <Post post={post} />
+    ))}
   </ol>
-  <p class="post-list-item h2 my-8 leading-relaxed" data-empty hidden>No matching article found</p>
+  <p class="post-list-item h2 my-8 leading-relaxed" data-empty hidden>
+    No matching article found
+  </p>
 </div>
 
 <script>

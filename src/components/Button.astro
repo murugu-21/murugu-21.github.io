@@ -17,5 +17,7 @@ const { text, href, download, newTab, event } = Astro.props;
   download={download}
   target={newTab ? "_blank" : undefined}
   rel={newTab ? "noopener noreferrer" : undefined}
-  data-ph-event={event}>{text}</a
+  data-ph-event={event}
 >
+  {text}
+</a>

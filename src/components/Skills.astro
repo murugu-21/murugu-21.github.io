@@ -6,11 +6,9 @@ import Tilt from "./Tilt.astro";
 import { accentTitle } from "../lib/accent";
 ---
 
-{
-  /* box-content: `width: 90%` + `padding: 20px 10px` was a content-box outer
+{/* box-content: `width: 90%` + `padding: 20px 10px` was a content-box outer
   width before Preflight switched everything to border-box (old `.main`
-  wrapper folded into this root). */
-}
+  wrapper folded into this root). */}
 <div
   id="skills"
   class="skills-main-div section-animate mx-auto mt-16 box-content flex w-[90%] overflow-hidden px-2.5 py-5 max-md:flex-col max-xs:w-auto"
@@ -24,41 +22,33 @@ import { accentTitle } from "../lib/accent";
     </Tilt>
   </div>
   <div class="skills-text-div ml-[50px] mb-[30px] flex-1 max-md:m-5">
-    {
-      /* my-[0.67em] pins the old h1 UA margin the heading kept after being
+    {/* my-[0.67em] pins the old h1 UA margin the heading kept after being
       demoted to h2 (h2 UA default would be 0.83em); font-normal because the
-      old rule set weight 400, not the browser's bold h2 default. */
-    }
+      old rule set weight 400, not the browser's bold h2 default. */}
     <h2
       class="skills-heading my-[0.67em] text-[56px] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
       set:html={accentTitle(skillsSection.title)}
     />
     {/* my-[1em] restores the browser default <p> margin Preflight removes */}
-    <p
-      class="subTitle skills-text-subtitle my-[1em] dark:text-white max-md:text-center max-md:text-[16px]"
-    >
+    <p class="subTitle skills-text-subtitle my-[1em] dark:text-white max-md:text-center max-md:text-[16px]">
       {skillsSection.subTitle}
     </p>
     <div class="software-skills-main-div">
       <ul class="dev-icons mb-2.5 flex flex-wrap gap-3">
-        {
-          skillsSection.softwareSkills.map(skill => (
-            <li class="software-skill-chip inline-flex items-center gap-2.5 rounded-3xl border border-chip-outline px-[18px] py-2.5 shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
-              <Icon name={skill.iconName} size="1.6rem" class="shrink-0 text-navy dark:text-blue" />
-              <span class="text-[15px] whitespace-nowrap text-text dark:text-white">
-                {skill.skillName}
-              </span>
-            </li>
-          ))
-        }
+        {skillsSection.softwareSkills.map(skill => (
+          <li class="software-skill-chip inline-flex items-center gap-2.5 rounded-3xl border border-chip-outline px-[18px] py-2.5 shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
+            <Icon name={skill.iconName} size="1.6rem" class="shrink-0 text-navy dark:text-blue" />
+            <span class="text-[15px] whitespace-nowrap text-text dark:text-white">
+              {skill.skillName}
+            </span>
+          </li>
+        ))}
       </ul>
     </div>
     <div>
-      {
-        skillsSection.skills.map(s => (
-          <p class="subTitle skills-text my-[1em] dark:text-white max-md:text-[16px]">{s}</p>
-        ))
-      }
+      {skillsSection.skills.map(s => (
+        <p class="subTitle skills-text my-[1em] dark:text-white max-md:text-[16px]">{s}</p>
+      ))}
     </div>
   </div>
 </div>

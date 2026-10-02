@@ -100,22 +100,20 @@ const isRootPath = Astro.url.pathname === rootPath;
       data-is-root-path={isRootPath}
     >
       <header class="global-header mb-12 flex flex-row items-center justify-between">
-        {
-          isRootPath ? (
-            <h1 class="main-heading m-0 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-title dark:text-white">
-              <a class="text-inherit no-underline" href={rootPath}>
-                {SITE_TITLE}
-              </a>
-            </h1>
-          ) : (
-            <a
-              class="header-link-home text-[1.2rem] font-bold text-navy no-underline dark:text-blue-light"
-              href={rootPath}
-            >
+        {isRootPath ? (
+          <h1 class="main-heading m-0 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-title dark:text-white">
+            <a class="text-inherit no-underline" href={rootPath}>
               {SITE_TITLE}
             </a>
-          )
-        }
+          </h1>
+        ) : (
+          <a
+            class="header-link-home text-[1.2rem] font-bold text-navy no-underline dark:text-blue-light"
+            href={rootPath}
+          >
+            {SITE_TITLE}
+          </a>
+        )}
         <div class="header-actions flex items-center gap-4">
           <a
             class="rss-link inline-flex items-center text-text hover:text-navy dark:text-text-dark dark:hover:text-blue-light"

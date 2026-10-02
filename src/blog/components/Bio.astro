@@ -51,19 +51,17 @@ const links = [
   </p>
 </div>
 <div class="bio-social flex gap-4">
-  {
-    links.map(link => (
-      <a
-        class="inline-flex text-text hover:text-navy dark:text-text-dark dark:hover:text-blue-light"
-        href={link.href}
-        aria-label={link.label}
-        title={link.label}
-        data-ph-event="social_click"
-        data-ph-prop="social"
-        data-ph-value={link.value}
-      >
-        <Icon name={link.icon} size="1.75rem" />
-      </a>
-    ))
-  }
+  {links.map(link => (
+    <a
+      class="inline-flex text-text hover:text-navy dark:text-text-dark dark:hover:text-blue-light"
+      href={link.href}
+      aria-label={link.label}
+      title={link.label}
+      data-ph-event="social_click"
+      data-ph-prop="social"
+      data-ph-value={link.value}
+    >
+      <Icon name={link.icon} size="1.75rem" />
+    </a>
+  ))}
 </div>
