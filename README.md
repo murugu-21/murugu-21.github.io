@@ -33,20 +33,19 @@ routes (`run_worker_first` in `wrangler.jsonc`) and for a request that matches
 no asset (`not_found_handling: "none"`), which it answers with the negotiated
 404 (see "Discovery documents and the agent-readable 404").
 
-**Known issue — `bun run dev` renders broken pages.** With a custom Worker
-entrypoint, `astro dev` cannot render a page whose components have a processed
-`<script>` (every page here, through the layouts): the request returns a
-51-byte `/@vite/client` stub and the log shows `Unable to resolve
-[…Layout.astro?astro&type=script&index=0&lang.ts]` from Astro's _production_
-script resolver; a URL matching no route gets Vite's empty 404 instead of the
-404 page. It is an Astro/adapter bug, reproduced on published
-`astro@7.3.5` + `@astrojs/cloudflare@14.3.3` with nothing but a Worker that
-forwards to `env.ASSETS.fetch()` (issue pending upstream). The production build
-is unaffected: use `bun run build && bun run preview` to see pages. The Worker's
-routes do work in `bun run dev` — `/api`, `/mcp` and the chat read live data,
-because the dev server answers the `ASSETS` binding the Worker addresses as
-`https://assets.local` (listed in `vite.server.allowedHosts` in
-`astro.config.ts`; without it Vite's host check turns every such read into a
+**`bun run dev` runs Astro on Node, not Bun.** Since the adapter, `astro dev`
+runs the Worker in miniflare, whose requests to workerd fail under the Bun
+runtime ("Unable to connect. Is the computer able to access the url?" from
+`fetchWorkerExportTypes`), and `astro preview` hangs the same way; so `dev` and
+`preview` call `astro` directly, which runs on Node. A second Astro/adapter bug
+makes every page a 51-byte `/@vite/client` stub (`Unable to resolve
+[…Layout.astro?astro&type=script&index=0&lang.ts]`) whenever the dev server
+starts on a warm `node_modules/.vite/deps_ssr` cache; `astro.config.ts` sets
+`vite.environments.ssr.optimizeDeps.force` so it re-optimizes on every start
+(about 3 s). The Worker's routes work in `bun run dev` — `/api`, `/mcp` and the
+chat read live data, because the dev server answers the `ASSETS` binding the
+Worker addresses as `https://assets.local` (listed in `vite.server.allowedHosts`
+in `astro.config.ts`; without it Vite's host check turns every such read into a
 403).
 
 `astro build` alone produces the complete site, so a tool that runs it itself
@@ -60,8 +59,8 @@ the build resolve it from `scripts/site-dir.ts`.
 
 [Bun](https://bun.sh) (version pinned in `package.json` → `packageManager`)
 installs dependencies, runs the package scripts and executes the TypeScript in
-`scripts/` directly. Astro and Vitest both run on Bun: the `dev`, `build` and
-`preview` scripts call Astro with `bun --bun`, `test` is `bun --bun vitest run`
+`scripts/` directly. The production build and Vitest run on Bun: `build` calls
+Astro with `bun --bun` (`dev` and `preview` stay on Node, see above), `test` is `bun --bun vitest run`
 (the tests still execute inside workerd via `@cloudflare/vitest-plugin` — only
 the host moved), and `check:astro` uses Bun's `--preload` for the TypeScript-7
 alias in `scripts/ts-alias.cjs` (Bun 1.3.x breaks the production build and
