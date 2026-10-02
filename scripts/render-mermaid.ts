@@ -1,10 +1,11 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import puppeteer, { type Browser, type Page } from "puppeteer";
+import type { Browser, Page } from "puppeteer";
 import sharp from "sharp";
 import subsetFont from "subset-font";
 
+import { launchBrowser } from "./launch-browser.ts";
 import {
   DIAGRAMS_DIR,
   diagramFile,
@@ -16,13 +17,13 @@ import {
 
 // Renders every ```mermaid fence under content/blog to
 // <slug>/diagrams/<hash>.<theme>.svg plus a light <hash>.png for RSS (feed
-// mirrors can't draw the SVGs), and prunes orphans. The build never runs
-// mermaid (remark-mermaid.ts fails on a missing file): commit the output.
+// mirrors can't draw the SVGs), and prunes orphans. The output is gitignored:
+// `astro build` runs this first, and remark-mermaid.ts runs it when a fence has
+// no rendering (an edited diagram in `astro dev`).
 //
 //   bun run diagrams           render what is missing or rendered by another
 //                              mermaid version, prune orphans
 //   bun run diagrams --force   re-render everything
-//   bun run diagrams --check   report missing/stale/orphaned files, exit 1 if any
 //
 // An SVG in <img> can't reach page fonts, so each embeds a Fira Code subset;
 // otherwise a substitute face's widths make labels overrun their boxes. The
@@ -46,8 +47,8 @@ const FONT_FILE = fileURLToPath(
 );
 const FONT_FAMILY = "Fira Code, ui-monospace, monospace";
 
-// A file stamped with another mermaid version counts as missing, so upgrades
-// re-render and `--check` flags them.
+// A file stamped with another mermaid version counts as missing, so a local
+// copy re-renders after an upgrade.
 const STAMP_ATTR = "data-renderer";
 const STAMP = `mermaid@${MERMAID_VERSION}`;
 const stampOf = (path: string): string | undefined =>
@@ -80,7 +81,6 @@ const THEMES: Record<DiagramTheme, { mermaid: string; background: string }> = {
 
 const args = new Set(process.argv.slice(2));
 const force = args.has("--force");
-const check = args.has("--check");
 
 interface Job {
   post: string; // path of index.md
@@ -156,7 +156,7 @@ async function embedStyle(svg: string, theme: DiagramTheme, font: Buffer): Promi
 }
 
 async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Page }> {
-  const browser = await puppeteer.launch({ headless: true });
+  const browser = await launchBrowser("render-mermaid");
   const page = await browser.newPage();
   // 2x for high-density screens; widened per screenshot when needed
   await page.setViewport({ width: 1200, height: 900, deviceScaleFactor: 2 });
@@ -175,7 +175,7 @@ async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Pag
 }
 
 // The id lands in the SVG and its stylesheet, so it derives from the hash (not
-// a counter) to keep `--force` diffs minimal. Ids needn't be unique across files.
+// a counter) to keep re-renders byte-identical. Ids needn't be unique across files.
 async function renderOne(
   page: Page,
   source: string,
@@ -255,21 +255,6 @@ async function main(): Promise<void> {
         force || (variant.kind === "png" ? lightStale || !existsSync(path) : !upToDate(path))
     );
   });
-
-  if (check) {
-    for (const { path } of missing) {
-      console.log(`${existsSync(path) ? "stale   " : "missing "} ${rel(path)}`);
-    }
-    for (const path of stale) console.log(`orphaned ${rel(path)}`);
-    if (missing.length || stale.length) {
-      console.error(
-        `render-mermaid: ${missing.length} missing, ${stale.length} orphaned — run \`bun run diagrams\``
-      );
-      process.exit(1);
-    }
-    console.log(`render-mermaid: ${jobs.length} diagrams up to date`);
-    return;
-  }
 
   for (const path of stale) {
     rmSync(path);

@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type { Code, Image, Paragraph, Parent, Root } from "mdast";
@@ -15,7 +16,8 @@ import {
 // ```mermaid fence becomes a <figure class="mermaid-diagram"> with a light and
 // a dark <img> (post.css shows one per theme). Post-relative mdast images let
 // Astro's image pipeline and the RSS absolutizer treat them like any post
-// image. A missing rendering fails the build rather than shipping broken.
+// image. A missing rendering (a new or edited fence) runs the renderer; one it
+// can't produce fails the build rather than shipping broken.
 
 interface Fence {
   node: Code;
@@ -44,6 +46,12 @@ function svgSize(svg: string): { width: number; height: number } | undefined {
     : undefined;
 }
 
+// Renders every missing diagram, not just this post's; a no-op when none are.
+function renderMissing(): void {
+  const result = spawnSync("bun", ["scripts/render-mermaid.ts"], { stdio: "inherit" });
+  if (result.status !== 0) throw new Error("remark-mermaid: scripts/render-mermaid.ts failed");
+}
+
 export default function remarkMermaid() {
   return async function transform(tree: Root, file: VFile): Promise<void> {
     const fences: Fence[] = [];
@@ -60,11 +68,11 @@ export default function remarkMermaid() {
       const paths = Object.fromEntries(
         DIAGRAM_THEMES.map(theme => [theme, join(postDir, diagramFile(hash, theme))])
       ) as Record<DiagramTheme, string>;
+      if (!DIAGRAM_THEMES.every(theme => existsSync(paths[theme]))) renderMissing();
       for (const theme of DIAGRAM_THEMES) {
         if (!existsSync(paths[theme])) {
           throw new Error(
-            `remark-mermaid: ${relative(process.cwd(), paths[theme])} is missing for ${diagramAlt(i).toLowerCase()} of ${relative(process.cwd(), file.path)} ` +
-              "(the fence changed or was never rendered). Run `bun run diagrams` and commit the result."
+            `remark-mermaid: ${relative(process.cwd(), paths[theme])} was not rendered for ${diagramAlt(i).toLowerCase()} of ${relative(process.cwd(), file.path)}`
           );
         }
       }

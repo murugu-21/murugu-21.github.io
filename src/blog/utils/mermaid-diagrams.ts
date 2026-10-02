@@ -1,6 +1,7 @@
 // Pure, Node-free half of the Mermaid pipeline (runs in the Workers test pool
-// and the build). `bun run diagrams` commits a light and dark SVG per fence,
-// named by hash; remark-mermaid.ts and the RSS route swap fences for them.
+// and the build). scripts/render-mermaid.ts writes a light and dark SVG per
+// fence at build time, named by hash; remark-mermaid.ts and the RSS route swap
+// fences for them.
 import { fromMarkdown } from "mdast-util-from-markdown";
 import type { Code, Parent, Root } from "mdast";
 
