@@ -244,6 +244,10 @@ export default defineConfig({
     buildArtifacts()
   ],
   vite: {
+    // Dev only: started on a warm node_modules/.vite/deps_ssr cache, every page
+    // renders as a 51-byte /@vite/client stub ("Unable to resolve
+    // Layout.astro?astro&type=script…"). Re-optimizing each start avoids it.
+    environments: { ssr: { optimizeDeps: { force: true } } },
     server: {
       // In dev the Worker reads ASSETS via https://assets.local
       // (worker/api/store.ts); Vite's host check would 403 it.

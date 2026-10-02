@@ -6,9 +6,9 @@
   "version": "2.0.0",
   "packageManager": "bun@1.4.2",
   "scripts": {
-    "dev": "bun --bun astro dev",
+    "dev": "astro dev",
     "build": "bun --bun astro build",
-    "preview": "bun --bun astro preview",
+    "preview": "astro preview",
     "format": "oxfmt src worker scripts vitest.config.ts wrangler.jsonc astro.config.ts && prettier --write \"src/**/*.astro\" \"content/**/*.md\"",
     "check-format": "oxfmt src worker scripts vitest.config.ts wrangler.jsonc astro.config.ts --check && prettier --check \"src/**/*.astro\" \"content/**/*.md\"",
     "lint": "oxlint src worker scripts vitest.config.ts astro.config.ts",
