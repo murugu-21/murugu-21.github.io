@@ -1,6 +1,10 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "murugappan-dev",
+  // The source config. `astro build` (@astrojs/cloudflare) bundles `main` and
+  // writes the deployable config to dist/server/wrangler.json, with
+  // .wrangler/deploy/config.json pointing `wrangler deploy` (and the other
+  // wrangler commands) at it — so deploy after a build, never before.
   "main": "worker/server.ts",
   "routes": [{ "pattern": "murugappan.dev", "custom_domain": true }],
   // the custom domain is the only public host — no *.workers.dev duplicate
@@ -9,30 +13,32 @@
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    "directory": "./dist",
+    // the adapter writes the prerendered site here (the Worker: dist/server)
+    "directory": "./dist/client",
     "binding": "ASSETS",
-    "not_found_handling": "404-page",
-    // The Worker runs ahead of asset serving for everything except the
-    // immutable hashed-asset directories. Three reasons, all of which need the
-    // Worker to see the request before the assets layer answers it:
-    //
-    //   * /api/*, /openapi.json, /mcp, /mcp.json and /.well-known/* are the
-    //     Worker's own routes — /api/* so every failure is the JSON error
-    //     envelope rather than the HTML 404 page, and the rest so the generated
-    //     documents name the host that actually answered.
-    //   * A 404 has to be content-negotiated (worker/not-found.ts): markdown for
-    //     a machine client, the styled page for a browser. Left to the assets
-    //     layer, `not_found_handling` answers every miss itself and the Worker
-    //     is never invoked — including for browser navigation requests, which
-    //     `assets_navigation_prefers_asset_serving` routes to asset serving
-    //     unless the Worker runs first.
-    //   * /parties/* is the chat Durable Object.
-    //
-    // `ASSETS.fetch()` still applies _headers, _redirects, html_handling and
-    // not_found_handling, so nothing about asset serving changes — it just
-    // happens one hop later. The exclusions keep the hashed, immutable bundles
-    // (which are most of the request volume) on the zero-invocation path.
-    "run_worker_first": ["/*", "!/static/*"]
+    // Pages are served straight from these assets — no Worker invocation —
+    // and a request that matches no asset is handed to the Worker. That is
+    // what "none" means here: with "404-page" the assets layer would answer
+    // every miss with 404.html itself, browser or agent alike, and the Worker
+    // could not content-negotiate it (worker/not-found.ts: markdown for a
+    // machine client, the styled page — which it fetches — for a browser).
+    "not_found_handling": "none",
+    // The Worker's own routes, which it must answer even where an asset or a
+    // browser navigation would otherwise win: /api/* so every failure is the
+    // JSON error envelope rather than an HTML page, the generated documents
+    // (/openapi.json, /mcp*, /.well-known/*) so they name the host that
+    // answered, /parties/* for the chat Durable Object and /blog/audio/* for
+    // R2. Keep in sync with the routes in worker/server.ts.
+    "run_worker_first": [
+      "/api/*",
+      "/openapi.json",
+      "/mcp",
+      "/mcp/*",
+      "/mcp.json",
+      "/.well-known/*",
+      "/parties/*",
+      "/blog/audio/*"
+    ]
   },
   // keep DO bindings + migrations in sync with worker/test/wrangler.jsonc
   "durable_objects": {

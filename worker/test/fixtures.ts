@@ -72,8 +72,15 @@ export const LLMS_FULL_TXT = "# SDE Journey\n\nEvery post, in full.\n";
 
 export const AGENTS_MD = "# AGENTS.md — murugappan.dev\n\nWhen to use.\n";
 
-/** The styled 404 page the assets layer answers a miss with. */
+/** The site's styled 404 page (dist/client/404.html). */
 export const NOT_FOUND_HTML = "<!doctype html><h1>404</h1>";
+
+/** The blog's styled 404 page (dist/client/blog/404/index.html). */
+export const BLOG_NOT_FOUND_HTML = "<!doctype html><h1>SDE Journey: 404</h1>";
+
+// Served as text/html, like the real binding does for .html files and the
+// directory-index paths html_handling resolves to them.
+const HTML_PATHS = new Set(["/404", "/blog/404/"]);
 
 /** Overriding a path with null makes the assets binding 404 it. */
 export function siteFiles(
@@ -85,6 +92,8 @@ export function siteFiles(
     "/blog/coin-change-problem/index.md": POST_MARKDOWN,
     "/blog/llms-full.txt": LLMS_FULL_TXT,
     "/AGENTS.md": AGENTS_MD,
+    "/404": NOT_FOUND_HTML,
+    "/blog/404/": BLOG_NOT_FOUND_HTML,
     ...overrides
   };
 }
@@ -102,19 +111,17 @@ export function fakeAssets(overrides: Record<string, string | null> = {}) {
     fetch: (input: RequestInfo | URL) => {
       const path = assetPath(input);
       const body = files[path];
-      // A miss is the styled 404 page, which is what the real binding returns
-      // under assets.not_found_handling: "404-page" (see wrangler.jsonc).
+      // A miss is an empty 404, which is what the real binding returns under
+      // assets.not_found_handling: "none" (see wrangler.jsonc).
       return Promise.resolve(
         body == null
-          ? new Response(NOT_FOUND_HTML, {
-              status: 404,
-              headers: { "Content-Type": "text/html; charset=utf-8" }
-            })
+          ? new Response(null, { status: 404 })
           : new Response(body, {
               status: 200,
-              headers: path.endsWith(".html")
-                ? { "Content-Type": "text/html; charset=utf-8" }
-                : undefined
+              headers:
+                path.endsWith(".html") || HTML_PATHS.has(path)
+                  ? { "Content-Type": "text/html; charset=utf-8" }
+                  : undefined
             })
       );
     }

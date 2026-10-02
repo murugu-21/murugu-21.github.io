@@ -10,10 +10,44 @@ One Astro project serves both the portfolio and the blog (served at `/blog`): bl
 
 ```bash
 bun install
-bun run dev       # local dev server
-bun run build     # the whole site into dist/: pages, markdown renditions, resume PDF
-bun run preview   # preview the production build
+bun run dev       # Astro dev server with the Worker, in workerd (:4399) — pages broken, see below
+bun run build     # site → dist/client, Worker → dist/server (+ markdown renditions, resume PDF)
+bun run preview   # the production build in workerd, API and chat included
 ```
+
+The Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) is built by
+[`@astrojs/cloudflare`](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)
+as part of `astro build`, and Wrangler still deploys it: the adapter writes the
+prerendered site to `dist/client`, the Worker bundle and a deployable
+`dist/server/wrangler.json`, and `.wrangler/deploy/config.json` pointing every
+`wrangler` command at that generated config — so deploy after a build. Every
+page is prerendered; the adapter builds the Worker anyway because the config
+names a custom `main`. That needs
+[withastro/astro#18202](https://github.com/withastro/astro/pull/18202) (14.3.3
+silently deploys a fully static site without its Worker,
+[#18201](https://github.com/withastro/astro/issues/18201)), so the adapter is
+pinned to that PR's `pkg.pr.new` build — move to the release that ships it.
+
+Pages are served straight from static assets; the Worker only runs for its own
+routes (`run_worker_first` in `wrangler.jsonc`) and for a request that matches
+no asset (`not_found_handling: "none"`), which it answers with the negotiated
+404 (see "Discovery documents and the agent-readable 404").
+
+**Known issue — `bun run dev` renders broken pages.** With a custom Worker
+entrypoint, `astro dev` cannot render a page whose components have a processed
+`<script>` (every page here, through the layouts): the request returns a
+51-byte `/@vite/client` stub and the log shows `Unable to resolve
+[…Layout.astro?astro&type=script&index=0&lang.ts]` from Astro's _production_
+script resolver; a URL matching no route gets Vite's empty 404 instead of the
+404 page. It is an Astro/adapter bug, reproduced on published
+`astro@7.3.5` + `@astrojs/cloudflare@14.3.3` with nothing but a Worker that
+forwards to `env.ASSETS.fetch()` (issue pending upstream). The production build
+is unaffected: use `bun run build && bun run preview` to see pages. The Worker's
+routes do work in `bun run dev` — `/api`, `/mcp` and the chat read live data,
+because the dev server answers the `ASSETS` binding the Worker addresses as
+`https://assets.local` (listed in `vite.server.allowedHosts` in
+`astro.config.ts`; without it Vite's host check turns every such read into a
+403).
 
 `astro build` alone produces the complete site, so a tool that runs it itself
 (the `cf` CLI, which this site is set to move to — branch
@@ -122,7 +156,7 @@ service instead.
 
 ## Deployment
 
-Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `bun run build` and deploy command `bun run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). Both commands are Cloudflare dashboard settings, not read from this repo, so changing either means editing it by hand there — nothing in this file enforces them. `bun run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
+Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `bun run build` and deploy command `bun run deploy` — one Worker serves the prerendered site (`dist/client`) and hosts the chat backend (see "AI chat widget" below). Both commands are Cloudflare dashboard settings, not read from this repo, so changing either means editing it by hand there — nothing in this file enforces them. `bun run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
 
 Workers Builds settings, for reference (dashboard → Workers → this application):
 
@@ -133,7 +167,7 @@ Workers Builds settings, for reference (dashboard → Workers → this applicati
 
 ## Resume generation
 
-`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `bun run build` (the `build-artifacts` integration in `astro.config.ts`), `scripts/generate-resume.ts` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
+`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `bun run build` (the `build-artifacts` integration in `astro.config.ts`), `scripts/generate-resume.ts` serves the finished site (`dist/client`) on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `resume.pdf` there. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
 
 ## Blog
 
@@ -252,7 +286,7 @@ bun run audio:align <slug>                # word timings for the Speechify-style
 ```
 
 Then push as usual. `bun run audio` with no slug renders every changed post; `--force` re-renders,
-`--dry-run` only extracts and hashes, `--local` targets `wrangler dev`'s R2. `bun run audio:align`
+`--dry-run` only extracts and hashes, `--local` targets the local R2 state `bun run dev` serves (`.wrangler/state`). `bun run audio:align`
 (`scripts/align-audio.ts`) runs after synthesis, never concurrently: it slices each paragraph out of the
 MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
 (`whisper-large-v3-turbo`, 1.6 GB, auto-downloaded), maps them onto the known text
@@ -324,10 +358,11 @@ and for agents at [`/AGENTS.md`](https://murugappan.dev/AGENTS.md).
   renditions, so the API can't fall behind the blog. `/developers` renders its
   endpoint table from the same OpenAPI document the Worker serves.
 - **Worker-owned paths.** `run_worker_first` in `wrangler.jsonc` claims `/api/*`,
-  `/openapi.json`, `/mcp*`, `/mcp.json` and `/.well-known/*` so every API failure
-  is the JSON error envelope rather than the HTML 404 page, and so the generated
-  discovery documents name the host that answered — keep that list in sync with
-  `worker/server.ts`.
+  `/openapi.json`, `/mcp*`, `/mcp.json`, `/.well-known/*`, `/parties/*` and
+  `/blog/audio/*` so every API failure is the JSON error envelope rather than an
+  HTML page, and so the generated discovery documents name the host that
+  answered — keep that list in sync with `worker/server.ts`. Everything else is
+  served straight from assets.
 - **`POST /api/v1/contact`** emails `OPPORTUNITY_INBOX` (same secret and
   `send_email` binding the chat's lead capture uses). Rate-limited by the
   existing `RateLimiter` DO: 3/client-IP/UTC-day, 20 site-wide. `"dryRun": true`
@@ -352,9 +387,12 @@ without reading prose, and can recover when it guesses a URL wrong.
   100-character cap, and one `streamable-http` remote. Anything beyond the
   schema rides in `_meta` under a reverse-DNS key. Generated, so the remote URL
   names the host that answered.
-- **The 404** (`worker/not-found.ts`) — every miss reaches the Worker (see
-  `run_worker_first` above) and is content-negotiated: `Accept: text/html` gets
-  the styled `404.html` the assets layer produced, unchanged; anything else
+- **The 404** (`worker/not-found.ts`) — pages are served from assets without
+  the Worker, but every miss reaches it (`not_found_handling: "none"` in
+  `wrangler.jsonc`; under `"404-page"` the assets layer would answer every miss
+  with `404.html` itself, browser or agent alike) and is content-negotiated:
+  `Accept: text/html` gets the styled page — the blog's own under `/blog/`, the
+  site's elsewhere, which the Worker fetches from assets; anything else
   (including no `Accept` at all, which is what curl and `fetch` send) gets a
   short markdown body naming the sitemap, `llms.txt`, `AGENTS.md`,
   `/developers/`, the OpenAPI document, the API catalogue, the MCP manifest and
@@ -405,7 +443,7 @@ server, so an MCP client can use the site without any HTTP glue. Add it as
 
 Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
 
-- **Server:** `worker/` — Cloudflare Worker serving `dist/` as static assets +
+- **Server:** `worker/` — Cloudflare Worker serving the prerendered site as static assets +
   `ChatRoom` Durable Object (partyserver, SQLite) streaming replies over
   WebSocket at `/parties/chat-room/:roomId`.
 - **Model:** DeepSeek `deepseek-flash` (BYOK via the `DEEPSEEK_API_KEY`
@@ -422,7 +460,7 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   `capture_opportunity` is never called, or is called without the visitor's
   contact detail. qwen3-30b was reverted on 2026-08-17 for narrating captures
   it never made — unit tests cannot catch that, only the live model can. Needs
-  `.dev.vars` and a built `dist/llms.txt`; costs a fraction of a cent.
+  `.dev.vars` and a built `llms.txt` (`bun run build`); costs a fraction of a cent.
 - **Loading:** the widget is a React island hydrated with `client:interaction`,
   a custom directive (`src/directives/interaction.ts`, registered in
   `astro.config.ts`) that loads React + the widget on the visitor's first
@@ -457,12 +495,10 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   A 402 from a chat call is authoritative and gates every room at once; a
   top-up is picked up at the next cache expiry, no deploy. There is no daily
   allowance — at ~$0.003/turn, top up to set the ceiling.
-- **Local dev (full-fidelity single-origin):** `bun run build && bunx wrangler dev` → http://localhost:8787
-  (runs both Astro and Worker on the same origin; chat connects at the Worker origin with full Durable Objects).
+- **Local dev:** `bun run build && bun run preview` → http://localhost:4399 runs the production build with the
+  Worker in workerd, so the widget connects on the same origin with full Durable Objects — no second server, no
+  `PUBLIC_CHAT_HOST`. (`bun run dev` runs the Worker too, but its pages are broken for now — see "Development".)
   Put `OPPORTUNITY_INBOX=you@example.com` and `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored);
   without the key the chat gates itself, since there is no fallback provider.
-- **Local dev (fast HMR loop):** put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env` (gitignored), then run `bun run dev:all`.
-  Starts Astro dev server (with HMR) on :4399 and Worker on :8787 in parallel; the widget connects to the real Worker.
-  Note: the Worker serves grounding from `dist/`, so run `bun run build` at least once first, or Jarvis will lack site knowledge.
   Also note: AI calls in dev hit the real DeepSeek API and are billed, so watch your spend.
 - **Tests:** `bun run test` (vitest + workers pool), `bun run check:worker`.

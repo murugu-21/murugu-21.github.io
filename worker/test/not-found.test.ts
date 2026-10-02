@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { markdownNotFound, notFoundMarkdown, prefersMarkdown, serveAsset } from "../not-found";
 import worker from "../server";
-import { fakeAssets, LLMS_TXT, NOT_FOUND_HTML } from "./fixtures";
+import { BLOG_NOT_FOUND_HTML, fakeAssets, LLMS_TXT, NOT_FOUND_HTML } from "./fixtures";
 import { env } from "cloudflare:test";
 
 const testEnv = (): Env => ({ ...env, ASSETS: fakeAssets() }) as unknown as Env;
@@ -115,7 +115,7 @@ describe("serveAsset", () => {
     expect(await res.text()).toBe(LLMS_TXT);
   });
 
-  it("replaces the HTML 404 page with markdown for a machine client", async () => {
+  it("answers a miss with markdown for a machine client", async () => {
     const res = await serveAsset(new Request("https://murugappan.dev/nope"), fakeAssets() as never);
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
@@ -135,7 +135,18 @@ describe("serveAsset", () => {
     expect(await res.text()).toBe(NOT_FOUND_HTML);
   });
 
-  it("falls back to markdown when the assets layer serves no HTML page", async () => {
+  it("serves the blog's own 404 page for a miss under /blog/", async () => {
+    const res = await serveAsset(
+      new Request("https://murugappan.dev/blog/no-such-post/", {
+        headers: { Accept: "text/html" }
+      }),
+      fakeAssets() as never
+    );
+    expect(res.status).toBe(404);
+    expect(await res.text()).toBe(BLOG_NOT_FOUND_HTML);
+  });
+
+  it("falls back to markdown when the build has no 404 page", async () => {
     const emptyAssets = {
       fetch: () => Promise.resolve(new Response(null, { status: 404 }))
     };

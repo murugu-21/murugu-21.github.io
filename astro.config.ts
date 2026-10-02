@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
 import { defineConfig } from "astro/config";
+import cloudflare from "@astrojs/cloudflare";
 import { unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
@@ -61,7 +62,7 @@ function singleFileSitemap(): AstroIntegration {
 // layer's glob loader logs the error, caches the empty result in
 // node_modules/.astro and the page ships with an empty <section
 // itemprop="articleBody">. Seen in review: exit 0, "17 page(s) built", blank
-// article. So check the output, like blogNotFoundCopy above: every published
+// article. So check the output: every published
 // post has a non-empty body and exactly one diagram figure per ```mermaid
 // fence in its source. Counting figures also catches a stale cached render
 // after the file is restored.
@@ -100,41 +101,6 @@ function blogPostBodies(): AstroIntegration {
         }
         if (checked === 0) throw new Error("blog-post-bodies: no blog posts checked");
         logger.info(`${checked} post bodies checked`);
-      }
-    }
-  };
-}
-
-// Astro only special-cases a *top-level* /404 as a status-code page, so
-// src/pages/blog/404.astro builds to dist/blog/404/index.html, not
-// dist/blog/404.html. Cloudflare's `not_found_handling: "404-page"` walks up
-// to the nearest 404.html for a miss, so without a copy at the old path
-// every /blog/<miss> silently falls back to the portfolio's top-level 404 —
-// no build error, just a wrong page in production. Restore the old path
-// alongside the new one (verified with `wrangler dev` both ways).
-function blogNotFoundCopy(): AstroIntegration {
-  return {
-    name: "blog-not-found-copy",
-    hooks: {
-      "astro:build:done": ({ dir }) => {
-        const src = new URL("blog/404/index.html", dir);
-        const dest = new URL("blog/404.html", dir);
-        if (!fs.existsSync(src)) {
-          throw new Error("blog-not-found-copy: dist/blog/404/index.html is missing");
-        }
-        fs.copyFileSync(src, dest);
-        // Guard against copying the wrong page under a right-looking path:
-        // this exact regression (dist/blog/404.html silently becoming some
-        // other page, so misses fell back to the portfolio 404 with no build
-        // error) already happened once on this branch and the build, test
-        // suite and astro check all missed it. Assert the copy is actually
-        // the blog's 404 by content, not just present.
-        if (!fs.readFileSync(dest, "utf8").includes("SDE Journey")) {
-          throw new Error(
-            "blog-not-found-copy: dist/blog/404.html does not contain " +
-              'the blog\'s title marker "SDE Journey" — wrong page copied'
-          );
-        }
       }
     }
   };
@@ -260,6 +226,26 @@ const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
+  // Builds the Worker (worker/server.ts, the `main` in wrangler.jsonc)
+  // alongside the site, and makes `astro dev` run both in workerd with the
+  // real bindings. Every page is still prerendered; the adapter builds the
+  // Worker anyway because wrangler.jsonc names a custom `main`.
+  //
+  // Pinned to a pkg.pr.new preview of withastro/astro#18202, which fixes a
+  // fully static site with a custom entrypoint deploying without its Worker
+  // (withastro/astro#18201; 14.3.3 drops it silently). Move to the release
+  // that ships it.
+  adapter: cloudflare({
+    // Images are optimized at build time with sharp, as before; nothing is
+    // transformed on request, so no Images binding.
+    imageService: "compile",
+    // Prerender in Node, not workerd: the build hooks below and several pages
+    // read the filesystem at build time.
+    prerenderEnvironment: "node"
+  }),
+  // No Astro sessions — without this the adapter provisions a SESSION KV
+  // namespace nothing reads.
+  session: false,
   server: { port: 4399 },
   build: {
     assets: "static",
@@ -296,11 +282,18 @@ export default defineConfig({
       }
     }),
     singleFileSitemap(),
-    blogNotFoundCopy(),
     blogPostBodies(),
     buildArtifacts()
   ],
   vite: {
+    server: {
+      // In dev the Worker's ASSETS binding is answered by this dev server, and
+      // the Worker addresses it as https://assets.local (worker/api/store.ts —
+      // production ignores the host). Without this Vite's host check rejects
+      // every such read with a 403, so the API, MCP and Jarvis's grounding
+      // come back empty in `astro dev`. Dev and preview servers only.
+      allowedHosts: ["assets.local"]
+    },
     // Vite's own assetsInlineLimit, raised to 8 KB for CSS only. It has to stay
     // a function rather than a plain number: as a number the limit is global,
     // and it base64-inlined every sub-8 KB font subset into the stylesheets
