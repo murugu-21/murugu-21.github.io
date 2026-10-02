@@ -1,9 +1,8 @@
 ---
 import ThemeToggle from "./ThemeToggle.astro";
 
-// "/#hash" (not bare "#hash") so the section links also work from /about.
-// /about itself is deliberately NOT in the human nav — it's the machine
-// entity page, reachable via sitemap/llms.txt/rel=author instead.
+// "/#hash" so the links work from other pages. /about is deliberately left out
+// (machine entity page, linked via sitemap/llms.txt/rel=author).
 const links = [
   { href: "/#skills", label: "Skills" },
   { href: "/#experience", label: "Work Experiences" },
@@ -14,16 +13,11 @@ const links = [
   { href: "/#contact", label: "Contact Me" }
 ];
 
-// Breakpoints. This file's old queries were `max-width: 47.99em` (767.84px)
-// and `min-width: 48em` (768px), so the mobile/desktop split is the literal
-// pair `max-[768px]:` / `min-[768px]:` — it meets at 768 with no overlap and
-// no gap. `md:` is deliberately NOT used: the theme puts md at 769px
-// (see global.css), which would leave 768px in neither band.
+// Breakpoints are the literal pair `max-[768px]:` / `min-[768px]:`, not `md:`:
+// the theme puts md at 769px (global.css), which would leave 768px in neither band.
 
-// Reference navbar: fixed on top, transparent at rest, translucent + blurred
-// once scrolled (`.scrolled` is added by the inline script below). Below 768px
-// the bar is always solid — the CSS-only dropdown needs an opaque surface no
-// matter where the page is scrolled to.
+// Transparent at rest, blurred once `.scrolled` (script below). Always solid
+// below 768px: the CSS-only dropdown needs an opaque surface.
 const headerClass = [
   "header fixed top-0 right-0 left-0 z-[999] mx-auto max-w-full bg-transparent px-5 py-2.5",
   "transition-all duration-300 ease-out motion-reduce:transition-none",
@@ -34,25 +28,21 @@ const headerClass = [
   "min-[768px]:[&.scrolled]:bg-nav-scrolled",
   "min-[768px]:[&.scrolled]:shadow-[0_10px_10px_0_rgba(3,5,40,0.12)]",
   "dark:min-[768px]:[&.scrolled]:bg-nav-scrolled-dark",
-  // 768–960 / 961–1120 / 1121–1320: full-size nav text + logo don't fit one
-  // row, so the bar's type steps down through three bands.
+  // Nav text + logo don't fit one row below 1320px, so type steps down in three bands.
   "min-[768px]:max-[961px]:text-[12px]",
   "min-[961px]:max-[1121px]:text-[13px]",
   "min-[1121px]:max-[1321px]:text-[14px]"
 ];
 
-// The signature logo at 1.5em (~300px) plus the floated hamburger can't share a
-// narrow row, so it shrinks (and re-centres) in two steps below 768px.
+// The ~300px logo and the hamburger can't share a narrow row, so it shrinks in two steps.
 const logo = [
   "logo float-left block flex-none leading-[normal] no-underline",
   "mt-2.5 text-[1.5em] min-[768px]:mt-0",
-  // old `max-width: 22.49em` = 359.84px, so the tiny band is < 360px
   "min-[360px]:max-[768px]:mt-[18px] min-[360px]:max-[768px]:text-[1.05em]",
   "max-[360px]:mt-6 max-[360px]:text-[0.85em]"
 ];
 
-// Nav links: grow-in accent underline on hover/focus (the reference ::after
-// bar); the 961–1320 band tightens the padding, so the bar's inset follows.
+// The 961–1320 band tightens the padding, so the underline's inset follows.
 const navLink = [
   "relative block px-5 py-[15px] text-text no-underline dark:text-white",
   "after:absolute after:bottom-2 after:left-5 after:h-[3px] after:w-0 after:rounded-[3px]",
@@ -64,11 +54,8 @@ const navLink = [
   "min-[961px]:max-[1321px]:focus-visible:after:w-[calc(100%-24px)]"
 ];
 
-// Hamburger bars. The middle bar is the element; the two outer bars are its
-// ::before/::after. Checked, the middle bar goes transparent and the outer two
-// stack at top:0 and cross into an X.
-// (the checked-state variants are written out in full — Tailwind scans this
-// file as text, so a composed template string would never be generated)
+// Middle bar is the element, outer bars its ::before/::after; checked, they
+// cross into an X. Variants are written out in full: Tailwind scans this file as text.
 const navicon = [
   "navicon relative block h-[3px] w-[22px] rounded-[3px] bg-navy dark:bg-blue",
   "transition-[background] duration-200 ease-out",
@@ -85,8 +72,7 @@ const navicon = [
   "[.menu-btn:checked~.menu-icon_&]:after:rotate-45"
 ];
 
-// Collapsed menu: max-height 0 + visibility hidden keeps the links out of the
-// tab order. Above 768px it is a plain row, so the collapse only exists below.
+// visibility hidden (with max-height 0) keeps collapsed links out of the tab order.
 const menu = [
   "menu clear-both m-0 list-none p-0",
   "max-[768px]:invisible max-[768px]:max-h-0 max-[768px]:overflow-hidden",
@@ -126,21 +112,15 @@ const menu = [
       ))}
     </ul>
   </nav>
-  <!-- Below 768px the menu collapses, so the toggle can't live inside it —
-       react.dev keeps its theme control in the top bar at every width. Anchored
-       to the fixed header at the centre of the collapsed bar (41px: 10px
-       padding + half the hamburger's 62px box — 22px bars + 20px padding each
-       side), NOT `top-1/2`: the header grows when the menu opens and a
-       percentage offset dragged the toggle into the middle of the menu list.
-       Clear of the hamburger, 20px off the edge. -->
+  <!-- Outside the collapsible menu so it stays in the bar. top-[41px] (10px
+       padding + half the 62px hamburger), not top-1/2: the header grows when
+       the menu opens. -->
   <div class="theme-slot absolute top-[41px] right-[86px] -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0">
     <ThemeToggle />
   </div>
 </header>
 
 <script>
-  // Reference navbar behavior: transparent over the hero, translucent +
-  // blurred once the page is scrolled (threshold 20px, like the original).
   const header = document.getElementById("site-header");
   const onScroll = () => header?.classList.toggle("scrolled", window.scrollY >= 20);
   onScroll();

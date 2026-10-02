@@ -1,21 +1,16 @@
 import { DurableObject } from "cloudflare:workers";
 
 import { fetchDeepseekBalance } from "./ai";
-// The allowance itself lives with the endpoint that spends it — api/contact.ts
-// has no Workers-runtime imports, so the OpenAPI document and the /developers
-// page can quote the same numbers without pulling this Durable Object (and
-// `cloudflare:workers` with it) into the Astro bundle.
+// Limits live in api/contact.ts so the Astro bundle can quote them without
+// importing `cloudflare:workers`.
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./api/contact";
 
-// Chat is gated on the DeepSeek account's real balance rather than a daily
-// allowance: the budget is whatever has actually been paid for, and a top-up
-// widens the tap on its own. Stop a little above zero so the last exchange of
-// the day can't land mid-reply on an empty account.
+// Chat is gated on the real DeepSeek balance. The reserve keeps the last
+// exchange from running out mid-reply.
 export const BALANCE_RESERVE_USD = 0.05;
 
-// How long a balance reading is trusted. DeepSeek's balance settles behind
-// real usage, so a shorter TTL buys little accuracy and costs a round-trip in
-// front of a visitor's message; the 402 path is the accurate one.
+// DeepSeek's balance lags real usage, so a shorter TTL buys little; the 402
+// path is the accurate one.
 const BALANCE_TTL_MS = 10 * 60 * 1000;
 
 const BALANCE_KEY = "deepseek:balance";
@@ -26,28 +21,22 @@ type CachedBalance = {
   checkedAt: number;
 };
 
-/** What is left of each contact tier for today, after the call that reported it. */
+/** What is left of each contact tier today, after the reporting call. */
 export type ContactUsage = { clientRemaining: number; globalRemaining: number };
 
 export type ContactSlot = ContactUsage &
   ({ allowed: true } | { allowed: false; scope: "client" | "global" });
 
-// Single fixed-name instance ("global") shared by every ChatRoom: one place
-// to cache the DeepSeek balance, so N conversations cost one balance check
-// rather than N, and one room hitting a 402 gates the whole site at once.
+// One fixed-name instance ("global") shared by every ChatRoom, so the balance
+// is checked once and one room's 402 gates the whole site.
 export class RateLimiter extends DurableObject {
   private sql: SqlStorage;
 
   constructor(ctx: DurableObjectState, env: unknown) {
     super(ctx, env as never);
     this.sql = ctx.storage.sql;
-    // Chat once kept a daily counter here (message counts, then Workers AI
-    // neurons, then DeepSeek dollars). All three are gone: the balance is
-    // read from DeepSeek instead of reconstructed locally. Their tables are
-    // left in place rather than dropped — the only destructive step in an
-    // otherwise additive schema, for rows that are already worthless.
-    // Keyed "<day>:global" / "<day>:client:<ip>" so both tiers share one
-    // table and yesterday's rows are trivially identifiable for cleanup.
+    // Obsolete chat counter tables are left in place: the schema is additive.
+    // Keyed "<day>:global" / "<day>:client:<ip>" so stale days are easy to purge.
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS contact_counters (
         key TEXT PRIMARY KEY,
@@ -56,11 +45,7 @@ export class RateLimiter extends DurableObject {
     );
   }
 
-  // Can chat still be served? Cached for BALANCE_TTL_MS, so a busy minute
-  // costs one call to DeepSeek rather than one per message. A failed lookup
-  // fails OPEN: the balance endpoint being unreachable is no reason to take
-  // the widget down, and a genuinely empty account is caught by the 402 on
-  // the very next exchange.
+  // Fails OPEN on a lookup error: an empty account is caught by the next 402.
   async chatAvailable(
     apiKey: string,
     // Injected by tests only; an RPC caller passes just the key.
@@ -84,9 +69,8 @@ export class RateLimiter extends DurableObject {
     }
   }
 
-  // Called when DeepSeek itself reports an empty account. Parks the cache in
-  // the exhausted state so every room gates immediately, and lets it expire
-  // normally — a top-up is picked up at the next TTL boundary with no deploy.
+  // Parks the cache as exhausted; it expires normally, so a top-up is picked
+  // up at the next TTL boundary.
   async markChatExhausted(): Promise<void> {
     await this.ctx.storage.put(BALANCE_KEY, {
       available: false,
@@ -95,10 +79,8 @@ export class RateLimiter extends DurableObject {
     } satisfies CachedBalance);
   }
 
-  // Synchronous, so the read-check-increment runs atomically inside the DO:
-  // two concurrent agents can never both take the last slot. The client tier
-  // is checked first, and a client-blocked request never touches the global
-  // counter — one noisy caller must not spend the site-wide allowance.
+  // Synchronous so read-check-increment is atomic in the DO. A client-blocked
+  // request never touches the global counter.
   takeContactSlot(client: string): ContactSlot {
     const day = this.today();
     this.sql.exec(`DELETE FROM contact_counters WHERE key NOT LIKE ?`, `${day}:%`);
@@ -123,11 +105,7 @@ export class RateLimiter extends DurableObject {
     return { allowed: true, ...this.remaining(clientUsed + 1, globalUsed + 1) };
   }
 
-  /**
-   * What is left of both tiers without spending anything — for a dry run,
-   * which has to report the allowance honestly precisely because it does not
-   * consume it.
-   */
+  /** Remaining allowance without spending any, for a dry run. */
   contactUsage(client: string): ContactUsage {
     const day = this.today();
     return this.remaining(

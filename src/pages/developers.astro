@@ -1,8 +1,6 @@
 ---
-// Developer portal for the murugappan.dev API. The endpoint table and the
-// tool-definition example are generated from the same OpenAPI document the
-// Worker serves at /openapi.json (worker/api/openapi.ts), so this page cannot
-// document an endpoint that does not exist — or miss one that does.
+// Endpoint table and tool example are generated from the served OpenAPI
+// document (worker/api/openapi.ts), so they can't drift from the API.
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import ScrollTop from "../components/ScrollTop.astro";
@@ -45,8 +43,6 @@ const operations = Object.entries(spec.paths).flatMap(([path, item]) =>
   }))
 );
 
-// A function-calling tool definition derived straight from the spec, so the
-// example on the page is exactly what the spec yields.
 const exampleOp = operations.find(o => o.operationId === "getBlogPost");
 if (!exampleOp) throw new Error("getBlogPost is missing from the OpenAPI document");
 const toolExample = {
@@ -152,9 +148,7 @@ const machineFiles = [
     what: "ATS-parseable resume, generated from the same data this API serves."
   }
 ];
-// Structured data for the API itself, so a search for "murugappan.dev API",
-// "murugappan API docs" or "murugappan MCP server" resolves to this page
-// rather than to the pages about the person.
+// So API searches resolve to this page rather than the pages about the person.
 const apiJsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -192,20 +186,13 @@ const apiJsonLd = {
 };
 const h2Cls = "mt-9 mb-3 scroll-mt-24 text-[1.5rem] font-bold";
 const h3Cls = "mt-7 mb-2 scroll-mt-24 text-[1.15rem] font-bold";
-// The page deliberately sets code in a real monospace face rather than the
-// body's Fira Code (global.css base rule: `code { font-family: inherit }`).
+// A real monospace face, not the inherited Fira Code.
 const codeFont = "font-[family-name:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace]";
 const codeCls = `${codeFont} rounded-sm bg-[rgba(6,3,141,0.08)] px-[0.35em] py-[0.1em] text-[0.9em] wrap-anywhere dark:bg-[rgba(76,125,255,0.12)]`;
-// Inside a <pre> the chip styling comes off again (no padding, no wrapping —
-// the <pre> scrolls instead), in both themes. The old stylesheet kept the blue
-// chip behind <pre> code on dark by accident (a specificity leak), which
-// painted a lighter slab behind every line of a block; the UI audit dropped it.
+// No chip styling inside <pre>; the <pre> scrolls instead.
 const preCodeCls = `${codeFont} rounded-sm text-[0.9em]`;
-// `font-[family-name:monospace]` is the UA default preflight overwrites with
-// the theme's Fira Code. The <pre> only ever contains a <code>, so the family
-// shows up solely in the line box strut — but with `line-height: normal` below
-// 1381px that strut is 2px taller in Fira Code, which would stretch every code
-// block on mobile.
+// font-[family-name:monospace]: Fira Code's line-box strut is 2px taller at
+// `line-height: normal`, which would stretch every code block on mobile.
 const preCls =
   "my-[1em] overflow-x-auto rounded-lg border border-border-soft bg-white p-4 font-[family-name:monospace] dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(255,255,255,0.04)]";
 // tables must scroll inside their own box, never widen the page
@@ -214,8 +201,7 @@ const tableCls = "w-full border-collapse text-[0.95rem]";
 const cellCls =
   "border-b border-border-soft px-3 py-[0.6rem] text-left align-top dark:border-[rgba(255,255,255,0.12)]";
 const thCls = `${cellCls} font-semibold whitespace-nowrap text-subtitle dark:text-white/65`;
-// Chips in a cell never break mid-identifier ("getProfil|e"): the table scrolls
-// in its wrapper at narrow widths instead.
+// Chips never break mid-identifier; the table scrolls instead.
 const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[overflow-wrap:normal]`;
 ---
 
@@ -224,9 +210,7 @@ const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[ove
   description="Developer docs for the murugappan.dev API: REST endpoints, OpenAPI 3.1.0 spec, MCP server, authentication, versioning and deprecation policy, rate-limit headers. No key, no signup."
 >
   <Header />
-  {/* Same reading column and type scale as /about, widened to 900px because
-    this page carries tables and code blocks. pt-28 (7rem) clears the fixed
-    navbar. */}
+  {/* /about's column, widened to 900px for tables. pt-28 clears the fixed navbar. */}
   <main class="dev-page box-content mx-auto max-w-[900px] px-5 pt-28 pb-16">
     <h1 class="mt-[0.67em] mb-2 text-[clamp(1.7rem,6vw,2.2rem)] font-bold">
       murugappan.dev API — developer portal

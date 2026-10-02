@@ -1,5 +1,4 @@
-// shadcn/ui card (new-york, Tailwind v4), vendored — relative imports;
-// only the pieces the chat widget uses.
+// shadcn/ui card (new-york, Tailwind v4), vendored; trimmed to what the chat widget uses.
 import * as React from "react";
 
 import { cn } from "../../lib/utils";

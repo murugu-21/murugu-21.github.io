@@ -1,14 +1,10 @@
-// Live-tests the lead-capture flow against the real DeepSeek model, which
-// prompt.ts requires before any DEEPSEEK_MODEL swap: qwen3-30b was reverted on
-// 2026-08-17 for narrating captures ("I've noted it") without ever calling
-// capture_opportunity, silently losing leads. Unit tests can't catch that —
-// only the live model can.
+// Live-tests lead capture against the real model; required before any
+// DEEPSEEK_MODEL swap, since only a live model shows whether it narrates a
+// capture without calling capture_opportunity.
 //
 //   bun run test:capture [<model>]
 //
-// Needs DEEPSEEK_API_KEY in .dev.vars and a built llms.txt (`bun run build`) (the real
-// grounding). Costs a few tenths of a cent. Exits non-zero if the model fails
-// to call the tool, or claims the lead was recorded without calling it.
+// Needs DEEPSEEK_API_KEY in .dev.vars and a built llms.txt.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -16,9 +12,8 @@ import { buildMessages, TOOLS, type ModelMessage, type ModelToolCall } from "../
 import type { ChatHistoryEntry } from "../worker/protocol.ts";
 import { SITE_DIR } from "./site-dir.ts";
 
-// ai.ts can't be imported here — it resolves its own imports the bundler way,
-// which bare Node won't do — so read the two constants out of its source and
-// keep it the single source of truth.
+// ai.ts uses bundler resolution bare Node can't follow, so read its constants
+// from source.
 const aiSource = readFileSync("worker/ai.ts", "utf8");
 const constant = (name: string): string =>
   aiSource.match(new RegExp(`^export const ${name} = "(.*)";$`, "m"))?.[1] ??
@@ -41,9 +36,7 @@ const visitorTurns = [
   "I'm Dana Okafor, dana.okafor@northlane.io — can you pass this to Murugappan?"
 ];
 
-// The exact regression to guard: prose that tells the visitor the lead is
-// handled. Harmless on its own — it only damns the model if no capture call
-// ever follows, which is precisely how qwen3-30b lost leads.
+// Prose claiming the lead is handled; a failure only if no capture follows.
 const CLAIMS_RECORDED =
   /\b(noted (it|this|that)|pass(ed|ing)? (it |this )?(on|along)|forwarded|be in touch|let him know)\b/i;
 
@@ -58,8 +51,7 @@ for (const turn of visitorTurns) {
     headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
       model,
-      // The Worker only ever stores user/assistant turns; this script feeds the
-      // tool round-trip back in as well, which buildMessages passes through.
+      // unlike the Worker, this feeds tool round-trips back; buildMessages passes them through
       messages: buildMessages(grounding, history as ChatHistoryEntry[]),
       tools: TOOLS,
       thinking: { type: "enabled" }
@@ -92,8 +84,7 @@ for (const turn of visitorTurns) {
   }
 }
 
-// The contact detail is the whole point of the tool call: a capture that
-// drops it reaches Murugappan as an unreplyable note.
+// A capture without the contact detail is unreplyable.
 const carriesContact = captured?.contact?.includes("dana.okafor@northlane.io") ?? false;
 
 console.log(`\n--- ${model} ---`);

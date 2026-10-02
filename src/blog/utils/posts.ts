@@ -3,9 +3,8 @@ import getReadingTime from "reading-time";
 
 export type Post = CollectionEntry<"blog">;
 
-// The flattened shape the blog index builds for PostList.astro / Post.astro
-// (`description` stays undefined when a post has none, so the search falls
-// back to the excerpt).
+// What the blog index hands PostList/Post. `description` stays undefined when
+// absent so search falls back to the excerpt.
 export interface SerializedPost {
   href: string;
   title: string;
@@ -17,9 +16,7 @@ export interface SerializedPost {
   excerpt: string;
 }
 
-// All posts, sorted by date ASC (the order gatsby-node.js used to wire up
-// previous/next links). Drafts (content/blog/draft/**) are excluded from
-// production builds, matching the old gatsby-source-filesystem ignore rule.
+// Date ascending. Drafts (content/blog/draft/**) are excluded in production.
 export async function getPublishedPosts(): Promise<Post[]> {
   const posts = await getCollection(
     "blog",
@@ -28,19 +25,13 @@ export async function getPublishedPosts(): Promise<Post[]> {
   return posts.sort((a, b) => a.data.date.getTime() - b.data.date.getTime());
 }
 
-// Site-relative URL for a post, e.g. /blog/coin-change-problem/. Literal
-// rather than import.meta.env.BASE_URL: the /blog prefix now comes from this
-// route's position under src/pages/blog/, not from an Astro `base` setting.
+// Literal /blog: the prefix comes from src/pages/blog/, not an Astro `base`.
 export const postPath = (id: string) => `/blog/${id}/`;
 
-// Site-relative URL for the index filtered to one tag, e.g.
-// /blog/?tag=system-design. This is the same URL the index's own chips write
-// (see PostList.astro), so a post-page chip and a chip click land on the same
-// view — controlled vocabulary means no escaping surprises, encodeURIComponent
-// is just hygiene.
+// Same URL the index's chips write (PostList.astro), so both land on one view.
 export const tagPath = (tag: string) => `/blog/?tag=${encodeURIComponent(tag)}`;
 
-// Matches Gatsby's date(formatString: "MMMM DD, YYYY"), e.g. "August 09, 2021"
+// "MMMM DD, YYYY", e.g. "August 09, 2021".
 export function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
     month: "long",
@@ -50,18 +41,15 @@ export function formatDate(date: Date): string {
   });
 }
 
-// Tags + keywords are one SEO vocabulary: precise terms live in `keywords` so
-// they don't clutter the visible filter chips (see content.config.ts). JSON-LD,
-// OG `article:tag` and the index's search haystack all use the union.
+// Tags + keywords are one SEO vocabulary (`keywords` keeps precise terms off
+// the filter chips); JSON-LD, OG article:tag and index search use the union.
 export const postKeywords = (post: Post): string[] => [...post.data.tags, ...post.data.keywords];
 
-// Reading time in whole minutes from the raw markdown body (replaces
-// Gatsby's MarkdownRemark.timeToRead).
+// Whole minutes, at least 1.
 export const timeToRead = (body: string | undefined) =>
   Math.max(1, Math.ceil(getReadingTime(body || "").minutes));
 
-// Plain-text excerpt from the raw markdown body (replaces Gatsby's
-// excerpt(pruneLength: 160)); used wherever frontmatter description is absent.
+// Plain-text excerpt of the raw markdown, for posts without a description.
 export function excerpt(body: string | undefined, length = 160): string {
   const text = (body || "")
     .replace(/```[\s\S]*?```/g, " ")

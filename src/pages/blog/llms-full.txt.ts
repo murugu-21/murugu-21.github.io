@@ -1,10 +1,7 @@
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, AUTHOR } from "../../blog/consts";
 import { getPublishedPosts, excerpt } from "../../blog/utils/posts";
 
-// Generate /llms-full.txt (https://llmstxt.org) — the full markdown body of
-// every post in one file, so LLM crawlers and agents can ingest the whole
-// blog without fetching each page. Same ordering/filtering as llms.txt.ts;
-// drafts are already excluded from production by getPublishedPosts.
+// /llms-full.txt (https://llmstxt.org): every post's markdown body in one file.
 export async function GET() {
   const posts = (await getPublishedPosts()).reverse(); // newest first
   const base = SITE_URL.replace(/\/$/, "");

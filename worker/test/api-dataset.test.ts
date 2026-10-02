@@ -8,9 +8,8 @@ import {
   type DatasetInput
 } from "../api/dataset";
 
-// Minimal stand-in for the real src/data/portfolio.ts shapes. Kept small on
-// purpose: buildDataset is a pure projection, so the fixture only needs one
-// entry per collection to pin the output contract.
+// Minimal stand-in for src/data/portfolio.ts: buildDataset is a pure
+// projection, so one entry per collection pins the output contract.
 function input(overrides: Partial<DatasetInput> = {}): DatasetInput {
   return {
     greeting: {

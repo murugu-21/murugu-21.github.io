@@ -1,18 +1,9 @@
-// The API's versioning and deprecation contract, in one place: the version
-// catalogue, the promises made about it, and the response headers that carry
-// both. An agent should never have to guess whether a surface can change under
-// it, so the policy is served as data (GET /api/versions) as well as prose.
-//
-// Standards used, exactly as published:
-//   * URL path versioning — /api/v1/... is the versioned surface.
-//   * RFC 9745 `Deprecation`  — an @-prefixed Date structured field.
-//   * RFC 8594  `Sunset`      — an HTTP-date.
-//   * RFC 8288  Link relations `deprecation`, `successor-version`,
-//     `version-history`, `latest-version`, `service-desc`, `service-doc`.
+// Version catalogue, deprecation policy and the headers that carry them. Standards: URL path
+// versioning, RFC 9745 `Deprecation`, RFC 8594 `Sunset`, RFC 8288 Link relations.
 
 import { API_PATHS, API_BASE, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./routes";
 
-/** Release of the current version, and the value of the `API-Version` header. */
+/** Also the value of the `API-Version` header. */
 export const API_VERSION = "1.0.0";
 
 /** Minimum notice between a version being marked deprecated and its sunset. */
@@ -38,11 +29,7 @@ export type VersionRecord = {
   successor: string | null;
 };
 
-/**
- * Every version this deployment knows about, newest first. Adding a version
- * means adding a record here; the response headers, the `/api/versions`
- * document and the OpenAPI description all read from it.
- */
+/** Newest first. Headers, `/api/versions` and the OpenAPI document all read from this. */
 export const VERSIONS: readonly VersionRecord[] = [
   {
     version: CURRENT_API_VERSION,
@@ -83,7 +70,7 @@ export type VersionsDocument = {
   };
 };
 
-/** The body of GET /api/versions, absolute against the host that was asked. */
+/** URLs are absolute against the host that was asked. */
 export function buildVersionsDocument(origin: string): VersionsDocument {
   const base = origin.replace(/\/$/, "");
   return {
@@ -125,11 +112,7 @@ export function sunsetFieldValue(isoDate: string): string {
   return new Date(`${isoDate}T00:00:00Z`).toUTCString();
 }
 
-/**
- * The version headers for a response served by `record`. Deprecation and
- * Sunset appear only once the record carries the dates, so a current version
- * never claims a lifetime it has not been given.
- */
+/** Deprecation and Sunset appear only once the record carries those dates. */
 export function versionHeaders(
   record: VersionRecord = CURRENT_VERSION_RECORD
 ): Record<string, string> {
@@ -144,11 +127,7 @@ export function versionHeaders(
   return headers;
 }
 
-/**
- * The `Link` field for an API response: where the description, the docs and
- * the version history are, plus the migration pointers a deprecated version
- * owes its callers.
- */
+/** Discovery links, plus migration pointers once the version is deprecated. */
 export function versionLinkHeader(record: VersionRecord = CURRENT_VERSION_RECORD): string {
   const links = [
     `<${API_PATHS.openapiRoot}>; rel="service-desc"; type="application/json"`,
@@ -166,7 +145,7 @@ export function versionLinkHeader(record: VersionRecord = CURRENT_VERSION_RECORD
   return links.join(", ");
 }
 
-/** Version and discovery headers a browser client must be able to read. */
+/** Exposed via CORS so browser clients can read them. */
 export const META_EXPOSED_HEADERS: readonly string[] = [
   "API-Version",
   "API-Supported-Versions",

@@ -1,8 +1,5 @@
-// Blog posts for /api/posts come from the site's own llms.txt, the same file
-// Jarvis is grounded on (see grounding.ts). src/pages/llms.txt.ts generates
-// every post there at build time as "- [title](url): description", so there
-// is exactly one build artifact listing posts and the API cannot fall behind
-// the blog.
+// Posts are parsed from llms.txt ("- [title](url): description", built by src/pages/llms.txt.ts),
+// the same file Jarvis is grounded on, so the API cannot fall behind the blog.
 
 export type PostSummary = {
   slug: string;
@@ -12,20 +9,16 @@ export type PostSummary = {
 };
 
 const POST_LINE = /^- \[(.+?)\]\((https?:\/\/[^\s)]+)\)(?::\s*(.*))?$/;
-// Post pages only: /blog/<slug>/ — this drops the feed links (rss.xml,
-// llms-full.txt) and the blog index that share the "- [..](..)" shape.
+// Post pages only: drops feed links and the blog index that share the list shape.
 const POST_PATH = /^\/blog\/([a-z0-9-]+)\/?$/;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-// Ceiling shared by the REST `limit` query param, the MCP tool schema and the
-// OpenAPI document, so the three contracts cannot drift.
+// Shared by the REST `limit` param, the MCP tool schema and the OpenAPI document.
 export const POSTS_LIMIT_MAX = 100;
 
 const SECTION_HEADING = "## Blog posts";
 
-// The list section is preferred; a whole-document scan is the fallback so a
-// rename of the heading in src/pages/llms.txt.ts degrades to "still works"
-// rather than to an empty /api/posts.
+// Falls back to the whole document so renaming the heading cannot empty /api/posts.
 function candidateLines(llmsTxt: string): string[] {
   const lines = llmsTxt.split("\n");
   const start = lines.findIndex(l => l.trim() === SECTION_HEADING);
@@ -54,9 +47,8 @@ export function parsePostList(llmsTxt: string): PostSummary[] {
   return posts;
 }
 
-// src/pages/blog/[slug]/index.md.ts emits the post's markdown source next to
-// its built index.html; the slug is re-validated here because it comes from
-// the request path, not from the parsed list.
+// Built by src/pages/blog/[slug]/index.md.ts. The slug comes from the request path, so it is
+// re-validated.
 export function postMarkdownPath(slug: string): string | null {
   return SLUG.test(slug) ? `/blog/${slug}/index.md` : null;
 }

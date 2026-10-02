@@ -14,18 +14,13 @@ export { ChatRoom, RateLimiter };
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Claims /parties/:party/:room (WebSocket upgrades and HTTP) for the Durable
-// Objects; everything else falls through to the next handler.
+// Claims /parties/:party/:room for the Durable Objects; the rest falls through.
 app.use(
   "*",
   partyserverMiddleware<{ Bindings: Env }>({
     options: {
-      // The chat room records where its visitor connected from, and this is
-      // the only place that context exists: `request.cf` is populated on the
-      // edge request and nowhere downstream, so the room would see nothing.
-      // Copy country and IP onto the upgrade as headers instead. Delete
-      // first, set second — a client-sent value under the same name must
-      // never be mistaken for Cloudflare's.
+      // `request.cf` exists only on the edge request, so forward country and IP
+      // as headers. Delete before set so a client-sent value can't pass as ours.
       onBeforeConnect: (req, _lobby, c) => {
         const cf = c.req.raw.cf as IncomingRequestCfProperties | undefined;
         const country = cf?.country ?? c.req.header("CF-IPCountry");
@@ -42,32 +37,20 @@ app.use(
   })
 );
 
-// The public JSON API. Claimed by the Worker (not static assets) so that
-// every /api/* failure is a JSON error envelope instead of the HTML 404 page
-// — keep the run_worker_first list in wrangler.jsonc in sync with these.
-//
-// Mounted twice: the explicitly versioned prefix first, so /api/v1/profile
-// matches its own route rather than the unversioned catch-all, and then the
-// unversioned prefix, which is a permanent alias for v1 (api/versioning.ts).
+// Keep wrangler.jsonc's run_worker_first list in sync with these routes.
+// /api/v1 must mount before /api, the permanent unversioned alias for v1.
 app.route("/api/v1", api);
 app.route("/api", api);
 app.route("/openapi.json", specRoutes);
 
-// Model Context Protocol server (Streamable HTTP) over the same content, and
-// its server.json manifest. The manifest routes are registered before /mcp so
-// /mcp.json is never mistaken for a JSON-RPC request.
+// Manifest routes register before /mcp so /mcp.json isn't taken as JSON-RPC.
 app.route("/mcp.json", mcpManifest);
 app.route("/.well-known", wellKnown);
 app.route("/mcp", mcp);
 
-// Pre-rendered blog audio from R2 (worker/audio.ts). Registered ahead of the
-// asset catch-all; a missing object still ends in the negotiated 404.
 app.route("/blog/audio", audio);
 
-// Reached for an asset miss (pages themselves are served straight from
-// assets, see wrangler.jsonc) and for a miss under the routes above: a
-// content-negotiated 404 — markdown for a machine client, the styled page for
-// a browser.
+// Asset and route misses: a content-negotiated 404 (pages bypass the Worker).
 app.all("*", c => serveAsset(c.req.raw, c.env.ASSETS));
 
 export default app;

@@ -1,34 +1,22 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "murugappan-dev",
-  // The source config. `astro build` (@astrojs/cloudflare) bundles `main` and
-  // writes the deployable config to dist/server/wrangler.json, with
-  // .wrangler/deploy/config.json pointing `wrangler deploy` (and the other
-  // wrangler commands) at it — so deploy after a build, never before.
+  // Source config: `astro build` writes the deployable one to
+  // dist/server/wrangler.json, so deploy after a build, never before.
   "main": "worker/server.ts",
   "routes": [{ "pattern": "murugappan.dev", "custom_domain": true }],
-  // the custom domain is the only public host — no *.workers.dev duplicate
-  // for crawlers to index (version preview URLs are unaffected)
+  // no *.workers.dev duplicate for crawlers (preview URLs unaffected)
   "workers_dev": false,
   "compatibility_date": "2026-08-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    // the adapter writes the prerendered site here (the Worker: dist/server)
     "directory": "./dist/client",
     "binding": "ASSETS",
-    // Pages are served straight from these assets — no Worker invocation —
-    // and a request that matches no asset is handed to the Worker. That is
-    // what "none" means here: with "404-page" the assets layer would answer
-    // every miss with 404.html itself, browser or agent alike, and the Worker
-    // could not content-negotiate it (worker/not-found.ts: markdown for a
-    // machine client, the styled page — which it fetches — for a browser).
+    // Misses go to the Worker so worker/not-found.ts can content-negotiate the
+    // 404; "404-page" would answer every miss with 404.html.
     "not_found_handling": "none",
-    // The Worker's own routes, which it must answer even where an asset or a
-    // browser navigation would otherwise win: /api/* so every failure is the
-    // JSON error envelope rather than an HTML page, the generated documents
-    // (/openapi.json, /mcp*, /.well-known/*) so they name the host that
-    // answered, /parties/* for the chat Durable Object and /blog/audio/* for
-    // R2. Keep in sync with the routes in worker/server.ts.
+    // Routes the Worker must answer even where an asset would win (JSON errors
+    // for /api/*, host-aware generated docs). Keep in sync with worker/server.ts.
     "run_worker_first": [
       "/api/*",
       "/openapi.json",
@@ -49,16 +37,10 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }],
   "send_email": [{ "name": "EMAIL" }],
-  // Read-only analytics mirror of every room: its messages plus the country
-  // and IP of the connection that opened it. DO SQLite stays the serving
-  // source of truth; D1 exists so chats are browsable in the dash
-  // (Storage & Databases → D1 → jarvis-chats). Writes are fire-and-forget.
-  //
-  // Schema lives in ./migrations (the default `migrations_dir`); apply it with
-  // `bun run db:migrate`. Unlike the DO, which creates its tables in onStart(),
-  // nothing in the Worker issues DDL against D1 — until the migration is
-  // applied every mirror write fails, and because the writes are
-  // fire-and-forget that shows up only as a "d1 mirror failed" line in the logs.
+  // Fire-and-forget analytics mirror of chat rooms (messages, country, IP) so
+  // chats are browsable in the dash; DO SQLite is the source of truth.
+  // The Worker issues no DDL: run `bun run db:migrate`, or every mirror write
+  // fails with only a "d1 mirror failed" log line.
   "d1_databases": [
     {
       "binding": "CHAT_DB",
@@ -66,8 +48,7 @@
       "database_id": "a1111792-fb35-470f-85c9-13c3aab0662c"
     }
   ],
-  // Pre-rendered blog audio + the voice reference, written by `bun run audio`
-  // from a laptop (never from Workers Builds). Served by worker/audio.ts.
+  // Blog audio, written locally by `bun run audio`; served by worker/audio.ts.
   "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "murugappan-dev-audio" }],
   "observability": { "enabled": true }
 }

@@ -1,23 +1,15 @@
-/* Island border default + chat-widget animations, shared by both apps.
-   src/styles/global.css — the one Tailwind entry for the portfolio and the
-   blog — imports this in layer(components), so utilities still out-cascade it.
-   The island mini-reset that used to live here is gone: preflight now applies
-   in both apps. Island tokens live in islands.css. */
+/* Island border default + chat-widget animations. Imported by global.css in
+   layer(components), so utilities still win. */
 
-/* The one mini-reset rule preflight does NOT replace. Preflight writes
-   `border: 0 solid` and leaves border-color at its initial `currentColor`, and
-   Tailwind's width-only utilities (`border`, `border-b`, `border-t`) set no
-   colour — so the chat card's frame and its header/footer rules would paint in
-   the text colour (measured: #2e353f light / #ffffff dark) instead of the
-   hairline token. layer(components) keeps `border-input`/`border-primary` and
-   every other colour utility winning over this. */
+/* Preflight leaves border-color at currentColor and width-only utilities set
+   no colour, so borders would paint in the text colour. */
 .ui-island *,
 .ui-island *::before,
 .ui-island *::after {
   border-color: var(--border);
 }
 
-/* Typing indicator — no shadcn primitive for this. */
+/* Typing indicator (no shadcn primitive). */
 .chat-dot {
   width: 6px;
   height: 6px;
@@ -44,10 +36,7 @@
   }
 }
 
-/* Activity row — the waiting state while Jarvis reasons or runs a tool.
-   `.chat-shimmer` sweeps a highlight across the label so a long pause still
-   looks alive; the spark marks a thinking beat and the primary-coloured dot
-   marks a real tool call, so flavour is never mistaken for activity. */
+/* Activity row: the spark marks a thinking beat, the dot a real tool call. */
 .chat-shimmer {
   background-image: linear-gradient(
     90deg,
@@ -110,8 +99,7 @@
   }
 }
 
-/* Visitors who asked for less motion keep the words and lose the movement —
-   the gradient must be undone too, or the label stays transparent. */
+/* Undo the gradient too, or the label stays transparent. */
 @media (prefers-reduced-motion: reduce) {
   .chat-shimmer,
   .chat-spark,

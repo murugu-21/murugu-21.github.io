@@ -7,9 +7,8 @@ export interface GithubProfile {
   location: string | null;
 }
 
-// Astro/Vite surfaces .env (and build-time env) via import.meta.env, not
-// process.env, for SSR — check it first so a token in .env works in dev and
-// in the production build; fall back to process.env for plain-node contexts.
+// Vite exposes .env via import.meta.env, not process.env; fall back to
+// process.env for plain-node contexts.
 function githubToken(): string | undefined {
   const meta = import.meta.env as unknown as Record<string, string | undefined>;
   return meta.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN ?? process.env.REACT_APP_GITHUB_TOKEN;
@@ -69,7 +68,7 @@ export interface GithubRepo {
   topics: string[];
 }
 
-/** GitHub's diskUsage is in KB; show KB under 1 MB, else MB (matches the old developerFolio card). */
+/** GitHub's diskUsage is in KB. */
 export function formatRepoSize(kb: number): string {
   if (kb < 1024) return `${kb} KB`;
   return `${parseFloat((kb / 1024).toFixed(1))} MB`;
@@ -115,8 +114,6 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
         repositoryTopics?: { nodes?: { topic: { name: string } }[] };
       };
     }[];
-    // Flatten repositoryTopics.nodes[].topic.name → string[] so the card just
-    // reads repo.topics.
     return edges
       .map(e => e.node)
       .map(({ repositoryTopics, ...rest }) => ({

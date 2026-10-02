@@ -3,18 +3,16 @@ import { blogSection } from "../data/portfolio";
 import { accentTitle } from "../lib/accent";
 ---
 
-{/* old `.main` wrapper (width/padding/margins) folded into the section root */}
 <div
   class="blog-section section-animate mx-auto mt-16 box-content w-[90%] px-2.5 py-5 max-xs:w-auto"
   id="blogs"
 >
   <div class="blog-header">
-    {/* 0.67em margins pin the old h1 UA margin after the demotion to h2 */}
+    {/* my-[0.67em]: h1 UA margin, kept after demotion to h2 */}
     <h2
       class="blog-header-text my-[0.67em] text-[56px] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
       set:html={accentTitle(blogSection.title)}
     />
-    {/* my-[1em] restores the UA <p> margin preflight removes */}
     <p class="subTitle blog-subtitle my-[1em] uppercase dark:text-white max-md:text-center max-md:text-[16px] max-md:leading-[normal]">
       {blogSection.subtitle}
     </p>
@@ -23,14 +21,8 @@ import { accentTitle } from "../lib/accent";
     <div class="blog-text-div mb-[30px] grid flex-1 grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-8 min-[300px]:max-[481px]:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
       {blogSection.blogs.map(blog => (
         <div class="blog-container glow-card box-content h-[200px] cursor-pointer text-blog-container dark:text-white">
-          {/* the old card opened blog.url via JS window.open; the whole
-                card is now a real anchor to the post. `group` drives the
-                ::before wipe and the text recolour the old
-                `.blog-card:hover > *` rules did; the wipe's scale is tuned per
-                breakpoint so it always covers the card. Its fill is the dusk
-                violet under the blue-hour light theme (a navy slab read as the
-                old palette sitting on the evening sky) and the night's blue in
-                dark mode. */}
+          {/* `group` drives the ::before hover wipe; its scale is tuned per
+                breakpoint so it always covers the card. */}
           <a
             class="blog-card group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:-top-4 before:-right-4 before:-z-1 before:size-8 before:origin-center before:scale-100 before:rounded-[32px] before:bg-dusk-violet dark:before:bg-blue-light before:transition-transform before:duration-[400ms] before:ease-out before:content-[''] hover:before:scale-[30] min-[481px]:max-[675px]:before:duration-[450ms] min-[481px]:max-[675px]:hover:before:scale-[40] min-[675px]:max-[925px]:before:duration-[500ms] min-[675px]:max-[860px]:hover:before:scale-[50] min-[860px]:max-[925px]:hover:before:scale-[60] min-[1025px]:max-[1405px]:before:duration-[450ms] min-[1025px]:max-[1405px]:hover:before:scale-[40] min-[1551px]:before:duration-[450ms] min-[1551px]:hover:before:scale-[40]"
             href={blog.url}
@@ -38,8 +30,7 @@ import { accentTitle } from "../lib/accent";
             data-ph-prop="post"
             data-ph-value={blog.title}
           >
-            {/* dark:text-white! mirrors the old `.small-dark` !important, which
-                  kept the hover recolour from re-tinting the text in dark mode */}
+            {/* `!` so dark mode beats group-hover:text-white */}
             <h3 class="blog-title mx-5 mt-8 mb-[14px] line-clamp-2 text-[1.375rem] leading-6 font-bold text-blog-title group-hover:text-white group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white! dark:group-hover:text-navy! min-[300px]:max-[481px]:text-[1.125rem]">
               {blog.title}
             </h3>

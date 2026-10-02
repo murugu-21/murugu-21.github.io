@@ -30,7 +30,7 @@ const { src, label } = Astro.props;
         autoplay: !REDUCED,
         animationData: data
       });
-      // reduced motion: render the first frame as a static illustration
+      // with reduced motion this leaves the first frame as a static illustration
     } catch {
       // failed to load: stop announcing an image that isn't there
       el.removeAttribute("role");
@@ -49,12 +49,8 @@ const { src, label } = Astro.props;
     },
     { rootMargin: "120px" }
   );
-  // Decoration waits for the visitor's first input (see lib/first-interaction.ts):
-  // the player is 170 KB and the coding illustration a 430 KB JSON whose parse
-  // and SVG build are a ~450 ms main-thread task — on a desktop viewport the
-  // Skills section is already in range at load, so it landed inside what
-  // Lighthouse scores as blocking time. A pointer move, key or touch (which
-  // reaching the section on a phone requires anyway) starts the observer.
+  // Wait for first input: the player + 430 KB JSON cost a ~450 ms main-thread
+  // task that otherwise lands in Lighthouse's blocking time on desktop.
   onFirstInteraction(() => {
     holders.forEach(h => io.observe(h));
   });

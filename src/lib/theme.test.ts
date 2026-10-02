@@ -19,8 +19,7 @@ describe("resolveTheme", () => {
 });
 
 describe("syncThemeOnRestore", () => {
-  // The Workers pool has no PageTransitionEvent; the implementation reads the
-  // one own property a real restore sets.
+  // the Workers pool has no PageTransitionEvent
   const show = (persisted: boolean) => Object.assign(new Event("pageshow"), { persisted });
   const source = (stored: string | null, current: Theme, prefersDark = false): ThemeSource => ({
     stored: () => stored,

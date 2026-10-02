@@ -6,9 +6,7 @@ import Tilt from "./Tilt.astro";
 import { accentTitle } from "../lib/accent";
 ---
 
-{/* box-content: `width: 90%` + `padding: 20px 10px` was a content-box outer
-  width before Preflight switched everything to border-box (old `.main`
-  wrapper folded into this root). */}
+{/* box-content: w-[90%] excludes the padding, as before Preflight's border-box */}
 <div
   id="skills"
   class="skills-main-div section-animate mx-auto mt-16 box-content flex w-[90%] overflow-hidden px-2.5 py-5 max-md:flex-col max-xs:w-auto"
@@ -22,14 +20,11 @@ import { accentTitle } from "../lib/accent";
     </Tilt>
   </div>
   <div class="skills-text-div ml-[50px] mb-[30px] flex-1 max-md:m-5">
-    {/* my-[0.67em] pins the old h1 UA margin the heading kept after being
-      demoted to h2 (h2 UA default would be 0.83em); font-normal because the
-      old rule set weight 400, not the browser's bold h2 default. */}
+    {/* my-[0.67em]: h1 UA margin, kept after demotion to h2 */}
     <h2
       class="skills-heading my-[0.67em] text-[56px] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
       set:html={accentTitle(skillsSection.title)}
     />
-    {/* my-[1em] restores the browser default <p> margin Preflight removes */}
     <p class="subTitle skills-text-subtitle my-[1em] dark:text-white max-md:text-center max-md:text-[16px]">
       {skillsSection.subTitle}
     </p>
@@ -54,11 +49,8 @@ import { accentTitle } from "../lib/accent";
 </div>
 
 <style>
-  /* sizing for the lazy lottie holder (old `.skills-image-div > img`
-     equivalent); aspect-ratio reserves the animation's box (1600x1200)
-     before load to avoid CLS. Third-party DOM (lottie-web renders an <svg>
-     into this div at runtime), so it stays a plain global rule rather than
-     an Icon-style class prop. */
+  /* aspect-ratio reserves the 1600x1200 animation box to avoid CLS; global
+     because lottie-web renders into this div at runtime. */
   .skills-image-div :global(.lottie-holder) {
     width: 100%;
     max-width: 100%;

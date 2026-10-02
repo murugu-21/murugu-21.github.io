@@ -9,11 +9,8 @@ import { replaceMermaidFences } from "../../blog/utils/mermaid-diagrams";
 
 const parser = new MarkdownIt();
 
-// Post images are written relative to the post directory (`react.jpg` inside
-// content/blog/react/index.md). Feed readers render the body detached from
-// that directory, so those paths have to become absolute URLs pointing at
-// assets the build actually emits. Importing them here runs them through
-// Astro's asset pipeline and yields the hashed, base-prefixed public path.
+// Feed readers need absolute image URLs; importing post images here yields
+// their hashed, emitted public paths.
 const ORIGIN = new URL(SITE_URL).origin;
 const assets = import.meta.glob<{ default: ImageMetadata | string }>(
   "../../../content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}",
@@ -29,8 +26,7 @@ const ASSET_URLS = new Map(
   })
 );
 
-// Point a post's relative <img src> at the emitted asset. Absolute URLs,
-// root-relative paths and anchors are left untouched.
+// Rewrites relative <img src> only; absolute, root-relative and anchor URLs pass through.
 function absolutizeAssets(html: string, postId: string): string {
   return html.replace(
     /(<img\b[^>]*?\bsrc=")([^"]+)(")/gi,
@@ -42,15 +38,9 @@ function absolutizeAssets(html: string, postId: string): string {
   );
 }
 
-// Feed at /blog/rss.xml, ported from gatsby-plugin-feed: newest first, with
-// the rendered post body in <content:encoded>.
-// This route runs markdown-it, not Astro's remark pipeline, so the ```mermaid
-// fences are swapped for their rendered PNGs here (light theme; feed readers
-// and mirrors such as dev.to have no theme toggle, and their image proxies
-// cannot rasterize the SVGs the page uses — see diagramRaster) — as
-// post-relative images, which absolutizeAssets then points at the emitted
-// files like any other post image. Left as fences they would reach readers as
-// diagram source.
+// This route uses markdown-it, not the remark pipeline, so ```mermaid fences are
+// swapped for their light-theme PNGs here: feed readers have no theme toggle and
+// their image proxies can't rasterize SVG (see diagramRaster).
 export async function GET() {
   const posts = (await getPublishedPosts()).reverse();
 

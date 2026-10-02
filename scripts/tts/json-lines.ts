@@ -4,9 +4,7 @@ import { spawn } from "node:child_process";
 
 export function startJsonLines(command: string, args: string[]) {
   const proc = spawn(command, args, { stdio: ["pipe", "pipe", "inherit"] });
-  // Lines are queued, not dropped: two lines often arrive in one data event
-  // (the last chunk report and the "done" line), and the consumer only has a
-  // waiter registered for the first of them.
+  // Queue lines: two often arrive in one data event with only one waiter.
   let buffer = "";
   const pending: unknown[] = [];
   const waiters: ((msg: unknown) => void)[] = [];

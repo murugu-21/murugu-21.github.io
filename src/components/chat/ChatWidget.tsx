@@ -1,7 +1,4 @@
-// Jarvis chat widget — React island on vendored shadcn/ui primitives, shared
-// by the portfolio and the blog through ChatWidget.astro, which hydrates it on
-// the visitor's first input (client:interaction) so a page that is only loaded
-// never pays for React or this bundle.
+// Jarvis chat island, shared by the portfolio and blog via ChatWidget.astro.
 import React, { useEffect, useRef, useState } from "react";
 import { nanoid } from "nanoid";
 import { PartySocket } from "partysocket";
@@ -25,12 +22,10 @@ import { track, reportError } from "../../lib/analytics";
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
 const MAX_LENGTH = 1000;
-// The composer grows with its content up to this height (~5 lines), then
-// scrolls. Long text wraps either way — it never scrolls sideways.
+// ~5 lines; the composer scrolls beyond this.
 const MAX_INPUT_HEIGHT = 120;
 
-// Shown as tappable chips while the conversation is empty. Subtle by design:
-// each steers Jarvis toward a strong grounded answer without selling.
+// Each steers Jarvis toward a strong grounded answer without selling.
 const STARTERS = [
   "What's the most impactful thing he's shipped?",
   "How has he used LLMs in production?",
@@ -48,13 +43,10 @@ function roomId(): string {
   return id;
 }
 
-// Render bare URLs in message text as real links (Jarvis replies in plain
-// text; the system prompt tells it to include full URLs). Split keeps the
-// captured URLs at odd indexes; trailing punctuation stays outside the link.
+// Split keeps captured URLs at odd indexes; trailing punctuation stays outside the link.
 const URL_SPLIT = /(https?:\/\/[^\s]+)/;
 
-// The prompt forbids markdown, but models still slip [label](url) through
-// sometimes — flatten it to "label: url" so the linkifier below handles it.
+// The prompt forbids markdown but [label](url) still slips through; flatten to "label: url".
 const MD_LINK = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
 
 function renderWithLinks(raw: string) {
@@ -98,8 +90,7 @@ export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [stream, setStream] = useState<string | null>(null);
-  // `typing` is the plain three dots, used for one thing only: the initial
-  // history load. Everything mid-turn goes through the activity row.
+  // Dots for the initial history load only; mid-turn uses the activity row.
   const [typing, setTyping] = useState(false);
   const [waiting, setWaiting] = useState(false);
   const [activity, setActivity] = useState<Activity | null>(null);
@@ -109,7 +100,7 @@ export function ChatWidget() {
   const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">("hidden");
 
   const socketRef = useRef<PartySocket | null>(null);
-  // Mirrors for the socket handlers, which outlive any single render.
+  // Refs for the socket handlers, which outlive any single render.
   const historyLoadedRef = useRef(false);
   const streamRef = useRef<string | null>(null);
   const greetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,24 +128,19 @@ export function ChatWidget() {
         setActivity(null);
         streamRef.current = null;
         setStream(null);
-        // One state swap = one paint, same as the old replaceChildren fix.
-        // The server seeds the greeting as the room's first message, so it
-        // arrives inside history — the local `greeted` bubble is only the
-        // offline fallback and must clear once real history lands.
+        // History includes the server-seeded greeting; `greeted` is only the offline fallback.
         setBubbles(msg.messages.map(m => ({ kind: m.role, text: m.content })));
         setGreeted(false);
         break;
       case "visitor":
-        // Another tab of this room sent a message — mirror it here.
+        // sent from another tab of this room
         setBubbles(b => [...b, { kind: "user", text: msg.text }]);
         break;
       case "delta": {
-        // Left-trim the first chunk — model replies can lead with blank lines;
-        // keep showing the typing dots until real text arrives.
+        // Replies can lead with blank lines; trim the first chunk and wait for real text.
         const text = streamRef.current === null ? msg.text.replace(/^\s+/, "") : msg.text;
         if (streamRef.current === null && text === "") break;
         setTyping(false);
-        // Real text is arriving — the row has nothing left to explain.
         setWaiting(false);
         setActivity(null);
         streamRef.current = (streamRef.current ?? "") + text;
@@ -162,8 +148,7 @@ export function ChatWidget() {
         break;
       }
       case "tool":
-        // A tool round can start after some text has already streamed, so the
-        // row comes back rather than only ever showing before the first token.
+        // A tool round can start after text has streamed, so the row comes back.
         setActivity({ name: msg.name, detail: msg.detail });
         setWaiting(true);
         break;
@@ -176,8 +161,7 @@ export function ChatWidget() {
         break;
       case "limit":
       case "error":
-        // No message text, here or anywhere below: nothing a visitor typed
-        // goes to PostHog. Session replay masks the input for the same reason.
+        // PII: never send message text to PostHog.
         track(msg.type === "limit" ? "chat_limit" : "chat_error");
         setTyping(false);
         setWaiting(false);
@@ -200,8 +184,7 @@ export function ChatWidget() {
       try {
         handleServerMessage(JSON.parse(event.data as string) as ServerMessage);
       } catch (err) {
-        // A malformed frame is a protocol bug, not a visitor's mistake —
-        // worth seeing in error tracking. Nothing a visitor typed is passed.
+        // A protocol bug worth tracking; nothing the visitor typed is passed.
         reportError(err, { surface: "chat" });
       }
     });
@@ -215,18 +198,16 @@ export function ChatWidget() {
     return socket;
   };
 
-  // Until the first history frame arrives the panel shows the typing dots as
-  // a loading state; if nothing lands in 4s (offline / worker down), settle
-  // into the greeting instead of dots forever (sends still buffer).
+  // Dots until history arrives; after 4s (offline / worker down) fall back to
+  // the local greeting. Sends still buffer.
   const beginLoading = () => {
     if (historyLoadedRef.current) return;
     setTyping(true);
     greetTimerRef.current ??= setTimeout(() => {
       greetTimerRef.current = null;
-      if (!historyLoadedRef.current) {
-        setTyping(false);
-        setGreeted(true);
-      }
+      if (historyLoadedRef.current) return;
+      setTyping(false);
+      setGreeted(true);
     }, 4000);
   };
 
@@ -250,8 +231,7 @@ export function ChatWidget() {
   const sendText = (raw: string) => {
     const text = raw.trim();
     if (!text || sending) return false;
-    // PartySocket buffers sends while CONNECTING/reconnecting and flushes on
-    // open — don't gate on readyState or messages get silently dropped.
+    // Don't gate on readyState: PartySocket buffers sends until open.
     const ws = connect();
     setBubbles(b => [...b, { kind: "user", text }]);
     setWaiting(true);
@@ -259,8 +239,7 @@ export function ChatWidget() {
     setSending(true);
     setConfirmRestart(false);
     track("chat_message_sent");
-    // Include the page the visitor is on — the room feeds it to the model as
-    // ephemeral context so "this post"/"this page" resolve correctly.
+    // `page` lets "this post"/"this page" resolve.
     ws.send(JSON.stringify({ type: "chat", text, page: window.location.pathname }));
     return true;
   };
@@ -274,8 +253,7 @@ export function ChatWidget() {
   const submit = () => {
     const el = inputRef.current;
     if (!el) return;
-    // Only clear on an accepted send — sendText refuses while a turn is in
-    // flight, and Enter-to-send makes silently wiping the box easy to hit.
+    // Clear only on an accepted send; sendText refuses while a turn is in flight.
     if (!sendText(el.value)) return;
     el.value = "";
     autoGrow(el);
@@ -287,8 +265,7 @@ export function ChatWidget() {
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter sends, Shift+Enter is a newline. isComposing guards IME input:
-    // the Enter that commits a candidate must not send the message.
+    // isComposing: the Enter that commits an IME candidate must not send.
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       submit();
@@ -330,24 +307,20 @@ export function ChatWidget() {
     URL.revokeObjectURL(url);
   };
 
-  // A tap on the server-rendered launcher while this bundle was still loading
-  // is recorded on the island by the client:interaction directive
-  // (src/directives/interaction.ts); honour it now that the widget exists.
+  // Honour a launcher tap recorded by src/directives/interaction.ts while this bundle loaded.
   useEffect(() => {
     const island = launcherRef.current?.closest("astro-island");
-    if (island instanceof HTMLElement && island.dataset.openOnHydrate) {
-      delete island.dataset.openOnHydrate;
-      // oxlint-disable-next-line react/set-state-in-effect
-      openPanel();
-    }
+    if (!(island instanceof HTMLElement) || !island.dataset.openOnHydrate) return;
+    delete island.dataset.openOnHydrate;
+    // oxlint-disable-next-line react/set-state-in-effect
+    openPanel();
   }, []);
 
   // One-time quiet tooltip.
   useEffect(() => {
     if (localStorage.getItem(TOOLTIP_KEY)) return;
     localStorage.setItem(TOOLTIP_KEY, "1");
-    // Deliberately setState-in-effect: this island is server-rendered and
-    // then hydrated, and localStorage is unreadable in both of those passes. Seeding "shown" from a lazy initializer instead
+    // setState-in-effect on purpose: a lazy initializer reading localStorage
     // would make the server and hydration renders disagree.
     // oxlint-disable-next-line react/set-state-in-effect
     setTooltip("shown");
@@ -359,9 +332,8 @@ export function ChatWidget() {
     };
   }, []);
 
-  // Keep the newest message in view — except on a fresh conversation, where
-  // the greeting (top) must stay visible even if the starter chips overflow
-  // a keyboard-shrunken mobile viewport.
+  // Stick to the bottom, except on a fresh conversation where the greeting must
+  // stay visible above overflowing starter chips.
   useEffect(() => {
     const v = viewportRef.current;
     if (!v) return;
@@ -382,8 +354,7 @@ export function ChatWidget() {
     };
   }, [open]);
 
-  // Autofocus only on desktop: on phones it pops the keyboard the instant
-  // the panel opens, halving the viewport and hiding the greeting.
+  // Desktop only: on phones autofocus pops the keyboard and hides the greeting.
   useEffect(() => {
     if (open && window.matchMedia("(min-width: 640px)").matches) {
       inputRef.current?.focus();
@@ -398,8 +369,7 @@ export function ChatWidget() {
     []
   );
 
-  // Starters show until the visitor has said anything — the greeting seeded
-  // by the server (or the offline fallback) doesn't count as conversation.
+  // Until the visitor says anything; the greeting doesn't count.
   const showStarters =
     (greeted || bubbles.length > 0) &&
     bubbles.every(b => b.kind !== "user") &&
@@ -500,12 +470,8 @@ export function ChatWidget() {
           )}
 
           <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
-            {/* Session replay masks <input> contents by default, but a sent
-                message is re-rendered as a bubble <div>, which is not covered —
-                mask the whole transcript so nothing a visitor typed reaches a
-                recording. data-ph-mask is the maskTextSelector PostHog is
-                configured with (see lib/analytics.ts). Matches the no-PII rule
-                the events follow. */}
+            {/* PII: replay masks inputs but not bubbles, so mask the transcript
+                (data-ph-mask is the maskTextSelector in lib/analytics.ts). */}
             <div className="flex flex-col gap-2 p-3" aria-live="polite" data-ph-mask="true">
               {greeted && <BubbleView kind="assistant" text={GREETING} />}
               {bubbles.map((b, i) => (

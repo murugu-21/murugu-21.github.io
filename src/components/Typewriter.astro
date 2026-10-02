@@ -1,7 +1,5 @@
 ---
-// Vanilla replacement for the reference's typewriter-effect library.
-// The first role is server-rendered so no-JS visitors (and
-// prefers-reduced-motion users, for whom the loop never starts) still see it.
+// The first role is server-rendered so no-JS and reduced-motion visitors see it.
 interface Props {
   roles: string[];
 }
@@ -43,15 +41,15 @@ const { roles } = Astro.props;
         } else {
           setTimeout(tick, 40);
         }
+        return;
+      }
+      pos++;
+      text.textContent = current.slice(0, pos);
+      if (pos === current.length) {
+        deleting = true;
+        setTimeout(tick, 1700);
       } else {
-        pos++;
-        text.textContent = roles[index % roles.length].slice(0, pos);
-        if (pos === roles[index % roles.length].length) {
-          deleting = true;
-          setTimeout(tick, 1700);
-        } else {
-          setTimeout(tick, 85);
-        }
+        setTimeout(tick, 85);
       }
     };
     setTimeout(tick, 1700);

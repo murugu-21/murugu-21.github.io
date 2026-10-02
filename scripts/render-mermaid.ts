@@ -14,28 +14,19 @@ import {
   type DiagramTheme
 } from "../src/blog/utils/mermaid-diagrams";
 
-// Renders every ```mermaid fence under content/blog to SVG, one file per
-// theme, next to its post (content/blog/<slug>/diagrams/<hash>.<theme>.svg),
-// plus a 2x PNG of the light theme for the RSS feed (<hash>.png — mirrors
-// rasterize images server-side and cannot draw the SVGs, see diagramRaster),
-// and deletes renderings no fence refers to any more. The build never runs
-// mermaid: src/blog/utils/remark-mermaid.ts swaps each fence for these files
-// and fails when one is missing, so this is a dev-time step — run it after
-// editing a diagram and commit the output.
+// Renders every ```mermaid fence under content/blog to
+// <slug>/diagrams/<hash>.<theme>.svg plus a light <hash>.png for RSS (feed
+// mirrors can't draw the SVGs), and prunes orphans. The build never runs
+// mermaid (remark-mermaid.ts fails on a missing file): commit the output.
 //
 //   bun run diagrams           render what is missing or rendered by another
 //                              mermaid version, prune orphans
 //   bun run diagrams --force   re-render everything
 //   bun run diagrams --check   report missing/stale/orphaned files, exit 1 if any
 //
-// Headless Chromium (puppeteer, already a dev dependency for the resume PDF)
-// runs the same mermaid the page used to ship, with the page's Fira Code
-// loaded so labels are measured in the face they are shown in. An SVG shown
-// through <img> cannot reach the page's fonts, so each file embeds a subset of
-// that font (only the glyphs the diagram uses, a few KB) as a data: URI —
-// without it the browser substitutes a system monospace with different
-// advance widths and labels overrun their boxes. The theme background is
-// baked in too, so the zoomed copy keeps a card behind edge labels.
+// An SVG in <img> can't reach page fonts, so each embeds a Fira Code subset;
+// otherwise a substitute face's widths make labels overrun their boxes. The
+// theme background is baked in so the zoomed copy keeps a card behind labels.
 
 const CONTENT_DIR = fileURLToPath(new URL("../content/blog/", import.meta.url));
 const MERMAID_JS = fileURLToPath(
@@ -55,10 +46,8 @@ const FONT_FILE = fileURLToPath(
 );
 const FONT_FAMILY = "Fira Code, ui-monospace, monospace";
 
-// Stamped on every <svg> root. A file whose stamp differs from the mermaid
-// installed now is treated as missing, so a mermaid upgrade re-renders on the
-// next run and `--check` reports it, without anyone remembering to bump
-// RENDERER_VERSION (that one is for changes to this script's own output).
+// A file stamped with another mermaid version counts as missing, so upgrades
+// re-render and `--check` flags them.
 const STAMP_ATTR = "data-renderer";
 const STAMP = `mermaid@${MERMAID_VERSION}`;
 const stampOf = (path: string): string | undefined =>
@@ -67,8 +56,7 @@ const stampOf = (path: string): string | undefined =>
     .match(new RegExp(`\\b${STAMP_ATTR}="([^"]*)"`))?.[1];
 const upToDate = (path: string) => existsSync(path) && stampOf(path) === STAMP;
 
-// One output file of one diagram. The PNG is a screenshot of the light SVG,
-// so it is current exactly when that SVG is (a PNG cannot carry the stamp).
+// The PNG can't carry the stamp; it is current exactly when the light SVG is.
 type Variant = { kind: "svg"; theme: DiagramTheme } | { kind: "png" };
 const VARIANTS: readonly Variant[] = [
   { kind: "svg", theme: "light" },
@@ -81,12 +69,10 @@ const variantPath = (job: Job, variant: Variant) =>
     variant.kind === "png" ? diagramRaster(job.hash) : diagramFile(job.hash, variant.theme)
   );
 const variantLabel = (variant: Variant) => (variant.kind === "png" ? "png" : variant.theme);
-// PNG padding, matching the card post.css draws around the page's <img>.
+// matches the card post.css draws around the <img>
 const PNG_PADDING = 12;
 
-// Per theme: mermaid's theme name and the card colour behind the diagram
-// (post.css paints the same colour behind the <img>'s padding; the dark one
-// is --color-dark-bg).
+// background matches post.css's card (dark is --color-dark-bg)
 const THEMES: Record<DiagramTheme, { mermaid: string; background: string }> = {
   light: { mermaid: "neutral", background: "#fff" },
   dark: { mermaid: "dark", background: "#282c35" }
@@ -113,7 +99,7 @@ function findPosts(dir: string): string[] {
   return posts.sort();
 }
 
-// Every file a post's fences expect, keyed by post directory.
+// Keyed by post directory.
 async function expectedFiles(): Promise<{ jobs: Job[]; expected: Map<string, Set<string>> }> {
   const jobs: Job[] = [];
   const expected = new Map<string, Set<string>>();
@@ -146,10 +132,8 @@ function orphans(expected: Map<string, Set<string>>): string[] {
 
 const rel = (path: string) => relative(process.cwd(), path);
 
-// The glyphs a rendering needs: the text between tags, once mermaid's inline
-// stylesheet is out of the way (its selectors would drag the whole CSS
-// character repertoire into the subset). A small superset of the visible
-// labels is fine — the subset only grows by a few glyphs.
+// Text between tags, minus the inline stylesheet (whose selectors would bloat
+// the subset). A small superset of the labels is fine.
 function usedText(svg: string): string {
   const text = svg
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, " ")
@@ -174,12 +158,10 @@ async function embedStyle(svg: string, theme: DiagramTheme, font: Buffer): Promi
 async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Page }> {
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
-  // 2x so the PNG stays sharp on high-density screens; the viewport is
-  // widened per screenshot for diagrams wider than this.
+  // 2x for high-density screens; widened per screenshot when needed
   await page.setViewport({ width: 1200, height: 900, deviceScaleFactor: 2 });
   page.on("pageerror", err => console.error("[render-mermaid] page error:", err));
-  // The full font goes into the measuring page so every glyph measures in the
-  // face the SVG will embed.
+  // full font, so every glyph measures in the face the SVG embeds
   await page.setContent(
     `<!doctype html><html><head><style>@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;` +
       `src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2-variations")}</style></head><body></body></html>`
@@ -192,11 +174,8 @@ async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Pag
   return { browser, page };
 }
 
-// The element id lands in the SVG (`<svg id>` and every selector of mermaid's
-// inline stylesheet), so it is derived from the file name rather than a
-// counter: a `--force` re-render then only changes the files whose picture
-// changed, and the diff stays reviewable. Each SVG is its own document inside
-// an <img>, so ids need not be unique across files.
+// The id lands in the SVG and its stylesheet, so it derives from the hash (not
+// a counter) to keep `--force` diffs minimal. Ids needn't be unique across files.
 async function renderOne(
   page: Page,
   source: string,
@@ -205,17 +184,12 @@ async function renderOne(
 ): Promise<string> {
   return page.evaluate(
     async (src, themeName, fontFamily, svgId) => {
-      // `mermaid` is the UMD global the script tag installed. "strict" is
-      // mermaid's default: no click callbacks, labels HTML-escaped. Nothing
-      // the posts use needs more, and the files are also reachable directly
-      // under /static/.
+      // "strict": no click callbacks, labels escaped; files are also served directly.
       const m = (window as unknown as { mermaid: typeof import("mermaid").default }).mermaid;
       m.initialize({ startOnLoad: false, theme: themeName, securityLevel: "strict", fontFamily });
       const { svg } = await m.render(svgId, src);
-      // mermaid serializes as HTML: label line breaks come out as a bare
-      // `<br>` inside the <foreignObject> labels, which an inline <svg> on a
-      // page tolerates but an <img> does not — the file is parsed as XML and
-      // a single unclosed tag leaves a broken image. Re-serialize as XML.
+      // mermaid emits HTML (bare `<br>` in labels); <img> parses as XML and
+      // breaks on it, so re-serialize as XML.
       const template = document.createElement("template");
       template.innerHTML = svg;
       const root = template.content.querySelector("svg");
@@ -229,8 +203,7 @@ async function renderOne(
   );
 }
 
-// The page shows each file through <img>, which parses it as XML and draws
-// nothing on any error, so a file that is not well-formed is never written.
+// <img> draws nothing for malformed XML, so never write one.
 async function assertWellFormed(page: Page, svg: string, path: string): Promise<void> {
   const error = await page.evaluate(
     markup =>
@@ -241,9 +214,7 @@ async function assertWellFormed(page: Page, svg: string, path: string): Promise<
   if (error) throw new Error(`render-mermaid: ${rel(path)} is not well-formed XML: ${error}`);
 }
 
-// Screenshot of the styled light SVG at its natural size, on the same white
-// card the page draws, quantized to a palette (line art compresses to a
-// fraction of a truecolour PNG with no visible loss).
+// Palette-quantized: line art compresses far smaller with no visible loss.
 async function rasterize(page: Page, styledSvg: string): Promise<Buffer> {
   const size = await page.evaluate(svgMarkup => {
     document.body.innerHTML = `<div id="shot" style="display:inline-block;background:#fff">${svgMarkup}</div>`;
@@ -304,7 +275,7 @@ async function main(): Promise<void> {
     rmSync(path);
     console.log(`removed  ${rel(path)}`);
   }
-  // A post whose last diagram went away leaves an empty directory behind.
+  // remove diagram dirs left empty
   for (const [postDir] of expected) {
     const dir = join(postDir, DIAGRAMS_DIR);
     if (existsSync(dir) && readdirSync(dir).length === 0) rmSync(dir, { recursive: true });
@@ -318,8 +289,7 @@ async function main(): Promise<void> {
   const font = readFileSync(FONT_FILE);
   const { browser, page } = await openRenderer(font);
   try {
-    // Styled light SVGs rendered this run, so the PNG (listed after the SVGs
-    // for the same job) reuses the exact markup just written.
+    // the PNG (listed after its SVGs) reuses the light markup just written
     const lightSvgs = new Map<string, string>();
     for (const { job, variant, path } of missing) {
       mkdirSync(dirname(path), { recursive: true });

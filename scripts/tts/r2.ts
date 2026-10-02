@@ -16,9 +16,8 @@ export function r2Store(local: boolean) {
     local ? "--local" : "--remote"
   ];
 
-  // False only when the object is genuinely absent. Any other wrangler failure
-  // (expired login, network) throws, so a broken session can never be mistaken
-  // for "nothing there yet".
+  // False only when the object is absent; other failures (expired login,
+  // network) throw so they aren't mistaken for "nothing there yet".
   function get(key: string, file: string): boolean {
     const r = spawnSync("bunx", args(["get", `${BUCKET}/${key}`, "--file", file]), {
       encoding: "utf8"
@@ -33,8 +32,7 @@ export function r2Store(local: boolean) {
     run("bunx", args(["put", `${BUCKET}/${key}`, "--file", file, "--content-type", contentType]));
   }
 
-  // Fail fast when wrangler cannot talk to Cloudflare, instead of finding out
-  // after minutes (or hours) of local work.
+  // Fail fast rather than after hours of local synthesis.
   function checkLogin() {
     if (local) return;
     const r = spawnSync("bunx", ["wrangler", "whoami"], { encoding: "utf8" });

@@ -1,30 +1,19 @@
-/* shadcn/ui design tokens for the React islands (chat widget, blog read-aloud).
-   NOT a Tailwind entry: src/styles/global.css — the ONE entry for both apps
-   (portfolio Layout.astro and blog BaseLayout.astro) — imports this file into
-   its Tailwind graph. Token names (background, primary, muted, …) map to the
-   site palette. Dark mode is `html.dark-mode` in both apps.
-   src/styles/islands.test.ts guards the contrast ratios and string-matches the
-   two `.ui-island` blocks below — keep their selectors exactly as written.
-   Shared islands (chat, ui, blog components) must not use `md:`/`max-md:`: the
-   theme redefines --breakpoint-md to 769px rather than Tailwind's 768px, so a
-   class written against the default would split at the wrong width — use
-   `sm`/`lg` or an arbitrary value instead. */
+/* shadcn tokens for the React islands; imported by global.css.
+   islands.test.ts string-matches the two `.ui-island` blocks: keep their
+   selectors exactly as written.
+   Islands must not use `md:`/`max-md:`: --breakpoint-md is 769px here, not
+   Tailwind's 768px. Use `sm`/`lg` or an arbitrary value. */
 
 @custom-variant dark (&:where(html.dark-mode *));
 
 .ui-island {
-  /* Blue-hour surfaces: the island floats over the sky gradient, so its panels
-     are the same dusk-white the cards use (global.css glow-card) and its greys
-     are violet-slates. The primary/ink pair is unchanged, so the ratios
-     islands.test.ts guards below still hold. */
   --background: #faf9ff;
   --foreground: #2f2a4d;
   --card: #faf9ff;
   --card-foreground: #2f2a4d;
   --primary: #06038d;
   --primary-foreground: #ffffff;
-  /* Darker than the #4c7dff bright accent so the white label keeps AA on
-     hover (that value gave 3.7:1). */
+  /* darker than #4c7dff so the white label keeps AA on hover */
   --primary-hover: #3b6fe0;
   --secondary: #f1eff8;
   --secondary-foreground: #2f2a4d;
@@ -36,24 +25,15 @@
   --input: rgba(34, 27, 61, 0.14);
   --ring: #06038d;
   --radius: 0.75rem;
-  /* shadcn radius scale, scoped to the islands: these override Tailwind's
-     default --radius-* custom properties (which its rounded-* utilities read
-     via var()) only inside an island, so the portfolio's own rounded-md etc.
-     keep Tailwind's default values. Previously these lived in @theme inline,
-     which inlined calc(var(--radius) …) into every utility site-wide and made
-     rounded-* resolve to 0 wherever --radius was undefined. */
+  /* Scoped here, not in @theme inline, so rounded-* keeps Tailwind's defaults
+     outside islands (inlining made them 0 where --radius was undefined). */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  /* Pin the island's type to what shadcn assumes — preflight's 16px/1.5 base.
-     Without the pin each host's body type leaked in and the same component
-     rendered at a different size per app: the portfolio's `font: 19px/23px`
-     gave starter chips of 60px/48px against the blog's 53px. `font-family`
-     already set the precedent of pinning type here. This block is UNLAYERED,
-     so it outranks any type utility placed on the island ROOT element itself
-     (there are none today); utilities on descendants are unaffected. */
+  /* Pin shadcn's assumed 16px/1.5 so each host's body type doesn't leak in.
+     Unlayered: outranks type utilities on the island root itself. */
   font-size: 1rem;
   line-height: 1.5;
 }
@@ -63,13 +43,8 @@ html.dark-mode .ui-island {
   --foreground: #ffffff;
   --card: #282c35;
   --card-foreground: #ffffff;
-  /* The dark theme needs a primary of its own. Inheriting the light navy left
-     `color: var(--primary)` accents — the thinking row's spark, the tool dot,
-     the starter-chip borders, the focus ring — at 1.1:1 on these surfaces,
-     which is invisible. #7da2ff is the same lightened blue the blog already
-     uses for its dark links (--color-blue-light in global.css), so the two apps
-     agree on one dark accent. Foreground flips to the navy: white on this
-     blue is only 2.5:1. src/styles/islands.test.ts holds the ratios. */
+  /* Light navy is 1.1:1 here; #7da2ff matches the blog's --color-blue-light.
+     Foreground flips to navy: white on this blue is only 2.5:1. */
   --primary: #7da2ff;
   --primary-foreground: #06038d;
   --primary-hover: #a8c2ff;

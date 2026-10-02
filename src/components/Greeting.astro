@@ -4,21 +4,17 @@ import SocialMedia from "./SocialMedia.astro";
 import Button from "./Button.astro";
 import Typewriter from "./Typewriter.astro";
 import { Image } from "astro:assets";
-// Developer-at-desk illustration from soumyajit4419/Portfolio (home-main.svg),
-// used with the credit its README asks for — see the Credits section in this
-// repo's README. Recolored purple → theme accent at pixel level (selective hue
-// rotate that preserves the skin tones); source art embedded a 775×817 PNG.
+// Portrait art from soumyajit4419/Portfolio (home-main.svg), recolored; credited
+// in the README's Credits section as its license asks.
 import portrait from "../assets/images/portrait.webp";
 ---
 
-{/* box-content: keep the old content-box outer width of `90vw + 20px` (see
-  Skills.astro). */}
+{/* box-content: see Skills.astro */}
 <div class="greet-main section-animate mx-auto mt-8 box-content w-[90%] px-2.5 py-5" id="greeting">
   <div class="greeting-main flex max-md:block">
     <div class="greeting-text-div mb-[30px] flex-1">
       <div>
-        {/* my-[0.67em] / my-[1em] below restore the browser default h1 and p
-          margins that Preflight removes; the pre-Tailwind site relied on them. */}
+        {/* my-[0.67em] / my-[1em]: UA h1 and p margins, which Preflight removes */}
         <h1 class="greeting-text my-[0.67em] text-[70px] font-bold leading-[1.1] text-text dark:text-white max-wide:text-[50px] max-md:text-center max-md:text-[30px]">
           <span class="greeting-hi mb-3 block text-[0.55em]">
             Hi There!
@@ -39,9 +35,7 @@ import portrait from "../assets/images/portrait.webp";
         </p>
         <div id="resume" class="empty-div mb-10"></div>
         <SocialMedia />
-        {/* the buttons' desktop margin-right is zeroed at 768px (legacy
-          developerFolio rule in Button.astro); without a gap they touch when
-          the wrapped row is full */}
+        {/* Button.astro zeroes its margin-right below 768px, so the gap keeps wrapped buttons apart */}
         <div class="button-greeting-div mt-10 flex max-md:flex-wrap max-md:justify-around max-md:gap-3">
           <Button text="Contact me" href="#contact" event="contact_click" />
           <Button
@@ -54,12 +48,9 @@ import portrait from "../assets/images/portrait.webp";
       </div>
     </div>
     <div class="greeting-image-div mb-[30px] flex flex-1 items-center justify-center">
-      {/* Rendered at up to 440px (2x → the 880px source) on wide screens and
-          240px on phones (the 768px breakpoint below), so the srcset lets a
-          phone take the 480px file instead of the full one. Eager + high
-          priority: it is above the fold on every viewport.
-          Round portrait with the site's navy ring and glow; box-content keeps
-          the old content-box sizing so the 6px ring sits outside the 440px. */}
+      {/* 440px wide (240px on phones), so the srcset lets phones take the 480px
+          file. Eager: above the fold everywhere. box-content puts the 6px ring
+          outside the 440px. */}
       <Image
         class="box-content aspect-square w-full max-w-[440px] rounded-full border-6 border-navy object-cover shadow-glow dark:border-blue dark:shadow-glow-dark max-md:max-w-[240px]"
         src={portrait}

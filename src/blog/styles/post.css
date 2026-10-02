@@ -1,19 +1,6 @@
-/* Rendered-markdown rules for blog posts.
-   Imported by src/blog/layouts/BaseLayout.astro ONLY — never by the portfolio
-   layout — and every selector is scoped under `.blog-post` (the post page's
-   `<article class="blog-post">`) so nothing leaks into the portfolio app.
-   Dark mode is `html.dark-mode`, the one theme class for both apps.
-
-   This is the 1:1 port of the element/markdown rules that used to live in
-   src/blog/styles/style.css (deleted with normalize/tag/search in the same
-   commit). A handful of declarations are NOT in that file — they restore what
-   the old blog inherited from normalize.css + the UA stylesheet and Tailwind's
-   preflight now zeroes (list markers, link underline, hr and list/blockquote
-   margins). Each is marked `preflight:` below.
-
-   Everything stays in @layer components so a utility class written on one of
-   these elements later still wins; the one thing outside it is the keyframes
-   definition below, which is not a cascaded rule. */
+/* Rendered-markdown rules for blog posts, all scoped under `.blog-post` so
+   nothing leaks into the portfolio. `preflight:` marks UA defaults Tailwind's
+   preflight zeroes. In @layer components so utility classes still win. */
 
 /* The table scroll hint (`.blog-post table` below): the mask is drawn 3rem
    wider than the table so its transparent tail sits off the right edge (no
@@ -29,16 +16,9 @@
 }
 
 @layer components {
-  /* --- Article root -------------------------------------------------------
-     The old `html { line-height: 1.5; font-size: 16px }` + `body { font-size:
-     1rem; color: var(--color-text) }`. */
+  /* --- Article root ------------------------------------------------------- */
   .blog-post {
-    /* Belt and braces: BaseLayout's <body> already carries `text-base
-       leading-normal` (16px/1.5), which beats the shared entry's base-layer
-       `font: 19px/23px` and its `(max-width: 1380px) { line-height: normal }`,
-       so the article inherits the right type without these. They are kept as
-       a local restatement so the article root is self-describing and stays
-       correct if that body class ever changes. */
+    /* Restates BaseLayout's body type so the article doesn't depend on it. */
     font-size: 1rem;
     line-height: 1.5;
     color: var(--color-text);
@@ -55,14 +35,9 @@
     font-feature-settings: "calt" 1;
   }
 
-  /* Inline code gets a surface. The whole site sets in Fira Code, so without
-     one an identifier in a sentence is indistinguishable from the prose around
-     it (the ligatures are the only tell). Same family as the fence: a pane of
-     white with the soft violet border, kept translucent so it still sits in
-     the sky. `break-word` lets a long identifier break instead of widening
-     the page; not `anywhere`, which would also let table columns compress
-     below their code cells and break identifiers mid-token. `:not(pre) >`
-     keeps this off Prism's fenced code, which scrolls instead. */
+  /* Inline code needs a surface: the prose is Fira Code too. `break-word`,
+     not `anywhere`, which would let table columns compress below their code
+     cells. */
   .blog-post :not(pre) > code {
     background: rgba(255, 255, 255, 0.6);
     border: 1px solid var(--color-border-soft);
@@ -79,9 +54,7 @@
     background: var(--color-accent-grey);
     height: 1px;
     border: 0;
-    /* preflight: `hr { margin: 0 }`. The old blog kept the UA rule's
-       `0.5em auto`, and the bottom half of it is visible — it does not collapse
-       through the article footer's padding. */
+    /* preflight: restores the UA `0.5em auto`. */
     margin: 0.5em auto;
   }
   html.dark-mode .blog-post hr {
@@ -98,15 +71,13 @@
   .blog-post h6 {
     margin-top: 3rem;
     margin-bottom: 1.5rem;
-    /* At least Fira Code's content box, which Chrome lays out at 1.306em
-       (52px at the post title's 39.8px). Any tighter and the boxes of a
-       wrapped heading's lines overlap, and the selection highlight — painted
-       over the content box — doubles up in a darker strip between them.
-       Rounded up to whole pixels so the seam lands on a pixel boundary. */
+    /* At least Fira Code's 1.306em content box, or a wrapped heading's
+       selection highlight doubles up between lines. Rounded to whole pixels
+       so the seam lands on a pixel boundary. */
     line-height: 1.32;
     line-height: round(up, 1.32em, 1px);
     letter-spacing: -0.025em;
-    /* anchor icons are absolutely positioned against the heading */
+    /* Containing block for the anchor icons. */
     position: relative;
   }
 
@@ -126,7 +97,7 @@
     color: var(--color-heading-dark);
   }
 
-  /* 700 is Fira Code's heaviest weight; was Montserrat 900 */
+  /* 700 is Fira Code's heaviest weight. */
   .blog-post h1 {
     font-weight: 700;
     font-size: 2.488rem;
@@ -162,7 +133,6 @@
     text-decoration: none;
   }
 
-  /* The post header (inside <article class="blog-post">) */
   .blog-post header h1 {
     margin: 0 0 1rem 0;
   }
@@ -184,27 +154,22 @@
   .blog-post ol {
     margin-left: 0;
     margin-right: 0;
-    /* UI audit: a hanging indent so wrapped lines line up with the first word
-       instead of running back under the marker (the old blog had padding 0). */
+    /* Hanging indent so wrapped lines align with the first word. */
     padding: 0 0 0 1.25rem;
-    /* preflight: `ol, ul { margin: 0 }` drops the UA `margin-block-start: 1em`
-       the old rule left in place. It collapses away after a paragraph or a
-       heading but is visible after a code block (code.css sets 0.5em). */
+    /* preflight: the UA top margin, visible after a code block. */
     margin-top: 1em;
     margin-bottom: 2rem;
     list-style-position: outside;
     list-style-image: none;
   }
-  /* preflight: Tailwind's `ol, ul { list-style: none }` removes the markers the
-     blog relied on from the UA stylesheet. */
+  /* preflight: list markers. */
   .blog-post ul {
     list-style-type: disc;
   }
   .blog-post ol {
     list-style-type: decimal;
   }
-  /* preflight: the UA's nested-list markers (`ul ul` circle, `ul ul ul` square)
-     go with it, so they are restated too. */
+  /* preflight: nested-list markers. */
   .blog-post ul ul {
     list-style-type: circle;
   }
@@ -233,8 +198,7 @@
 
   .blog-post blockquote {
     color: var(--color-text-light);
-    /* preflight: as for lists, the UA `margin-block-start: 1em` the old rule
-       never overrode. */
+    /* preflight: the UA top margin. */
     margin-top: 1em;
     margin-left: -1.5rem;
     margin-right: 2rem;
@@ -259,9 +223,7 @@
   }
 
   /* --- Tables -------------------------------------------------------------
-     Restores the Gatsby-era styling lost in the Astro port (cell padding
-     approximates the old typography.js defaults). Wide tables scroll
-     horizontally instead of blowing out the column. */
+     Wide tables scroll horizontally instead of blowing out the column. */
   .blog-post table {
     width: 100%;
     margin-bottom: 2rem;
@@ -269,33 +231,25 @@
     border-spacing: 0.25rem;
     display: block;
     overflow-x: auto;
-    /* Scroll hint. Overlay scrollbars (macOS, iOS) give no sign that a wide
-       table scrolls, so on a phone the last column just looks cut off. The
-       right edge fades while there is more to the right, driven by the
-       table's own horizontal scroll progress (keyframes at the top of this
-       file). The resting mask is the no-fade state, so a table that does not
-       overflow (inactive timeline, animation never applies) is not faded, and
-       an engine without scroll timelines runs the shorthand as a 0s animation
-       that lands on its `to` frame — also no fade. */
+    /* Scroll hint for overlay scrollbars: the right edge fades while there is
+       more to the right. The resting mask is no-fade, so a non-overflowing
+       table, or an engine without scroll timelines (0s animation landing on
+       `to`), shows no fade. */
     mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
     mask-repeat: no-repeat;
     mask-size: calc(100% + 3rem) 100%;
     animation: table-scroll-hint linear both;
   }
-  /* Separate block on purpose: written next to the shorthand, Lightning CSS
-     folds the timeline into it (`animation: … scroll(self inline)`), which
-     Chrome rejects, dropping the whole animation. It also has to follow the
-     shorthand in source order, since `animation` resets animation-timeline
-     to auto. The duration is what a scroll timeline implies; spelled out so
-     the fallback's 0s above is visibly not relied on here. */
+  /* Separate block on purpose: Lightning CSS would fold the timeline into the
+     shorthand, which Chrome rejects. Must follow the shorthand, which resets
+     animation-timeline. */
   @supports (animation-timeline: scroll()) {
     .blog-post table {
       animation-timeline: scroll(self inline);
       animation-duration: auto;
     }
   }
-  /* Paper cannot scroll: a wide table prints at scroll position 0, which is
-     the faded state, so the hint comes off for print. */
+  /* Print is at scroll position 0, the faded state. */
   @media print {
     .blog-post table {
       mask-image: none;
@@ -306,9 +260,7 @@
   .blog-post th,
   .blog-post td {
     text-align: left;
-    /* UI audit: tall rows had the first column centred and the rest
-       top-aligned (UA default `middle` on td vs preflight); pin every cell to
-       the top. */
+    /* th and td otherwise disagree (UA `middle` vs preflight). */
     vertical-align: top;
     padding: 0.5rem 1rem 0.5rem 0;
     border-bottom: 1px solid var(--color-accent-grey);
@@ -333,8 +285,7 @@
   }
 
   /* --- Links --------------------------------------------------------------
-     preflight: `a { color: inherit; text-decoration: inherit }` drops the UA
-     underline the old blog kept, so it is restated here. */
+     preflight: the UA underline. */
   .blog-post a {
     color: var(--color-navy);
     text-decoration: underline;
@@ -346,11 +297,8 @@
     color: var(--color-blue-light);
   }
 
-  /* Blue hour warms a link on hover; the night keeps its blue (the unlayered
-     `html.dark-mode` rule above sets the resting colour, so the hover needs
-     its own dark pairing or it would paint the light theme's amber at night).
-     The deep amber, not amber-ink: 16px links cross the sky's deep stop, where
-     amber-ink is only large-text AA (see the token in global.css). */
+  /* Deep amber, not amber-ink: amber-ink is only large-text AA on the sky's
+     deep stop. Night needs its own pairing or it would paint amber. */
   .blog-post a:hover,
   .blog-post a:focus {
     color: var(--color-amber-ink-deep);
@@ -362,11 +310,8 @@
   }
 
   /* --- Post-body images ---------------------------------------------------
-     Constrained to the column (width/height attrs keep the aspect ratio, so no
-     CLS) and hinted as click-to-zoomable. Scoped to the articleBody <section>
-     so the Bio avatar / social icons in the article footer stay plain links.
-     preflight: `img { display: block }` would left-align the centred diagrams
-     and drop the baseline strut the old inline images sat on. */
+     Scoped to the articleBody <section> so the footer Bio stays plain.
+     preflight: inline, or centred diagrams would left-align. */
   .blog-post section img {
     display: inline;
     vertical-align: baseline;
@@ -376,9 +321,7 @@
   }
 
   /* --- Heading anchors ----------------------------------------------------
-     Position/reveal behaviour matching the styles
-     gatsby-remark-autolink-headers used to inject: the icon sits to the left
-     of the heading and only appears on hover/focus. */
+     The icon sits left of the heading and shows on hover/focus. */
   .blog-post a.anchor {
     position: absolute;
     top: calc(50% - 8px);
@@ -411,18 +354,15 @@
 
   /* --- Mermaid diagrams ---------------------------------------------------- */
 
-  /* ```mermaid fences are rendered at build time into a <figure> holding one
-     <img> per theme (src/blog/utils/remark-mermaid.ts); the rules below show
-     the one for the current theme. The hidden one is lazy-loaded and has no
+  /* One <img> per theme (remark-mermaid.ts). The hidden one is lazy with no
      box, so it is never fetched. */
   .blog-post .mermaid-diagram {
     margin: 2rem 0;
     text-align: center;
   }
 
-  /* Backdrop for labels outside node boxes (sequence text, edge labels). Same
-     colour per theme as the background scripts/render-mermaid.ts bakes into
-     the SVG itself, so the padding ring matches the image. */
+  /* Backdrop for labels outside node boxes; matches the background
+     scripts/render-mermaid.ts bakes into the SVG. */
   .blog-post .mermaid-diagram img {
     display: inline;
     vertical-align: baseline;
@@ -443,12 +383,8 @@
 
   /* --- Read-aloud highlight ----------------------------------------------- */
 
-  /* The read-aloud transport is sticky while a session is live
-     (src/pages/blog/[...slug].astro): while the reader scrolls, a 12px gap plus
-     the 58px bar sit over the top of the viewport. scrollIntoView() honours
-     scroll-margin-top: without this, a block taller than the screen (scrolled
-     with `block: "start"`) and every heading anchor would land underneath it.
-     5rem clears 12 + 58 with room to spare. */
+  /* Clears the sticky read-aloud bar (12px gap + 58px) for scrollIntoView
+     and heading anchors. */
   .blog-post .is-speaking,
   .blog-post h2,
   .blog-post h3,
@@ -456,9 +392,7 @@
     scroll-margin-top: 5rem;
   }
 
-  /* The block currently being read aloud. Warm under the light theme — the old
-     blue tint read as a colour cast on the blue-hour sky — and the blog's blue
-     at night. */
+  /* Warm in light: a blue tint read as a colour cast on the sky. */
   .blog-post .is-speaking {
     background: color-mix(in srgb, var(--color-amber) 14%, transparent);
     box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-amber) 14%, transparent);
@@ -472,11 +406,8 @@
     box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-box-dark) 14%, transparent);
   }
 
-  /* The word currently being spoken, inside the highlighted block. Spans are
-     inserted lazily by the read-aloud island (src/blog/utils/audio-words.ts).
-     Light 25% / night 20%: the word sits on the 14% block, and the ink over
-     both washes has to stay AA — body ink on the sky's deep stop, and at night
-     a LINK inside the spoken word (palette.test.ts guards both). */
+  /* The spoken word. Light 25% / night 20% over the 14% block keep the ink AA
+     (palette.test.ts guards both). */
   .blog-post .is-speaking .rw.is-word {
     background: color-mix(in srgb, var(--color-amber) 25%, transparent);
     border-radius: 3px;
@@ -487,10 +418,8 @@
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-box-dark) 20%, transparent);
   }
 
-  /* Headings' line boxes (1.32) only just clear Fira Code's content box
-     (1.306em), so the word's 2px shadow would still spill into the next line of
-     a wrapped heading. Paint the wash as a gradient band at most one line box
-     (1lh) tall, less a 1px gap, and drop the shadow. */
+  /* Heading line boxes barely clear the content box, so the 2px shadow would
+     spill into the next line; paint a 1lh band instead. */
   .blog-post .is-speaking:is(h1, h2, h3, h4, h5, h6) .rw.is-word {
     --word-wash: color-mix(in srgb, var(--color-amber) 25%, transparent);
   }
@@ -508,19 +437,14 @@
     box-shadow: none;
   }
 
-  /* --- Narrow column (the old `@media (max-width: 42rem)`) ----------------- */
+  /* --- Narrow column ----------------------------------------------------- */
 
   @media (max-width: 42rem) {
     .blog-post blockquote {
       padding: 0 0 0 1rem;
       margin-left: 0;
     }
-    /* The old blog switched markers to `inside` here (it had no list padding
-       to hang them in); with the 1.25rem padding above they stay outside, so
-       wrapped lines keep a clean left edge on phones too. */
-    /* UI audit: a 3-column table squeezed into a 350px column wrapped cells
-       to one word per line; a minimum cell width lets the table's own
-       horizontal scroll (display:block above) take over instead. */
+    /* Let the table scroll rather than wrap cells one word per line. */
     .blog-post th,
     .blog-post td {
       min-width: 9rem;

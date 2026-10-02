@@ -1,12 +1,11 @@
-// Pure text preparation shared by the audio generation script and the client.
-// The client must normalise the same way so block texts match the timing JSON.
+// Text prep shared by the audio generator and the client, which must normalise
+// identically so block texts match the timing JSON.
 
 // Emoji, pictographs and their modifiers. Punctuation is kept.
 const SYMBOLS = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE0F}\u{200D}]/gu;
 
-// A run of five or more of one digit in the fractional part of a decimal
-// (0.30000000000000004). LLM-style TTS models loop on these, so the run is
-// described instead of listed.
+// Five or more of one fractional digit (0.30000000000000004): LLM-style TTS
+// models loop on these, so the run is described instead.
 const LONG_DIGIT_RUN = /(\d+\.\d*?)((\d)\3{4,})(\d*)/g;
 const DIGIT_NAMES = [
   "zero",
@@ -44,8 +43,8 @@ export function normalizeSpeechText(text: string): string {
 // Sentence boundary: terminal punctuation followed by whitespace.
 const SENTENCE_END = /(?<=[.!?])\s+/;
 
-// Greedily pack sentences into chunks of at most `max` characters. A single
-// sentence longer than `max` is emitted on its own rather than split mid-way.
+// Greedily packs sentences into chunks of at most `max` chars; a longer
+// sentence is emitted whole.
 export function packSentences(text: string, max = 300): string[] {
   const sentences = text.split(SENTENCE_END).filter(s => s.length > 0);
   const chunks: string[] = [];
@@ -64,8 +63,7 @@ export function packSentences(text: string, max = 300): string[] {
   return chunks;
 }
 
-// SHA-256 of the spoken text; the generator stores it so unchanged posts are
-// skipped. WebCrypto is available in Node 22 and in Workers alike.
+// The generator stores this to skip unchanged posts.
 export async function spokenHash(texts: string[]): Promise<string> {
   const data = new TextEncoder().encode(texts.join("\n"));
   const digest = await crypto.subtle.digest("SHA-256", data);

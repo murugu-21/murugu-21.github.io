@@ -1,10 +1,7 @@
-// Read-aloud controls for a blog post, as a shadcn/ui island.
-//
-// Preferred path: pre-rendered audio in the author's voice from
-// /blog/audio/<slug>.{json,mp3} (scripts/generate-audio.ts), with the
-// paragraph highlight driven by the timing JSON. Fallback, when that is
-// missing (new post, astro dev has no Worker) or fails: the browser's speech
-// synthesis, one block per utterance. Both backends implement `Player`.
+// Read-aloud controls for a blog post. Prefers pre-rendered audio from
+// /blog/audio/<slug>.{json,mp3} (scripts/generate-audio.ts); falls back to
+// browser speech synthesis when that is missing (new post, astro dev has no
+// Worker) or fails.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Loader2, Pause, Play } from "lucide-react";
 
@@ -43,8 +40,7 @@ interface Player {
   seek?(seconds: number): void;
 }
 
-// What the transport bar shows. Audio: seconds played / total seconds.
-// Speech synthesis: paragraphs read / total paragraphs (not seekable).
+// Audio: seconds played / total. Speech synthesis: paragraphs read / total.
 interface Progress {
   position: number;
   length: number;
@@ -74,13 +70,8 @@ const storeRate = (rate: SpeechRate) => {
   }
 };
 
-// The stored rate as an external store rather than state seeded from an
-// effect. It can't be read on the server, and reading it during the hydration
-// render would mismatch the server HTML, so useSyncExternalStore is the
-// sanctioned shape: getServerSnapshot supplies what the server rendered and
-// React re-renders once after hydration. (utils/useTheme.ts is an external
-// store for the same reason.) The value is held in memory as well as in
-// localStorage so the picker still works when storage is blocked.
+// An external store: reading localStorage during hydration would mismatch the
+// server HTML. Held in memory too so the picker works when storage is blocked.
 let currentRate: SpeechRate | null = null;
 const rateListeners = new Set<() => void>();
 
@@ -141,15 +132,12 @@ export function ListenControls({ slug }: { slug: string }) {
     if (el === highlightedRef.current) return;
     highlightedRef.current?.classList.remove("is-speaking");
     highlightedRef.current = el;
-    if (el) {
-      el.classList.add("is-speaking");
-      const block = scrollTarget(el.getBoundingClientRect(), window.innerHeight);
-      if (block) el.scrollIntoView({ block, behavior: "smooth" });
-    }
+    if (!el) return;
+    el.classList.add("is-speaking");
+    const block = scrollTarget(el.getBoundingClientRect(), window.innerHeight);
+    if (block) el.scrollIntoView({ block, behavior: "smooth" });
   }, []);
 
-  // Word-level highlight inside the current block. Spans are created lazily
-  // the first time a block becomes active and reused afterwards.
   // A word is one or more spans (it may straddle an inline element).
   const wordRef = useRef<HTMLElement[] | null>(null);
   const highlightWord = useCallback((pieces: HTMLElement[] | null) => {
@@ -157,11 +145,10 @@ export function ListenControls({ slug }: { slug: string }) {
     wordRef.current?.forEach(p => p.classList.remove("is-word"));
     wordRef.current = pieces;
     pieces?.forEach(p => p.classList.add("is-word"));
+    if (!pieces?.length) return;
     // Inside a paragraph taller than the reading band, follow the word.
-    if (pieces?.length) {
-      const block = scrollTarget(pieces[0].getBoundingClientRect(), window.innerHeight, WORD_BAND);
-      if (block) pieces[0].scrollIntoView({ block, behavior: "smooth" });
-    }
+    const block = scrollTarget(pieces[0].getBoundingClientRect(), window.innerHeight, WORD_BAND);
+    if (block) pieces[0].scrollIntoView({ block, behavior: "smooth" });
   }, []);
 
   const setState = useCallback(
@@ -189,12 +176,8 @@ export function ListenControls({ slug }: { slug: string }) {
     return () => window.removeEventListener("pagehide", onPageHide);
   }, []);
 
-  // The transport bar only sticks while a listen session is live: it docks on
-  // the first press of Play and stays docked through pauses, then returns to
-  // the page flow when the reading finishes (or a start fails). The wrapper
-  // around this island reads the class with its `[&.listening]` utilities
-  // (src/pages/blog/[...slug].astro); `loading` counts so the bar doesn't slip
-  // back to the top while the player loads.
+  // Dock the transport bar while a session is live, including loading and
+  // pauses; src/pages/blog/[...slug].astro styles `.listening`.
   useEffect(() => {
     const island = root?.closest(".listen-island");
     island?.classList.toggle("listening", state !== "idle");
@@ -206,9 +189,8 @@ export function ListenControls({ slug }: { slug: string }) {
   const speechPlayer = useCallback((): Player => {
     const synth = window.speechSynthesis;
     let index = 0;
-    // The utterance we expect events from. Set to null before cancel() so
-    // the cancelled utterance's onend/onerror (sync in some engines) is
-    // ignored.
+    // Nulled before cancel() so the cancelled utterance's onend/onerror (sync
+    // in some engines) is ignored.
     let current: SpeechSynthesisUtterance | null = null;
     const cancel = () => {
       current = null;
@@ -228,9 +210,8 @@ export function ListenControls({ slug }: { slug: string }) {
       const u = new SpeechSynthesisUtterance(block.text);
       u.rate = rateRef.current;
       u.lang = document.documentElement.lang || "en";
-      // Word boundaries arrive with the character offset into the utterance;
-      // map it onto the block's rendered word spans. Tokens and spans line up
-      // by construction (same normalisation), otherwise skip word highlights.
+      // Map boundary char offsets onto the block's word spans; skip word
+      // highlights if they don't line up.
       const tokens = tokenize(block.text);
       const offsets: number[] = [];
       let pos = 0;
@@ -273,15 +254,13 @@ export function ListenControls({ slug }: { slug: string }) {
     };
     return {
       play: () => speakFrom(index),
-      // Pause = cancel + remember the block; Resume restarts it. Native
-      // pause() is a no-op on Chrome for Android and can wedge desktop
-      // Chrome, so restarting one paragraph is the reliable trade.
+      // Cancel and restart the block on resume: native pause() is a no-op on
+      // Chrome for Android and can wedge desktop Chrome.
       pause: () => {
         cancel();
         setState("paused");
       },
-      // rate is read at utterance creation, so a change mid-block restarts
-      // that block at the new speed; a paused reader picks it up on Resume.
+      // Rate is fixed per utterance, so restart the current block.
       setRate: () => {
         if (stateRef.current === "speaking") speakFrom(index);
       }
@@ -297,8 +276,7 @@ export function ListenControls({ slug }: { slug: string }) {
       const ranges = matched.map(m =>
         m ? { start: m.start, end: m.end } : { start: -1, end: -1 }
       );
-      // Per block: its timed words (version 2 JSON) and, once wrapped, the
-      // rendered spans they map onto. `null` spans = mismatch, paragraph only.
+      // Per block: timed words (v2 JSON) and their spans; null = mismatch.
       const words = timings.blocks.map(b => b.words);
       const spansByBlock: Array<HTMLElement[][] | null | undefined> = [];
       const wordSpan = (i: number, t: number): HTMLElement[] | null => {
@@ -363,12 +341,8 @@ export function ListenControls({ slug }: { slug: string }) {
         else setState("idle");
       });
       return {
-        // The media error event fires before play() rejects; by then the
-        // fallback above owns the state, so the stale rejection must not force
-        // it back to idle — that would undock the bar and drop the highlight
-        // in the middle of an utterance. (Without a fallback the error handler
-        // has already set idle; a rejection with no error event — blocked
-        // playback — still undocks.)
+        // The media error event fires before play() rejects, so once the
+        // fallback owns the state the stale rejection must not reset it.
         play: () =>
           void audio.play().catch(() => {
             if (!fellBack) setState("idle");
@@ -425,8 +399,6 @@ export function ListenControls({ slug }: { slug: string }) {
       return;
     }
     if (!playerRef.current) {
-      // First play of the post: `post` tags the session with what was read,
-      // and the backend tag is set inside loadPlayer once one is chosen.
       track("listen_play", { post: slug });
       setState("loading");
       playerRef.current = await loadPlayer();
@@ -448,25 +420,15 @@ export function ListenControls({ slug }: { slug: string }) {
     playerRef.current?.setRate(next);
   };
 
-  // `supported` can only be decided after mount (it needs speechSynthesis /
-  // Audio and the article's blocks), so this used to return null until then.
-  // That made the whole 72px control pop in after hydration and push the
-  // article down — the page's only layout shift. It now renders at full size
-  // from the server in a disabled state and simply becomes interactive once
-  // the effect confirms a backend, so nothing moves. A browser with no
-  // backend at all keeps the disabled control rather than a reserved gap.
+  // Rendered full-size but disabled until mount confirms a backend, so
+  // hydration causes no layout shift.
   const busy = state === "loading";
   const playing = state === "speaking";
   const Icon = busy ? Loader2 : playing ? Pause : Play;
   const seekable = progress.seekable;
 
-  // Spotify-shaped transport: round primary play button, thin seek bar with
-  // the thumb revealed on hover, times in tabular figures, speed as a pill.
-  // Surface is the island's card + border (same idiom as the chat tooltip):
-  // the page canvas is the portfolio gradient with the starfield behind it,
-  // and a translucent muted fill disappeared into it in both themes. At night
-  // the border is lifted to white/40: the island `--border` (16%) is tuned for
-  // the chat widget's own panels and vanished on the canvas.
+  // Card surface: a translucent fill vanished into the gradient canvas. At
+  // night the island --border (16%) is too faint, hence white/40.
   return (
     <div
       ref={setRoot}
@@ -493,9 +455,8 @@ export function ListenControls({ slug }: { slug: string }) {
             : "0:00"}
       </span>
 
-      {/* Track at 30% foreground (40% at night) rather than the primitive's
-          15%: on the island card the default track all but vanished before
-          playback filled it. Tuned here so the vendored slider stays pristine. */}
+      {/* Track at 30%/40% foreground: the primitive's 15% vanished on the
+          card. Tuned here to keep the vendored slider pristine. */}
       <Slider
         className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 **:data-[slot=slider-thumb]:hover:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 dark:**:data-[slot=slider-track]:bg-foreground/40 hover:**:data-[slot=slider-thumb]:opacity-100 focus-within:**:data-[slot=slider-thumb]:opacity-100"
         value={[progress.position]}
@@ -507,7 +468,7 @@ export function ListenControls({ slug }: { slug: string }) {
           if (seekable) playerRef.current?.seek?.(v);
         }}
         onValueCommit={() => {
-          // Commit, not every drag tick — one event per scrub.
+          // One event per scrub, not per drag tick.
           if (seekable) track("listen_seek");
         }}
       />

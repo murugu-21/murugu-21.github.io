@@ -1,8 +1,5 @@
-// v2: root llms.txt only (~3.5KB ≈ 900 tokens). It already carries every blog
-// post as title + summary + link (src/pages/llms.txt.ts generates them at
-// build time); grounding on blog/llms-full.txt (~70KB) cost ~20x the input
-// tokens per message and would keep growing with the post count. Jarvis
-// answers post questions from summaries and points visitors at links.
+// Grounds on root llms.txt (~900 tokens), which lists every post as title +
+// summary + link. blog/llms-full.txt costs ~20x the tokens and grows per post.
 import { readAsset, type AssetsLike } from "./api/store";
 
 const CACHE_KEY = "grounding:v2";

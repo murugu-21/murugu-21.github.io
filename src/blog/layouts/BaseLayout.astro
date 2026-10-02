@@ -1,33 +1,20 @@
 ---
-// The blog sets in the site's one text face, Fira Code, declared inline by
-// BaseHead (see ../../lib/fonts.ts) — no second font family to ship.
-// The one Tailwind entry, shared with the portfolio app
 import "../../styles/global.css";
 import Icon from "../../components/Icon.astro";
-// Fenced code blocks: the fence surface + both Prism token palettes
 import "../styles/code.css";
-// Rendered-markdown rules for post bodies (every selector under .blog-post)
 import "../styles/post.css";
 
 import BaseHead from "../components/BaseHead.astro";
 import ThemeToggle from "../../components/ThemeToggle.astro";
 import ChatWidget from "../../components/chat/ChatWidget.astro";
-// The landing page's drifting starfield, shared so the blog reads as the
-// same site (idle-loaded canvas, off under prefers-reduced-motion).
 import Particles from "../../components/Particles.astro";
 import { SITE_TITLE } from "../consts";
 
-// title/description plus SEO passthroughs for BaseHead (ogType,
-// publishedTime, tags, noindex, jsonLd).
+// Everything but title/description passes through to BaseHead.
 const { title, description, ...seo } = Astro.props;
 
-// The <body> utilities below are the blog's body type and text colour, which
-// used to come from style.css (`html { line-height: 1.5; font-size: 16px }` +
-// `body { font-size: 1rem; color }`). The shared entry's base layer sets
-// 19px/23px, so `text-base leading-normal` restores 16px/1.5. The page canvas
-// is NOT restated: the blog paints the same gradients as the portfolio (base
-// layer, --background-image-page / -dark) so the shared starfield reads the
-// same on both apps — the old flat white / #282c35 canvas is gone.
+// The <body>'s `text-base leading-normal` overrides the shared base layer's
+// 19px/23px.
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
 const base = "/blog";
@@ -36,43 +23,29 @@ const isRootPath = Astro.url.pathname === rootPath;
 ---
 
 <!doctype html>
-<!-- Anchor jumps glide (the heading anchors and the post's table-of-contents
-     rail). On the layout's <html>, as the portfolio's Layout.astro does, not in
-     global.css, which both apps share. No scroll-padding here: the blog has no
-     fixed header, and the headings carry their own scroll-margin (post.css) for
-     the pinned read-aloud bar. The read-aloud auto-scroll passes its own
-     `behavior` and is unaffected. -->
+<!-- Smooth anchor jumps, set here rather than in the shared global.css.
+     Headings carry their own scroll-margin (post.css). -->
 <html lang="en" class="scroll-smooth motion-reduce:scroll-auto">
   <head>
     <BaseHead title={title} description={description} {...seo} />
   </head>
   <body class="text-base leading-normal text-text dark:text-text-dark">
-    <!-- Dimmed: the blog is a reading surface. At dusk the close amber stars
-         landing between words read as stray bullets (half strength); at night
-         the bright white ones land inside code fences (70%). The landing page
-         is untouched. -->
+    <!-- Dimmed for reading: stars between words read as stray bullets. -->
     <Particles class="opacity-50 dark:opacity-70" />
-    <!-- Theme bootstrap, ported from gatsby-ssr.js. Runs before first paint so
-         there is no light/dark flash; exposes window.__theme (the current
-         value) and window.__setPreferredTheme, and fires a `themechange` event
-         on window so any number of React islands can subscribe (see
-         ../utils/useTheme.ts). -->
+    <!-- Theme bootstrap, before first paint to avoid a flash. Exposes
+         window.__theme and window.__setPreferredTheme and fires `themechange`
+         (see ../utils/useTheme.ts). -->
     <script is:inline>
-      // Shared persistence contract with the portfolio app: key "isDark",
-      // value is a JSON bool. Derive the blog's "dark"/"light" string from it.
-      // Inline so it runs before paint, which means it cannot import; the key
-      // and the rule are ../../lib/theme.ts (resolveTheme) — keep in step.
+      // Shared with the portfolio: key "isDark", a JSON bool. Inline scripts
+      // can't import, so keep in step with resolveTheme in ../../lib/theme.ts.
       var preferredTheme = null;
       try {
         var stored = localStorage.getItem("isDark");
         if (stored !== null) preferredTheme = JSON.parse(stored) ? "dark" : "light";
       } catch (err) {}
 
-      // Paint and announce, without persisting — unlike setTheme in
-      // ../../lib/theme.ts, which remembers the choice too.
+      // Paint and announce without persisting.
       function applyTheme(newTheme) {
-        // One theme class for both apps: html.dark-mode (see ../../lib/theme.ts
-        // and the `dark` custom variant in ../../styles/islands.css).
         document.documentElement.classList.toggle("dark-mode", newTheme === "dark");
         window.__theme = newTheme;
         preferredTheme = newTheme;
@@ -91,10 +64,8 @@ const isRootPath = Astro.url.pathname === rootPath;
       };
       applyTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"));
     </script>
-    <!-- `data-[is-root-path=true]:[&_.bio]:mb-5` is the old
-         `.global-wrapper[data-is-root-path="true"] .bio { margin-bottom: 1.25rem }`:
-         the Bio sits in the page slot, so the override has to be written from
-         the wrapper. Its (0,3,0) specificity beats Bio's own `mb-16`. -->
+    <!-- Bio sits in the page slot, so its index-page margin is set from the
+         wrapper; (0,3,0) beats Bio's own `mb-16`. -->
     <div
       class="global-wrapper mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:[&_.bio]:mb-5 max-md:pb-24"
       data-is-root-path={isRootPath}

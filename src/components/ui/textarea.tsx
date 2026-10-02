@@ -1,5 +1,4 @@
-// shadcn/ui textarea (new-york, Tailwind v4), vendored — relative imports
-// instead of the CLI's "@/" alias.
+// shadcn/ui textarea (new-york, Tailwind v4), vendored.
 import * as React from "react";
 
 import { cn } from "../../lib/utils";

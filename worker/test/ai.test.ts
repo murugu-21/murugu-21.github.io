@@ -42,8 +42,7 @@ describe("runDeepseekExchange", () => {
     expect(body.model).toBe("deepseek-flash");
     expect(body.stream).toBe(true);
     expect(body.stream_options).toEqual({ include_usage: true });
-    // Reasoning is on: it sharpens tool selection, and with no max_tokens it
-    // can no longer starve the reply.
+    // Reasoning sharpens tool selection; with no max_tokens it can't starve the reply.
     expect(body.thinking).toEqual({ type: "enabled" });
     // Truncating a concierge answer mid-sentence is worse than the tokens it
     // saves; length is the prompt's job and spend is the RateLimiter's.

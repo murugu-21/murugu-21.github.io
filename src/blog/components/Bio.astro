@@ -3,11 +3,8 @@ import { Image } from "astro:assets";
 import Icon from "../../components/Icon.astro";
 import { socialMediaLinks } from "../../data/portfolio";
 import { AUTHOR } from "../consts";
-// The same photo the portfolio landing shows (Greeting.astro), resized at
-// build time; the .bio-avatar utilities below crop it to a 50px circle, so the
-// blog keeps no second copy of the picture. The portrait is a full-body square
-// (face around x 21–79%, y 8–67%), hence the 171% scale-up plus the
-// translate(-20.8%, -8.5%) that brings head and shoulders into the circle.
+// The portfolio's portrait, cropped to a 50px circle. It is a full-body square
+// (face around x 21–79%, y 8–67%), hence the 171% scale and translate below.
 import portrait from "../../assets/images/portrait.webp";
 
 const links = [
@@ -33,8 +30,6 @@ const links = [
       loading="lazy"
     />
   </span>
-  <!-- The old global `p` rule (line-height 1.625, margin 0 0 2rem) plus
-       `.bio p { margin-bottom: 0 }`. -->
   <p class="m-0 p-0 leading-relaxed">
     technical blog by{" "}
     <a

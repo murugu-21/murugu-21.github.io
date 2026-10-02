@@ -1,8 +1,5 @@
-// Groups the flat, most-recent-first workExperiences list into company
-// stints for the Experiences section. Grouping is by *consecutive* company so
-// a return to a former employer renders as its own stint rather than being
-// merged into the earlier one. The shared data in src/data/portfolio.ts stays
-// flat because the resume, about page and dataset API all consume it as-is.
+// Groups the most-recent-first workExperiences into stints by *consecutive*
+// company, so a return to a former employer is its own stint.
 
 export interface Stint<T> {
   company: string;
@@ -35,14 +32,14 @@ export function groupByCompany<T extends RoleLike>(roles: T[]): Stint<T>[] {
     const last = stints[stints.length - 1];
     if (last && last.company === role.company) {
       last.roles.push(role);
-    } else {
-      stints.push({
-        company: role.company,
-        span: "",
-        location: null,
-        roles: [role]
-      });
+      continue;
     }
+    stints.push({
+      company: role.company,
+      span: "",
+      location: null,
+      roles: [role]
+    });
   }
   for (const stint of stints) {
     stint.span = spanOf(stint.roles);
@@ -52,11 +49,8 @@ export function groupByCompany<T extends RoleLike>(roles: T[]): Stint<T>[] {
   return stints;
 }
 
-// The site writes ranges as "Month YYYY – Month YYYY" or "Month YYYY – Present".
-// Months are counted inclusively at both ends (LinkedIn's convention), so
-// "April 2025 – December 2025" is 9 months. Open ranges are measured to the
-// current month; the component re-runs this in the browser so a "Present" role
-// keeps ticking between deploys.
+// Ranges are "Month YYYY – Month YYYY" or "Month YYYY – Present". Months count
+// inclusively (LinkedIn's convention): "April 2025 – December 2025" is 9.
 
 export interface YearMonth {
   year: number;
@@ -138,11 +132,7 @@ export function totalExperienceMonths(periods: string[], now: YearMonth = curren
   return total;
 }
 
-/**
- * Distinct companies across the given stints. Grouping is by *consecutive*
- * company, so a return to a former employer is two stints but still one
- * company — headline counts have to de-duplicate by name, not count stints.
- */
+/** De-duplicates by name: a return to a former employer is two stints. */
 export function countCompanies(stints: ReadonlyArray<{ company: string }>): number {
   return new Set(stints.map(s => s.company)).size;
 }

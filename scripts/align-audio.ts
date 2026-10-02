@@ -1,18 +1,13 @@
-// Adds word-level timings to the read-aloud JSON already in R2, so the page
-// can highlight the word being spoken. Runs on the author's laptop after
-// `bun run audio`; never re-synthesises anything:
+// Adds word-level timings to the read-aloud JSON in R2. Runs after
+// `bun run audio`; never re-synthesises:
 //
 //   bun run audio:align              # every post whose JSON is still version 1
 //   bun run audio:align first-post   # one post
 //   bun run audio:align --force   # re-align version 2 posts too
 //   bun run audio:align --local   # target `wrangler dev`'s local R2
 //
-// Per post: fetch <slug>.json + .mp3 → decode to 16 kHz mono → slice each
-// block by its timings → mlx-whisper word timestamps (scripts/tts/whisper.py,
-// long-lived worker) → alignWords() maps them onto the block's known text →
-// write version 2 JSON back. Blocks that align poorly keep no `words` and
-// fall back to the paragraph highlight. Do not run while `bun run audio` is
-// synthesising: both want the GPU.
+// Poorly aligned blocks keep no `words` (paragraph highlight only).
+// Don't run alongside `bun run audio`: both want the GPU.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -38,7 +33,6 @@ const r2 = r2Store(local);
 
 // ---- whisper worker ---------------------------------------------------------
 
-// One JSON line back from scripts/tts/whisper.py per transcribe() job.
 interface WhisperReply {
   error?: string;
   words?: WhisperWord[];
@@ -57,8 +51,8 @@ function startWorker() {
 
 type Worker = ReturnType<typeof startWorker>;
 
-// The timing JSON written by generate-audio.ts (version 1) and rewritten here
-// with per-word times (version 2); mirrors src/blog/utils/audio-sync.ts.
+// Version 1 from generate-audio.ts, version 2 adds words; mirrors
+// src/blog/utils/audio-sync.ts.
 interface TimingBlock {
   text: string;
   start: number;
@@ -120,13 +114,13 @@ async function alignPost(slug: string, worker: Worker) {
       }
       const whisperWords = reply.words ?? [];
       const words = alignWords(block.text, whisperWords, block);
-      if (words) {
-        aligned++;
-        blocks.push({ ...rest, words });
-      } else {
+      if (!words) {
         log(`  b${i}: poor match (${whisperWords.length} whisper words), paragraph only`);
         blocks.push(rest);
+        continue;
       }
+      aligned++;
+      blocks.push({ ...rest, words });
     }
 
     const out = { ...timings, version: 2, blocks };

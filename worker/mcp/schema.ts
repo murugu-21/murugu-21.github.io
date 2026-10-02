@@ -1,16 +1,10 @@
-// MCP tool schemas must stand alone: a client validating `structuredContent`
-// against a tool's `outputSchema` has only that schema, and the spec forbids
-// dereferencing a `$ref` that resolves to a network URI
-// (2026-07-28 "JSON Schema Usage / $ref Resolution"). The API's response types
-// are already JSON Schema 2020-12 — they just use `$ref` into
-// `components.schemas` — so the MCP layer inlines them instead of keeping a
-// second, hand-maintained copy of every shape.
+// MCP output schemas must stand alone (the spec forbids resolving network
+// `$ref`s), so the API's `components.schemas` refs are inlined.
 
 export type JsonSchema = Record<string, unknown>;
 
 const REF_PREFIX = "#/components/schemas/";
-// Deep enough for the API's nesting (response → array → entry → nested object)
-// with headroom; a cycle trips it instead of hanging the isolate.
+// Headroom over the API's nesting; a cycle trips it instead of hanging.
 const MAX_DEPTH = 16;
 
 export function inlineRefs(node: unknown, schemas: Record<string, unknown>, depth = 0): unknown {

@@ -1,8 +1,5 @@
-// Markdown rendition of each post for Accept: text/markdown (see the
-// Transform Rule note in public/_headers): the real markdown source,
-// frontmatter included — the same shape as Cloudflare's converter output.
-// Only published, top-level posts get one, so drafts (content/blog/draft/)
-// never leak.
+// Each post's markdown source, frontmatter included, for Accept: text/markdown
+// (see public/_headers). Published top-level posts only, so drafts never leak.
 import { readFileSync } from "node:fs";
 import type { APIRoute, GetStaticPaths } from "astro";
 

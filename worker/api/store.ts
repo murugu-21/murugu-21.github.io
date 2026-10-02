@@ -1,16 +1,12 @@
-// Reads the API's inputs out of the deployed static build through the ASSETS
-// binding. This is the one module that knows how to reach the build artifacts,
-// shared by the REST API, the MCP tools/resources and the chat's grounding.
-// Nothing is cached in memory: the binding call is local to the isolate, and
-// the API's own Cache-Control lets the edge do the caching, so a redeploy is
-// visible immediately instead of being pinned by a stale module-level copy.
+// Reads build artifacts through the ASSETS binding for the REST API, MCP and chat grounding.
+// No in-memory cache: the binding is isolate-local and the edge caches, so redeploys show at once.
 
 import { parseDataset, type Dataset } from "./dataset";
 import { parsePostList, postMarkdownPath, type PostSummary } from "./posts";
 
 export type AssetsLike = { fetch(input: string): Promise<Response> };
 
-// The host is irrelevant for the assets binding — only the path is matched.
+// The assets binding matches only the path.
 const ASSET_ORIGIN = "https://assets.local";
 
 /** The asset's text, or null when it is absent, non-2xx or the binding throws. */

@@ -12,9 +12,7 @@ import {
   totalExperienceMonths
 } from "../lib/experience";
 
-// One card per company stint, roles stacked inside as a promotion ladder.
-// Durations are rendered at build time and, for anything still running,
-// recomputed in the browser (see the script below) so they stay current.
+// Ongoing durations are recomputed in the browser (script below) to stay current.
 const now = currentMonth();
 const ym = (v: { year: number; month: number }) => `${v.year}-${String(v.month).padStart(2, "0")}`;
 const duration = (period: string) => {
@@ -34,9 +32,7 @@ const stints = groupByCompany(workExperiences).map(stint => ({
   partTime: stint.roles.every(r => r.partTime),
   roles: stint.roles.map(role => ({ ...role, duration: duration(role.date) }))
 }));
-// Part-time roles are shown but count toward neither the total nor the
-// company count — the headline has to describe the same set of stints on
-// both sides, otherwise it reads as more experience than it is.
+// Part-time roles are shown but excluded from the total and the company count.
 const allPeriods = workExperiences.filter(w => !w.partTime).map(w => w.date);
 const total = formatDuration(totalExperienceMonths(allPeriods, now));
 const companyCount = countCompanies(stints.filter(s => !s.partTime));
@@ -65,14 +61,11 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
       </div>
       <ol class="stints flex flex-col gap-5">
         {stints.map(stint => (
-          /* `[&:hover]:` instead of `hover:`: Tailwind wraps `hover:` in
-                @media (hover: hover), so a plain `hover:transform-none` would not
-                exist on touch — where `glow-card`'s own :hover scale still fires
-                on tap. The bare selector cancels it everywhere. */
+          /* `[&:hover]:`, not `hover:` (gated on @media (hover: hover)), so
+                glow-card's :hover scale is also cancelled on tap. */
           <li class="stint glow-card px-7 py-6 text-text [&:hover]:transform-none max-md:px-4 max-md:py-5 dark:text-white">
             <header class="stint-header mb-5 flex items-center gap-5">
-              {/* Rendered at 4.5rem (3rem on phones): 72px + a 2x variant
-                    as WebP, instead of the 256px source PNG. */}
+              {/* Rendered at 4.5rem (3rem on phones), so 72px + 2x instead of the 256px source. */}
               <Image
                 class="stint-logo size-18 flex-none rounded-full object-cover shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-md:size-12"
                 src={stint.logo}
@@ -132,8 +125,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                   </div>
                   <p class="role-desc mt-[0.4rem] mb-0 text-[16px] leading-[1.5]">{role.desc}</p>
                   {role.descBullets?.length ? (
-                    /* `group` is load-bearing: the chevron below reads it
-                          through `group-open:rotate-45`. */
+                    /* `group` drives the chevron's group-open:rotate-45 */
                     <details class="role-details group mt-2">
                       <summary class="role-summary inline-flex cursor-pointer list-none items-center gap-[0.4rem] text-[15px] font-semibold text-navy select-none [&::-webkit-details-marker]:hidden hover:text-amber-ink focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-amber-ink dark:text-blue dark:hover:text-white dark:focus-visible:outline-blue">
                         <span
@@ -161,8 +153,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
 </div>
 
 <script>
-  // Keep "Present" durations and the total honest between deploys: the
-  // build stamped them for its own month, so recompute against today's.
+  // The build stamped "Present" durations for its own month; recompute for today.
   import {
     currentMonth,
     formatDuration,

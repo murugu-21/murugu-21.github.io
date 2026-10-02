@@ -1,8 +1,6 @@
 #!/bin/sh
-# Fast path: auto-format only the staged files (lint-staged re-stages the
-# fixes). The heavy gates — astro checks, worker typecheck, tests — run in
-# .githooks/pre-push instead, so commits stay near-instant.
-# Emergency bypass: git commit --no-verify
+# Formats staged files only; heavy gates run in pre-push.
+# Bypass: git commit --no-verify
 set -e
 
 bunx lint-staged

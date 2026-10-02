@@ -2,8 +2,7 @@
 import { socialMediaLinks } from "../data/portfolio";
 import Icon from "./Icon.astro";
 
-// Monochrome glyphs in the section's text color, same treatment as the blog
-// footer (src/blog/components/Bio.astro), instead of per-brand colored discs.
+// Monochrome glyphs, matching the blog footer (src/blog/components/Bio.astro).
 const links = [
   {
     href: socialMediaLinks.github,
@@ -56,11 +55,8 @@ const links = [
       aria-label={link.label}
       title={link.label}
     >
-      {/* The anchor keeps a 2.6rem hit target; the svg is a plain glyph
-            inside it. Putting padding + border-radius on the <svg> itself
-            (the old FA <i> translation) made Chrome clip the glyph to the
-            radius inset by the padding, which shaved the corners off the
-            LinkedIn "i" dot. */}
+      {/* Hit target lives on the anchor: padding + border-radius on the <svg>
+            makes Chrome clip the glyph (shaved the LinkedIn "i" dot). */}
       <Icon name={link.icon} class="block" size="1.6rem" />
     </a>
   ))}

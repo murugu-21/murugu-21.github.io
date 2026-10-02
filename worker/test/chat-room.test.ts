@@ -132,8 +132,8 @@ describe("ChatRoom storage", () => {
       first_seen: number;
       last_seen: number;
     };
-    // Fire-and-forget on the room's side, so retry until the write lands —
-    // against the expected values, because the previous row is already there.
+    // The room writes fire-and-forget, so poll; match on expected values because
+    // the previous row is already there.
     const mirrored = (expected: Partial<RoomRow>) =>
       vi.waitFor(
         async () => {
