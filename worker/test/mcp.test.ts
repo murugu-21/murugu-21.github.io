@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { CONTACT_DAILY_PER_CLIENT } from "../api/contact";
 import { buildDataset } from "../api/dataset";
@@ -217,22 +217,62 @@ describe("modern request validation", () => {
   const readLlms = { uri: `${RESOURCE_ORIGIN}/llms.txt` };
 
   // undefined deletes the header.
-  it.each<[string, string, Record<string, unknown>, Record<string, string | undefined>]>([
-    ["a missing MCP-Protocol-Version", "tools/list", {}, { "MCP-Protocol-Version": undefined }],
-    ["a version header that disagrees", "tools/list", {}, { "MCP-Protocol-Version": "2025-11-25" }],
-    ["a missing Mcp-Method", "tools/list", {}, { "Mcp-Method": undefined }],
-    ["an Mcp-Method that disagrees", "tools/list", {}, { "Mcp-Method": "tools/call" }],
-    ["tools/call without Mcp-Name", "tools/call", getProfile, { "Mcp-Name": undefined }],
-    ["an Mcp-Name that disagrees with the tool", "tools/call", getProfile, { "Mcp-Name": "x" }],
-    ["a nameless tools/call", "tools/call", { arguments: {} }, {}],
-    [
-      "an Mcp-Name that disagrees with the uri",
-      "resources/read",
-      readLlms,
-      { "Mcp-Name": `${RESOURCE_ORIGIN}/AGENTS.md` }
-    ],
-    ["a uri-less resources/read", "resources/read", {}, { "Mcp-Name": "anything" }]
-  ])("rejects %s with HeaderMismatch", async (_label, method, params, edits) => {
+  it.each<{
+    label: string;
+    method: string;
+    params: Record<string, unknown>;
+    edits: Record<string, string | undefined>;
+  }>([
+    {
+      label: "a missing MCP-Protocol-Version",
+      method: "tools/list",
+      params: {},
+      edits: { "MCP-Protocol-Version": undefined }
+    },
+    {
+      label: "a version header that disagrees",
+      method: "tools/list",
+      params: {},
+      edits: { "MCP-Protocol-Version": "2025-11-25" }
+    },
+    {
+      label: "a missing Mcp-Method",
+      method: "tools/list",
+      params: {},
+      edits: { "Mcp-Method": undefined }
+    },
+    {
+      label: "an Mcp-Method that disagrees",
+      method: "tools/list",
+      params: {},
+      edits: { "Mcp-Method": "tools/call" }
+    },
+    {
+      label: "tools/call without Mcp-Name",
+      method: "tools/call",
+      params: getProfile,
+      edits: { "Mcp-Name": undefined }
+    },
+    {
+      label: "an Mcp-Name that disagrees with the tool",
+      method: "tools/call",
+      params: getProfile,
+      edits: { "Mcp-Name": "x" }
+    },
+    { label: "a nameless tools/call", method: "tools/call", params: { arguments: {} }, edits: {} },
+    {
+      label: "an Mcp-Name that disagrees with the uri",
+      method: "resources/read",
+      params: readLlms,
+      edits: { "Mcp-Name": `${RESOURCE_ORIGIN}/AGENTS.md` }
+    },
+    {
+      label: "a uri-less resources/read",
+      method: "resources/read",
+      params: {},
+      edits: { "Mcp-Name": "anything" }
+    }
+  ])("rejects $label with HeaderMismatch", async ({ method, params, edits }) => {
     const { body, headers } = modern(method, params);
     for (const [key, value] of Object.entries(edits)) {
       if (value === undefined) delete headers[key];
@@ -289,7 +329,8 @@ describe("server/discover", () => {
   it("reports supported versions, capabilities, identity and instructions", async () => {
     const { res, json } = await callModern("server/discover");
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    const result = json.result!;
+    const result = json.result;
+    assert(result, "server/discover returned no result");
     expect(result.resultType).toBe("complete");
     expect(result.supportedVersions).toEqual(SUPPORTED_PROTOCOL_VERSIONS);
     expect(result.capabilities).toEqual({ tools: {}, resources: {} });
@@ -544,7 +585,7 @@ describe("MCP_TOOLS definitions", () => {
   });
 
   it("closes the schema of a tool that takes no arguments", () => {
-    expect(findTool("get_profile")!.inputSchema).toEqual({
+    expect(findTool("get_profile")?.inputSchema).toEqual({
       type: "object",
       properties: {},
       additionalProperties: false
@@ -713,13 +754,16 @@ describe("listResources", () => {
       expect(priority, resource.uri).toBeLessThanOrEqual(1);
     }
     const priority = new Map(resources.map(r => [r.uri, r.annotations?.priority]));
-    expect(priority.get(`${RESOURCE_ORIGIN}/llms.txt`)!).toBeGreaterThan(priority.get(POST_URI)!);
+    const postPriority = priority.get(POST_URI);
+    assert(postPriority !== undefined, "the post has no priority");
+    expect(priority.get(`${RESOURCE_ORIGIN}/llms.txt`)).toBeGreaterThan(postPriority);
   });
 
   it("uses each post's title and summary from the site's own post list", async () => {
     const post = (await listResources(resourceCtx())).find(r =>
       r.uri.includes("cloud-agnostic-rate-limiting")
-    )!;
+    );
+    assert(post, "the rate-limiting post is not listed");
     expect(post.title).toBe("Modern distributed rate limiting in the cloud");
     expect(post.description).toContain("per-user rate limiting");
   });
@@ -743,8 +787,10 @@ describe("readResource", () => {
 
   it("generates the OpenAPI document rather than reading a file", async () => {
     const contents = await readResource(`${RESOURCE_ORIGIN}/openapi.json`, resourceCtx());
-    expect(contents![0].mimeType).toBe("application/json");
-    const doc = JSON.parse(contents![0].text) as {
+    const [content] = contents ?? [];
+    assert(content, "openapi.json returned no contents");
+    expect(content.mimeType).toBe("application/json");
+    const doc = JSON.parse(content.text) as {
       openapi: string;
       servers: Array<{ url: string }>;
     };

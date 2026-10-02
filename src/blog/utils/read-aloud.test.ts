@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { parseHTML } from "linkedom";
 
 import { normalizeSpeechText, packSentences, spokenHash } from "./audio-prep";
@@ -308,12 +308,16 @@ describe("alignWords", () => {
 });
 
 describe("wrapWords", () => {
+  const paragraph = (html: string) => {
+    const p = parseHTML(html).document.querySelector("p");
+    assert(p, "fixture has no <p>");
+    return p as unknown as HTMLElement;
+  };
   const texts = (words: HTMLElement[][]) =>
     words.map(pieces => pieces.map(p => p.textContent).join(""));
 
   it("wraps every whitespace-delimited token across inline children, in order", () => {
-    const { document } = parseHTML('<p>Use <code>ctrl + i</code> to <a href="#">open</a> it.</p>');
-    const p = document.querySelector("p")! as unknown as HTMLElement;
+    const p = paragraph('<p>Use <code>ctrl + i</code> to <a href="#">open</a> it.</p>');
     const words = wrapWords(p);
     expect(texts(words)).toEqual(["Use", "ctrl", "+", "i", "to", "open", "it."]);
     expect(words.every(w => w.length === 1)).toBe(true);
@@ -322,10 +326,9 @@ describe("wrapWords", () => {
   });
 
   it("keeps a word whole when it straddles an element boundary", () => {
-    const { document } = parseHTML(
+    const p = paragraph(
       '<p><a href="#">SiteGPT</a>’s founder said <strong>place</strong>. Done</p>'
     );
-    const p = document.querySelector("p")! as unknown as HTMLElement;
     const words = wrapWords(p);
     expect(texts(words)).toEqual(["SiteGPT’s", "founder", "said", "place.", "Done"]);
     // the straddling words are made of two spans each, one per text node
@@ -337,8 +340,7 @@ describe("wrapWords", () => {
   });
 
   it("is idempotent, returning the same grouping on a second call", () => {
-    const { document } = parseHTML("<p><em>a</em>b c</p>");
-    const p = document.querySelector("p")! as unknown as HTMLElement;
+    const p = paragraph("<p><em>a</em>b c</p>");
     const first = wrapWords(p);
     const second = wrapWords(p);
     expect(texts(second)).toEqual(["ab", "c"]);
@@ -390,10 +392,11 @@ describe("matchWordSpans", () => {
       { w: "here", s: 9, e: 10 }
     ];
     const spans = matchWordSpans(words, timed);
+    assert(spans);
     expect(spans).toHaveLength(timed.length);
-    expect(spans![0]).toEqual(words[0]);
-    for (let k = 1; k <= 8; k++) expect(spans![k]).toEqual(words[1]);
-    expect(spans![9]).toEqual(words[2]);
+    expect(spans[0]).toEqual(words[0]);
+    for (let k = 1; k <= 8; k++) expect(spans[k]).toEqual(words[1]);
+    expect(spans[9]).toEqual(words[2]);
   });
 
   it("still returns null when an expanded word disagrees with the timings", () => {

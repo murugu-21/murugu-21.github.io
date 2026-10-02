@@ -282,7 +282,7 @@ api.post("/contact", async c => {
   }
 
   try {
-    await sendContactEmail(email, inbox, parsed.value);
+    await sendContactEmail({ email, inbox, msg: parsed.value });
   } catch (err) {
     console.error("contact email failed", err);
     return apiError({

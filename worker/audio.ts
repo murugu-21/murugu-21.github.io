@@ -47,7 +47,7 @@ audio.get("/:file", async c => {
   if (!head) return serveAsset(c.req.raw, c.env.ASSETS);
 
   const etag = head.httpEtag;
-  const contentType = head.httpMetadata?.contentType ?? TYPES[file.split(".").pop()!];
+  const contentType = head.httpMetadata?.contentType ?? TYPES[file.split(".").pop() ?? ""];
   const baseHeaders = {
     "Content-Type": contentType,
     "Accept-Ranges": "bytes",

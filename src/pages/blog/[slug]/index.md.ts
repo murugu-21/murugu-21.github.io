@@ -8,9 +8,9 @@ import { markdownResponse } from "../../../lib/llms";
 
 export const getStaticPaths = (async () => {
   const posts = await getPublishedPosts();
-  return posts
-    .filter(post => !post.id.includes("/") && post.filePath)
-    .map(post => ({ params: { slug: post.id }, props: { filePath: post.filePath! } }));
+  return posts.flatMap(({ id, filePath }) =>
+    !id.includes("/") && filePath ? [{ params: { slug: id }, props: { filePath } }] : []
+  );
 }) satisfies GetStaticPaths;
 
 export const GET: APIRoute = ({ props }) => markdownResponse(readFileSync(props.filePath, "utf8"));

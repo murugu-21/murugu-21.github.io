@@ -129,10 +129,12 @@ export async function readResource(
 
   const slug = uri.match(BLOG_URI)?.[1];
   // postMarkdownPath re-validates the slug shape.
-  if (!slug || postMarkdownPath(slug) === null) return null;
+  if (!slug) return null;
+  const path = postMarkdownPath(slug);
+  if (path === null) return null;
   // Published posts only, so an unlisted markdown file can't be guessed.
   const posts = await loadPosts(ctx.assets);
   if (!posts.some(post => post.slug === slug)) return null;
-  const text = await readAsset(ctx.assets, postMarkdownPath(slug)!);
+  const text = await readAsset(ctx.assets, path);
   return text === null ? null : [{ uri, mimeType: "text/markdown", text }];
 }

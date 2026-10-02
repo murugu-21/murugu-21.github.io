@@ -91,6 +91,28 @@ const publishRate = (next: SpeechRate) => {
   rateListeners.forEach(fn => fn());
 };
 
+const isAudioTimings = (value: unknown): value is AudioTimings =>
+  typeof value === "object" &&
+  value !== null &&
+  "version" in value &&
+  (value.version === 1 || value.version === 2) &&
+  "blocks" in value &&
+  Array.isArray(value.blocks);
+
+const fetchTimings = async (slug: string): Promise<AudioTimings | null> => {
+  try {
+    const res = await fetch(`/blog/audio/${slug}.json`, {
+      headers: { Accept: "application/json" }
+    });
+    const body: unknown = res.ok ? await res.json() : null;
+    if (isAudioTimings(body)) return body;
+    console.warn(`No read-aloud audio for this post (${res.status}), using speech synthesis`);
+  } catch (err) {
+    console.warn("Read-aloud audio unavailable, using speech synthesis", err);
+  }
+  return null;
+};
+
 // Same extraction + normalisation as the generator, so texts line up with
 // the timing JSON. The title is read first.
 const collectBlocks = (): Block[] => {
@@ -367,21 +389,13 @@ export function ListenControls({ slug }: { slug: string }) {
 
   // ---- choose a backend on first use -----------------------------------------
   const loadPlayer = useCallback(async (): Promise<Player | null> => {
-    if ("Audio" in window) {
+    const timings = "Audio" in window ? await fetchTimings(slug) : null;
+    if (timings) {
       try {
-        const res = await fetch(`/blog/audio/${slug}.json`, {
-          headers: { Accept: "application/json" }
-        });
-        if (res.ok) {
-          const timings = (await res.json()) as AudioTimings;
-          if ((timings.version === 1 || timings.version === 2) && Array.isArray(timings.blocks)) {
-            const player = audioPlayer(timings);
-            player.setRate(rateRef.current);
-            tag("listen_backend", "audio");
-            return player;
-          }
-        }
-        console.warn(`No read-aloud audio for this post (${res.status}), using speech synthesis`);
+        const player = audioPlayer(timings);
+        player.setRate(rateRef.current);
+        tag("listen_backend", "audio");
+        return player;
       } catch (err) {
         console.warn("Read-aloud audio unavailable, using speech synthesis", err);
       }

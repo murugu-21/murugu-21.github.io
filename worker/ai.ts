@@ -49,12 +49,17 @@ function estimateUsage(messages: ModelMessage[], content: string): Usage {
   };
 }
 
-export async function runDeepseekExchange(
-  apiKey: string,
-  messages: ModelMessage[],
-  onDelta: (text: string) => void,
-  fetcher: typeof fetch = fetch
-): Promise<StreamResult> {
+export async function runDeepseekExchange({
+  apiKey,
+  messages,
+  onDelta,
+  fetcher = fetch
+}: {
+  apiKey: string;
+  messages: ModelMessage[];
+  onDelta: (text: string) => void;
+  fetcher?: typeof fetch;
+}): Promise<StreamResult> {
   const res = await fetcher(`${DEEPSEEK_BASE_URL}/chat/completions`, {
     method: "POST",
     headers: {

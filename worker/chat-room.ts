@@ -1,7 +1,7 @@
 import { Server, type Connection, type ConnectionContext } from "partyserver";
 
 import { isInsufficientBalance, runDeepseekExchange } from "./ai";
-import { parseLeadArguments, sendOpportunityEmail, type Lead } from "./email";
+import { parseLeadArguments, sendOpportunityEmail, type EmailLike, type Lead } from "./email";
 import { fetchSitePage } from "./fetch-page";
 import { getGrounding } from "./grounding";
 import { buildMessages, parseFetchArguments, ROOM_DAILY_LIMIT, type ModelMessage } from "./prompt";
@@ -169,7 +169,7 @@ export class ChatRoom extends Server<Env> {
     messages: ModelMessage[],
     onDelta: (text: string) => void
   ): Promise<StreamResult> {
-    const result = await runDeepseekExchange(key, messages, onDelta);
+    const result = await runDeepseekExchange({ apiKey: key, messages, onDelta });
     // Keeps spend visible in `wrangler tail`.
     console.log("deepseek usage", JSON.stringify(result.usage));
     return result;
@@ -200,12 +200,12 @@ export class ChatRoom extends Server<Env> {
       .toArray();
     if (alreadyCaptured.length === 0) {
       try {
-        await sendOpportunityEmail(
-          this.env.EMAIL as unknown as Parameters<typeof sendOpportunityEmail>[0],
-          this.env.OPPORTUNITY_INBOX,
+        await sendOpportunityEmail({
+          email: this.env.EMAIL as unknown as EmailLike,
+          inbox: this.env.OPPORTUNITY_INBOX,
           lead,
-          this.history()
-        );
+          transcript: this.history()
+        });
         this.ctx.storage.sql.exec(
           `INSERT INTO meta (key, value) VALUES ('lead_captured', ?)`,
           new Date().toISOString()

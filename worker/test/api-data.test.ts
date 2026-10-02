@@ -121,11 +121,16 @@ describe("splitSkillItems", () => {
 
 describe("parsePeriod", () => {
   it.each([
-    ["April 2025 – December 2025", "2025-04", "2025-12", false],
-    ["June 2019 - April 2023", "2019-06", "2023-04", false],
-    ["December 2025 – Present", "2025-12", null, true],
-    ["some time ago", null, null, false]
-  ])("reads %s", (period, startDate, endDate, current) => {
+    {
+      period: "April 2025 – December 2025",
+      startDate: "2025-04",
+      endDate: "2025-12",
+      current: false
+    },
+    { period: "June 2019 - April 2023", startDate: "2019-06", endDate: "2023-04", current: false },
+    { period: "December 2025 – Present", startDate: "2025-12", endDate: null, current: true },
+    { period: "some time ago", startDate: null, endDate: null, current: false }
+  ])("reads $period", ({ period, startDate, endDate, current }) => {
     expect(parsePeriod(period)).toEqual({ startDate, endDate, current });
   });
 });

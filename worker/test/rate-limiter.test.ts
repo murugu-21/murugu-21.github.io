@@ -42,10 +42,20 @@ describe("chatAvailable", () => {
   // the next exchange, so an unreachable balance endpoint must not take the
   // widget down.
   it.each([
-    ["gates once the balance is down to the reserve", usd(BALANCE_RESERVE_USD), 200, false],
-    ["gates when DeepSeek reports the account unavailable", usd("10.00", false), 200, false],
-    ["fails open when the balance lookup errors", {}, 500, true]
-  ])("%s", async (label, body, status, expected) => {
+    {
+      label: "gates once the balance is down to the reserve",
+      body: usd(BALANCE_RESERVE_USD),
+      status: 200,
+      expected: false
+    },
+    {
+      label: "gates when DeepSeek reports the account unavailable",
+      body: usd("10.00", false),
+      status: 200,
+      expected: false
+    },
+    { label: "fails open when the balance lookup errors", body: {}, status: 500, expected: true }
+  ])("$label", async ({ label, body, status, expected }) => {
     const { fetcher } = balanceResponse(body, status);
     await inLimiter(`bal-${label}`, async instance => {
       expect(await instance.chatAvailable("sk-test", fetcher)).toBe(expected);

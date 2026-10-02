@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeAll, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
 
 import {
@@ -135,7 +135,9 @@ describe("tag", () => {
 describe("initClickTracking", () => {
   const click = (d: Document, id: string) => {
     const Ctor = (d.defaultView as unknown as { Event: typeof Event }).Event;
-    d.getElementById(id)!.dispatchEvent(new Ctor("click", { bubbles: true }));
+    const target = d.getElementById(id);
+    assert(target, `no #${id} in the fixture`);
+    target.dispatchEvent(new Ctor("click", { bubbles: true }));
   };
 
   it("captures the nearest annotated ancestor of the click target", () => {
@@ -188,7 +190,11 @@ describe("redactBlogFilters", () => {
 describe("initAnalytics", () => {
   describe("SDK config", () => {
     let init: ReturnType<typeof vi.fn>;
-    let config: Record<string, any>;
+    let config: {
+      api_host: string;
+      session_recording: { maskAllInputs: boolean; maskTextSelector: string };
+      sanitize_properties: (properties: Record<string, unknown>) => Record<string, unknown>;
+    };
 
     beforeAll(async () => {
       const fake = fakeSdk();
@@ -241,8 +247,7 @@ describe("initAnalytics", () => {
 
   it("replays events captured before the SDK finished loading", async () => {
     const { sdk, capture, register } = fakeSdk();
-    let release: (() => void) | undefined;
-    const gate = new Promise<void>(r => (release = r));
+    const { promise: gate, resolve: release } = Promise.withResolvers<void>();
     const ph = await fresh();
     const booting = ph.initAnalytics("phc_test", "https://e.example.dev", async () => {
       await gate;
@@ -251,7 +256,7 @@ describe("initAnalytics", () => {
     ph.track("resume_download");
     ph.tag("theme", "dark");
     expect(capture).not.toHaveBeenCalled();
-    release!();
+    release();
     await booting;
     expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
     expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
@@ -297,10 +302,10 @@ describe("bootAnalytics", () => {
 
   it("buffers errors and rejections thrown before the SDK boots and replays them", async () => {
     const { sdk, captureException } = fakeSdk();
-    let release: (() => void) | undefined;
-    const gate = new Promise<void>(r => (release = r));
+    const { promise: gate, resolve: release } = Promise.withResolvers<void>();
     const d = page(metas);
-    const win = d.defaultView! as unknown as typeof globalThis;
+    assert(d.defaultView, "fixture page has no window");
+    const win = d.defaultView as unknown as typeof globalThis;
     const ph = await fresh();
     const booting = ph.bootAnalytics(d, async () => {
       await gate;
@@ -310,7 +315,7 @@ describe("bootAnalytics", () => {
     const reason = new Error("fetch failed");
     win.dispatchEvent(Object.assign(new win.Event("error"), { error: err }));
     win.dispatchEvent(Object.assign(new win.Event("unhandledrejection"), { reason }));
-    release!();
+    release();
     await booting;
     expect(captureException.mock.calls).toEqual([
       [err, undefined],

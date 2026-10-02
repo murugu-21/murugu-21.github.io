@@ -26,7 +26,7 @@ import {
   type RpcFailure
 } from "./protocol";
 import { BLOG_POST_TEMPLATE, listResources, readResource } from "./resources";
-import { findTool, MCP_TOOLS, type ToolContext, type ToolResult } from "./tools";
+import { findTool, MCP_TOOLS, type McpTool, type ToolContext, type ToolResult } from "./tools";
 
 const SERVER_INFO = { name: SERVER_NAME, version: API_VERSION };
 
@@ -126,7 +126,7 @@ async function readResourceResult(
 
 function toolCallArgs(
   message: JsonRpcMessage
-): { name: string; args: Record<string, unknown> } | RpcFailure {
+): { tool: McpTool; args: Record<string, unknown> } | RpcFailure {
   const name = message.params?.name;
   if (typeof name !== "string") {
     return {
@@ -143,14 +143,15 @@ function toolCallArgs(
       message: "Invalid params: 'arguments' must be an object when present."
     };
   }
-  if (!findTool(name)) {
+  const tool = findTool(name);
+  if (!tool) {
     return {
       status: 200,
       code: JSON_RPC_INVALID_PARAMS,
       message: `Unknown tool: ${name}. Call tools/list for the tools this server offers.`
     };
   }
-  return { name, args: (raw as Record<string, unknown>) ?? {} };
+  return { tool, args: (raw as Record<string, unknown>) ?? {} };
 }
 
 async function runTool(
@@ -159,7 +160,7 @@ async function runTool(
 ): Promise<ToolResult | RpcFailure> {
   const parsed = toolCallArgs(message);
   if ("code" in parsed) return parsed;
-  return findTool(parsed.name)!.run(parsed.args, ctx);
+  return parsed.tool.run(parsed.args, ctx);
 }
 
 const isFailure = (value: object): value is RpcFailure => "code" in value;

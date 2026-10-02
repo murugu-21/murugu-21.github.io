@@ -6,7 +6,7 @@ const SYMBOLS = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE0F}\u{200D
 
 // Five or more of one fractional digit (0.30000000000000004): LLM-style TTS
 // models loop on these, so the run is described instead.
-const LONG_DIGIT_RUN = /(\d+\.\d*?)((\d)\3{4,})(\d*)/g;
+const LONG_DIGIT_RUN = /(\d+\.\d*?)((\d)\3{4,})\d*/g;
 const DIGIT_NAMES = [
   "zero",
   "one",
@@ -20,14 +20,9 @@ const DIGIT_NAMES = [
   "nine"
 ];
 
-function describeDigitRun(
-  _match: string,
-  head: string,
-  run: string,
-  digit: string,
-  tail: string
-): string {
-  const spoken = `${head}, then ${DIGIT_NAMES[Number(digit)]} repeated ${run.length} times`;
+function describeDigitRun(match: string, head: string, run: string): string {
+  const tail = match.slice(head.length + run.length);
+  const spoken = `${head}, then ${DIGIT_NAMES[Number(run[0])]} repeated ${run.length} times`;
   return tail ? `${spoken}, then ${tail}` : spoken;
 }
 

@@ -29,11 +29,11 @@ const ASSET_URLS = new Map(
 // Rewrites relative <img src> only; absolute, root-relative and anchor URLs pass through.
 function absolutizeAssets(html: string, postId: string): string {
   return html.replace(
-    /(<img\b[^>]*?\bsrc=")([^"]+)(")/gi,
-    (match: string, before: string, url: string, after: string) => {
+    /(<img\b[^>]*?\bsrc=")([^"]+)(?=")/gi,
+    (match: string, before: string, url: string) => {
       if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|\/|#)/i.test(url)) return match;
       const resolved = ASSET_URLS.get(`${postId}/${url.replace(/^\.\//, "")}`);
-      return resolved ? before + resolved + after : match;
+      return resolved ? before + resolved : match;
     }
   );
 }

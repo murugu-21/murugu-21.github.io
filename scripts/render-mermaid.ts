@@ -176,14 +176,19 @@ async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Pag
 
 // The id lands in the SVG and its stylesheet, so it derives from the hash (not
 // a counter) to keep re-renders byte-identical. Ids needn't be unique across files.
-async function renderOne(
-  page: Page,
-  source: string,
-  theme: DiagramTheme,
-  hash: string
-): Promise<string> {
+async function renderOne({
+  page,
+  source,
+  theme,
+  hash
+}: {
+  page: Page;
+  source: string;
+  theme: DiagramTheme;
+  hash: string;
+}): Promise<string> {
   return page.evaluate(
-    async (src, themeName, fontFamily, svgId) => {
+    async ({ src, themeName, fontFamily, svgId }) => {
       // "strict": no click callbacks, labels escaped; files are also served directly.
       const m = (window as unknown as { mermaid: typeof import("mermaid").default }).mermaid;
       m.initialize({ startOnLoad: false, theme: themeName, securityLevel: "strict", fontFamily });
@@ -196,10 +201,12 @@ async function renderOne(
       if (!root) throw new Error("renderOne: mermaid returned no <svg>");
       return new XMLSerializer().serializeToString(root);
     },
-    source,
-    THEMES[theme].mermaid as "neutral" | "dark",
-    FONT_FAMILY,
-    `m-${hash}-${theme}`
+    {
+      src: source,
+      themeName: THEMES[theme].mermaid as "neutral" | "dark",
+      fontFamily: FONT_FAMILY,
+      svgId: `m-${hash}-${theme}`
+    }
   );
 }
 
@@ -245,6 +252,42 @@ async function rasterize(page: Page, styledSvg: string): Promise<Buffer> {
   return sharp(shot).png({ palette: true, compressionLevel: 9 }).toBuffer();
 }
 
+type Target = { job: Job; variant: Variant; path: string };
+
+async function renderMissing({
+  page,
+  font,
+  missing
+}: {
+  page: Page;
+  font: Buffer;
+  missing: Target[];
+}): Promise<void> {
+  // the PNG (listed after its SVGs) reuses the light markup just written
+  const lightSvgs = new Map<string, string>();
+  for (const { job, variant, path } of missing) {
+    mkdirSync(dirname(path), { recursive: true });
+    if (variant.kind === "svg") {
+      const svg = await renderOne({
+        page,
+        source: job.source,
+        theme: variant.theme,
+        hash: job.hash
+      });
+      const styled = await embedStyle(svg, variant.theme, font);
+      await assertWellFormed(page, styled, path);
+      if (variant.theme === "light") lightSvgs.set(job.hash, styled);
+      writeFileSync(path, styled);
+    } else {
+      const styled = lightSvgs.get(job.hash) ?? readFileSync(variantPath(job, VARIANTS[0]), "utf8");
+      writeFileSync(path, await rasterize(page, styled));
+    }
+    console.log(
+      `rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${variantLabel(variant)})`
+    );
+  }
+}
+
 async function main(): Promise<void> {
   const { jobs, expected } = await expectedFiles();
   const stale = orphans(expected);
@@ -274,25 +317,7 @@ async function main(): Promise<void> {
   const font = readFileSync(FONT_FILE);
   const { browser, page } = await openRenderer(font);
   try {
-    // the PNG (listed after its SVGs) reuses the light markup just written
-    const lightSvgs = new Map<string, string>();
-    for (const { job, variant, path } of missing) {
-      mkdirSync(dirname(path), { recursive: true });
-      if (variant.kind === "svg") {
-        const svg = await renderOne(page, job.source, variant.theme, job.hash);
-        const styled = await embedStyle(svg, variant.theme, font);
-        await assertWellFormed(page, styled, path);
-        if (variant.theme === "light") lightSvgs.set(job.hash, styled);
-        writeFileSync(path, styled);
-      } else {
-        const styled =
-          lightSvgs.get(job.hash) ?? readFileSync(variantPath(job, VARIANTS[0]), "utf8");
-        writeFileSync(path, await rasterize(page, styled));
-      }
-      console.log(
-        `rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${variantLabel(variant)})`
-      );
-    }
+    await renderMissing({ page, font, missing });
   } finally {
     await browser.close();
   }

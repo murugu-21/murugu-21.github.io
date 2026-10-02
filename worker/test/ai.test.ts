@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { fetchDeepseekBalance, isInsufficientBalance, runDeepseekExchange } from "../ai";
 import { buildMessages, CAPTURE_TOOL, MAX_HISTORY_MESSAGES } from "../prompt";
@@ -16,9 +16,9 @@ function sseStream(events: string[]): ReadableStream<Uint8Array> {
 
 describe("runDeepseekExchange", () => {
   it("sends an OpenAI chat-completions request and parses the stream", async () => {
-    let captured: { url: string; init: RequestInit } | null = null;
+    const calls: { url: string; init: RequestInit }[] = [];
     const fetcher = (async (url: string | URL | Request, init?: RequestInit) => {
-      captured = { url: String(url), init: init! };
+      calls.push({ url: String(url), init: init ?? {} });
       return new Response(
         sseStream([
           'data: {"choices":[{"delta":{"content":"hi there"}}]}\n\n',
@@ -29,17 +29,19 @@ describe("runDeepseekExchange", () => {
     }) as typeof fetch;
 
     const deltas: string[] = [];
-    const result = await runDeepseekExchange(
-      "sk-test",
-      [{ role: "user", content: "hello" }],
-      t => deltas.push(t),
+    const result = await runDeepseekExchange({
+      apiKey: "sk-test",
+      messages: [{ role: "user", content: "hello" }],
+      onDelta: t => deltas.push(t),
       fetcher
-    );
+    });
 
-    expect(captured!.url).toBe("https://api.deepseek.com/chat/completions");
-    const headers = captured!.init.headers as Record<string, string>;
+    const [captured] = calls;
+    assert(captured, "no request was sent");
+    expect(captured.url).toBe("https://api.deepseek.com/chat/completions");
+    const headers = captured.init.headers as Record<string, string>;
     expect(headers.authorization).toBe("Bearer sk-test");
-    const body = JSON.parse(captured!.init.body as string);
+    const body = JSON.parse(captured.init.body as string);
     expect(body.stream).toBe(true);
     expect(body.stream_options).toEqual({ include_usage: true });
     // Reasoning sharpens tool selection; with no max_tokens it can't starve the reply.
@@ -58,7 +60,12 @@ describe("runDeepseekExchange", () => {
     const failing = (status: number) =>
       (async () => new Response("no", { status })) as typeof fetch;
     const error = (status: number) =>
-      runDeepseekExchange("sk-test", [], () => {}, failing(status)).then(
+      runDeepseekExchange({
+        apiKey: "sk-test",
+        messages: [],
+        onDelta: () => {},
+        fetcher: failing(status)
+      }).then(
         () => expect.unreachable(),
         (e: unknown) => e
       );

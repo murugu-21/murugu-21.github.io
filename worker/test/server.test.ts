@@ -1,7 +1,7 @@
 // The worker entry: which requests it claims, which fall through to static
 // assets, and how a miss is answered.
 import { env, runInDurableObject } from "cloudflare:test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { assert, beforeEach, describe, expect, it } from "vitest";
 
 import { parseRange } from "../audio";
 import { ChatRoom } from "../chat-room";
@@ -289,7 +289,8 @@ describe("GET /blog/audio/:file", () => {
 
   it("answers 304 to a matching If-None-Match", async () => {
     const first = await fetchPath("/blog/audio/first-post.mp3");
-    const etag = first.headers.get("ETag")!;
+    const etag = first.headers.get("ETag");
+    assert(etag, "first response has no ETag");
     const res = await fetchPath("/blog/audio/first-post.mp3", {
       headers: { "If-None-Match": etag }
     });

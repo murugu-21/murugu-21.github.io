@@ -28,12 +28,17 @@ export type ContactParseResult =
 // Deliberately loose: stricter patterns reject deliverable addresses.
 const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
-function optional(
-  raw: unknown,
-  field: "name" | "company",
-  max: number,
-  issues: FieldIssue[]
-): string | undefined {
+function optional({
+  raw,
+  field,
+  max,
+  issues
+}: {
+  raw: unknown;
+  field: "name" | "company";
+  max: number;
+  issues: FieldIssue[];
+}): string | undefined {
   if (raw === undefined || raw === null) return undefined;
   if (typeof raw !== "string") {
     issues.push({ field, issue: "must be a string" });
@@ -58,7 +63,7 @@ export function parseContactRequest(raw: unknown): ContactParseResult {
   const body = raw as Record<string, unknown>;
   const issues: FieldIssue[] = [];
 
-  const name = optional(body.name, "name", CONTACT_LIMITS.name, issues);
+  const name = optional({ raw: body.name, field: "name", max: CONTACT_LIMITS.name, issues });
 
   let email: string | undefined;
   if (typeof body.email !== "string") {
@@ -72,7 +77,12 @@ export function parseContactRequest(raw: unknown): ContactParseResult {
     }
   }
 
-  const company = optional(body.company, "company", CONTACT_LIMITS.company, issues);
+  const company = optional({
+    raw: body.company,
+    field: "company",
+    max: CONTACT_LIMITS.company,
+    issues
+  });
 
   // Validates the payload without sending an email or spending a rate-limit slot.
   const rawDryRun = body.dryRun ?? false;

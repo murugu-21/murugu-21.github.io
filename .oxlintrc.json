@@ -1,10 +1,20 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc", "react", "import", "promise"],
-  "categories": {"correctness": "error"},
+  "categories": { "correctness": "error" },
   "rules": {
-    "no-irregular-whitespace": ["error", {"skipComments": true}],
+    "no-irregular-whitespace": ["error", { "skipComments": true }],
     "react/purity": "warn",
-    "react/set-state-in-effect": "warn"
+    "react/set-state-in-effect": "warn",
+    "typescript/no-explicit-any": "error",
+    "typescript/ban-ts-comment": [
+      "error",
+      { "ts-expect-error": "allow-with-description", "ts-ignore": true, "ts-nocheck": true }
+    ],
+    "no-else-return": ["error", { "allowElseIf": false }],
+    "no-lonely-if": "error",
+    "max-depth": ["error", { "max": 3 }],
+    "max-params": ["error", { "max": 3 }],
+    "typescript/no-non-null-assertion": "error"
   }
 }

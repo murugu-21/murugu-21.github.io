@@ -94,14 +94,20 @@ describe("sending", () => {
     [
       "an opportunity",
       (email: EmailLike) =>
-        sendOpportunityEmail(email, "inbox@example.com", { contact: "a@b.c", summary: "s" }, [])
+        sendOpportunityEmail({
+          email,
+          inbox: "inbox@example.com",
+          lead: { contact: "a@b.c", summary: "s" },
+          transcript: []
+        })
     ],
     [
       "a contact message",
       (email: EmailLike) =>
-        sendContactEmail(email, "inbox@example.com", {
-          email: "ada@example.com",
-          message: "Hello there, this is a message."
+        sendContactEmail({
+          email,
+          inbox: "inbox@example.com",
+          msg: { email: "ada@example.com", message: "Hello there, this is a message." }
         })
     ]
   ])("sends %s from the site address to the configured inbox", async (_label, sendWith) => {

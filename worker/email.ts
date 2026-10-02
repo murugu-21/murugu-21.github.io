@@ -44,12 +44,17 @@ export function formatOpportunityEmail(
   };
 }
 
-export async function sendOpportunityEmail(
-  email: EmailLike,
-  inbox: string,
-  lead: Lead,
-  transcript: ChatHistoryEntry[]
-): Promise<void> {
+export async function sendOpportunityEmail({
+  email,
+  inbox,
+  lead,
+  transcript
+}: {
+  email: EmailLike;
+  inbox: string;
+  lead: Lead;
+  transcript: ChatHistoryEntry[];
+}): Promise<void> {
   const { subject, text } = formatOpportunityEmail(lead, transcript);
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });
 }
@@ -81,11 +86,15 @@ export function formatContactEmail(msg: ContactMessage): {
   };
 }
 
-export async function sendContactEmail(
-  email: EmailLike,
-  inbox: string,
-  msg: ContactMessage
-): Promise<void> {
+export async function sendContactEmail({
+  email,
+  inbox,
+  msg
+}: {
+  email: EmailLike;
+  inbox: string;
+  msg: ContactMessage;
+}): Promise<void> {
   const { subject, text } = formatContactEmail(msg);
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });
 }

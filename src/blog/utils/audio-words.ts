@@ -92,7 +92,7 @@ export function alignWords(
     let j = i;
     while (j < tokens.length && !anchors.has(j)) j++;
     const from = i > 0 ? out[i - 1].e : 0;
-    const to = j < tokens.length ? anchors.get(j)!.s : length;
+    const to = anchors.get(j)?.s ?? length;
     const step = Math.max(0, to - from) / (j - i);
     for (let k = i; k < j; k++) {
       out[k] = {

@@ -13,20 +13,20 @@ async function get(path: string, options?: TestEnvOptions): Promise<Response> {
 async function post(
   path: string,
   body: unknown,
-  init: { ip?: string; contentType?: string | null } = {},
-  options?: TestEnvOptions
+  options: { ip?: string; contentType?: string | null; env?: TestEnvOptions } = {}
 ): Promise<Response> {
   const headers: Record<string, string> = {
-    "CF-Connecting-IP": init.ip ?? "203.0.113.1"
+    "CF-Connecting-IP": options.ip ?? "203.0.113.1"
   };
-  if (init.contentType !== null) headers["Content-Type"] = init.contentType ?? "application/json";
+  if (options.contentType !== null)
+    headers["Content-Type"] = options.contentType ?? "application/json";
   return await worker.fetch(
     new Request(`https://murugappan.dev${path}`, {
       method: "POST",
       headers,
       body: typeof body === "string" ? body : JSON.stringify(body)
     }),
-    testEnv(options)
+    testEnv(options.env)
   );
 }
 
@@ -327,11 +327,9 @@ describe("POST /api/contact", () => {
         company: "Analytical Engines",
         message: "We are hiring a senior backend engineer for a data platform."
       },
-      { ip: "203.0.113.10" },
       {
-        email: {
-          send: async msg => void sent.push(msg as (typeof sent)[number])
-        }
+        ip: "203.0.113.10",
+        env: { email: { send: async msg => void sent.push(msg as (typeof sent)[number]) } }
       }
     );
     expect(res.status).toBe(202);
@@ -386,18 +384,16 @@ describe("POST /api/contact", () => {
   });
 
   it("answers 503 when no inbox is configured", async () => {
-    const res = await post("/api/contact", valid, { ip: "203.0.113.15" }, { inbox: null });
+    const res = await post("/api/contact", valid, { ip: "203.0.113.15", env: { inbox: null } });
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
   });
 
   it("answers 503 when the email send fails", async () => {
-    const res = await post(
-      "/api/contact",
-      valid,
-      { ip: "203.0.113.16" },
-      { email: { send: () => Promise.reject(new Error("relay down")) } }
-    );
+    const res = await post("/api/contact", valid, {
+      ip: "203.0.113.16",
+      env: { email: { send: () => Promise.reject(new Error("relay down")) } }
+    });
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
   });
@@ -412,14 +408,10 @@ describe("POST /api/contact with dryRun", () => {
 
   it("validates without sending an email", async () => {
     const sent: unknown[] = [];
-    const res = await post(
-      "/api/contact",
-      body,
-      { ip: "198.51.100.20" },
-      {
-        email: { send: async msg => void sent.push(msg) }
-      }
-    );
+    const res = await post("/api/contact", body, {
+      ip: "198.51.100.20",
+      env: { email: { send: async msg => void sent.push(msg) } }
+    });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
       status: "validated",
@@ -438,7 +430,7 @@ describe("POST /api/contact with dryRun", () => {
   });
 
   it("validates even when no inbox is configured", async () => {
-    const res = await post("/api/contact", body, { ip: "198.51.100.23" }, { inbox: null });
+    const res = await post("/api/contact", body, { ip: "198.51.100.23", env: { inbox: null } });
     expect(res.status).toBe(200);
   });
 });

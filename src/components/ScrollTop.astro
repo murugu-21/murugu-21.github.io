@@ -12,7 +12,8 @@ import Icon from "./Icon.astro";
 </button>
 
 <script>
-  const btn = document.getElementById("topButton")!;
+  const btn = document.getElementById("topButton");
+  if (!btn) throw new Error("ScrollTop: #topButton is missing");
   window.addEventListener(
     "scroll",
     () => {

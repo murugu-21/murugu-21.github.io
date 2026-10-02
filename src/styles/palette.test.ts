@@ -289,13 +289,18 @@ describe.each(["light", "dark"] as const)("%s island tokens", mode => {
   // (the panel header title is 16px semibold).
   it.each([
     // the ✦ spark and the tool dot on the bg-muted activity row
-    ["activity-row indicators", "--primary", "--muted", 3],
-    ["primary button against the panel", "--primary", "--card", 3],
-    ["primary button label", "--primary-foreground", "--primary", 4.5],
-    ["primary button label on hover", "--primary-foreground", "--primary-hover", 4.5],
-    ["focus ring against the panel", "--ring", "--card", 3],
-    ["body text on the panel", "--foreground", "--card", 4.5]
-  ] as const)("keeps the %s at contrast (%s on %s >= %d:1)", (_, fg, bg, min) => {
+    { label: "activity-row indicators", fg: "--primary", bg: "--muted", min: 3 },
+    { label: "primary button against the panel", fg: "--primary", bg: "--card", min: 3 },
+    { label: "primary button label", fg: "--primary-foreground", bg: "--primary", min: 4.5 },
+    {
+      label: "primary button label on hover",
+      fg: "--primary-foreground",
+      bg: "--primary-hover",
+      min: 4.5
+    },
+    { label: "focus ring against the panel", fg: "--ring", bg: "--card", min: 3 },
+    { label: "body text on the panel", fg: "--foreground", bg: "--card", min: 4.5 }
+  ] as const)("keeps the $label at contrast ($fg on $bg >= $min:1)", ({ fg, bg, min }) => {
     expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(min);
   });
 });

@@ -275,10 +275,11 @@ describe("buildOpenApiDocument", () => {
 
   it("gives every success status a described JSON response schema", () => {
     for (const [where, op] of operations()) {
-      const success = Object.keys(op.responses ?? {}).filter(s => s.startsWith("2"));
+      const responses = op.responses ?? {};
+      const success = Object.keys(responses).filter(s => s.startsWith("2"));
       expect(success.length, where).toBeGreaterThan(0);
       for (const status of success) {
-        const response = op.responses![status] as {
+        const response = responses[status] as {
           description?: string;
           content?: Record<string, { schema?: unknown }>;
         };
@@ -290,12 +291,11 @@ describe("buildOpenApiDocument", () => {
 
   it("documents a machine-readable error body on every failure status", () => {
     for (const [where, op] of operations()) {
-      const failures = Object.keys(op.responses ?? {}).filter(
-        s => s.startsWith("4") || s.startsWith("5")
-      );
+      const responses = op.responses ?? {};
+      const failures = Object.keys(responses).filter(s => s.startsWith("4") || s.startsWith("5"));
       expect(failures.length, where).toBeGreaterThan(0);
       for (const status of failures) {
-        const response = op.responses![status] as {
+        const response = responses[status] as {
           content?: Record<string, { schema?: { $ref?: string } }>;
         };
         expect(response.content?.["application/json"]?.schema?.$ref, `${where} ${status}`).toBe(
@@ -322,7 +322,7 @@ describe("buildOpenApiDocument", () => {
         }
       }
     });
-    expect(Object.keys(contact.responses!)).toContain("200");
+    expect(Object.keys(contact.responses ?? {})).toContain("200");
     const schema = doc.components.schemas.ContactRequest as {
       properties: Record<string, unknown>;
     };
