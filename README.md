@@ -4,16 +4,25 @@ Personal portfolio of Murugappan, built with [Astro 7](https://astro.build) (Vit
 
 **Live site:** https://murugappan.dev
 
-One Astro project serves both the portfolio and the blog (served at `/blog`): blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position rather than an Astro `base`, and the blog's non-route code (layout, islands, styles, post helpers) is namespaced under `src/blog/`. Posts are markdown in `content/blog/<slug>/index.md`. `bun run build:site` builds the whole site into a single `dist/`. The light/dark theme is shared across both halves via the `isDark` localStorage key.
+One Astro project serves both the portfolio and the blog (served at `/blog`): blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position rather than an Astro `base`, and the blog's non-route code (layout, islands, styles, post helpers) is namespaced under `src/blog/`. Posts are markdown in `content/blog/<slug>/index.md`. `bun run build` builds the whole site into a single `dist/`. The light/dark theme is shared across both halves via the `isDark` localStorage key.
 
 ## Development
 
 ```bash
 bun install
 bun run dev       # local dev server
-bun run build     # production build into dist/
+bun run build     # the whole site into dist/: pages, markdown renditions, resume PDF
 bun run preview   # preview the production build
 ```
+
+`astro build` alone produces the complete site, so a tool that runs it itself
+(the `cf` CLI, which this site is set to move to — branch
+`feat/cf-astro-adapter`) gets everything. The markdown renditions (`index.md`
+next to a page's `index.html`, served for `Accept: text/markdown`) are
+prerendered endpoints under `src/pages/**/index.md.ts`, sharing
+`src/lib/llms.ts` with `/llms.txt`. The diagram `--check` and the resume PDF run
+from the `build-artifacts` integration in `astro.config.ts`. Scripts that read
+the build resolve it from `scripts/site-dir.ts`.
 
 [Bun](https://bun.sh) (version pinned in `package.json` → `packageManager`)
 installs dependencies, runs the package scripts and executes the TypeScript in
@@ -113,18 +122,18 @@ service instead.
 
 ## Deployment
 
-Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `bun run build:site` and deploy command `bun run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). Both commands are Cloudflare dashboard settings, not read from this repo, so changing either means editing it by hand there — nothing in this file enforces them. `bun run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
+Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `bun run build` and deploy command `bun run deploy` — one Worker serves the static `dist/` and hosts the chat backend (see "AI chat widget" below). Both commands are Cloudflare dashboard settings, not read from this repo, so changing either means editing it by hand there — nothing in this file enforces them. `bun run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
 
 Workers Builds settings, for reference (dashboard → Workers → this application):
 
-- **Build command:** `bun run build:site`. Workers Builds picks the package manager from the lockfile and installs before the build command runs; it has recognised Bun's text `bun.lock` since May 2025 (earlier it only knew the binary `bun.lockb`, which is why older guides prepend `bun install &&`).
+- **Build command:** `bun run build`. Workers Builds picks the package manager from the lockfile and installs before the build command runs; it has recognised Bun's text `bun.lock` since May 2025 (earlier it only knew the binary `bun.lockb`, which is why older guides prepend `bun install &&`).
 - **Deploy command:** `bun run deploy` (not `bunx wrangler deploy` — see above).
 - **Build env vars:** `BUN_VERSION` (match `packageManager` in `package.json` — `1.4.2` or newer, the floor for the Astro-on-Bun build; the image's default Bun is older), `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `POST_HOG_TOKEN`, `POST_HOG_URL`, `RESUME_PHONE` (optional — see "Resume generation" below). Node's version comes from `.nvmrc`.
 - **Worker secrets:** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `bunx wrangler secret put <name>`.
 
 ## Resume generation
 
-`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `bun run build:site`, `scripts/generate-resume.ts` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
+`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `bun run build` (the `build-artifacts` integration in `astro.config.ts`), `scripts/generate-resume.ts` serves the finished `dist/` on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `dist/resume.pdf`. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `dist/resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
 
 ## Blog
 
@@ -448,12 +457,12 @@ Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
   A 402 from a chat call is authoritative and gates every room at once; a
   top-up is picked up at the next cache expiry, no deploy. There is no daily
   allowance — at ~$0.003/turn, top up to set the ceiling.
-- **Local dev (full-fidelity single-origin):** `bun run build:site && bunx wrangler dev` → http://localhost:8787
+- **Local dev (full-fidelity single-origin):** `bun run build && bunx wrangler dev` → http://localhost:8787
   (runs both Astro and Worker on the same origin; chat connects at the Worker origin with full Durable Objects).
   Put `OPPORTUNITY_INBOX=you@example.com` and `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored);
   without the key the chat gates itself, since there is no fallback provider.
 - **Local dev (fast HMR loop):** put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env` (gitignored), then run `bun run dev:all`.
   Starts Astro dev server (with HMR) on :4399 and Worker on :8787 in parallel; the widget connects to the real Worker.
-  Note: the Worker serves grounding from `dist/`, so run `bun run build:site` at least once first, or Jarvis will lack site knowledge.
+  Note: the Worker serves grounding from `dist/`, so run `bun run build` at least once first, or Jarvis will lack site knowledge.
   Also note: AI calls in dev hit the real DeepSeek API and are billed, so watch your spend.
 - **Tests:** `bun run test` (vitest + workers pool), `bun run check:worker`.

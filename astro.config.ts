@@ -1,5 +1,7 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
 import { defineConfig } from "astro/config";
 import { unified } from "@astrojs/markdown-remark";
@@ -48,7 +50,7 @@ function singleFileSitemap(): AstroIntegration {
         }
         fs.renameSync(chunk, new URL("sitemap.xml", dir));
         fs.rmSync(new URL("sitemap-index.xml", dir), { force: true });
-        logger.info("`sitemap.xml` created at `dist`");
+        logger.info(`\`sitemap.xml\` created at \`${fileURLToPath(dir)}\``);
       }
     }
   };
@@ -134,6 +136,31 @@ function blogNotFoundCopy(): AstroIntegration {
           );
         }
       }
+    }
+  };
+}
+
+// The build steps that used to wrap `astro build` in package.json, so that
+// `astro build` alone produces the complete site: the diagram check before
+// rendering, the resume PDF once the output is final. A deploy tool that runs
+// `astro build` itself (the cf CLI does) would otherwise skip them, and `dir`
+// follows the output wherever an adapter puts it. Each script stays a
+// standalone CLI.
+function buildArtifacts(): AstroIntegration {
+  const run = (script: string, ...args: string[]) => {
+    const result = spawnSync("bun", [script, ...args], { stdio: "inherit" });
+    if (result.status !== 0) {
+      throw new Error(`build-artifacts: ${script} ${args.join(" ")} failed`);
+    }
+  };
+  return {
+    name: "build-artifacts",
+    hooks: {
+      // Fail before rendering when a committed diagram is missing or stale.
+      "astro:build:start": () => run("scripts/render-mermaid.ts", "--check"),
+      // Registered last, so the site it prints from is final: the resume PDF,
+      // printed from /resume/ in headless Chromium.
+      "astro:build:done": ({ dir }) => run("scripts/generate-resume.ts", fileURLToPath(dir))
     }
   };
 }
@@ -270,7 +297,8 @@ export default defineConfig({
     }),
     singleFileSitemap(),
     blogNotFoundCopy(),
-    blogPostBodies()
+    blogPostBodies(),
+    buildArtifacts()
   ],
   vite: {
     // Vite's own assetsInlineLimit, raised to 8 KB for CSS only. It has to stay

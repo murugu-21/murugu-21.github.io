@@ -18,8 +18,8 @@ resource "cloudflare_email_routing_address" "opportunity_inbox" {
 # Email Routing -> Routing rules -> Create address.
 
 # Markdown for Agents: rewrite Accept: text/markdown page requests to the
-# build-time static renditions (dist/**/index.md, see
-# scripts/generate-markdown.ts) at the zone edge — the Worker never runs, so
+# build-time static renditions (**/index.md, see src/pages/**/index.md.ts)
+# at the zone edge — the Worker never runs, so
 # page views stay on the free unlimited asset path. Two rules because the
 # free plan has no regex rewrites (trailing-slash vs extensionless paths).
 # Pages without a rendition (only /resume/, which is noindexed) 404 to

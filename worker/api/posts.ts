@@ -54,9 +54,9 @@ export function parsePostList(llmsTxt: string): PostSummary[] {
   return posts;
 }
 
-// generate-markdown.ts writes the post's markdown source next to its built
-// index.html; the slug is re-validated here because it comes from the request
-// path, not from the parsed list.
+// src/pages/blog/[slug]/index.md.ts emits the post's markdown source next to
+// its built index.html; the slug is re-validated here because it comes from
+// the request path, not from the parsed list.
 export function postMarkdownPath(slug: string): string | null {
   return SLUG.test(slug) ? `/blog/${slug}/index.md` : null;
 }

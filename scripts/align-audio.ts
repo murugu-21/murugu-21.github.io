@@ -21,10 +21,11 @@ import { join, resolve } from "node:path";
 import { alignWords, type TimedWord, type WhisperWord } from "../src/blog/utils/audio-words.ts";
 import { fail, log, publishedSlugs, run, runEach } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
+import { SITE_DIR } from "./site-dir.ts";
 import { r2Store } from "./tts/r2.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
-const DIST = join(ROOT, "dist", "blog");
+const DIST = join(SITE_DIR, "blog");
 const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "whisper.py");
 
