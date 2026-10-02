@@ -6,13 +6,15 @@
 //
 //   bun run test:capture [<model>]
 //
-// Needs DEEPSEEK_API_KEY in .dev.vars and a built dist/llms.txt (the real
+// Needs DEEPSEEK_API_KEY in .dev.vars and a built llms.txt (`bun run build`) (the real
 // grounding). Costs a few tenths of a cent. Exits non-zero if the model fails
 // to call the tool, or claims the lead was recorded without calling it.
 import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { buildMessages, TOOLS, type ModelMessage, type ModelToolCall } from "../worker/prompt.ts";
 import type { ChatHistoryEntry } from "../worker/protocol.ts";
+import { SITE_DIR } from "./site-dir.ts";
 
 // ai.ts can't be imported here — it resolves its own imports the bundler way,
 // which bare Node won't do — so read the two constants out of its source and
@@ -30,7 +32,7 @@ const apiKey = readFileSync(".dev.vars", "utf8")
   .match(/^DEEPSEEK_API_KEY=(.*)$/m)?.[1]
   .trim();
 if (!apiKey) throw new Error("DEEPSEEK_API_KEY missing from .dev.vars");
-const grounding = readFileSync("dist/llms.txt", "utf8");
+const grounding = readFileSync(join(SITE_DIR, "llms.txt"), "utf8");
 
 // A visitor who is unmistakably a lead: intent, then specifics, then contact.
 const visitorTurns = [

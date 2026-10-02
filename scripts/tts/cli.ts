@@ -20,10 +20,10 @@ export function run(cmd: string, cmdArgs: string[]): string {
   return r.stdout;
 }
 
-// Every dist/blog/<dir>/index.html that is a post. The blog's own 404 page
+// Every <built site>/blog/<dir>/index.html that is a post. The blog's own 404 page
 // lives there too and has no article body.
 export function publishedSlugs(dist: string): string[] {
-  if (!existsSync(dist)) fail("dist/blog missing — run `bun run build` first");
+  if (!existsSync(dist)) fail(`${dist} missing — run \`bun run build\` first`);
   return readdirSync(dist, { withFileTypes: true })
     .filter(d => {
       const page = join(dist, d.name, "index.html");

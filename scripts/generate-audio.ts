@@ -1,7 +1,7 @@
 // Renders each published blog post to MP3 in the blog's designed voice and
 // uploads it, with per-paragraph timings, to R2. Runs on the author's laptop:
 //
-//   bun run build                # dist/ must be current
+//   bun run build                # the built site (scripts/site-dir.ts) must be current
 //   bun run audio                # every post whose spoken text changed
 //   bun run audio first-post     # one post
 //   bun run audio --force     # regenerate even if unchanged
@@ -10,7 +10,7 @@
 //   bun run audio --keep      # leave the temp dir behind for inspection
 //   bun run audio --upload-voice   # push .voice/* to R2 once
 //
-// Pipeline per post: dist HTML → speechBlocks (same function the page uses) →
+// Pipeline per post: built HTML → speechBlocks (same function the page uses) →
 // normalise → pack into ≤300-char sentence groups → Python worker (Breeze TTS 2
 // 8-bit via mlx-audio, plain clone of .voice/reference.wav) → per-chunk
 // atempo=1.08 → sample-accurate assembly with gaps → loudnorm → 64 kbps MP3 +
@@ -34,11 +34,12 @@ import { speechBlocks } from "../src/blog/utils/speech.ts";
 import { normalizeSpeechText, packSentences, spokenHash } from "../src/blog/utils/audio-prep.ts";
 import { fail, log, publishedSlugs, run, runEach } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
+import { SITE_DIR } from "./site-dir.ts";
 import { r2Store } from "./tts/r2.ts";
 import { assemble, readWav, writeWav } from "./tts/wav.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
-const DIST = join(ROOT, "dist", "blog");
+const DIST = join(SITE_DIR, "blog");
 // Tuning knobs. The defaults are the settings the 2026-09-09 evaluation
 // settled on; the env overrides exist for A/B renders, not for production.
 //   AUDIO_VOICE_DIR   directory holding reference.wav + reference.txt
@@ -73,7 +74,7 @@ const r2 = r2Store(local);
 // ---- preconditions ---------------------------------------------------------
 
 function checkPreconditions(): { audio: string; text: string } {
-  if (!existsSync(DIST)) fail("dist/blog missing — run `bun run build` first");
+  if (!existsSync(DIST)) fail(`${DIST} missing — run \`bun run build\` first`);
   for (const tool of ["ffmpeg", "ffprobe"]) {
     if (spawnSync(tool, ["-version"]).status !== 0) {
       fail(`${tool} not on PATH (brew install ffmpeg)`);

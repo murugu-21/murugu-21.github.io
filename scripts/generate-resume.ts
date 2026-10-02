@@ -1,17 +1,20 @@
 import { createServer, type Server } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
-import { extname, join, normalize } from "node:path";
+import { extname, join, normalize, resolve } from "node:path";
 import puppeteer, { type Browser } from "puppeteer";
 import { PDFParse } from "pdf-parse";
 
-// Renders /resume as a PDF with headless Chromium and writes it to
-// dist/resume.pdf. Runs as the last step of `build:site`, after dist/ is
-// final (markdown renditions written) so the static server below serves
-// exactly what ships to production.
+import { SITE_DIR } from "./site-dir.ts";
 
-const DIST_DIR = new URL("../dist/", import.meta.url).pathname;
-const OUT_PATH = new URL("../dist/resume.pdf", import.meta.url).pathname;
+// Renders /resume as a PDF with headless Chromium and writes it to
+// resume.pdf in the built site. Runs last from the build-artifacts
+// integration in astro.config.ts, after the output is final, so the static
+// server below serves exactly what ships to production. The argument is the
+// built site's directory (default SITE_DIR).
+
+const DIST_DIR = resolve(process.argv[2] ?? SITE_DIR) + "/";
+const OUT_PATH = join(DIST_DIR, "resume.pdf");
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -32,7 +35,7 @@ const MIME_TYPES: Record<string, string> = {
   ".pdf": "application/pdf"
 };
 
-/** Minimal static file server over dist/, directory-index aware (foo/ -> foo/index.html). */
+/** Minimal static file server over the built site, directory-index aware (foo/ -> foo/index.html). */
 function createStaticServer(rootDir: string): Server {
   return createServer(async (req, res) => {
     try {

@@ -7,11 +7,12 @@
 // entry points and the pages that do exist, which is enough to recover from a
 // guessed or stale URL without a second request.
 //
-// This is why `assets.run_worker_first` covers "/*" (see wrangler.jsonc): left
-// to itself, the assets layer answers every miss from `not_found_handling` and
-// the Worker is never invoked, so there would be nowhere to negotiate. Running
-// first changes nothing else about asset serving — `ASSETS.fetch()` still
-// applies _headers, _redirects and html_handling.
+// Pages never reach the Worker: they are served straight from static assets.
+// A request that matches no asset does, because `not_found_handling` is
+// "none" (see wrangler.jsonc) — under "404-page" the assets layer would answer
+// every miss with 404.html itself, browser or agent alike, and there would be
+// nowhere to negotiate. The flip side is that the Worker fetches the styled
+// page itself (`notFoundPage`) instead of being handed it.
 
 import { API_PATHS, VERSIONED_API_BASE } from "./api/routes";
 
@@ -104,10 +105,10 @@ export function markdownNotFound(pathname: string, method: string): Response {
 type AssetsLike = { fetch(request: Request): Promise<Response> };
 
 /**
- * The styled page the assets layer produced, with the negotiation declared and
- * the same Link relations the markdown body carries. If the response is not
- * HTML — `not_found_handling` misconfigured, or the page missing from the build
- * — markdown is better than an empty body, so that is what a client gets.
+ * The styled 404 page, with the negotiation declared and the same Link
+ * relations the markdown body carries. If the response is not HTML — the page
+ * missing from the build — markdown is better than an empty body, so that is
+ * what a client gets.
  */
 function htmlNotFound(request: Request, response: Response): Response {
   if (!(response.headers.get("Content-Type") ?? "").startsWith("text/html"))
@@ -130,7 +131,24 @@ export async function serveAsset(request: Request, assets: AssetsLike): Promise<
   const response = await assets.fetch(request);
   if (response.status !== 404) return response;
 
+  const { pathname } = new URL(request.url);
   return prefersMarkdown(request.headers.get("Accept"))
-    ? markdownNotFound(new URL(request.url).pathname, request.method)
-    : htmlNotFound(request, response);
+    ? markdownNotFound(pathname, request.method)
+    : htmlNotFound(request, await notFoundPage(request, assets));
+}
+
+/**
+ * The styled page for a miss: the blog's own under /blog/, the site's
+ * everywhere else — what `not_found_handling: "404-page"` would have picked by
+ * walking up to the nearest 404.html. Fetched as a GET whatever the method
+ * (htmlNotFound drops the body for a HEAD), and always re-statused 404: the
+ * page itself is an asset, so the binding answers it 200.
+ */
+async function notFoundPage(request: Request, assets: AssetsLike): Promise<Response> {
+  const { pathname } = new URL(request.url);
+  const page = pathname === "/blog" || pathname.startsWith("/blog/") ? "/blog/404/" : "/404";
+  const res = await assets.fetch(
+    new Request(new URL(page, request.url), { headers: request.headers })
+  );
+  return new Response(res.body, { status: 404, headers: res.headers });
 }

@@ -64,8 +64,10 @@ app.route("/mcp", mcp);
 // asset catch-all; a missing object still ends in the negotiated 404.
 app.route("/blog/audio", audio);
 
-// Anything else is static assets. A 404 from that layer is content-negotiated:
-// markdown for a machine client, the styled page for a browser.
+// Reached for an asset miss (pages themselves are served straight from
+// assets, see wrangler.jsonc) and for a miss under the routes above: a
+// content-negotiated 404 — markdown for a machine client, the styled page for
+// a browser.
 app.all("*", c => serveAsset(c.req.raw, c.env.ASSETS));
 
 export default app;
