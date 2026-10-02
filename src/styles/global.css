@@ -100,7 +100,7 @@
   /* Deepened from #3d6ff0 so white on the checked chip clears AA
      (palette.test.ts). */
   --color-box-dark: #2a56c8;
-  /* The night edge of the blog's code fence and inline code chips (prism-dark.css,
+  /* The night edge of the blog's code fence and inline code chips (code.css,
      post.css): 3:1 on the canvas so they read as panels. The shared
      --color-border-soft-dark (25%) stays softer for the portfolio's card rules. */
   --color-fence-edge-dark: rgba(255, 255, 255, 0.35);

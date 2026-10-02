@@ -336,8 +336,7 @@ export default defineConfig({
       rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig]]
     }),
     // PrismJS class-based highlighting, matching gatsby-remark-prismjs; the
-    // theme CSS (prismjs/themes/prism.css) is imported in the blog's
-    // BaseLayout.
+    // token palettes live in src/blog/styles/code.css.
     syntaxHighlight: "prism"
   }
 });

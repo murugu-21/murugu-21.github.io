@@ -212,13 +212,33 @@ async function renderOne(
       const m = (window as unknown as { mermaid: typeof import("mermaid").default }).mermaid;
       m.initialize({ startOnLoad: false, theme: themeName, securityLevel: "strict", fontFamily });
       const { svg } = await m.render(svgId, src);
-      return svg;
+      // mermaid serializes as HTML: label line breaks come out as a bare
+      // `<br>` inside the <foreignObject> labels, which an inline <svg> on a
+      // page tolerates but an <img> does not — the file is parsed as XML and
+      // a single unclosed tag leaves a broken image. Re-serialize as XML.
+      const template = document.createElement("template");
+      template.innerHTML = svg;
+      const root = template.content.querySelector("svg");
+      if (!root) throw new Error("renderOne: mermaid returned no <svg>");
+      return new XMLSerializer().serializeToString(root);
     },
     source,
     THEMES[theme].mermaid as "neutral" | "dark",
     FONT_FAMILY,
     `m-${hash}-${theme}`
   );
+}
+
+// The page shows each file through <img>, which parses it as XML and draws
+// nothing on any error, so a file that is not well-formed is never written.
+async function assertWellFormed(page: Page, svg: string, path: string): Promise<void> {
+  const error = await page.evaluate(
+    markup =>
+      new DOMParser().parseFromString(markup, "image/svg+xml").querySelector("parsererror")
+        ?.textContent ?? null,
+    svg
+  );
+  if (error) throw new Error(`render-mermaid: ${rel(path)} is not well-formed XML: ${error}`);
 }
 
 // Screenshot of the styled light SVG at its natural size, on the same white
@@ -306,6 +326,7 @@ async function main(): Promise<void> {
       if (variant.kind === "svg") {
         const svg = await renderOne(page, job.source, variant.theme, job.hash);
         const styled = await embedStyle(svg, variant.theme, font);
+        await assertWellFormed(page, styled, path);
         if (variant.theme === "light") lightSvgs.set(job.hash, styled);
         writeFileSync(path, styled);
       } else {

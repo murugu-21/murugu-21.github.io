@@ -47,11 +47,8 @@
     color: var(--color-text-dark);
   }
 
-  /* Inline `code` (and any un-highlighted `pre`) is Fira Code with its
-     ligatures on; the body turns `calt` off for prose. FENCED code blocks are
-     NOT affected: prism.css is imported unlayered, so its Consolas stack still
-     wins for `[class*="language-"]` — exactly as it did when these rules lived
-     in style.css. */
+  /* All code, inline and fenced, is Fira Code with its ligatures on; the
+     body turns `calt` off for prose. */
   .blog-post code,
   .blog-post pre {
     font-family: var(--font-mono);
@@ -192,7 +189,7 @@
     padding: 0 0 0 1.25rem;
     /* preflight: `ol, ul { margin: 0 }` drops the UA `margin-block-start: 1em`
        the old rule left in place. It collapses away after a paragraph or a
-       heading but is visible after a code block (Prism sets 0.5em). */
+       heading but is visible after a code block (code.css sets 0.5em). */
     margin-top: 1em;
     margin-bottom: 2rem;
     list-style-position: outside;
