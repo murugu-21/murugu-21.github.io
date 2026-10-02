@@ -86,7 +86,7 @@ function blogPostBodies(): AstroIntegration {
           if (fences !== figures) {
             throw new Error(
               `blog-post-bodies: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in dist — ` +
-                "run `bun run diagrams` and clear node_modules/.astro"
+                "clear node_modules/.astro, the stale render is cached"
             );
           }
           checked++;
@@ -110,8 +110,9 @@ function buildArtifacts(): AstroIntegration {
   return {
     name: "build-artifacts",
     hooks: {
-      // Fail before rendering when a committed diagram is missing or stale.
-      "astro:build:start": () => run("scripts/render-mermaid.ts", "--check"),
+      // Diagrams are gitignored. remark-mermaid renders them during content
+      // sync, but posts cached in node_modules/.astro skip it.
+      "astro:build:start": () => run("scripts/render-mermaid.ts"),
       // Registered last, so the site it prints from is final.
       "astro:build:done": ({ dir }) => run("scripts/generate-resume.ts", fileURLToPath(dir))
     }
@@ -271,7 +272,7 @@ export default defineConfig({
   },
   markdown: {
     // Astro 7's default satteri processor doesn't run unified plugins.
-    // remarkMermaid swaps fences for the committed SVGs; no diagram code ships.
+    // remarkMermaid swaps fences for the build-rendered SVGs; no diagram code ships.
     processor: unified({
       remarkPlugins: [remarkMermaid],
       rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig]]

@@ -54,7 +54,7 @@ because the dev server answers the `ASSETS` binding the Worker addresses as
 `feat/cf-astro-adapter`) gets everything. The markdown renditions (`index.md`
 next to a page's `index.html`, served for `Accept: text/markdown`) are
 prerendered endpoints under `src/pages/**/index.md.ts`, sharing
-`src/lib/llms.ts` with `/llms.txt`. The diagram `--check` and the resume PDF run
+`src/lib/llms.ts` with `/llms.txt`. The mermaid diagrams and the resume PDF render
 from the `build-artifacts` integration in `astro.config.ts`. Scripts that read
 the build resolve it from `scripts/site-dir.ts`.
 
@@ -201,15 +201,15 @@ description: One-line description shown in lists, search and feeds.
 ```
 
 Images placed next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build
-time. ` ```mermaid ` code blocks become diagrams at build time, not in the browser: `bun run diagrams` renders
-each fence to two SVGs (light and dark theme, with a subset of Fira Code embedded so labels measure the same
-through `<img>`) plus a light PNG for the feed, under `content/blog/<slug>/diagrams/`, named by a hash of the
-fence, and prunes renderings no fence uses any more; commit them with the post. Every file carries the mermaid version it was rendered with, so
-a mermaid upgrade makes them all stale and the next run re-renders them (`--force` does the same on demand; a
-change to the renderer's own output — theme, font — needs a `RENDERER_VERSION` bump in
-`src/blog/utils/mermaid-diagrams.ts` so the hashes change). An edited diagram can never ship stale: `bun run
-build` runs `bun run diagrams --check` first (no browser needed) and stops with the command to run, and a
-post-build integration (`blogPostBodies` in `astro.config.ts`) asserts every post body rendered with one figure
+time. ` ```mermaid ` code blocks become diagrams at build time, not in the browser: `scripts/render-mermaid.ts`
+renders each fence to two SVGs (light and dark theme, with a subset of Fira Code embedded so labels measure the
+same through `<img>`) plus a light PNG for the feed, under `content/blog/<slug>/diagrams/`, named by a hash of the
+fence, and prunes renderings no fence uses any more. The renderings are gitignored, so only the fence source is
+committed: `bun run build` renders them first, and when a fence has no rendering yet (written or edited while
+drafting under `astro dev`) the markdown plugin runs the renderer itself. `bun run diagrams` renders on demand.
+Every file carries the mermaid version it was rendered with, so a local copy re-renders after a mermaid upgrade
+(`--force` re-renders everything; a change to the renderer's own output — theme, font — needs a
+`RENDERER_VERSION` bump in `src/blog/utils/mermaid-diagrams.ts` so the hashes change). A post-build integration (`blogPostBodies` in `astro.config.ts`) asserts every post body rendered with one figure
 per fence — needed because the content layer only logs a post whose markdown failed to render, caches the empty
 result in `node_modules/.astro` and ships a blank article. The RSS feed carries the PNG, not the SVG: feed readers and
 mirrors (dev.to, Hashnode) rasterize images server-side, with no HTML engine for mermaid's `foreignObject` labels

@@ -2,9 +2,10 @@ import { createServer, type Server } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
-import puppeteer, { type Browser } from "puppeteer";
+import type { Browser } from "puppeteer";
 import { PDFParse } from "pdf-parse";
 
+import { launchBrowser } from "./launch-browser.ts";
 import { SITE_DIR } from "./site-dir.ts";
 
 // Prints /resume to resume.pdf in the built site. Runs last from astro.config.ts
@@ -95,24 +96,7 @@ try {
   if (!address || typeof address === "string") throw new Error("static server has no port");
   const url = `http://127.0.0.1:${address.port}/resume/`;
 
-  // --no-sandbox: CI AppArmor blocks Chrome's sandbox; safe for our own local page.
-  const launchArgs = ["--no-sandbox", "--disable-setuid-sandbox"];
-  try {
-    browser = await puppeteer.launch({ headless: true, args: launchArgs });
-  } catch (err) {
-    // Workers Builds' image lacks Chrome's system libraries (libatk etc.);
-    // @sparticuz/chromium bundles them.
-    console.warn(
-      `[generate-resume] system chrome failed (${(err instanceof Error ? err.message : String(err)).split("\n")[0]}); ` +
-        "falling back to @sparticuz/chromium"
-    );
-    const { default: chromium } = await import("@sparticuz/chromium");
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath: await chromium.executablePath(),
-      args: [...chromium.args, ...launchArgs]
-    });
-  }
+  browser = await launchBrowser("generate-resume");
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: "networkidle0" });
   // wait for the webfont, or the PDF gets fallback metrics and line breaks
