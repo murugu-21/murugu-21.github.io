@@ -1,101 +1,111 @@
 # murugappan.dev
 
-Personal portfolio of Murugappan, built with [Astro 7](https://astro.build) (Vite 8 / Rolldown) and served by a single Cloudflare Worker.
+Personal portfolio and blog of Murugappan, built with [Astro 7](https://astro.build) and deployed as one Cloudflare Worker.
 
 **Live site:** https://murugappan.dev
 
-One Astro project serves both the portfolio and the blog (served at `/blog`): blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position rather than an Astro `base`, and the blog's non-route code (layout, islands, styles, post helpers) is namespaced under `src/blog/`. Posts are markdown in `content/blog/<slug>/index.md`. `bun run build` builds the whole site into a single `dist/`. The light/dark theme is shared across both halves via the `isDark` localStorage key.
+One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. The blog's other code (layout, islands, styles, post helpers) lives under `src/blog/`, and posts are markdown in `content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
 
 ## Development
 
 ```bash
 bun install
-bun run dev       # Astro dev server with the Worker, in workerd (:4399) — pages broken, see below
-bun run build     # site → dist/client, Worker → dist/server (+ markdown renditions, resume PDF)
+bun run dev       # Astro dev server with the Worker in workerd, on :4399
+bun run build     # site → dist/client, Worker → dist/server, plus markdown renditions and the resume PDF
 bun run preview   # the production build in workerd, API and chat included
 ```
 
-The Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) is built by
-[`@astrojs/cloudflare`](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)
-as part of `astro build`, and Wrangler still deploys it: the adapter writes the
-prerendered site to `dist/client`, the Worker bundle and a deployable
-`dist/server/wrangler.json`, and `.wrangler/deploy/config.json` pointing every
-`wrangler` command at that generated config — so deploy after a build. Every
-page is prerendered; the adapter builds the Worker anyway because the config
-names a custom `main`. That needs
-[withastro/astro#18202](https://github.com/withastro/astro/pull/18202) (14.3.3
-silently deploys a fully static site without its Worker,
-[#18201](https://github.com/withastro/astro/issues/18201)), so the adapter is
-pinned to that PR's `pkg.pr.new` build — move to the release that ships it.
+### Build
 
-Pages are served straight from static assets; the Worker only runs for its own
-routes (`run_worker_first` in `wrangler.jsonc`) and for a request that matches
-no asset (`not_found_handling: "none"`), which it answers with the negotiated
-404 (see "Discovery documents and the agent-readable 404").
+`@astrojs/cloudflare` builds the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) as part of `astro build`. Besides `dist/client` and `dist/server`, it writes a deployable `dist/server/wrangler.json` and `.wrangler/deploy/config.json`, which points every `wrangler` command at the generated config. Deploy only after a build.
 
-**`bun run dev` runs Astro on Node, not Bun.** Since the adapter, `astro dev`
-runs the Worker in miniflare, whose requests to workerd fail under the Bun
-runtime ("Unable to connect. Is the computer able to access the url?" from
-`fetchWorkerExportTypes`), and `astro preview` hangs the same way; so `dev` and
-`preview` call `astro` directly, which runs on Node. A second Astro/adapter bug
-makes every page a 51-byte `/@vite/client` stub (`Unable to resolve
-[…Layout.astro?astro&type=script&index=0&lang.ts]`) whenever the dev server
-starts on a warm `node_modules/.vite/deps_ssr` cache; `astro.config.ts` sets
-`vite.environments.ssr.optimizeDeps.force` so it re-optimizes on every start
-(about 3 s). The Worker's routes work in `bun run dev` — `/api`, `/mcp` and the
-chat read live data, because the dev server answers the `ASSETS` binding the
-Worker addresses as `https://assets.local` (listed in `vite.server.allowedHosts`
-in `astro.config.ts`; without it Vite's host check turns every such read into a
-403).
+Every page is prerendered. The adapter still builds the Worker because the config names a custom `main`, which needs [withastro/astro#18202](https://github.com/withastro/astro/pull/18202). Without it, `@astrojs/cloudflare` 14.3.3 deploys the static site and drops the Worker ([#18201](https://github.com/withastro/astro/issues/18201)). The adapter is pinned to that PR's `pkg.pr.new` build; move to the first release that ships it.
 
-`astro build` alone produces the complete site, so a tool that runs it itself
-(the `cf` CLI, which this site is set to move to — branch
-`feat/cf-astro-adapter`) gets everything. The markdown renditions (`index.md`
-next to a page's `index.html`, served for `Accept: text/markdown`) are
-prerendered endpoints under `src/pages/**/index.md.ts`, sharing
-`src/lib/llms.ts` with `/llms.txt`. The mermaid diagrams and the resume PDF render
-from the `build-artifacts` integration in `astro.config.ts`. Scripts that read
-the build resolve it from `scripts/site-dir.ts`.
+`astro build` produces everything:
 
-[Bun](https://bun.sh) (version pinned in `package.json` → `packageManager`)
-installs dependencies, runs the package scripts and executes the TypeScript in
-`scripts/` directly. The production build and Vitest run on Bun: `build` calls
-Astro with `bun --bun` (`dev` and `preview` stay on Node, see above), `test` is `bun --bun vitest run`
-(the tests still execute inside workerd via `@cloudflare/vitest-plugin` — only
-the host moved), and `check:astro` uses Bun's `--preload` for the TypeScript-7
-alias in `scripts/ts-alias.cjs` (Bun 1.3.x breaks the production build and
-`astro check`, so 1.4.2 is the pinned floor). Run the suite with `bun run test`,
-not `bun test` (Bun's own runner). Node (version in `.nvmrc`) stays the runtime
-for Wrangler and `tsc`. Bun blocks the install scripts of packages outside its
-default trust list; the two it blocks here are safe to leave blocked:
-`@posthog/cli` downloads its Rust binary the first time a source map upload
-actually runs (production builds), and `core-js` prints a funding banner.
+- Markdown renditions (`index.md` next to each `index.html`, served for `Accept: text/markdown`) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `src/lib/llms.ts` with `/llms.txt`.
+- Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
+- Scripts that read the build find it through `scripts/site-dir.ts`.
 
-The GitHub profile card is fetched at **build time** from the GitHub GraphQL API. Set a `GITHUB_TOKEN` environment variable locally (any token with public read scope) to render it; without one the site builds fine and shows a contact fallback instead.
+Pages are served straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](#discovery-documents-and-the-404).
+
+### Bun and Node
+
+[Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `package.json` → `packageManager`; 1.4.2 is the floor, because Bun 1.3.x breaks the production build and `astro check`. Node (version in `.nvmrc`) runs Wrangler, `tsc`, `astro dev` and `astro preview`.
+
+- `build` runs Astro under `bun --bun`.
+- `test` is `bun --bun vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`. Use `bun run test`, not `bun test`, which is Bun's own runner.
+- `dev` and `preview` call `astro` on Node. Under Bun, miniflare's requests to workerd fail ("Unable to connect. Is the computer able to access the url?" from `fetchWorkerExportTypes`) and `astro preview` hangs.
+
+Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
+
+### Dev server quirks
+
+- If the dev server starts on a warm `node_modules/.vite/deps_ssr` cache, an Astro/adapter bug turns every page into a 51-byte `/@vite/client` stub (`Unable to resolve […Layout.astro?astro&type=script&index=0&lang.ts]`). `astro.config.ts` sets `vite.environments.ssr.optimizeDeps.force` to re-optimize on every start, which costs about 3 s.
+- In dev the Worker reads the `ASSETS` binding at `https://assets.local`. Vite's host check would answer those reads with a 403, so the host is listed in `vite.server.allowedHosts`.
+
+### Build-time environment
+
+- `GITHUB_TOKEN` (any token with public read scope) renders the GitHub profile card from the GraphQL API. Without it the site still builds and shows a contact fallback.
+- `POST_HOG_TOKEN` and `POST_HOG_URL` turn on analytics. If either is missing the SDK never loads, so local and CI builds send nothing.
+- `POSTHOG_API_KEY` (a personal key with error-tracking write) and `POSTHOG_PROJECT_ID` turn on source-map uploads.
+- `RESUME_PHONE` adds a phone line to the resume (see [Resume](#resume)).
 
 ```bash
 GITHUB_TOKEN=ghp_xxx bun run build
 ```
 
-[PostHog](https://posthog.com) analytics is wired at **build time** when both `POST_HOG_TOKEN` and `POST_HOG_URL` are set (configured in the Workers Builds build env vars for production). With either missing the SDK is never loaded, so local dev and CI builds stay analytics-free.
+## Checks
 
-Ingestion goes through **`https://e.murugappan.dev`** — PostHog's _managed_ reverse proxy, a CNAME to their infrastructure (`…cf-prod-us-proxy.proxyhog.com`, US region). Nothing in this repo proxies it; the Worker is not in that request path, and the host is just the SDK's `api_host`. If the CNAME is ever re-added in Cloudflare DNS it must be **DNS only (grey cloud)** — proxying it breaks PostHog's cert issuance and SNI. `ui_host` stays `https://us.posthog.com` so the PostHog toolbar works.
+```bash
+bun run check-format   # oxfmt, plus prettier for .astro and content markdown
+bun run lint           # oxlint
+bun run check:astro    # type-check .astro files
+bun run check:src      # type-check src/, scripts/ and the config files
+bun run check:worker   # type-check worker/
+bun run test           # vitest in the workers pool
+```
 
-**Session replay is PostHog's too, started on the visitor's first interaction.** The recorder is the SDK's heaviest extension, and loading it in the idle window right after paint put its evaluation inside what Lighthouse scores as blocking time — so `initAnalytics` boots with `disable_session_recording: true` and calls `startSessionRecording()` from `onFirstInteraction` (`src/lib/first-interaction.ts`: the first pointer, touch, key or wheel event, once — not `scroll`, which Chrome fires during load without any input). A visitor who never touches the page has nothing worth replaying; a Lighthouse run never interacts, so it never pays for the recorder. Recording must also be switched on in the PostHog project's replay settings. The extensions this site does not use (`disable_surveys`, `capture_dead_clicks: false`) are off, since each is a separate script the SDK would otherwise fetch after boot.
+The project compiler is TypeScript 7, whose native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` supports TypeScript 7.
 
-Privacy: replay masks every `<input>` and `<textarea>` (`maskAllInputs`), which covers the Jarvis chat box and the blog search. A _sent_ chat message is re-rendered as a bubble `<div>` though, so the transcript container carries `data-ph-mask="true"`, the `maskTextSelector` PostHog is configured with — nothing a visitor typed reaches a recording, matching the no-PII rule the events follow.
+Having both compilers installed has two side effects:
 
-**Error tracking is PostHog's, on the same SDK.** `initAnalytics` turns on `capture_exceptions: true`, so uncaught errors and unhandled promise rejections become `$exception` events (the SDK fetches its small `exception-autocapture` script once it boots). Because the SDK itself waits for the first interaction, `bootAnalytics` attaches its own `error` / `unhandledrejection` listeners at page load and buffers everything thrown in between — the hydration and chunk-load window, where client errors actually happen — replaying it through `captureException` once the SDK arrives, then detaching so PostHog's autocapture is the only listener. Failures the code catches on purpose (a malformed chat frame, a chunk that failed to load) go through `reportError(error, { ... })`, which no-ops without the SDK and buffers while it loads like `track`/`tag`. Error tracking must also be switched on in the PostHog project settings.
+- The TypeScript 6 copy wins `node_modules/.bin/tsc`, so bare `bunx tsc` reports 6.0.3. The `check:*` scripts call `node node_modules/typescript/bin/tsc` by path to get 7.
+- TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace TypeScript version" picks up 6. Point it at the TypeScript 7 language service instead.
 
-**Source maps go up with each production build, so those stack traces are unminified.** The Vite build runs `@posthog/rollup-plugin` (`astro.config.ts`): it switches the build to hidden source maps, injects the chunk-id comments PostHog's symbol-set lookup keys on, uploads chunks and maps, then deletes the `.map` files — nothing extra is served, and an upload that fails fails the build instead of deploying unmapped. It activates only when `POSTHOG_API_KEY` (a personal API key with error-tracking write) and `POSTHOG_PROJECT_ID` are set, which is true in the Workers Builds production env vars and false for local dev and the GitHub checks, so those builds stay map-free and self-contained.
+## Deployment
+
+Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, lint, type-checks, tests and a full build including the resume.
+
+The build and deploy commands are dashboard settings (Workers → this application), not read from this repo:
+
+- **Build command.** `bun run build`. Workers Builds installs dependencies from `bun.lock` before running it.
+- **Deploy command.** `bun run deploy`, not `bunx wrangler deploy`. It applies pending D1 migrations from `./migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
+- **Build env vars.** `BUN_VERSION` (match `packageManager`; the image's default Bun is too old), `GITHUB_TOKEN`, `REQUIRE_GITHUB_PROFILE=1` (fail the build instead of falling back when the profile fetch fails), `POST_HOG_TOKEN`, `POST_HOG_URL`, `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and optionally `RESUME_PHONE`.
+- **Worker secrets.** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `bunx wrangler secret put <name>`.
+
+## Analytics
+
+[PostHog](https://posthog.com); see [Build-time environment](#build-time-environment) for the env vars that turn it on. Replay and error tracking must also be enabled in the PostHog project.
+
+- **Ingestion.** Events go through `https://e.murugappan.dev`, PostHog's managed reverse proxy: a CNAME to `…cf-prod-us-proxy.proxyhog.com` (US region), set as the SDK's `api_host`. Nothing in this repo or the Worker sits in that path. The DNS record must stay **DNS only (grey cloud)**, because proxying it breaks PostHog's certificate issuance. `ui_host` stays `https://us.posthog.com` so the toolbar works.
+- **Loading.** `posthog-js` is `import()`ed as its own chunk on the first input, or after 10 s without one (`scheduleSdkLoad`), so it stays outside Lighthouse's measured window. The token and host reach the client through `<meta name="ph-token">` and `<meta name="ph-host">`, because Astro bundles `<script>` as a module, where `document.currentScript` is `null`. They're read at build time, so the env vars need no `PUBLIC_` prefix.
+- **Session replay** starts on the first pointer, touch, key or wheel event (`onFirstInteraction` in `src/lib/first-interaction.ts`), not on `scroll`, which Chrome fires during load. The recorder is the SDK's heaviest extension, and loading it right after paint counted against Lighthouse's blocking time. Surveys and dead-click capture are off, so the SDK doesn't fetch their scripts.
+- **Error tracking.** `capture_exceptions: true` turns uncaught errors and rejections into `$exception` events. Since the SDK waits for the first interaction, `bootAnalytics` listens for `error` and `unhandledrejection` from page load, buffers them, replays them once the SDK arrives, then detaches. Errors the code catches on purpose go through `reportError`.
+- **Source maps.** In production builds `@posthog/rollup-plugin` emits hidden source maps, uploads them and deletes the `.map` files, so nothing extra is served. A failed upload fails the build rather than deploying unmapped code.
+- **Privacy.** Nothing a visitor types is sent. Replay masks every `<input>` and `<textarea>`, and the chat transcript carries `data-ph-mask="true"` because sent messages render as `<div>`s. Blog filter params (`?q=`, `?tag=`) are stripped from captured URLs (`redactBlogFilters` / `sanitize_properties`).
 
 ### Custom events
 
-`src/lib/analytics.ts` wraps PostHog for both apps — `track(event, props?)`, `tag(key, value)`, `reportError(error, props?)`, `initClickTracking()` and `bootAnalytics()`. `track` captures an event; `tag` registers a _super property_ (session context like `theme`, correct for anonymous visitors rather than person properties); `reportError` sends a caught error to error tracking. Every one no-ops when the SDK was never loaded and swallows failures, so calls are safe anywhere; anything captured while the SDK is still loading is buffered and replayed. Pageviews, autocapture and heatmaps come from PostHog itself and are not re-instrumented here. **Nothing a visitor typed** (chat messages, blog search queries) is ever sent: blog filter params (`?q=`, `?tag=`) are stripped from captured URLs before they leave the browser (`redactBlogFilters` / `sanitize_properties`), so even a reloaded or shared filtered link does not leak the query.
+`src/lib/analytics.ts` wraps PostHog for both halves:
 
-The SDK is the `posthog-js` npm package, `import()`ed on idle so it is a separate chunk outside the initial bundle. The token and host reach the client through `<meta name="ph-token">` / `<meta name="ph-host">` rendered from frontmatter — a meta tag rather than a `data-` attribute on the script because Astro bundles `<script>` as a module, where `document.currentScript` is `null`. This is also why the env vars need no `PUBLIC_` prefix: they are read at build time, never in a client bundle.
+- `track(event, props?)` captures an event.
+- `tag(key, value)` registers a super property, which suits anonymous visitors better than person properties.
+- `reportError(error, props?)` sends a caught error.
 
-Plain links opt in declaratively — `data-ph-event`, plus optional `data-ph-prop`/`data-ph-value` — and one delegated `click` listener per document handles them, React-rendered markup included. `initClickTracking()` is called from `src/layouts/Layout.astro` (portfolio) and `src/blog/components/BaseHead.astro` (blog).
+Each one no-ops without the SDK, buffers while it loads and swallows failures, so they're safe to call anywhere. Pageviews, autocapture and heatmaps come from PostHog itself.
+
+Links opt in with `data-ph-event` and optional `data-ph-prop` / `data-ph-value`. A single delegated `click` listener per document handles them, React-rendered markup included. `initClickTracking()` is called from `src/layouts/Layout.astro` (portfolio) and `src/blog/components/BaseHead.astro` (blog).
 
 | Event                                            | Fired on                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------- |
@@ -108,7 +118,7 @@ Plain links opt in declaratively — `data-ph-event`, plus optional `data-ph-pro
 | `blog_card_click`                                | a homepage blog card, tagged `post=<title>`                                       |
 | `chat_open`                                      | the Jarvis launcher is opened                                                     |
 | `chat_starter_click`                             | a suggested starter chip                                                          |
-| `chat_message_sent`                              | a message is sent (first one also upgrades the recording)                         |
+| `chat_message_sent`                              | a message is sent (the first also upgrades the recording)                         |
 | `chat_limit` / `chat_error`                      | the room replies with a rate limit or an error                                    |
 | `chat_restart` / `chat_transcript_download`      | conversation menu actions                                                         |
 | `listen_play`                                    | first play on a post, tagged `post=<slug>`                                        |
@@ -116,115 +126,63 @@ Plain links opt in declaratively — `data-ph-event`, plus optional `data-ph-pro
 | `listen_rate`                                    | playback speed changed, tagged `listen_rate=<n>x`                                 |
 | `listen_complete`                                | the post was read to the end                                                      |
 | `listen_audio_fallback`                          | pre-rendered audio failed and speech synthesis took over                          |
-| `listen_unavailable`                             | no backend at all (should be unreachable — the control hides itself)              |
+| `listen_unavailable`                             | no backend at all (should never fire: the control hides itself)                   |
 
-Super properties carry context rather than actions: `theme` (`dark`/`light`, set on load and on every toggle) and `listen_backend` (`audio`/`speech`).
+Super properties: `theme` (`dark` / `light`, set on load and on every toggle) and `listen_backend` (`audio` / `speech`).
 
-## Checks
+## Resume
 
-```bash
-bun run check-format   # oxfmt (+ prettier for .astro/.md)
-bun run lint           # oxlint
-bun run check:astro    # type-check .astro files
-bun run check:src      # type-check src/, scripts/ and the config files
-bun run check:worker   # type-check worker/
-```
+`/resume` (`src/pages/resume.astro`) is a print-styled page built entirely from `src/data/portfolio.ts` and `src/data/resume.ts`, so it can't drift from the site.
 
-Everything is TypeScript: the Astro config, the blog islands and routes, and the
-`scripts/`, which Bun runs directly (`bun scripts/<name>.ts`). Two files stay
-JavaScript on purpose: `scripts/ts-alias.cjs` is a `node -r` preload for
-`astro check` (which runs under Node) and must be CommonJS, and `public/blog/sw.js`
-is served verbatim.
+At the end of `bun run build`, `scripts/generate-resume.ts` serves `dist/client` locally, opens `/resume/` in headless Chromium through Puppeteer and prints `resume.pdf`. It then parses the PDF with `pdf-parse` and fails the build if any ATS-critical string (name, email, section headings, current title, headline stats) isn't extractable text. On Workers Builds, which has no system Chrome, it falls back to `@sparticuz/chromium`.
 
-The project compiler is TypeScript 7, whose native build no longer ships the
-old JS API that Astro's Volar-based tooling calls into — `astro check` crashes on it outright.
-Microsoft publishes that old API as `@typescript/typescript6` for this overlap,
-so `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's
-`require("typescript")` at the compat package while everything else stays on 7.
-`@astrojs/check` also still declares a `typescript@^5 || ^6` peer, hence the
-`overrides` entry in `package.json`. All three come out together once
-`@astrojs/check` supports TypeScript 7.
-
-Two consequences of having both compilers in the tree. `@typescript/typescript6`
-pulls its own TypeScript 6, and that copy wins `node_modules/.bin/tsc` — so bare
-`bunx tsc` reports 6.0.3, and the `check:*` scripts invoke
-`node node_modules/typescript/bin/tsc` by path to be sure they get 7. And
-TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace
-TypeScript version" lands on the 6 copy; point it at the TypeScript 7 language
-service instead.
-
-## Deployment
-
-Cloudflare Workers Builds (git-integrated) builds on every push to `main` with build command `bun run build` and deploy command `bun run deploy` — one Worker serves the prerendered site (`dist/client`) and hosts the chat backend (see "AI chat widget" below). Both commands are Cloudflare dashboard settings, not read from this repo, so changing either means editing it by hand there — nothing in this file enforces them. `bun run deploy` applies any unapplied D1 migrations from `./migrations` before `wrangler deploy`; nothing in the Worker issues DDL against D1, so a deploy that skips this step leaves the chat mirror writing to a table that doesn't exist. GitHub Actions (`.github/workflows/ci.yml`) runs checks only — format, lint, type-check, worker and unit tests, and a build smoke test including resume generation.
-
-Workers Builds settings, for reference (dashboard → Workers → this application):
-
-- **Build command:** `bun run build`. Workers Builds picks the package manager from the lockfile and installs before the build command runs; it has recognised Bun's text `bun.lock` since May 2025 (earlier it only knew the binary `bun.lockb`, which is why older guides prepend `bun install &&`).
-- **Deploy command:** `bun run deploy` (not `bunx wrangler deploy` — see above).
-- **Build env vars:** `BUN_VERSION` (match `packageManager` in `package.json` — `1.4.2` or newer, the floor for the Astro-on-Bun build; the image's default Bun is older), `GITHUB_TOKEN` (public read scope), `REQUIRE_GITHUB_PROFILE=1`, `POST_HOG_TOKEN`, `POST_HOG_URL`, `RESUME_PHONE` (optional — see "Resume generation" below). Node's version comes from `.nvmrc`.
-- **Worker secrets:** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `bunx wrangler secret put <name>`.
-
-## Resume generation
-
-`/resume` (`src/pages/resume.astro`) renders a print-styled resume sourced entirely from `src/data/portfolio.ts` and `src/data/resume.ts` — portfolio data is the single source of truth, so the page and the PDF can never drift from the site. As the last step of `bun run build` (the `build-artifacts` integration in `astro.config.ts`), `scripts/generate-resume.ts` serves the finished site (`dist/client`) on a local port, opens `/resume/` in headless Chromium via Puppeteer, and prints it to `resume.pdf` there. Set `RESUME_PHONE` (Workers Builds build env for production, a local `.env` for previewing the phone line) to show a phone number on the resume — no phone number is hardcoded in source, so leaving it unset simply omits that line. The portfolio's own contact section (`GithubCard.astro`) only reads this value in its no-GitHub-profile fallback view; production renders the GitHub-profile branch instead, which never shows a phone number. After printing, the script parses `resume.pdf` with `pdf-parse` and fails the build (exit 1, listing what's missing) unless every ATS-critical string (name, email, section headings, current title, and the standout stats) is present as extractable text — a guard against the PDF ever becoming an image-only, unparseable export. Puppeteer runs fine on Workers Builds — the image lacks some system libraries, so the script falls back to `@sparticuz/chromium` when no system Chrome is present (see its resolution chain). If headless Chromium ever stops being viable there, Tectonic/LaTeX is the documented fallback renderer for this same build step.
+No phone number is in source. Set `RESUME_PHONE` (Workers Builds env in production, `.env` locally) to add one; leaving it unset omits the line. The contact section in `GithubCard.astro` reads it only in its no-GitHub fallback, which production never renders.
 
 ## Blog
 
-The blog (["SDE Journey"](https://murugappan.dev/blog/), migrated from Gatsby) lives in the same Astro project:
+```text
+content/blog/          # one directory per post: <slug>/index.md (+ images)
+  draft/               # drafts: visible in dev, excluded from production builds
+src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
+src/blog/              # layout, head, React islands (search, tags, theme toggle, bio),
+                       # styles, post helpers, consts.ts site metadata
+src/content.config.ts  # content collection schema
+public/blog/           # static files served verbatim (og-image, sw.js)
+```
 
-    content/blog/          # one directory per post: <slug>/index.md (+ images)
-      draft/               # drafts — visible in dev, excluded from production builds
-    src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
-    src/blog/              # layout, head, React islands (search, tags, theme toggle, bio),
-                           # styles, post helpers, consts.ts site metadata
-    src/content.config.ts  # blog content collection schema
-    public/blog/           # static files served verbatim (og-image, sw.js)
-
-The index mirrors its search box and tag chips into the URL (`/blog/?q=…&tag=…`, one `tag` per checked chip),
-so a filtered list is shareable, bookmarkable and survives a reload. Post pages link their tags to the same
-URLs, so a reader can jump from an article straight into its filtered view. A `tag` is a controlled vocabulary
-term from the schema (see "Tag vocabulary") — unknown ones are ignored.
+The index mirrors its search box and tag chips into the URL (`/blog/?q=…&tag=…`, one `tag` per chip), so filtered views survive a reload and can be shared. Post pages link their tags to the same URLs. Unknown tags are ignored.
 
 ### Writing a post
 
-Create `content/blog/<slug>/index.md` with frontmatter:
+Create `content/blog/<slug>/index.md`. The directory name is the slug, so the post appears at `/blog/<slug>/` and in the sitemap, RSS feed, both `llms.txt` files and the markdown renditions.
 
 ```yaml
 ---
 title: My post title
 date: "2026-06-10T10:00:00.000Z"
 tags: ["system-design"]
-keywords: ["kafka", "outbox"] # optional: SEO/search terms, never shown as chips
+keywords: ["kafka", "outbox"] # optional: SEO and search terms, never shown as chips
 description: One-line description shown in lists, search and feeds.
 ---
 ```
 
-Images placed next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build
-time. ` ```mermaid ` code blocks become diagrams at build time, not in the browser: `scripts/render-mermaid.ts`
-renders each fence to two SVGs (light and dark theme, with a subset of Fira Code embedded so labels measure the
-same through `<img>`) plus a light PNG for the feed, under `content/blog/<slug>/diagrams/`, named by a hash of the
-fence, and prunes renderings no fence uses any more. The renderings are gitignored, so only the fence source is
-committed: `bun run build` renders them first, and when a fence has no rendering yet (written or edited while
-drafting under `astro dev`) the markdown plugin runs the renderer itself. `bun run diagrams` renders on demand.
-Every file carries the mermaid version it was rendered with, so a local copy re-renders after a mermaid upgrade
-(`--force` re-renders everything; a change to the renderer's own output — theme, font — needs a
-`RENDERER_VERSION` bump in `src/blog/utils/mermaid-diagrams.ts` so the hashes change). A post-build integration (`blogPostBodies` in `astro.config.ts`) asserts every post body rendered with one figure
-per fence — needed because the content layer only logs a post whose markdown failed to render, caches the empty
-result in `node_modules/.astro` and ships a blank article. The RSS feed carries the PNG, not the SVG: feed readers and
-mirrors (dev.to, Hashnode) rasterize images server-side, with no HTML engine for mermaid's `foreignObject` labels
-and no web fonts, so the SVGs come out blank there while the PNG shows the diagram. On wide screens the post's `##` and
-`###` headings feed a Notion-style table-of-contents rail at the right edge (`TableOfContents.astro`); a post
-with fewer than two shows no rail, and a separator should be `---`, never an empty `##`. The directory name is the URL slug, so
-the post is published at `/blog/<slug>/` and picked up automatically by the sitemap, RSS feed, both `llms.txt`
-files and the markdown renditions.
+- **Images** next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build time.
+- **Headings.** On wide screens, `##` and `###` headings feed the table-of-contents rail (`TableOfContents.astro`). Posts with fewer than two get no rail. Use `---` as a separator, never an empty `##`.
+- **Mermaid** fences render at build time, not in the browser.
+
+### Mermaid diagrams
+
+`scripts/render-mermaid.ts` renders each ` ```mermaid ` fence to a light and a dark SVG (with a Fira Code subset embedded, so labels measure the same inside `<img>`) and a light PNG, under `content/blog/<slug>/diagrams/`, named by a hash of the fence. Renderings no fence uses are pruned.
+
+The renderings are gitignored; only the fence source is committed. `bun run build` renders them first, the markdown plugin renders any fence that has no rendering yet (useful under `astro dev`), and `bun run diagrams` renders on demand. Each file records the mermaid version that rendered it, so an upgrade re-renders automatically; `--force` re-renders everything. If you change the renderer's own output (theme, font), bump `RENDERER_VERSION` in `src/blog/utils/mermaid-diagrams.ts` so the hashes change.
+
+The RSS feed uses the PNG. Feed readers and mirrors like dev.to rasterize images without an HTML engine or web fonts, so mermaid's `foreignObject` labels come out blank in the SVG.
+
+The `blogPostBodies` integration in `astro.config.ts` checks after the build that every post rendered one figure per fence. Without it, a markdown failure would ship a blank article: the content layer only logs the error and caches the empty result in `node_modules/.astro`.
 
 ### Tag vocabulary
 
-Tags are the filter chips on the blog index, so they must be broad reader intents that recur across posts — not
-labels for a single article. They are constrained in `src/content.config.ts` (an unknown tag fails the build)
-and must follow: **1–3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`,
-`debezium`, `partykit`, `floating-point`) belong in `keywords`, which feeds JSON-LD, `article:tag` and the
-index's search haystack but never renders as a chip.
+Tags are the index's filter chips, so they name broad reader intents that recur across posts. `src/content.config.ts` constrains them (an unknown tag fails the build): **1–3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`, `debezium`, `floating-point`) go in `keywords`, which feeds JSON-LD, `article:tag` and the search index but never renders as a chip.
 
 | Tag             | What it covers                                          |
 | --------------- | ------------------------------------------------------- |
@@ -238,266 +196,96 @@ index's search haystack but never renders as a chip.
 | `react`         | React mental models and the ecosystem                   |
 | `system-design` | Distributed architecture: queues, scaling, event-driven |
 
-Adding a tag is a deliberate act: add it to `BLOG_TAGS` in `src/content.config.ts`, document it here, and tag
-the posts it covers. A tag with no posts yet is fine — chips are derived from post counts, so it stays
-invisible until used.
+To add a tag, add it to `BLOG_TAGS` in `src/content.config.ts`, document it here and tag the posts it covers. Chips come from post counts, so an unused tag stays hidden.
 
 ### Read-aloud audio
 
-Every post has a **Listen** control. When `/blog/audio/<slug>.json` exists the page plays a
-pre-rendered MP3 of the post in the blog's designed narrator voice and highlights the paragraph
-being read from the timing JSON; otherwise (a new post, or `astro dev`, which has no Worker) it
-falls back to the browser's speech synthesis. Audio is generated **on a laptop, never in CI**: the
-model is 3.9 GB and needs Apple Silicon.
+Every post has a **Listen** control. When `/blog/audio/<slug>.json` exists, the page plays a pre-rendered MP3 and highlights the paragraph (or word) being read. Otherwise it falls back to the browser's speech synthesis, which highlights words from `boundary` events.
 
-**Pipeline** (`scripts/generate-audio.ts`): built HTML → the same `speechBlocks()` the page
-uses → emoji/punctuation/long-digit-run normalisation → ≤300-char sentence groups → Breeze TTS 2
-(`scripts/tts/synth.py`, [mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit)
-via [mlx-audio](https://github.com/Blaizzy/mlx-audio), plain clone of `.voice/reference.wav`) →
-`atempo=1.08` per chunk → sample-accurate joins (0.15 s within a paragraph, 0.45 s between) →
-`loudnorm I=-16` → 64 kbps MP3 + `{blocks:[{text,start,end}]}` JSON → R2 bucket
-`murugappan-dev-audio` (`infra/main.tf`, bound as `AUDIO`) under the per-voice prefix
-`blog/breeze/`, served by `worker/audio.ts` with Range/ETag support. Posts whose spoken-text hash
-is unchanged are skipped. The previous voice (a Fish Audio S2 Pro clone of a phone recording,
-2026-09-05) is still in the bucket at `blog/<slug>.*` and is no longer referenced.
+Audio is generated **on a laptop, never in CI**: the model is 3.9 GB and needs Apple Silicon.
+
+**Pipeline** (`scripts/generate-audio.ts`):
+
+1. Extract text from the built HTML with the same `speechBlocks()` the page uses, then normalize emoji, punctuation and long digit runs. Breeze loops on runs like `0.30000000000000004`, so `normalizeSpeechText` describes them instead of reading them out.
+2. Synthesize ≤300-character sentence groups with Breeze TTS 2 ([mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit) via [mlx-audio](https://github.com/Blaizzy/mlx-audio), `scripts/tts/synth.py`), cloning `.voice/reference.wav` with no instruction prompt. Use the 8-bit build; bf16 swaps on a 24 GB machine.
+3. Speed up each chunk (`atempo=1.08`), join with 0.15 s gaps inside a paragraph and 0.45 s between paragraphs, and normalize loudness (`loudnorm I=-16`).
+4. Upload a 64 kbps MP3 and a `{blocks:[{text,start,end}]}` JSON to the R2 bucket `murugappan-dev-audio` (`infra/main.tf`, bound as `AUDIO`) under `blog/breeze/`. `worker/audio.ts` serves them with Range and ETag support.
+
+Posts whose spoken text hasn't changed are skipped. The `blog/<slug>.*` objects in R2 are unused and safe to delete.
+
+The voice reference is a synthetic clip designed once from the persona prompt in `scripts/tts/design-voice.py`, so every paragraph clones the same clean source. Breeze TTS 2 weights are under the BreezeBlue Research and Non-Commercial License, which this personal blog satisfies.
 
 **One-time setup**
 
 ```bash
+terraform -chdir=infra apply   # creates the R2 bucket
 brew install ffmpeg
 python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/tts/requirements.txt
 .venv-tts/bin/python scripts/tts/design-voice.py 3   # persona prompt → .voice/candidates/{0,1,2}.wav
 cp .voice/candidates/<k>.wav .voice/reference.wav && cp .voice/candidates/reference.txt .voice/reference.txt
-bun run audio --upload-voice     # durable copy in R2; restored automatically if .voice/ is lost
+bun run audio --upload-voice     # durable copy in R2
 ```
 
-Or skip the design step and fetch the clip in use: `bun run audio` restores `.voice/` from
-`voice/breeze/` in R2 when it is missing.
-
-The bucket comes from `terraform apply` in `infra/` (or `bunx wrangler r2 bucket create
-murugappan-dev-audio`). Voice reference and venv are git-ignored; the reference is never served.
+To reuse the current voice instead, skip the design step: `bun run audio` restores `.voice/` from `voice/breeze/` in R2 when it's missing. The voice reference and venv are gitignored, and the reference is never served.
 
 **Publishing a post**
 
 ```bash
-bun run build && bun run audio <slug>      # ~2.8 s of compute per second of audio on an M4 Pro
-bun run audio:align <slug>                # word timings for the Speechify-style highlight, ~5 s per post
+bun run build && bun run audio <slug>   # ~2.8 s of compute per second of audio on an M4 Pro
+bun run audio:align <slug>             # word timings, ~5 s per post
 ```
 
-Then push as usual. `bun run audio` with no slug renders every changed post; `--force` re-renders,
-`--dry-run` only extracts and hashes, `--local` targets the local R2 state `bun run dev` serves (`.wrangler/state`). `bun run audio:align`
-(`scripts/align-audio.ts`) runs after synthesis, never concurrently: it slices each paragraph out of the
-MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
-(`whisper-large-v3-turbo`, 1.6 GB, auto-downloaded), maps them onto the known text
-(`src/blog/utils/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per
-paragraph. The page highlights the current word when that array exists and the paragraph otherwise;
-the speech-synthesis fallback gets word highlights from the browser's `boundary` events. Breeze TTS 2
-weights are under the BreezeBlue Research and Non-Commercial License, which this personal blog satisfies.
+Then push as usual. With no slug, `bun run audio` renders every changed post. `--force` re-renders, `--dry-run` only extracts and hashes, and `--local` writes to the local R2 state that `bun run dev` serves (`.wrangler/state`).
 
-**The voice** was chosen in a 2026-09-09 listening evaluation against Google Chirp 3 HD, Gemini 3.1
-Flash TTS and the earlier Fish clone. The clone of a phone recording hissed and shifted tone between
-paragraphs; a _designed_ voice fixes both because the reference clip is synthetic (noise floor about
-−60 dBFS) and every paragraph clones the same clip. The design runs once with the persona prompt in
-`scripts/tts/design-voice.py` (`cfg_scale=4`):
-
-> A 25-year-old male software engineer from Chennai with a light Tamil-influenced Indian English
-> accent, recording the audio version of his own blog post. Quiet confidence and a bit of dry
-> humour. Natural conversational pace, slight emphasis on key terms, brief pauses between ideas.
-
-Per-paragraph synthesis passes **no** instruction: classifier-free guidance would run the 3B backbone
-twice per frame and let the delivery drift. Use the 8-bit build; bf16 swaps on a 24 GB machine and is
-3x slower. Breeze loops on long runs of one digit (`0.30000000000000004`), which is why
-`normalizeSpeechText` describes such runs instead of listing them. Gemini 3.1 Flash TTS (voice
-`Fenrir`) sounded as good and renders in seconds, but has no free tier once billing is attached to the
-project; its narration prompt was "Narrate this technical blog post like a calm, clear software
-engineer explaining to a peer. Natural conversational pace, no hype. Read acronyms letter by letter
-and code identifiers exactly as written."
+`bun run audio:align` (`scripts/align-audio.ts`) runs after synthesis, never at the same time. It slices each paragraph out of the MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (`whisper-large-v3-turbo`, 1.6 GB, downloaded automatically), maps them onto the known text (`src/blog/utils/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per paragraph.
 
 ## Public API (`/api/*`)
 
-A public, unauthenticated JSON API over the site's own content, for AI agents and
-developers. Documented for humans at [`/developers`](https://murugappan.dev/developers/),
-for machines at [`/openapi.json`](https://murugappan.dev/openapi.json) (OpenAPI 3.1.0),
-and for agents at [`/AGENTS.md`](https://murugappan.dev/AGENTS.md).
+A public, unauthenticated JSON API over the site's content, for agents and developers. Documented at [`/developers`](https://murugappan.dev/developers/), [`/openapi.json`](https://murugappan.dev/openapi.json) (OpenAPI 3.1.0) and [`/AGENTS.md`](https://murugappan.dev/AGENTS.md).
 
-- **Code:** `worker/api/` — `routes.ts` is the single source of truth for the
-  surface (the router and the spec are both checked against it), `openapi.ts`
-  generates the spec, `errors.ts` is the one JSON error envelope, `store.ts`
-  reads the inputs, `index.ts` is the Hono sub-app.
-- **Endpoints:** `GET /api/v1/profile`, `/api/v1/experience`, `/api/v1/skills`,
-  `/api/v1/education`, `/api/v1/open-source`, `/api/v1/posts` (`?q=`, `?limit=`),
-  `/api/v1/posts/{slug}` (full markdown), `POST /api/v1/contact`,
-  `GET /api/v1/versions`, and the spec at `/openapi.json` + `/api/v1/openapi.json`.
-- **Versioning** (`worker/api/versioning.ts`): the version is a path segment.
-  `API_PATHS` holds the published `/api/v1/...` templates; `toVersionedPath()`
-  normalises the unversioned `/api/...` alias onto them, which is what lets
-  `server.ts` mount the same Hono app at both prefixes (versioned first, so
-  `/api/v1/profile` matches its own route rather than the catch-all). The alias
-  is a permanent pin to v1 — a v2 would live only at `/api/v2/...`. `VERSIONS`
-  is the catalogue: adding a record there is what turns on `Deprecation`
-  (RFC 9745) and `Sunset` (RFC 8594) headers, the `deprecation` /
-  `successor-version` `Link` relations, and the `GET /api/v1/versions` document.
-  Every API response carries `API-Version`, `API-Supported-Versions` and the
-  discovery `Link` relations, applied by `worker/api/middleware.ts` so no
-  endpoint can be added without them.
-- **Rate-limit headers** (`worker/api/ratelimit.ts`): every response carries
-  `RateLimit-Policy` and `RateLimit` in the syntax of
-  draft-ietf-httpapi-ratelimit-headers, mirrored as `X-RateLimit-Limit` /
-  `-Remaining` / `-Reset`, with `Retry-After` on a `429`. Reads have a fair-use
-  ceiling (600 per 60s per client) counted in a per-isolate fixed window — no
-  Durable Object round trip on a read, and the consequence (the ceiling is per
-  edge location, so the advertised number is a floor) is documented on
-  `/developers`. Contact responses report the real daily allowance, which
-  `RateLimiter.takeContactSlot()` / `contactUsage()` now return.
-- **No second copy of the data.** `src/pages/api/dataset.json.ts` is an Astro
-  static endpoint that runs `src/data/portfolio.ts` + `resume.ts` through
-  `buildDataset()` (in `worker/api/dataset.ts`) and prerenders
-  `dist/api/dataset.json`; the Worker reads it back through the ASSETS binding.
-  Blog posts come from the merged root `llms.txt` and the per-post `index.md`
-  renditions, so the API can't fall behind the blog. `/developers` renders its
-  endpoint table from the same OpenAPI document the Worker serves.
-- **Worker-owned paths.** `run_worker_first` in `wrangler.jsonc` claims `/api/*`,
-  `/openapi.json`, `/mcp*`, `/mcp.json`, `/.well-known/*`, `/parties/*` and
-  `/blog/audio/*` so every API failure is the JSON error envelope rather than an
-  HTML page, and so the generated discovery documents name the host that
-  answered — keep that list in sync with `worker/server.ts`. Everything else is
-  served straight from assets.
-- **`POST /api/v1/contact`** emails `OPPORTUNITY_INBOX` (same secret and
-  `send_email` binding the chat's lead capture uses). Rate-limited by the
-  existing `RateLimiter` DO: 3/client-IP/UTC-day, 20 site-wide. `"dryRun": true`
-  validates a payload without sending or spending a slot — the endpoint's
-  sandbox. Without the secret configured it answers `503`, never a silent drop.
+- **Code.** It lives in `worker/api/`. `routes.ts` defines the surface, and both the router and the spec are checked against it. `openapi.ts` generates the spec, `errors.ts` is the JSON error envelope, `store.ts` reads the data and `index.ts` is the Hono app.
+- **Endpoints.** `GET /api/v1/profile`, `/experience`, `/skills`, `/education`, `/open-source`, `/posts` (`?q=`, `?limit=`), `/posts/{slug}` (full markdown), `/versions`, `POST /api/v1/contact`, and the spec at `/openapi.json` and `/api/v1/openapi.json`.
+- **Versioning** (`worker/api/versioning.ts`). The version is a path segment. `toVersionedPath()` maps the unversioned `/api/...` alias onto the `/api/v1/...` templates in `API_PATHS`, so `server.ts` mounts one Hono app at both prefixes. The alias is permanently pinned to v1; a v2 would live only at `/api/v2/...`.
+- **Deprecation.** Adding a record to `VERSIONS` turns on the `Deprecation` (RFC 9745) and `Sunset` (RFC 8594) headers, the `deprecation` / `successor-version` links and the `/api/v1/versions` document. `worker/api/middleware.ts` adds `API-Version`, `API-Supported-Versions` and the discovery `Link` relations to every response.
+- **Rate limits** (`worker/api/ratelimit.ts`). Every response carries `RateLimit-Policy` and `RateLimit` (draft-ietf-httpapi-ratelimit-headers), mirrored as `X-RateLimit-*`, plus `Retry-After` on a 429. Reads allow 600 per 60 s per client, counted per isolate so they never wait on a Durable Object; the limit is therefore per edge location. Contact responses report the real daily allowance from `RateLimiter.takeContactSlot()` / `contactUsage()`.
+- **One copy of the data.** `src/pages/api/dataset.json.ts` runs `src/data/portfolio.ts` and `resume.ts` through `buildDataset()` (`worker/api/dataset.ts`) and prerenders `dist/api/dataset.json`, which the Worker reads through `ASSETS`. Posts come from the root `llms.txt` and the per-post `index.md` renditions, and `/developers` renders its endpoint table from the served OpenAPI document, so none of them can drift from the source data.
+- **Worker-owned paths.** `run_worker_first` in `wrangler.jsonc` claims `/api/*`, `/openapi.json`, `/mcp*`, `/mcp.json`, `/.well-known/*`, `/parties/*` and `/blog/audio/*`. That keeps API errors in the JSON envelope rather than HTML, and lets generated discovery documents name the host that answered. Keep the list in sync with `worker/server.ts`.
+- **`POST /api/v1/contact`.** It emails `OPPORTUNITY_INBOX` through the `send_email` binding the chat also uses. The `RateLimiter` Durable Object caps it at 3 per client IP per UTC day and 20 site-wide. `"dryRun": true` validates a payload without sending or using a slot. Without the secret it answers 503.
 
-## Discovery documents and the agent-readable 404
+## Discovery documents and the 404
 
-Three things exist so an agent that has never seen this site can find its way in
-without reading prose, and can recover when it guesses a URL wrong.
+These let an agent that has never seen the site find its way in, and recover from a wrong guess.
 
-- **`/.well-known/api-catalog`** (`worker/well-known.ts`) — an RFC 9727 API
-  catalogue, serialised as an RFC 9264 link set
-  (`application/linkset+json`). One context object per API: the REST API
-  (anchored at `/api/v1`, with `service-desc` → `/openapi.json`, `service-doc` →
-  `/developers/`, `service-meta` → `/api/v1/versions`) and the MCP server. Also
-  advertised as `Link: rel="api-catalog"` on the pages and in `<link>` in the
-  layout head.
-- **`/.well-known/mcp.json`** and **`/mcp.json`** — the MCP `server.json`
-  manifest, following the published schema: reverse-DNS `name`
-  (`dev.murugappan/murugappan-dev`), a `description` inside the schema's
-  100-character cap, and one `streamable-http` remote. Anything beyond the
-  schema rides in `_meta` under a reverse-DNS key. Generated, so the remote URL
-  names the host that answered.
-- **The 404** (`worker/not-found.ts`) — pages are served from assets without
-  the Worker, but every miss reaches it (`not_found_handling: "none"` in
-  `wrangler.jsonc`; under `"404-page"` the assets layer would answer every miss
-  with `404.html` itself, browser or agent alike) and is content-negotiated:
-  `Accept: text/html` gets the styled page — the blog's own under `/blog/`, the
-  site's elsewhere, which the Worker fetches from assets; anything else
-  (including no `Accept` at all, which is what curl and `fetch` send) gets a
-  short markdown body naming the sitemap, `llms.txt`, `AGENTS.md`,
-  `/developers/`, the OpenAPI document, the API catalogue, the MCP manifest and
-  the pages that do exist. Both branches carry `Vary: Accept` and the discovery
-  `Link` relations, and the status is a real `404` either way.
+- **`/.well-known/api-catalog`** (`worker/well-known.ts`): an RFC 9727 API catalogue as an RFC 9264 link set (`application/linkset+json`). It has one entry for the REST API (anchored at `/api/v1`, with `service-desc` → `/openapi.json`, `service-doc` → `/developers/`, `service-meta` → `/api/v1/versions`) and one for the MCP server. Pages advertise it with `Link: rel="api-catalog"` and a `<link>` in the layout head.
+- **`/.well-known/mcp.json`** and **`/mcp.json`**: the MCP `server.json` manifest, following the published schema, with a reverse-DNS `name` (`dev.murugappan/murugappan-dev`), a `description` under the 100-character cap and one `streamable-http` remote. Extras go in `_meta` under a reverse-DNS key. It's generated, so the remote URL names the host that answered.
+- **The 404** (`worker/not-found.ts`). With `not_found_handling: "none"`, every asset miss reaches the Worker, which negotiates on `Accept`. `text/html` gets the styled page (the blog's under `/blog/`, the site's elsewhere). Anything else, including no `Accept` header as sent by curl and `fetch`, gets a short markdown body that points to the sitemap, `llms.txt`, `AGENTS.md`, `/developers/`, the OpenAPI document, the API catalogue, the MCP manifest and the pages that exist. Both carry `Vary: Accept`, the discovery links and a real 404 status.
 
-`public/_redirects` also 301s the URLs people and agents guess before they guess
-`/developers/`: `/docs`, `/api-docs`, `/developer`, `/api-reference`,
-`/mcp-server`.
+`public/_redirects` also 301s common guesses (`/docs`, `/api-docs`, `/developer`, `/api-reference`, `/mcp-server`) to `/developers/`.
 
 ## MCP server (`/mcp`)
 
-The same content again as a [Model Context Protocol](https://modelcontextprotocol.io)
-server, so an MCP client can use the site without any HTTP glue. Add it as
-`https://murugappan.dev/mcp` — Streamable HTTP, `POST` only, no auth, no session.
+The same content as a [Model Context Protocol](https://modelcontextprotocol.io) server. Add `https://murugappan.dev/mcp`: Streamable HTTP, `POST` only, no auth, no session.
 
-- **Code:** `worker/mcp/` — `protocol.ts` (JSON-RPC framing, version constants,
-  header/body validation, Origin check), `tools.ts` (the eight tools, each a thin
-  adapter over `worker/api/store.ts`), `schema.ts` (inlines the OpenAPI
-  `$ref`s so every tool's `outputSchema` is self-contained, as the spec
-  requires), `index.ts` (the Hono app).
-- **Dual-era.** Implements revision `2026-07-28` (stateless, per-request
-  `_meta`, `resultType`, mandatory `server/discover`, mirrored
-  `MCP-Protocol-Version` / `Mcp-Method` / `Mcp-Name` headers validated against
-  the body with `-32020` on mismatch) _and_ the `initialize` handshake of
-  `2025-11-25` / `2025-06-18` / `2025-03-26`, which is what most deployed
-  clients still speak. The era is chosen by whether the request carries modern
-  `_meta`. No session is ever minted; `GET`/`DELETE` answer `405`.
-- **Tools:** `get_profile`, `list_experience`, `list_skills`, `list_education`,
-  `list_open_source`, `search_blog_posts`, `get_blog_post`, `send_message`.
-  `send_message` shares the `RateLimiter` allowance with `POST /api/v1/contact`
-  and honours the same `dryRun`.
-- **Resources** (`worker/mcp/resources.ts`): `/llms.txt`, `/AGENTS.md`, the
-  generated `openapi.json`, `/blog/llms-full.txt`, and one entry per published
-  post, plus the `{slug}` URI template. `https://` URIs, per the spec's rule
-  that the scheme is for resources a client can fetch from the web itself.
-  Reads go through an explicit allowlist and a re-validated slug, and a missing
-  resource is `-32602` with the uri in `data` — never an empty `contents` array.
-- **Docs are generated.** The MCP section of `/developers` renders its tool
-  table from `MCP_TOOLS`, so it cannot list a tool that does not exist.
-
-## Credits
-
-- Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio); the hero desk illustration is adapted from that project (recolored to this site's navy theme).
-- Originally based on [developerFolio](https://github.com/saadpasta/developerFolio) before the Astro migration.
+- **Code.** It lives in `worker/mcp/`. `protocol.ts` handles JSON-RPC framing, version constants, header and body validation and the Origin check. `tools.ts` holds the tools, each a thin adapter over `worker/api/store.ts`. `schema.ts` inlines the OpenAPI `$ref`s so every tool's `outputSchema` is self-contained, as the spec requires. `index.ts` is the Hono app.
+- **Protocol versions.** It implements revision `2026-07-28`: stateless, per-request `_meta`, `resultType`, mandatory `server/discover`, and mirrored `MCP-Protocol-Version` / `Mcp-Method` / `Mcp-Name` headers checked against the body (`-32020` on mismatch). It also accepts the `initialize` handshake of `2025-11-25`, `2025-06-18` and `2025-03-26`. Requests carrying `2026-07-28` `_meta` get that revision's behaviour; the rest get the handshake era's. No session is ever created, and `GET` / `DELETE` answer 405.
+- **Tools.** `get_profile`, `list_experience`, `list_skills`, `list_education`, `list_open_source`, `search_blog_posts`, `get_blog_post`, `send_message`. `send_message` shares the contact endpoint's allowance and `dryRun`.
+- **Resources** (`worker/mcp/resources.ts`): `/llms.txt`, `/AGENTS.md`, the generated `openapi.json`, `/blog/llms-full.txt`, one entry per post and a `{slug}` URI template. URIs use `https://` because clients can fetch them from the web. Reads go through an allowlist with a re-validated slug, and a missing resource is a `-32602` error with the URI in `data`.
+- **Docs.** The MCP section of `/developers` renders its tool table from `MCP_TOOLS`, so it can't list a tool that doesn't exist.
 
 ## AI chat widget
 
-Intercom-style AI concierge (named Jarvis) on every page (portfolio + blog).
+Jarvis, an AI concierge on every portfolio and blog page.
 
-- **Server:** `worker/` — Cloudflare Worker serving the prerendered site as static assets +
-  `ChatRoom` Durable Object (partyserver, SQLite) streaming replies over
-  WebSocket at `/parties/chat-room/:roomId`.
-- **Model:** DeepSeek `deepseek-flash` (BYOK via the `DEEPSEEK_API_KEY`
-  secret), the only provider — Workers AI was dropped on 2026-08-27 for being
-  slow and truncating replies when the free neuron allocation ran out. Thinking
-  is enabled (`thinking: {type: "enabled"}`) — the model reasons before
-  answering, which sharpens tool selection; `reasoning_content` is dropped so
-  visitors see only the reply. This is only safe because there is no
-  `max_tokens`: reasoning used to consume the whole 800-token cap. `deepseek-flash`
-  tracks the current Flash generation — it became V4.1-Flash on 2026-09-10, when
-  the older `deepseek-v4-flash` name was retired to a temporary compat alias.
-- **Swapping the model:** run `bun run test:capture` first. It drives a real
-  lead-capture conversation against the live model and fails if
-  `capture_opportunity` is never called, or is called without the visitor's
-  contact detail. qwen3-30b was reverted on 2026-08-17 for narrating captures
-  it never made — unit tests cannot catch that, only the live model can. Needs
-  `.dev.vars` and a built `llms.txt` (`bun run build`); costs a fraction of a cent.
-- **Loading:** the widget is a React island hydrated with `client:interaction`,
-  a custom directive (`src/directives/interaction.ts`, registered in
-  `astro.config.ts`) that loads React + the widget on the visitor's first
-  input anywhere on the page instead of on idle. A page that is only loaded —
-  a Lighthouse run — never downloads it; a tap on the server-rendered launcher
-  while the bundle is in flight is remembered on the island and the panel
-  opens itself once mounted.
-- **Widget:** `src/components/chat/` (shared by the blog via relative import).
-  While a turn is in flight the panel shows `ActivityRow` instead of the three
-  dots: a rotating playful label ("Discombobulating…") with an elapsed counter
-  while the model reasons, switching to the real action when the worker
-  broadcasts a `tool` frame ("Reading blog/…", "Noting your details"). The
-  frame carries only the tool name plus a page path — never tool arguments —
-  and is ephemeral: nothing is persisted, and the next delta clears the row.
-  The row is `aria-hidden` with a stable `sr-only` "Jarvis is typing", so the
-  rotating words don't spam the panel's live region.
-- **Email:** `send_email` binding → `OPPORTUNITY_INBOX` (Worker secret).
-- **Visitor context:** the Worker edge reads the country off the WebSocket
-  upgrade (`request.cf.country`, falling back to `CF-IPCountry`) and the
-  address off `CF-Connecting-IP`, and carries both to the room as headers —
-  a Durable Object never sees `request.cf`, and the client's own copy of
-  those headers is deleted first, so a spoofed value can never be read.
-  `ChatRoom.onConnect` records them under `visitor_*` meta keys and mirrors
-  one `rooms` row per room to D1 (`migrations/0002_rooms.sql`), refreshed on
-  every reconnect with `first_seen` preserved, so the dash shows where a
-  conversation came from without joining transcripts. IPs are personal data:
-  they live only in the room and that mirror, never in analytics.
-- **Limits:** 20 msgs/day per conversation, 300/day globally, 1000 chars/msg.
-  Chat runs until the DeepSeek account is actually out of credit — the
-  `RateLimiter` DO reads `GET /user/balance` on the same key (cached 10 min,
-  shared by every room, fails open) and gates below `BALANCE_RESERVE_USD`.
-  A 402 from a chat call is authoritative and gates every room at once; a
-  top-up is picked up at the next cache expiry, no deploy. There is no daily
-  allowance — at ~$0.003/turn, top up to set the ceiling.
-- **Local dev:** `bun run build && bun run preview` → http://localhost:4399 runs the production build with the
-  Worker in workerd, so the widget connects on the same origin with full Durable Objects — no second server, no
-  `PUBLIC_CHAT_HOST`. (`bun run dev` runs the Worker too, but its pages are broken for now — see "Development".)
-  Put `OPPORTUNITY_INBOX=you@example.com` and `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored);
-  without the key the chat gates itself, since there is no fallback provider.
-  Also note: AI calls in dev hit the real DeepSeek API and are billed, so watch your spend.
-- **Tests:** `bun run test` (vitest + workers pool), `bun run check:worker`.
+- **Server.** The `ChatRoom` Durable Object in `worker/` (partyserver, SQLite) streams replies over WebSocket at `/parties/chat-room/:roomId`.
+- **Model.** DeepSeek `deepseek-flash`, the only provider. The name tracks DeepSeek's current Flash generation, so behaviour can change without a deploy. It authenticates with the `DEEPSEEK_API_KEY` secret. Thinking is on (`thinking: {type: "enabled"}`) to sharpen tool selection, and `reasoning_content` is dropped so visitors see only the reply. There's deliberately no `max_tokens`: reasoning can use up a cap and leave an empty reply.
+- **Changing the model.** Run `bun run test:capture` first. It drives a real lead-capture conversation against the live model and fails unless `capture_opportunity` is called with the visitor's contact detail. Unit tests can't catch a model that claims a capture it never made. It needs `.dev.vars` and a built `llms.txt`, and costs a fraction of a cent.
+- **Loading.** The widget is a React island hydrated with `client:interaction`, a custom directive (`src/directives/interaction.ts`, registered in `astro.config.ts`) that loads React and the widget on the visitor's first input. A page that's only loaded, such as a Lighthouse run, never downloads it. A tap on the server-rendered launcher while the bundle is loading is remembered, and the panel opens once mounted.
+- **Widget.** `src/components/chat/`, which the blog imports too. While a turn is in flight, `ActivityRow` shows a rotating label ("Discombobulating…") with an elapsed counter, then the real action when the Worker sends a `tool` frame ("Reading blog/…", "Noting your details"). The frame carries only the tool name and a page path, never arguments, and isn't persisted. The row is `aria-hidden` behind a stable `sr-only` "Jarvis is typing", so the live region stays quiet.
+- **Visitor context.** The Worker reads the country from the WebSocket upgrade (`request.cf.country`, falling back to `CF-IPCountry`) and the IP from `CF-Connecting-IP`, and passes both to the room as headers, since a Durable Object never sees `request.cf`. Client-sent copies are deleted first so they can't be spoofed. `ChatRoom.onConnect` stores them under `visitor_*` meta keys and upserts one `rooms` row per room into D1 (`migrations/0002_rooms.sql`), keeping `first_seen`. IPs are personal data: they stay in the room and that table, never in analytics.
+- **Limits.** 40 messages per day per conversation (`ROOM_DAILY_LIMIT`), 1000 characters per message (`MAX_MESSAGE_LENGTH`). The `RateLimiter` Durable Object reads DeepSeek's `GET /user/balance` (cached 10 minutes, shared by every room, fails open) and stops chat below `BALANCE_RESERVE_USD`. A 402 from a chat call stops every room immediately. A top-up takes effect at the next cache expiry, with no deploy. At about $0.003 per turn, the account balance is the spending cap.
+- **Local dev.** Put `OPPORTUNITY_INBOX=you@example.com` and `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored), then use `bun run dev` or `bun run build && bun run preview` (http://localhost:4399). The widget connects on the same origin with full Durable Objects. Without the key the chat disables itself. Dev calls hit the real DeepSeek API and are billed.
+
+## Credits
+
+- Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio). The hero desk illustration is adapted from it, recoloured to this site's navy theme.
+- Originally based on [developerFolio](https://github.com/saadpasta/developerFolio).
