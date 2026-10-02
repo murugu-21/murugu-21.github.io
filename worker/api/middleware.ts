@@ -9,13 +9,12 @@ import {
   policyField,
   READ_QUOTA,
   readRateLimitHeaders,
-  takeReadSlot,
-  type ReadSlot
+  takeReadSlot
 } from "./ratelimit";
 import { API_PATHS, matchApiPath } from "./routes";
 import { versionHeaders, versionLinkHeader } from "./versioning";
 
-export type ApiHeaderOptions = {
+type ApiHeaderOptions = {
   /** False for the OpenAPI document: a throttled client must still be able to learn why. */
   enforceReads: boolean;
 };
@@ -29,7 +28,7 @@ export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings
     // Cloudflare always sets this header in production.
     const client = c.req.header("CF-Connecting-IP");
 
-    const slot: ReadSlot | null = isRead && !isContact && client ? takeReadSlot(client) : null;
+    const slot = isRead && !isContact && client ? takeReadSlot(client) : null;
     if (slot && opts.enforceReads && !slot.allowed) {
       return apiError({
         status: 429,

@@ -30,69 +30,77 @@ function document(body: unknown, contentType: string): Response {
   });
 }
 
-type LinksetTarget = { href: string; type?: string; title?: string };
-
 /** RFC 9727 requires `service-desc` or `service-doc` per entry. */
 export function buildApiCatalog(origin: string): {
   linkset: Array<Record<string, unknown>>;
 } {
   const base = origin.replace(/\/$/, "");
   const abs = (path: string): string => `${base}${path}`;
-  const target = (href: string, type: string, title: string): LinksetTarget => ({
-    href,
+  const target = ({ path, type, title }: { path: string; type: string; title: string }) => ({
+    href: abs(path),
     type,
     title
   });
+  const agentInstructions = target({
+    path: "/AGENTS.md",
+    type: "text/markdown",
+    title: "murugappan.dev — agent instructions"
+  });
+  const author = { href: abs("/about/"), title: "Murugappan M" };
 
   return {
     linkset: [
       {
         anchor: abs(VERSIONED_API_BASE),
         "service-desc": [
-          target(
-            abs(API_PATHS.openapiRoot),
-            "application/json",
-            "murugappan.dev API — OpenAPI 3.1.0 specification"
-          )
+          target({
+            path: API_PATHS.openapiRoot,
+            type: "application/json",
+            title: "murugappan.dev API — OpenAPI 3.1.0 specification"
+          })
         ],
         "service-doc": [
-          target(abs("/developers/"), "text/html", "murugappan.dev API — developer portal")
+          target({
+            path: "/developers/",
+            type: "text/html",
+            title: "murugappan.dev API — developer portal"
+          })
         ],
         "service-meta": [
-          target(
-            abs(API_PATHS.versions),
-            "application/json",
-            "murugappan.dev API — version and deprecation policy"
-          )
+          target({
+            path: API_PATHS.versions,
+            type: "application/json",
+            title: "murugappan.dev API — version and deprecation policy"
+          })
         ],
-        describedby: [
-          target(abs("/AGENTS.md"), "text/markdown", "murugappan.dev — agent instructions")
-        ],
+        describedby: [agentInstructions],
         status: [
-          target(
-            abs("/developers/#versioning"),
-            "text/html",
-            "murugappan.dev API — versioning and deprecation status"
-          )
+          target({
+            path: "/developers/#versioning",
+            type: "text/html",
+            title: "murugappan.dev API — versioning and deprecation status"
+          })
         ],
-        author: [{ href: abs("/about/"), title: "Murugappan M" }]
+        author: [author]
       },
       {
         anchor: abs("/mcp"),
         "service-desc": [
-          target(
-            abs("/.well-known/mcp.json"),
-            "application/json",
-            "murugappan.dev MCP server — server.json manifest"
-          )
+          target({
+            path: "/.well-known/mcp.json",
+            type: "application/json",
+            title: "murugappan.dev MCP server — server.json manifest"
+          })
         ],
         "service-doc": [
-          target(abs("/developers/#mcp"), "text/html", "murugappan.dev MCP server — documentation")
+          target({
+            path: "/developers/#mcp",
+            type: "text/html",
+            title: "murugappan.dev MCP server — documentation"
+          })
         ],
-        describedby: [
-          target(abs("/AGENTS.md"), "text/markdown", "murugappan.dev — agent instructions")
-        ],
-        author: [{ href: abs("/about/"), title: "Murugappan M" }]
+        describedby: [agentInstructions],
+        author: [author]
       }
     ]
   };
@@ -125,9 +133,11 @@ export function buildMcpManifest(origin: string): Record<string, unknown> {
   };
 }
 
+const readCors = cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 });
+
 export const wellKnown = new Hono<{ Bindings: Env }>();
 
-wellKnown.use("*", cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 }));
+wellKnown.use("*", readCors);
 
 wellKnown.on(READ_METHODS, "/api-catalog", c =>
   document(buildApiCatalog(publicOrigin(c.req.url)), LINKSET_MEDIA_TYPE)
@@ -140,10 +150,7 @@ wellKnown.on(READ_METHODS, "/mcp.json", c =>
 /** The same manifest at the site root, where clients look first. */
 export const mcpManifest = new Hono<{ Bindings: Env }>();
 
-mcpManifest.use(
-  "*",
-  cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 })
-);
+mcpManifest.use("*", readCors);
 
 mcpManifest.on(READ_METHODS, "/", c =>
   document(buildMcpManifest(publicOrigin(c.req.url)), "application/json")

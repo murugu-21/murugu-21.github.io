@@ -1,8 +1,8 @@
 // TypeScript 7 dropped the JS compiler API that Volar (and so `astro check`)
 // hardcodes via require("typescript"). This preload, used only by
 // check:astro, redirects it to the `@typescript/typescript6` compat package.
-// Delete this file, that devDependency and the `@astrojs/check` override once
-// @astrojs/check supports TypeScript 7.
+// Delete this file, that devDependency and the `typescript` override in
+// package.json once @astrojs/check supports TypeScript 7.
 const Module = require("node:module");
 
 const resolveFilename = Module._resolveFilename;

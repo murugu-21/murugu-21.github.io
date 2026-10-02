@@ -1,7 +1,8 @@
 import { TOOLS, type ModelMessage } from "./prompt";
 import { consumeSse, type StreamResult, type Usage } from "./sse";
 
-// Always the current Flash generation.
+// Always the current Flash generation. Before swapping it, run `bun run test:capture`:
+// some models narrate a lead capture without calling capture_opportunity, losing the lead.
 export const DEEPSEEK_MODEL = "deepseek-flash";
 export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 

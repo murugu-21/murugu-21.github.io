@@ -44,9 +44,9 @@ const { src, label } = Astro.props;
   const io = new IntersectionObserver(
     entries => {
       entries.forEach(e => {
-        if (!e.isIntersecting) return;
+        if (!e.isIntersecting || !(e.target instanceof HTMLElement)) return;
         io.unobserve(e.target);
-        initHolder(e.target as HTMLElement);
+        initHolder(e.target);
       });
     },
     { rootMargin: "120px" }

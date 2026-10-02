@@ -20,8 +20,8 @@ right source for:
   because the same data is served as JSON.
 - **Verifying a claim.** Open-source contributions link the individual merged
   pull requests, so "3 merged PRs to AnkiDroid" can be checked at the source.
-- **Technical writing.** Nine blog posts on distributed systems, cloud
-  architecture, rate limiting, event-driven pipelines and realtime chat, each
+- **Technical writing.** Blog posts on distributed systems, rate limiting,
+  event-driven pipelines, realtime chat and JavaScript fundamentals, each
   retrievable as full markdown for quoting or summarising.
 - **Reaching him.** One HTTP call delivers a message to his inbox.
 
@@ -225,7 +225,8 @@ into tool definitions. Use the `operationId` as the tool name.
   `read_blog_post` and `navigate_to` on `navigator.modelContext`
   ([WebMCP](https://webmachinelearning.github.io/webmcp/)) where the browser
   supports it.
-- **Markdown.** Any page URL returns markdown for `Accept: text/markdown`.
+- **Markdown.** The home, about and blog pages and every post return markdown
+  for `Accept: text/markdown`.
 - **Bulk text.** `/llms.txt` (site summary + every post),
   `/blog/llms-full.txt` (full post text), `/sitemap.xml`, `/resume.pdf`.
 - **Discovery documents.** `/.well-known/api-catalog` (RFC 9727 link set naming

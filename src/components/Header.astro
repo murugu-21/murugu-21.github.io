@@ -88,7 +88,7 @@ const menu = [
     <span class="logo-name px-2.5 font-bold text-navy dark:text-white">Murugappan M</span>
     <span class="text-subtitle dark:text-white/65">/&gt;</span>
   </a>
-  <!-- Kept over the icon (48px, opacity 0 — not sr-only) for hit area + focus order. -->
+  {/* Kept over the icon (48px, opacity 0 — not sr-only) for hit area + focus order. */}
   <input
     class="menu-btn peer absolute top-2 right-2 z-[1] m-0 h-12 w-12 cursor-pointer opacity-0 min-[768px]:hidden"
     type="checkbox"
@@ -112,9 +112,9 @@ const menu = [
       ))}
     </ul>
   </nav>
-  <!-- Outside the collapsible menu so it stays in the bar. top-[41px] (10px
+  {/* Outside the collapsible menu so it stays in the bar. top-[41px] (10px
        padding + half the 62px hamburger), not top-1/2: the header grows when
-       the menu opens. -->
+       the menu opens. */}
   <div class="theme-slot absolute top-[41px] right-[86px] -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0">
     <ThemeToggle />
   </div>

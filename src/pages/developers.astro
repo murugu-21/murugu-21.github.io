@@ -5,6 +5,7 @@ import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import ScrollTop from "../components/ScrollTop.astro";
 import { SITE_ORIGIN } from "../lib/site";
+import { socialMediaLinks } from "../data/portfolio";
 import { linkCls, linksUl, proseLi, proseP, proseUl } from "../lib/prose";
 import { buildOpenApiDocument } from "../../worker/api/openapi";
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "../../worker/api/contact";
@@ -104,6 +105,17 @@ ws.onmessage = e => console.log(JSON.parse(e.data)); // history | delta | done
 ws.onopen = () =>
   ws.send(JSON.stringify({type: "chat", text: "What has Murugappan shipped?"}));`;
 
+const portalLinks = [
+  { href: "/openapi.json", label: "OpenAPI 3.1.0 spec" },
+  { href: "#mcp", label: "MCP server" },
+  { href: "/.well-known/mcp.json", label: "MCP manifest" },
+  { href: "/.well-known/api-catalog", label: "API catalog" },
+  { href: API_PATHS.profile, label: `GET ${API_PATHS.profile}` },
+  { href: API_PATHS.versions, label: "Version policy" },
+  { href: "/llms.txt", label: "llms.txt" },
+  { href: "/AGENTS.md", label: "AGENTS.md" }
+];
+
 const machineFiles = [
   {
     path: "/.well-known/api-catalog",
@@ -196,7 +208,7 @@ const preCodeCls = `${codeFont} rounded-sm text-[0.9em]`;
 const preCls =
   "my-[1em] overflow-x-auto rounded-lg border border-border-soft bg-white p-4 font-[family-name:monospace] dark:border-[rgba(255,255,255,0.12)] dark:bg-[rgba(255,255,255,0.04)]";
 // tables must scroll inside their own box, never widen the page
-const tableWrapCls = "table-scroll overflow-x-auto";
+const tableWrapCls = "overflow-x-auto";
 const tableCls = "w-full border-collapse text-[0.95rem]";
 const cellCls =
   "border-b border-border-soft px-3 py-[0.6rem] text-left align-top dark:border-[rgba(255,255,255,0.12)]";
@@ -211,11 +223,11 @@ const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[ove
 >
   <Header />
   {/* /about's column, widened to 900px for tables. pt-28 clears the fixed navbar. */}
-  <main class="dev-page box-content mx-auto max-w-[900px] px-5 pt-28 pb-16">
+  <main class="box-content mx-auto max-w-[900px] px-5 pt-28 pb-16">
     <h1 class="mt-[0.67em] mb-2 text-[clamp(1.7rem,6vw,2.2rem)] font-bold">
       murugappan.dev API — developer portal
     </h1>
-    <p class="pitch my-[1em] text-[1.15rem] leading-[1.6]">
+    <p class="my-[1em] text-[1.15rem] leading-[1.6]">
       A public, unauthenticated JSON API over everything this site publishes about{" "}
       <a class={linkCls} href="/about/">
         Murugappan M
@@ -242,46 +254,13 @@ const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[ove
       .
     </p>
     <ul class={linksUl}>
-      <li class={proseLi}>
-        <a class={linkCls} href="/openapi.json">
-          OpenAPI 3.1.0 spec
-        </a>
-      </li>
-      <li class={proseLi}>
-        <a class={linkCls} href="#mcp">
-          MCP server
-        </a>
-      </li>
-      <li class={proseLi}>
-        <a class={linkCls} href="/.well-known/mcp.json">
-          MCP manifest
-        </a>
-      </li>
-      <li class={proseLi}>
-        <a class={linkCls} href="/.well-known/api-catalog">
-          API catalog
-        </a>
-      </li>
-      <li class={proseLi}>
-        <a class={linkCls} href={API_PATHS.profile}>
-          GET {API_PATHS.profile}
-        </a>
-      </li>
-      <li class={proseLi}>
-        <a class={linkCls} href={API_PATHS.versions}>
-          Version policy
-        </a>
-      </li>
-      <li class={proseLi}>
-        <a class={linkCls} href="/llms.txt">
-          llms.txt
-        </a>
-      </li>
-      <li class={proseLi}>
-        <a class={linkCls} href="/AGENTS.md">
-          AGENTS.md
-        </a>
-      </li>
+      {portalLinks.map(l => (
+        <li class={proseLi}>
+          <a class={linkCls} href={l.href}>
+            {l.label}
+          </a>
+        </li>
+      ))}
     </ul>
 
     <section>
@@ -799,7 +778,7 @@ Retry-After: 39122</code></pre>
           murugappan.dev
         </a>
         . Questions, or something broken?{" "}
-        <a class={linkCls} href="mailto:murugu2001@gmail.com">
+        <a class={linkCls} href={`mailto:${socialMediaLinks.gmail}`}>
           Email Murugappan
         </a>{" "}
         or use <code class={codeCls}>POST /api/contact</code>.

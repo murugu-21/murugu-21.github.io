@@ -21,11 +21,9 @@ const SAMPLE_REPO: GithubRepo = {
   topics: ["event-driven", "kafka", "debezium-server", "nestjs", "reactjs", "aws-cdk"]
 };
 if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
-
-const show = projectsSection.display && repos.length > 0;
 ---
 
-{show && (
+{repos.length > 0 && (
   <div
     class="projects-section section-animate mx-auto mt-16 box-content w-[90%] px-2.5 py-5"
     id="projects"

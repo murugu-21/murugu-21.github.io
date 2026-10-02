@@ -4,37 +4,35 @@ import Icon from "../../components/Icon.astro";
 import "../styles/code.css";
 import "../styles/post.css";
 
-import BaseHead from "../components/BaseHead.astro";
+import BaseHead, { type Props as HeadProps } from "../components/BaseHead.astro";
 import ThemeToggle from "../../components/ThemeToggle.astro";
 import ChatWidget from "../../components/chat/ChatWidget.astro";
 import Particles from "../../components/Particles.astro";
 import { SITE_TITLE } from "../consts";
 
-// Everything but title/description passes through to BaseHead.
-const { title, description, ...seo } = Astro.props;
+type Props = HeadProps;
 
 // The <body>'s `text-base leading-normal` overrides the shared base layer's
 // 19px/23px.
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
-const base = "/blog";
-const rootPath = `${base}/`;
+const rootPath = "/blog/";
 const isRootPath = Astro.url.pathname === rootPath;
 ---
 
 <!doctype html>
-<!-- Smooth anchor jumps, set here rather than in the shared global.css.
-     Headings carry their own scroll-margin (post.css). -->
+{/* Smooth anchor jumps, set here rather than in the shared global.css.
+     Headings carry their own scroll-margin (post.css). */}
 <html lang="en" class="scroll-smooth motion-reduce:scroll-auto">
   <head>
-    <BaseHead title={title} description={description} {...seo} />
+    <BaseHead {...Astro.props} />
   </head>
   <body class="text-base leading-normal text-text dark:text-text-dark">
-    <!-- Dimmed for reading: stars between words read as stray bullets. -->
+    {/* Dimmed for reading: stars between words read as stray bullets. */}
     <Particles class="opacity-50 dark:opacity-70" />
-    <!-- Theme bootstrap, before first paint to avoid a flash. Exposes
-         window.__theme and window.__setPreferredTheme and fires `themechange`
-         (see ../utils/useTheme.ts). -->
+    {/* Theme bootstrap, before first paint to avoid a flash. Exposes
+         window.__setPreferredTheme and fires `themechange` (see
+         ../../lib/theme.ts). */}
     <script is:inline>
       // Shared with the portfolio: key "isDark", a JSON bool. Inline scripts
       // can't import, so keep in step with resolveTheme in ../../lib/theme.ts.
@@ -47,7 +45,6 @@ const isRootPath = Astro.url.pathname === rootPath;
       // Paint and announce without persisting.
       function applyTheme(newTheme) {
         document.documentElement.classList.toggle("dark-mode", newTheme === "dark");
-        window.__theme = newTheme;
         preferredTheme = newTheme;
         window.dispatchEvent(new Event("themechange"));
       }
@@ -64,8 +61,8 @@ const isRootPath = Astro.url.pathname === rootPath;
       };
       applyTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"));
     </script>
-    <!-- Bio sits in the page slot, so its index-page margin is set from the
-         wrapper; (0,3,0) beats Bio's own `mb-16`. -->
+    {/* Bio sits in the page slot, so its index-page margin is set from the
+         wrapper; (0,3,0) beats Bio's own `mb-16`. */}
     <div
       class="global-wrapper mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:[&_.bio]:mb-5 max-md:pb-24"
       data-is-root-path={isRootPath}

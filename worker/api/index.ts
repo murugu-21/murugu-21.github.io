@@ -4,20 +4,21 @@
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 
-import { sendContactEmail, type EmailLike } from "../email";
+import { contactMailer, sendContactEmail } from "../email";
 import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "./contact";
 import type { Dataset } from "./dataset";
 import { apiError } from "./errors";
 import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "./openapi";
-import { POSTS_LIMIT_MAX } from "./posts";
+import { POSTS_LIMIT_MAX, searchPosts } from "./posts";
 import {
   contactRateLimitHeaders,
+  globalLimiter,
   RATE_LIMIT_EXPOSED_HEADERS,
   secondsUntilUtcMidnight
 } from "./ratelimit";
 import { ALLOWED_METHODS, API_PATHS, matchApiPath, READ_METHODS } from "./routes";
-import { loadDataset, loadPostMarkdown, loadPosts } from "./store";
+import { loadDataset, loadPost, loadPosts } from "./store";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
 // Reads depend only on the deployed build; five minutes keeps a redeploy visible quickly.
@@ -93,12 +94,12 @@ api.use(
 
 api.use("*", apiHeaders({ enforceReads: true }));
 
-const datasetRoute = <T>(project: (data: Dataset) => T) => {
-  return async (c: Context<{ Bindings: Env }>) => {
+const datasetRoute =
+  <T>(project: (data: Dataset) => T) =>
+  async (c: Context<{ Bindings: Env }>) => {
     const data = await loadDataset(c.env.ASSETS);
     return data ? json(project(data)) : datasetUnavailable();
   };
-};
 
 api.on(
   READ_METHODS,
@@ -148,32 +149,24 @@ api.on(READ_METHODS, "/posts", async c => {
     });
   }
 
-  const query = c.req.query("q")?.trim().toLowerCase();
-  let posts = await loadPosts(c.env.ASSETS);
-  if (query) {
-    posts = posts.filter(
-      p => p.title.toLowerCase().includes(query) || p.description.toLowerCase().includes(query)
-    );
-  }
-  if (limit !== undefined) posts = posts.slice(0, limit);
+  const posts = searchPosts({
+    posts: await loadPosts(c.env.ASSETS),
+    query: c.req.query("q"),
+    limit
+  });
   return json({ posts, count: posts.length });
 });
 
 api.on(READ_METHODS, "/posts/:slug", async c => {
   const slug = c.req.param("slug");
-  const notFound = () =>
-    apiError({
-      status: 404,
-      code: "not_found",
-      message: `No published post has the slug '${slug}'.`,
-      hint: "Call GET /api/posts to list the slugs that exist."
-    });
-
-  const post = (await loadPosts(c.env.ASSETS)).find(p => p.slug === slug);
-  if (!post) return notFound();
-  const markdown = await loadPostMarkdown(c.env.ASSETS, slug);
-  if (markdown === null) return notFound();
-  return json({ ...post, markdown });
+  const post = await loadPost(c.env.ASSETS, slug);
+  if (post) return json(post);
+  return apiError({
+    status: 404,
+    code: "not_found",
+    message: `No published post has the slug '${slug}'.`,
+    hint: "Call GET /api/posts to list the slugs that exist."
+  });
 });
 
 // Served under both prefixes so a client that knows no version yet can discover one.
@@ -233,7 +226,7 @@ api.post("/contact", async c => {
     });
   }
 
-  const limiter = c.env.RateLimiter.get(c.env.RateLimiter.idFromName("global"));
+  const limiter = globalLimiter(c.env);
   const clientIp = c.req.header("CF-Connecting-IP") ?? "unknown";
 
   if (parsed.dryRun) {
@@ -249,9 +242,8 @@ api.post("/contact", async c => {
     );
   }
 
-  const inbox = c.env.OPPORTUNITY_INBOX?.trim();
-  const email = c.env.EMAIL as unknown as EmailLike | undefined;
-  if (!inbox || !email) {
+  const mailer = contactMailer(c.env);
+  if (!mailer) {
     return apiError({
       status: 503,
       code: "service_unavailable",
@@ -282,7 +274,7 @@ api.post("/contact", async c => {
   }
 
   try {
-    await sendContactEmail({ email, inbox, msg: parsed.value });
+    await sendContactEmail({ ...mailer, msg: parsed.value });
   } catch (err) {
     console.error("contact email failed", err);
     return apiError({
@@ -325,7 +317,7 @@ api.all("*", c => {
 });
 
 /** The OpenAPI document, with `servers` set to the host that was asked. */
-export function specResponse(requestUrl: string): Response {
+function specResponse(requestUrl: string): Response {
   return json(buildOpenApiDocument(publicOrigin(requestUrl)));
 }
 

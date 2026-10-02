@@ -53,6 +53,29 @@ function optional({
   return value;
 }
 
+function requiredEmail(raw: unknown, issues: FieldIssue[]): string | undefined {
+  if (typeof raw !== "string") {
+    issues.push({ field: "email", issue: "is required and must be a string" });
+    return undefined;
+  }
+  const value = raw.trim();
+  if (EMAIL.test(value) && value.length <= CONTACT_LIMITS.email) return value;
+  issues.push({ field: "email", issue: "must be a valid email address" });
+  return undefined;
+}
+
+function requiredMessage(raw: unknown, issues: FieldIssue[]): string | undefined {
+  if (typeof raw !== "string") {
+    issues.push({ field: "message", issue: "is required and must be a string" });
+    return undefined;
+  }
+  const value = raw.trim();
+  const { min, max } = CONTACT_LIMITS.message;
+  if (value.length >= min && value.length <= max) return value;
+  issues.push({ field: "message", issue: `must be between ${min} and ${max} characters` });
+  return undefined;
+}
+
 export function parseContactRequest(raw: unknown): ContactParseResult {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     return {
@@ -65,17 +88,7 @@ export function parseContactRequest(raw: unknown): ContactParseResult {
 
   const name = optional({ raw: body.name, field: "name", max: CONTACT_LIMITS.name, issues });
 
-  let email: string | undefined;
-  if (typeof body.email !== "string") {
-    issues.push({ field: "email", issue: "is required and must be a string" });
-  } else {
-    const trimmed = body.email.trim();
-    if (!EMAIL.test(trimmed) || trimmed.length > CONTACT_LIMITS.email) {
-      issues.push({ field: "email", issue: "must be a valid email address" });
-    } else {
-      email = trimmed;
-    }
-  }
+  const email = requiredEmail(body.email, issues);
 
   const company = optional({
     raw: body.company,
@@ -89,34 +102,18 @@ export function parseContactRequest(raw: unknown): ContactParseResult {
   if (typeof rawDryRun !== "boolean") issues.push({ field: "dryRun", issue: "must be a boolean" });
   const dryRun = rawDryRun === true;
 
-  let message: string | undefined;
-  if (typeof body.message !== "string") {
-    issues.push({
-      field: "message",
-      issue: "is required and must be a string"
-    });
-  } else {
-    const trimmed = body.message.trim();
-    const { min, max } = CONTACT_LIMITS.message;
-    if (trimmed.length < min || trimmed.length > max) {
-      issues.push({
-        field: "message",
-        issue: `must be between ${min} and ${max} characters`
-      });
-    } else {
-      message = trimmed;
-    }
-  }
+  const message = requiredMessage(body.message, issues);
 
-  if (issues.length > 0) return { ok: false, issues };
+  if (issues.length > 0 || email === undefined || message === undefined)
+    return { ok: false, issues };
   return {
     ok: true,
     dryRun,
     value: {
       ...(name ? { name } : {}),
-      email: email as string,
+      email,
       ...(company ? { company } : {}),
-      message: message as string
+      message
     }
   };
 }

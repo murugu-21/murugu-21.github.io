@@ -4,11 +4,11 @@
 //   bun run build                # the built site (scripts/site-dir.ts) must be current
 //   bun run audio                # every post whose spoken text changed
 //   bun run audio first-post     # one post
-//   bun run audio --force     # regenerate even if unchanged
-//   bun run audio --local     # target `wrangler dev`'s local R2
-//   bun run audio --dry-run   # extract + hash only, no synthesis/upload
-//   bun run audio --keep      # leave the temp dir behind for inspection
-//   bun run audio --upload-voice   # push .voice/* to R2 once
+//   bun run audio --force        # regenerate even if unchanged
+//   bun run audio --local        # target the local R2 that `bun run dev` serves
+//   bun run audio --dry-run      # extract + hash only, no synthesis/upload
+//   bun run audio --keep         # leave the temp dir behind for inspection
+//   bun run audio --upload-voice # push .voice/* to R2 once
 //
 // Per post: built HTML → speechBlocks (same as the page) → ≤300-char sentence
 // chunks → synth.py (Breeze TTS 2 via mlx-audio) → per-chunk atempo →
@@ -33,7 +33,7 @@ import { normalizeSpeechText, packSentences, spokenHash } from "../src/blog/util
 import { fail, log, publishedSlugs, run, runEach } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
 import { SITE_DIR } from "./site-dir.ts";
-import { r2Store } from "./tts/r2.ts";
+import { AUDIO_PREFIX, VOICE_PREFIX, r2Store } from "./tts/r2.ts";
 import { assemble, readWav, writeWav } from "./tts/wav.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
@@ -45,12 +45,10 @@ const DIST = join(SITE_DIR, "blog");
 const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   ? resolve(process.env.AUDIO_VOICE_DIR)
   : join(ROOT, ".voice");
+const VOICE_WAV = join(VOICE_DIR, "reference.wav");
+const VOICE_TXT = join(VOICE_DIR, "reference.txt");
 const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "synth.py");
-// Namespaced per voice so a new one never overwrites the last; worker/audio.ts
-// and align-audio.ts read the same prefix.
-const KEY_PREFIX = "blog/breeze";
-const VOICE_KEY_PREFIX = "voice/breeze";
 const VOICE_ID = "breeze-tts-2-8bit/chennai-2026-09-09";
 const CHUNK_MAX = 300;
 const GAPS = { intra: 0.15, inter: 0.45 };
@@ -61,11 +59,7 @@ const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1
 const args = process.argv.slice(2);
 const flags = new Set(args.filter(a => a.startsWith("--")));
 const slugs = args.filter(a => !a.startsWith("--"));
-const local = flags.has("--local");
-
-const r2 = r2Store(local);
-
-// ---- preconditions ---------------------------------------------------------
+const r2 = r2Store(flags.has("--local"));
 
 function checkPreconditions(): { audio: string; text: string } {
   if (!existsSync(DIST)) fail(`${DIST} missing — run \`bun run build\` first`);
@@ -84,22 +78,18 @@ function checkPreconditions(): { audio: string; text: string } {
       fail(".venv-tts cannot import mlx_audio — reinstall scripts/tts/requirements.txt");
     }
   }
-  const wav = join(VOICE_DIR, "reference.wav");
-  const txt = join(VOICE_DIR, "reference.txt");
-  if (!existsSync(wav) || !existsSync(txt)) {
+  if (!existsSync(VOICE_WAV) || !existsSync(VOICE_TXT)) {
     log("no .voice/ reference locally, fetching from R2 …");
     mkdirSync(VOICE_DIR, { recursive: true });
     if (
-      !r2.get(`${VOICE_KEY_PREFIX}/reference.wav`, wav) ||
-      !r2.get(`${VOICE_KEY_PREFIX}/reference.txt`, txt)
+      !r2.get(`${VOICE_PREFIX}/reference.wav`, VOICE_WAV) ||
+      !r2.get(`${VOICE_PREFIX}/reference.txt`, VOICE_TXT)
     ) {
       fail("voice reference missing locally and in R2 — restore .voice/reference.{wav,txt}");
     }
   }
-  return { audio: wav, text: readFileSync(txt, "utf8").trim() };
+  return { audio: VOICE_WAV, text: readFileSync(VOICE_TXT, "utf8").trim() };
 }
-
-// ---- extraction ------------------------------------------------------------
 
 function extractBlocks(slug: string): string[] {
   const html = readFileSync(join(DIST, slug, "index.html"), "utf8");
@@ -111,8 +101,6 @@ function extractBlocks(slug: string): string[] {
   if (title) raw.unshift(title.textContent ?? "");
   return raw.map(normalizeSpeechText).filter(t => t.length > 0);
 }
-
-// ---- synthesis worker -------------------------------------------------------
 
 // synth.py replies: one after model load, one per chunk, `done` per job.
 interface ReadyMsg {
@@ -144,11 +132,9 @@ function startWorker() {
 
 type Worker = ReturnType<typeof startWorker>;
 
-// ---- per-post pipeline ------------------------------------------------------
-
 function existingHash(slug: string, tmp: string): string | null {
   const file = join(tmp, "existing.json");
-  if (!r2.get(`${KEY_PREFIX}/${slug}.json`, file)) return null;
+  if (!r2.get(`${AUDIO_PREFIX}/${slug}.json`, file)) return null;
   try {
     const { hash } = JSON.parse(readFileSync(file, "utf8")) as { hash?: string };
     return hash ?? null;
@@ -269,8 +255,8 @@ async function renderPost(
         }))
       })
     );
-    r2.put(`${KEY_PREFIX}/${slug}.mp3`, mp3, "audio/mpeg");
-    r2.put(`${KEY_PREFIX}/${slug}.json`, json, "application/json");
+    r2.put(`${AUDIO_PREFIX}/${slug}.mp3`, mp3, "audio/mpeg");
+    r2.put(`${AUDIO_PREFIX}/${slug}.json`, json, "application/json");
     log(`${slug}: uploaded ${(duration / 60).toFixed(1)} min`);
     return "rendered";
   } finally {
@@ -279,17 +265,13 @@ async function renderPost(
   }
 }
 
-// ---- main ------------------------------------------------------------------
-
 async function main() {
   if (flags.has("--upload-voice")) {
-    const wav = join(VOICE_DIR, "reference.wav");
-    const txt = join(VOICE_DIR, "reference.txt");
-    if (!existsSync(wav) || !existsSync(txt)) {
+    if (!existsSync(VOICE_WAV) || !existsSync(VOICE_TXT)) {
       fail("put reference.wav and reference.txt in .voice/ first");
     }
-    r2.put(`${VOICE_KEY_PREFIX}/reference.wav`, wav, "audio/wav");
-    r2.put(`${VOICE_KEY_PREFIX}/reference.txt`, txt, "text/plain");
+    r2.put(`${VOICE_PREFIX}/reference.wav`, VOICE_WAV, "audio/wav");
+    r2.put(`${VOICE_PREFIX}/reference.txt`, VOICE_TXT, "text/plain");
     log("voice reference uploaded");
     return;
   }

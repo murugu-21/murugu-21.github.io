@@ -2,8 +2,6 @@ import type { ChatHistoryEntry } from "./protocol";
 
 export const MAX_HISTORY_MESSAGES = 20;
 // Per-room cap over a rolling 24h; the only pacing on spend.
-// Before swapping DEEPSEEK_MODEL, run `bun run test:capture`: some models
-// narrate a lead capture without calling capture_opportunity, losing the lead.
 export const ROOM_DAILY_LIMIT = 40;
 
 // OpenAI-compatible, so any chat-completions provider can serve them.

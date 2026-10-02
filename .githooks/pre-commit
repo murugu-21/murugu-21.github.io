@@ -1,6 +1,5 @@
 #!/bin/sh
 # Formats staged files only; heavy gates run in pre-push.
-# Bypass: git commit --no-verify
 set -e
 
 bunx lint-staged

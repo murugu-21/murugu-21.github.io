@@ -9,7 +9,6 @@ export const greeting = {
   username: "Murugappan M",
   // short, candid form used only by the hero line ("I'm Muru")
   nickname: "Muru",
-  title: "Hi all, I'm Murugappan",
   subTitle:
     "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.",
   resumePath: "/resume.pdf"
@@ -38,7 +37,7 @@ export const sameAs = [
   socialMediaLinks.twitter
 ];
 
-export interface SoftwareSkill {
+interface SoftwareSkill {
   skillName: string;
   iconName: string; // <symbol id> in src/assets/icons.svg, rendered by components/Icon.astro
 }
@@ -74,7 +73,7 @@ export const skillsSection: {
 
 // progressPercentage feeds the dataset API's `level`; the site doesn't show it.
 
-export interface ProficiencyTool {
+interface ProficiencyTool {
   name: string;
   icon: string;
 }
@@ -134,7 +133,7 @@ export const techStack: {
   ]
 };
 
-export interface WorkExperience {
+interface WorkExperience {
   role: string;
   company: string;
   companyLogo: ImageMetadata;
@@ -238,7 +237,7 @@ export const skillsCategories: { category: string; items: string }[] = [
   }
 ];
 
-export interface Education {
+interface Education {
   schoolName: string;
   logo: ImageMetadata;
   subHeader: string;
@@ -266,14 +265,9 @@ export const educationInfo: Education[] = [
 // Pinned GitHub repos, fetched at build time; the section renders only when
 // some exist.
 
-export const projectsSection: {
-  title: string;
-  subtitle: string;
-  display: boolean;
-} = {
+export const projectsSection: { title: string; subtitle: string } = {
   title: "Projects 🛠️",
-  subtitle: "A few things I've built — pinned from my GitHub.",
-  display: true
+  subtitle: "A few things I've built — pinned from my GitHub."
 };
 
 export const openSourceSection: { title: string; subtitle: string } = {
@@ -354,7 +348,7 @@ export const contactInfo = {
   // Never hardcoded: comes from RESUME_PHONE. Renders only in GithubCard's
   // no-profile fallback.
   number: import.meta.env.RESUME_PHONE ?? "",
-  emailAddress: "murugu2001@gmail.com"
+  emailAddress: socialMediaLinks.gmail
 };
 
 export const isHireable = true;

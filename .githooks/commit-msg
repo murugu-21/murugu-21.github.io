@@ -1,6 +1,5 @@
 #!/bin/sh
 # Enforces Conventional Commits on the subject line; `content` is this repo's type for site copy.
-# Bypass: git commit --no-verify
 subject=$(head -n 1 "$1")
 
 case "$subject" in

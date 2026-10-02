@@ -1,11 +1,15 @@
 // wrangler R2 helpers for the audio scripts: object get/put and a login check,
-// against --remote or a local `wrangler dev` bucket.
+// against --remote or the local R2 that `bun run dev` serves.
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
 import { fail, run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";
+// Namespaced per voice so a new one never overwrites the last; worker/audio.ts
+// serves the same prefix.
+export const AUDIO_PREFIX = "blog/breeze";
+export const VOICE_PREFIX = "voice/breeze";
 
 export function r2Store(local: boolean) {
   const args = (extra: string[]) => [

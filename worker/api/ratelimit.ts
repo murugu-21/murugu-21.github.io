@@ -45,7 +45,7 @@ export function rateLimitField(quota: Quota, remaining: number, resetSeconds: nu
 }
 
 /** The draft fields plus the de-facto `X-RateLimit-*` trio for one policy. */
-export function rateLimitHeaders(
+function rateLimitHeaders(
   policies: readonly Quota[],
   reported: { quota: Quota; remaining: number; resetSeconds: number }
 ): Record<string, string> {
@@ -129,6 +129,11 @@ export function contactRateLimitHeaders(usage: {
     remaining: clientTighter ? usage.clientRemaining : usage.globalRemaining,
     resetSeconds: usage.resetSeconds
   });
+}
+
+/** The one RateLimiter DO every caller shares, so allowances and the chat balance are global. */
+export function globalLimiter(env: Env) {
+  return env.RateLimiter.get(env.RateLimiter.idFromName("global"));
 }
 
 /** Seconds until the daily contact allowances reset (00:00 UTC). */

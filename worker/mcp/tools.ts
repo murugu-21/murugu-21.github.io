@@ -4,9 +4,11 @@
 
 import { API_SCHEMAS } from "../api/openapi";
 import { parseContactRequest, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
-import { POSTS_LIMIT_MAX } from "../api/posts";
-import { loadDataset, loadPostMarkdown, loadPosts, type AssetsLike } from "../api/store";
-import { sendContactEmail, type EmailLike } from "../email";
+import type { Dataset } from "../api/dataset";
+import { POSTS_LIMIT_MAX, searchPosts } from "../api/posts";
+import { globalLimiter } from "../api/ratelimit";
+import { loadDataset, loadPost, loadPosts, type AssetsLike } from "../api/store";
+import { contactMailer, sendContactEmail } from "../email";
 import { resolveSchema, type JsonSchema } from "./schema";
 
 export type ToolContext = {
@@ -82,7 +84,7 @@ function datasetTool({
   title: string;
   description: string;
   schema: string;
-  project: (data: NonNullable<Awaited<ReturnType<typeof loadDataset>>>) => unknown;
+  project: (data: Dataset) => unknown;
 }): McpTool {
   return {
     name,
@@ -188,15 +190,7 @@ export const MCP_TOOLS: McpTool[] = [
         limit = parsed;
       }
 
-      let posts = await loadPosts(ctx.assets);
-      const needle = query.value?.trim().toLowerCase();
-      if (needle) {
-        posts = posts.filter(
-          p =>
-            p.title.toLowerCase().includes(needle) || p.description.toLowerCase().includes(needle)
-        );
-      }
-      if (limit !== undefined) posts = posts.slice(0, limit);
+      const posts = searchPosts({ posts: await loadPosts(ctx.assets), query: query.value, limit });
       return ok({ posts, count: posts.length });
     }
   },
@@ -226,12 +220,11 @@ export const MCP_TOOLS: McpTool[] = [
       if (!slug.value)
         return fail("The 'slug' argument is required. Call search_blog_posts to discover slugs.");
 
-      const notFound = `No published post has the slug '${slug.value}'. Call search_blog_posts to see which slugs exist.`;
-      const post = (await loadPosts(ctx.assets)).find(p => p.slug === slug.value);
-      if (!post) return fail(notFound);
-      const markdown = await loadPostMarkdown(ctx.assets, slug.value);
-      if (markdown === null) return fail(notFound);
-      return ok({ ...post, markdown });
+      const post = await loadPost(ctx.assets, slug.value);
+      if (post) return ok(post);
+      return fail(
+        `No published post has the slug '${slug.value}'. Call search_blog_posts to see which slugs exist.`
+      );
     }
   },
   {
@@ -297,15 +290,13 @@ export const MCP_TOOLS: McpTool[] = [
         });
       }
 
-      const inbox = ctx.env.OPPORTUNITY_INBOX?.trim();
-      const email = ctx.env.EMAIL as unknown as EmailLike | undefined;
-      if (!inbox || !email)
+      const mailer = contactMailer(ctx.env);
+      if (!mailer)
         return fail(
           "Message delivery is not configured on this deployment. Use one of the contact links from get_profile instead."
         );
 
-      const limiter = ctx.env.RateLimiter.get(ctx.env.RateLimiter.idFromName("global"));
-      const slot = await limiter.takeContactSlot(ctx.clientIp);
+      const slot = await globalLimiter(ctx.env).takeContactSlot(ctx.clientIp);
       if (!slot.allowed)
         return fail(
           slot.scope === "client"
@@ -314,7 +305,7 @@ export const MCP_TOOLS: McpTool[] = [
         );
 
       try {
-        await sendContactEmail({ email, inbox, msg: parsed.value });
+        await sendContactEmail({ ...mailer, msg: parsed.value });
       } catch (err) {
         console.error("mcp send_message failed", err);
         return fail(

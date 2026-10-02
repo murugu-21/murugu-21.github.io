@@ -47,6 +47,25 @@ export function parsePostList(llmsTxt: string): PostSummary[] {
   return posts;
 }
 
+/** Case-insensitive substring match on title and description, then the first `limit`. */
+export function searchPosts({
+  posts,
+  query,
+  limit
+}: {
+  posts: PostSummary[];
+  query?: string;
+  limit?: number;
+}): PostSummary[] {
+  const needle = query?.trim().toLowerCase();
+  const matches = needle
+    ? posts.filter(
+        p => p.title.toLowerCase().includes(needle) || p.description.toLowerCase().includes(needle)
+      )
+    : posts;
+  return limit === undefined ? matches : matches.slice(0, limit);
+}
+
 // Built by src/pages/blog/[slug]/index.md.ts. The slug comes from the request path, so it is
 // re-validated.
 export function postMarkdownPath(slug: string): string | null {

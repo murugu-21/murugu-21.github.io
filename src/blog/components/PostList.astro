@@ -84,26 +84,19 @@ const tags: TagCount[] = [...totals]
       for (const input of tagInputs) input.checked = tags.has(input.value);
     };
 
-    search?.addEventListener("input", () => {
+    const onFilter = () => {
       apply();
       syncUrl();
-    });
-    for (const input of tagInputs) {
-      input.addEventListener("change", () => {
-        apply();
-        syncUrl();
-      });
-    }
-    addEventListener("popstate", () => {
+    };
+    const restore = () => {
       readUrl();
       apply();
-    });
-    addEventListener("pageshow", () => {
-      readUrl();
-      apply();
-    });
+    };
 
-    readUrl();
-    apply();
+    search?.addEventListener("input", onFilter);
+    for (const input of tagInputs) input.addEventListener("change", onFilter);
+    addEventListener("popstate", restore);
+    addEventListener("pageshow", restore);
+    restore();
   }
 </script>

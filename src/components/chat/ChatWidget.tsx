@@ -115,6 +115,18 @@ export function ChatWidget() {
     if (text) setBubbles(b => [...b, { kind: "assistant", text }]);
   };
 
+  const clearIndicators = () => {
+    setTyping(false);
+    setWaiting(false);
+    setActivity(null);
+  };
+
+  const endTurn = () => {
+    clearIndicators();
+    commitStream();
+    setSending(false);
+  };
+
   const handleServerMessage = (msg: ServerMessage) => {
     switch (msg.type) {
       case "history":
@@ -123,9 +135,7 @@ export function ChatWidget() {
           clearTimeout(greetTimerRef.current);
           greetTimerRef.current = null;
         }
-        setTyping(false);
-        setWaiting(false);
-        setActivity(null);
+        clearIndicators();
         streamRef.current = null;
         setStream(null);
         // History includes the server-seeded greeting; `greeted` is only the offline fallback.
@@ -140,9 +150,7 @@ export function ChatWidget() {
         // Replies can lead with blank lines; trim the first chunk and wait for real text.
         const text = streamRef.current === null ? msg.text.replace(/^\s+/, "") : msg.text;
         if (streamRef.current === null && text === "") break;
-        setTyping(false);
-        setWaiting(false);
-        setActivity(null);
+        clearIndicators();
         streamRef.current = (streamRef.current ?? "") + text;
         setStream(streamRef.current);
         break;
@@ -153,21 +161,13 @@ export function ChatWidget() {
         setWaiting(true);
         break;
       case "done":
-        setTyping(false);
-        setWaiting(false);
-        setActivity(null);
-        commitStream();
-        setSending(false);
+        endTurn();
         break;
       case "limit":
       case "error":
         // PII: never send message text to PostHog.
         track(msg.type === "limit" ? "chat_limit" : "chat_error");
-        setTyping(false);
-        setWaiting(false);
-        setActivity(null);
-        commitStream();
-        setSending(false);
+        endTurn();
         setBubbles(b => [...b, { kind: "system", text: msg.message }]);
         break;
     }
@@ -182,16 +182,14 @@ export function ChatWidget() {
     });
     socket.addEventListener("message", event => {
       try {
-        handleServerMessage(JSON.parse(event.data as string) as ServerMessage);
+        handleServerMessage(JSON.parse(event.data));
       } catch (err) {
         // A protocol bug worth tracking; nothing the visitor typed is passed.
         reportError(err, { surface: "chat" });
       }
     });
     socket.addEventListener("close", () => {
-      setTyping(false);
-      setWaiting(false);
-      setActivity(null);
+      clearIndicators();
       setSending(false);
     });
     socketRef.current = socket;
@@ -220,12 +218,9 @@ export function ChatWidget() {
   };
 
   const toggleOpen = () => {
-    if (open) {
-      setOpen(false);
-      setTooltip("hidden");
-    } else {
-      openPanel();
-    }
+    if (!open) return openPanel();
+    setOpen(false);
+    setTooltip("hidden");
   };
 
   const sendText = (raw: string) => {
@@ -259,7 +254,7 @@ export function ChatWidget() {
     autoGrow(el);
   };
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     submit();
   };
@@ -281,9 +276,7 @@ export function ChatWidget() {
     streamRef.current = null;
     setBubbles([]);
     setStream(null);
-    setTyping(false);
-    setWaiting(false);
-    setActivity(null);
+    clearIndicators();
     setSending(false);
     setGreeted(false);
     setConfirmRestart(false);

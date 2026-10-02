@@ -74,7 +74,7 @@ const variantLabel = (variant: Variant) => (variant.kind === "png" ? "png" : var
 const PNG_PADDING = 12;
 
 // background matches post.css's card (dark is --color-dark-bg)
-const THEMES: Record<DiagramTheme, { mermaid: string; background: string }> = {
+const THEMES: Record<DiagramTheme, { mermaid: "neutral" | "dark"; background: string }> = {
   light: { mermaid: "neutral", background: "#fff" },
   dark: { mermaid: "dark", background: "#282c35" }
 };
@@ -203,7 +203,7 @@ async function renderOne({
     },
     {
       src: source,
-      themeName: THEMES[theme].mermaid as "neutral" | "dark",
+      themeName: THEMES[theme].mermaid,
       fontFamily: FONT_FAMILY,
       svgId: `m-${hash}-${theme}`
     }
@@ -239,12 +239,12 @@ async function rasterize(page: Page, styledSvg: string): Promise<Buffer> {
     height: Math.ceil(size.height) + 2 * PNG_PADDING + 40,
     deviceScaleFactor: 2
   });
-  await page.evaluate(padding => {
-    (document.getElementById("shot") as HTMLElement).style.padding = `${padding}px`;
+  const card = await page.$("div#shot");
+  if (!card) throw new Error("rasterize: card element missing");
+  await card.evaluate((el, padding) => {
+    el.style.padding = `${padding}px`;
   }, PNG_PADDING);
   await page.evaluate(() => document.fonts.ready);
-  const card = await page.$("#shot");
-  if (!card) throw new Error("rasterize: card element missing");
   const shot = await card.screenshot({ type: "png" });
   await page.evaluate(() => {
     document.body.innerHTML = "";

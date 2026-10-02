@@ -1,11 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import type { Code, Image, Paragraph, Parent, Root } from "mdast";
+import type { Image, Paragraph, Root } from "mdast";
 import type { VFile } from "vfile";
 
 import {
   DIAGRAM_THEMES,
+  collectMermaidNodes,
   diagramAlt,
   diagramFile,
   diagramHash,
@@ -18,22 +19,6 @@ import {
 // Astro's image pipeline and the RSS absolutizer treat them like any post
 // image. A missing rendering (a new or edited fence) runs the renderer; one it
 // can't produce fails the build rather than shipping broken.
-
-interface Fence {
-  node: Code;
-  parent: Parent;
-  index: number;
-}
-
-function collectFences(node: Parent, out: Fence[]): void {
-  node.children.forEach((child, index) => {
-    if (child.type === "code" && child.lang === "mermaid") {
-      out.push({ node: child, parent: node, index });
-    } else if ("children" in child) {
-      collectFences(child, out);
-    }
-  });
-}
 
 // Intrinsic size from the viewBox: reserves layout space and gives medium-zoom
 // its natural dimensions.
@@ -54,29 +39,26 @@ function renderMissing(): void {
 
 export default function remarkMermaid() {
   return async function transform(tree: Root, file: VFile): Promise<void> {
-    const fences: Fence[] = [];
-    collectFences(tree, fences);
+    const fences = collectMermaidNodes(tree);
     if (fences.length === 0) return;
     if (!file.path) {
       throw new Error("remark-mermaid: a mermaid fence was found in markdown with no file path");
     }
     const postDir = dirname(file.path);
 
-    // Replace from the end so earlier sibling indexes stay valid.
-    for (const [i, { node, parent, index }] of [...fences.entries()].reverse()) {
+    // One-for-one replacement, so sibling indexes stay valid.
+    for (const [i, { node, parent, index }] of fences.entries()) {
       const hash = await diagramHash(node.value);
-      const paths = Object.fromEntries(
-        DIAGRAM_THEMES.map(theme => [theme, join(postDir, diagramFile(hash, theme))])
-      ) as Record<DiagramTheme, string>;
-      if (!DIAGRAM_THEMES.every(theme => existsSync(paths[theme]))) renderMissing();
+      const pathOf = (theme: DiagramTheme) => join(postDir, diagramFile(hash, theme));
+      if (!DIAGRAM_THEMES.every(theme => existsSync(pathOf(theme)))) renderMissing();
       for (const theme of DIAGRAM_THEMES) {
-        if (!existsSync(paths[theme])) {
+        if (!existsSync(pathOf(theme))) {
           throw new Error(
-            `remark-mermaid: ${relative(process.cwd(), paths[theme])} was not rendered for ${diagramAlt(i).toLowerCase()} of ${relative(process.cwd(), file.path)}`
+            `remark-mermaid: ${relative(process.cwd(), pathOf(theme))} was not rendered for ${diagramAlt(i).toLowerCase()} of ${relative(process.cwd(), file.path)}`
           );
         }
       }
-      const size = svgSize(readFileSync(paths.light, "utf8"));
+      const size = svgSize(readFileSync(pathOf("light"), "utf8"));
 
       const images: Image[] = DIAGRAM_THEMES.map(theme => ({
         type: "image",

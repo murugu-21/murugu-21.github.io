@@ -4,14 +4,14 @@ import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
 
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "../../blog/consts";
-import { getPublishedPosts, excerpt } from "../../blog/utils/posts";
+import { getPublishedPosts, postDescription, postUrl } from "../../blog/utils/posts";
 import { replaceMermaidFences } from "../../blog/utils/mermaid-diagrams";
+import { SITE_ORIGIN } from "../../lib/site";
 
 const parser = new MarkdownIt();
 
 // Feed readers need absolute image URLs; importing post images here yields
 // their hashed, emitted public paths.
-const ORIGIN = new URL(SITE_URL).origin;
 const assets = import.meta.glob<{ default: ImageMetadata | string }>(
   "../../../content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}",
   { eager: true }
@@ -21,7 +21,7 @@ const ASSET_URLS = new Map(
     const asset = mod.default;
     return [
       file.replace("../../../content/blog/", ""),
-      ORIGIN + (typeof asset === "string" ? asset : asset.src)
+      SITE_ORIGIN + (typeof asset === "string" ? asset : asset.src)
     ];
   })
 );
@@ -48,8 +48,8 @@ export async function GET() {
     posts.map(async post => ({
       title: post.data.title,
       pubDate: post.data.date,
-      link: `${SITE_URL}/${post.id}/`,
-      description: post.data.description || excerpt(post.body),
+      link: postUrl(post.id),
+      description: postDescription(post),
       content: absolutizeAssets(
         sanitizeHtml(parser.render(await replaceMermaidFences(post.body || "")), {
           allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"])

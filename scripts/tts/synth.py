@@ -75,13 +75,12 @@ def run_job(model, job_path: str) -> None:
                 {
                     "id": chunk["id"],
                     "seconds": len(audio) / SAMPLE_RATE,
-                    "sampleRate": SAMPLE_RATE,
                     "wall": round(time.time() - t0, 1),
                 }
             )
         except Exception as exc:  # noqa: BLE001 — report and keep going; the orchestrator decides
             emit({"id": chunk["id"], "error": f"{type(exc).__name__}: {exc}"})
-    emit({"done": True, "job": job_path})
+    emit({"done": True})
 
 
 def main() -> int:

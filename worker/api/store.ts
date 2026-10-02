@@ -35,7 +35,15 @@ export async function loadPosts(assets: AssetsLike): Promise<PostSummary[]> {
   return body === null ? [] : parsePostList(body);
 }
 
-export async function loadPostMarkdown(assets: AssetsLike, slug: string): Promise<string | null> {
+/** A published post with its markdown, so an unlisted markdown file can't be guessed. */
+export async function loadPost(
+  assets: AssetsLike,
+  slug: string
+): Promise<(PostSummary & { markdown: string }) | null> {
   const path = postMarkdownPath(slug);
-  return path === null ? null : readAsset(assets, path);
+  if (path === null) return null;
+  const post = (await loadPosts(assets)).find(p => p.slug === slug);
+  if (!post) return null;
+  const markdown = await readAsset(assets, path);
+  return markdown === null ? null : { ...post, markdown };
 }

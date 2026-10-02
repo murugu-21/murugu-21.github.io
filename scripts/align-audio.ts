@@ -3,8 +3,8 @@
 //
 //   bun run audio:align              # every post whose JSON is still version 1
 //   bun run audio:align first-post   # one post
-//   bun run audio:align --force   # re-align version 2 posts too
-//   bun run audio:align --local   # target `wrangler dev`'s local R2
+//   bun run audio:align --force      # re-align version 2 posts too
+//   bun run audio:align --local      # target the local R2 that `bun run dev` serves
 //
 // Poorly aligned blocks keep no `words` (paragraph highlight only).
 // Don't run alongside `bun run audio`: both want the GPU.
@@ -17,7 +17,7 @@ import { alignWords, type TimedWord, type WhisperWord } from "../src/blog/utils/
 import { fail, log, publishedSlugs, run, runEach } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
 import { SITE_DIR } from "./site-dir.ts";
-import { r2Store } from "./tts/r2.ts";
+import { AUDIO_PREFIX, r2Store } from "./tts/r2.ts";
 
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const DIST = join(SITE_DIR, "blog");
@@ -27,11 +27,7 @@ const WORKER = join(ROOT, "scripts", "tts", "whisper.py");
 const args = process.argv.slice(2);
 const flags = new Set(args.filter(a => a.startsWith("--")));
 const slugs = args.filter(a => !a.startsWith("--"));
-const local = flags.has("--local");
-
-const r2 = r2Store(local);
-
-// ---- whisper worker ---------------------------------------------------------
+const r2 = r2Store(flags.has("--local"));
 
 interface WhisperReply {
   error?: string;
@@ -64,14 +60,12 @@ interface Timings {
   blocks: TimingBlock[];
 }
 
-// ---- per-post -----------------------------------------------------------------
-
 async function alignPost(slug: string, worker: Worker) {
   const tmp = mkdtempSync(join(tmpdir(), `align-${slug}-`));
   try {
     const jsonPath = join(tmp, "timings.json");
     const mp3 = join(tmp, "post.mp3");
-    if (!r2.get(`blog/breeze/${slug}.json`, jsonPath)) {
+    if (!r2.get(`${AUDIO_PREFIX}/${slug}.json`, jsonPath)) {
       log(`${slug}: no audio in R2, skipping`);
       return "skipped";
     }
@@ -80,7 +74,7 @@ async function alignPost(slug: string, worker: Worker) {
       log(`${slug}: already aligned, skipping`);
       return "skipped";
     }
-    if (!r2.get(`blog/breeze/${slug}.mp3`, mp3)) throw new Error("mp3 missing in R2");
+    if (!r2.get(`${AUDIO_PREFIX}/${slug}.mp3`, mp3)) throw new Error("mp3 missing in R2");
 
     const wav = join(tmp, "post.wav");
     run("ffmpeg", ["-y", "-loglevel", "error", "-i", mp3, "-ac", "1", "-ar", "16000", wav]);
@@ -125,15 +119,13 @@ async function alignPost(slug: string, worker: Worker) {
 
     const out = { ...timings, version: 2, blocks };
     writeFileSync(jsonPath, JSON.stringify(out));
-    r2.put(`blog/breeze/${slug}.json`, jsonPath, "application/json");
+    r2.put(`${AUDIO_PREFIX}/${slug}.json`, jsonPath, "application/json");
     log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
     return "aligned";
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
 }
-
-// ---- main ------------------------------------------------------------------------
 
 async function main() {
   if (!existsSync(PYTHON)) fail('no .venv-tts — see README "Read-aloud audio"');

@@ -52,27 +52,25 @@ export const SPEC_PATHS: readonly string[] = [
   API_PATHS.openapi
 ];
 
-const LITERAL_PATHS = Object.values(API_PATHS).filter(p => !p.includes("{"));
+const LITERAL_PATHS: readonly string[] = Object.values(API_PATHS).filter(p => !p.includes("{"));
 const POST_PATH = new RegExp(`^${VERSIONED_API_BASE}/posts/[^/]+$`);
 
 /** Rewrites the unversioned alias onto `/api/v1`. Bare `/api` names no endpoint, so it is kept. */
 export function toVersionedPath(pathname: string): string {
   if (
-    pathname === API_BASE ||
+    !pathname.startsWith(`${API_BASE}/`) ||
     pathname === VERSIONED_API_BASE ||
     pathname.startsWith(`${VERSIONED_API_BASE}/`)
   )
     return pathname;
-  if (pathname.startsWith(`${API_BASE}/`))
-    return `${VERSIONED_API_BASE}${pathname.slice(API_BASE.length)}`;
-  return pathname;
+  return `${VERSIONED_API_BASE}${pathname.slice(API_BASE.length)}`;
 }
 
 /** The templated path a request URL maps to, or null when nothing serves it. */
 export function matchApiPath(pathname: string): string | null {
   const trimmed = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   const path = toVersionedPath(trimmed);
-  if ((LITERAL_PATHS as string[]).includes(path)) return path;
+  if (LITERAL_PATHS.includes(path)) return path;
   if (POST_PATH.test(path)) return API_PATHS.post;
   return null;
 }

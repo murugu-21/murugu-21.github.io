@@ -48,7 +48,8 @@
 <script>
   import { currentTheme, setTheme } from "../lib/theme";
 
-  const btn = document.getElementById("theme-toggle") as HTMLButtonElement;
+  const btn = document.getElementById("theme-toggle");
+  if (!btn) throw new Error("ThemeToggle: #theme-toggle is missing");
 
   // The label names the action, so it tracks the theme rather than the state.
   const label = () =>

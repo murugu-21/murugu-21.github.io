@@ -4,7 +4,7 @@ import { SITE_ORIGIN } from "../lib/site";
 import "../styles/global.css";
 import ChatWidget from "../components/chat/ChatWidget.astro";
 import Particles from "../components/Particles.astro";
-import { sameAs, skillsCategories } from "../data/portfolio";
+import { sameAs, skillsCategories, socialMediaLinks } from "../data/portfolio";
 
 interface Props {
   title?: string;
@@ -70,7 +70,7 @@ const personNode = {
   givenName: "Murugappan",
   // helps entity resolvers connect the sameAs profiles
   alternateName: ["murugu-21", "murugu21"],
-  email: "mailto:murugu2001@gmail.com",
+  email: `mailto:${socialMediaLinks.gmail}`,
   address: {
     "@type": "PostalAddress",
     addressLocality: "Bangalore",

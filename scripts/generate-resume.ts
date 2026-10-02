@@ -129,10 +129,8 @@ try {
     process.exitCode = 1;
   } else {
     console.log(
-      `[generate-resume] wrote ${OUT_PATH} (${(size / 1024).toFixed(1)} KB, ${pageCount ?? "unknown"} page${pageCount === 1 ? "" : "s"})`
-    );
-    console.log(
-      `[generate-resume] ATS gate passed — all ${ATS_REQUIRED_TOKENS.length} required tokens found; ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"} (max ${MAX_PAGES})`
+      `[generate-resume] wrote ${OUT_PATH} (${(size / 1024).toFixed(1)} KB, ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"}); ` +
+        `ATS gate passed, all ${ATS_REQUIRED_TOKENS.length} required tokens found`
     );
   }
 } finally {

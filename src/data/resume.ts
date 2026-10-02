@@ -1,9 +1,10 @@
+import { SITE_ORIGIN } from "../lib/site";
 import { socialMediaLinks } from "./portfolio";
 
 // The phone number is never hardcoded: it comes from the RESUME_PHONE build
 // env var, and the contact line omits it when unset.
 
-export interface ResumeContact {
+interface ResumeContact {
   name: string;
   title: string;
   location: string;
@@ -18,9 +19,9 @@ export const resumeContact: ResumeContact = {
   name: "Murugappan M",
   title: "Full Stack Engineer",
   location: "Bangalore, India",
-  email: "murugu2001@gmail.com",
+  email: socialMediaLinks.gmail,
   phone: import.meta.env.RESUME_PHONE ?? "",
   linkedin: socialMediaLinks.linkedin,
   github: socialMediaLinks.github,
-  site: "https://murugappan.dev"
+  site: SITE_ORIGIN
 };

@@ -3,9 +3,13 @@
 // from the body); anything else as legacy `initialize`. No sessions either way.
 
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
-export const MODERN_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION] as const;
+const MODERN_PROTOCOL_VERSIONS: readonly string[] = [LATEST_PROTOCOL_VERSION];
 // Newest first — the first entry is what `initialize` falls back to.
-export const LEGACY_PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"] as const;
+export const LEGACY_PROTOCOL_VERSIONS: readonly string[] = [
+  "2025-11-25",
+  "2025-06-18",
+  "2025-03-26"
+];
 export const SUPPORTED_PROTOCOL_VERSIONS: string[] = [
   ...MODERN_PROTOCOL_VERSIONS,
   ...LEGACY_PROTOCOL_VERSIONS
@@ -14,9 +18,8 @@ export const SUPPORTED_PROTOCOL_VERSIONS: string[] = [
 export const SERVER_NAME = "murugappan.dev";
 
 // `_meta` keys reserved by the specification.
-export const META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
-export const META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo";
-export const META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
+const META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
+const META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
 export const META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
 // JSON-RPC 2.0 standard codes plus the MCP-reserved sub-range (-32020..-32099).
@@ -24,8 +27,8 @@ export const JSON_RPC_PARSE_ERROR = -32700;
 export const JSON_RPC_INVALID_REQUEST = -32600;
 export const JSON_RPC_METHOD_NOT_FOUND = -32601;
 export const JSON_RPC_INVALID_PARAMS = -32602;
-export const MCP_HEADER_MISMATCH = -32020;
-export const MCP_UNSUPPORTED_PROTOCOL_VERSION = -32022;
+const MCP_HEADER_MISMATCH = -32020;
+const MCP_UNSUPPORTED_PROTOCOL_VERSION = -32022;
 
 export type JsonRpcId = string | number;
 
@@ -94,16 +97,19 @@ export function parseMessage(
   };
 }
 
-export function isModernRequest(message: JsonRpcMessage): boolean {
+function metaOf(message: JsonRpcMessage): Record<string, unknown> {
   const meta = message.params?._meta;
-  if (typeof meta !== "object" || meta === null) return false;
-  return typeof (meta as Record<string, unknown>)[META_PROTOCOL_VERSION] === "string";
+  return typeof meta === "object" && meta !== null ? (meta as Record<string, unknown>) : {};
+}
+
+export function isModernRequest(message: JsonRpcMessage): boolean {
+  return typeof metaOf(message)[META_PROTOCOL_VERSION] === "string";
 }
 
 const BASE64_SENTINEL = /^=\?base64\?(.*)\?=$/;
 
 /** Decodes the `=?base64?…?=` sentinel for non-ASCII header values; null if invalid. */
-export function decodeHeaderValue(value: string): string | null {
+function decodeHeaderValue(value: string): string | null {
   const match = value.match(BASE64_SENTINEL);
   if (!match) return value;
   try {
@@ -126,7 +132,7 @@ export function validateModernHeaders(
   message: JsonRpcMessage,
   headers: { get(name: string): string | null }
 ): RpcFailure | null {
-  const meta = (message.params?._meta ?? {}) as Record<string, unknown>;
+  const meta = metaOf(message);
 
   const versionHeader = headers.get("MCP-Protocol-Version");
   if (!versionHeader) {
@@ -172,8 +178,7 @@ export function validateModernHeaders(
 }
 
 export function validateModernMeta(message: JsonRpcMessage): RpcFailure | null {
-  const meta = (message.params?._meta ?? {}) as Record<string, unknown>;
-  const capabilities = meta[META_CLIENT_CAPABILITIES];
+  const capabilities = metaOf(message)[META_CLIENT_CAPABILITIES];
   if (typeof capabilities !== "object" || capabilities === null || Array.isArray(capabilities)) {
     return {
       status: 400,
@@ -185,10 +190,9 @@ export function validateModernMeta(message: JsonRpcMessage): RpcFailure | null {
 }
 
 export function checkModernVersion(message: JsonRpcMessage): RpcFailure | null {
-  const requested = ((message.params?._meta ?? {}) as Record<string, unknown>)[
-    META_PROTOCOL_VERSION
-  ] as string;
-  if ((MODERN_PROTOCOL_VERSIONS as readonly string[]).includes(requested)) return null;
+  // isModernRequest guarantees a string.
+  const requested = String(metaOf(message)[META_PROTOCOL_VERSION]);
+  if (MODERN_PROTOCOL_VERSIONS.includes(requested)) return null;
   return {
     status: 400,
     code: MCP_UNSUPPORTED_PROTOCOL_VERSION,
@@ -212,8 +216,7 @@ export function isAllowedOrigin(origin: string | null): boolean {
 }
 
 export function negotiateLegacyVersion(requested: unknown): string {
-  return typeof requested === "string" &&
-    (LEGACY_PROTOCOL_VERSIONS as readonly string[]).includes(requested)
+  return typeof requested === "string" && LEGACY_PROTOCOL_VERSIONS.includes(requested)
     ? requested
     : LEGACY_PROTOCOL_VERSIONS[0];
 }

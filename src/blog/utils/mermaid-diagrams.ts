@@ -3,7 +3,7 @@
 // fence at build time, named by hash; remark-mermaid.ts and the RSS route swap
 // fences for them.
 import { fromMarkdown } from "mdast-util-from-markdown";
-import type { Code, Parent, Root } from "mdast";
+import type { Code, Parent } from "mdast";
 
 export const DIAGRAMS_DIR = "diagrams";
 export type DiagramTheme = "light" | "dark";
@@ -11,7 +11,7 @@ export const DIAGRAM_THEMES: readonly DiagramTheme[] = ["light", "dark"];
 
 // Folded into every hash. Bump when render output changes in a way the mermaid
 // version stamp doesn't capture (theme, font, embedded style).
-export const RENDERER_VERSION = "2";
+const RENDERER_VERSION = "2";
 
 export interface MermaidFence {
   // Diagram source exactly as the markdown parser hands it to the build:
@@ -23,24 +23,24 @@ export interface MermaidFence {
   end: number;
 }
 
+interface MermaidNode {
+  node: Code;
+  parent: Parent;
+  index: number;
+}
+
 // Walks the tree in document order so fence numbering matches the page.
-function collectCode(node: Parent, out: Code[]): void {
-  for (const child of node.children) {
-    if (child.type === "code") {
-      if (child.lang === "mermaid") out.push(child);
-    } else if ("children" in child) {
-      collectCode(child, out);
-    }
-  }
+export function collectMermaidNodes(parent: Parent): MermaidNode[] {
+  return parent.children.flatMap((child, index) => {
+    if (child.type === "code" && child.lang === "mermaid") return [{ node: child, parent, index }];
+    return "children" in child ? collectMermaidNodes(child) : [];
+  });
 }
 
 // Same CommonMark parser as Astro's remark pipeline, so fence detection and
 // `value` (hence hashes and file names) match the build exactly.
 export function findMermaidFences(markdown: string): MermaidFence[] {
-  const tree: Root = fromMarkdown(markdown);
-  const fences: Code[] = [];
-  collectCode(tree, fences);
-  return fences.map(node => {
+  return collectMermaidNodes(fromMarkdown(markdown)).map(({ node }) => {
     if (node.position?.start.offset === undefined) {
       throw new Error("findMermaidFences: parser returned a code node without a position");
     }

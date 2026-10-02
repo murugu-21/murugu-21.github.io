@@ -4,9 +4,6 @@ import {
   countCompanies,
   formatDuration,
   groupByCompany,
-  monthsBetween,
-  parseMonth,
-  periodBounds,
   totalExperienceMonths
 } from "./experience";
 
@@ -46,12 +43,13 @@ describe("groupByCompany", () => {
     expect(groups[0].roles.map(r => r.role)).toEqual(["SDE 2", "SDE 1", "Intern"]);
   });
 
-  it("spans a stint from the oldest start to the newest end", () => {
+  it("spans a stint from the oldest start to the newest end, at the shared location", () => {
     const [stint] = groupByCompany([
       role({ company: "HyperVerge", date: "April 2025 – December 2025", role: "SDE 2" }),
       role({ company: "HyperVerge", date: "August 2022 – June 2023", role: "Intern" })
     ]);
     expect(stint.span).toBe("August 2022 – December 2025");
+    expect(stint.location).toBe("Bangalore");
   });
 
   it("keeps a single role's own date string as the span", () => {
@@ -63,14 +61,6 @@ describe("groupByCompany", () => {
 
   it("splits a return to a former company into separate stints", () => {
     expect(groupByCompany(returning).map(g => g.company)).toEqual(["Acme", "Other", "Acme"]);
-  });
-
-  it("lifts the location to the stint when every role shares it", () => {
-    const [stint] = groupByCompany([
-      role({ company: "HyperVerge", date: "April 2025 – December 2025", role: "SDE 2" }),
-      role({ company: "HyperVerge", date: "August 2022 – June 2023", role: "Intern" })
-    ]);
-    expect(stint.location).toBe("Bangalore");
   });
 
   it("leaves the stint location empty when roles were in different places", () => {
@@ -89,43 +79,6 @@ describe("groupByCompany", () => {
       })
     ]);
     expect(stint.location).toBeNull();
-  });
-});
-
-describe("parseMonth", () => {
-  it("reads a 'Month YYYY' label", () => {
-    expect(parseMonth("December 2025")).toEqual({ year: 2025, month: 12 });
-  });
-
-  it("returns null for anything else", () => {
-    expect(parseMonth("Present")).toBeNull();
-    expect(parseMonth("2025")).toBeNull();
-  });
-});
-
-describe("periodBounds", () => {
-  it("splits a closed range into start and end months", () => {
-    expect(periodBounds("July 2023 – March 2025")).toEqual({
-      start: { year: 2023, month: 7 },
-      end: { year: 2025, month: 3 }
-    });
-  });
-
-  it("marks an open range with a null end", () => {
-    expect(periodBounds("December 2025 – Present")).toEqual({
-      start: { year: 2025, month: 12 },
-      end: null
-    });
-  });
-
-  it("returns null when the range cannot be read", () => {
-    expect(periodBounds("sometime")).toBeNull();
-  });
-});
-
-describe("monthsBetween", () => {
-  it("counts both the first and the last month, like LinkedIn", () => {
-    expect(monthsBetween({ year: 2025, month: 4 }, { year: 2025, month: 12 })).toBe(9);
   });
 });
 

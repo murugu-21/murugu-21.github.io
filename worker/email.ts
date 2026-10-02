@@ -1,3 +1,4 @@
+import type { ContactRequest } from "./api/contact";
 import type { ChatHistoryEntry } from "./protocol";
 
 export const SENDER_ADDRESS = "chatbot@murugappan.dev";
@@ -7,6 +8,13 @@ export type Lead = { name?: string; contact: string; summary: string };
 export type EmailLike = {
   send(msg: { to: string; from: string; subject: string; text: string }): Promise<unknown>;
 };
+
+/** The configured relay and inbox, or null when the deploy lacks either. */
+export function contactMailer(env: Env): { email: EmailLike; inbox: string } | null {
+  // Typed non-optional, but a deploy can lack the binding or the var.
+  const inbox = env.OPPORTUNITY_INBOX?.trim();
+  return env.EMAIL && inbox ? { email: env.EMAIL, inbox } : null;
+}
 
 export function parseLeadArguments(raw: string): Lead | null {
   let data: unknown;
@@ -25,14 +33,15 @@ export function parseLeadArguments(raw: string): Lead | null {
   };
 }
 
+const subjectName = (who: string): string => who.replace(/\s+/g, " ").slice(0, 80);
+
 export function formatOpportunityEmail(
   lead: Lead,
   transcript: ChatHistoryEntry[]
 ): { subject: string; text: string } {
-  const who = (lead.name || lead.contact).replace(/\s+/g, " ").slice(0, 80);
   const lines = transcript.map(m => `${m.role === "user" ? "visitor" : "assistant"}: ${m.content}`);
   return {
-    subject: `New opportunity via murugappan.dev chat — ${who}`,
+    subject: `New opportunity via murugappan.dev chat — ${subjectName(lead.name || lead.contact)}`,
     text: [
       `Name:    ${lead.name ?? "(not given)"}`,
       `Contact: ${lead.contact}`,
@@ -59,21 +68,12 @@ export async function sendOpportunityEmail({
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });
 }
 
-// POST /api/contact's payload; unlike Lead it has no transcript.
-export type ContactMessage = {
-  name?: string;
-  email: string;
-  company?: string;
-  message: string;
-};
-
-export function formatContactEmail(msg: ContactMessage): {
+export function formatContactEmail(msg: ContactRequest): {
   subject: string;
   text: string;
 } {
-  const who = (msg.name || msg.email).replace(/\s+/g, " ").slice(0, 80);
   return {
-    subject: `New message via the murugappan.dev API — ${who}`,
+    subject: `New message via the murugappan.dev API — ${subjectName(msg.name || msg.email)}`,
     text: [
       `Name:    ${msg.name ?? "(not given)"}`,
       `Email:   ${msg.email}`,
@@ -93,7 +93,7 @@ export async function sendContactEmail({
 }: {
   email: EmailLike;
   inbox: string;
-  msg: ContactMessage;
+  msg: ContactRequest;
 }): Promise<void> {
   const { subject, text } = formatContactEmail(msg);
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });

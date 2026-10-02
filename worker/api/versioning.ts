@@ -103,12 +103,12 @@ export function buildVersionsDocument(origin: string): VersionsDocument {
 }
 
 /** RFC 9745: a Date structured field, i.e. `@` + a Unix timestamp in seconds. */
-export function deprecationFieldValue(isoDate: string): string {
+function deprecationFieldValue(isoDate: string): string {
   return `@${Math.floor(Date.parse(`${isoDate}T00:00:00Z`) / 1000)}`;
 }
 
 /** RFC 8594: an IMF-fixdate, the same format Retry-After and Date use. */
-export function sunsetFieldValue(isoDate: string): string {
+function sunsetFieldValue(isoDate: string): string {
   return new Date(`${isoDate}T00:00:00Z`).toUTCString();
 }
 

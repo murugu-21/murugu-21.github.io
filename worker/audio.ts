@@ -1,5 +1,5 @@
-// Read-only blog audio from R2; the prefix must match KEY_PREFIX in
-// scripts/generate-audio.ts. Supports Range because <audio> seeks with it.
+// Read-only blog audio from R2; the prefix must match AUDIO_PREFIX in
+// scripts/tts/r2.ts. Supports Range because <audio> seeks with it.
 import { Hono } from "hono";
 
 import { serveAsset } from "./not-found";

@@ -1,7 +1,7 @@
 import { assert, describe, expect, it } from "vitest";
 
 import { fetchDeepseekBalance, isInsufficientBalance, runDeepseekExchange } from "../ai";
-import { buildMessages, CAPTURE_TOOL, MAX_HISTORY_MESSAGES } from "../prompt";
+import { buildMessages, MAX_HISTORY_MESSAGES } from "../prompt";
 import { consumeSse } from "../sse";
 
 function sseStream(events: string[]): ReadableStream<Uint8Array> {
@@ -17,7 +17,7 @@ function sseStream(events: string[]): ReadableStream<Uint8Array> {
 describe("runDeepseekExchange", () => {
   it("sends an OpenAI chat-completions request and parses the stream", async () => {
     const calls: { url: string; init: RequestInit }[] = [];
-    const fetcher = (async (url: string | URL | Request, init?: RequestInit) => {
+    const fetcher: typeof fetch = async (url, init) => {
       calls.push({ url: String(url), init: init ?? {} });
       return new Response(
         sseStream([
@@ -26,7 +26,7 @@ describe("runDeepseekExchange", () => {
           "data: [DONE]\n\n"
         ])
       );
-    }) as typeof fetch;
+    };
 
     const deltas: string[] = [];
     const result = await runDeepseekExchange({
@@ -57,8 +57,10 @@ describe("runDeepseekExchange", () => {
   });
 
   it("rejects a non-ok response, flagging only a 402 as an exhausted balance", async () => {
-    const failing = (status: number) =>
-      (async () => new Response("no", { status })) as typeof fetch;
+    const failing =
+      (status: number): typeof fetch =>
+      async () =>
+        new Response("no", { status });
     const error = (status: number) =>
       runDeepseekExchange({
         apiKey: "sk-test",
@@ -78,7 +80,7 @@ describe("runDeepseekExchange", () => {
 
 describe("fetchDeepseekBalance", () => {
   function json(body: unknown, status = 200): typeof fetch {
-    return (async () => new Response(JSON.stringify(body), { status })) as typeof fetch;
+    return async () => new Response(JSON.stringify(body), { status });
   }
 
   it("reads is_available and the USD balance, ignoring other currencies", async () => {
@@ -110,31 +112,7 @@ describe("fetchDeepseekBalance", () => {
 });
 
 describe("consumeSse", () => {
-  it("accumulates response-shape deltas and reports them", async () => {
-    const deltas: string[] = [];
-    const result = await consumeSse(
-      sseStream(['data: {"response":"Hel"}\n\n', 'data: {"response":"lo"}\n\ndata: [DONE]\n\n']),
-      t => deltas.push(t)
-    );
-    expect(result.content).toBe("Hello");
-    expect(deltas).toEqual(["Hel", "lo"]);
-    expect(result.toolCalls).toEqual([]);
-    expect(result.usage).toBeNull();
-  });
-
-  it("captures usage from the final event", async () => {
-    const result = await consumeSse(
-      sseStream([
-        'data: {"response":"hi"}\n\n',
-        'data: {"response":"","usage":{"prompt_tokens":1200,"completion_tokens":34}}\n\n',
-        "data: [DONE]\n\n"
-      ]),
-      () => {}
-    );
-    expect(result.usage).toEqual({ promptTokens: 1200, completionTokens: 34 });
-  });
-
-  it("accumulates chat-completions deltas split across reads", async () => {
+  it("accumulates deltas split across reads", async () => {
     const chunk = 'data: {"choices":[{"delta":{"content":"wor"}}]}\n\n';
     const result = await consumeSse(
       sseStream([
@@ -171,25 +149,9 @@ describe("consumeSse", () => {
     expect(result.toolCalls[0].id).toBe("call_abc123");
   });
 
-  it("collects whole tool_calls arrays (non-incremental shape)", async () => {
-    const result = await consumeSse(
-      sseStream([
-        'data: {"tool_calls":[{"name":"capture_opportunity","arguments":{"contact":"x@y.z","summary":"role"}}]}\n\n'
-      ]),
-      () => {}
-    );
-    expect(result.toolCalls).toEqual([
-      {
-        id: "call_0",
-        name: "capture_opportunity",
-        arguments: '{"contact":"x@y.z","summary":"role"}'
-      }
-    ]);
-  });
-
   it("skips malformed JSON lines without dying", async () => {
     const result = await consumeSse(
-      sseStream(["data: {broken\n\n", 'data: {"response":"ok"}\n\n']),
+      sseStream(["data: {broken\n\n", 'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n']),
       () => {}
     );
     expect(result.content).toBe("ok");
@@ -224,12 +186,5 @@ describe("buildMessages", () => {
     const messages = buildMessages("g", history);
     expect(messages).toHaveLength(1 + MAX_HISTORY_MESSAGES);
     expect(messages.at(-1)?.content).toBe("m49");
-  });
-});
-
-describe("CAPTURE_TOOL", () => {
-  // parseLeadArguments rejects a call missing either field.
-  it("requires contact and summary", () => {
-    expect(CAPTURE_TOOL.function.parameters.required).toEqual(["contact", "summary"]);
   });
 });

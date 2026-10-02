@@ -1,11 +1,12 @@
 import { Server, type Connection, type ConnectionContext } from "partyserver";
 
 import { isInsufficientBalance, runDeepseekExchange } from "./ai";
-import { parseLeadArguments, sendOpportunityEmail, type EmailLike, type Lead } from "./email";
+import { globalLimiter } from "./api/ratelimit";
+import { contactMailer, parseLeadArguments, sendOpportunityEmail, type Lead } from "./email";
 import { fetchSitePage } from "./fetch-page";
 import { getGrounding } from "./grounding";
 import { buildMessages, parseFetchArguments, ROOM_DAILY_LIMIT, type ModelMessage } from "./prompt";
-import { type StreamResult } from "./sse";
+import type { StreamResult, ToolCall } from "./sse";
 import {
   GREETING,
   parseClientMessage,
@@ -16,10 +17,35 @@ import {
 } from "./protocol";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_FETCH_ROUNDS = 2;
+
+type CountRow = { n: number };
 
 const LIMIT_MESSAGE =
   "I've hit my chat budget for now — please reach Murugappan directly " +
   "through the social links on this site instead.";
+
+// Strict OpenAI shape (assistant.tool_calls → tool) so any provider accepts it.
+function toolExchange({
+  call,
+  content,
+  result
+}: {
+  call: ToolCall;
+  content: string;
+  result: string;
+}): ModelMessage[] {
+  return [
+    {
+      role: "assistant",
+      content,
+      tool_calls: [
+        { id: call.id, type: "function", function: { name: call.name, arguments: call.arguments } }
+      ]
+    },
+    { role: "tool", tool_call_id: call.id, content: result }
+  ];
+}
 
 export class ChatRoom extends Server<Env> {
   static options = { hibernate: true };
@@ -51,8 +77,8 @@ export class ChatRoom extends Server<Env> {
 
   onConnect(connection: Connection, ctx: ConnectionContext): void {
     // Synchronous check-and-insert, so the greeting can't be seeded twice.
-    const count = this.ctx.storage.sql.exec(`SELECT COUNT(*) AS n FROM messages`).one().n as number;
-    if (count === 0) this.persist("assistant", GREETING);
+    const { n } = this.ctx.storage.sql.exec<CountRow>(`SELECT COUNT(*) AS n FROM messages`).one();
+    if (n === 0) this.persist("assistant", GREETING);
     this.recordVisitor(ctx.request);
     this.send(connection, { type: "history", messages: this.history() });
   }
@@ -86,7 +112,7 @@ export class ChatRoom extends Server<Env> {
     }
     // A missing key gates like an empty account; the visitor can't fix either.
     const key = this.deepseekKey();
-    if (!key || !(await this.limiter().chatAvailable(key))) {
+    if (!key || !(await globalLimiter(this.env).chatAvailable(key))) {
       this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
       return;
     }
@@ -101,7 +127,7 @@ export class ChatRoom extends Server<Env> {
       console.error("chat generation failed", err);
       // A 402 beats the cached balance: gate every room until the next check.
       if (isInsufficientBalance(err)) {
-        await this.limiter().markChatExhausted();
+        await globalLimiter(this.env).markChatExhausted();
         this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
         return;
       }
@@ -112,16 +138,15 @@ export class ChatRoom extends Server<Env> {
     }
   }
 
-  // One reply turn: exchange with up to MAX_FETCH_ROUNDS fetch_page rounds, an
-  // optional capture exchange, then persist. Everything is broadcast to the room.
+  // One reply turn: up to MAX_FETCH_ROUNDS fetch_page rounds, an optional
+  // capture exchange, then persist. Everything is broadcast to the room.
   private async generate(key: string, page?: string): Promise<void> {
     const onDelta = (text: string) => this.broadcastMsg({ type: "delta", text });
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
-    const messages: ModelMessage[] = buildMessages(grounding, this.history(), page);
+    const messages = buildMessages(grounding, this.history(), page);
 
-    const MAX_FETCH_ROUNDS = 2;
     let reply = "";
-    let capture: { id: string; name: string; arguments: string } | undefined;
+    let capture: ToolCall | undefined;
     for (let round = 0; ; round++) {
       const result = await this.exchange(key, messages, onDelta);
       reply += result.content;
@@ -137,25 +162,14 @@ export class ChatRoom extends Server<Env> {
         ? await fetchSitePage(this.env.ASSETS, url)
         : "The url argument was missing.";
       messages.push(
-        {
-          role: "assistant",
-          content: result.content,
-          tool_calls: [
-            {
-              id: fetchCall.id,
-              type: "function",
-              function: { name: fetchCall.name, arguments: fetchCall.arguments }
-            }
-          ]
-        },
-        { role: "tool", tool_call_id: fetchCall.id, content: pageText }
+        ...toolExchange({ call: fetchCall, content: result.content, result: pageText })
       );
     }
 
     if (capture) {
       if (reply) this.broadcastMsg({ type: "delta", text: "\n" });
       const followUp = await this.handleCapture(capture, key, onDelta);
-      reply = [reply, followUp].filter(Boolean).join(reply ? "\n" : "");
+      reply = reply && followUp ? `${reply}\n${followUp}` : reply || followUp;
     }
 
     // Collapse stray blank lines left between exchanges.
@@ -178,14 +192,14 @@ export class ChatRoom extends Server<Env> {
   // Typed non-optional, but a deploy can lack the secret and `.dev.vars` holds
   // a placeholder.
   private deepseekKey(): string | null {
-    const trimmed = (this.env.DEEPSEEK_API_KEY as string | undefined)?.trim();
+    const trimmed = this.env.DEEPSEEK_API_KEY?.trim();
     return trimmed && !trimmed.startsWith("placeholder") ? trimmed : null;
   }
 
   // Stores the lead, emails once per room, and has the model phrase the
   // confirmation.
   private async handleCapture(
-    capture: { id: string; name: string; arguments: string },
+    capture: ToolCall,
     key: string,
     onDelta: (text: string) => void
   ): Promise<string> {
@@ -194,64 +208,48 @@ export class ChatRoom extends Server<Env> {
 
     this.broadcastMsg(toolFrame("capture_opportunity"));
     this.storeLead(lead);
+    await this.emailLeadOnce(lead);
 
-    const alreadyCaptured = this.ctx.storage.sql
-      .exec(`SELECT value FROM meta WHERE key = 'lead_captured'`)
-      .toArray();
-    if (alreadyCaptured.length === 0) {
-      try {
-        await sendOpportunityEmail({
-          email: this.env.EMAIL as unknown as EmailLike,
-          inbox: this.env.OPPORTUNITY_INBOX,
-          lead,
-          transcript: this.history()
-        });
-        this.ctx.storage.sql.exec(
-          `INSERT INTO meta (key, value) VALUES ('lead_captured', ?)`,
-          new Date().toISOString()
-        );
-      } catch (err) {
-        // Lead is already in SQLite; losing the email must not kill the chat.
-        console.error("opportunity email failed", err);
-      }
-    }
-
-    // Strict OpenAI shape (assistant.tool_calls → tool) so any provider accepts it.
     const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
     const followUp = await this.exchange(
       key,
       [
         ...buildMessages(grounding, this.history()),
-        {
-          role: "assistant",
+        ...toolExchange({
+          call: capture,
           content: "",
-          tool_calls: [
-            {
-              id: capture.id,
-              type: "function",
-              function: {
-                name: capture.name,
-                arguments: capture.arguments
-              }
-            }
-          ]
-        },
-        {
-          role: "tool",
-          tool_call_id: capture.id,
-          content: JSON.stringify({
+          result: JSON.stringify({
             status: "recorded",
             note: "Murugappan will be notified by email."
           })
-        }
+        })
       ],
       onDelta
     );
     return followUp.content;
   }
 
-  private limiter() {
-    return this.env.RateLimiter.get(this.env.RateLimiter.idFromName("global"));
+  private async emailLeadOnce(lead: Lead): Promise<void> {
+    if (this.metaValue("lead_captured") !== null) return;
+    const mailer = contactMailer(this.env);
+    if (!mailer) {
+      console.error("opportunity email skipped: no EMAIL binding or inbox");
+      return;
+    }
+    try {
+      await sendOpportunityEmail({
+        ...mailer,
+        lead,
+        transcript: this.history()
+      });
+      this.ctx.storage.sql.exec(
+        `INSERT INTO meta (key, value) VALUES ('lead_captured', ?)`,
+        new Date().toISOString()
+      );
+    } catch (err) {
+      // Lead is already in SQLite; losing the email must not kill the chat.
+      console.error("opportunity email failed", err);
+    }
   }
 
   // Stored under `visitor_*` meta keys and mirrored to one D1 `rooms` row.
@@ -261,15 +259,13 @@ export class ChatRoom extends Server<Env> {
     if (!visitor) return;
 
     const now = Date.now();
-    const existing = this.ctx.storage.sql
-      .exec(`SELECT value FROM meta WHERE key = 'visitor_first_seen'`)
-      .toArray();
-    const firstSeen = existing.length ? Number(existing[0].value) : now;
+    const knownFirstSeen = this.metaValue("visitor_first_seen");
+    const firstSeen = knownFirstSeen === null ? now : Number(knownFirstSeen);
 
     this.upsertMeta("visitor_country", visitor.country);
     this.upsertMeta("visitor_ip", visitor.ip);
     this.upsertMeta("visitor_last_seen", String(now));
-    if (!existing.length) this.upsertMeta("visitor_first_seen", String(now));
+    if (knownFirstSeen === null) this.upsertMeta("visitor_first_seen", String(now));
 
     this.env.CHAT_DB?.prepare(
       `INSERT INTO rooms (room_id, country, ip, first_seen, last_seen)
@@ -282,6 +278,13 @@ export class ChatRoom extends Server<Env> {
       .bind(this.name, visitor.country, visitor.ip, firstSeen, now)
       .run()
       .catch((err: unknown) => console.error("d1 mirror failed", err));
+  }
+
+  private metaValue(key: string): string | null {
+    const rows = this.ctx.storage.sql
+      .exec<{ value: string }>(`SELECT value FROM meta WHERE key = ?`, key)
+      .toArray();
+    return rows.length ? rows[0].value : null;
   }
 
   private upsertMeta(key: string, value: string | null): void {
@@ -306,19 +309,17 @@ export class ChatRoom extends Server<Env> {
 
   private history(): ChatHistoryEntry[] {
     return this.ctx.storage.sql
-      .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
-      .toArray()
-      .map(r => ({
-        role: r.role as "user" | "assistant",
-        content: r.content as string
-      }));
+      .exec<ChatHistoryEntry>(`SELECT role, content FROM messages ORDER BY id ASC`)
+      .toArray();
   }
 
   private userMessagesSince(cutoff: number): number {
-    const row = this.ctx.storage.sql
-      .exec(`SELECT COUNT(*) AS n FROM messages WHERE role = 'user' AND created_at > ?`, cutoff)
-      .one();
-    return row.n as number;
+    return this.ctx.storage.sql
+      .exec<CountRow>(
+        `SELECT COUNT(*) AS n FROM messages WHERE role = 'user' AND created_at > ?`,
+        cutoff
+      )
+      .one().n;
   }
 
   private persist(role: "user" | "assistant", content: string): void {

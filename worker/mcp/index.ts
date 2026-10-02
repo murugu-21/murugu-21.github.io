@@ -4,7 +4,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
-import { API_VERSION } from "../api/openapi";
+import { API_VERSION } from "../api/versioning";
 import {
   checkModernVersion,
   isAllowedOrigin,
@@ -89,15 +89,23 @@ function rpcResult(id: JsonRpcId, result: object): Response {
   return jsonResponse({ jsonrpc: "2.0", id, result });
 }
 
-const discoverResult = () => ({
+function completeResult(id: JsonRpcId, result: object): Response {
+  return rpcResult(id, {
+    resultType: "complete",
+    ...result,
+    _meta: { [META_SERVER_INFO]: SERVER_INFO }
+  });
+}
+
+// No `listChanged`/`subscribe`: this server sends no notifications.
+const CAPABILITIES = { tools: {}, resources: {} };
+
+const DISCOVER_RESULT = {
   supportedVersions: SUPPORTED_PROTOCOL_VERSIONS,
-  // No `listChanged`/`subscribe`: this server sends no notifications.
   capabilities: CAPABILITIES,
   instructions: INSTRUCTIONS,
   ...LIST_CACHE
-});
-
-const CAPABILITIES = { tools: {}, resources: {} };
+};
 
 function resourceNotFound(uri: unknown): RpcFailure {
   return {
@@ -107,6 +115,8 @@ function resourceNotFound(uri: unknown): RpcFailure {
     data: { uri }
   };
 }
+
+const isFailure = (value: object): value is RpcFailure => "code" in value;
 
 async function readResourceResult(
   message: JsonRpcMessage,
@@ -159,11 +169,9 @@ async function runTool(
   ctx: ToolContext
 ): Promise<ToolResult | RpcFailure> {
   const parsed = toolCallArgs(message);
-  if ("code" in parsed) return parsed;
+  if (isFailure(parsed)) return parsed;
   return parsed.tool.run(parsed.args, ctx);
 }
-
-const isFailure = (value: object): value is RpcFailure => "code" in value;
 
 const toolCallResult = (result: ToolResult) => ({
   content: result.content,
@@ -235,16 +243,11 @@ mcp.post("*", async c => {
       checkModernVersion(message);
     if (failure) return rpcError(id, failure);
 
-    const complete = (result: object) =>
-      rpcResult(id, {
-        resultType: "complete",
-        ...result,
-        _meta: { [META_SERVER_INFO]: SERVER_INFO }
-      });
+    const complete = (result: object) => completeResult(id, result);
 
     switch (message.method) {
       case "server/discover":
-        return complete(discoverResult());
+        return complete(DISCOVER_RESULT);
       case "tools/list":
         return complete({ tools: WIRE_TOOLS, ...LIST_CACHE });
       case "resources/list":
@@ -279,11 +282,7 @@ mcp.post("*", async c => {
   // learns the supported versions.
   switch (message.method) {
     case "server/discover":
-      return rpcResult(id, {
-        resultType: "complete",
-        ...discoverResult(),
-        _meta: { [META_SERVER_INFO]: SERVER_INFO }
-      });
+      return completeResult(id, DISCOVER_RESULT);
     case "initialize":
       return rpcResult(id, {
         protocolVersion: negotiateLegacyVersion(message.params?.protocolVersion),

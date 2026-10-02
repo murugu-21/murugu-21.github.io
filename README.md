@@ -144,8 +144,8 @@ No phone number is in source. Set `RESUME_PHONE` (Workers Builds env in producti
 content/blog/          # one directory per post: <slug>/index.md (+ images)
   draft/               # drafts: visible in dev, excluded from production builds
 src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
-src/blog/              # layout, head, React islands (search, tags, theme toggle, bio),
-                       # styles, post helpers, consts.ts site metadata
+src/blog/              # layout, head, components (search, tags, table of contents,
+                       # Listen control), styles, post helpers, consts.ts site metadata
 src/content.config.ts  # content collection schema
 public/blog/           # static files served verbatim (og-image, sw.js)
 ```

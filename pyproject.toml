@@ -1,6 +1,5 @@
-# Editor/type-checker settings for the read-aloud TTS scripts in scripts/tts.
-# There is no Python package here; the scripts run under .venv-tts (see README
-# "Read-aloud audio"), and basedpyright needs to know that to resolve mlx imports.
+# basedpyright settings for scripts/tts. Not a package: the scripts run under
+# .venv-tts (README "Read-aloud audio"), which is where the mlx imports resolve.
 [tool.basedpyright]
 venvPath = "."
 venv = ".venv-tts"

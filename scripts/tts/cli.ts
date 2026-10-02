@@ -4,7 +4,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 export const log = (...m: unknown[]) => console.error(...m);
-export const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
+const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
 export const fail = (msg: string): never => {
   log(`error: ${msg}`);
   process.exit(1);

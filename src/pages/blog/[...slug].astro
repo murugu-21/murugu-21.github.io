@@ -6,11 +6,12 @@ import { SITE_TITLE, SITE_URL, PERSON } from "../../blog/consts";
 import {
   getPublishedPosts,
   postPath,
+  postUrl,
+  postDescription,
   postKeywords,
   tagPath,
   formatDate,
-  timeToRead,
-  excerpt
+  timeToRead
 } from "../../blog/utils/posts";
 import { formatReadingTime } from "../../blog/utils/helpers";
 import { ListenControls } from "../../blog/components/ListenControls";
@@ -34,16 +35,16 @@ const { post, previous, next } = Astro.props;
 // Astro's heading collector, which keeps an existing id.
 const { Content, headings } = await render(post);
 
-const description = post.data.description || excerpt(post.body);
+const description = postDescription(post);
 
-const postUrl = `${SITE_URL}/${post.id}/`;
+const url = postUrl(post.id);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   headline: post.data.title,
   description,
-  url: postUrl,
-  mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+  url,
+  mainEntityOfPage: { "@type": "WebPage", "@id": url },
   datePublished: post.data.date.toISOString(),
   dateModified: post.data.date.toISOString(),
   keywords: postKeywords(post).join(", "),
@@ -90,12 +91,12 @@ const jsonLd = {
         ))}
       </div>
     </header>
-    <!-- Read-aloud island; ships disabled at full size so hydration doesn't
+    {/* Read-aloud island; ships disabled at full size so hydration doesn't
          shift layout. `ui-island` scopes the shadcn tokens. Sticky only while
          `.listening` (set by the island), and a direct child of the article
          because sticky only travels inside its parent. `pt-3` is always there
          so the layout never shifts; post.css scroll-margin-top clears the
-         12+58px pinned bar. -->
+         12+58px pinned bar. */}
     <div class="listen-sentinel h-px -mb-px" aria-hidden="true"></div>
     <div class="listen-island ui-island mb-4 pt-3 [&.listening]:sticky [&.listening]:top-0 [&.listening]:z-30 [&.listening.pinned]:bg-nav-scrolled [&.listening.pinned]:backdrop-blur-[15px] dark:[&.listening.pinned]:bg-nav-scrolled-dark">
       {/* client:interaction, not client:idle: idle can fire before first paint
@@ -106,13 +107,12 @@ const jsonLd = {
     <section itemprop="articleBody">
       <Content />
     </section>
-    <!-- styled by `.blog-post hr` in post.css -->
     <hr />
     <footer class="py-6">
       <Bio />
     </footer>
   </article>
-  <!-- After the article, not inside it: see the component header. -->
+  {/* After the article, not inside it: see the component header. */}
   <TableOfContents headings={headings} />
   <nav class="blog-post-nav" aria-label="Previous and next posts">
     <ul class="m-0 flex list-none flex-wrap justify-between p-0">
