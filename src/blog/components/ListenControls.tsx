@@ -145,7 +145,6 @@ export function ListenControls({ slug }: { slug: string }) {
 
   // Refs mirror state for the player closures, which outlive renders.
   const stateRef = useRef<State>("idle");
-  const rateRef = useRef<SpeechRate>(1);
   const blocksRef = useRef<Block[]>([]);
   const playerRef = useRef<Player | null>(null);
   const highlightedRef = useRef<HTMLElement | null>(null);
@@ -190,7 +189,6 @@ export function ListenControls({ slug }: { slug: string }) {
     const canSpeak = !!window.speechSynthesis && "SpeechSynthesisUtterance" in window;
     const canPlayAudio = "Audio" in window;
     blocksRef.current = collectBlocks();
-    rateRef.current = getRate();
     setSupported((canSpeak || canPlayAudio) && blocksRef.current.length > 0);
     // Chrome keeps talking after the tab navigates away otherwise.
     const onPageHide = () => playerRef.current?.pause();
@@ -230,7 +228,7 @@ export function ListenControls({ slug }: { slug: string }) {
       }
       const block = blocks[i];
       const u = new SpeechSynthesisUtterance(block.text);
-      u.rate = rateRef.current;
+      u.rate = getRate();
       u.lang = document.documentElement.lang || "en";
       // Map boundary char offsets onto the block's word spans; skip word
       // highlights if they don't line up.
@@ -295,21 +293,25 @@ export function ListenControls({ slug }: { slug: string }) {
       const audio = new Audio(`/blog/audio/${slug}.mp3`);
       audio.preload = "auto";
       const matched = matchBlocks(blocksRef.current, timings.blocks);
-      const ranges = matched.map(m =>
-        m ? { start: m.start, end: m.end } : { start: -1, end: -1 }
-      );
-      // Per block: timed words (v2 JSON) and their spans; null = mismatch.
-      const words = timings.blocks.map(b => b.words);
+      // Per block word spans, matched lazily; null = mismatch.
       const spansByBlock: Array<HTMLElement[][] | null | undefined> = [];
       const wordSpan = (i: number, t: number): HTMLElement[] | null => {
-        const w = words[i];
-        const el = matched[i]?.el;
+        const w = timings.blocks[i].words;
+        const el = matched[i];
         if (!w || !el) return null;
         spansByBlock[i] ??= matchWordSpans(wrapWords(el), w);
         const spans = spansByBlock[i];
         if (!spans) return null;
         const k = wordAt(w, t);
         return k >= 0 ? spans[k] : null;
+      };
+      // In a gap between blocks keep the previous highlight in place. A block
+      // whose text no longer matches clears it.
+      const syncHighlight = (t: number) => {
+        const i = blockAt(timings.blocks, t);
+        if (i < 0) return;
+        highlight(matched[i] ?? null);
+        highlightWord(wordSpan(i, t));
       };
       let raf = 0;
       let lastTick = -1;
@@ -321,12 +323,7 @@ export function ListenControls({ slug }: { slug: string }) {
         });
       const tick = () => {
         const t = audio.currentTime;
-        const i = blockAt(ranges, t);
-        // In a gap between blocks keep the previous highlight in place.
-        if (i >= 0) {
-          highlight(matched[i]?.el ?? null);
-          highlightWord(wordSpan(i, t));
-        }
+        syncHighlight(t);
         // The bar only needs a few updates a second; the highlight gets 60.
         const quarter = Math.floor(t * 4);
         if (quarter !== lastTick) {
@@ -375,11 +372,7 @@ export function ListenControls({ slug }: { slug: string }) {
         },
         seek: seconds => {
           audio.currentTime = seconds;
-          const i = blockAt(ranges, seconds);
-          if (i >= 0) {
-            highlight(matched[i]?.el ?? null);
-            highlightWord(wordSpan(i, seconds));
-          }
+          syncHighlight(seconds);
           report();
         }
       };
@@ -393,7 +386,7 @@ export function ListenControls({ slug }: { slug: string }) {
     if (timings) {
       try {
         const player = audioPlayer(timings);
-        player.setRate(rateRef.current);
+        player.setRate(getRate());
         tag("listen_backend", "audio");
         return player;
       } catch (err) {
@@ -428,7 +421,6 @@ export function ListenControls({ slug }: { slug: string }) {
   };
 
   const onRate = (next: SpeechRate) => {
-    rateRef.current = next;
     publishRate(next);
     track("listen_rate", { listen_rate: `${next}x` });
     playerRef.current?.setRate(next);

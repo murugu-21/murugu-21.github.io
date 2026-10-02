@@ -21,22 +21,13 @@ export interface AudioTimings {
   blocks: TimedBlock[];
 }
 
-export interface MatchedBlock<T> {
-  el: T;
-  start: number;
-  end: number;
-}
-
 // Pair page blocks with timings by position, but only when the normalised
 // text still matches: an edited paragraph plays fine, it just isn't lit up.
 export function matchBlocks<T>(
   page: ReadonlyArray<{ el: T; text: string }>,
   timed: ReadonlyArray<TimedBlock>
-): Array<MatchedBlock<T> | null> {
-  return page.map((block, i) => {
-    const t = timed[i];
-    return t && t.text === block.text ? { el: block.el, start: t.start, end: t.end } : null;
-  });
+): Array<T | null> {
+  return page.map((block, i) => (timed[i]?.text === block.text ? block.el : null));
 }
 
 // Binary search for the block whose [start, end) contains t; -1 if none.

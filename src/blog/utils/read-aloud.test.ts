@@ -134,28 +134,13 @@ const timedBlocks = [
 ];
 
 describe("matchBlocks", () => {
-  it("pairs blocks by index when texts are equal", () => {
-    const page = [
-      { el: "h1", text: "Title" },
-      { el: "p1", text: "First paragraph." },
-      { el: "p2", text: "Second paragraph." }
-    ];
-    expect(matchBlocks(page, timedBlocks)).toEqual([
-      { el: "h1", start: 0, end: 2 },
-      { el: "p1", start: 2.5, end: 6 },
-      { el: "p2", start: 6.4, end: 9 }
-    ]);
-  });
-
   it("leaves a block unhighlighted when its text changed since generation", () => {
     const page = [
       { el: "h1", text: "Title" },
       { el: "p1", text: "First paragraph, edited." },
       { el: "p2", text: "Second paragraph." }
     ];
-    const result = matchBlocks(page, timedBlocks);
-    expect(result[1]).toBeNull();
-    expect(result[2]).toEqual({ el: "p2", start: 6.4, end: 9 });
+    expect(matchBlocks(page, timedBlocks)).toEqual(["h1", null, "p2"]);
   });
 
   it("handles a page with more blocks than the timings", () => {
