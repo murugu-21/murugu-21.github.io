@@ -4,10 +4,8 @@ import { accentTitle } from "../lib/accent";
 import Icon from "./Icon.astro";
 ---
 
-{
-  /* box-content: keep the old content-box outer width of `.proficiency-container`
-  (see Skills.astro). */
-}
+{/* box-content: keep the old content-box outer width of `.proficiency-container`
+  (see Skills.astro). */}
 <div
   class="proficiency-container section-animate box-content mx-auto mt-8 flex w-[90%] px-2.5 py-5"
   id="proficiency"
@@ -19,29 +17,23 @@ import Icon from "./Icon.astro";
       set:html={accentTitle("Proficiency")}
     />
     <dl class="areas m-0 flex flex-col gap-4">
-      {
-        techStack.experience.map(exp => (
-          <div class="area grid grid-cols-[12rem_1fr] items-center gap-x-6 gap-y-2 max-md:grid-cols-1 max-md:gap-[0.4rem]">
-            <dt class="area-name m-0 text-[18px] font-semibold text-text max-md:text-[16px] dark:text-white">
-              {exp.stack}
-            </dt>
-            <dd class="area-tools m-0">
-              <ul class="chips m-0 flex list-none flex-wrap gap-2 p-0">
-                {exp.tools.map(tool => (
-                  <li class="chip inline-flex items-center gap-2 rounded-[20px] border border-chip-outline px-3.5 py-1.5 text-[14px] whitespace-nowrap text-text shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:text-white dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
-                    <Icon
-                      name={tool.icon}
-                      size="1.1rem"
-                      class="shrink-0 text-navy dark:text-blue"
-                    />
-                    <span>{tool.name}</span>
-                  </li>
-                ))}
-              </ul>
-            </dd>
-          </div>
-        ))
-      }
+      {techStack.experience.map(exp => (
+        <div class="area grid grid-cols-[12rem_1fr] items-center gap-x-6 gap-y-2 max-md:grid-cols-1 max-md:gap-[0.4rem]">
+          <dt class="area-name m-0 text-[18px] font-semibold text-text max-md:text-[16px] dark:text-white">
+            {exp.stack}
+          </dt>
+          <dd class="area-tools m-0">
+            <ul class="chips m-0 flex list-none flex-wrap gap-2 p-0">
+              {exp.tools.map(tool => (
+                <li class="chip inline-flex items-center gap-2 rounded-[20px] border border-chip-outline px-3.5 py-1.5 text-[14px] whitespace-nowrap text-text shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:text-white dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
+                  <Icon name={tool.icon} size="1.1rem" class="shrink-0 text-navy dark:text-blue" />
+                  <span>{tool.name}</span>
+                </li>
+              ))}
+            </ul>
+          </dd>
+        </div>
+      ))}
     </dl>
   </div>
 </div>

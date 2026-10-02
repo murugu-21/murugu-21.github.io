@@ -111,19 +111,19 @@ const menu = [
   />
   <label
     class="menu-icon relative float-right inline-block cursor-pointer px-5 py-7 select-none peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy min-[768px]:hidden"
-    for="menu-btn"><span class:list={navicon}></span></label
+    for="menu-btn"
   >
+    <span class:list={navicon}></span>
+  </label>
   <nav aria-label="Main" class="min-[768px]:ml-auto">
     <ul class:list={menu}>
-      {
-        links.map(l => (
-          <li class="min-[768px]:float-left">
-            <a href={l.href} class:list={navLink}>
-              {l.label}
-            </a>
-          </li>
-        ))
-      }
+      {links.map(l => (
+        <li class="min-[768px]:float-left">
+          <a href={l.href} class:list={navLink}>
+            {l.label}
+          </a>
+        </li>
+      ))}
     </ul>
   </nav>
   <!-- Below 768px the menu collapses, so the toggle can't live inside it —
@@ -133,9 +133,7 @@ const menu = [
        side), NOT `top-1/2`: the header grows when the menu opens and a
        percentage offset dragged the toggle into the middle of the menu list.
        Clear of the hamburger, 20px off the edge. -->
-  <div
-    class="theme-slot absolute top-[41px] right-[86px] -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0"
-  >
+  <div class="theme-slot absolute top-[41px] right-[86px] -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0">
     <ThemeToggle />
   </div>
 </header>

@@ -47,12 +47,10 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 <title>{fullTitle}</title>
 {noindex && <meta name="robots" content="noindex" />}
 <link rel="canonical" href={canonical} />
-{
-  /* Agent discovery, same relations the portfolio layout emits (see
+{/* Agent discovery, same relations the portfolio layout emits (see
     ../../layouts/Layout.astro): the site's OpenAPI description and the
     developer portal that documents it. Absolute because the blog is served
-    under a base path. */
-}
+    under a base path. */}
 <link
   rel="service-desc"
   type="application/json"
@@ -79,11 +77,9 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content={SITE_TITLE} />
-{
-  ogType === "article" && publishedTime && (
-    <meta property="article:published_time" content={publishedTime.toISOString()} />
-  )
-}
+{ogType === "article" && publishedTime && (
+  <meta property="article:published_time" content={publishedTime.toISOString()} />
+)}
 {ogType === "article" && tags.map((tag: string) => <meta property="article:tag" content={tag} />)}
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:creator" content={SOCIAL.twitter} />
@@ -97,14 +93,12 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
   href={`${base}/rss.xml`}
 />
 {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
-{
-  analyticsEnabled && (
-    <>
-      <meta name="ph-token" content={POST_HOG_TOKEN} />
-      <meta name="ph-host" content={POST_HOG_URL} />
-    </>
-  )
-}
+{analyticsEnabled && (
+  <>
+    <meta name="ph-token" content={POST_HOG_TOKEN} />
+    <meta name="ph-host" content={POST_HOG_URL} />
+  </>
+)}
 
 <script>
   // Shared WebMCP tool registration from the portfolio app (same cross-app

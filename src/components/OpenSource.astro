@@ -12,17 +12,13 @@ import { accentTitle } from "../lib/accent";
       class="heading achievement-heading m-0 text-[56px] leading-[normal] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
       set:html={accentTitle(openSourceSection.title)}
     />
-    <p
-      class="subTitle achievement-subtitle m-0 mb-[50px] uppercase dark:text-white max-md:text-center max-md:text-[16px] max-md:leading-[normal]"
-    >
+    <p class="subTitle achievement-subtitle m-0 mb-[50px] uppercase dark:text-white max-md:text-center max-md:text-[16px] max-md:leading-[normal]">
       {openSourceSection.subtitle}
     </p>
   </div>
   <div class="achievement-cards-div grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
     <div class="certificate-card glow-card p-6">
-      <div
-        class="certificate-image-div relative flex h-[250px] items-center justify-center overflow-hidden"
-      >
+      <div class="certificate-image-div relative flex h-[250px] items-center justify-center overflow-hidden">
         <img
           src={openSourceCard.image}
           alt={openSourceCard.imageAlt}
@@ -33,33 +29,27 @@ import { accentTitle } from "../lib/accent";
         />
       </div>
       <div class="certificate-detail-div text-center">
-        <h3
-          class="card-title m-0 mt-[15px] text-[1.375rem] leading-[24px] font-bold text-title dark:text-white"
-        >
+        <h3 class="card-title m-0 mt-[15px] text-[1.375rem] leading-[24px] font-bold text-title dark:text-white">
           {openSourceCard.title}
         </h3>
-        <p
-          class="card-subtitle my-[1em] text-[1.063rem] leading-[1.5rem] text-card-subtitle dark:text-white"
-        >
+        <p class="card-subtitle my-[1em] text-[1.063rem] leading-[1.5rem] text-card-subtitle dark:text-white">
           {openSourceCard.subtitle}
         </p>
       </div>
       <div class="certificate-card-footer flex flex-wrap items-center justify-center">
-        {
-          openSourceCard.footerLink.map(f => (
-            <a
-              class="certificate-tag mr-2 mb-2 inline-flex h-[2em] items-center justify-center rounded bg-navy px-[0.75em] align-middle text-[0.75rem] leading-[1.5] whitespace-nowrap text-surface-alt no-underline transition-colors duration-200 ease-in hover:bg-dusk-violet dark:hover:bg-blue-light dark:hover:text-navy"
-              href={f.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-ph-event="oss_link_click"
-              data-ph-prop="oss"
-              data-ph-value={f.name}
-            >
-              {f.name}
-            </a>
-          ))
-        }
+        {openSourceCard.footerLink.map(f => (
+          <a
+            class="certificate-tag mr-2 mb-2 inline-flex h-[2em] items-center justify-center rounded bg-navy px-[0.75em] align-middle text-[0.75rem] leading-[1.5] whitespace-nowrap text-surface-alt no-underline transition-colors duration-200 ease-in hover:bg-dusk-violet dark:hover:bg-blue-light dark:hover:text-navy"
+            href={f.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ph-event="oss_link_click"
+            data-ph-prop="oss"
+            data-ph-value={f.name}
+          >
+            {f.name}
+          </a>
+        ))}
       </div>
     </div>
   </div>

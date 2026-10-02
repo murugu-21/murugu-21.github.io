@@ -9,10 +9,13 @@ const { roles } = Astro.props;
 ---
 
 <span class="typewriter text-navy dark:text-blue font-semibold" data-roles={JSON.stringify(roles)}>
-  <span class="typewriter-text">{roles[0]}</span><span
+  <span class="typewriter-text">{roles[0]}</span>
+  <span
     class="typewriter-cursor ml-0.5 font-normal animate-[typewriter-blink_1s_step-end_infinite] motion-reduce:animate-none max-[768px]:hidden"
-    aria-hidden="true">|</span
+    aria-hidden="true"
   >
+    |
+  </span>
 </span>
 
 <script>

@@ -184,10 +184,8 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
     {!noindex && <link rel="canonical" href={canonicalUrl} />}
     {/* crawler-only pointer to the entity page (not in the human nav) */}
     <link rel="author" href="/about/" />
-    {
-      /* IANA link relations for agent discovery: the API's OpenAPI description
-        and the human-readable developer portal that documents it. */
-    }
+    {/* IANA link relations for agent discovery: the API's OpenAPI description
+        and the human-readable developer portal that documents it. */}
     <link
       rel="service-desc"
       type="application/json"
@@ -232,11 +230,9 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
 
-    {
-      /* The text face is preloaded so it is usually in hand by first paint:
+    {/* The text face is preloaded so it is usually in hand by first paint:
         with no metric-tuned fallback faces (see ../lib/fonts.ts) the swap
-        from the system font is what would otherwise shift layout. */
-    }
+        from the system font is what would otherwise shift layout. */}
     <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
     <style is:inline set:html={FIRA_CODE_FACE}></style>
 
@@ -256,18 +252,14 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
         if (dark) document.documentElement.classList.add("dark-mode");
       })();
     </script>
-
-    {
-      analyticsEnabled && (
-        <>
-          <meta name="ph-token" content={POST_HOG_TOKEN} />
-          <meta name="ph-host" content={POST_HOG_URL} />
-        </>
-      )
-    }
+    {analyticsEnabled && (
+      <>
+        <meta name="ph-token" content={POST_HOG_TOKEN} />
+        <meta name="ph-host" content={POST_HOG_URL} />
+      </>
+    )}
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
-
     <script>
       import "../lib/webmcp";
       import { bootAnalytics, initClickTracking, tag } from "../lib/analytics";

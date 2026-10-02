@@ -34,25 +34,23 @@ const { headings } = Astro.props;
 const entries = tocEntries(headings);
 ---
 
-{
-  entries.length > 0 && (
-    <nav class="toc" aria-label="On this page">
-      <ol>
-        {entries.map(entry => (
-          <li class:list={[{ sub: entry.depth === 3 }]}>
-            {/* The label stays in the accessibility tree while collapsed
+{entries.length > 0 && (
+  <nav class="toc" aria-label="On this page">
+    <ol>
+      {entries.map(entry => (
+        <li class:list={[{ sub: entry.depth === 3 }]}>
+          {/* The label stays in the accessibility tree while collapsed
                 (clipped, not display:none), so each link keeps its name and
                 the bar is decoration. */}
-            <a href={`#${entry.slug}`}>
-              <span class="bar" aria-hidden="true" />
-              <span class="label">{entry.text}</span>
-            </a>
-          </li>
-        ))}
-      </ol>
-    </nav>
-  )
-}
+          <a href={`#${entry.slug}`}>
+            <span class="bar" aria-hidden="true" />
+            <span class="label">{entry.text}</span>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </nav>
+)}
 
 <style>
   .toc {
