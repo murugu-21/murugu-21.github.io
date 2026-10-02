@@ -6,11 +6,11 @@ import { defineConfig } from "vitest/config";
 // Tests run on the Workers pool, which has no filesystem, and Vite's CSS
 // pipeline swallows `?raw` for stylesheets. This config runs on the host
 // (Bun), so read the stylesheets here and inline them — islands.css,
-// global.css and the blog's prism-dark.css stay the one source of truth for
+// global.css and the blog's code.css stay the one source of truth for
 // the palettes, and src/styles/*.test.ts assert their contrast.
 const islandsCss = readFileSync("./src/styles/islands.css", "utf8");
 const globalCss = readFileSync("./src/styles/global.css", "utf8");
-const prismCss = readFileSync("./src/blog/styles/prism-dark.css", "utf8");
+const codeCss = readFileSync("./src/blog/styles/code.css", "utf8");
 
 // The pool's D1 starts empty and the chat mirrors are fire-and-forget: their
 // writes would land in a logged .catch() rather than a table. Read the real
@@ -22,7 +22,7 @@ export default defineConfig({
   define: {
     __ISLANDS_CSS__: JSON.stringify(islandsCss),
     __GLOBAL_CSS__: JSON.stringify(globalCss),
-    __PRISM_CSS__: JSON.stringify(prismCss),
+    __CODE_CSS__: JSON.stringify(codeCss),
     __D1_MIGRATIONS__: JSON.stringify(d1Migrations)
   },
   plugins: [

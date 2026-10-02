@@ -15,9 +15,9 @@ import { channels, contrast, luminance } from "./contrast";
 // Inlined from global.css by vitest.config.ts (the Workers pool has no
 // filesystem).
 declare const __GLOBAL_CSS__: string;
-// Inlined from the blog's src/blog/styles/prism-dark.css, whose `--- Light
-// palette` section darkens Prism's default light inks for the blog's fence.
-declare const __PRISM_CSS__: string;
+// Inlined from the blog's src/blog/styles/code.css, whose `--- Light palette`
+// section holds the light inks for the blog's fence.
+declare const __CODE_CSS__: string;
 const css = __GLOBAL_CSS__;
 
 const token = (name: string): string => {
@@ -205,7 +205,7 @@ describe("night palette", () => {
     }
   });
 
-  // The code fence's and inline code's night edge (prism-dark.css, post.css).
+  // The code fence's and inline code's night edge (code.css, post.css).
   it("shows the blog's dark panel edges against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
       expect(contrast(over(token("color-fence-edge-dark"), stop), stop)).toBeGreaterThanOrEqual(3);
@@ -279,11 +279,11 @@ describe("night palette", () => {
 describe("blog light code palette", () => {
   // Prism's default light inks were written for a plain white page, and
   // several sit under AA on the blog's white fence (#999 punctuation at
-  // 2.85:1, #690 strings at 3.43, …). prism-dark.css re-inks them in its
-  // `--- Light palette` section; every colour there must clear 4.5:1 on the
-  // fence. The dark overrides that follow the section are the night palette
+  // 2.85:1, #690 strings at 3.43, …). code.css re-inks them in its
+  // `--- Light palette` section, which holds every light ink; each must clear
+  // 4.5:1 on the fence. The dark overrides that follow the section are the night palette
   // and are not parsed here — they answer to the dark fence, not white.
-  const lightSection = __PRISM_CSS__.split("/* --- Dark palette")[0];
+  const lightSection = __CODE_CSS__.split("/* --- Dark palette")[0];
   const inks = [...lightSection.matchAll(/(?<![\w-])color:\s*(#[0-9a-f]{6})/gi)].map(m => m[1]);
 
   it("finds the light palette's inks", () => {

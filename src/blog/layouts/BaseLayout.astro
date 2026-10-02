@@ -4,10 +4,8 @@
 // The one Tailwind entry, shared with the portfolio app
 import "../../styles/global.css";
 import Icon from "../../components/Icon.astro";
-// Highlighting for code blocks: Prism's light theme, then the fence surface +
-// dark palette that must follow it unlayered (see prism-dark.css header).
-import "prismjs/themes/prism.css";
-import "../styles/prism-dark.css";
+// Fenced code blocks: the fence surface + both Prism token palettes
+import "../styles/code.css";
 // Rendered-markdown rules for post bodies (every selector under .blog-post)
 import "../styles/post.css";
 
