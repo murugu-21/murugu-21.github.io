@@ -7,7 +7,6 @@ import {
   CONTACT_QUOTAS,
   contactRateLimitHeaders,
   policyField,
-  rateLimitField,
   READ_QUOTA,
   readRateLimitHeaders,
   resetReadWindows,
@@ -55,14 +54,9 @@ describe("field serialisation", () => {
     );
   });
 
-  // The same draft: RateLimit reports one policy, with r (remaining) and t
-  // (seconds until the quota resets).
-  it("writes RateLimit as the live snapshot of one policy", () => {
-    expect(rateLimitField(READ_QUOTA, 599, 42)).toBe('"reads";r=599;t=42');
-  });
-
   it("never reports a negative remaining or reset", () => {
-    expect(rateLimitField(READ_QUOTA, -5, -1)).toBe('"reads";r=0;t=0');
+    const headers = readRateLimitHeaders({ allowed: false, remaining: -5, resetSeconds: -1 });
+    expect(headers.RateLimit).toBe('"reads";r=0;t=0');
   });
 
   it("mirrors the reported policy into the de-facto X-RateLimit trio", () => {

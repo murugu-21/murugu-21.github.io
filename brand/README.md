@@ -1,7 +1,7 @@
 # Brand images
 
-X (Twitter) profile banners, rendered from `x-cover.html` — the night sky and
-the blue-hour sky, in the site's own tokens.
+X (Twitter) profile banners rendered from `x-cover.html`: the night sky and the
+blue-hour sky, in the site's own tokens.
 
 | File                   | Size      | Use                                     |
 | ---------------------- | --------- | --------------------------------------- |

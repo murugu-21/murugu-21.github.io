@@ -9,7 +9,7 @@ const { roles } = Astro.props;
 <span class="typewriter text-navy dark:text-blue font-semibold" data-roles={JSON.stringify(roles)}>
   <span class="typewriter-text">{roles[0]}</span>
   <span
-    class="typewriter-cursor ml-0.5 font-normal animate-[typewriter-blink_1s_step-end_infinite] motion-reduce:animate-none max-[768px]:hidden"
+    class="ml-0.5 font-normal animate-[typewriter-blink_1s_step-end_infinite] motion-reduce:animate-none max-[768px]:hidden"
     aria-hidden="true"
   >
     |
@@ -31,26 +31,18 @@ const { roles } = Astro.props;
 
     const tick = () => {
       const current = roles[index % roles.length];
-      if (deleting) {
-        pos--;
-        text.textContent = current.slice(0, pos);
-        if (pos === 0) {
-          deleting = false;
-          index++;
-          setTimeout(tick, 400);
-        } else {
-          setTimeout(tick, 40);
-        }
-        return;
-      }
-      pos++;
+      pos += deleting ? -1 : 1;
       text.textContent = current.slice(0, pos);
-      if (pos === current.length) {
+      let delay = deleting ? 40 : 85;
+      if (deleting && pos === 0) {
+        deleting = false;
+        index++;
+        delay = 400;
+      } else if (!deleting && pos === current.length) {
         deleting = true;
-        setTimeout(tick, 1700);
-      } else {
-        setTimeout(tick, 85);
+        delay = 1700;
       }
+      setTimeout(tick, delay);
     };
     setTimeout(tick, 1700);
   });

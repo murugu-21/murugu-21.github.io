@@ -1,6 +1,8 @@
 // Validation for POST /api/contact, the HTTP twin of Jarvis's capture_opportunity tool. Every
 // rejection names its fields so a function-calling model can repair its arguments and retry.
 
+import { z } from "zod";
+
 import type { FieldIssue } from "./errors";
 
 // Daily allowances enforced by the RateLimiter DO; small on purpose so this is not a mailer.
@@ -21,91 +23,59 @@ export type ContactRequest = {
   message: string;
 };
 
-export type ContactParseResult =
+type ContactParseResult =
   // `dryRun` sits beside the payload so the email formatter never sees it.
   { ok: true; value: ContactRequest; dryRun: boolean } | { ok: false; issues: FieldIssue[] };
 
 // Deliberately loose: stricter patterns reject deliverable addresses.
 const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
-function optional({
-  raw,
-  field,
-  max,
-  issues
-}: {
-  raw: unknown;
-  field: "name" | "company";
-  max: number;
-  issues: FieldIssue[];
-}): string | undefined {
-  if (raw === undefined || raw === null) return undefined;
-  if (typeof raw !== "string") {
-    issues.push({ field, issue: "must be a string" });
-    return undefined;
-  }
-  const value = raw.trim();
-  if (value.length === 0) return undefined;
-  if (value.length > max) {
-    issues.push({ field, issue: `must be at most ${max} characters` });
-    return undefined;
-  }
-  return value;
-}
+// Blank after trimming counts as absent.
+const optionalText = (max: number) =>
+  z
+    .string({ error: "must be a string" })
+    .trim()
+    .max(max, { error: `must be at most ${max} characters` })
+    .nullish()
+    .transform(value => value || undefined);
 
-function requiredEmail(raw: unknown, issues: FieldIssue[]): string | undefined {
-  if (typeof raw !== "string") {
-    issues.push({ field: "email", issue: "is required and must be a string" });
-    return undefined;
-  }
-  const value = raw.trim();
-  if (EMAIL.test(value) && value.length <= CONTACT_LIMITS.email) return value;
-  issues.push({ field: "email", issue: "must be a valid email address" });
-  return undefined;
-}
+const requiredText = z.string({ error: "is required and must be a string" }).trim();
 
-function requiredMessage(raw: unknown, issues: FieldIssue[]): string | undefined {
-  if (typeof raw !== "string") {
-    issues.push({ field: "message", issue: "is required and must be a string" });
-    return undefined;
-  }
-  const value = raw.trim();
-  const { min, max } = CONTACT_LIMITS.message;
-  if (value.length >= min && value.length <= max) return value;
-  issues.push({ field: "message", issue: `must be between ${min} and ${max} characters` });
-  return undefined;
-}
+const MESSAGE = CONTACT_LIMITS.message;
+
+// Key order is the order issues are reported in.
+const ContactBody = z.object(
+  {
+    name: optionalText(CONTACT_LIMITS.name),
+    email: requiredText.refine(value => EMAIL.test(value) && value.length <= CONTACT_LIMITS.email, {
+      error: "must be a valid email address"
+    }),
+    company: optionalText(CONTACT_LIMITS.company),
+    // Validates the payload without sending an email or spending a rate-limit slot.
+    dryRun: z
+      .boolean({ error: "must be a boolean" })
+      .nullish()
+      .transform(value => value ?? false),
+    message: requiredText.refine(
+      value => value.length >= MESSAGE.min && value.length <= MESSAGE.max,
+      { error: `must be between ${MESSAGE.min} and ${MESSAGE.max} characters` }
+    )
+  },
+  { error: "must be a JSON object" }
+);
 
 export function parseContactRequest(raw: unknown): ContactParseResult {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+  const parsed = ContactBody.safeParse(raw);
+  if (!parsed.success) {
     return {
       ok: false,
-      issues: [{ field: "body", issue: "must be a JSON object" }]
+      issues: parsed.error.issues.map(issue => ({
+        field: issue.path.length > 0 ? String(issue.path[0]) : "body",
+        issue: issue.message
+      }))
     };
   }
-  const body = raw as Record<string, unknown>;
-  const issues: FieldIssue[] = [];
-
-  const name = optional({ raw: body.name, field: "name", max: CONTACT_LIMITS.name, issues });
-
-  const email = requiredEmail(body.email, issues);
-
-  const company = optional({
-    raw: body.company,
-    field: "company",
-    max: CONTACT_LIMITS.company,
-    issues
-  });
-
-  // Validates the payload without sending an email or spending a rate-limit slot.
-  const rawDryRun = body.dryRun ?? false;
-  if (typeof rawDryRun !== "boolean") issues.push({ field: "dryRun", issue: "must be a boolean" });
-  const dryRun = rawDryRun === true;
-
-  const message = requiredMessage(body.message, issues);
-
-  if (issues.length > 0 || email === undefined || message === undefined)
-    return { ok: false, issues };
+  const { dryRun, name, email, company, message } = parsed.data;
   return {
     ok: true,
     dryRun,

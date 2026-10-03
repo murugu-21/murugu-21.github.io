@@ -113,6 +113,9 @@ export function alignWords(
   return out.map(w => ({ w: w.w, s: round(w.s), e: round(w.e) }));
 }
 
+const isText = (node: Node): node is Text => node.nodeType === 3;
+const isElement = (node: Node): node is Element => node.nodeType === 1;
+
 const WORD_CLASS = "rw";
 const WORD_ATTR = "data-w";
 
@@ -134,8 +137,8 @@ export function wrapWords(el: HTMLElement): HTMLElement[][] {
   const textNodes: Text[] = [];
   const walk = (node: Node) => {
     for (const child of Array.from(node.childNodes)) {
-      if (child.nodeType === 3) textNodes.push(child as Text);
-      else if (child.nodeType === 1) walk(child);
+      if (isText(child)) textNodes.push(child);
+      else if (isElement(child)) walk(child);
     }
   };
   walk(el);

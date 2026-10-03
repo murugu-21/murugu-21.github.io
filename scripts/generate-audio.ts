@@ -30,14 +30,23 @@ import { parseHTML } from "linkedom";
 
 import { speechBlocks } from "../src/blog/utils/speech.ts";
 import { normalizeSpeechText, packSentences, spokenHash } from "../src/blog/utils/audio-prep.ts";
-import { fail, log, publishedSlugs, run, runEach } from "./tts/cli.ts";
+import {
+  BLOG_DIST,
+  PYTHON,
+  ROOT,
+  fail,
+  flags,
+  log,
+  publishedSlugs,
+  run,
+  runEach,
+  runMain,
+  slugs
+} from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
-import { SITE_DIR } from "./site-dir.ts";
 import { AUDIO_PREFIX, VOICE_PREFIX, r2Store } from "./tts/r2.ts";
 import { assemble, readWav, writeWav } from "./tts/wav.ts";
 
-const ROOT = resolve(new URL("..", import.meta.url).pathname);
-const DIST = join(SITE_DIR, "blog");
 // Env overrides are for A/B renders, not production.
 //   AUDIO_VOICE_DIR   directory holding reference.wav + reference.txt
 //   AUDIO_TEMPO       atempo factor, "1" disables the pass
@@ -47,7 +56,6 @@ const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   : join(ROOT, ".voice");
 const VOICE_WAV = join(VOICE_DIR, "reference.wav");
 const VOICE_TXT = join(VOICE_DIR, "reference.txt");
-const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "synth.py");
 const VOICE_ID = "breeze-tts-2-8bit/chennai-2026-09-09";
 const CHUNK_MAX = 300;
@@ -56,13 +64,10 @@ const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
 // Loudness only: Breeze is ~-60 dBFS between words, so no denoise or gate.
 const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
 
-const args = process.argv.slice(2);
-const flags = new Set(args.filter(a => a.startsWith("--")));
-const slugs = args.filter(a => !a.startsWith("--"));
 const r2 = r2Store(flags.has("--local"));
 
 function checkPreconditions(): { audio: string; text: string } {
-  if (!existsSync(DIST)) fail(`${DIST} missing — run \`bun run build\` first`);
+  if (!existsSync(BLOG_DIST)) fail(`${BLOG_DIST} missing — run \`bun run build\` first`);
   for (const tool of ["ffmpeg", "ffprobe"]) {
     if (spawnSync(tool, ["-version"]).status !== 0) {
       fail(`${tool} not on PATH (brew install ffmpeg)`);
@@ -92,7 +97,7 @@ function checkPreconditions(): { audio: string; text: string } {
 }
 
 function extractBlocks(slug: string): string[] {
-  const html = readFileSync(join(DIST, slug, "index.html"), "utf8");
+  const html = readFileSync(join(BLOG_DIST, slug, "index.html"), "utf8");
   const { document } = parseHTML(html);
   const title = document.querySelector("article.blog-post header h1");
   const body = document.querySelector("section[itemprop='articleBody']");
@@ -277,9 +282,9 @@ async function main() {
   }
   r2.checkLogin();
   const reference = checkPreconditions();
-  const targets = slugs.length ? slugs : publishedSlugs(DIST);
+  const targets = slugs.length ? slugs : publishedSlugs();
   for (const s of targets) {
-    if (!existsSync(join(DIST, s, "index.html"))) {
+    if (!existsSync(join(BLOG_DIST, s, "index.html"))) {
       fail(`no built post for slug "${s}"`);
     }
   }
@@ -298,6 +303,4 @@ async function main() {
   if (failures.length) process.exit(1);
 }
 
-main().catch((err: unknown) =>
-  fail(err instanceof Error ? (err.stack ?? err.message) : String(err))
-);
+runMain(main);

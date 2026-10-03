@@ -6,7 +6,7 @@ import { consumeSse, type StreamResult, type Usage } from "./sse";
 export const DEEPSEEK_MODEL = "deepseek-flash";
 export const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
-export class DeepseekError extends Error {
+class DeepseekError extends Error {
   constructor(readonly status: number) {
     super(`deepseek request failed: ${status}`);
     this.name = "DeepseekError";

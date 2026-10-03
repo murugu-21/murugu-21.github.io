@@ -1,3 +1,6 @@
+import { z } from "zod";
+
+import { jsonString } from "./json";
 import type { ChatHistoryEntry } from "./protocol";
 
 export const MAX_HISTORY_MESSAGES = 20;
@@ -18,7 +21,7 @@ export type ModelMessage = {
   tool_call_id?: string;
 };
 
-export const CAPTURE_TOOL = {
+const CAPTURE_TOOL = {
   type: "function",
   function: {
     name: "capture_opportunity",
@@ -72,14 +75,10 @@ const FETCH_TOOL = {
 
 export const TOOLS = [CAPTURE_TOOL, FETCH_TOOL] as const;
 
-export function parseFetchArguments(raw: string): string | null {
-  try {
-    const args = JSON.parse(raw) as { url?: unknown };
-    return typeof args.url === "string" && args.url.length > 0 ? args.url : null;
-  } catch {
-    return null;
-  }
-}
+const FetchArguments = jsonString(z.object({ url: z.string().min(1) }));
+
+export const parseFetchArguments = (raw: string): string | null =>
+  FetchArguments.safeParse(raw).data?.url ?? null;
 
 function buildSystemPrompt(grounding: string): string {
   return `You are Jarvis, the AI assistant on murugappan.dev — the personal site of Murugappan M, a full stack engineer (TypeScript, Node.js, React, AWS). You act as his concierge: part support agent, part inbound-sales assistant.

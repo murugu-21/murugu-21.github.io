@@ -14,7 +14,7 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
 ---
 
 <li class="mb-4 pl-0" data-search={haystack} data-tags={JSON.stringify(post.tags)}>
-  <article class="post-list-item mt-8" itemscope itemtype="http://schema.org/Article">
+  <article class="mt-8" itemscope itemtype="http://schema.org/Article">
     <header class="mb-4">
       <h2 class="mt-0 mb-2 text-[1.728rem] leading-[1.1] font-bold tracking-tight text-navy dark:text-blue-light">
         <a href={post.href} itemprop="url" class="text-inherit no-underline">

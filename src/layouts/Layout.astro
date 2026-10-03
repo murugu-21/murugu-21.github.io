@@ -183,13 +183,13 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
     {!noindex && <meta property="og:url" content={canonicalUrl} />}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={socialDescription} />
-    <meta property="og:image" content="https://murugappan.dev/og-image.png" />
+    <meta property="og:image" content={`${SITE_ORIGIN}/og-image.png`} />
 
     <meta name="twitter:card" content="summary_large_image" />
     {!noindex && <meta name="twitter:url" content={canonicalUrl} />}
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={socialDescription} />
-    <meta name="twitter:image" content="https://murugappan.dev/og-image.png" />
+    <meta name="twitter:image" content={`${SITE_ORIGIN}/og-image.png`} />
 
     <meta name="msapplication-TileColor" content="#06038d" />
     <meta name="theme-color" content="#06038d" />

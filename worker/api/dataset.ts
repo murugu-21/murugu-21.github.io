@@ -2,66 +2,80 @@
 // `dist/api/dataset.json`, which the Worker reads via ASSETS, so the API cannot drift from the site.
 // Input is typed structurally to keep `astro` imports (ImageMetadata) out of the Worker.
 
-export type Link = { label: string; url: string };
+import { z } from "zod";
 
-export type ExperienceEntry = {
-  role: string;
-  company: string;
-  location: string;
+const Link = z.object({ label: z.string(), url: z.string() });
+export type Link = z.infer<typeof Link>;
+
+const nullableString = z.string().nullable();
+
+const ExperienceEntry = z.object({
+  role: z.string(),
+  company: z.string(),
+  location: z.string(),
   /** As displayed on the site. */
-  period: string;
+  period: z.string(),
   /** ISO 8601 year-month, or null when the period could not be parsed. */
-  startDate: string | null;
-  endDate: string | null;
-  current: boolean;
-  summary: string;
-  highlights: string[];
-};
+  startDate: nullableString,
+  endDate: nullableString,
+  current: z.boolean(),
+  summary: z.string(),
+  highlights: z.array(z.string())
+});
+export type ExperienceEntry = z.infer<typeof ExperienceEntry>;
 
-export type SkillCategory = { category: string; skills: string[] };
+const SkillCategory = z.object({ category: z.string(), skills: z.array(z.string()) });
+export type SkillCategory = z.infer<typeof SkillCategory>;
 
-export type Proficiency = { area: string; tools: string[]; level: number };
+const Proficiency = z.object({ area: z.string(), tools: z.array(z.string()), level: z.number() });
+export type Proficiency = z.infer<typeof Proficiency>;
 
-export type EducationEntry = {
-  institution: string;
-  credential: string;
-  location: string;
-  period: string;
-  startDate: string | null;
-  endDate: string | null;
+const EducationEntry = z.object({
+  institution: z.string(),
+  credential: z.string(),
+  location: z.string(),
+  period: z.string(),
+  startDate: nullableString,
+  endDate: nullableString,
   /** Grade as the site displays it (e.g. "CGPA 9.53 / 10"), or null. */
-  grade: string | null;
-  highlights: string[];
-};
+  grade: nullableString,
+  highlights: z.array(z.string())
+});
+export type EducationEntry = z.infer<typeof EducationEntry>;
 
-export type OpenSourceContribution = {
-  project: string;
-  role: string;
-  description: string;
-  links: Link[];
-};
+const OpenSourceContribution = z.object({
+  project: z.string(),
+  role: z.string(),
+  description: z.string(),
+  links: z.array(Link)
+});
+export type OpenSourceContribution = z.infer<typeof OpenSourceContribution>;
 
-export type Person = {
-  name: string;
-  headline: string;
-  pitch: string;
-  location: string;
-  email: string;
-  site: string;
-  availableForWork: boolean;
-  currentRole: { role: string; company: string; since: string | null } | null;
-  focus: string[];
-};
+const Person = z.object({
+  name: z.string(),
+  headline: z.string(),
+  pitch: z.string(),
+  location: z.string(),
+  email: z.string(),
+  site: z.string(),
+  availableForWork: z.boolean(),
+  currentRole: z
+    .object({ role: z.string(), company: z.string(), since: nullableString })
+    .nullable(),
+  focus: z.array(z.string())
+});
+export type Person = z.infer<typeof Person>;
 
-export type Dataset = {
-  person: Person;
-  links: Link[];
-  experience: ExperienceEntry[];
-  skills: SkillCategory[];
-  proficiencies: Proficiency[];
-  education: EducationEntry[];
-  openSource: OpenSourceContribution[];
-};
+export const Dataset = z.object({
+  person: Person,
+  links: z.array(Link),
+  experience: z.array(ExperienceEntry),
+  skills: z.array(SkillCategory),
+  proficiencies: z.array(Proficiency),
+  education: z.array(EducationEntry),
+  openSource: z.array(OpenSourceContribution)
+});
+export type Dataset = z.infer<typeof Dataset>;
 
 export type DatasetInput = {
   greeting: { username: string; subTitle: string; resumePath: string };
@@ -145,7 +159,7 @@ function toYearMonth(part: string): string | null {
   return `${match[2]}-${String(month + 1).padStart(2, "0")}`;
 }
 
-export type Period = {
+type Period = {
   startDate: string | null;
   endDate: string | null;
   current: boolean;
@@ -265,22 +279,7 @@ export function buildDataset(input: DatasetInput): Dataset {
   };
 }
 
-const COLLECTIONS = [
-  "links",
-  "experience",
-  "skills",
-  "proficiencies",
-  "education",
-  "openSource"
-] as const;
-
 // A stale or truncated build artifact must surface as a 503, not as `undefined` in a 200 body.
 export function parseDataset(raw: unknown): Dataset | null {
-  if (typeof raw !== "object" || raw === null) return null;
-  const doc = raw as Record<string, unknown>;
-  const person = doc.person;
-  if (typeof person !== "object" || person === null) return null;
-  if (typeof (person as Record<string, unknown>).name !== "string") return null;
-  for (const key of COLLECTIONS) if (!Array.isArray(doc[key])) return null;
-  return doc as unknown as Dataset;
+  return Dataset.safeParse(raw).data ?? null;
 }

@@ -6,12 +6,12 @@ import { loadPost, loadPosts, readAsset, type AssetsLike } from "../api/store";
 
 export const RESOURCE_ORIGIN = "https://murugappan.dev";
 
-export type ResourceAnnotations = {
+type ResourceAnnotations = {
   audience: Array<"user" | "assistant">;
   priority: number;
 };
 
-export type ResourceDescriptor = {
+type ResourceDescriptor = {
   uri: string;
   name: string;
   title: string;
@@ -20,13 +20,13 @@ export type ResourceDescriptor = {
   annotations?: ResourceAnnotations;
 };
 
-export type ResourceContents = {
+type ResourceContents = {
   uri: string;
   mimeType: string;
   text: string;
 };
 
-export type ResourceContext = { assets: AssetsLike };
+type ResourceContext = { assets: AssetsLike };
 
 const forAssistant = (priority: number): ResourceAnnotations => ({
   audience: ["assistant"],

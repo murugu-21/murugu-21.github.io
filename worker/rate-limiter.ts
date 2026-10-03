@@ -21,9 +21,9 @@ const hasFunds = ({ available, totalUsd }: DeepseekBalance): boolean =>
   available && totalUsd > BALANCE_RESERVE_USD;
 
 /** What is left of each contact tier today, after the reporting call. */
-export type ContactUsage = { clientRemaining: number; globalRemaining: number };
+type ContactUsage = { clientRemaining: number; globalRemaining: number };
 
-export type ContactSlot = ContactUsage &
+type ContactSlot = ContactUsage &
   ({ allowed: true } | { allowed: false; scope: "client" | "global" });
 
 // One fixed-name instance ("global") shared by every ChatRoom, so the balance
@@ -115,10 +115,6 @@ export class RateLimiter extends DurableObject<Env> {
       clientRemaining: Math.max(0, CONTACT_DAILY_PER_CLIENT - clientUsed),
       globalRemaining: Math.max(0, CONTACT_DAILY_GLOBAL - globalUsed)
     };
-  }
-
-  contactsSentToday(): number {
-    return this.contactCount(`${this.today()}:global`);
   }
 
   private contactCount(key: string): number {

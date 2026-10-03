@@ -58,7 +58,7 @@ export function writeWav(sampleRate: number, pcm: Buffer): Buffer {
   return Buffer.concat([header, pcm]);
 }
 
-export function silence(sampleRate: number, seconds: number): Buffer {
+function silence(sampleRate: number, seconds: number): Buffer {
   return Buffer.alloc(Math.round(sampleRate * seconds) * 2);
 }
 

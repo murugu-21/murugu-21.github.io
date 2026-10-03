@@ -64,27 +64,27 @@ const isRootPath = Astro.url.pathname === rootPath;
     {/* Bio sits in the page slot, so its index-page margin is set from the
          wrapper; (0,3,0) beats Bio's own `mb-16`. */}
     <div
-      class="global-wrapper mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:[&_.bio]:mb-5 max-md:pb-24"
+      class="mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:[&_.bio]:mb-5 max-md:pb-24"
       data-is-root-path={isRootPath}
     >
-      <header class="global-header mb-12 flex flex-row items-center justify-between">
+      <header class="mb-12 flex flex-row items-center justify-between">
         {isRootPath ? (
-          <h1 class="main-heading m-0 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-title dark:text-white">
+          <h1 class="m-0 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-title dark:text-white">
             <a class="text-inherit no-underline" href={rootPath}>
               {SITE_TITLE}
             </a>
           </h1>
         ) : (
           <a
-            class="header-link-home text-[1.2rem] font-bold text-navy no-underline dark:text-blue-light"
+            class="text-[1.2rem] font-bold text-navy no-underline dark:text-blue-light"
             href={rootPath}
           >
             {SITE_TITLE}
           </a>
         )}
-        <div class="header-actions flex items-center gap-4">
+        <div class="flex items-center gap-4">
           <a
-            class="rss-link inline-flex items-center text-text hover:text-navy dark:text-text-dark dark:hover:text-blue-light"
+            class="inline-flex items-center text-text hover:text-navy dark:text-text-dark dark:hover:text-blue-light"
             href={`${rootPath}rss.xml`}
             target="_blank"
             rel="noopener noreferrer"

@@ -6,7 +6,7 @@
 
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./contact";
 
-export type Quota = {
+type Quota = {
   /** Policy name, quoted verbatim in both header fields. */
   name: string;
   quota: number;
@@ -40,25 +40,24 @@ export function policyField(quotas: readonly Quota[]): string {
 
 const clamp = (n: number) => Math.max(0, Math.floor(n));
 
-export function rateLimitField(quota: Quota, remaining: number, resetSeconds: number): string {
+type Reported = { quota: Quota; remaining: number; resetSeconds: number };
+
+function rateLimitField({ quota, remaining, resetSeconds }: Reported): string {
   return `"${quota.name}";r=${clamp(remaining)};t=${clamp(resetSeconds)}`;
 }
 
 /** The draft fields plus the de-facto `X-RateLimit-*` trio for one policy. */
-function rateLimitHeaders(
-  policies: readonly Quota[],
-  reported: { quota: Quota; remaining: number; resetSeconds: number }
-): Record<string, string> {
+function rateLimitHeaders(policies: readonly Quota[], reported: Reported): Record<string, string> {
   return {
     "RateLimit-Policy": policyField(policies),
-    RateLimit: rateLimitField(reported.quota, reported.remaining, reported.resetSeconds),
+    RateLimit: rateLimitField(reported),
     "X-RateLimit-Limit": String(reported.quota.quota),
     "X-RateLimit-Remaining": String(clamp(reported.remaining)),
     "X-RateLimit-Reset": String(clamp(reported.resetSeconds))
   };
 }
 
-export type ReadSlot = {
+type ReadSlot = {
   allowed: boolean;
   remaining: number;
   resetSeconds: number;

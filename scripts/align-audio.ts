@@ -11,22 +11,26 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 
 import { alignWords, type TimedWord, type WhisperWord } from "../src/blog/utils/audio-words.ts";
-import { fail, log, publishedSlugs, run, runEach } from "./tts/cli.ts";
+import {
+  PYTHON,
+  ROOT,
+  fail,
+  flags,
+  log,
+  publishedSlugs,
+  run,
+  runEach,
+  runMain,
+  slugs
+} from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
-import { SITE_DIR } from "./site-dir.ts";
 import { AUDIO_PREFIX, r2Store } from "./tts/r2.ts";
 
-const ROOT = resolve(new URL("..", import.meta.url).pathname);
-const DIST = join(SITE_DIR, "blog");
-const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "whisper.py");
 
-const args = process.argv.slice(2);
-const flags = new Set(args.filter(a => a.startsWith("--")));
-const slugs = args.filter(a => !a.startsWith("--"));
 const r2 = r2Store(flags.has("--local"));
 
 interface WhisperReply {
@@ -135,7 +139,7 @@ async function main() {
   if (spawnSync("ffmpeg", ["-version"]).status !== 0) fail("ffmpeg not on PATH");
 
   r2.checkLogin();
-  const targets = slugs.length ? slugs : publishedSlugs(DIST);
+  const targets = slugs.length ? slugs : publishedSlugs();
   const worker = startWorker();
   let failures: string[];
   try {
@@ -146,6 +150,4 @@ async function main() {
   if (failures.length) process.exit(1);
 }
 
-main().catch((err: unknown) =>
-  fail(err instanceof Error ? (err.stack ?? err.message) : String(err))
-);
+runMain(main);

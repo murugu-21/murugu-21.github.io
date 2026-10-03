@@ -42,14 +42,14 @@ const links = [
 ];
 ---
 
-<div class="social-media-div max-md:text-center">
+<div class="max-md:text-center">
   {links.map(link => (
     <a
       href={link.href}
       data-ph-event="social_click"
       data-ph-prop="social"
       data-ph-value={link.value}
-      class="icon-button inline-flex items-center justify-center w-[2.6rem] h-[2.6rem] mx-[5px] mb-2.5 text-text no-underline cursor-pointer align-middle select-none transition-colors duration-200 ease-in hover:text-navy dark:text-white dark:hover:text-blue"
+      class="inline-flex items-center justify-center w-[2.6rem] h-[2.6rem] mx-[5px] mb-2.5 text-text no-underline cursor-pointer align-middle select-none transition-colors duration-200 ease-in hover:text-navy dark:text-white dark:hover:text-blue"
       target={link.external ? "_blank" : undefined}
       rel={link.external ? "noopener noreferrer" : undefined}
       aria-label={link.label}

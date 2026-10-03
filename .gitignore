@@ -13,8 +13,6 @@ dist/
 .env.test.local
 .env.production.local
 
-npm-debug.log*
-
 # cloudflare worker
 .wrangler/
 .dev.vars

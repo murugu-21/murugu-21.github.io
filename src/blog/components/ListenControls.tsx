@@ -438,7 +438,7 @@ export function ListenControls({ slug }: { slug: string }) {
   return (
     <div
       ref={setRoot}
-      className="flex items-center gap-3 rounded-lg border border-border bg-card py-2 pr-2 pl-2 shadow-sm dark:border-white/40"
+      className="flex items-center gap-3 rounded-lg border border-border bg-card p-2 shadow-sm dark:border-white/40"
     >
       <Button
         onClick={onToggle}
@@ -490,7 +490,7 @@ export function ListenControls({ slug }: { slug: string }) {
             size="sm"
             disabled={!supported}
             aria-label="Playback speed"
-            // w-14 (not auto): a stored 1.75x would otherwise widen the pill
+            // w-14 (not auto): a stored 1.25x would otherwise widen the pill
             // after hydration and nudge the row.
             className="h-7 w-14 shrink-0 rounded-full px-2.5 text-xs font-semibold tabular-nums"
           >

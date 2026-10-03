@@ -2,6 +2,10 @@
 // with per-request `_meta` is served as modern (stateless, headers mirrored
 // from the body); anything else as legacy `initialize`. No sessions either way.
 
+import { z } from "zod";
+
+import { JsonObject, lenient } from "../json";
+
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
 const MODERN_PROTOCOL_VERSIONS: readonly string[] = [LATEST_PROTOCOL_VERSION];
 // Newest first — the first entry is what `initialize` falls back to.
@@ -30,14 +34,17 @@ export const JSON_RPC_INVALID_PARAMS = -32602;
 const MCP_HEADER_MISMATCH = -32020;
 const MCP_UNSUPPORTED_PROTOCOL_VERSION = -32022;
 
-export type JsonRpcId = string | number;
+const JsonRpcId = z.union([z.string(), z.number()]);
+export type JsonRpcId = z.infer<typeof JsonRpcId>;
 
-export type JsonRpcMessage = {
-  jsonrpc: "2.0";
-  id?: JsonRpcId;
-  method: string;
-  params?: Record<string, unknown>;
-};
+const JsonRpcMessage = z.object({
+  jsonrpc: z.literal("2.0"),
+  id: JsonRpcId.optional(),
+  method: z.string(),
+  // Non-object params are dropped; each method validates the fields it reads.
+  params: lenient(JsonObject)
+});
+export type JsonRpcMessage = z.infer<typeof JsonRpcMessage>;
 
 export type RpcFailure = {
   /** HTTP status the transport requires for this failure. */
@@ -47,59 +54,33 @@ export type RpcFailure = {
   data?: unknown;
 };
 
+function invalidRequest(message: string): { ok: false; failure: RpcFailure } {
+  return { ok: false, failure: { status: 400, code: JSON_RPC_INVALID_REQUEST, message } };
+}
+
 export function parseMessage(
   raw: unknown
 ): { ok: true; message: JsonRpcMessage } | { ok: false; failure: RpcFailure } {
+  const parsed = JsonRpcMessage.safeParse(raw);
+  if (parsed.success) return { ok: true, message: parsed.data };
+
+  const { issues } = parsed.error;
   // The transport forbids batch arrays.
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    return {
-      ok: false,
-      failure: {
-        status: 400,
-        code: JSON_RPC_INVALID_REQUEST,
-        message:
-          "The request body must be a single JSON-RPC request or notification object. Batches and arrays are not supported on the Streamable HTTP transport."
-      }
-    };
+  if (issues.some(issue => issue.path.length === 0)) {
+    return invalidRequest(
+      "The request body must be a single JSON-RPC request or notification object. Batches and arrays are not supported on the Streamable HTTP transport."
+    );
   }
-  const msg = raw as Record<string, unknown>;
-  if (msg.jsonrpc !== "2.0" || typeof msg.method !== "string") {
-    return {
-      ok: false,
-      failure: {
-        status: 400,
-        code: JSON_RPC_INVALID_REQUEST,
-        message: 'A JSON-RPC message needs "jsonrpc": "2.0" and a "method".'
-      }
-    };
+  const failed = new Set(issues.map(issue => issue.path[0]));
+  if (failed.has("jsonrpc") || failed.has("method")) {
+    return invalidRequest('A JSON-RPC message needs "jsonrpc": "2.0" and a "method".');
   }
-  if (msg.id !== undefined && typeof msg.id !== "string" && typeof msg.id !== "number") {
-    return {
-      ok: false,
-      failure: {
-        status: 400,
-        code: JSON_RPC_INVALID_REQUEST,
-        message: 'The "id" of a JSON-RPC request must be a string or a number.'
-      }
-    };
-  }
-  return {
-    ok: true,
-    message: {
-      jsonrpc: "2.0",
-      ...(msg.id === undefined ? {} : { id: msg.id as JsonRpcId }),
-      method: msg.method,
-      params:
-        typeof msg.params === "object" && msg.params !== null && !Array.isArray(msg.params)
-          ? (msg.params as Record<string, unknown>)
-          : undefined
-    }
-  };
+  // `id` is all that is left: `params` falls back instead of failing.
+  return invalidRequest('The "id" of a JSON-RPC request must be a string or a number.');
 }
 
 function metaOf(message: JsonRpcMessage): Record<string, unknown> {
-  const meta = message.params?._meta;
-  return typeof meta === "object" && meta !== null ? (meta as Record<string, unknown>) : {};
+  return JsonObject.safeParse(message.params?._meta).data ?? {};
 }
 
 export function isModernRequest(message: JsonRpcMessage): boolean {
@@ -179,7 +160,7 @@ export function validateModernHeaders(
 
 export function validateModernMeta(message: JsonRpcMessage): RpcFailure | null {
   const capabilities = metaOf(message)[META_CLIENT_CAPABILITIES];
-  if (typeof capabilities !== "object" || capabilities === null || Array.isArray(capabilities)) {
+  if (!JsonObject.safeParse(capabilities).success) {
     return {
       status: 400,
       code: JSON_RPC_INVALID_PARAMS,

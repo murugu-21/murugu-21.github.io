@@ -10,9 +10,7 @@ export interface GithubProfile {
 // Vite exposes .env via import.meta.env, not process.env; fall back to
 // process.env for plain-node contexts.
 function githubToken(): string | undefined {
-  return (
-    import.meta.env.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN ?? process.env.REACT_APP_GITHUB_TOKEN
-  );
+  return import.meta.env.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN;
 }
 
 /** Build-time GraphQL query; logs and returns null on any failure so the build never breaks. */
@@ -50,7 +48,7 @@ async function queryGithub<T>({
       );
       return null;
     }
-    return json?.data ?? null;
+    return json.data ?? null;
   } catch (e) {
     console.warn(`[github] fetch failed — ${fallback}`, e);
     return null;

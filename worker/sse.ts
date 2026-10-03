@@ -1,3 +1,32 @@
+import { z } from "zod";
+
+import { jsonString, lenient } from "./json";
+
+// Upstream chunks are untrusted: a malformed field or array element is dropped, not fatal to
+// the stream.
+
+const ToolCallDelta = z.object({
+  index: lenient(z.number()),
+  id: lenient(z.string()),
+  function: lenient(z.object({ name: lenient(z.string()), arguments: lenient(z.string()) }))
+});
+
+const Choice = z.object({
+  delta: lenient(
+    z.object({
+      content: lenient(z.string()),
+      tool_calls: lenient(z.array(lenient(ToolCallDelta)))
+    })
+  )
+});
+
+const SseChunk = jsonString(
+  z.object({
+    usage: lenient(z.object({ prompt_tokens: z.number(), completion_tokens: z.number() })),
+    choices: lenient(z.array(lenient(Choice)))
+  })
+);
+
 // `id` is synthesized when missing: the tool-result message must reference it.
 export type ToolCall = { id: string; name: string; arguments: string };
 
@@ -8,10 +37,6 @@ export type StreamResult = {
   toolCalls: ToolCall[];
   usage: Usage | null;
 };
-
-function toolCallId(id: unknown, index: number): string {
-  return typeof id === "string" && id.length > 0 ? id : `call_${index}`;
-}
 
 export async function consumeSse(
   stream: ReadableStream<Uint8Array>,
@@ -28,30 +53,11 @@ export async function consumeSse(
     if (!line.startsWith("data:")) return;
     const payload = line.slice(5).trim();
     if (payload === "" || payload === "[DONE]") return;
-    let data: {
-      usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
-      choices?: {
-        delta?: {
-          content?: unknown;
-          tool_calls?: {
-            index?: number;
-            id?: string;
-            function?: { name?: string; arguments?: string };
-          }[];
-        };
-      }[];
-    };
-    try {
-      data = JSON.parse(payload);
-    } catch {
-      return;
-    }
+    const data = SseChunk.safeParse(payload).data;
+    if (!data) return;
 
     // Usage arrives on the final event.
-    if (
-      typeof data.usage?.prompt_tokens === "number" &&
-      typeof data.usage?.completion_tokens === "number"
-    ) {
+    if (data.usage) {
       usage = {
         promptTokens: data.usage.prompt_tokens,
         completionTokens: data.usage.completion_tokens
@@ -59,12 +65,13 @@ export async function consumeSse(
     }
 
     const delta = data.choices?.[0]?.delta?.content;
-    if (typeof delta === "string" && delta.length > 0) {
+    if (delta) {
       content += delta;
       onDelta(delta);
     }
 
     for (const tc of data.choices?.[0]?.delta?.tool_calls ?? []) {
+      if (!tc) continue;
       const i = tc.index ?? 0;
       toolCalls[i] ??= { id: "", name: "", arguments: "" };
       if (tc.id) toolCalls[i].id = tc.id;
@@ -87,7 +94,7 @@ export async function consumeSse(
     content,
     toolCalls: toolCalls
       .filter(t => t && t.name)
-      .map((t, i) => ({ ...t, id: toolCallId(t.id, i) })),
+      .map((t, i) => ({ ...t, id: t.id || `call_${i}` })),
     usage
   };
 }

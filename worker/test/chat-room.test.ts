@@ -1,11 +1,10 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { assert, describe, expect, it, vi } from "vitest";
 
-import { ChatRoom } from "../chat-room";
+import { ChatRoom, parseClientMessage } from "../chat-room";
 import {
   GREETING,
   MAX_MESSAGE_LENGTH,
-  parseClientMessage,
   parseVisitorContext,
   toolFrame,
   VISITOR_COUNTRY_HEADER,

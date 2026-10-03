@@ -28,7 +28,7 @@
 
 # Markdown renditions (src/pages/**/index.md.ts). A zone Transform Rule
 # rewrites Accept: text/markdown page requests to these files, so their body
-# is served under the page URL — Vary tells caches that URL depends on Accept.
+# is served under the page URL; Vary tells caches it depends on Accept.
 /index.md
   Vary: Accept
 /blog/index.md

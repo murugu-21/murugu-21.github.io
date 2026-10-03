@@ -40,16 +40,16 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
 
 <div id="experience">
   <div
-    class="experience-container section-animate mx-auto mt-8 box-content flex w-[90%] px-2.5 py-5"
+    class="section-animate mx-auto mt-8 box-content flex w-[90%] px-2.5 py-5"
     id="workExperience"
   >
     <div class="flex-1">
-      <div class="experience-head mb-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 max-md:flex-col max-md:items-center">
+      <div class="mb-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 max-md:flex-col max-md:items-center">
         <h2
-          class="experience-heading mt-[0.67em] mb-0 text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+          class="mt-[0.67em] mb-0 text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
           set:html={accentTitle("Experiences")}
         />
-        <p class="experience-total subTitle text-right text-[18px] max-md:text-center">
+        <p class="subTitle text-right text-[18px] max-md:text-center">
           <span
             class="experience-total-value font-semibold text-navy dark:text-blue"
             data-periods={JSON.stringify(allPeriods)}
@@ -59,15 +59,15 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
           of experience across {companyCount} {companyCount === 1 ? "company" : "companies"}
         </p>
       </div>
-      <ol class="stints flex flex-col gap-5">
+      <ol class="flex flex-col gap-5">
         {stints.map(stint => (
           /* `[&:hover]:`, not `hover:` (gated on @media (hover: hover)), so
                 glow-card's :hover scale is also cancelled on tap. */
-          <li class="stint glow-card px-7 py-6 text-text [&:hover]:transform-none max-md:px-4 max-md:py-5 dark:text-white">
-            <header class="stint-header mb-5 flex items-center gap-5">
+          <li class="glow-card px-7 py-6 text-text [&:hover]:transform-none max-md:px-4 max-md:py-5 dark:text-white">
+            <header class="mb-5 flex items-center gap-5">
               {/* Rendered at 4.5rem (3rem on phones), so 72px + 2x instead of the 256px source. */}
               <Image
-                class="stint-logo size-18 flex-none rounded-full object-cover shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-md:size-12"
+                class="size-18 flex-none rounded-full object-cover shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-md:size-12"
                 src={stint.logo}
                 width={72}
                 height={72}
@@ -76,10 +76,10 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                 loading="lazy"
               />
               <div>
-                <h3 class="stint-company text-[25px] leading-[1.2] font-bold max-md:text-[21px]">
+                <h3 class="text-[25px] leading-[1.2] font-bold max-md:text-[21px]">
                   {stint.company}
                 </h3>
-                <p class="stint-meta subTitle mt-1 mb-0 text-[16px] dark:text-white/65">
+                <p class="subTitle mt-1 mb-0 text-[16px] dark:text-white/65">
                   {stint.span}
                   {stint.duration && (
                     <span
@@ -99,8 +99,8 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
 
             <ol class="roles ml-[1.9rem] flex flex-col gap-5 pl-[1.6rem] max-md:ml-[1.15rem] max-md:pl-[1.4rem]">
               {stint.roles.map(role => (
-                <li class="role relative before:absolute before:top-[0.45rem] before:-left-[1.6rem] before:size-[0.7rem] before:rounded-full before:bg-navy before:shadow-[0_0_0_3px_rgba(6,3,141,0.18)] before:content-[''] after:absolute after:top-[1.15rem] after:-bottom-5 after:left-[calc(-1.6rem_+_0.35rem_-_1px)] after:w-0.5 after:bg-[rgba(6,3,141,0.25)] after:content-[''] last:after:hidden max-md:before:-left-[1.4rem] max-md:after:left-[calc(-1.4rem_+_0.35rem_-_1px)] dark:before:bg-blue dark:before:shadow-[0_0_0_3px_rgba(76,125,255,0.2)] dark:after:bg-[rgba(76,125,255,0.3)]">
-                  <div class="role-head flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <li class="relative before:absolute before:top-[0.45rem] before:-left-[1.6rem] before:size-[0.7rem] before:rounded-full before:bg-navy before:shadow-[0_0_0_3px_rgba(6,3,141,0.18)] before:content-[''] after:absolute after:top-[1.15rem] after:-bottom-5 after:left-[calc(-1.6rem_+_0.35rem_-_1px)] after:w-0.5 after:bg-[rgba(6,3,141,0.25)] after:content-[''] last:after:hidden max-md:before:-left-[1.4rem] max-md:after:left-[calc(-1.4rem_+_0.35rem_-_1px)] dark:before:bg-blue dark:before:shadow-[0_0_0_3px_rgba(76,125,255,0.2)] dark:after:bg-[rgba(76,125,255,0.3)]">
+                  <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                     <h4 class="role-title text-[20px] leading-[1.3] font-bold max-md:text-[18px]">
                       {role.role}
                     </h4>
@@ -126,16 +126,16 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                   <p class="role-desc mt-[0.4rem] mb-0 text-[16px] leading-[1.5]">{role.desc}</p>
                   {role.descBullets?.length ? (
                     /* `group` drives the chevron's group-open:rotate-45 */
-                    <details class="role-details group mt-2">
-                      <summary class="role-summary inline-flex cursor-pointer list-none items-center gap-[0.4rem] text-[15px] font-semibold text-navy select-none [&::-webkit-details-marker]:hidden hover:text-amber-ink focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-amber-ink dark:text-blue dark:hover:text-white dark:focus-visible:outline-blue">
+                    <details class="group mt-2">
+                      <summary class="inline-flex cursor-pointer list-none items-center gap-[0.4rem] text-[15px] font-semibold text-navy select-none [&::-webkit-details-marker]:hidden hover:text-amber-ink focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-amber-ink dark:text-blue dark:hover:text-white dark:focus-visible:outline-blue">
                         <span
-                          class="role-summary-chevron mb-0.5 inline-block box-content size-[0.45rem] -rotate-45 border-r-2 border-b-2 border-current transition-transform duration-200 ease-[ease] group-open:mt-[-2px] group-open:mb-0 group-open:rotate-45 motion-reduce:transition-none"
+                          class="mb-0.5 inline-block box-content size-[0.45rem] -rotate-45 border-r-2 border-b-2 border-current transition-transform duration-200 ease-[ease] group-open:mt-[-2px] group-open:mb-0 group-open:rotate-45 motion-reduce:transition-none"
                           aria-hidden="true"
                         />
                         {role.descBullets.length}{" "}
                         {role.descBullets.length === 1 ? "highlight" : "highlights"}
                       </summary>
-                      <ul class="role-bullets mt-[0.6rem] mb-0 list-disc pl-5 text-[16px] leading-[1.55]">
+                      <ul class="mt-[0.6rem] mb-0 list-disc pl-5 text-[16px] leading-[1.55]">
                         {role.descBullets.map(item => (
                           <li class="mt-[0.4rem] first:mt-0">{item}</li>
                         ))}

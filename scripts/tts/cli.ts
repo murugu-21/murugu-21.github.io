@@ -1,7 +1,17 @@
 // Shared CLI helpers for generate-audio.ts and align-audio.ts.
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+
+import { SITE_DIR } from "../site-dir.ts";
+
+export const ROOT = resolve(new URL("../..", import.meta.url).pathname);
+export const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
+export const BLOG_DIST = join(SITE_DIR, "blog");
+
+const args = process.argv.slice(2);
+export const flags = new Set(args.filter(a => a.startsWith("--")));
+export const slugs = args.filter(a => !a.startsWith("--"));
 
 export const log = (...m: unknown[]) => console.error(...m);
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
@@ -19,11 +29,11 @@ export function run(cmd: string, cmdArgs: string[]): string {
 }
 
 // Post dirs under the built blog; the articleBody check skips the blog's 404.
-export function publishedSlugs(dist: string): string[] {
-  if (!existsSync(dist)) fail(`${dist} missing — run \`bun run build\` first`);
-  return readdirSync(dist, { withFileTypes: true })
+export function publishedSlugs(): string[] {
+  if (!existsSync(BLOG_DIST)) fail(`${BLOG_DIST} missing — run \`bun run build\` first`);
+  return readdirSync(BLOG_DIST, { withFileTypes: true })
     .filter(d => {
-      const page = join(dist, d.name, "index.html");
+      const page = join(BLOG_DIST, d.name, "index.html");
       return (
         d.isDirectory() &&
         existsSync(page) &&
@@ -51,4 +61,10 @@ export async function runEach(
   const minutes = ((Date.now() - t0) / 60000).toFixed(1);
   log(`done in ${minutes} min${failures.length ? `, failed: ${failures.join(", ")}` : ""}`);
   return failures;
+}
+
+export function runMain(main: () => Promise<void>): void {
+  main().catch((err: unknown) =>
+    fail(err instanceof Error ? (err.stack ?? err.message) : String(err))
+  );
 }

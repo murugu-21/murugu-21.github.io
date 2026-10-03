@@ -142,11 +142,12 @@ function usedText(svg: string): string {
   return [...new Set(text)].join("");
 }
 
+const fontFace = (woff2: Buffer) =>
+  `@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;` +
+  `src:url(data:font/woff2;base64,${woff2.toString("base64")}) format("woff2-variations")}`;
+
 async function embedStyle(svg: string, theme: DiagramTheme, font: Buffer): Promise<string> {
-  const subset = await subsetFont(font, usedText(svg), { targetFormat: "woff2" });
-  const face =
-    `@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;` +
-    `src:url(data:font/woff2;base64,${subset.toString("base64")}) format("woff2-variations")}`;
+  const face = fontFace(await subsetFont(font, usedText(svg), { targetFormat: "woff2" }));
   return svg
     .replace(/<svg\b/, `<svg ${STAMP_ATTR}="${STAMP}"`)
     .replace(
@@ -163,8 +164,7 @@ async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Pag
   page.on("pageerror", err => console.error("[render-mermaid] page error:", err));
   // full font, so every glyph measures in the face the SVG embeds
   await page.setContent(
-    `<!doctype html><html><head><style>@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;` +
-      `src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2-variations")}</style></head><body></body></html>`
+    `<!doctype html><html><head><style>${fontFace(font)}</style></head><body></body></html>`
   );
   await page.addScriptTag({ content: readFileSync(MERMAID_JS, "utf8") });
   await page.evaluate(async () => {
@@ -303,7 +303,6 @@ async function main(): Promise<void> {
     rmSync(path);
     console.log(`removed  ${rel(path)}`);
   }
-  // remove diagram dirs left empty
   for (const [postDir] of expected) {
     const dir = join(postDir, DIAGRAMS_DIR);
     if (existsSync(dir) && readdirSync(dir).length === 0) rmSync(dir, { recursive: true });

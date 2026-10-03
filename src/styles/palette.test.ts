@@ -2,12 +2,33 @@
 // code.css's light palette and islands.css. The CSS is inlined by vitest.config.ts.
 import { describe, expect, it } from "vitest";
 
-import { channels, contrast, luminance } from "./contrast";
-
 declare const __GLOBAL_CSS__: string;
 declare const __CODE_CSS__: string;
 declare const __ISLANDS_CSS__: string;
 const css = __GLOBAL_CSS__;
+
+const channels = (c: string): number[] => {
+  const hex = /^#([0-9a-f]{6})$/i.exec(c);
+  if (hex) return [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16));
+  const rgb = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(c);
+  if (rgb) return [1, 2, 3].map(i => Number(rgb[i]));
+  throw new Error(`not a hex or rgb() colour: ${c}`);
+};
+
+const linear = (v: number): number => {
+  const s = v / 255;
+  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+};
+
+const luminance = (c: string): number => {
+  const [r, g, b] = channels(c).map(linear);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+const contrast = (a: string, b: string): number => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
 
 const token = (name: string): string => {
   const m = new RegExp(`--${name}:\\s*([^;]+);`).exec(css);

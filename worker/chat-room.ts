@@ -1,20 +1,38 @@
 import { Server, type Connection, type ConnectionContext } from "partyserver";
+import { z } from "zod";
 
 import { isInsufficientBalance, runDeepseekExchange } from "./ai";
 import { globalLimiter } from "./api/ratelimit";
 import { contactMailer, parseLeadArguments, sendOpportunityEmail, type Lead } from "./email";
 import { fetchSitePage } from "./fetch-page";
 import { getGrounding } from "./grounding";
+import { jsonString, lenient } from "./json";
 import { buildMessages, parseFetchArguments, ROOM_DAILY_LIMIT, type ModelMessage } from "./prompt";
 import type { StreamResult, ToolCall } from "./sse";
 import {
   GREETING,
-  parseClientMessage,
+  MAX_MESSAGE_LENGTH,
   parseVisitorContext,
   toolFrame,
   type ChatHistoryEntry,
   type ServerMessage
 } from "./protocol";
+
+const PAGE_PATH = /^\/[^\s]{0,199}$/;
+
+const ClientMessage = jsonString(
+  z.object({
+    type: z.literal("chat"),
+    text: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
+    // The visitor's current site path; never persisted. A malformed one is dropped, not rejected.
+    page: lenient(z.string().regex(PAGE_PATH))
+  })
+);
+
+type ClientMessage = z.infer<typeof ClientMessage>;
+
+export const parseClientMessage = (raw: unknown): ClientMessage | null =>
+  ClientMessage.safeParse(raw).data ?? null;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_FETCH_ROUNDS = 2;

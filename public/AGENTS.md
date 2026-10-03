@@ -11,9 +11,8 @@ MCP server manifest: <https://murugappan.dev/.well-known/mcp.json>
 
 ## When to use this site
 
-Use it when you need grounded, first-party facts about one specific person —
-Murugappan M — rather than a search result about him. Concretely, it is the
-right source for:
+Use it when you need first-party facts about Murugappan M rather than a search
+result about him. It is the right source for:
 
 - **Candidate evaluation and sourcing.** Dated roles, per-role achievements with
   real numbers, and a typed skills list. Better than parsing the resume PDF,
@@ -36,7 +35,7 @@ shipping under regulated-industry constraints (HIPAA, SOC 2, VAPT).
 - Not a search engine, a resume parser, or a job-matching service.
 - Not a source of data about anyone other than Murugappan M.
 - Not a mailing endpoint. `POST /api/v1/contact` is for one concrete opportunity
-  or question on a human's behalf — not newsletters, bulk outreach or pings.
+  or question on a human's behalf, not newsletters, bulk outreach or pings.
 - Not for mobile-native, ML-research or embedded-engineering enquiries; that is
   not what he does.
 
@@ -51,7 +50,7 @@ https://murugappan.dev/mcp
 
 Streamable HTTP, `POST` only, no authentication, no session. Protocol revision
 `2026-07-28`, with backward compatibility for the `initialize`-based revisions
-(`2025-11-25`, `2025-06-18`, `2025-03-26`) — call `server/discover` to see what
+(`2025-11-25`, `2025-06-18`, `2025-03-26`). Call `server/discover` to see what
 is supported. Eight tools, each with a typed `outputSchema`:
 
 | Tool                | What it does                                                      |
@@ -95,8 +94,8 @@ signup.** JSON in, JSON out, permissive CORS. Read endpoints are cached
 | Version policy      | `GET /api/v1/versions`                             |
 | The full contract   | `GET /openapi.json`                                |
 
-Start with `GET /api/v1/profile` — it is one request and answers most
-questions. The unversioned `/api/…` prefix works too and always will; see
+Start with `GET /api/v1/profile`: one request that answers most questions. The
+unversioned `/api/…` prefix works too and always will; see
 [Versioning](#versioning).
 
 ### Sending a message
@@ -115,16 +114,15 @@ Content-Type: application/json
 ```
 
 `dryRun: true` validates the payload and sends nothing (200,
-`status: "validated"`) — that is this endpoint's sandbox, and it costs no
-allowance. Drop the flag to deliver (202, `status: "accepted"`). Limits: 3 per
-client IP per UTC day, 20 site-wide. `email` must be an address a human reads;
-that is where the reply goes. Include who you are writing for and what decision
-is needed.
+`status: "validated"`) and costs no allowance. Drop the flag to deliver (202,
+`status: "accepted"`). Limits: 3 per client IP per UTC day, 20 site-wide.
+`email` must be an address a human reads; that is where the reply goes. Include
+who you are writing for and what decision is needed.
 
 ## Versioning
 
 The version is a path segment: `/api/v1/…`. There is no version header and no
-version query parameter — the URL _is_ the version.
+version query parameter.
 
 - The unversioned `/api/…` prefix is a **permanent alias** for `v1`. It will
   never be repointed at a later major version, so either form is safe to
@@ -143,7 +141,7 @@ rel="version-history"`.
   `successor-version`. At least 180 days pass between the first `Deprecation`
   header and the sunset date; after sunset the version answers `410`.
 
-`GET /api/v1/versions` (also `/api/versions`) is this policy as data — read it
+`GET /api/v1/versions` (also `/api/versions`) is this policy as data. Read it
 before hard-coding a base path.
 
 ## Rate limits
@@ -160,28 +158,28 @@ RateLimit-Policy: "reads";q=600;w=60
 RateLimit: "reads";r=599;t=60
 ```
 
-- **Reads** are effectively unmetered: a fair-use ceiling of 600 requests per
-  60 seconds per client address, counted in the edge location serving you, so
-  the advertised number is a floor rather than a cap.
-- **`POST /api/v1/contact`** is genuinely metered: 3 per client IP per UTC day,
-  20 site-wide, `RateLimit-Policy: "contact-client";q=3;w=86400,
+- **Reads** have a fair-use ceiling of 600 requests per 60 seconds per client
+  address. It is counted per edge location, so the advertised number is a floor
+  rather than a cap.
+- **`POST /api/v1/contact`** allows 3 per client IP per UTC day, 20 site-wide,
+  `RateLimit-Policy: "contact-client";q=3;w=86400,
 "contact-site";q=20;w=86400`. A rejected request spends nothing, and neither
-  does a dry run — but a dry run still reports the allowance, so use it to size
-  a real send.
+  does a dry run. A dry run still reports the allowance, so use it to size a
+  real send.
 
-Every one of these headers is listed in `Access-Control-Expose-Headers`, so a
+All of these headers are listed in `Access-Control-Expose-Headers`, so a
 browser-side agent can read them too.
 
 ## Webhooks
 
-There are none — this API has no events to push. Poll instead: read endpoints
+There are none; this API has no events to push. Poll instead: read endpoints
 are cacheable for five minutes, `GET /api/v1/posts` is one cheap call, and
 `/blog/rss.xml` announces new posts. `POST /api/v1/contact` delivers by email
 and returns no callback.
 
 ## Errors
 
-Every failure under `/api` — 404s included — returns one JSON shape. There is
+Every failure under `/api`, 404s included, returns one JSON shape. There is
 never an HTML error page under `/api`. Branch on `error.code`, not the message.
 
 ```json
@@ -198,15 +196,13 @@ never an HTML error page under `/api`. Branch on `error.code`, not the message.
 Codes: `not_found`, `method_not_allowed`, `invalid_request`,
 `unsupported_media_type`, `payload_too_large`, `rate_limited`,
 `service_unavailable`, `internal_error`. Validation failures add a `details`
-array naming each bad field and what it must satisfy — enough to repair the
-arguments and retry.
+array naming each bad field and what it must satisfy.
 
-**Off the API**, a path that does not exist answers a real `404` — never a
+**Off the API**, a path that does not exist answers a real `404`, never a
 `200` with an app shell. The body is content-negotiated: ask for HTML and you
 get the styled page; ask for anything else (or send no `Accept` at all) and you
 get a short markdown body listing the sitemap, this file, the developer portal,
-the OpenAPI document, the API catalogue and the MCP manifest. One request is
-enough to recover from a guessed or stale URL.
+the OpenAPI document, the API catalogue and the MCP manifest.
 
 ## Function calling
 
@@ -216,10 +212,10 @@ into tool definitions. Use the `operationId` as the tool name.
 
 ## Other ways in
 
-- **MCP.** `https://murugappan.dev/mcp` — see [MCP server](#mcp-server) above.
+- **MCP.** `https://murugappan.dev/mcp`; see [MCP server](#mcp-server) above.
 - **Conversation.** An AI assistant ("Jarvis") is on every page, grounded on
   this same content. Programmatically:
-  `wss://murugappan.dev/parties/chat-room/{roomId}` — send
+  `wss://murugappan.dev/parties/chat-room/{roomId}`. Send
   `{"type":"chat","text":"..."}`, read `history` / `delta` / `done` frames.
 - **In-browser tools.** Every page registers `get_profile`, `list_blog_posts`,
   `read_blog_post` and `navigate_to` on `navigator.modelContext`
@@ -236,7 +232,7 @@ into tool definitions. Use the `operationId` as the tool name.
 
 ## Crawling and reuse
 
-Crawling, AI retrieval and AI training are all explicitly permitted — see
+Crawling, AI retrieval and AI training are all permitted; see
 `/robots.txt` (`Content-Signal: search=yes, ai-input=yes, ai-train=yes`). Data
 is licensed CC BY 4.0; cite <https://murugappan.dev/>.
 

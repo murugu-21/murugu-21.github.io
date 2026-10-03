@@ -1,6 +1,8 @@
 // MCP output schemas must stand alone (the spec forbids resolving network
 // `$ref`s), so the API's `components.schemas` refs are inlined.
 
+import { JsonObject } from "../json";
+
 export type JsonSchema = Record<string, unknown>;
 
 const REF_PREFIX = "#/components/schemas/";
@@ -14,10 +16,11 @@ export function inlineRefs(node: unknown, schemas: Record<string, unknown>, dept
   if (Array.isArray(node)) {
     return node.map(item => inlineRefs(item, schemas, depth + 1));
   }
-  if (typeof node !== "object" || node === null) return node;
+  const parsed = JsonObject.safeParse(node);
+  if (!parsed.success) return node;
 
-  const entries = Object.entries(node as JsonSchema);
-  const ref = (node as JsonSchema).$ref;
+  const entries = Object.entries(parsed.data);
+  const ref = parsed.data.$ref;
   if (typeof ref === "string") {
     if (!ref.startsWith(REF_PREFIX)) {
       throw new Error(`inlineRefs: refusing to resolve external $ref '${ref}'`);

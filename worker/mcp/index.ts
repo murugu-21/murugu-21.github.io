@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { API_VERSION } from "../api/versioning";
+import { JsonObject } from "../json";
 import {
   checkModernVersion,
   isAllowedOrigin,
@@ -145,8 +146,9 @@ function toolCallArgs(
       message: "Invalid params: 'name' is required and must be a string."
     };
   }
-  const raw = message.params?.arguments;
-  if (raw !== undefined && (typeof raw !== "object" || raw === null || Array.isArray(raw))) {
+  // Only a missing value defaults; `null` is still rejected.
+  const args = JsonObject.default({}).safeParse(message.params?.arguments);
+  if (!args.success) {
     return {
       status: 200,
       code: JSON_RPC_INVALID_PARAMS,
@@ -161,7 +163,7 @@ function toolCallArgs(
       message: `Unknown tool: ${name}. Call tools/list for the tools this server offers.`
     };
   }
-  return { tool, args: (raw as Record<string, unknown>) ?? {} };
+  return { tool, args: args.data };
 }
 
 async function runTool(

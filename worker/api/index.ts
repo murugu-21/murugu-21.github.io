@@ -27,11 +27,11 @@ const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 
 const SPEC_HINT = "Fetch https://murugappan.dev/openapi.json for the full list of endpoints.";
 
-function json(data: unknown, cache = READ_CACHE): Response {
+function json(data: unknown): Response {
   return new Response(JSON.stringify(data, null, 2), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": cache
+      "Cache-Control": READ_CACHE
     }
   });
 }

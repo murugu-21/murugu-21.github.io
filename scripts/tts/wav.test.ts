@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Buffer } from "node:buffer";
 
-import { assemble, readWav, silence, writeWav } from "./wav.ts";
+import { assemble, readWav, writeWav } from "./wav.ts";
 
 const SR = 8000;
 const tone = (seconds: number) => {
@@ -27,14 +27,6 @@ describe("wav round trip", () => {
   });
 });
 
-describe("silence", () => {
-  it("is zeroed PCM of the requested length", () => {
-    const s = silence(SR, 0.25);
-    expect(s.length).toBe(SR * 0.25 * 2);
-    expect(s.every(b => b === 0)).toBe(true);
-  });
-});
-
 describe("assemble", () => {
   it("joins chunks with intra gaps, blocks with inter gaps, and reports block timings", () => {
     const { pcm, timings } = assemble(
@@ -44,6 +36,7 @@ describe("assemble", () => {
     );
     // 1 + 0.5 + 1 = 2.5 s, a 1 s gap, then 2 s: no gap trails the last block
     expect(pcm.length).toBe(SR * 5.5 * 2);
+    expect(pcm.subarray(SR * 2.5 * 2, SR * 3.5 * 2).every(b => b === 0)).toBe(true);
     expect(timings).toEqual([
       { start: 0, end: 2.5 },
       { start: 3.5, end: 5.5 }

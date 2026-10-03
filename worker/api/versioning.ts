@@ -9,7 +9,7 @@ export const API_VERSION = "1.0.0";
 /** Minimum notice between a version being marked deprecated and its sunset. */
 export const DEPRECATION_NOTICE_DAYS = 180;
 
-export type VersionStatus = "current" | "deprecated" | "sunset";
+type VersionStatus = "current" | "deprecated" | "sunset";
 
 export type VersionRecord = {
   /** Path segment that selects this version. */
@@ -56,7 +56,7 @@ export const POLICY_RULES: readonly string[] = [
   "After sunset a version answers 410 Gone with the standard error envelope, pointing at its successor. Paths are never silently reused."
 ];
 
-export type VersionsDocument = {
+type VersionsDocument = {
   current: string;
   currentRelease: string;
   unversionedAlias: { basePath: string; pinnedTo: string; note: string };

@@ -5,7 +5,7 @@ import { assert, beforeEach, describe, expect, it } from "vitest";
 
 import { parseRange } from "../audio";
 import { ChatRoom } from "../chat-room";
-import { markdownNotFound, notFoundMarkdown, prefersMarkdown, serveAsset } from "../not-found";
+import { markdownNotFound, prefersMarkdown, serveAsset } from "../not-found";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "../protocol";
 import worker from "../server";
 import {
@@ -123,15 +123,6 @@ describe("prefersMarkdown", () => {
   });
 });
 
-describe("notFoundMarkdown", () => {
-  const body = notFoundMarkdown("/some-path-that-does-not-exist");
-
-  it("opens with a heading and names the path that was missed", () => {
-    expect(body.startsWith("# 404 Not Found")).toBe(true);
-    expect(body).toContain("`/some-path-that-does-not-exist`");
-  });
-});
-
 describe("markdownNotFound", () => {
   it("is an unindexed, uncached 404 that declares the negotiation", async () => {
     const res = markdownNotFound("/nope", "GET");
@@ -144,7 +135,9 @@ describe("markdownNotFound", () => {
     expect(link).toContain('rel="service-desc"');
     expect(link).toContain('rel="api-catalog"');
     expect(link).toContain("/sitemap.xml");
-    expect(await res.text()).toContain("# 404 Not Found");
+    const body = await res.text();
+    expect(body.startsWith("# 404 Not Found")).toBe(true);
+    expect(body).toContain("`/nope`");
   });
 
   it("sends no body for a HEAD", async () => {

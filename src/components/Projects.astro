@@ -24,23 +24,20 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
 ---
 
 {repos.length > 0 && (
-  <div
-    class="projects-section section-animate mx-auto mt-16 box-content w-[90%] px-2.5 py-5"
-    id="projects"
-  >
-    <div class="projects-header">
+  <div class="section-animate mx-auto mt-16 box-content w-[90%] px-2.5 py-5" id="projects">
+    <div>
       <h2
-        class="heading projects-heading m-0 text-[56px] leading-[normal] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+        class="heading m-0 text-[56px] leading-[normal] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
         set:html={accentTitle(projectsSection.title)}
       />
-      <p class="subTitle projects-subtitle m-0 mb-[50px] uppercase dark:text-white max-md:text-center max-md:text-[16px] max-md:leading-[normal]">
+      <p class="subTitle m-0 mb-[50px] uppercase dark:text-white max-md:text-center max-md:text-[16px] max-md:leading-[normal]">
         {projectsSection.subtitle}
       </p>
     </div>
-    <div class="repo-cards-div-main grid grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-4 max-md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(400px,1fr))] gap-4 max-md:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]">
       {repos.map(repo => (
         <a
-          class="repo-card-div glow-card flex flex-col cursor-pointer p-8 text-repo-text no-underline dark:text-white"
+          class="glow-card flex flex-col cursor-pointer p-8 text-repo-text no-underline dark:text-white"
           href={repo.url}
           target="_blank"
           rel="noopener noreferrer"
@@ -48,10 +45,10 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
           data-ph-prop="project"
           data-ph-value={repo.name}
         >
-          <div class="repo-name-div flex items-center">
+          <div class="flex items-center">
             {/* no fill utility in light mode: the path keeps the SVG default (black) */}
             <svg
-              class="repo-svg mr-2 min-w-4 dark:fill-white"
+              class="mr-2 min-w-4 dark:fill-white"
               aria-hidden="true"
               height="20"
               viewBox="0 0 12 16"
@@ -62,26 +59,26 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
                 d="M4 9H3V8h1v1zm0-3H3v1h1V6zm0-2H3v1h1V4zm0-2H3v1h1V2zm8-1v12c0 .55-.45 1-1 1H6v2l-1.5-1.5L3 16v-2H1c-.55 0-1-.45-1-1V1c0-.55.45-1 1-1h10c.55 0 1 .45 1 1zm-1 10H1v2h2v-1h3v1h5v-2zm0-10H2v9h9V1z"
               />
             </svg>
-            <p class="repo-name m-0 h-[30px] overflow-hidden text-[25px] font-bold tracking-[-0.5px] overflow-ellipsis whitespace-nowrap text-repo-name dark:text-white">
+            <p class="m-0 h-[30px] overflow-hidden text-[25px] font-bold tracking-[-0.5px] overflow-ellipsis whitespace-nowrap text-repo-name dark:text-white">
               {repo.name}
             </p>
           </div>
-          <p class="repo-description my-3 line-clamp-2">{repo.description}</p>
+          <p class="my-3 line-clamp-2">{repo.description}</p>
           {repo.topics.length > 0 && (
-            <div class="repo-topics mb-4 flex flex-wrap gap-[0.4rem]">
+            <div class="mb-4 flex flex-wrap gap-[0.4rem]">
               {repo.topics.map(t => (
-                <span class="repo-topic rounded-[999px] bg-[rgba(6,3,141,0.1)] px-[0.6rem] py-[0.1rem] text-[0.72rem] leading-[1.6] whitespace-nowrap text-navy dark:bg-[rgba(76,125,255,0.14)] dark:text-blue">
+                <span class="rounded-[999px] bg-[rgba(6,3,141,0.1)] px-[0.6rem] py-[0.1rem] text-[0.72rem] leading-[1.6] whitespace-nowrap text-navy dark:bg-[rgba(76,125,255,0.14)] dark:text-blue">
                   {t}
                 </span>
               ))}
             </div>
           )}
-          <div class="repo-stats mt-auto flex justify-between text-[13px] text-repo-stats dark:text-white">
-            <div class="repo-left-stat flex grow">
+          <div class="mt-auto flex justify-between text-[13px] text-repo-stats dark:text-white">
+            <div class="flex grow">
               {repo.primaryLanguage && (
                 <span class="mr-3 flex items-center">
                   <div
-                    class="language-color mr-1 size-2.5 rounded-full"
+                    class="mr-1 size-2.5 rounded-full"
                     style={`background-color:${repo.primaryLanguage.color}`}
                   />
                   <p class="m-0">{repo.primaryLanguage.name}</p>
@@ -89,7 +86,7 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
               )}
               <span class="mr-3 flex items-center">
                 <svg
-                  class="repo-star-svg mr-[0.3rem]"
+                  class="mr-[0.3rem]"
                   aria-hidden="true"
                   height="20"
                   viewBox="0 0 10 16"
@@ -105,7 +102,7 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
               </span>
               <span class="mr-3 flex items-center">
                 <svg
-                  class="repo-star-svg mr-[0.3rem]"
+                  class="mr-[0.3rem]"
                   aria-hidden="true"
                   height="20"
                   viewBox="0 0 14 16"
@@ -120,7 +117,7 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
                 <p class="m-0">{repo.stargazers.totalCount}</p>
               </span>
             </div>
-            <div class="repo-right-stat">
+            <div>
               <p class="m-0">{formatRepoSize(repo.diskUsage)}</p>
             </div>
           </div>

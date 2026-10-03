@@ -1,6 +1,7 @@
 import { SITE_TITLE, SITE_DESCRIPTION, AUTHOR } from "../../blog/consts";
 import { oneLineDescription } from "../../blog/utils/llms";
 import { getPublishedPosts, postUrl } from "../../blog/utils/posts";
+import { textResponse } from "../../lib/llms";
 
 // /blog/llms-full.txt (https://llmstxt.org): every post's markdown body in one file.
 export async function GET() {
@@ -27,7 +28,5 @@ export async function GET() {
   });
   lines.push(``);
 
-  return new Response(lines.join(`\n`), {
-    headers: { "Content-Type": "text/plain; charset=utf-8" }
-  });
+  return textResponse(lines.join(`\n`));
 }

@@ -115,7 +115,9 @@ describe("contact slots", () => {
   it("does not charge the global counter for a client-blocked request", async () => {
     await inLimiter("contact-no-charge", instance => {
       for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 2; i++) instance.takeContactSlot("5.5.5.5");
-      expect(instance.contactsSentToday()).toBe(CONTACT_DAILY_PER_CLIENT);
+      expect(instance.contactUsage("5.5.5.5").globalRemaining).toBe(
+        CONTACT_DAILY_GLOBAL - CONTACT_DAILY_PER_CLIENT
+      );
     });
   });
 
@@ -135,7 +137,6 @@ describe("contact slots", () => {
         clientRemaining: CONTACT_DAILY_PER_CLIENT,
         globalRemaining: CONTACT_DAILY_GLOBAL - 1
       });
-      expect(instance.contactsSentToday()).toBe(1);
     });
   });
 });

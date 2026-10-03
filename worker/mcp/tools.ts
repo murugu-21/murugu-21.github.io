@@ -3,7 +3,7 @@
 // other arguments is an `isError` result, not a protocol error.
 
 import { API_SCHEMAS } from "../api/openapi";
-import { parseContactRequest, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
+import { CONTACT_DAILY_PER_CLIENT, CONTACT_LIMITS, parseContactRequest } from "../api/contact";
 import type { Dataset } from "../api/dataset";
 import { POSTS_LIMIT_MAX, searchPosts } from "../api/posts";
 import { globalLimiter } from "../api/ratelimit";
@@ -18,7 +18,7 @@ export type ToolContext = {
   clientIp: string;
 };
 
-export type ToolTextContent = { type: "text"; text: string };
+type ToolTextContent = { type: "text"; text: string };
 
 export type ToolResult = {
   content: ToolTextContent[];
@@ -26,7 +26,7 @@ export type ToolResult = {
   isError?: boolean;
 };
 
-export type ToolAnnotations = {
+type ToolAnnotations = {
   readOnlyHint: boolean;
   destructiveHint: boolean;
   idempotentHint: boolean;
@@ -244,18 +244,18 @@ export const MCP_TOOLS: McpTool[] = [
           type: "string",
           description:
             "What you are writing about. Be specific: the role or project, the stack, and anything that needs a decision.",
-          minLength: 20,
-          maxLength: 4000
+          minLength: CONTACT_LIMITS.message.min,
+          maxLength: CONTACT_LIMITS.message.max
         },
         name: {
           type: "string",
           description: "Who the message is from.",
-          maxLength: 120
+          maxLength: CONTACT_LIMITS.name
         },
         company: {
           type: "string",
           description: "The company or team you are writing on behalf of.",
-          maxLength: 120
+          maxLength: CONTACT_LIMITS.company
         },
         dryRun: {
           type: "boolean",
