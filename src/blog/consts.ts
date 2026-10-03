@@ -8,10 +8,7 @@ export const AUTHOR = {
   name: "Murugappan M",
   summary: "Hard-won lessons from building software that actually runs in production"
 };
-export const SOCIAL = {
-  // X handle for twitter:creator.
-  twitter: new URL(socialMediaLinks.twitter).pathname.replace(/^\//, "")
-};
+export const TWITTER_HANDLE = new URL(socialMediaLinks.twitter).pathname.replace(/^\//, "");
 // Same @id as src/layouts/Layout.astro so crawlers merge the blog author with
 // the site-wide Person.
 export const PERSON = {

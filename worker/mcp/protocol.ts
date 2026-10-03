@@ -137,7 +137,7 @@ export function validateModernHeaders(
 
   if (!NAME_REQUIRED_METHODS.has(message.method)) return null;
 
-  const bodyName = message.params?.name ?? message.params?.uri ?? undefined;
+  const bodyName = message.params?.name ?? message.params?.uri;
   const nameHeader = headers.get("Mcp-Name");
   if (!nameHeader) {
     return headerMismatch(

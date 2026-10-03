@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { jsonString } from "./json";
-import type { ChatHistoryEntry } from "./protocol";
 
 export const MAX_HISTORY_MESSAGES = 20;
 // Per-room cap over a rolling 24h; the only pacing on spend.
@@ -115,7 +114,7 @@ ${grounding}
 
 export function buildMessages(
   grounding: string,
-  history: ChatHistoryEntry[],
+  history: ModelMessage[],
   page?: string
 ): ModelMessage[] {
   const messages: ModelMessage[] = [

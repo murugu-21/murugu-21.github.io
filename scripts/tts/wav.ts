@@ -2,7 +2,7 @@
 // trusting ffmpeg's rounded durations.
 import { Buffer } from "node:buffer";
 
-export interface Wav {
+interface Wav {
   sampleRate: number;
   channels: number;
   pcm: Buffer;
@@ -62,12 +62,12 @@ function silence(sampleRate: number, seconds: number): Buffer {
   return Buffer.alloc(Math.round(sampleRate * seconds) * 2);
 }
 
-export interface Gaps {
+interface Gaps {
   intra: number;
   inter: number;
 }
 
-export interface BlockTiming {
+interface BlockTiming {
   start: number;
   end: number;
 }

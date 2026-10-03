@@ -122,7 +122,7 @@ try {
       `[generate-resume] ATS gate FAILED — missing tokens: ${missing.map(t => JSON.stringify(t)).join(", ")}`
     );
     process.exitCode = 1;
-  } else if (typeof pageCount === "number" && pageCount > MAX_PAGES) {
+  } else if (pageCount !== null && pageCount > MAX_PAGES) {
     // @sparticuz's fallback fonts are wider than local Chrome's, so overflow
     // can be CI-only.
     console.error(`[generate-resume] page gate FAILED — ${pageCount} pages (max ${MAX_PAGES})`);

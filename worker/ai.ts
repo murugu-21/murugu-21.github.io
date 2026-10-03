@@ -1,3 +1,6 @@
+import { z } from "zod";
+
+import { lenient } from "./json";
 import { TOOLS, type ModelMessage } from "./prompt";
 import { consumeSse, type StreamResult, type Usage } from "./sse";
 
@@ -21,6 +24,15 @@ export function isInsufficientBalance(err: unknown): boolean {
 export type DeepseekBalance = { available: boolean; totalUsd: number };
 
 // `total_balance` arrives as a decimal string per currency.
+const BalanceResponse = z.object({
+  is_available: lenient(z.boolean()),
+  balance_infos: lenient(
+    z.array(
+      lenient(z.object({ currency: z.string(), total_balance: z.union([z.string(), z.number()]) }))
+    )
+  )
+});
+
 export async function fetchDeepseekBalance(
   apiKey: string,
   fetcher: typeof fetch = fetch
@@ -29,11 +41,8 @@ export async function fetchDeepseekBalance(
     headers: { authorization: `Bearer ${apiKey}` }
   });
   if (!res.ok) throw new DeepseekError(res.status);
-  const body = (await res.json()) as {
-    is_available?: unknown;
-    balance_infos?: { currency?: unknown; total_balance?: unknown }[];
-  };
-  const usd = body.balance_infos?.find(b => b.currency === "USD");
+  const body = BalanceResponse.parse(await res.json());
+  const usd = body.balance_infos?.find(b => b?.currency === "USD");
   const totalUsd = Number(usd?.total_balance);
   return {
     available: body.is_available === true,

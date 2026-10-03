@@ -16,12 +16,13 @@ import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 import remarkMermaid from "./src/blog/utils/remark-mermaid";
 import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
 
+const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
+
 // slug -> ISO publish date, for sitemap <lastmod>.
 function postDates(): Record<string, string> {
-  const root = path.join(process.cwd(), "content/blog");
   const dates: Record<string, string> = {};
-  for (const dir of fs.readdirSync(root)) {
-    const file = path.join(root, dir, "index.md");
+  for (const dir of fs.readdirSync(BLOG_CONTENT)) {
+    const file = path.join(BLOG_CONTENT, dir, "index.md");
     if (!fs.existsSync(file)) continue;
     const match = fs.readFileSync(file, "utf8").match(/^date:\s*"?([^"\n]+)"?\s*$/m);
     if (match) dates[dir] = new Date(match[1]).toISOString();
@@ -63,10 +64,9 @@ function blogPostBodies(): AstroIntegration {
     name: "blog-post-bodies",
     hooks: {
       "astro:build:done": ({ dir, logger }) => {
-        const root = path.join(process.cwd(), "content/blog");
         let checked = 0;
-        for (const slug of fs.readdirSync(root)) {
-          const source = path.join(root, slug, "index.md");
+        for (const slug of fs.readdirSync(BLOG_CONTENT)) {
+          const source = path.join(BLOG_CONTENT, slug, "index.md");
           if (!fs.existsSync(source)) continue; // draft/ holds nested posts, unpublished
           const page = new URL(`blog/${slug}/index.html`, dir);
           if (!fs.existsSync(page)) {
@@ -183,7 +183,7 @@ function modulePreloadHints(): AstroIntegration {
           // before the first module script, so the preload scanner sees them together
           const at = html.indexOf('<script type="module" src="');
           fs.writeFileSync(file, html.slice(0, at) + links + html.slice(at));
-          hinted += 1;
+          hinted++;
         }
         logger.info(`modulepreload hints added to ${hinted} page(s)`);
       }

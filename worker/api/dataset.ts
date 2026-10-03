@@ -5,7 +5,6 @@
 import { z } from "zod";
 
 const Link = z.object({ label: z.string(), url: z.string() });
-export type Link = z.infer<typeof Link>;
 
 const nullableString = z.string().nullable();
 
@@ -22,13 +21,11 @@ const ExperienceEntry = z.object({
   summary: z.string(),
   highlights: z.array(z.string())
 });
-export type ExperienceEntry = z.infer<typeof ExperienceEntry>;
+type ExperienceEntry = z.infer<typeof ExperienceEntry>;
 
 const SkillCategory = z.object({ category: z.string(), skills: z.array(z.string()) });
-export type SkillCategory = z.infer<typeof SkillCategory>;
 
 const Proficiency = z.object({ area: z.string(), tools: z.array(z.string()), level: z.number() });
-export type Proficiency = z.infer<typeof Proficiency>;
 
 const EducationEntry = z.object({
   institution: z.string(),
@@ -41,7 +38,6 @@ const EducationEntry = z.object({
   grade: nullableString,
   highlights: z.array(z.string())
 });
-export type EducationEntry = z.infer<typeof EducationEntry>;
 
 const OpenSourceContribution = z.object({
   project: z.string(),
@@ -49,7 +45,6 @@ const OpenSourceContribution = z.object({
   description: z.string(),
   links: z.array(Link)
 });
-export type OpenSourceContribution = z.infer<typeof OpenSourceContribution>;
 
 const Person = z.object({
   name: z.string(),
@@ -64,7 +59,6 @@ const Person = z.object({
     .nullable(),
   focus: z.array(z.string())
 });
-export type Person = z.infer<typeof Person>;
 
 export const Dataset = z.object({
   person: Person,

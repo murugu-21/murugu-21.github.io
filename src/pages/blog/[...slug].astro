@@ -24,8 +24,8 @@ export async function getStaticPaths() {
     params: { slug: post.id },
     props: {
       post,
-      previous: index === 0 ? null : posts[index - 1],
-      next: index === posts.length - 1 ? null : posts[index + 1]
+      previous: posts[index - 1] ?? null,
+      next: posts[index + 1] ?? null
     }
   }));
 }
@@ -114,7 +114,7 @@ const jsonLd = {
   </article>
   {/* After the article, not inside it: see the component header. */}
   <TableOfContents headings={headings} />
-  <nav class="blog-post-nav" aria-label="Previous and next posts">
+  <nav aria-label="Previous and next posts">
     <ul class="m-0 flex list-none flex-wrap justify-between p-0">
       <li class="mb-4 pl-0">
         {previous && (

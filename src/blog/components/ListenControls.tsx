@@ -405,19 +405,21 @@ export function ListenControls({ slug }: { slug: string }) {
       playerRef.current?.pause();
       return;
     }
-    if (!playerRef.current) {
-      track("listen_play", { post: slug });
-      setState("loading");
-      playerRef.current = await loadPlayer();
-      if (!playerRef.current) {
-        track("listen_unavailable");
-        setState("idle");
-        return;
-      }
-    } else {
+    if (playerRef.current) {
       track("listen_resume");
+      playerRef.current.play();
+      return;
     }
-    playerRef.current.play();
+    track("listen_play", { post: slug });
+    setState("loading");
+    const player = await loadPlayer();
+    playerRef.current = player;
+    if (!player) {
+      track("listen_unavailable");
+      setState("idle");
+      return;
+    }
+    player.play();
   };
 
   const onRate = (next: SpeechRate) => {

@@ -5,6 +5,8 @@
 import { fromMarkdown } from "mdast-util-from-markdown";
 import type { Code, Parent } from "mdast";
 
+import { sha256Hex } from "./helpers";
+
 export const DIAGRAMS_DIR = "diagrams";
 export type DiagramTheme = "light" | "dark";
 export const DIAGRAM_THEMES: readonly DiagramTheme[] = ["light", "dark"];
@@ -13,7 +15,7 @@ export const DIAGRAM_THEMES: readonly DiagramTheme[] = ["light", "dark"];
 // version stamp doesn't capture (theme, font, embedded style).
 const RENDERER_VERSION = "2";
 
-export interface MermaidFence {
+interface MermaidFence {
   // Diagram source exactly as the markdown parser hands it to the build:
   // container indentation (a fence inside a list item) already stripped.
   source: string;
@@ -53,15 +55,9 @@ export function findMermaidFences(markdown: string): MermaidFence[] {
 }
 
 // 12 hex chars of SHA-256 over the normalised source and renderer version.
-// Web Crypto rather than node:crypto so it runs in the Workers test pool.
 export async function diagramHash(source: string): Promise<string> {
   const normalised = source.replace(/\r\n?/g, "\n").trim();
-  const bytes = new TextEncoder().encode(`${RENDERER_VERSION}\n${normalised}`);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return [...new Uint8Array(digest)]
-    .slice(0, 6)
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+  return (await sha256Hex(`${RENDERER_VERSION}\n${normalised}`)).slice(0, 12);
 }
 
 export const diagramFile = (hash: string, theme: DiagramTheme) =>

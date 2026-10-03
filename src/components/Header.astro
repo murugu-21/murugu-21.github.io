@@ -19,7 +19,7 @@ const links = [
 // Transparent at rest, blurred once `.scrolled` (script below). Always solid
 // below 768px: the CSS-only dropdown needs an opaque surface.
 const headerClass = [
-  "header fixed top-0 right-0 left-0 z-[999] mx-auto max-w-full bg-transparent px-5 py-2.5",
+  "fixed top-0 right-0 left-0 z-[999] mx-auto max-w-full bg-transparent px-5 py-2.5",
   "transition-all duration-300 ease-out motion-reduce:transition-none",
   "[&.scrolled]:backdrop-blur-[15px]",
   "max-[768px]:bg-surface max-[768px]:shadow-[0_4px_10px_0_rgba(3,5,40,0.12)]",
@@ -36,7 +36,7 @@ const headerClass = [
 
 // The ~300px logo and the hamburger can't share a narrow row, so it shrinks in two steps.
 const logo = [
-  "logo float-left block flex-none leading-[normal] no-underline",
+  "float-left block flex-none leading-[normal] no-underline",
   "mt-2.5 text-[1.5em] min-[768px]:mt-0",
   "min-[360px]:max-[768px]:mt-[18px] min-[360px]:max-[768px]:text-[1.05em]",
   "max-[360px]:mt-6 max-[360px]:text-[0.85em]"
@@ -57,7 +57,7 @@ const navLink = [
 // Middle bar is the element, outer bars its ::before/::after; checked, they
 // cross into an X. Variants are written out in full: Tailwind scans this file as text.
 const navicon = [
-  "navicon relative block h-[3px] w-[22px] rounded-[3px] bg-navy dark:bg-blue",
+  "relative block h-[3px] w-[22px] rounded-[3px] bg-navy dark:bg-blue",
   "transition-[background] duration-200 ease-out",
   "before:absolute before:top-[7px] before:block before:h-full before:w-full before:rounded-[3px]",
   "before:bg-navy before:transition-all before:duration-200 before:ease-out before:content-['']",
@@ -74,7 +74,7 @@ const navicon = [
 
 // visibility hidden (with max-height 0) keeps collapsed links out of the tab order.
 const menu = [
-  "menu clear-both m-0 list-none p-0",
+  "clear-both m-0 list-none p-0",
   "max-[768px]:invisible max-[768px]:max-h-0 max-[768px]:overflow-hidden",
   "max-[768px]:transition-[max-height,visibility] max-[768px]:duration-200 max-[768px]:ease-out",
   "max-[768px]:[.menu-btn:checked~nav_&]:visible",

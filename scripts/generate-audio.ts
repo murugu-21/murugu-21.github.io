@@ -13,7 +13,6 @@
 // Per post: built HTML → speechBlocks (same as the page) → ≤300-char sentence
 // chunks → synth.py (Breeze TTS 2 via mlx-audio) → per-chunk atempo →
 // sample-accurate assembly → loudnorm → 64 kbps MP3 + timing JSON → R2.
-import { spawnSync } from "node:child_process";
 import type { Buffer } from "node:buffer";
 import {
   copyFileSync,
@@ -38,6 +37,8 @@ import {
   flags,
   log,
   publishedSlugs,
+  requireFfmpeg,
+  requirePython,
   run,
   runEach,
   runMain,
@@ -68,21 +69,8 @@ const r2 = r2Store(flags.has("--local"));
 
 function checkPreconditions(): { audio: string; text: string } {
   if (!existsSync(BLOG_DIST)) fail(`${BLOG_DIST} missing — run \`bun run build\` first`);
-  for (const tool of ["ffmpeg", "ffprobe"]) {
-    if (spawnSync(tool, ["-version"]).status !== 0) {
-      fail(`${tool} not on PATH (brew install ffmpeg)`);
-    }
-  }
-  if (!flags.has("--dry-run")) {
-    if (!existsSync(PYTHON)) {
-      fail(
-        "no .venv-tts — run: python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/tts/requirements.txt"
-      );
-    }
-    if (spawnSync(PYTHON, ["-c", "import mlx_audio"]).status !== 0) {
-      fail(".venv-tts cannot import mlx_audio — reinstall scripts/tts/requirements.txt");
-    }
-  }
+  requireFfmpeg();
+  if (!flags.has("--dry-run")) requirePython("mlx_audio");
   if (!existsSync(VOICE_WAV) || !existsSync(VOICE_TXT)) {
     log("no .voice/ reference locally, fetching from R2 …");
     mkdirSync(VOICE_DIR, { recursive: true });
@@ -161,7 +149,7 @@ async function renderPost(
   try {
     if (!flags.has("--force") && existingHash(slug, tmp) === hash) {
       log(`${slug}: unchanged, skipping`);
-      return "skipped";
+      return;
     }
     const chunks: Chunk[] = [];
     const chunkIds = blocks.map((text, b) =>
@@ -174,7 +162,7 @@ async function renderPost(
     log(
       `${slug}: ${blocks.length} blocks, ${chunks.length} chunks, ${blocks.join(" ").length} chars`
     );
-    if (flags.has("--dry-run") || !worker) return "dry-run";
+    if (flags.has("--dry-run") || !worker) return;
 
     const outDir = join(tmp, "chunks");
     const jobPath = join(tmp, "job.json");
@@ -263,7 +251,6 @@ async function renderPost(
     r2.put(`${AUDIO_PREFIX}/${slug}.mp3`, mp3, "audio/mpeg");
     r2.put(`${AUDIO_PREFIX}/${slug}.json`, json, "application/json");
     log(`${slug}: uploaded ${(duration / 60).toFixed(1)} min`);
-    return "rendered";
   } finally {
     if (flags.has("--keep")) log(`${slug}: kept ${tmp}`);
     else rmSync(tmp, { recursive: true, force: true });

@@ -3,7 +3,7 @@
 
 import type { TimedWord } from "./audio-words";
 
-export interface TimedBlock {
+interface TimedBlock {
   text: string;
   start: number;
   end: number;
@@ -47,7 +47,7 @@ export function blockAt(timed: ReadonlyArray<{ start: number; end: number }>, t:
 // Leave the block alone while its top sits in the reading band (fractions of
 // the viewport), centre it when it drifts out, and show the start of a block
 // taller than the screen.
-export interface ScrollBand {
+interface ScrollBand {
   top: number;
   bottom: number;
 }

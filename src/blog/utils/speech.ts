@@ -1,13 +1,13 @@
 // Pure helpers behind the blog "Listen" control. DOM access is typed
 // structurally so tests can use plain objects in the Workers pool (no DOM).
 
-export interface BlockLike {
+interface BlockLike {
   tagName: string;
   textContent: string | null;
   children: ArrayLike<BlockLike>;
 }
 
-export interface SpeechBlock<T extends BlockLike> {
+interface SpeechBlock<T extends BlockLike> {
   el: T;
   text: string;
 }

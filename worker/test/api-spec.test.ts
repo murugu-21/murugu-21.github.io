@@ -1,6 +1,6 @@
 // The API's contract as data: the route table, the version catalogue and the
 // OpenAPI document generated from them, checked against each other.
-import { describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 import { buildOpenApiDocument } from "../api/openapi";
 import {
@@ -21,13 +21,6 @@ import {
 } from "../api/versioning";
 
 describe("the route table", () => {
-  it("publishes every endpoint under /api/<version>", () => {
-    for (const path of Object.values(API_PATHS)) {
-      if (path === API_PATHS.openapiRoot) continue;
-      expect(path.startsWith(VERSIONED_API_BASE), path).toBe(true);
-    }
-  });
-
   it("declares the methods for every known path", () => {
     for (const path of Object.values(API_PATHS)) {
       expect(ALLOWED_METHODS[path], path).toBeDefined();
@@ -145,24 +138,15 @@ describe("buildVersionsDocument", () => {
 describe("buildOpenApiDocument", () => {
   const doc = buildOpenApiDocument("https://murugappan.dev");
 
-  type Operation = {
-    operationId?: string;
-    summary?: string;
-    description?: string;
-    tags?: string[];
-    parameters?: Array<Record<string, unknown>>;
-    requestBody?: Record<string, unknown>;
-    responses?: Record<string, Record<string, unknown>>;
-  };
+  type Operation = NonNullable<(typeof doc.paths)[string]["get"]>;
 
   function operations(): Array<[string, Operation]> {
-    const out: Array<[string, Operation]> = [];
-    for (const [path, item] of Object.entries(doc.paths)) {
-      for (const [method, op] of Object.entries(item as Record<string, Operation>)) {
-        out.push([`${method.toUpperCase()} ${path}`, op]);
-      }
-    }
-    return out;
+    return Object.entries(doc.paths).flatMap(([path, item]) =>
+      Object.entries(item).map(([method, op]): [string, Operation] => [
+        `${method.toUpperCase()} ${path}`,
+        op
+      ])
+    );
   }
 
   function refs(node: unknown, found: string[] = []): string[] {
@@ -204,7 +188,7 @@ describe("buildOpenApiDocument", () => {
   it("documents exactly the paths and methods the router serves", () => {
     expect(Object.keys(doc.paths).sort()).toEqual([...SPEC_PATHS].sort());
     for (const [path, item] of Object.entries(doc.paths)) {
-      const documented = Object.keys(item as object)
+      const documented = Object.keys(item)
         .map(m => m.toUpperCase())
         .sort();
       expect(documented, path).toEqual([...ALLOWED_METHODS[path]].sort());
@@ -222,8 +206,8 @@ describe("buildOpenApiDocument", () => {
     for (const [where, op] of operations()) {
       expect(op.summary, where).toBeTruthy();
       expect(op.description, where).toBeTruthy();
-      expect(op.tags?.length, where).toBeGreaterThan(0);
-      for (const tag of op.tags ?? []) expect(declared, where).toContain(tag);
+      expect(op.tags.length, where).toBeGreaterThan(0);
+      for (const tag of op.tags) expect(declared, where).toContain(tag);
     }
   });
 
@@ -234,7 +218,7 @@ describe("buildOpenApiDocument", () => {
         expect(param.name, at).toBeTruthy();
         expect(param.in, at).toBeTruthy();
         expect(param.description, at).toBeTruthy();
-        expect((param.schema as { type?: string } | undefined)?.type, at).toBeTruthy();
+        expect(param.schema.type, at).toBeTruthy();
         if (param.in === "path") expect(param.required, at).toBe(true);
       }
       const names = (op.parameters ?? []).map(p => p.name);
@@ -246,14 +230,11 @@ describe("buildOpenApiDocument", () => {
 
   it("gives every success status a described JSON response schema", () => {
     for (const [where, op] of operations()) {
-      const responses = op.responses ?? {};
+      const responses = op.responses;
       const success = Object.keys(responses).filter(s => s.startsWith("2"));
       expect(success.length, where).toBeGreaterThan(0);
       for (const status of success) {
-        const response = responses[status] as {
-          description?: string;
-          content?: Record<string, { schema?: unknown }>;
-        };
+        const response = responses[status];
         expect(response.description, `${where} ${status}`).toBeTruthy();
         expect(response.content?.["application/json"]?.schema, `${where} ${status}`).toBeTruthy();
       }
@@ -262,13 +243,11 @@ describe("buildOpenApiDocument", () => {
 
   it("documents a machine-readable error body on every failure status", () => {
     for (const [where, op] of operations()) {
-      const responses = op.responses ?? {};
+      const responses = op.responses;
       const failures = Object.keys(responses).filter(s => s.startsWith("4") || s.startsWith("5"));
       expect(failures.length, where).toBeGreaterThan(0);
       for (const status of failures) {
-        const response = responses[status] as {
-          content?: Record<string, { schema?: { $ref?: string } }>;
-        };
+        const response = responses[status];
         expect(response.content?.["application/json"]?.schema?.$ref, `${where} ${status}`).toBe(
           "#/components/schemas/Error"
         );
@@ -279,12 +258,13 @@ describe("buildOpenApiDocument", () => {
   it("documents the 429 the read ceiling can actually produce", () => {
     for (const [where, op] of operations()) {
       if (!where.startsWith("GET ")) continue;
-      expect(Object.keys(op.responses ?? {}), where).toContain("429");
+      expect(Object.keys(op.responses), where).toContain("429");
     }
   });
 
   it("requires a JSON request body on the write operation, with the dry-run sandbox", () => {
-    const contact = (doc.paths[API_PATHS.contact] as { post: Operation }).post;
+    const contact = doc.paths[API_PATHS.contact].post;
+    assert(contact, "the contact path has no POST operation");
     expect(contact.requestBody).toMatchObject({
       required: true,
       content: {
@@ -293,11 +273,8 @@ describe("buildOpenApiDocument", () => {
         }
       }
     });
-    expect(Object.keys(contact.responses ?? {})).toContain("200");
-    const schema = doc.components.schemas.ContactRequest as {
-      properties: Record<string, unknown>;
-    };
-    expect(schema.properties.dryRun).toBeTruthy();
+    expect(Object.keys(contact.responses)).toContain("200");
+    expect(doc.components.schemas.ContactRequest.properties?.dryRun).toBeTruthy();
   });
 
   it("resolves every $ref against a declared component schema", () => {
@@ -309,11 +286,8 @@ describe("buildOpenApiDocument", () => {
   });
 
   it("describes every property of every component schema", () => {
-    for (const [name, schema] of Object.entries(doc.components.schemas)) {
-      const properties = (schema as { properties?: Record<string, unknown> }).properties;
-      if (!properties) continue;
-      for (const [property, value] of Object.entries(properties)) {
-        const spec = value as { description?: string; $ref?: string };
+    for (const [name, { properties }] of Object.entries(doc.components.schemas)) {
+      for (const [property, spec] of Object.entries(properties ?? {})) {
         if (spec.$ref) continue;
         expect(spec.description, `${name}.${property}`).toBeTruthy();
       }

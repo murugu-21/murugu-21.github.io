@@ -31,7 +31,7 @@ async function post(
 }
 
 async function errorBody(res: Response) {
-  const body = (await res.json()) as {
+  const body = await res.json<{
     error: {
       code: string;
       message: string;
@@ -39,7 +39,7 @@ async function errorBody(res: Response) {
       documentation_url: string;
       details?: unknown;
     };
-  };
+  }>();
   return body.error;
 }
 
@@ -50,10 +50,10 @@ describe("GET /api/profile", () => {
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Cache-Control")).toMatch(/max-age=\d+/);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       person: { name: string; currentRole: { company: string } };
       links: Array<{ label: string }>;
-    };
+    }>();
     expect(body.person.name).toBe("Murugappan M");
     expect(body.person.currentRole.company).toBe("MedMe Health");
     expect(body.links.map(l => l.label)).toContain("OpenAPI spec");
@@ -103,7 +103,7 @@ describe("path versioning", () => {
     for (const path of [API_PATHS.versions, "/api/versions"]) {
       const res = await get(path);
       expect(res.status, path).toBe(200);
-      const body = (await res.json()) as { current: string };
+      const body = await res.json<{ current: string }>();
       expect(body.current, path).toBe(CURRENT_API_VERSION);
     }
   });
@@ -152,10 +152,10 @@ describe("GET /api/posts", () => {
   it("lists every post with a count", async () => {
     const res = await get("/api/posts");
     expect(res.status).toBe(200);
-    const body = (await res.json()) as {
+    const body = await res.json<{
       posts: Array<{ slug: string }>;
       count: number;
-    };
+    }>();
     expect(body.count).toBe(2);
     expect(body.posts.map(p => p.slug)).toEqual([
       "cloud-agnostic-rate-limiting",
@@ -164,18 +164,15 @@ describe("GET /api/posts", () => {
   });
 
   it("filters case-insensitively on title and summary", async () => {
-    const body = (await (await get("/api/posts?q=RATE+LIMITING")).json()) as {
-      posts: Array<{ slug: string }>;
-      count: number;
-    };
+    const res = await get("/api/posts?q=RATE+LIMITING");
+    const body = await res.json<{ posts: Array<{ slug: string }>; count: number }>();
     expect(body.count).toBe(1);
     expect(body.posts[0].slug).toBe("cloud-agnostic-rate-limiting");
   });
 
   it("caps the list with limit", async () => {
-    const body = (await (await get("/api/posts?limit=1")).json()) as {
-      count: number;
-    };
+    const res = await get("/api/posts?limit=1");
+    const body = await res.json<{ count: number }>();
     expect(body.count).toBe(1);
   });
 
@@ -240,7 +237,7 @@ describe("the OpenAPI spec", () => {
     const res = await get(path);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    expect(((await res.json()) as { openapi: string }).openapi).toBe("3.1.0");
+    expect((await res.json<{ openapi: string }>()).openapi).toBe("3.1.0");
   });
 
   // The server URL follows the host that was asked, upgraded to https except
@@ -251,7 +248,7 @@ describe("the OpenAPI spec", () => {
     ["http://localhost:8787", "http://localhost:8787"]
   ])("names %s as %s in servers", async (origin, server) => {
     const res = await worker.fetch(new Request(`${origin}/openapi.json`), testEnv());
-    const body = (await res.json()) as { servers: Array<{ url: string }> };
+    const body = await res.json<{ servers: Array<{ url: string }> }>();
     expect(body.servers[0].url).toBe(server);
   });
 });

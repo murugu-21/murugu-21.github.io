@@ -4,8 +4,7 @@
 // mirrors into the URL (`?q=`, one `?tag=` per chip), which wins on load.
 import type { SerializedPost } from "../utils/posts";
 import SearchBar from "./SearchBar.astro";
-import TagBar from "./TagBar.astro";
-import type { TagCount } from "./Tag.astro";
+import Tag, { type TagCount } from "./Tag.astro";
 import Post from "./Post.astro";
 
 interface Props {
@@ -20,12 +19,16 @@ for (const post of posts) {
 }
 const tags: TagCount[] = [...totals]
   .map(([name, count]) => ({ name, count }))
-  .sort((a, b) => (a.count === b.count ? (a.name > b.name ? 1 : -1) : b.count - a.count));
+  .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 ---
 
 <div data-post-list>
   <SearchBar />
-  <TagBar tags={tags} />
+  <div class="flex flex-wrap">
+    {tags.map(tag => (
+      <Tag tag={tag} />
+    ))}
+  </div>
   <ol class="mt-4 mb-8 list-none p-0">
     {posts.map(post => (
       <Post post={post} />

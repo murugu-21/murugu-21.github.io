@@ -1,16 +1,7 @@
 const REQUIRED = process.env.REQUIRE_GITHUB_PROFILE === "1";
 
-export interface GithubProfile {
-  name: string;
+interface GithubProfile {
   bio: string | null;
-  avatarUrl: string;
-  location: string | null;
-}
-
-// Vite exposes .env via import.meta.env, not process.env; fall back to
-// process.env for plain-node contexts.
-function githubToken(): string | undefined {
-  return import.meta.env.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN;
 }
 
 /** Build-time GraphQL query; logs and returns null on any failure so the build never breaks. */
@@ -22,7 +13,8 @@ async function queryGithub<T>({
   /** What the page does instead, for the log line. */
   fallback: string;
 }): Promise<T | null> {
-  const token = githubToken();
+  // Vite exposes .env via import.meta.env; process.env covers plain-node contexts.
+  const token = import.meta.env.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN;
   if (!token) {
     console.warn(`[github] no GITHUB_TOKEN — ${fallback}`);
     return null;
@@ -57,7 +49,7 @@ async function queryGithub<T>({
 
 export async function fetchGithubProfile(): Promise<GithubProfile | null> {
   const data = await queryGithub<{ user: GithubProfile | null }>({
-    query: `{ user(login: "murugu-21") { name bio avatarUrl location } }`,
+    query: `{ user(login: "murugu-21") { bio } }`,
     fallback: "rendering contact fallback"
   });
   if (data?.user) return data.user;

@@ -1,6 +1,7 @@
 ---
 // Endpoint table and tool example are generated from the served OpenAPI
 // document (worker/api/openapi.ts), so they can't drift from the API.
+
 import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import ScrollTop from "../components/ScrollTop.astro";
@@ -29,21 +30,18 @@ import { MCP_SERVER_NAME, MCP_SERVER_SCHEMA } from "../../worker/well-known";
 
 const spec = buildOpenApiDocument(SITE_ORIGIN);
 
-type Operation = {
-  operationId: string;
-  summary: string;
-  description: string;
-  parameters?: Array<{ name: string; in: string; required?: boolean }>;
-};
-
 const operations = Object.entries(spec.paths).flatMap(([path, item]) =>
-  Object.entries(item as Record<string, Operation>).map(([method, op]) => ({
+  Object.entries(item).map(([method, { operationId, summary, description }]) => ({
     path,
     method: method.toUpperCase(),
-    ...op
+    operationId,
+    summary,
+    description
   }))
 );
 
+const postSlugSchema = spec.components.schemas.PostSummary.properties?.slug;
+if (!postSlugSchema) throw new Error("PostSummary has no slug property in the OpenAPI document");
 const exampleOp = operations.find(o => o.operationId === "getBlogPost");
 if (!exampleOp) throw new Error("getBlogPost is missing from the OpenAPI document");
 const toolExample = {
@@ -52,11 +50,7 @@ const toolExample = {
   input_schema: {
     type: "object",
     properties: {
-      slug: (
-        spec.components.schemas.PostSummary as {
-          properties: Record<string, unknown>;
-        }
-      ).properties.slug
+      slug: postSlugSchema
     },
     required: ["slug"]
   }
@@ -487,7 +481,7 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
         <strong class="font-bold">
           <code class={codeCls}>POST {API_PATHS.contact}</code>
         </strong>{" "}
-        sends real email, so it is genuinely metered:
+        sends real email, so it is metered:
         {CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day and {CONTACT_DAILY_GLOBAL}{" "}
         site-wide. Past either it answers <code class={codeCls}>429</code> with code{" "}
         <code class={codeCls}>rate_limited</code>, a <code class={codeCls}>Retry-After</code>{" "}
@@ -659,8 +653,8 @@ Retry-After: 39122</code></pre>
         <code class={codeCls}>/llms.txt</code>, <code class={codeCls}>/AGENTS.md</code>, the OpenAPI
         specification, the full blog text, and every post's markdown (URI template{" "}
         <code class={codeCls}>{SITE_ORIGIN}/blog/&#123;slug&#125;/index.md</code>). They use{" "}
-        <code class={codeCls}>https://</code> URIs because they really are fetchable straight from
-        the web, which is what that scheme is reserved for.
+        <code class={codeCls}>https://</code> URIs because they are fetchable straight from the web,
+        which is what that scheme is reserved for.
       </p>
       <p class={proseP}>
         Every tool declares a typed, self-contained <code class={codeCls}>outputSchema</code> (the

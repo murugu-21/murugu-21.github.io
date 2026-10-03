@@ -8,8 +8,7 @@
 //
 // Poorly aligned blocks keep no `words` (paragraph highlight only).
 // Don't run alongside `bun run audio`: both want the GPU.
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -17,10 +16,11 @@ import { alignWords, type TimedWord, type WhisperWord } from "../src/blog/utils/
 import {
   PYTHON,
   ROOT,
-  fail,
   flags,
   log,
   publishedSlugs,
+  requireFfmpeg,
+  requirePython,
   run,
   runEach,
   runMain,
@@ -71,12 +71,12 @@ async function alignPost(slug: string, worker: Worker) {
     const mp3 = join(tmp, "post.mp3");
     if (!r2.get(`${AUDIO_PREFIX}/${slug}.json`, jsonPath)) {
       log(`${slug}: no audio in R2, skipping`);
-      return "skipped";
+      return;
     }
     const timings = JSON.parse(readFileSync(jsonPath, "utf8")) as Timings;
     if (timings.version >= 2 && !flags.has("--force")) {
       log(`${slug}: already aligned, skipping`);
-      return "skipped";
+      return;
     }
     if (!r2.get(`${AUDIO_PREFIX}/${slug}.mp3`, mp3)) throw new Error("mp3 missing in R2");
 
@@ -125,18 +125,14 @@ async function alignPost(slug: string, worker: Worker) {
     writeFileSync(jsonPath, JSON.stringify(out));
     r2.put(`${AUDIO_PREFIX}/${slug}.json`, jsonPath, "application/json");
     log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
-    return "aligned";
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
 }
 
 async function main() {
-  if (!existsSync(PYTHON)) fail('no .venv-tts — see README "Read-aloud audio"');
-  if (spawnSync(PYTHON, ["-c", "import mlx_whisper"]).status !== 0) {
-    fail(".venv-tts cannot import mlx_whisper — pip install -r scripts/tts/requirements.txt");
-  }
-  if (spawnSync("ffmpeg", ["-version"]).status !== 0) fail("ffmpeg not on PATH");
+  requirePython("mlx_whisper");
+  requireFfmpeg();
 
   r2.checkLogin();
   const targets = slugs.length ? slugs : publishedSlugs();

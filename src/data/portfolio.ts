@@ -37,17 +37,7 @@ export const sameAs = [
   socialMediaLinks.twitter
 ];
 
-interface SoftwareSkill {
-  skillName: string;
-  iconName: string; // <symbol id> in src/assets/icons.svg, rendered by components/Icon.astro
-}
-
-export const skillsSection: {
-  title: string;
-  subTitle: string;
-  skills: string[];
-  softwareSkills: SoftwareSkill[];
-} = {
+export const skillsSection = {
   title: "What I do",
   subTitle: "FULL-STACK ENGINEER BUILDING CLOUD-NATIVE, EVENT-DRIVEN SYSTEMS END-TO-END",
   skills: [
@@ -55,6 +45,7 @@ export const skillsSection: {
     "⚡ Design distributed, event-driven systems on AWS (Lambda, API Gateway, SQS, EventBridge)",
     "⚡ Ship with observability and security built in — OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],
+  // iconName is a <symbol id> in src/assets/icons.svg
   softwareSkills: [
     { skillName: "TypeScript", iconName: "typescript" },
     { skillName: "React", iconName: "react" },
@@ -72,19 +63,7 @@ export const skillsSection: {
 };
 
 // progressPercentage feeds the dataset API's `level`; the site doesn't show it.
-
-interface ProficiencyTool {
-  name: string;
-  icon: string;
-}
-
-export const techStack: {
-  experience: {
-    stack: string;
-    tools: ProficiencyTool[];
-    progressPercentage: string;
-  }[];
-} = {
+export const techStack = {
   experience: [
     {
       stack: "Backend",
@@ -217,8 +196,7 @@ export const workExperiences: WorkExperience[] = [
 ];
 
 // Resume SKILLS taxonomy, also folded into Layout.astro's JSON-LD knowsAbout.
-
-export const skillsCategories: { category: string; items: string }[] = [
+export const skillsCategories = [
   { category: "Languages", items: "TypeScript, Python, SQL, Bash, YAML" },
   {
     category: "Full Stack",
@@ -264,24 +242,17 @@ export const educationInfo: Education[] = [
 
 // Pinned GitHub repos, fetched at build time; the section renders only when
 // some exist.
-
-export const projectsSection: { title: string; subtitle: string } = {
+export const projectsSection = {
   title: "Projects 🛠️",
   subtitle: "A few things I've built — pinned from my GitHub."
 };
 
-export const openSourceSection: { title: string; subtitle: string } = {
+export const openSourceSection = {
   title: "Open Source Contributions 🌐",
   subtitle: "Code I've contributed to projects used by people around the world."
 };
 
-export const openSourceCard: {
-  title: string;
-  subtitle: string;
-  image: string;
-  imageAlt: string;
-  footerLink: { name: string; url: string }[];
-} = {
+export const openSourceCard = {
   title: "AnkiDroid — Open Source Contributor",
   subtitle:
     "3 merged pull requests to AnkiDroid, the popular open-source spaced-repetition flashcard app for Android (11k+ GitHub stars, millions of installs). Contributions include clipboard image paste, a deprecation-API wrapper, and test-configuration improvements.",
@@ -307,11 +278,7 @@ export const openSourceCard: {
   ]
 };
 
-export const blogSection: {
-  title: string;
-  subtitle: string;
-  blogs: { url: string; title: string; description: string }[];
-} = {
+export const blogSection = {
   title: "Blogs",
   subtitle:
     "I write about real-world software engineering — distributed systems, cloud architecture, and lessons from production.",

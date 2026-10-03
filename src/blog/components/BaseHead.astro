@@ -1,5 +1,5 @@
 ---
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, SOCIAL } from "../consts";
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, TWITTER_HANDLE } from "../consts";
 import { SITE_ORIGIN } from "../../lib/site";
 
 // Declared inline and preloaded so the face is usually in hand by first paint.
@@ -79,7 +79,7 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 )}
 {ogType === "article" && tags.map(tag => <meta property="article:tag" content={tag} />)}
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:creator" content={SOCIAL.twitter} />
+<meta name="twitter:creator" content={TWITTER_HANDLE} />
 <meta name="twitter:title" content={ogTitle} />
 <meta name="twitter:description" content={metaDescription} />
 <meta name="twitter:image" content={ogImage} />

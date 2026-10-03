@@ -10,11 +10,8 @@ export async function GET() {
   const lines = [
     `# ${SITE_TITLE} — full content`,
     ``,
-    `> ${SITE_DESCRIPTION} — by ${AUTHOR.name}.`
-  ];
-
-  posts.forEach(post => {
-    lines.push(
+    `> ${SITE_DESCRIPTION} — by ${AUTHOR.name}.`,
+    ...posts.flatMap(post => [
       ``,
       `---`,
       ``,
@@ -24,9 +21,9 @@ export async function GET() {
       `Description: ${oneLineDescription(post)}`,
       ``,
       (post.body || ``).trim()
-    );
-  });
-  lines.push(``);
+    ]),
+    ``
+  ];
 
   return textResponse(lines.join(`\n`));
 }

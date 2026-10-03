@@ -7,6 +7,33 @@ import { POSTS_LIMIT_MAX } from "./posts";
 import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "./ratelimit";
 import { API_VERSION, DEPRECATION_NOTICE_DAYS, VERSIONS } from "./versioning";
 
+type SchemaObject = {
+  $ref?: string;
+  type?: string | string[];
+  description?: string;
+  properties?: Record<string, SchemaObject>;
+  [keyword: string]: unknown;
+};
+
+type Operation = {
+  operationId: string;
+  summary: string;
+  description: string;
+  tags: string[];
+  parameters?: Array<{
+    name: string;
+    in: string;
+    description: string;
+    required?: boolean;
+    schema: SchemaObject;
+  }>;
+  requestBody?: unknown;
+  responses: Record<
+    string,
+    { description: string; content?: Record<string, { schema: SchemaObject }> }
+  >;
+};
+
 type OpenApiDocument = {
   openapi: string;
   info: {
@@ -21,9 +48,9 @@ type OpenApiDocument = {
   externalDocs: { url: string; description: string };
   tags: Array<{ name: string; description: string }>;
   security: unknown[];
-  paths: Record<string, Record<string, unknown>>;
+  paths: Record<string, Partial<Record<"get" | "post", Operation>>>;
   components: {
-    schemas: Record<string, unknown>;
+    schemas: Record<string, SchemaObject>;
     securitySchemes: Record<string, unknown>;
   };
 };
@@ -50,17 +77,13 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 
 **Other machine-readable entry points.** \`/.well-known/api-catalog\` (RFC 9727 linkset of every API here), \`/.well-known/mcp.json\` (MCP server manifest), \`/mcp\` (MCP server), \`/llms.txt\` (site summary + every blog post), \`/AGENTS.md\` (agent instructions), \`/blog/llms-full.txt\` (full post text), \`/sitemap.xml\`, and \`Accept: text/markdown\` on any page URL.`;
 
-const errorResponse = (description: string) => ({
-  description,
-  content: {
-    "application/json": { schema: { $ref: "#/components/schemas/Error" } }
-  }
-});
-
 const jsonResponse = (description: string, ref: string) => ({
   description,
   content: { "application/json": { schema: { $ref: ref } } }
 });
+
+const errorResponse = (description: string) =>
+  jsonResponse(description, "#/components/schemas/Error");
 
 const rateLimited = errorResponse(
   "The client's read allowance for the current window is spent (`rate_limited`). `Retry-After` and the `RateLimit` header say when to come back — see the Rate limits section above."
@@ -348,7 +371,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
 }
 
 // Shared with worker/mcp/tools.ts, which inlines them into self-contained tool schemas.
-export const API_SCHEMAS: Record<string, unknown> = {
+export const API_SCHEMAS: Record<string, SchemaObject> = {
   Error: {
     type: "object",
     title: "Error",

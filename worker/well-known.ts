@@ -30,10 +30,16 @@ function document(body: unknown, contentType: string): Response {
   });
 }
 
+type LinkTarget = { href: string; type?: string; title: string };
+type LinksetEntry = { anchor: string } & Partial<
+  Record<
+    "service-desc" | "service-doc" | "service-meta" | "describedby" | "status" | "author",
+    LinkTarget[]
+  >
+>;
+
 /** RFC 9727 requires `service-desc` or `service-doc` per entry. */
-export function buildApiCatalog(origin: string): {
-  linkset: Array<Record<string, unknown>>;
-} {
+export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
   const base = origin.replace(/\/$/, "");
   const abs = (path: string): string => `${base}${path}`;
   const target = ({ path, type, title }: { path: string; type: string; title: string }) => ({
@@ -107,7 +113,7 @@ export function buildApiCatalog(origin: string): {
 }
 
 /** The tool list rides in `_meta`, the only place the schema allows extra data. */
-export function buildMcpManifest(origin: string): Record<string, unknown> {
+export function buildMcpManifest(origin: string) {
   const base = origin.replace(/\/$/, "");
   return {
     $schema: MCP_SERVER_SCHEMA,

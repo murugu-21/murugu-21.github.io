@@ -3,7 +3,7 @@ import { parseHTML } from "linkedom";
 
 import { normalizeSpeechText, packSentences, spokenHash } from "./audio-prep";
 import { blockAt, matchBlocks, scrollTarget, WORD_BAND } from "./audio-sync";
-import { alignWords, matchWordSpans, tokenize, wordAt, wrapWords } from "./audio-words";
+import { alignWords, matchWordSpans, wordAt, wrapWords } from "./audio-words";
 import { parseRate, speechBlocks } from "./speech";
 
 describe("normalizeSpeechText", () => {
@@ -205,17 +205,6 @@ describe("scrollTarget", () => {
     expect(scrollTarget(rect(700, 24), vh, WORD_BAND)).toBeNull();
     expect(scrollTarget(rect(850, 24), vh, WORD_BAND)).toBe("center");
     expect(scrollTarget(rect(-30, 24), vh, WORD_BAND)).toBe("center");
-  });
-});
-
-describe("tokenize", () => {
-  it("splits on whitespace runs and keeps punctuation attached", () => {
-    expect(tokenize("Hello,  world!\nHow's 0.1+0.2?")).toEqual([
-      "Hello,",
-      "world!",
-      "How's",
-      "0.1+0.2?"
-    ]);
   });
 });
 

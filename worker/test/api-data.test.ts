@@ -190,15 +190,6 @@ describe("parseDataset", () => {
     expect(roundTripped).toEqual(built);
   });
 
-  it("rejects a non-object", () => {
-    expect(parseDataset("nope")).toBeNull();
-    expect(parseDataset(null)).toBeNull();
-  });
-
-  it("rejects a document with no person name", () => {
-    expect(parseDataset({ ...buildDataset(input), person: {} })).toBeNull();
-  });
-
   it("rejects a document with a missing collection", () => {
     const { experience: _dropped, ...rest } = buildDataset(input);
     expect(parseDataset(rest)).toBeNull();

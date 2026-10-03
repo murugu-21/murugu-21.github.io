@@ -108,13 +108,8 @@ const DISCOVER_RESULT = {
   ...LIST_CACHE
 };
 
-function resourceNotFound(uri: unknown): RpcFailure {
-  return {
-    status: 200,
-    code: JSON_RPC_INVALID_PARAMS,
-    message: "Resource not found. Call resources/list for the resources this server offers.",
-    data: { uri }
-  };
+function invalidParams(message: string, data?: unknown): RpcFailure {
+  return { status: 200, code: JSON_RPC_INVALID_PARAMS, message, data };
 }
 
 const isFailure = (value: object): value is RpcFailure => "code" in value;
@@ -125,14 +120,16 @@ async function readResourceResult(
 ): Promise<{ contents: unknown[] } | RpcFailure> {
   const uri = message.params?.uri;
   if (typeof uri !== "string") {
-    return {
-      status: 200,
-      code: JSON_RPC_INVALID_PARAMS,
-      message: "Invalid params: 'uri' is required and must be a string."
-    };
+    return invalidParams("Invalid params: 'uri' is required and must be a string.");
   }
   const contents = await readResource(uri, ctx);
-  return contents === null ? resourceNotFound(uri) : { contents };
+  if (contents === null) {
+    return invalidParams(
+      "Resource not found. Call resources/list for the resources this server offers.",
+      { uri }
+    );
+  }
+  return { contents };
 }
 
 function toolCallArgs(
@@ -140,28 +137,18 @@ function toolCallArgs(
 ): { tool: McpTool; args: Record<string, unknown> } | RpcFailure {
   const name = message.params?.name;
   if (typeof name !== "string") {
-    return {
-      status: 200,
-      code: JSON_RPC_INVALID_PARAMS,
-      message: "Invalid params: 'name' is required and must be a string."
-    };
+    return invalidParams("Invalid params: 'name' is required and must be a string.");
   }
   // Only a missing value defaults; `null` is still rejected.
   const args = JsonObject.default({}).safeParse(message.params?.arguments);
   if (!args.success) {
-    return {
-      status: 200,
-      code: JSON_RPC_INVALID_PARAMS,
-      message: "Invalid params: 'arguments' must be an object when present."
-    };
+    return invalidParams("Invalid params: 'arguments' must be an object when present.");
   }
   const tool = findTool(name);
   if (!tool) {
-    return {
-      status: 200,
-      code: JSON_RPC_INVALID_PARAMS,
-      message: `Unknown tool: ${name}. Call tools/list for the tools this server offers.`
-    };
+    return invalidParams(
+      `Unknown tool: ${name}. Call tools/list for the tools this server offers.`
+    );
   }
   return { tool, args: args.data };
 }

@@ -20,6 +20,19 @@ export const fail = (msg: string): never => {
   process.exit(1);
 };
 
+export function requirePython(module: string): void {
+  if (!existsSync(PYTHON)) fail('no .venv-tts — see README "Read-aloud audio"');
+  if (spawnSync(PYTHON, ["-c", `import ${module}`]).status !== 0) {
+    fail(`.venv-tts cannot import ${module} — reinstall scripts/tts/requirements.txt`);
+  }
+}
+
+export function requireFfmpeg(): void {
+  if (spawnSync("ffmpeg", ["-version"]).status !== 0) {
+    fail("ffmpeg not on PATH (brew install ffmpeg)");
+  }
+}
+
 export function run(cmd: string, cmdArgs: string[]): string {
   const r = spawnSync(cmd, cmdArgs, { encoding: "utf8" });
   if (r.status !== 0) {
@@ -46,7 +59,7 @@ export function publishedSlugs(): string[] {
 // Logs failures instead of stopping; returns the failed slugs.
 export async function runEach(
   slugs: string[],
-  fn: (slug: string) => Promise<unknown>
+  fn: (slug: string) => Promise<void>
 ): Promise<string[]> {
   const failures: string[] = [];
   const t0 = Date.now();

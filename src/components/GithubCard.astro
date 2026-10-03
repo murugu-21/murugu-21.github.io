@@ -6,8 +6,6 @@ import { accentTitle } from "../lib/accent";
 import { resumeContact } from "../data/resume";
 
 const prof = await fetchGithubProfile();
-// The site's own wording, not the GitHub profile's location field.
-const location = resumeContact.location;
 
 const contactLink =
   "mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] hover:transition-all hover:duration-300 hover:ease-[ease] dark:text-white dark:hover:[text-shadow:2px_1px_2px_var(--color-contact-hover-dark)] max-wide:text-[20px]";
@@ -30,28 +28,25 @@ const contactLink =
           "{prof.bio}"
         </h2>
       )}
-      {location && (
-        <div>
-          <span class="text-[19px] leading-[45px] max-md:text-[16px] max-md:leading-[30px]">
-            {/* inline: preflight makes svg a block; keep it on the text's line */}
-            <svg
-              class="inline align-baseline"
-              viewBox="-0.5 -2 20 19"
-              version="1.1"
-              width="22"
-              height="16"
-              aria-hidden="true"
-              stroke="currentColor"
-            >
-              <path
-                fill-rule="evenodd"
-                d="M6 0C2.69 0 0 2.5 0 5.5 0 10.02 6 16 6 16s6-5.98 6-10.5C12 2.5 9.31 0 6 0zm0 14.55C4.14 12.52 1 8.44 1 5.5 1 3.02 3.25 1 6 1c1.34 0 2.61.48 3.56 1.36.92.86 1.44 1.97 1.44 3.14 0 2.94-3.14 7.02-5 9.05zM8 5.5c0 1.11-.89 2-2 2-1.11 0-2-.89-2-2 0-1.11.89-2 2-2 1.11 0 2 .89 2 2z"
-              />
-            </svg>
-            {location}
-          </span>
-        </div>
-      )}
+      <div>
+        <span class="text-[19px] leading-[45px] max-md:text-[16px] max-md:leading-[30px]">
+          {/* inline: preflight makes svg a block; keep it on the text's line */}
+          <svg
+            class="inline align-baseline"
+            viewBox="-0.5 -2 20 19"
+            width="22"
+            height="16"
+            aria-hidden="true"
+            stroke="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M6 0C2.69 0 0 2.5 0 5.5 0 10.02 6 16 6 16s6-5.98 6-10.5C12 2.5 9.31 0 6 0zm0 14.55C4.14 12.52 1 8.44 1 5.5 1 3.02 3.25 1 6 1c1.34 0 2.61.48 3.56 1.36.92.86 1.44 1.97 1.44 3.14 0 2.94-3.14 7.02-5 9.05zM8 5.5c0 1.11-.89 2-2 2-1.11 0-2-.89-2-2 0-1.11.89-2 2-2 1.11 0 2 .89 2 2z"
+            />
+          </svg>
+          {resumeContact.location}
+        </span>
+      </div>
       <SocialMedia />
     </div>
   </div>
@@ -60,7 +55,7 @@ const contactLink =
     <div class="flex [&>*]:flex-1">
       <div>
         <h2
-          class="heading my-[0.67em] text-[65px] font-normal max-wide:text-center max-wide:text-[40px]"
+          class="my-[0.67em] text-[65px] font-normal max-wide:text-center max-wide:text-[40px]"
           set:html={accentTitle(contactInfo.title)}
         />
         <p class="subTitle my-[1em] uppercase dark:text-white max-wide:text-center max-wide:text-[16px] max-wide:leading-[normal]">
