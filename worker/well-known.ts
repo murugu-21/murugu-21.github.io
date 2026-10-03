@@ -30,77 +30,89 @@ function document(body: unknown, contentType: string): Response {
   });
 }
 
-type LinksetTarget = { href: string; type?: string; title?: string };
+type LinkTarget = { href: string; type?: string; title: string };
+type LinksetEntry = { anchor: string } & Partial<
+  Record<
+    "service-desc" | "service-doc" | "service-meta" | "describedby" | "status" | "author",
+    LinkTarget[]
+  >
+>;
 
 /** RFC 9727 requires `service-desc` or `service-doc` per entry. */
-export function buildApiCatalog(origin: string): {
-  linkset: Array<Record<string, unknown>>;
-} {
-  const base = origin.replace(/\/$/, "");
-  const abs = (path: string): string => `${base}${path}`;
-  const target = (href: string, type: string, title: string): LinksetTarget => ({
-    href,
+export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
+  const abs = (path: string): string => `${origin}${path}`;
+  const target = ({ path, type, title }: { path: string; type: string; title: string }) => ({
+    href: abs(path),
     type,
     title
   });
+  const agentInstructions = target({
+    path: "/AGENTS.md",
+    type: "text/markdown",
+    title: "murugappan.dev — agent instructions"
+  });
+  const author = { href: abs("/about/"), title: "Murugappan M" };
 
   return {
     linkset: [
       {
         anchor: abs(VERSIONED_API_BASE),
         "service-desc": [
-          target(
-            abs(API_PATHS.openapiRoot),
-            "application/json",
-            "murugappan.dev API — OpenAPI 3.1.0 specification"
-          )
+          target({
+            path: API_PATHS.openapiRoot,
+            type: "application/json",
+            title: "murugappan.dev API — OpenAPI 3.1.0 specification"
+          })
         ],
         "service-doc": [
-          target(abs("/developers/"), "text/html", "murugappan.dev API — developer portal")
+          target({
+            path: "/developers/",
+            type: "text/html",
+            title: "murugappan.dev API — developer portal"
+          })
         ],
         "service-meta": [
-          target(
-            abs(API_PATHS.versions),
-            "application/json",
-            "murugappan.dev API — version and deprecation policy"
-          )
+          target({
+            path: API_PATHS.versions,
+            type: "application/json",
+            title: "murugappan.dev API — version and deprecation policy"
+          })
         ],
-        describedby: [
-          target(abs("/AGENTS.md"), "text/markdown", "murugappan.dev — agent instructions")
-        ],
+        describedby: [agentInstructions],
         status: [
-          target(
-            abs("/developers/#versioning"),
-            "text/html",
-            "murugappan.dev API — versioning and deprecation status"
-          )
+          target({
+            path: "/developers/#versioning",
+            type: "text/html",
+            title: "murugappan.dev API — versioning and deprecation status"
+          })
         ],
-        author: [{ href: abs("/about/"), title: "Murugappan M" }]
+        author: [author]
       },
       {
         anchor: abs("/mcp"),
         "service-desc": [
-          target(
-            abs("/.well-known/mcp.json"),
-            "application/json",
-            "murugappan.dev MCP server — server.json manifest"
-          )
+          target({
+            path: "/.well-known/mcp.json",
+            type: "application/json",
+            title: "murugappan.dev MCP server — server.json manifest"
+          })
         ],
         "service-doc": [
-          target(abs("/developers/#mcp"), "text/html", "murugappan.dev MCP server — documentation")
+          target({
+            path: "/developers/#mcp",
+            type: "text/html",
+            title: "murugappan.dev MCP server — documentation"
+          })
         ],
-        describedby: [
-          target(abs("/AGENTS.md"), "text/markdown", "murugappan.dev — agent instructions")
-        ],
-        author: [{ href: abs("/about/"), title: "Murugappan M" }]
+        describedby: [agentInstructions],
+        author: [author]
       }
     ]
   };
 }
 
 /** The tool list rides in `_meta`, the only place the schema allows extra data. */
-export function buildMcpManifest(origin: string): Record<string, unknown> {
-  const base = origin.replace(/\/$/, "");
+export function buildMcpManifest(origin: string) {
   return {
     $schema: MCP_SERVER_SCHEMA,
     name: MCP_SERVER_NAME,
@@ -108,9 +120,9 @@ export function buildMcpManifest(origin: string): Record<string, unknown> {
     description:
       "First-party facts about Murugappan M: profile, experience, skills, writing, and a way to reach him.",
     version: API_VERSION,
-    websiteUrl: `${base}/developers/#mcp`,
+    websiteUrl: `${origin}/developers/#mcp`,
     repository: { url: MCP_REPOSITORY, source: "github" },
-    remotes: [{ type: "streamable-http", url: `${base}/mcp` }],
+    remotes: [{ type: "streamable-http", url: `${origin}/mcp` }],
     _meta: {
       "dev.murugappan/server": {
         transport: "streamable-http",
@@ -118,33 +130,31 @@ export function buildMcpManifest(origin: string): Record<string, unknown> {
         protocolVersion: LATEST_PROTOCOL_VERSION,
         serverName: SERVER_NAME,
         tools: MCP_TOOLS.map(tool => tool.name),
-        documentation: `${base}/developers/#mcp`,
-        openapi: `${base}${API_PATHS.openapiRoot}`
+        documentation: `${origin}/developers/#mcp`,
+        openapi: `${origin}${API_PATHS.openapiRoot}`
       }
     }
   };
 }
 
+const readCors = cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 });
+
 export const wellKnown = new Hono<{ Bindings: Env }>();
 
-wellKnown.use("*", cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 }));
+wellKnown.use("*", readCors);
 
 wellKnown.on(READ_METHODS, "/api-catalog", c =>
   document(buildApiCatalog(publicOrigin(c.req.url)), LINKSET_MEDIA_TYPE)
 );
 
-wellKnown.on(READ_METHODS, "/mcp.json", c =>
-  document(buildMcpManifest(publicOrigin(c.req.url)), "application/json")
-);
+const manifestResponse = (requestUrl: string) =>
+  document(buildMcpManifest(publicOrigin(requestUrl)), "application/json");
+
+wellKnown.on(READ_METHODS, "/mcp.json", c => manifestResponse(c.req.url));
 
 /** The same manifest at the site root, where clients look first. */
 export const mcpManifest = new Hono<{ Bindings: Env }>();
 
-mcpManifest.use(
-  "*",
-  cors({ origin: "*", allowMethods: ["GET", "HEAD", "OPTIONS"], maxAge: 86400 })
-);
+mcpManifest.use("*", readCors);
 
-mcpManifest.on(READ_METHODS, "/", c =>
-  document(buildMcpManifest(publicOrigin(c.req.url)), "application/json")
-);
+mcpManifest.on(READ_METHODS, "/", c => manifestResponse(c.req.url));

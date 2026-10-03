@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
+import { z } from "zod";
 
-import { fetchDeepseekBalance } from "./ai";
+import { fetchDeepseekBalance, type DeepseekBalance } from "./ai";
 // Limits live in api/contact.ts so the Astro bundle can quote them without
 // importing `cloudflare:workers`.
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./api/contact";
@@ -15,27 +16,30 @@ const BALANCE_TTL_MS = 10 * 60 * 1000;
 
 const BALANCE_KEY = "deepseek:balance";
 
-type CachedBalance = {
-  available: boolean;
-  totalUsd: number;
-  checkedAt: number;
-};
+const CachedBalance = z.object({
+  available: z.boolean(),
+  totalUsd: z.number(),
+  checkedAt: z.number()
+}) satisfies z.ZodType<DeepseekBalance>;
+type CachedBalance = z.infer<typeof CachedBalance>;
+
+const hasFunds = ({ available, totalUsd }: DeepseekBalance): boolean =>
+  available && totalUsd > BALANCE_RESERVE_USD;
 
 /** What is left of each contact tier today, after the reporting call. */
-export type ContactUsage = { clientRemaining: number; globalRemaining: number };
+type ContactUsage = { clientRemaining: number; globalRemaining: number };
 
-export type ContactSlot = ContactUsage &
+type ContactSlot = ContactUsage &
   ({ allowed: true } | { allowed: false; scope: "client" | "global" });
 
 // One fixed-name instance ("global") shared by every ChatRoom, so the balance
 // is checked once and one room's 402 gates the whole site.
-export class RateLimiter extends DurableObject {
+export class RateLimiter extends DurableObject<Env> {
   private sql: SqlStorage;
 
-  constructor(ctx: DurableObjectState, env: unknown) {
-    super(ctx, env as never);
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
     this.sql = ctx.storage.sql;
-    // Obsolete chat counter tables are left in place: the schema is additive.
     // Keyed "<day>:global" / "<day>:client:<ip>" so stale days are easy to purge.
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS contact_counters (
@@ -51,18 +55,15 @@ export class RateLimiter extends DurableObject {
     // Injected by tests only; an RPC caller passes just the key.
     fetcher: typeof fetch = fetch
   ): Promise<boolean> {
-    const cached = await this.ctx.storage.get<CachedBalance>(BALANCE_KEY);
-    if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) {
-      return cached.available && cached.totalUsd > BALANCE_RESERVE_USD;
-    }
+    const cached = CachedBalance.safeParse(await this.ctx.storage.get(BALANCE_KEY)).data;
+    if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) return hasFunds(cached);
     try {
-      const { available, totalUsd } = await fetchDeepseekBalance(apiKey, fetcher);
+      const balance = await fetchDeepseekBalance(apiKey, fetcher);
       await this.ctx.storage.put(BALANCE_KEY, {
-        available,
-        totalUsd,
+        ...balance,
         checkedAt: Date.now()
       } satisfies CachedBalance);
-      return available && totalUsd > BALANCE_RESERVE_USD;
+      return hasFunds(balance);
     } catch (err) {
       console.error("deepseek balance check failed", err);
       return true;
@@ -91,43 +92,50 @@ export class RateLimiter extends DurableObject {
       return {
         allowed: false,
         scope: "client",
-        ...this.remaining(clientUsed, this.contactCount(globalKey))
+        ...this.remaining({ clientUsed, globalUsed: this.contactCount(globalKey) })
       };
     const globalUsed = this.contactCount(globalKey);
     if (globalUsed >= CONTACT_DAILY_GLOBAL)
       return {
         allowed: false,
         scope: "global",
-        ...this.remaining(clientUsed, globalUsed)
+        ...this.remaining({ clientUsed, globalUsed })
       };
     this.bumpContact(clientKey);
     this.bumpContact(globalKey);
-    return { allowed: true, ...this.remaining(clientUsed + 1, globalUsed + 1) };
+    return {
+      allowed: true,
+      ...this.remaining({ clientUsed: clientUsed + 1, globalUsed: globalUsed + 1 })
+    };
   }
 
   /** Remaining allowance without spending any, for a dry run. */
   contactUsage(client: string): ContactUsage {
     const day = this.today();
-    return this.remaining(
-      this.contactCount(`${day}:client:${client}`),
-      this.contactCount(`${day}:global`)
-    );
+    return this.remaining({
+      clientUsed: this.contactCount(`${day}:client:${client}`),
+      globalUsed: this.contactCount(`${day}:global`)
+    });
   }
 
-  private remaining(clientUsed: number, globalUsed: number): ContactUsage {
+  private remaining({
+    clientUsed,
+    globalUsed
+  }: {
+    clientUsed: number;
+    globalUsed: number;
+  }): ContactUsage {
     return {
       clientRemaining: Math.max(0, CONTACT_DAILY_PER_CLIENT - clientUsed),
       globalRemaining: Math.max(0, CONTACT_DAILY_GLOBAL - globalUsed)
     };
   }
 
-  contactsSentToday(): number {
-    return this.contactCount(`${this.today()}:global`);
-  }
-
   private contactCount(key: string): number {
-    const rows = this.sql.exec(`SELECT count FROM contact_counters WHERE key = ?`, key).toArray();
-    return rows.length ? (rows[0].count as number) : 0;
+    const rows = this.sql
+      .exec<{ count: number }>(`SELECT count FROM contact_counters WHERE key = ?`, key)
+      .toArray();
+    return rows.length ? rows[0].count : 0;
   }
 
   private bumpContact(key: string): void {

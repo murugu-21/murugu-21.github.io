@@ -3,47 +3,49 @@
 //
 //   bun run audio:align              # every post whose JSON is still version 1
 //   bun run audio:align first-post   # one post
-//   bun run audio:align --force   # re-align version 2 posts too
-//   bun run audio:align --local   # target `wrangler dev`'s local R2
+//   bun run audio:align --force      # re-align version 2 posts too
+//   bun run audio:align --local      # target the local R2 that `bun run dev` serves
 //
 // Poorly aligned blocks keep no `words` (paragraph highlight only).
 // Don't run alongside `bun run audio`: both want the GPU.
-import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
+import { z } from "zod";
 
-import { alignWords, type TimedWord, type WhisperWord } from "../src/blog/utils/audio-words.ts";
-import { fail, log, publishedSlugs, run, runEach } from "./tts/cli.ts";
+import { alignWords, type TimedWord } from "../src/blog/utils/audio-words.ts";
+import {
+  PYTHON,
+  ROOT,
+  flags,
+  log,
+  publishedSlugs,
+  requireFfmpeg,
+  requirePython,
+  run,
+  runEach,
+  runMain,
+  slugs
+} from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
-import { SITE_DIR } from "./site-dir.ts";
-import { r2Store } from "./tts/r2.ts";
+import { AUDIO_PREFIX, r2Store } from "./tts/r2.ts";
 
-const ROOT = resolve(new URL("..", import.meta.url).pathname);
-const DIST = join(SITE_DIR, "blog");
-const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 const WORKER = join(ROOT, "scripts", "tts", "whisper.py");
 
-const args = process.argv.slice(2);
-const flags = new Set(args.filter(a => a.startsWith("--")));
-const slugs = args.filter(a => !a.startsWith("--"));
-const local = flags.has("--local");
+const r2 = r2Store(flags.has("--local"));
 
-const r2 = r2Store(local);
-
-// ---- whisper worker ---------------------------------------------------------
-
-interface WhisperReply {
-  error?: string;
-  words?: WhisperWord[];
-}
+const WhisperReply = z.object({
+  error: z.string().optional(),
+  words: z.array(z.object({ word: z.string(), start: z.number(), end: z.number() })).optional()
+});
+type WhisperReply = z.infer<typeof WhisperReply>;
 
 function startWorker() {
   const { next, send, close } = startJsonLines(PYTHON, [WORKER]);
   return {
     async transcribe(job: { id: string; wav: string; text: string }): Promise<WhisperReply> {
       send(JSON.stringify(job));
-      return (await next()) as WhisperReply;
+      return WhisperReply.parse(await next());
     },
     close
   };
@@ -59,28 +61,27 @@ interface TimingBlock {
   end: number;
   words?: TimedWord[];
 }
-interface Timings {
-  version: number;
-  blocks: TimingBlock[];
-}
-
-// ---- per-post -----------------------------------------------------------------
+// Loose: every field is written back untouched.
+const Timings = z.looseObject({
+  version: z.number(),
+  blocks: z.array(z.looseObject({ text: z.string(), start: z.number(), end: z.number() }))
+});
 
 async function alignPost(slug: string, worker: Worker) {
   const tmp = mkdtempSync(join(tmpdir(), `align-${slug}-`));
   try {
     const jsonPath = join(tmp, "timings.json");
     const mp3 = join(tmp, "post.mp3");
-    if (!r2.get(`blog/breeze/${slug}.json`, jsonPath)) {
+    if (!r2.get(`${AUDIO_PREFIX}/${slug}.json`, jsonPath)) {
       log(`${slug}: no audio in R2, skipping`);
-      return "skipped";
+      return;
     }
-    const timings = JSON.parse(readFileSync(jsonPath, "utf8")) as Timings;
+    const timings = Timings.parse(JSON.parse(readFileSync(jsonPath, "utf8")));
     if (timings.version >= 2 && !flags.has("--force")) {
       log(`${slug}: already aligned, skipping`);
-      return "skipped";
+      return;
     }
-    if (!r2.get(`blog/breeze/${slug}.mp3`, mp3)) throw new Error("mp3 missing in R2");
+    if (!r2.get(`${AUDIO_PREFIX}/${slug}.mp3`, mp3)) throw new Error("mp3 missing in R2");
 
     const wav = join(tmp, "post.wav");
     run("ffmpeg", ["-y", "-loglevel", "error", "-i", mp3, "-ac", "1", "-ar", "16000", wav]);
@@ -125,25 +126,19 @@ async function alignPost(slug: string, worker: Worker) {
 
     const out = { ...timings, version: 2, blocks };
     writeFileSync(jsonPath, JSON.stringify(out));
-    r2.put(`blog/breeze/${slug}.json`, jsonPath, "application/json");
+    r2.put(`${AUDIO_PREFIX}/${slug}.json`, jsonPath, "application/json");
     log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
-    return "aligned";
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
 }
 
-// ---- main ------------------------------------------------------------------------
-
 async function main() {
-  if (!existsSync(PYTHON)) fail('no .venv-tts — see README "Read-aloud audio"');
-  if (spawnSync(PYTHON, ["-c", "import mlx_whisper"]).status !== 0) {
-    fail(".venv-tts cannot import mlx_whisper — pip install -r scripts/tts/requirements.txt");
-  }
-  if (spawnSync("ffmpeg", ["-version"]).status !== 0) fail("ffmpeg not on PATH");
+  requirePython("mlx_whisper");
+  requireFfmpeg();
 
   r2.checkLogin();
-  const targets = slugs.length ? slugs : publishedSlugs(DIST);
+  const targets = slugs.length ? slugs : publishedSlugs();
   const worker = startWorker();
   let failures: string[];
   try {
@@ -154,6 +149,4 @@ async function main() {
   if (failures.length) process.exit(1);
 }
 
-main().catch((err: unknown) =>
-  fail(err instanceof Error ? (err.stack ?? err.message) : String(err))
-);
+runMain(main);

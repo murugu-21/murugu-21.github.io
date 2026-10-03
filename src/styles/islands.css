@@ -1,5 +1,5 @@
 /* shadcn tokens for the React islands; imported by global.css.
-   islands.test.ts string-matches the two `.ui-island` blocks: keep their
+   palette.test.ts string-matches the two `.ui-island` blocks: keep their
    selectors exactly as written.
    Islands must not use `md:`/`max-md:`: --breakpoint-md is 769px here, not
    Tailwind's 768px. Use `sm`/`lg` or an arbitrary value. */

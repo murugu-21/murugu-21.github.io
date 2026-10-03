@@ -22,7 +22,6 @@ export function tocEntries(headings: ReadonlyArray<MarkdownHeading>): MarkdownHe
 // of article on screen": on a tall viewport that would steal the highlight
 // from a jumped-to second-to-last heading.)
 export function activeIndex(tops: ReadonlyArray<number>, line: number, atEnd: boolean): number {
-  if (tops.length === 0) return -1;
   if (atEnd) return tops.length - 1;
   let active = -1;
   for (let i = 0; i < tops.length; i++) {

@@ -1,5 +1,5 @@
-// Read-only blog audio from R2; the prefix must match KEY_PREFIX in
-// scripts/generate-audio.ts. Supports Range because <audio> seeks with it.
+// Read-only blog audio from R2; the prefix must match AUDIO_PREFIX in
+// scripts/tts/r2.ts. Supports Range because <audio> seeks with it.
 import { Hono } from "hono";
 
 import { serveAsset } from "./not-found";
@@ -40,14 +40,15 @@ export const audio = new Hono<{ Bindings: Env }>();
 
 audio.get("/:file", async c => {
   const file = c.req.param("file");
-  if (!FILE.test(file)) return serveAsset(c.req.raw, c.env.ASSETS);
+  const extension = FILE.exec(file)?.[1];
+  if (!extension) return serveAsset(c.req.raw, c.env.ASSETS);
 
   const key = `blog/breeze/${file}`;
   const head = await c.env.AUDIO.head(key);
   if (!head) return serveAsset(c.req.raw, c.env.ASSETS);
 
   const etag = head.httpEtag;
-  const contentType = head.httpMetadata?.contentType ?? TYPES[file.split(".").pop()!];
+  const contentType = head.httpMetadata?.contentType ?? TYPES[extension];
   const baseHeaders = {
     "Content-Type": contentType,
     "Accept-Ranges": "bytes",

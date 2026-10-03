@@ -1,14 +1,34 @@
-// Contrast guards: every light ink against the sky gradient's stops and the
-// card surface, and every night ink against both dark stops.
+// WCAG contrast guards for the design tokens: global.css (sky, card, night),
+// code.css's light palette and islands.css. The CSS is inlined by vitest.config.ts.
 import { describe, expect, it } from "vitest";
 
-import { channels, contrast, luminance } from "./contrast";
-
-// Inlined by vitest.config.ts.
 declare const __GLOBAL_CSS__: string;
-// src/blog/styles/code.css, inlined by vitest.config.ts.
 declare const __CODE_CSS__: string;
+declare const __ISLANDS_CSS__: string;
 const css = __GLOBAL_CSS__;
+
+const channels = (c: string): number[] => {
+  const hex = /^#([0-9a-f]{6})$/i.exec(c);
+  if (hex) return [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16));
+  const rgb = /^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/.exec(c);
+  if (rgb) return [1, 2, 3].map(i => Number(rgb[i]));
+  throw new Error(`not a hex or rgb() colour: ${c}`);
+};
+
+const linear = (v: number): number => {
+  const s = v / 255;
+  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+};
+
+const luminance = (c: string): number => {
+  const [r, g, b] = channels(c).map(linear);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+
+const contrast = (a: string, b: string): number => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
 
 const token = (name: string): string => {
   const m = new RegExp(`--${name}:\\s*([^;]+);`).exec(css);
@@ -162,9 +182,8 @@ describe("blue-hour light palette", () => {
   });
 });
 
-// The night that follows: --background-image-page-dark runs `to left` from
-// rgb(30, 33, 48) at the right edge to rgb(20, 22, 34). The two stops are
-// close, so every guard runs on both rather than picking a deepest one.
+// The night gradient's stops are close in luminance, so every guard runs on
+// each stop rather than picking a deepest one.
 const night = (() => {
   const m = /--background-image-page-dark:\s*linear-gradient\(([^\n]+)\)/.exec(css);
   if (!m) throw new Error("no --background-image-page-dark gradient in global.css");
@@ -184,7 +203,6 @@ describe("night palette", () => {
     expect(contrast("#ffffff", ink("box-dark"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // Chip boundaries against the night, as for the light token.
   it("shows the dark chip outline against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
       expect(contrast(over(token("color-chip-outline-dark"), stop), stop)).toBeGreaterThanOrEqual(
@@ -225,12 +243,6 @@ describe("night palette", () => {
     expect(contrast(placeholder, ink("dark-bg"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The blog's dark hr and table rules.
-  it("keeps the blog's dark rules visible on the night canvas (>= 2:1)", () => {
-    for (const stop of night)
-      expect(contrast(ink("accent-grey-dark"), stop)).toBeGreaterThanOrEqual(2);
-  });
-
   // The dark read-aloud highlight (post.css): box-dark at 20% for the word
   // inside its block at 14%. A LINK inside the spoken word (blue-light) is
   // the tight case; body ink has more room. Alphas restated, as for the light
@@ -246,7 +258,8 @@ describe("night palette", () => {
   });
 
   // The ToC rail at night: bars are accent-grey-dark straight on the canvas
-  // (3:1 as a UI component), labels are text-dark / heading-dark on the dark
+  // (3:1 as a UI component, which also covers the blog's dark hr and table
+  // rules in the same token), labels are text-dark / heading-dark on the dark
   // frosted band (nav-scrolled-dark) over each stop.
   it("shows the ToC bars against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
@@ -269,12 +282,43 @@ describe("blog light code palette", () => {
   // white fence; the dark section after it is not parsed here.
   const lightSection = __CODE_CSS__.split("/* --- Dark palette")[0];
   const inks = [...lightSection.matchAll(/(?<![\w-])color:\s*(#[0-9a-f]{6})/gi)].map(m => m[1]);
-
-  it("finds the light palette's inks", () => {
-    expect(inks.length).toBeGreaterThan(0);
-  });
+  // An empty match would make the it.each below pass vacuously.
+  if (inks.length === 0) throw new Error("no inks in code.css's light palette");
 
   it.each(inks)("keeps %s readable on the white fence", hex => {
     expect(contrast(hex, "#ffffff")).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe.each(["light", "dark"] as const)("%s island tokens", mode => {
+  const block = (selector: string): Record<string, string> => {
+    const at = __ISLANDS_CSS__.indexOf(selector);
+    if (at === -1) throw new Error(`no ${selector} block in islands.css`);
+    const body = __ISLANDS_CSS__.slice(at + selector.length, __ISLANDS_CSS__.indexOf("}", at));
+    return Object.fromEntries(
+      [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(m => [m[1], m[2].trim()])
+    );
+  };
+  const light = block(".ui-island {");
+  // Dark mode inherits every token the dark block does not restate.
+  const t = mode === "light" ? light : { ...light, ...block("html.dark-mode .ui-island {") };
+
+  // 3:1 is WCAG 1.4.11 for non-text UI; 4.5:1 is 1.4.3 AA for normal text
+  // (the panel header title is 16px semibold).
+  it.each([
+    // the ✦ spark and the tool dot on the bg-muted activity row
+    { label: "activity-row indicators", fg: "--primary", bg: "--muted", min: 3 },
+    { label: "primary button against the panel", fg: "--primary", bg: "--card", min: 3 },
+    { label: "primary button label", fg: "--primary-foreground", bg: "--primary", min: 4.5 },
+    {
+      label: "primary button label on hover",
+      fg: "--primary-foreground",
+      bg: "--primary-hover",
+      min: 4.5
+    },
+    { label: "focus ring against the panel", fg: "--ring", bg: "--card", min: 3 },
+    { label: "body text on the panel", fg: "--foreground", bg: "--card", min: 4.5 }
+  ] as const)("keeps the $label at contrast ($fg on $bg >= $min:1)", ({ fg, bg, min }) => {
+    expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(min);
   });
 });

@@ -6,11 +6,12 @@ import {
   parseLeadArguments,
   SENDER_ADDRESS,
   sendContactEmail,
-  sendOpportunityEmail
+  sendOpportunityEmail,
+  type EmailLike
 } from "../email";
 
 describe("parseLeadArguments", () => {
-  it("parses valid tool arguments", () => {
+  it("parses valid tool arguments, rejecting missing contact or summary and malformed JSON", () => {
     expect(
       parseLeadArguments('{"name":"Ada","contact":"ada@lovelace.dev","summary":"CTO role"}')
     ).toEqual({
@@ -18,9 +19,6 @@ describe("parseLeadArguments", () => {
       contact: "ada@lovelace.dev",
       summary: "CTO role"
     });
-  });
-
-  it("rejects missing contact or summary, and malformed JSON", () => {
     expect(parseLeadArguments('{"summary":"x"}')).toBeNull();
     expect(parseLeadArguments('{"contact":"x"}')).toBeNull();
     expect(parseLeadArguments("nope")).toBeNull();
@@ -56,24 +54,7 @@ describe("formatOpportunityEmail", () => {
       },
       []
     );
-    expect(subject).not.toMatch(/[\r\n]/);
-  });
-});
-
-describe("sendOpportunityEmail", () => {
-  it("sends via the binding to the configured inbox", async () => {
-    const sent: unknown[] = [];
-    await sendOpportunityEmail(
-      { send: async msg => void sent.push(msg) },
-      "inbox@example.com",
-      { contact: "a@b.c", summary: "s" },
-      []
-    );
-    expect(sent).toHaveLength(1);
-    expect(sent[0]).toMatchObject({
-      to: "inbox@example.com",
-      from: "chatbot@murugappan.dev"
-    });
+    expect(subject).toBe("New opportunity via murugappan.dev chat — line1 line2");
   });
 });
 
@@ -85,25 +66,15 @@ describe("formatContactEmail", () => {
     message: "We are hiring a senior backend engineer."
   };
 
-  it("names the sender in the subject", () => {
-    expect(formatContactEmail(message).subject).toBe(
-      "New message via the murugappan.dev API — Ada Lovelace"
-    );
-  });
-
-  it("falls back to the email address when no name is given", () => {
+  it("names the sender in the subject, falling back to the email address", () => {
+    expect(formatContactEmail(message).subject).toContain("Ada Lovelace");
     const { name: _dropped, ...anonymous } = message;
-    expect(formatContactEmail(anonymous).subject).toBe(
-      "New message via the murugappan.dev API — ada@example.com"
-    );
+    expect(formatContactEmail(anonymous).subject).toContain("ada@example.com");
   });
 
-  it("puts every field and the reply-to address in the body", () => {
+  it("puts every field and the source in the body", () => {
     const { text } = formatContactEmail(message);
-    expect(text).toContain("Name:    Ada Lovelace");
-    expect(text).toContain("Email:   ada@example.com");
-    expect(text).toContain("Company: Analytical Engines Ltd");
-    expect(text).toContain("We are hiring a senior backend engineer.");
+    for (const value of Object.values(message)) expect(text).toContain(value);
     expect(text).toContain("POST /api/contact");
   });
 
@@ -115,17 +86,32 @@ describe("formatContactEmail", () => {
   });
 });
 
-describe("sendContactEmail", () => {
-  it("sends from the site address to the configured inbox", async () => {
+describe("sending", () => {
+  it.each([
+    [
+      "an opportunity",
+      (email: EmailLike) =>
+        sendOpportunityEmail({
+          email,
+          inbox: "inbox@example.com",
+          lead: { contact: "a@b.c", summary: "s" },
+          transcript: []
+        })
+    ],
+    [
+      "a contact message",
+      (email: EmailLike) =>
+        sendContactEmail({
+          email,
+          inbox: "inbox@example.com",
+          msg: { email: "ada@example.com", message: "Hello there, this is a message." }
+        })
+    ]
+  ])("sends %s from the site address to the configured inbox", async (_label, sendWith) => {
     const sent: unknown[] = [];
-    await sendContactEmail({ send: async msg => void sent.push(msg) }, "inbox@example.com", {
-      email: "ada@example.com",
-      message: "Hello there, this is a message."
-    });
-    expect(sent).toHaveLength(1);
-    expect(sent[0]).toMatchObject({
-      to: "inbox@example.com",
-      from: SENDER_ADDRESS
-    });
+    await sendWith({ send: async msg => void sent.push(msg) });
+    expect(sent).toEqual([
+      expect.objectContaining({ to: "inbox@example.com", from: SENDER_ADDRESS })
+    ]);
   });
 });

@@ -3,6 +3,7 @@ import BaseLayout from "../../blog/layouts/BaseLayout.astro";
 import PostList from "../../blog/components/PostList.astro";
 import Bio from "../../blog/components/Bio.astro";
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, PERSON } from "../../blog/consts";
+import { SITE_ORIGIN } from "../../lib/site";
 import {
   getPublishedPosts,
   postPath,
@@ -14,7 +15,6 @@ import {
 
 const posts = (await getPublishedPosts()).reverse();
 
-// `description` stays undefined when missing so search falls back to the excerpt.
 const serialized: SerializedPost[] = posts.map(post => ({
   href: postPath(post.id),
   title: post.data.title,
@@ -33,13 +33,13 @@ const jsonLd = {
   name: SITE_TITLE,
   description: SITE_DESCRIPTION,
   url: `${SITE_URL}/`,
-  isPartOf: { "@id": "https://murugappan.dev/#website" },
+  isPartOf: { "@id": `${SITE_ORIGIN}/#website` },
   author: PERSON,
   publisher: PERSON
 };
 ---
 
-<!-- No title prop: BaseHead supplies the homepage title. -->
+{/* No title prop: BaseHead supplies the homepage title. */}
 <BaseLayout jsonLd={jsonLd}>
   <PostList posts={serialized} />
   <Bio />

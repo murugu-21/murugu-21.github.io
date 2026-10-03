@@ -8,7 +8,6 @@ Plain clone on purpose: the reference was already designed (design-voice.py);
 an instruction here doubles the cost (CFG runs the backbone twice) and lets
 delivery drift. 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
 """
-import contextlib
 import json
 import sys
 import time
@@ -75,13 +74,12 @@ def run_job(model, job_path: str) -> None:
                 {
                     "id": chunk["id"],
                     "seconds": len(audio) / SAMPLE_RATE,
-                    "sampleRate": SAMPLE_RATE,
                     "wall": round(time.time() - t0, 1),
                 }
             )
         except Exception as exc:  # noqa: BLE001 — report and keep going; the orchestrator decides
             emit({"id": chunk["id"], "error": f"{type(exc).__name__}: {exc}"})
-    emit({"done": True, "job": job_path})
+    emit({"done": True})
 
 
 def main() -> int:
@@ -89,8 +87,7 @@ def main() -> int:
 
     t0 = time.time()
     mx.set_cache_limit(CACHE_LIMIT)
-    with contextlib.redirect_stdout(sys.stderr):
-        model = load(MODEL)
+    model = load(MODEL)
     emit({"ready": True, "model": MODEL, "loadSeconds": round(time.time() - t0, 1)})
     for line in sys.stdin:
         line = line.strip()

@@ -6,10 +6,6 @@ import { readAsset, type AssetsLike } from "./api/store";
 const SITE_HOST = "murugappan.dev";
 const MAX_CHARS = 24_000;
 
-function normalize(url: string): string {
-  return url.endsWith("/") ? url : `${url}/`;
-}
-
 function htmlToText(html: string): string {
   const scoped =
     /<article[\s\S]*?<\/article>/i.exec(html)?.[0] ??
@@ -46,10 +42,9 @@ export async function fetchSitePage(assets: AssetsLike, rawUrl: string): Promise
   if (url.pathname.startsWith("/blog/")) {
     const full = await readAsset(assets, "/blog/llms-full.txt");
     if (full) {
-      const target = normalize(`https://${SITE_HOST}${url.pathname}`);
-      const section = full
-        .split(/\n(?=# )/)
-        .find(s => s.includes(`URL: ${target}`) || s.includes(`URL: ${target.slice(0, -1)}`));
+      // Without its trailing slash, the marker matches the URL in either form.
+      const marker = `URL: https://${SITE_HOST}${url.pathname.replace(/\/$/, "")}`;
+      const section = full.split(/\n(?=# )/).find(s => s.includes(marker));
       if (section) return section.slice(0, MAX_CHARS);
     }
   }

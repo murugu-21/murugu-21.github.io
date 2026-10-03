@@ -1,7 +1,7 @@
 // Groups the most-recent-first workExperiences into stints by *consecutive*
 // company, so a return to a former employer is its own stint.
 
-export interface Stint<T> {
+interface Stint<T> {
   company: string;
   /** "oldest start – newest end", or the role's own date for a single role. */
   span: string;
@@ -52,7 +52,7 @@ export function groupByCompany<T extends RoleLike>(roles: T[]): Stint<T>[] {
 // Ranges are "Month YYYY – Month YYYY" or "Month YYYY – Present". Months count
 // inclusively (LinkedIn's convention): "April 2025 – December 2025" is 9.
 
-export interface YearMonth {
+interface YearMonth {
   year: number;
   month: number; // 1-12
 }
@@ -74,7 +74,7 @@ const MONTHS = [
 
 const OPEN_ENDED = /^(present|now|current)$/i;
 
-export function parseMonth(label: string): YearMonth | null {
+function parseMonth(label: string): YearMonth | null {
   const m = /^([A-Za-z]+)\s+(\d{4})$/.exec(label.trim());
   if (!m) return null;
   const month = MONTHS.indexOf(m[1].toLowerCase()) + 1;
@@ -98,7 +98,7 @@ export function currentMonth(now = new Date()): YearMonth {
 
 const toIndex = (ym: YearMonth) => ym.year * 12 + (ym.month - 1);
 
-export function monthsBetween(start: YearMonth, end: YearMonth): number {
+export function monthsBetween({ start, end }: { start: YearMonth; end: YearMonth }): number {
   return Math.max(0, toIndex(end) - toIndex(start) + 1);
 }
 
@@ -116,17 +116,17 @@ export function totalExperienceMonths(periods: string[], now: YearMonth = curren
   const ranges = periods
     .map(periodBounds)
     .filter((b): b is NonNullable<typeof b> => b !== null)
-    .map(b => [toIndex(b.start), toIndex(b.end ?? now)] as [number, number])
+    .map((b): [number, number] => [toIndex(b.start), toIndex(b.end ?? now)])
     .sort((a, b) => a[0] - b[0]);
   let total = 0;
   let cur: [number, number] | null = null;
   for (const [s, e] of ranges) {
     if (cur && s <= cur[1] + 1) {
       cur[1] = Math.max(cur[1], e);
-    } else {
-      if (cur) total += cur[1] - cur[0] + 1;
-      cur = [s, e];
+      continue;
     }
+    if (cur) total += cur[1] - cur[0] + 1;
+    cur = [s, e];
   }
   if (cur) total += cur[1] - cur[0] + 1;
   return total;

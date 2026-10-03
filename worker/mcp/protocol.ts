@@ -2,10 +2,18 @@
 // with per-request `_meta` is served as modern (stateless, headers mirrored
 // from the body); anything else as legacy `initialize`. No sessions either way.
 
+import { z } from "zod";
+
+import { JsonObject, lenient } from "../json";
+
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
-export const MODERN_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION] as const;
+const MODERN_PROTOCOL_VERSIONS: readonly string[] = [LATEST_PROTOCOL_VERSION];
 // Newest first — the first entry is what `initialize` falls back to.
-export const LEGACY_PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"] as const;
+export const LEGACY_PROTOCOL_VERSIONS: readonly string[] = [
+  "2025-11-25",
+  "2025-06-18",
+  "2025-03-26"
+];
 export const SUPPORTED_PROTOCOL_VERSIONS: string[] = [
   ...MODERN_PROTOCOL_VERSIONS,
   ...LEGACY_PROTOCOL_VERSIONS
@@ -14,9 +22,8 @@ export const SUPPORTED_PROTOCOL_VERSIONS: string[] = [
 export const SERVER_NAME = "murugappan.dev";
 
 // `_meta` keys reserved by the specification.
-export const META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
-export const META_CLIENT_INFO = "io.modelcontextprotocol/clientInfo";
-export const META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
+const META_PROTOCOL_VERSION = "io.modelcontextprotocol/protocolVersion";
+const META_CLIENT_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities";
 export const META_SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
 // JSON-RPC 2.0 standard codes plus the MCP-reserved sub-range (-32020..-32099).
@@ -24,17 +31,20 @@ export const JSON_RPC_PARSE_ERROR = -32700;
 export const JSON_RPC_INVALID_REQUEST = -32600;
 export const JSON_RPC_METHOD_NOT_FOUND = -32601;
 export const JSON_RPC_INVALID_PARAMS = -32602;
-export const MCP_HEADER_MISMATCH = -32020;
-export const MCP_UNSUPPORTED_PROTOCOL_VERSION = -32022;
+const MCP_HEADER_MISMATCH = -32020;
+const MCP_UNSUPPORTED_PROTOCOL_VERSION = -32022;
 
-export type JsonRpcId = string | number;
+const JsonRpcId = z.union([z.string(), z.number()]);
+export type JsonRpcId = z.infer<typeof JsonRpcId>;
 
-export type JsonRpcMessage = {
-  jsonrpc: "2.0";
-  id?: JsonRpcId;
-  method: string;
-  params?: Record<string, unknown>;
-};
+const JsonRpcMessage = z.object({
+  jsonrpc: z.literal("2.0"),
+  id: JsonRpcId.optional(),
+  method: z.string(),
+  // Non-object params are dropped; each method validates the fields it reads.
+  params: lenient(JsonObject)
+});
+export type JsonRpcMessage = z.infer<typeof JsonRpcMessage>;
 
 export type RpcFailure = {
   /** HTTP status the transport requires for this failure. */
@@ -44,66 +54,43 @@ export type RpcFailure = {
   data?: unknown;
 };
 
+function invalidRequest(message: string): { ok: false; failure: RpcFailure } {
+  return { ok: false, failure: { status: 400, code: JSON_RPC_INVALID_REQUEST, message } };
+}
+
 export function parseMessage(
   raw: unknown
 ): { ok: true; message: JsonRpcMessage } | { ok: false; failure: RpcFailure } {
+  const parsed = JsonRpcMessage.safeParse(raw);
+  if (parsed.success) return { ok: true, message: parsed.data };
+
+  const { issues } = parsed.error;
   // The transport forbids batch arrays.
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    return {
-      ok: false,
-      failure: {
-        status: 400,
-        code: JSON_RPC_INVALID_REQUEST,
-        message:
-          "The request body must be a single JSON-RPC request or notification object. Batches and arrays are not supported on the Streamable HTTP transport."
-      }
-    };
+  if (issues.some(issue => issue.path.length === 0)) {
+    return invalidRequest(
+      "The request body must be a single JSON-RPC request or notification object. Batches and arrays are not supported on the Streamable HTTP transport."
+    );
   }
-  const msg = raw as Record<string, unknown>;
-  if (msg.jsonrpc !== "2.0" || typeof msg.method !== "string") {
-    return {
-      ok: false,
-      failure: {
-        status: 400,
-        code: JSON_RPC_INVALID_REQUEST,
-        message: 'A JSON-RPC message needs "jsonrpc": "2.0" and a "method".'
-      }
-    };
+  const failed = new Set(issues.map(issue => issue.path[0]));
+  if (failed.has("jsonrpc") || failed.has("method")) {
+    return invalidRequest('A JSON-RPC message needs "jsonrpc": "2.0" and a "method".');
   }
-  if (msg.id !== undefined && typeof msg.id !== "string" && typeof msg.id !== "number") {
-    return {
-      ok: false,
-      failure: {
-        status: 400,
-        code: JSON_RPC_INVALID_REQUEST,
-        message: 'The "id" of a JSON-RPC request must be a string or a number.'
-      }
-    };
-  }
-  return {
-    ok: true,
-    message: {
-      jsonrpc: "2.0",
-      ...(msg.id === undefined ? {} : { id: msg.id as JsonRpcId }),
-      method: msg.method,
-      params:
-        typeof msg.params === "object" && msg.params !== null && !Array.isArray(msg.params)
-          ? (msg.params as Record<string, unknown>)
-          : undefined
-    }
-  };
+  // `id` is all that is left: `params` falls back instead of failing.
+  return invalidRequest('The "id" of a JSON-RPC request must be a string or a number.');
+}
+
+function metaOf(message: JsonRpcMessage): Record<string, unknown> {
+  return JsonObject.safeParse(message.params?._meta).data ?? {};
 }
 
 export function isModernRequest(message: JsonRpcMessage): boolean {
-  const meta = message.params?._meta;
-  if (typeof meta !== "object" || meta === null) return false;
-  return typeof (meta as Record<string, unknown>)[META_PROTOCOL_VERSION] === "string";
+  return typeof metaOf(message)[META_PROTOCOL_VERSION] === "string";
 }
 
 const BASE64_SENTINEL = /^=\?base64\?(.*)\?=$/;
 
 /** Decodes the `=?base64?…?=` sentinel for non-ASCII header values; null if invalid. */
-export function decodeHeaderValue(value: string): string | null {
+function decodeHeaderValue(value: string): string | null {
   const match = value.match(BASE64_SENTINEL);
   if (!match) return value;
   try {
@@ -126,7 +113,7 @@ export function validateModernHeaders(
   message: JsonRpcMessage,
   headers: { get(name: string): string | null }
 ): RpcFailure | null {
-  const meta = (message.params?._meta ?? {}) as Record<string, unknown>;
+  const meta = metaOf(message);
 
   const versionHeader = headers.get("MCP-Protocol-Version");
   if (!versionHeader) {
@@ -150,7 +137,7 @@ export function validateModernHeaders(
 
   if (!NAME_REQUIRED_METHODS.has(message.method)) return null;
 
-  const bodyName = message.params?.name ?? message.params?.uri ?? undefined;
+  const bodyName = message.params?.name ?? message.params?.uri;
   const nameHeader = headers.get("Mcp-Name");
   if (!nameHeader) {
     return headerMismatch(
@@ -172,9 +159,8 @@ export function validateModernHeaders(
 }
 
 export function validateModernMeta(message: JsonRpcMessage): RpcFailure | null {
-  const meta = (message.params?._meta ?? {}) as Record<string, unknown>;
-  const capabilities = meta[META_CLIENT_CAPABILITIES];
-  if (typeof capabilities !== "object" || capabilities === null || Array.isArray(capabilities)) {
+  const capabilities = metaOf(message)[META_CLIENT_CAPABILITIES];
+  if (!JsonObject.safeParse(capabilities).success) {
     return {
       status: 400,
       code: JSON_RPC_INVALID_PARAMS,
@@ -185,10 +171,9 @@ export function validateModernMeta(message: JsonRpcMessage): RpcFailure | null {
 }
 
 export function checkModernVersion(message: JsonRpcMessage): RpcFailure | null {
-  const requested = ((message.params?._meta ?? {}) as Record<string, unknown>)[
-    META_PROTOCOL_VERSION
-  ] as string;
-  if ((MODERN_PROTOCOL_VERSIONS as readonly string[]).includes(requested)) return null;
+  // isModernRequest guarantees a string.
+  const requested = String(metaOf(message)[META_PROTOCOL_VERSION]);
+  if (MODERN_PROTOCOL_VERSIONS.includes(requested)) return null;
   return {
     status: 400,
     code: MCP_UNSUPPORTED_PROTOCOL_VERSION,
@@ -212,8 +197,7 @@ export function isAllowedOrigin(origin: string | null): boolean {
 }
 
 export function negotiateLegacyVersion(requested: unknown): string {
-  return typeof requested === "string" &&
-    (LEGACY_PROTOCOL_VERSIONS as readonly string[]).includes(requested)
+  return typeof requested === "string" && LEGACY_PROTOCOL_VERSIONS.includes(requested)
     ? requested
     : LEGACY_PROTOCOL_VERSIONS[0];
 }

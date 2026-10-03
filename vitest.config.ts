@@ -27,6 +27,8 @@ export default defineConfig({
   ],
   test: {
     setupFiles: ["./worker/test/apply-migrations.ts"],
+    // 0 stops truncating `$field` values in it.each titles (and in failure messages).
+    chaiConfig: { truncateThreshold: 0 },
     include: ["worker/test/**/*.test.ts", "src/**/*.test.ts", "scripts/**/*.test.ts"]
   }
 });

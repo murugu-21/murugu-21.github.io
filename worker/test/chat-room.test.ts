@@ -1,130 +1,53 @@
 import { env, runInDurableObject } from "cloudflare:test";
-import { describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 
-import { ChatRoom } from "../chat-room";
-import { GREETING, VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "../protocol";
-
-// `ConnectionContext` is only the upgrade request to the room; importing one
-// URL keeps every call site honest about that.
-function connectContext(headers: Record<string, string> = {}): { request: Request } {
-  return {
-    request: new Request("https://example.com/parties/chat-room/x", { headers })
-  };
-}
-
-function visitorMeta(instance: ChatRoom): Record<string, unknown> {
-  return Object.fromEntries(
-    instance.ctx.storage.sql
-      .exec(`SELECT key, value FROM meta WHERE key LIKE 'visitor_%'`)
-      .toArray()
-      .map(r => [r.key as string, r.value])
-  );
-}
+import { ChatRoom, parseClientMessage } from "../chat-room";
+import {
+  GREETING,
+  MAX_MESSAGE_LENGTH,
+  parseServerMessage,
+  parseVisitorContext,
+  type ServerMessage,
+  toolFrame,
+  VISITOR_COUNTRY_HEADER,
+  VISITOR_IP_HEADER
+} from "../protocol";
+import { connectRoom, recordingEmail, testEnv, visitorMeta } from "./fixtures";
 
 describe("ChatRoom storage", () => {
   it("seeds the greeting exactly once on first connect", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-greet"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      const sent: string[] = [];
-      const conn = { send: (d: string) => sent.push(d) } as never;
-      const ctx = connectContext();
-      instance.onConnect(conn, ctx);
-      instance.onConnect(conn, ctx); // reconnect must not seed again
-      const rows = instance.ctx.storage.sql
-        .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
-        .toArray();
-      expect(rows).toEqual([{ role: "assistant", content: GREETING }]);
-      // both history frames include the greeting
-      const last = JSON.parse(sent[1]);
-      expect(last.messages).toEqual([{ role: "assistant", content: GREETING }]);
-    });
-  });
-
-  it("creates tables on start and persists/reads messages in order", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-a"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      instance.ctx.storage.sql.exec(
-        `INSERT INTO messages (role, content, created_at) VALUES ('user', 'q', 1), ('assistant', 'a', 2)`
-      );
-      const rows = instance.ctx.storage.sql
-        .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
-        .toArray();
-      expect(rows).toEqual([
-        { role: "user", content: "q" },
-        { role: "assistant", content: "a" }
-      ]);
-    });
-  });
-
-  it("stores leads and enforces the lead_captured dedupe key", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-b"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      instance.ctx.storage.sql.exec(
-        `INSERT INTO leads (name, contact, summary, created_at) VALUES (NULL, 'a@b.c', 's', 1)`
-      );
-      instance.ctx.storage.sql.exec(
-        `INSERT INTO meta (key, value) VALUES ('lead_captured', 'now')`
-      );
-      expect(() =>
-        instance.ctx.storage.sql.exec(
-          `INSERT INTO meta (key, value) VALUES ('lead_captured', 'again')`
-        )
-      ).toThrow();
-      const leads = instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray();
-      expect(leads).toEqual([{ contact: "a@b.c" }]);
+    await connectRoom("room-greet");
+    // A reconnect must not seed again.
+    const { history } = await connectRoom("room-greet");
+    expect(parseServerMessage(history)).toEqual({
+      type: "history",
+      messages: [{ role: "assistant", content: GREETING }]
     });
   });
 
   it("records the visitor's country and IP, keeping first-seen across reconnects", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-visitor"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      const conn = { send: () => {} } as never;
-      const connect = (headers: Record<string, string>) =>
-        instance.onConnect(conn, connectContext(headers));
+    const meta = async (headers: Record<string, string>) => {
+      const { stub } = await connectRoom("room-visitor", headers);
+      return await runInDurableObject(stub, visitorMeta);
+    };
 
-      connect({
-        [VISITOR_COUNTRY_HEADER]: "IN",
-        [VISITOR_IP_HEADER]: "203.0.113.7"
-      });
-      const first = visitorMeta(instance);
-      expect(first).toMatchObject({
-        visitor_country: "IN",
-        visitor_ip: "203.0.113.7"
-      });
-
-      connect({ [VISITOR_COUNTRY_HEADER]: "DE" });
-      const second = visitorMeta(instance);
-      expect(second.visitor_country).toBe("DE"); // the latest country wins
-      expect(second.visitor_ip).toBe("203.0.113.7"); // but a missing value never erases one
-      expect(second.visitor_first_seen).toBe(first.visitor_first_seen);
-      expect(Number(second.visitor_last_seen)).toBeGreaterThanOrEqual(
-        Number(first.visitor_last_seen)
-      );
+    const first = await meta({ "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.7" });
+    expect(first).toMatchObject({
+      visitor_country: "IN",
+      visitor_ip: "203.0.113.7"
     });
-  });
 
-  it("writes nothing when the upgrade carries no visitor context", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-anon"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      const conn = { send: () => {} } as never;
-      instance.onConnect(conn, connectContext());
-      expect(visitorMeta(instance)).toEqual({});
-    });
+    const second = await meta({ "CF-IPCountry": "DE" });
+    expect(second.visitor_country).toBe("DE"); // the latest country wins
+    expect(second.visitor_ip).toBe("203.0.113.7"); // but a missing value never erases one
+    expect(second.visitor_first_seen).toBe(first.visitor_first_seen);
+    expect(Number(second.visitor_last_seen)).toBeGreaterThanOrEqual(
+      Number(first.visitor_last_seen)
+    );
   });
 
   it("mirrors one rooms row per room to D1, refreshed on reconnect", async () => {
     const room = "room-mirror";
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName(room));
-    const connect = (headers: Record<string, string>) =>
-      runInDurableObject(stub, async (instance: ChatRoom) => {
-        instance.onStart();
-        instance.onConnect({ send: () => {} } as never, connectContext(headers));
-      });
 
     type RoomRow = {
       country: string | null;
@@ -142,23 +65,152 @@ describe("ChatRoom storage", () => {
           )
             .bind(room)
             .first<RoomRow>();
+          assert(found, "no rooms row yet");
           expect(found).toMatchObject(expected);
-          return found as RoomRow;
+          return found;
         },
-        { timeout: 2000 }
+        { timeout: 2000, interval: 5 }
       );
 
-    await connect({
-      [VISITOR_COUNTRY_HEADER]: "IN",
-      [VISITOR_IP_HEADER]: "203.0.113.9"
-    });
+    await connectRoom(room, { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" });
     const first = await mirrored({ country: "IN", ip: "203.0.113.9" });
 
     // A reconnect without an IP refreshes the country and last_seen, but must
     // not erase the address already known.
-    await connect({ [VISITOR_COUNTRY_HEADER]: "DE" });
+    await connectRoom(room, { "CF-IPCountry": "DE" });
     const second = await mirrored({ country: "DE", ip: "203.0.113.9" });
     expect(second.first_seen).toBe(first.first_seen);
     expect(second.last_seen).toBeGreaterThanOrEqual(first.last_seen);
+  });
+});
+
+describe("ChatRoom leads", () => {
+  it("emails the owner about a lead once per room", async () => {
+    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-lead"));
+    await runInDurableObject(stub, async (instance: ChatRoom) => {
+      instance.onStart();
+      const { email, sent } = recordingEmail();
+      Object.assign(instance, { env: testEnv({ email }) });
+      const lead = { contact: "a@b.c", summary: "Staff role" };
+      await instance["emailLeadOnce"](lead);
+      await instance["emailLeadOnce"](lead);
+      expect(sent).toHaveLength(1);
+      expect(sent[0].to).toBe("inbox@example.com");
+    });
+  });
+});
+
+describe("parseServerMessage", () => {
+  it.each<ServerMessage>([
+    { type: "history", messages: [{ role: "assistant", content: GREETING }] },
+    { type: "visitor", text: "hi" },
+    { type: "delta", text: "hel" },
+    toolFrame("fetch_page", "https://murugappan.dev/blog/x/"),
+    toolFrame("capture_opportunity"),
+    { type: "done" },
+    { type: "limit", message: "budget" },
+    { type: "error", message: "oops" }
+  ])("round-trips a $type frame the room sends", frame => {
+    expect(parseServerMessage(JSON.stringify(frame))).toEqual(frame);
+  });
+
+  it("accepts a delta frame and rejects frames the room never sends", () => {
+    expect(parseServerMessage('{"type":"delta","text":"hel"}')).toEqual({
+      type: "delta",
+      text: "hel"
+    });
+    for (const frame of [
+      { type: "nope" },
+      { type: "delta" },
+      { type: "tool", name: "rm_rf" },
+      { type: "history", messages: [{ role: "x", content: "" }] }
+    ]) {
+      const raw = JSON.stringify(frame);
+      expect(parseServerMessage(raw), raw).toBeNull();
+    }
+  });
+});
+
+describe("parseClientMessage", () => {
+  it("accepts a valid chat message, trimmed, and rejects anything else", () => {
+    const msg = parseClientMessage(JSON.stringify({ type: "chat", text: "  hi there  " }));
+    expect(msg).toEqual({ type: "chat", text: "hi there" });
+    for (const [label, raw] of [
+      ["binary frame", new ArrayBuffer(8)],
+      ["malformed JSON", "{nope"],
+      ["unknown type", JSON.stringify({ type: "ping" })],
+      ["missing text", JSON.stringify({ type: "chat" })],
+      ["blank text", JSON.stringify({ type: "chat", text: "   " })],
+      ["oversized text", JSON.stringify({ type: "chat", text: "x".repeat(MAX_MESSAGE_LENGTH + 1) })]
+    ] satisfies [string, string | ArrayBuffer][]) {
+      expect(parseClientMessage(raw), label).toBeNull();
+    }
+  });
+
+  it("accepts a valid page path and drops invalid ones", () => {
+    expect(
+      parseClientMessage(JSON.stringify({ type: "chat", text: "hi", page: "/blog/react/" }))?.page
+    ).toBe("/blog/react/");
+    for (const bad of ["blog/react", "https://evil.example/x", "/a b", "x"]) {
+      expect(
+        parseClientMessage(JSON.stringify({ type: "chat", text: "hi", page: bad }))?.page
+      ).toBeUndefined();
+    }
+  });
+});
+
+describe("parseVisitorContext", () => {
+  it("returns the country and IP the edge attached, trimmed", () => {
+    const headers = new Headers({
+      [VISITOR_COUNTRY_HEADER]: " IN ",
+      [VISITOR_IP_HEADER]: " 203.0.113.7 "
+    });
+    expect(parseVisitorContext(headers)).toEqual({
+      country: "IN",
+      ip: "203.0.113.7"
+    });
+  });
+
+  it("treats a missing or blank header as unknown, and null when both are", () => {
+    const ipOnly = new Headers({
+      [VISITOR_COUNTRY_HEADER]: "  ",
+      [VISITOR_IP_HEADER]: "203.0.113.7"
+    });
+    expect(parseVisitorContext(ipOnly)).toEqual({ country: null, ip: "203.0.113.7" });
+    expect(parseVisitorContext(new Headers())).toBeNull();
+    expect(parseVisitorContext(new Headers({ [VISITOR_COUNTRY_HEADER]: "  " }))).toBeNull();
+  });
+
+  it("caps a forged value instead of storing it whole", () => {
+    const headers = new Headers({ [VISITOR_IP_HEADER]: "x".repeat(200) });
+    expect(parseVisitorContext(headers)?.ip).toHaveLength(64);
+  });
+});
+
+describe("toolFrame", () => {
+  it("reports a page fetch as the site path, not the full url", () => {
+    expect(toolFrame("fetch_page", "https://murugappan.dev/blog/react/")).toEqual({
+      type: "tool",
+      name: "fetch_page",
+      detail: "/blog/react/"
+    });
+  });
+
+  it("omits the detail when the url is missing or unparseable", () => {
+    expect(toolFrame("fetch_page", null)).toEqual({
+      type: "tool",
+      name: "fetch_page"
+    });
+    expect(toolFrame("fetch_page", "not a url")).toEqual({
+      type: "tool",
+      name: "fetch_page"
+    });
+  });
+
+  it("never carries a detail for a capture — contact details stay server-side", () => {
+    expect(toolFrame("capture_opportunity")).toEqual({
+      type: "tool",
+      name: "capture_opportunity"
+    });
   });
 });

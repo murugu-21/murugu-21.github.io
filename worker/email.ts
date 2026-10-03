@@ -1,38 +1,45 @@
+import { z } from "zod";
+
+import type { ContactRequest } from "./api/contact";
+import { jsonString, lenient } from "./json";
 import type { ChatHistoryEntry } from "./protocol";
 
 export const SENDER_ADDRESS = "chatbot@murugappan.dev";
 
-export type Lead = { name?: string; contact: string; summary: string };
+const Lead = z.object({
+  // A non-string name is dropped; the lead is still worth sending.
+  name: lenient(z.string()),
+  contact: z.string(),
+  summary: z.string()
+});
+export type Lead = z.infer<typeof Lead>;
+
+const LeadArguments = jsonString(Lead);
 
 export type EmailLike = {
   send(msg: { to: string; from: string; subject: string; text: string }): Promise<unknown>;
 };
 
-export function parseLeadArguments(raw: string): Lead | null {
-  let data: unknown;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (typeof data !== "object" || data === null) return null;
-  const lead = data as Record<string, unknown>;
-  if (typeof lead.contact !== "string" || typeof lead.summary !== "string") return null;
-  return {
-    name: typeof lead.name === "string" ? lead.name : undefined,
-    contact: lead.contact,
-    summary: lead.summary
-  };
+/** The configured relay and inbox, or null when either is missing. */
+export function contactMailer(env: Env): { email: EmailLike; inbox: string } | null {
+  // Unreachable once built (contactInbox checks wrangler.jsonc); kept so a
+  // misconfigured env answers "not configured" instead of throwing.
+  const inbox = env.OPPORTUNITY_INBOX?.trim();
+  return env.EMAIL && inbox ? { email: env.EMAIL, inbox } : null;
 }
+
+export const parseLeadArguments = (raw: string): Lead | null =>
+  LeadArguments.safeParse(raw).data ?? null;
+
+const subjectName = (who: string): string => who.replace(/\s+/g, " ").slice(0, 80);
 
 export function formatOpportunityEmail(
   lead: Lead,
   transcript: ChatHistoryEntry[]
 ): { subject: string; text: string } {
-  const who = (lead.name || lead.contact).replace(/\s+/g, " ").slice(0, 80);
   const lines = transcript.map(m => `${m.role === "user" ? "visitor" : "assistant"}: ${m.content}`);
   return {
-    subject: `New opportunity via murugappan.dev chat — ${who}`,
+    subject: `New opportunity via murugappan.dev chat — ${subjectName(lead.name || lead.contact)}`,
     text: [
       `Name:    ${lead.name ?? "(not given)"}`,
       `Contact: ${lead.contact}`,
@@ -44,31 +51,27 @@ export function formatOpportunityEmail(
   };
 }
 
-export async function sendOpportunityEmail(
-  email: EmailLike,
-  inbox: string,
-  lead: Lead,
-  transcript: ChatHistoryEntry[]
-): Promise<void> {
+export async function sendOpportunityEmail({
+  email,
+  inbox,
+  lead,
+  transcript
+}: {
+  email: EmailLike;
+  inbox: string;
+  lead: Lead;
+  transcript: ChatHistoryEntry[];
+}): Promise<void> {
   const { subject, text } = formatOpportunityEmail(lead, transcript);
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });
 }
 
-// POST /api/contact's payload; unlike Lead it has no transcript.
-export type ContactMessage = {
-  name?: string;
-  email: string;
-  company?: string;
-  message: string;
-};
-
-export function formatContactEmail(msg: ContactMessage): {
+export function formatContactEmail(msg: ContactRequest): {
   subject: string;
   text: string;
 } {
-  const who = (msg.name || msg.email).replace(/\s+/g, " ").slice(0, 80);
   return {
-    subject: `New message via the murugappan.dev API — ${who}`,
+    subject: `New message via the murugappan.dev API — ${subjectName(msg.name || msg.email)}`,
     text: [
       `Name:    ${msg.name ?? "(not given)"}`,
       `Email:   ${msg.email}`,
@@ -81,11 +84,15 @@ export function formatContactEmail(msg: ContactMessage): {
   };
 }
 
-export async function sendContactEmail(
-  email: EmailLike,
-  inbox: string,
-  msg: ContactMessage
-): Promise<void> {
+export async function sendContactEmail({
+  email,
+  inbox,
+  msg
+}: {
+  email: EmailLike;
+  inbox: string;
+  msg: ContactRequest;
+}): Promise<void> {
   const { subject, text } = formatContactEmail(msg);
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });
 }

@@ -33,7 +33,7 @@ const links = [
 
 const h2Cls = "mt-9 mb-3 text-[1.5rem] font-bold";
 const h3Cls = "mt-5 mb-1 text-[1.1rem] font-bold";
-const metaP = "meta my-[1em] leading-[1.6] text-subtitle dark:text-white/65";
+const metaP = "my-[1em] leading-[1.6] text-subtitle dark:text-white/65";
 ---
 
 <Layout
@@ -41,12 +41,12 @@ const metaP = "meta my-[1em] leading-[1.6] text-subtitle dark:text-white/65";
   profilePage
 >
   <Header />
-  <main class="about-page box-content mx-auto max-w-[760px] px-5 pt-28 pb-16">
+  <main class="box-content mx-auto max-w-[760px] px-5 pt-28 pb-16">
     <h1 class="mt-[0.67em] mb-2 text-[clamp(1.7rem,6vw,2.2rem)] font-bold">
       About {resumeContact.name}
     </h1>
-    <p class="pitch my-[1em] text-[1.15rem] leading-[1.6]">{greeting.subTitle}</p>
-    <p class="facts my-[1em] leading-[1.6] text-subtitle dark:text-white/65">
+    <p class="my-[1em] text-[1.15rem] leading-[1.6]">{greeting.subTitle}</p>
+    <p class={metaP}>
       {resumeContact.title} · {resumeContact.location} · currently at{" "}
       <a href="https://www.medmehealth.com" class={linkCls}>
         MedMe Health
@@ -66,14 +66,14 @@ const metaP = "meta my-[1em] leading-[1.6] text-subtitle dark:text-white/65";
     <section>
       <h2 class={h2Cls}>Experience</h2>
       {stints.map(stint => (
-        <article class="stint">
+        <article>
           <h3 class={h3Cls}>{stint.company}</h3>
           <p class={metaP}>
             {stint.span}
             {stint.location && ` \u00b7 ${stint.location}`}
           </p>
           {stint.roles.map(job => (
-            <div class="job pl-4">
+            <div class="pl-4">
               <h4 class="mt-4 mb-[0.15rem] text-[1rem] font-bold">
                 {job.role}
                 {job.partTime && " (Part-time)"}
@@ -113,7 +113,7 @@ const metaP = "meta my-[1em] leading-[1.6] text-subtitle dark:text-white/65";
     <section>
       <h2 class={h2Cls}>Education</h2>
       {educationInfo.map(school => (
-        <article class="job">
+        <article>
           <h3 class={h3Cls}>{school.schoolName}</h3>
           <p class={metaP}>
             {school.subHeader} · {school.duration}

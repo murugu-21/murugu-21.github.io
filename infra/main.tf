@@ -15,9 +15,8 @@ resource "cloudflare_email_routing_address" "opportunity_inbox" {
 # Rewrite Accept: text/markdown page requests to the static **/index.md
 # renditions at the edge, so the Worker never runs. Two rules because the free
 # plan has no regex rewrites. Pages without a rendition (/resume/) 404.
-# Token needs Zone -> Transform Rules -> Edit.
-# This owns the zone's http_request_transform entrypoint: dashboard-added
-# rewrite rules get overwritten on apply, so keep them all here.
+# This owns the zone's http_request_transform entrypoint, so an apply
+# overwrites dashboard-added rewrite rules: keep them all here.
 resource "cloudflare_ruleset" "markdown_for_agents" {
   zone_id = var.zone_id
   name    = "Markdown for Agents"

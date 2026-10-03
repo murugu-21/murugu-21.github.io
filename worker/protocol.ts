@@ -1,3 +1,6 @@
+// The wire contract shared with the chat widget, so it stays free of runtime dependencies
+// that would ship in the client bundle.
+
 export const MAX_MESSAGE_LENGTH = 1000;
 
 // Shared: the ChatRoom persists it as each room's first message, and the
@@ -6,11 +9,6 @@ export const GREETING =
   "Hi, I'm Jarvis — Murugappan's AI assistant. Ask me about his experience, " +
   "projects, or blog posts — or tell me about an opportunity for him.";
 
-// `page` is the visitor's current site path; never persisted.
-export type ClientMessage = { type: "chat"; text: string; page?: string };
-
-const PAGE_PATH = /^\/[^\s]{0,199}$/;
-
 export type ChatHistoryEntry = { role: "user" | "assistant"; content: string };
 
 // Set on the WebSocket upgrade by server.ts, which strips client-sent copies,
@@ -18,7 +16,7 @@ export type ChatHistoryEntry = { role: "user" | "assistant"; content: string };
 export const VISITOR_COUNTRY_HEADER = "x-visitor-country";
 export const VISITOR_IP_HEADER = "x-visitor-ip";
 
-export type VisitorContext = { country: string | null; ip: string | null };
+type VisitorContext = { country: string | null; ip: string | null };
 
 export function parseVisitorContext(headers: Headers): VisitorContext | null {
   const country = cleanHeader(headers.get(VISITOR_COUNTRY_HEADER));
@@ -47,21 +45,45 @@ export type ServerMessage =
   | { type: "limit"; message: string }
   | { type: "error"; message: string };
 
-export function parseClientMessage(raw: unknown): ClientMessage | null {
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isHistoryEntry = (value: unknown): value is ChatHistoryEntry =>
+  isRecord(value) &&
+  (value.role === "user" || value.role === "assistant") &&
+  typeof value.content === "string";
+
+/** Decodes a socket frame from the room, or null for anything off-contract. */
+export function parseServerMessage(raw: unknown): ServerMessage | null {
   if (typeof raw !== "string") return null;
-  let data: unknown;
+  let msg: unknown;
   try {
-    data = JSON.parse(raw);
+    msg = JSON.parse(raw);
   } catch {
     return null;
   }
-  if (typeof data !== "object" || data === null) return null;
-  const msg = data as Record<string, unknown>;
-  if (msg.type !== "chat" || typeof msg.text !== "string") return null;
-  const text = msg.text.trim();
-  if (text.length === 0 || text.length > MAX_MESSAGE_LENGTH) return null;
-  const page = typeof msg.page === "string" && PAGE_PATH.test(msg.page) ? msg.page : undefined;
-  return { type: "chat", text, page };
+  if (!isRecord(msg)) return null;
+  switch (msg.type) {
+    case "history":
+      return Array.isArray(msg.messages) && msg.messages.every(isHistoryEntry)
+        ? { type: "history", messages: msg.messages }
+        : null;
+    case "visitor":
+    case "delta":
+      return typeof msg.text === "string" ? { type: msg.type, text: msg.text } : null;
+    case "tool":
+      if (msg.name !== "fetch_page" && msg.name !== "capture_opportunity") return null;
+      return typeof msg.detail === "string"
+        ? { type: "tool", name: msg.name, detail: msg.detail }
+        : { type: "tool", name: msg.name };
+    case "done":
+      return { type: "done" };
+    case "limit":
+    case "error":
+      return typeof msg.message === "string" ? { type: msg.type, message: msg.message } : null;
+    default:
+      return null;
+  }
 }
 
 // The widget owns the wording. A capture never gets `detail`: its arguments

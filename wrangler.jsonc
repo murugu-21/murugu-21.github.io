@@ -36,7 +36,13 @@
     ]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }],
-  "send_email": [{ "name": "EMAIL" }],
+  // A plain var, not a secret, so `astro build` can fail on a malformed inbox before
+  // anything deploys (contactInbox in astro.config.ts). destination_address locks the
+  // EMAIL binding to this one address.
+  "vars": { "OPPORTUNITY_INBOX": "murugu2001@gmail.com" },
+  "send_email": [{ "name": "EMAIL", "destination_address": "murugu2001@gmail.com" }],
+  // Deploy fails while it is unset; `wrangler types` reads this list, not .dev.vars.
+  "secrets": { "required": ["DEEPSEEK_API_KEY"] },
   // Fire-and-forget analytics mirror of chat rooms (messages, country, IP) so
   // chats are browsable in the dash; DO SQLite is the source of truth.
   // The Worker issues no DDL: run `bun run db:migrate`, or every mirror write

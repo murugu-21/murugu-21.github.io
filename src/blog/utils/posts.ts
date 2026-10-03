@@ -1,6 +1,8 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 import getReadingTime from "reading-time";
 
+import { SITE_ORIGIN } from "../../lib/site";
+
 export type Post = CollectionEntry<"blog">;
 
 // What the blog index hands PostList/Post. `description` stays undefined when
@@ -27,6 +29,7 @@ export async function getPublishedPosts(): Promise<Post[]> {
 
 // Literal /blog: the prefix comes from src/pages/blog/, not an Astro `base`.
 export const postPath = (id: string) => `/blog/${id}/`;
+export const postUrl = (id: string) => `${SITE_ORIGIN}${postPath(id)}`;
 
 // Same URL the index's chips write (PostList.astro), so both land on one view.
 export const tagPath = (tag: string) => `/blog/?tag=${encodeURIComponent(tag)}`;
@@ -61,3 +64,5 @@ export function excerpt(body: string | undefined, length = 160): string {
   if (text.length <= length) return text;
   return text.slice(0, length).replace(/\s+\S*$/, "") + "…";
 }
+
+export const postDescription = (post: Post) => post.data.description || excerpt(post.body);

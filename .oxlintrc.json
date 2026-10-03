@@ -1,10 +1,61 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc", "react", "import", "promise"],
-  "categories": {"correctness": "error"},
+  "options": { "typeAware": true },
+  "jsPlugins": ["./scripts/lint/test-behaviour.ts"],
+  "categories": { "correctness": "error" },
   "rules": {
-    "no-irregular-whitespace": ["error", {"skipComments": true}],
+    "no-irregular-whitespace": ["error", { "skipComments": true }],
     "react/purity": "warn",
-    "react/set-state-in-effect": "warn"
-  }
+    "react/set-state-in-effect": "warn",
+    "typescript/no-explicit-any": "error",
+    "typescript/ban-ts-comment": [
+      "error",
+      { "ts-expect-error": "allow-with-description", "ts-ignore": true, "ts-nocheck": true }
+    ],
+    "no-else-return": ["error", { "allowElseIf": false }],
+    "no-lonely-if": "error",
+    "max-depth": ["error", { "max": 3 }],
+    "max-params": ["error", { "max": 3 }],
+    "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error"
+  },
+  "overrides": [
+    {
+      "files": ["scripts/ts-alias.cjs"],
+      "rules": {
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off"
+      }
+    },
+    {
+      "files": ["**/*.test.ts"],
+      "plugins": ["vitest"],
+      "rules": {
+        "tests/observe-behaviour": "error",
+        "vitest/no-conditional-expect": "error",
+        "vitest/no-standalone-expect": "error",
+        // Vitest's expect(value, message) takes a second argument.
+        "vitest/valid-expect": ["error", { "maxArgs": 2 }],
+        "vitest/no-restricted-matchers": [
+          "error",
+          {
+            "toBeDefined": "Passes for any value. Assert the literal value (see AGENTS.md › Tests).",
+            "toBeTruthy": "Passes for any value. Assert the literal value, e.g. toBe(true) (see AGENTS.md › Tests).",
+            "toBeFalsy": "Passes for undefined. Assert the literal value, e.g. toBe(false) (see AGENTS.md › Tests).",
+            "toHaveBeenCalled": "Asserts only that a call happened. Assert the payload with toHaveBeenCalledWith or the state after the call (see AGENTS.md › Tests).",
+            "toHaveBeenCalledTimes": "Asserts only that calls happened. Assert the payloads via fn.mock.calls (see AGENTS.md › Tests)."
+          }
+        ]
+      }
+    }
+  ]
 }

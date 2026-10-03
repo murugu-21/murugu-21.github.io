@@ -223,8 +223,9 @@ const entries = tocEntries(headings);
 
     // Escape collapses a keyboard-opened panel.
     nav.addEventListener("keydown", event => {
-      if (event.key === "Escape" && nav.contains(document.activeElement)) {
-        (document.activeElement as HTMLElement).blur();
+      const focused = document.activeElement;
+      if (event.key === "Escape" && focused instanceof HTMLElement && nav.contains(focused)) {
+        focused.blur();
       }
     });
 

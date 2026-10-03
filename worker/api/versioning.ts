@@ -9,7 +9,7 @@ export const API_VERSION = "1.0.0";
 /** Minimum notice between a version being marked deprecated and its sunset. */
 export const DEPRECATION_NOTICE_DAYS = 180;
 
-export type VersionStatus = "current" | "deprecated" | "sunset";
+type VersionStatus = "current" | "deprecated" | "sunset";
 
 export type VersionRecord = {
   /** Path segment that selects this version. */
@@ -56,7 +56,7 @@ export const POLICY_RULES: readonly string[] = [
   "After sunset a version answers 410 Gone with the standard error envelope, pointing at its successor. Paths are never silently reused."
 ];
 
-export type VersionsDocument = {
+type VersionsDocument = {
   current: string;
   currentRelease: string;
   unversionedAlias: { basePath: string; pinnedTo: string; note: string };
@@ -72,7 +72,6 @@ export type VersionsDocument = {
 
 /** URLs are absolute against the host that was asked. */
 export function buildVersionsDocument(origin: string): VersionsDocument {
-  const base = origin.replace(/\/$/, "");
   return {
     current: CURRENT_API_VERSION,
     currentRelease: API_VERSION,
@@ -83,14 +82,14 @@ export function buildVersionsDocument(origin: string): VersionsDocument {
     },
     versions: VERSIONS.map(record => ({
       ...record,
-      url: `${base}${record.basePath}`,
-      specUrl: `${base}${record.specUrl}`
+      url: `${origin}${record.basePath}`,
+      specUrl: `${origin}${record.specUrl}`
     })),
     policy: {
       scheme: "url-path",
       deprecationNoticeDays: DEPRECATION_NOTICE_DAYS,
       rules: POLICY_RULES,
-      documentationUrl: `${base}/developers/#versioning`,
+      documentationUrl: `${origin}/developers/#versioning`,
       headers: {
         "API-Version": "The semantic release that answered this request.",
         "API-Supported-Versions": "Every path version this deployment still answers.",
@@ -103,12 +102,12 @@ export function buildVersionsDocument(origin: string): VersionsDocument {
 }
 
 /** RFC 9745: a Date structured field, i.e. `@` + a Unix timestamp in seconds. */
-export function deprecationFieldValue(isoDate: string): string {
+function deprecationFieldValue(isoDate: string): string {
   return `@${Math.floor(Date.parse(`${isoDate}T00:00:00Z`) / 1000)}`;
 }
 
 /** RFC 8594: an IMF-fixdate, the same format Retry-After and Date use. */
-export function sunsetFieldValue(isoDate: string): string {
+function sunsetFieldValue(isoDate: string): string {
   return new Date(`${isoDate}T00:00:00Z`).toUTCString();
 }
 

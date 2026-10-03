@@ -2,7 +2,7 @@
 // trusting ffmpeg's rounded durations.
 import { Buffer } from "node:buffer";
 
-export interface Wav {
+interface Wav {
   sampleRate: number;
   channels: number;
   pcm: Buffer;
@@ -38,16 +38,17 @@ export function readWav(buffer: Buffer): Wav {
   return { sampleRate: fmt.sampleRate, channels: fmt.channels, pcm };
 }
 
-export function writeWav(sampleRate: number, pcm: Buffer, channels = 1): Buffer {
+// Mono, like everything synth.py writes.
+export function writeWav(sampleRate: number, pcm: Buffer): Buffer {
   const header = Buffer.alloc(44);
-  const blockAlign = channels * 2;
+  const blockAlign = 2;
   header.write("RIFF", 0, "ascii");
   header.writeUInt32LE(36 + pcm.length, 4);
   header.write("WAVE", 8, "ascii");
   header.write("fmt ", 12, "ascii");
   header.writeUInt32LE(16, 16);
   header.writeUInt16LE(1, 20);
-  header.writeUInt16LE(channels, 22);
+  header.writeUInt16LE(1, 22);
   header.writeUInt32LE(sampleRate, 24);
   header.writeUInt32LE(sampleRate * blockAlign, 28);
   header.writeUInt16LE(blockAlign, 32);
@@ -57,16 +58,16 @@ export function writeWav(sampleRate: number, pcm: Buffer, channels = 1): Buffer 
   return Buffer.concat([header, pcm]);
 }
 
-export function silence(sampleRate: number, seconds: number): Buffer {
+function silence(sampleRate: number, seconds: number): Buffer {
   return Buffer.alloc(Math.round(sampleRate * seconds) * 2);
 }
 
-export interface Gaps {
+interface Gaps {
   intra: number;
   inter: number;
 }
 
-export interface BlockTiming {
+interface BlockTiming {
   start: number;
   end: number;
 }

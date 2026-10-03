@@ -1,20 +1,40 @@
 // OpenAPI 3.1.0 document served at /openapi.json and /api/openapi.json. Generated per request
-// so `servers` names the host that answered; api-openapi.test.ts checks it against routes.ts.
+// so `servers` names the host that answered; api-spec.test.ts checks it against routes.ts.
 
-import {
-  API_BASE,
-  API_PATHS,
-  CURRENT_API_VERSION,
-  VERSIONED_API_BASE as VERSIONED_BASE
-} from "./routes";
+import { API_BASE, API_PATHS, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./routes";
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT, CONTACT_LIMITS } from "./contact";
-import { POSTS_LIMIT_MAX } from "./posts";
+import { POSTS_LIMIT_MAX, SLUG_PATTERN } from "./posts";
 import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "./ratelimit";
 import { API_VERSION, DEPRECATION_NOTICE_DAYS, VERSIONS } from "./versioning";
 
-export { API_VERSION };
+type SchemaObject = {
+  $ref?: string;
+  type?: string | string[];
+  description?: string;
+  properties?: Record<string, SchemaObject>;
+  [keyword: string]: unknown;
+};
 
-export type OpenApiDocument = {
+type Operation = {
+  operationId: string;
+  summary: string;
+  description: string;
+  tags: string[];
+  parameters?: Array<{
+    name: string;
+    in: string;
+    description: string;
+    required?: boolean;
+    schema: SchemaObject;
+  }>;
+  requestBody?: unknown;
+  responses: Record<
+    string,
+    { description: string; content?: Record<string, { schema: SchemaObject }> }
+  >;
+};
+
+type OpenApiDocument = {
   openapi: string;
   info: {
     title: string;
@@ -28,9 +48,9 @@ export type OpenApiDocument = {
   externalDocs: { url: string; description: string };
   tags: Array<{ name: string; description: string }>;
   security: unknown[];
-  paths: Record<string, Record<string, unknown>>;
+  paths: Record<string, Partial<Record<"get" | "post", Operation>>>;
   components: {
-    schemas: Record<string, unknown>;
+    schemas: Record<string, SchemaObject>;
     securitySchemes: Record<string, unknown>;
   };
 };
@@ -43,7 +63,7 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 
 **Authentication.** None. Every endpoint is public and unauthenticated; no key, token or signup is required. Read endpoints are cached for 5 minutes.
 
-**Versioning.** The version is a path segment: \`${VERSIONED_BASE}/…\`. The unversioned \`${API_BASE}/…\` prefix is a permanent alias for \`${CURRENT_API_VERSION}\` and is never repointed at a later major version, so either form is safe to hard-code. Additive changes ship inside a version without notice — ignore response fields you do not recognise. Breaking changes only ever ship as a new path version. Every response carries \`API-Version\` and \`API-Supported-Versions\`; \`GET ${API_PATHS.versions}\` is the machine-readable policy.
+**Versioning.** The version is a path segment: \`${VERSIONED_API_BASE}/…\`. The unversioned \`${API_BASE}/…\` prefix is a permanent alias for \`${CURRENT_API_VERSION}\` and is never repointed at a later major version, so either form is safe to hard-code. Additive changes ship inside a version without notice — ignore response fields you do not recognise. Breaking changes only ever ship as a new path version. Every response carries \`API-Version\` and \`API-Supported-Versions\`; \`GET ${API_PATHS.versions}\` is the machine-readable policy.
 
 **Deprecation.** A deprecated version answers every request with \`Deprecation\` (RFC 9745) and \`Sunset\` (RFC 8594) headers plus \`Link\` relations \`deprecation\` and \`successor-version\`, and at least ${DEPRECATION_NOTICE_DAYS} days pass between the first \`Deprecation\` header and the sunset date. After sunset the version answers \`410\`. Nothing is currently deprecated: ${VERSIONS.map(v => `\`${v.version}\` is ${v.status}`).join(", ")}.
 
@@ -57,17 +77,13 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 
 **Other machine-readable entry points.** \`/.well-known/api-catalog\` (RFC 9727 linkset of every API here), \`/.well-known/mcp.json\` (MCP server manifest), \`/mcp\` (MCP server), \`/llms.txt\` (site summary + every blog post), \`/AGENTS.md\` (agent instructions), \`/blog/llms-full.txt\` (full post text), \`/sitemap.xml\`, and \`Accept: text/markdown\` on any page URL.`;
 
-const errorResponse = (description: string) => ({
-  description,
-  content: {
-    "application/json": { schema: { $ref: "#/components/schemas/Error" } }
-  }
-});
-
 const jsonResponse = (description: string, ref: string) => ({
   description,
   content: { "application/json": { schema: { $ref: ref } } }
 });
+
+const errorResponse = (description: string) =>
+  jsonResponse(description, "#/components/schemas/Error");
 
 const rateLimited = errorResponse(
   "The client's read allowance for the current window is spent (`rate_limited`). `Retry-After` and the `RateLimit` header say when to come back — see the Rate limits section above."
@@ -93,7 +109,6 @@ const stringProp = (description: string, extra: object = {}) => ({
 });
 
 export function buildOpenApiDocument(origin: string): OpenApiDocument {
-  const base = origin.replace(/\/$/, "");
   return {
     openapi: "3.1.0",
     info: {
@@ -109,7 +124,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
       },
       license: { name: "CC BY 4.0", identifier: "CC-BY-4.0" }
     },
-    servers: [{ url: base, description: "Production" }],
+    servers: [{ url: origin, description: "Production" }],
     externalDocs: {
       url: "https://murugappan.dev/developers/",
       description: "Developer portal: quickstart, examples and agent notes."
@@ -258,7 +273,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
               required: true,
               description:
                 "The post's slug — the last path segment of its URL, e.g. `cloud-agnostic-rate-limiting`.",
-              schema: { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+              schema: { type: "string", pattern: SLUG_PATTERN }
             }
           ],
           responses: {
@@ -355,7 +370,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
 }
 
 // Shared with worker/mcp/tools.ts, which inlines them into self-contained tool schemas.
-export const API_SCHEMAS: Record<string, unknown> = {
+export const API_SCHEMAS: Record<string, SchemaObject> = {
   Error: {
     type: "object",
     title: "Error",
@@ -702,7 +717,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
     additionalProperties: false,
     properties: {
       slug: stringProp("Identifier to pass to getBlogPost.", {
-        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        pattern: SLUG_PATTERN
       }),
       title: stringProp("Post title."),
       url: stringProp("Canonical URL of the post.", { format: "uri" }),
@@ -774,7 +789,7 @@ export const API_SCHEMAS: Record<string, unknown> = {
         { examples: [API_VERSION] }
       ),
       basePath: stringProp("Path prefix every endpoint of this version has.", {
-        examples: [VERSIONED_BASE]
+        examples: [VERSIONED_API_BASE]
       }),
       url: stringProp("Absolute base URL of this version.", { format: "uri" }),
       specUrl: stringProp("Absolute URL of this version's OpenAPI document.", {

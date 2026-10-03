@@ -4,23 +4,20 @@ import { educationInfo } from "../data/portfolio";
 import { accentTitle } from "../lib/accent";
 ---
 
-<div
-  class="education-section section-animate mt-8 mx-auto flex w-[90%] flex-col py-5"
-  id="education"
->
+<div class="section-animate mt-8 mx-auto flex w-[90%] flex-col py-5" id="education">
   {/* mt-[0.67em]: h1 UA margin, kept after demotion to h2 */}
   <h2
-    class="education-heading mt-[0.67em] mb-[30px] flex-1 text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+    class="mt-[0.67em] mb-[30px] flex-1 text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
     set:html={accentTitle("Education")}
   />
-  <div class="education-card-container mb-[30px] flex flex-1 flex-col pt-5 max-wide:pt-0">
+  <div class="mb-[30px] flex flex-1 flex-col pt-5 max-wide:pt-0">
     {educationInfo.map(school => (
       <div>
-        <div class="education-card peer flex max-wide:flex-col max-wide:pb-2.5 max-md:text-center">
-          <div class="education-card-left">
+        <div class="peer flex max-wide:flex-col max-wide:pb-2.5 max-md:text-center">
+          <div>
             {/* Rendered at 6rem (4rem on phones), so 96px + 2x instead of the 256px source. */}
             <Image
-              class="education-roundedimg mr-8 inline h-24 w-24 rounded-full object-cover align-baseline shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-wide:mr-0 max-wide:mb-2 max-wide:h-16 max-wide:w-16 max-md:mt-2.5 max-md:mb-4"
+              class="mr-8 inline h-24 w-24 rounded-full object-cover align-baseline shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-wide:mr-0 max-wide:mb-2 max-wide:h-16 max-wide:w-16 max-md:mt-2.5 max-md:mb-4"
               src={school.logo}
               width={96}
               height={96}
@@ -29,26 +26,24 @@ import { accentTitle } from "../lib/accent";
               loading="lazy"
             />
           </div>
-          <div class="education-card-right max-w-[70%] max-wide:max-w-[90%] max-md:max-w-full">
-            <h3 class="education-text-school m-0 h-[27px] overflow-hidden text-[28px] font-bold text-ellipsis whitespace-nowrap max-wide:h-[23px] max-wide:text-[20px]">
+          <div class="max-w-[70%] max-wide:max-w-[90%] max-md:max-w-full">
+            <h3 class="m-0 h-[27px] overflow-hidden text-[28px] font-bold text-ellipsis whitespace-nowrap max-wide:h-[23px] max-wide:text-[20px]">
               {school.schoolName}
             </h3>
 
-            <div class="education-text-details">
+            <div>
               {/* leading-[normal], not leading-normal (which is 1.5) */}
-              <h4 class="education-text-subHeader m-0 pt-[0.8rem] text-[19px] leading-[normal] font-bold text-text max-wide:pt-2 max-wide:text-[16px] dark:text-white">
+              <h4 class="m-0 pt-[0.8rem] text-[19px] leading-[normal] font-bold text-text max-wide:pt-2 max-wide:text-[16px] dark:text-white">
                 {school.subHeader}
               </h4>
-              <p class="education-text-duration m-0 pt-2 text-[19px] text-title max-wide:text-[16px] dark:text-white">
+              <p class="m-0 pt-2 text-[19px] text-title max-wide:text-[16px] dark:text-white">
                 {school.duration}
               </p>
               {school.grade && (
-                <p class="education-text-grade m-0 pt-2 text-[19px] text-title dark:text-white">
-                  {school.grade}
-                </p>
+                <p class="m-0 pt-2 text-[19px] text-title dark:text-white">{school.grade}</p>
               )}
-              <p class="education-text-desc mt-2 mb-2">{school.desc}</p>
-              <div class="education-text-bullets">
+              <p class="mt-2 mb-2">{school.desc}</p>
+              <div>
                 <ul class="mt-2 mb-[1em] box-content list-disc pl-10 max-md:my-0 max-md:mx-auto max-md:max-w-[80%]">
                   {school.descBullets.map(item => (
                     <li class="subTitle">{item}</li>
@@ -58,7 +53,7 @@ import { accentTitle } from "../lib/accent";
             </div>
           </div>
         </div>
-        <div class="education-card-border box-content h-[30px] w-4/5 border-t-2 border-border-soft mb-5 transition-[width] duration-600 ease-in-out max-wide:w-[90%] max-md:w-full peer-hover:w-full peer-hover:border-amber dark:border-border-soft-dark dark:peer-hover:border-blue max-wide:peer-hover:w-full max-md:peer-hover:w-full" />
+        <div class="box-content h-[30px] w-4/5 border-t-2 border-border-soft mb-5 transition-[width] duration-600 ease-in-out max-wide:w-[90%] max-md:w-full peer-hover:w-full peer-hover:border-amber dark:border-border-soft-dark dark:peer-hover:border-blue max-wide:peer-hover:w-full max-md:peer-hover:w-full" />
       </div>
     ))}
   </div>

@@ -92,7 +92,7 @@ export function alignWords(
     let j = i;
     while (j < tokens.length && !anchors.has(j)) j++;
     const from = i > 0 ? out[i - 1].e : 0;
-    const to = j < tokens.length ? anchors.get(j)!.s : length;
+    const to = anchors.get(j)?.s ?? length;
     const step = Math.max(0, to - from) / (j - i);
     for (let k = i; k < j; k++) {
       out[k] = {
@@ -113,13 +113,16 @@ export function alignWords(
   return out.map(w => ({ w: w.w, s: round(w.s), e: round(w.e) }));
 }
 
+const isText = (node: Node): node is Text => node.nodeType === 3;
+const isElement = (node: Node): node is Element => node.nodeType === 1;
+
 const WORD_CLASS = "rw";
 const WORD_ATTR = "data-w";
 
 // Wraps each word of `el` in <span class="rw">, grouped per word in document
 // order. Words span text nodes, so "<a>SiteGPT</a>’s" is one word of two
 // spans. Idempotent: existing spans are regrouped by word index.
-export function wrapWords(el: HTMLElement): HTMLElement[][] {
+export function wrapWords(el: Element): HTMLElement[][] {
   const existing = Array.from(el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`));
   if (existing.length > 0) {
     const grouped: HTMLElement[][] = [];
@@ -134,8 +137,8 @@ export function wrapWords(el: HTMLElement): HTMLElement[][] {
   const textNodes: Text[] = [];
   const walk = (node: Node) => {
     for (const child of Array.from(node.childNodes)) {
-      if (child.nodeType === 3) textNodes.push(child as Text);
-      else if (child.nodeType === 1) walk(child);
+      if (isText(child)) textNodes.push(child);
+      else if (isElement(child)) walk(child);
     }
   };
   walk(el);

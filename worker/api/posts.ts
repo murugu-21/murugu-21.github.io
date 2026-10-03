@@ -11,10 +11,15 @@ export type PostSummary = {
 const POST_LINE = /^- \[(.+?)\]\((https?:\/\/[^\s)]+)\)(?::\s*(.*))?$/;
 // Post pages only: drops feed links and the blog index that share the list shape.
 const POST_PATH = /^\/blog\/([a-z0-9-]+)\/?$/;
-const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// Also published as the slug `pattern` in the OpenAPI document and the MCP tool schema.
+export const SLUG_PATTERN = "^[a-z0-9]+(?:-[a-z0-9]+)*$";
+const SLUG = new RegExp(SLUG_PATTERN);
 
 // Shared by the REST `limit` param, the MCP tool schema and the OpenAPI document.
 export const POSTS_LIMIT_MAX = 100;
+
+export const isPostsLimit = (n: number): boolean =>
+  Number.isInteger(n) && n >= 1 && n <= POSTS_LIMIT_MAX;
 
 const SECTION_HEADING = "## Blog posts";
 
@@ -45,6 +50,25 @@ export function parsePostList(llmsTxt: string): PostSummary[] {
     posts.push({ slug, title, url, description: description?.trim() ?? "" });
   }
   return posts;
+}
+
+/** Case-insensitive substring match on title and description, then the first `limit`. */
+export function searchPosts({
+  posts,
+  query,
+  limit
+}: {
+  posts: PostSummary[];
+  query?: string;
+  limit?: number;
+}): PostSummary[] {
+  const needle = query?.trim().toLowerCase();
+  const matches = needle
+    ? posts.filter(
+        p => p.title.toLowerCase().includes(needle) || p.description.toLowerCase().includes(needle)
+      )
+    : posts;
+  return limit === undefined ? matches : matches.slice(0, limit);
 }
 
 // Built by src/pages/blog/[slug]/index.md.ts. The slug comes from the request path, so it is

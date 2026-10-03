@@ -2,7 +2,7 @@ variable "cloudflare_api_token" {
   type        = string
   sensitive   = true
   default     = ""
-  description = "API token (Zone Settings/DNS/Email Routing write). Prefer a disposable token; falls back to the CLOUDFLARE_API_TOKEN env var when unset."
+  description = "API token (Email Routing addresses, Transform Rules and R2 edit). Prefer a disposable token; falls back to the CLOUDFLARE_API_TOKEN env var when unset."
 }
 
 variable "account_id" {

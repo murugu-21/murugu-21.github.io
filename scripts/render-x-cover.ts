@@ -5,7 +5,7 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import puppeteer from "puppeteer";
+import { launchBrowser } from "./launch-browser.ts";
 
 const SOURCE = "brand/x-cover.html";
 const THEMES = ["dark", "light"] as const;
@@ -14,11 +14,7 @@ const SCALES = [
   { deviceScaleFactor: 2, suffix: "@2x" }
 ] as const;
 
-// --no-sandbox: CI AppArmor blocks Chrome's sandbox; safe for our own local page.
-const browser = await puppeteer.launch({
-  headless: true,
-  args: ["--no-sandbox", "--disable-setuid-sandbox"]
-});
+const browser = await launchBrowser("render-x-cover");
 
 try {
   const page = await browser.newPage();

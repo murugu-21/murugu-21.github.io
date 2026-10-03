@@ -1,12 +1,14 @@
 // Text prep shared by the audio generator and the client, which must normalise
 // identically so block texts match the timing JSON.
 
+import { sha256Hex } from "./helpers";
+
 // Emoji, pictographs and their modifiers. Punctuation is kept.
 const SYMBOLS = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE0F}\u{200D}]/gu;
 
 // Five or more of one fractional digit (0.30000000000000004): LLM-style TTS
 // models loop on these, so the run is described instead.
-const LONG_DIGIT_RUN = /(\d+\.\d*?)((\d)\3{4,})(\d*)/g;
+const LONG_DIGIT_RUN = /(\d+\.\d*?)((\d)\3{4,})\d*/g;
 const DIGIT_NAMES = [
   "zero",
   "one",
@@ -20,14 +22,9 @@ const DIGIT_NAMES = [
   "nine"
 ];
 
-function describeDigitRun(
-  _match: string,
-  head: string,
-  run: string,
-  digit: string,
-  tail: string
-): string {
-  const spoken = `${head}, then ${DIGIT_NAMES[Number(digit)]} repeated ${run.length} times`;
+function describeDigitRun(match: string, head: string, run: string): string {
+  const tail = match.slice(head.length + run.length);
+  const spoken = `${head}, then ${DIGIT_NAMES[Number(run[0])]} repeated ${run.length} times`;
   return tail ? `${spoken}, then ${tail}` : spoken;
 }
 
@@ -64,8 +61,6 @@ export function packSentences(text: string, max = 300): string[] {
 }
 
 // The generator stores this to skip unchanged posts.
-export async function spokenHash(texts: string[]): Promise<string> {
-  const data = new TextEncoder().encode(texts.join("\n"));
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+export function spokenHash(texts: string[]): Promise<string> {
+  return sha256Hex(texts.join("\n"));
 }

@@ -1,9 +1,9 @@
-import type { ChatHistoryEntry } from "./protocol";
+import { z } from "zod";
+
+import { jsonString } from "./json";
 
 export const MAX_HISTORY_MESSAGES = 20;
 // Per-room cap over a rolling 24h; the only pacing on spend.
-// Before swapping DEEPSEEK_MODEL, run `bun run test:capture`: some models
-// narrate a lead capture without calling capture_opportunity, losing the lead.
 export const ROOM_DAILY_LIMIT = 40;
 
 // OpenAI-compatible, so any chat-completions provider can serve them.
@@ -20,7 +20,7 @@ export type ModelMessage = {
   tool_call_id?: string;
 };
 
-export const CAPTURE_TOOL = {
+const CAPTURE_TOOL = {
   type: "function",
   function: {
     name: "capture_opportunity",
@@ -74,14 +74,10 @@ const FETCH_TOOL = {
 
 export const TOOLS = [CAPTURE_TOOL, FETCH_TOOL] as const;
 
-export function parseFetchArguments(raw: string): string | null {
-  try {
-    const args = JSON.parse(raw) as { url?: unknown };
-    return typeof args.url === "string" && args.url.length > 0 ? args.url : null;
-  } catch {
-    return null;
-  }
-}
+const FetchArguments = jsonString(z.object({ url: z.string().min(1) }));
+
+export const parseFetchArguments = (raw: string): string | null =>
+  FetchArguments.safeParse(raw).data?.url ?? null;
 
 function buildSystemPrompt(grounding: string): string {
   return `You are Jarvis, the AI assistant on murugappan.dev — the personal site of Murugappan M, a full stack engineer (TypeScript, Node.js, React, AWS). You act as his concierge: part support agent, part inbound-sales assistant.
@@ -118,7 +114,7 @@ ${grounding}
 
 export function buildMessages(
   grounding: string,
-  history: ChatHistoryEntry[],
+  history: ModelMessage[],
   page?: string
 ): ModelMessage[] {
   const messages: ModelMessage[] = [

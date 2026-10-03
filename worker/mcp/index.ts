@@ -4,7 +4,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
-import { API_VERSION } from "../api/openapi";
+import { API_VERSION } from "../api/versioning";
+import { JsonObject } from "../json";
 import {
   checkModernVersion,
   isAllowedOrigin,
@@ -26,7 +27,7 @@ import {
   type RpcFailure
 } from "./protocol";
 import { BLOG_POST_TEMPLATE, listResources, readResource } from "./resources";
-import { findTool, MCP_TOOLS, type ToolContext, type ToolResult } from "./tools";
+import { findTool, MCP_TOOLS, type McpTool, type ToolContext, type ToolResult } from "./tools";
 
 const SERVER_INFO = { name: SERVER_NAME, version: API_VERSION };
 
@@ -89,24 +90,29 @@ function rpcResult(id: JsonRpcId, result: object): Response {
   return jsonResponse({ jsonrpc: "2.0", id, result });
 }
 
-const discoverResult = () => ({
+function completeResult(id: JsonRpcId, result: object): Response {
+  return rpcResult(id, {
+    resultType: "complete",
+    ...result,
+    _meta: { [META_SERVER_INFO]: SERVER_INFO }
+  });
+}
+
+// No `listChanged`/`subscribe`: this server sends no notifications.
+const CAPABILITIES = { tools: {}, resources: {} };
+
+const DISCOVER_RESULT = {
   supportedVersions: SUPPORTED_PROTOCOL_VERSIONS,
-  // No `listChanged`/`subscribe`: this server sends no notifications.
   capabilities: CAPABILITIES,
   instructions: INSTRUCTIONS,
   ...LIST_CACHE
-});
+};
 
-const CAPABILITIES = { tools: {}, resources: {} };
-
-function resourceNotFound(uri: unknown): RpcFailure {
-  return {
-    status: 200,
-    code: JSON_RPC_INVALID_PARAMS,
-    message: "Resource not found. Call resources/list for the resources this server offers.",
-    data: { uri }
-  };
+function invalidParams(message: string, data?: unknown): RpcFailure {
+  return { status: 200, code: JSON_RPC_INVALID_PARAMS, message, data };
 }
+
+const isFailure = (value: object): value is RpcFailure => "code" in value;
 
 async function readResourceResult(
   message: JsonRpcMessage,
@@ -114,43 +120,37 @@ async function readResourceResult(
 ): Promise<{ contents: unknown[] } | RpcFailure> {
   const uri = message.params?.uri;
   if (typeof uri !== "string") {
-    return {
-      status: 200,
-      code: JSON_RPC_INVALID_PARAMS,
-      message: "Invalid params: 'uri' is required and must be a string."
-    };
+    return invalidParams("Invalid params: 'uri' is required and must be a string.");
   }
   const contents = await readResource(uri, ctx);
-  return contents === null ? resourceNotFound(uri) : { contents };
+  if (contents === null) {
+    return invalidParams(
+      "Resource not found. Call resources/list for the resources this server offers.",
+      { uri }
+    );
+  }
+  return { contents };
 }
 
 function toolCallArgs(
   message: JsonRpcMessage
-): { name: string; args: Record<string, unknown> } | RpcFailure {
+): { tool: McpTool; args: Record<string, unknown> } | RpcFailure {
   const name = message.params?.name;
   if (typeof name !== "string") {
-    return {
-      status: 200,
-      code: JSON_RPC_INVALID_PARAMS,
-      message: "Invalid params: 'name' is required and must be a string."
-    };
+    return invalidParams("Invalid params: 'name' is required and must be a string.");
   }
-  const raw = message.params?.arguments;
-  if (raw !== undefined && (typeof raw !== "object" || raw === null || Array.isArray(raw))) {
-    return {
-      status: 200,
-      code: JSON_RPC_INVALID_PARAMS,
-      message: "Invalid params: 'arguments' must be an object when present."
-    };
+  // Only a missing value defaults; `null` is still rejected.
+  const args = JsonObject.default({}).safeParse(message.params?.arguments);
+  if (!args.success) {
+    return invalidParams("Invalid params: 'arguments' must be an object when present.");
   }
-  if (!findTool(name)) {
-    return {
-      status: 200,
-      code: JSON_RPC_INVALID_PARAMS,
-      message: `Unknown tool: ${name}. Call tools/list for the tools this server offers.`
-    };
+  const tool = findTool(name);
+  if (!tool) {
+    return invalidParams(
+      `Unknown tool: ${name}. Call tools/list for the tools this server offers.`
+    );
   }
-  return { name, args: (raw as Record<string, unknown>) ?? {} };
+  return { tool, args: args.data };
 }
 
 async function runTool(
@@ -158,11 +158,9 @@ async function runTool(
   ctx: ToolContext
 ): Promise<ToolResult | RpcFailure> {
   const parsed = toolCallArgs(message);
-  if ("code" in parsed) return parsed;
-  return findTool(parsed.name)!.run(parsed.args, ctx);
+  if (isFailure(parsed)) return parsed;
+  return parsed.tool.run(parsed.args, ctx);
 }
-
-const isFailure = (value: object): value is RpcFailure => "code" in value;
 
 const toolCallResult = (result: ToolResult) => ({
   content: result.content,
@@ -234,16 +232,11 @@ mcp.post("*", async c => {
       checkModernVersion(message);
     if (failure) return rpcError(id, failure);
 
-    const complete = (result: object) =>
-      rpcResult(id, {
-        resultType: "complete",
-        ...result,
-        _meta: { [META_SERVER_INFO]: SERVER_INFO }
-      });
+    const complete = (result: object) => completeResult(id, result);
 
     switch (message.method) {
       case "server/discover":
-        return complete(discoverResult());
+        return complete(DISCOVER_RESULT);
       case "tools/list":
         return complete({ tools: WIRE_TOOLS, ...LIST_CACHE });
       case "resources/list":
@@ -278,11 +271,7 @@ mcp.post("*", async c => {
   // learns the supported versions.
   switch (message.method) {
     case "server/discover":
-      return rpcResult(id, {
-        resultType: "complete",
-        ...discoverResult(),
-        _meta: { [META_SERVER_INFO]: SERVER_INFO }
-      });
+      return completeResult(id, DISCOVER_RESULT);
     case "initialize":
       return rpcResult(id, {
         protocolVersion: negotiateLegacyVersion(message.params?.protocolVersion),

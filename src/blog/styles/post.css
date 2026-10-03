@@ -144,8 +144,6 @@
 
   .blog-post p {
     line-height: 1.625;
-    --baseline-multiplier: 0.179;
-    --x-height-multiplier: 0.35;
     margin: 0 0 2rem 0;
     padding: 0;
   }
@@ -228,7 +226,6 @@
     width: 100%;
     margin-bottom: 2rem;
     border-collapse: collapse;
-    border-spacing: 0.25rem;
     display: block;
     overflow-x: auto;
     /* Scroll hint for overlay scrollbars: the right edge fades while there is
@@ -267,13 +264,6 @@
   }
   html.dark-mode .blog-post th,
   html.dark-mode .blog-post td {
-    border-bottom-color: var(--color-accent-grey-dark);
-  }
-
-  .blog-post thead tr th {
-    border-bottom: 1px solid var(--color-accent-grey);
-  }
-  html.dark-mode .blog-post thead tr th {
     border-bottom-color: var(--color-accent-grey-dark);
   }
 

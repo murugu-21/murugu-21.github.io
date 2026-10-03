@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { Browser, Page } from "puppeteer";
 import sharp from "sharp";
 import subsetFont from "subset-font";
+import { z } from "zod";
 
 import { launchBrowser } from "./launch-browser.ts";
 import {
@@ -29,16 +30,27 @@ import {
 // otherwise a substitute face's widths make labels overrun their boxes. The
 // theme background is baked in so the zoomed copy keeps a card behind labels.
 
+// Set by the mermaid bundle that renderOne's page loads.
+declare global {
+  interface Window {
+    mermaid?: typeof import("mermaid").default;
+  }
+}
+
 const CONTENT_DIR = fileURLToPath(new URL("../content/blog/", import.meta.url));
 const MERMAID_JS = fileURLToPath(
   new URL("../node_modules/mermaid/dist/mermaid.min.js", import.meta.url)
 );
-const MERMAID_VERSION: string = JSON.parse(
-  readFileSync(
-    fileURLToPath(new URL("../node_modules/mermaid/package.json", import.meta.url)),
-    "utf8"
-  )
-).version;
+const MERMAID_VERSION = z
+  .object({ version: z.string() })
+  .parse(
+    JSON.parse(
+      readFileSync(
+        fileURLToPath(new URL("../node_modules/mermaid/package.json", import.meta.url)),
+        "utf8"
+      )
+    )
+  ).version;
 const FONT_FILE = fileURLToPath(
   new URL(
     "../node_modules/@fontsource-variable/fira-code/files/fira-code-latin-wght-normal.woff2",
@@ -74,7 +86,7 @@ const variantLabel = (variant: Variant) => (variant.kind === "png" ? "png" : var
 const PNG_PADDING = 12;
 
 // background matches post.css's card (dark is --color-dark-bg)
-const THEMES: Record<DiagramTheme, { mermaid: string; background: string }> = {
+const THEMES: Record<DiagramTheme, { mermaid: "neutral" | "dark"; background: string }> = {
   light: { mermaid: "neutral", background: "#fff" },
   dark: { mermaid: "dark", background: "#282c35" }
 };
@@ -142,11 +154,12 @@ function usedText(svg: string): string {
   return [...new Set(text)].join("");
 }
 
+const fontFace = (woff2: Buffer) =>
+  `@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;` +
+  `src:url(data:font/woff2;base64,${woff2.toString("base64")}) format("woff2-variations")}`;
+
 async function embedStyle(svg: string, theme: DiagramTheme, font: Buffer): Promise<string> {
-  const subset = await subsetFont(font, usedText(svg), { targetFormat: "woff2" });
-  const face =
-    `@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;` +
-    `src:url(data:font/woff2;base64,${subset.toString("base64")}) format("woff2-variations")}`;
+  const face = fontFace(await subsetFont(font, usedText(svg), { targetFormat: "woff2" }));
   return svg
     .replace(/<svg\b/, `<svg ${STAMP_ATTR}="${STAMP}"`)
     .replace(
@@ -163,8 +176,7 @@ async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Pag
   page.on("pageerror", err => console.error("[render-mermaid] page error:", err));
   // full font, so every glyph measures in the face the SVG embeds
   await page.setContent(
-    `<!doctype html><html><head><style>@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;` +
-      `src:url(data:font/woff2;base64,${font.toString("base64")}) format("woff2-variations")}</style></head><body></body></html>`
+    `<!doctype html><html><head><style>${fontFace(font)}</style></head><body></body></html>`
   );
   await page.addScriptTag({ content: readFileSync(MERMAID_JS, "utf8") });
   await page.evaluate(async () => {
@@ -176,16 +188,22 @@ async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Pag
 
 // The id lands in the SVG and its stylesheet, so it derives from the hash (not
 // a counter) to keep re-renders byte-identical. Ids needn't be unique across files.
-async function renderOne(
-  page: Page,
-  source: string,
-  theme: DiagramTheme,
-  hash: string
-): Promise<string> {
+async function renderOne({
+  page,
+  source,
+  theme,
+  hash
+}: {
+  page: Page;
+  source: string;
+  theme: DiagramTheme;
+  hash: string;
+}): Promise<string> {
   return page.evaluate(
-    async (src, themeName, fontFamily, svgId) => {
+    async ({ src, themeName, fontFamily, svgId }) => {
       // "strict": no click callbacks, labels escaped; files are also served directly.
-      const m = (window as unknown as { mermaid: typeof import("mermaid").default }).mermaid;
+      const m = window.mermaid;
+      if (!m) throw new Error("mermaid did not load in the page");
       m.initialize({ startOnLoad: false, theme: themeName, securityLevel: "strict", fontFamily });
       const { svg } = await m.render(svgId, src);
       // mermaid emits HTML (bare `<br>` in labels); <img> parses as XML and
@@ -196,10 +214,12 @@ async function renderOne(
       if (!root) throw new Error("renderOne: mermaid returned no <svg>");
       return new XMLSerializer().serializeToString(root);
     },
-    source,
-    THEMES[theme].mermaid as "neutral" | "dark",
-    FONT_FAMILY,
-    `m-${hash}-${theme}`
+    {
+      src: source,
+      themeName: THEMES[theme].mermaid,
+      fontFamily: FONT_FAMILY,
+      svgId: `m-${hash}-${theme}`
+    }
   );
 }
 
@@ -232,17 +252,53 @@ async function rasterize(page: Page, styledSvg: string): Promise<Buffer> {
     height: Math.ceil(size.height) + 2 * PNG_PADDING + 40,
     deviceScaleFactor: 2
   });
-  await page.evaluate(padding => {
-    (document.getElementById("shot") as HTMLElement).style.padding = `${padding}px`;
+  const card = await page.$("div#shot");
+  if (!card) throw new Error("rasterize: card element missing");
+  await card.evaluate((el, padding) => {
+    el.style.padding = `${padding}px`;
   }, PNG_PADDING);
   await page.evaluate(() => document.fonts.ready);
-  const card = await page.$("#shot");
-  if (!card) throw new Error("rasterize: card element missing");
   const shot = await card.screenshot({ type: "png" });
   await page.evaluate(() => {
     document.body.innerHTML = "";
   });
   return sharp(shot).png({ palette: true, compressionLevel: 9 }).toBuffer();
+}
+
+type Target = { job: Job; variant: Variant; path: string };
+
+async function renderMissing({
+  page,
+  font,
+  missing
+}: {
+  page: Page;
+  font: Buffer;
+  missing: Target[];
+}): Promise<void> {
+  // the PNG (listed after its SVGs) reuses the light markup just written
+  const lightSvgs = new Map<string, string>();
+  for (const { job, variant, path } of missing) {
+    mkdirSync(dirname(path), { recursive: true });
+    if (variant.kind === "svg") {
+      const svg = await renderOne({
+        page,
+        source: job.source,
+        theme: variant.theme,
+        hash: job.hash
+      });
+      const styled = await embedStyle(svg, variant.theme, font);
+      await assertWellFormed(page, styled, path);
+      if (variant.theme === "light") lightSvgs.set(job.hash, styled);
+      writeFileSync(path, styled);
+    } else {
+      const styled = lightSvgs.get(job.hash) ?? readFileSync(variantPath(job, VARIANTS[0]), "utf8");
+      writeFileSync(path, await rasterize(page, styled));
+    }
+    console.log(
+      `rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${variantLabel(variant)})`
+    );
+  }
 }
 
 async function main(): Promise<void> {
@@ -260,7 +316,6 @@ async function main(): Promise<void> {
     rmSync(path);
     console.log(`removed  ${rel(path)}`);
   }
-  // remove diagram dirs left empty
   for (const [postDir] of expected) {
     const dir = join(postDir, DIAGRAMS_DIR);
     if (existsSync(dir) && readdirSync(dir).length === 0) rmSync(dir, { recursive: true });
@@ -274,25 +329,7 @@ async function main(): Promise<void> {
   const font = readFileSync(FONT_FILE);
   const { browser, page } = await openRenderer(font);
   try {
-    // the PNG (listed after its SVGs) reuses the light markup just written
-    const lightSvgs = new Map<string, string>();
-    for (const { job, variant, path } of missing) {
-      mkdirSync(dirname(path), { recursive: true });
-      if (variant.kind === "svg") {
-        const svg = await renderOne(page, job.source, variant.theme, job.hash);
-        const styled = await embedStyle(svg, variant.theme, font);
-        await assertWellFormed(page, styled, path);
-        if (variant.theme === "light") lightSvgs.set(job.hash, styled);
-        writeFileSync(path, styled);
-      } else {
-        const styled =
-          lightSvgs.get(job.hash) ?? readFileSync(variantPath(job, VARIANTS[0]), "utf8");
-        writeFileSync(path, await rasterize(page, styled));
-      }
-      console.log(
-        `rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${variantLabel(variant)})`
-      );
-    }
+    await renderMissing({ page, font, missing });
   } finally {
     await browser.close();
   }

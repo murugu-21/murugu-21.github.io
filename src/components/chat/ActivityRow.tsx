@@ -1,5 +1,5 @@
 // Fills the wait before the first token: the running tool, or a rotating word while the model reasons.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { ToolName } from "../../../worker/protocol";
 
@@ -40,17 +40,12 @@ export type Activity = { name: ToolName; detail?: string };
 export function ActivityRow({ activity }: { activity: Activity | null }) {
   const [word, setWord] = useState(() => pickWord(""));
   const [elapsed, setElapsed] = useState(0);
-  // Set by the effect below before any interval reads it.
-  const startRef = useRef(0);
 
   // The row unmounts when the first delta lands, so the timers never need resetting.
   useEffect(() => {
-    startRef.current = Date.now();
+    const start = Date.now();
     const rotate = setInterval(() => setWord(pickWord), ROTATE_MS);
-    const tick = setInterval(
-      () => setElapsed(Math.floor((Date.now() - startRef.current) / 1000)),
-      1000
-    );
+    const tick = setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
     return () => {
       clearInterval(rotate);
       clearInterval(tick);

@@ -1,4 +1,4 @@
-"""Design the read-aloud voice once, from a persona prompt (Breeze TTS 2 voice design).
+"""Design the read-aloud voice once from a persona prompt (Breeze TTS 2 voice design).
 
   .venv-tts/bin/python scripts/tts/design-voice.py [count]
 
@@ -8,7 +8,7 @@ the one you like:
 
   cp .voice/candidates/1.wav .voice/reference.wav
   cp .voice/candidates/reference.txt .voice/reference.txt
-  npm run audio -- --upload-voice
+  bun run audio --upload-voice
 
 Posts are plain clones of that clip (synth.py), which keeps the voice fixed
 across paragraphs. Design is sampled, so candidates differ.

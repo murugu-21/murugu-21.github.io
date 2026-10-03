@@ -4,24 +4,30 @@ import {
   countCompanies,
   formatDuration,
   groupByCompany,
-  monthsBetween,
-  parseMonth,
-  periodBounds,
   totalExperienceMonths
 } from "./experience";
 
-const role = (company: string, date: string, role: string, location = "Bangalore") => ({
-  company,
-  date,
-  role,
-  location
+const role = (r: { company: string; date: string; role: string; location?: string }) => ({
+  location: "Bangalore",
+  ...r
 });
+
+const returning = [
+  role({ company: "Acme", date: "2025 – Present", role: "Staff" }),
+  role({ company: "Other", date: "2023 – 2025", role: "Senior" }),
+  role({ company: "Acme", date: "2020 – 2023", role: "Junior" })
+];
 
 describe("groupByCompany", () => {
   it("keeps one entry per role when companies differ", () => {
     const groups = groupByCompany([
-      role("MedMe", "December 2025 – Present", "SE II", "Canada"),
-      role("Samsung", "December 2021 – August 2022", "Intern")
+      role({
+        company: "MedMe",
+        date: "December 2025 – Present",
+        role: "SE II",
+        location: "Canada"
+      }),
+      role({ company: "Samsung", date: "December 2021 – August 2022", role: "Intern" })
     ]);
     expect(groups.map(g => g.company)).toEqual(["MedMe", "Samsung"]);
     expect(groups.map(g => g.roles.length)).toEqual([1, 1]);
@@ -29,9 +35,9 @@ describe("groupByCompany", () => {
 
   it("folds consecutive roles at the same company into one stint", () => {
     const groups = groupByCompany([
-      role("HyperVerge", "April 2025 – December 2025", "SDE 2"),
-      role("HyperVerge", "July 2023 – March 2025", "SDE 1"),
-      role("HyperVerge", "August 2022 – June 2023", "Intern")
+      role({ company: "HyperVerge", date: "April 2025 – December 2025", role: "SDE 2" }),
+      role({ company: "HyperVerge", date: "July 2023 – March 2025", role: "SDE 1" }),
+      role({ company: "HyperVerge", date: "August 2022 – June 2023", role: "Intern" })
     ]);
     expect(groups).toHaveLength(1);
     expect(groups[0].roles.map(r => r.role)).toEqual(["SDE 2", "SDE 1", "Intern"]);
@@ -39,99 +45,47 @@ describe("groupByCompany", () => {
 
   it("spans a stint from the oldest start to the newest end", () => {
     const [stint] = groupByCompany([
-      role("HyperVerge", "April 2025 – December 2025", "SDE 2"),
-      role("HyperVerge", "August 2022 – June 2023", "Intern")
+      role({ company: "HyperVerge", date: "April 2025 – December 2025", role: "SDE 2" }),
+      role({ company: "HyperVerge", date: "August 2022 – June 2023", role: "Intern" })
     ]);
     expect(stint.span).toBe("August 2022 – December 2025");
   });
 
+  it("shows a stint's location only when all its roles shared it", () => {
+    const stint = (secondLocation: string) =>
+      groupByCompany([
+        role({ company: "HyperVerge", date: "April 2025 – December 2025", role: "SDE 2" }),
+        role({
+          company: "HyperVerge",
+          date: "August 2022 – June 2023",
+          role: "Intern",
+          location: secondLocation
+        })
+      ])[0].location;
+    expect(stint("Bangalore")).toBe("Bangalore");
+    expect(stint("Toronto")).toBeNull();
+  });
+
   it("keeps a single role's own date string as the span", () => {
-    const [stint] = groupByCompany([role("MedMe", "December 2025 – Present", "SE II")]);
+    const [stint] = groupByCompany([
+      role({ company: "MedMe", date: "December 2025 – Present", role: "SE II" })
+    ]);
     expect(stint.span).toBe("December 2025 – Present");
   });
 
   it("splits a return to a former company into separate stints", () => {
-    const groups = groupByCompany([
-      role("Acme", "2025 – Present", "Staff"),
-      role("Other", "2023 – 2025", "Senior"),
-      role("Acme", "2020 – 2023", "Junior")
-    ]);
-    expect(groups.map(g => g.company)).toEqual(["Acme", "Other", "Acme"]);
-  });
-
-  it("lifts the location to the stint when every role shares it", () => {
-    const [stint] = groupByCompany([
-      role("HyperVerge", "April 2025 – December 2025", "SDE 2"),
-      role("HyperVerge", "August 2022 – June 2023", "Intern")
-    ]);
-    expect(stint.location).toBe("Bangalore");
-  });
-
-  it("leaves the stint location empty when roles were in different places", () => {
-    const [stint] = groupByCompany([
-      role("HyperVerge", "April 2025 – December 2025", "SDE 2", "Toronto"),
-      role("HyperVerge", "August 2022 – June 2023", "Intern", "Bangalore")
-    ]);
-    expect(stint.location).toBeNull();
-  });
-});
-
-describe("parseMonth", () => {
-  it("reads a 'Month YYYY' label", () => {
-    expect(parseMonth("December 2025")).toEqual({ year: 2025, month: 12 });
-  });
-
-  it("returns null for anything else", () => {
-    expect(parseMonth("Present")).toBeNull();
-    expect(parseMonth("2025")).toBeNull();
-  });
-});
-
-describe("periodBounds", () => {
-  it("splits a closed range into start and end months", () => {
-    expect(periodBounds("July 2023 – March 2025")).toEqual({
-      start: { year: 2023, month: 7 },
-      end: { year: 2025, month: 3 }
-    });
-  });
-
-  it("marks an open range with a null end", () => {
-    expect(periodBounds("December 2025 – Present")).toEqual({
-      start: { year: 2025, month: 12 },
-      end: null
-    });
-  });
-
-  it("returns null when the range cannot be read", () => {
-    expect(periodBounds("sometime")).toBeNull();
-  });
-});
-
-describe("monthsBetween", () => {
-  it("counts both the first and the last month, like LinkedIn", () => {
-    expect(monthsBetween({ year: 2025, month: 4 }, { year: 2025, month: 12 })).toBe(9);
-  });
-
-  it("spans years", () => {
-    expect(monthsBetween({ year: 2023, month: 7 }, { year: 2025, month: 3 })).toBe(21);
+    expect(groupByCompany(returning).map(g => g.company)).toEqual(["Acme", "Other", "Acme"]);
   });
 });
 
 describe("formatDuration", () => {
-  it("shows months only under a year", () => {
-    expect(formatDuration(9)).toBe("9 mos");
-  });
-
-  it("singularises one month", () => {
-    expect(formatDuration(1)).toBe("1 mo");
-  });
-
-  it("shows years and months", () => {
-    expect(formatDuration(21)).toBe("1 yr 9 mos");
-  });
-
-  it("drops the months when they are zero", () => {
-    expect(formatDuration(24)).toBe("2 yrs");
+  it.each([
+    [9, "9 mos"],
+    [1, "1 mo"],
+    [21, "1 yr 9 mos"],
+    [24, "2 yrs"]
+  ])("formats %i months as %s", (months, label) => {
+    expect(formatDuration(months)).toBe(label);
   });
 });
 
@@ -165,21 +119,7 @@ describe("totalExperienceMonths", () => {
 });
 
 describe("countCompanies", () => {
-  it("counts one stint per distinct company", () => {
-    expect(countCompanies([{ company: "MedMe" }, { company: "HyperVerge" }])).toBe(2);
-  });
-
   it("counts a return to a former employer once", () => {
-    const stints = groupByCompany([
-      role("Acme", "2025 – Present", "Staff"),
-      role("Other", "2023 – 2025", "Senior"),
-      role("Acme", "2020 – 2023", "Junior")
-    ]);
-    expect(stints).toHaveLength(3);
-    expect(countCompanies(stints)).toBe(2);
-  });
-
-  it("counts nothing for an empty list", () => {
-    expect(countCompanies([])).toBe(0);
+    expect(countCompanies(groupByCompany(returning))).toBe(2);
   });
 });

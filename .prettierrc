@@ -1,20 +1,13 @@
 {
 	"plugins": ["prettier-plugin-astro"],
 	"trailingComma": "none",
-	"bracketSpacing": true,
 	"arrowParens": "avoid",
-	"singleQuote": false,
 	"printWidth": 100,
-	"useTabs": false,
-	"tabWidth": 2,
-	"semi": true,
 	"overrides": [
 		{
 			"files": "content/**/*.md",
 			"options": {
 				"semi": false,
-				"arrowParens": "avoid",
-				"bracketSpacing": true,
 				"trailingComma": "all"
 			}
 		}

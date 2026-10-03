@@ -8,7 +8,6 @@ spells names and numbers like the post, easing the match in audio-words.ts.
 """
 import json
 import sys
-import time
 from typing import Any
 
 import mlx_whisper
@@ -46,7 +45,6 @@ def main() -> int:
         if not line:
             continue
         job = json.loads(line)
-        t0 = time.time()
         try:
             words = transcribe(job["wav"], job.get("text"))
             # Whisper sometimes treats the prompt as already spoken and returns
@@ -56,7 +54,7 @@ def main() -> int:
                 retry = transcribe(job["wav"], None)
                 if len(retry) > len(words):
                     words = retry
-            emit({"id": job["id"], "words": words, "wall": round(time.time() - t0, 2)})
+            emit({"id": job["id"], "words": words})
         except Exception as exc:  # noqa: BLE001 — report and keep serving
             emit({"id": job["id"], "error": f"{type(exc).__name__}: {exc}"})
     return 0

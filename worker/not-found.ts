@@ -39,7 +39,7 @@ const list = (entries: ReadonlyArray<[string, string]>): string =>
   entries.map(([path, what]) => `- ${what}: ${SITE_ORIGIN}${path}`).join("\n");
 
 /** Absolute URLs, so the body is useful when quoted. */
-export function notFoundMarkdown(pathname: string): string {
+function notFoundMarkdown(pathname: string): string {
   return `# 404 Not Found
 
 \`${pathname}\` is not a path on murugappan.dev. Nothing was moved — this URL has never been served, so do not retry it.

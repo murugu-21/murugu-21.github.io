@@ -3,7 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
-import { defineConfig } from "astro/config";
+import { defineConfig, envField } from "astro/config";
+import { parse as parseJsonc, printParseErrorCode, type ParseError } from "jsonc-parser";
 import cloudflare from "@astrojs/cloudflare";
 import { unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
@@ -15,13 +16,15 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 import remarkMermaid from "./src/blog/utils/remark-mermaid";
 import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
+import { contactConfigProblem } from "./worker/contact-config";
+
+const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
 
 // slug -> ISO publish date, for sitemap <lastmod>.
 function postDates(): Record<string, string> {
-  const root = path.join(process.cwd(), "content/blog");
   const dates: Record<string, string> = {};
-  for (const dir of fs.readdirSync(root)) {
-    const file = path.join(root, dir, "index.md");
+  for (const dir of fs.readdirSync(BLOG_CONTENT)) {
+    const file = path.join(BLOG_CONTENT, dir, "index.md");
     if (!fs.existsSync(file)) continue;
     const match = fs.readFileSync(file, "utf8").match(/^date:\s*"?([^"\n]+)"?\s*$/m);
     if (match) dates[dir] = new Date(match[1]).toISOString();
@@ -63,10 +66,9 @@ function blogPostBodies(): AstroIntegration {
     name: "blog-post-bodies",
     hooks: {
       "astro:build:done": ({ dir, logger }) => {
-        const root = path.join(process.cwd(), "content/blog");
         let checked = 0;
-        for (const slug of fs.readdirSync(root)) {
-          const source = path.join(root, slug, "index.md");
+        for (const slug of fs.readdirSync(BLOG_CONTENT)) {
+          const source = path.join(BLOG_CONTENT, slug, "index.md");
           if (!fs.existsSync(source)) continue; // draft/ holds nested posts, unpublished
           const page = new URL(`blog/${slug}/index.html`, dir);
           if (!fs.existsSync(page)) {
@@ -115,6 +117,28 @@ function buildArtifacts(): AstroIntegration {
       "astro:build:start": () => run("scripts/render-mermaid.ts"),
       // Registered last, so the site it prints from is final.
       "astro:build:done": ({ dir }) => run("scripts/generate-resume.ts", fileURLToPath(dir))
+    }
+  };
+}
+
+// Fails the build, and so the Workers Builds deploy, on a malformed inbox or one
+// the EMAIL binding isn't locked to.
+function contactInbox(): AstroIntegration {
+  return {
+    name: "contact-inbox",
+    hooks: {
+      // config:setup, not build:start, so it fails before content sync and fetches.
+      "astro:config:setup": ({ command }) => {
+        if (command !== "build") return;
+        const errors: ParseError[] = [];
+        const config: unknown = parseJsonc(fs.readFileSync("wrangler.jsonc", "utf8"), errors);
+        if (errors.length) {
+          const where = errors.map(e => `${printParseErrorCode(e.error)} at offset ${e.offset}`);
+          throw new Error(`contact-inbox: wrangler.jsonc does not parse: ${where.join(", ")}`);
+        }
+        const problem = contactConfigProblem(config);
+        if (problem) throw new Error(`contact-inbox: wrangler.jsonc:\n${problem}`);
+      }
     }
   };
 }
@@ -183,7 +207,7 @@ function modulePreloadHints(): AstroIntegration {
           // before the first module script, so the preload scanner sees them together
           const at = html.indexOf('<script type="module" src="');
           fs.writeFileSync(file, html.slice(0, at) + links + html.slice(at));
-          hinted += 1;
+          hinted++;
         }
         logger.info(`modulepreload hints added to ${hinted} page(s)`);
       }
@@ -211,6 +235,34 @@ export default defineConfig({
   }),
   // otherwise the adapter provisions an unused SESSION KV namespace
   session: false,
+  // Validated at build, so a malformed value fails the build instead of shipping.
+  env: {
+    schema: {
+      PUBLIC_CHAT_HOST: envField.string({ context: "client", access: "public", optional: true }),
+      // A public project key (phc_), written into meta tags at build; never the personal phx_ key.
+      POST_HOG_TOKEN: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+        startsWith: "phc_"
+      }),
+      POST_HOG_URL: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+        url: true
+      }),
+      GITHUB_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
+      // "1" fails the build instead of falling back when the profile fetch fails.
+      REQUIRE_GITHUB_PROFILE: envField.enum({
+        context: "server",
+        access: "public",
+        values: ["0", "1"],
+        default: "0"
+      }),
+      RESUME_PHONE: envField.string({ context: "server", access: "secret", optional: true })
+    }
+  },
   server: { port: 4399 },
   build: {
     assets: "static",
@@ -219,6 +271,7 @@ export default defineConfig({
     inlineStylesheets: "always"
   },
   integrations: [
+    contactInbox(),
     react(),
     clientInteractionDirective(),
     modulePreloadHints(),

@@ -22,9 +22,11 @@ export const API_PATHS = {
   openapiRoot: "/openapi.json"
 } as const;
 
+export type ApiPath = (typeof API_PATHS)[keyof typeof API_PATHS];
+
 export const READ_METHODS = ["GET", "HEAD"];
 
-export const ALLOWED_METHODS: Record<string, readonly string[]> = {
+export const ALLOWED_METHODS: Record<ApiPath, readonly string[]> = {
   [API_PATHS.profile]: ["GET"],
   [API_PATHS.experience]: ["GET"],
   [API_PATHS.skills]: ["GET"],
@@ -39,7 +41,7 @@ export const ALLOWED_METHODS: Record<string, readonly string[]> = {
 };
 
 // Paths the OpenAPI document describes as operations.
-export const SPEC_PATHS: readonly string[] = [
+export const SPEC_PATHS: readonly ApiPath[] = [
   API_PATHS.profile,
   API_PATHS.experience,
   API_PATHS.skills,
@@ -58,21 +60,20 @@ const POST_PATH = new RegExp(`^${VERSIONED_API_BASE}/posts/[^/]+$`);
 /** Rewrites the unversioned alias onto `/api/v1`. Bare `/api` names no endpoint, so it is kept. */
 export function toVersionedPath(pathname: string): string {
   if (
-    pathname === API_BASE ||
+    !pathname.startsWith(`${API_BASE}/`) ||
     pathname === VERSIONED_API_BASE ||
     pathname.startsWith(`${VERSIONED_API_BASE}/`)
   )
     return pathname;
-  if (pathname.startsWith(`${API_BASE}/`))
-    return `${VERSIONED_API_BASE}${pathname.slice(API_BASE.length)}`;
-  return pathname;
+  return `${VERSIONED_API_BASE}${pathname.slice(API_BASE.length)}`;
 }
 
 /** The templated path a request URL maps to, or null when nothing serves it. */
-export function matchApiPath(pathname: string): string | null {
+export function matchApiPath(pathname: string): ApiPath | null {
   const trimmed = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
   const path = toVersionedPath(trimmed);
-  if ((LITERAL_PATHS as string[]).includes(path)) return path;
+  const literal = LITERAL_PATHS.find(p => p === path);
+  if (literal) return literal;
   if (POST_PATH.test(path)) return API_PATHS.post;
   return null;
 }

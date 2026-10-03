@@ -28,7 +28,7 @@ import { parseRate, SPEECH_RATES, speechBlocks, type SpeechRate } from "../utils
 type State = "idle" | "loading" | "speaking" | "paused";
 
 interface Block {
-  el: HTMLElement;
+  el: Element;
   text: string;
 }
 
@@ -91,16 +91,38 @@ const publishRate = (next: SpeechRate) => {
   rateListeners.forEach(fn => fn());
 };
 
+const isAudioTimings = (value: unknown): value is AudioTimings =>
+  typeof value === "object" &&
+  value !== null &&
+  "version" in value &&
+  (value.version === 1 || value.version === 2) &&
+  "blocks" in value &&
+  Array.isArray(value.blocks);
+
+const fetchTimings = async (slug: string): Promise<AudioTimings | null> => {
+  try {
+    const res = await fetch(`/blog/audio/${slug}.json`, {
+      headers: { Accept: "application/json" }
+    });
+    const body: unknown = res.ok ? await res.json() : null;
+    if (isAudioTimings(body)) return body;
+    console.warn(`No read-aloud audio for this post (${res.status}), using speech synthesis`);
+  } catch (err) {
+    console.warn("Read-aloud audio unavailable, using speech synthesis", err);
+  }
+  return null;
+};
+
 // Same extraction + normalisation as the generator, so texts line up with
 // the timing JSON. The title is read first.
 const collectBlocks = (): Block[] => {
-  const article = document.querySelector<HTMLElement>("article.blog-post");
-  const body = article?.querySelector<HTMLElement>("section[itemprop='articleBody']");
+  const article = document.querySelector("article.blog-post");
+  const body = article?.querySelector("section[itemprop='articleBody']");
   if (!body) return [];
   const blocks: Block[] = speechBlocks(body)
     .map(b => ({ el: b.el, text: normalizeSpeechText(b.text) }))
     .filter(b => b.text);
-  const title = article?.querySelector<HTMLElement>("header h1");
+  const title = article?.querySelector("header h1");
   if (title) {
     const text = normalizeSpeechText(title.textContent ?? "");
     if (text) blocks.unshift({ el: title, text });
@@ -126,9 +148,9 @@ export function ListenControls({ slug }: { slug: string }) {
   const rateRef = useRef<SpeechRate>(1);
   const blocksRef = useRef<Block[]>([]);
   const playerRef = useRef<Player | null>(null);
-  const highlightedRef = useRef<HTMLElement | null>(null);
+  const highlightedRef = useRef<Element | null>(null);
 
-  const highlight = useCallback((el: HTMLElement | null) => {
+  const highlight = useCallback((el: Element | null) => {
     if (el === highlightedRef.current) return;
     highlightedRef.current?.classList.remove("is-speaking");
     highlightedRef.current = el;
@@ -367,21 +389,13 @@ export function ListenControls({ slug }: { slug: string }) {
 
   // ---- choose a backend on first use -----------------------------------------
   const loadPlayer = useCallback(async (): Promise<Player | null> => {
-    if ("Audio" in window) {
+    const timings = "Audio" in window ? await fetchTimings(slug) : null;
+    if (timings) {
       try {
-        const res = await fetch(`/blog/audio/${slug}.json`, {
-          headers: { Accept: "application/json" }
-        });
-        if (res.ok) {
-          const timings = (await res.json()) as AudioTimings;
-          if ((timings.version === 1 || timings.version === 2) && Array.isArray(timings.blocks)) {
-            const player = audioPlayer(timings);
-            player.setRate(rateRef.current);
-            tag("listen_backend", "audio");
-            return player;
-          }
-        }
-        console.warn(`No read-aloud audio for this post (${res.status}), using speech synthesis`);
+        const player = audioPlayer(timings);
+        player.setRate(rateRef.current);
+        tag("listen_backend", "audio");
+        return player;
       } catch (err) {
         console.warn("Read-aloud audio unavailable, using speech synthesis", err);
       }
@@ -398,19 +412,21 @@ export function ListenControls({ slug }: { slug: string }) {
       playerRef.current?.pause();
       return;
     }
-    if (!playerRef.current) {
-      track("listen_play", { post: slug });
-      setState("loading");
-      playerRef.current = await loadPlayer();
-      if (!playerRef.current) {
-        track("listen_unavailable");
-        setState("idle");
-        return;
-      }
-    } else {
+    if (playerRef.current) {
       track("listen_resume");
+      playerRef.current.play();
+      return;
     }
-    playerRef.current.play();
+    track("listen_play", { post: slug });
+    setState("loading");
+    const player = await loadPlayer();
+    playerRef.current = player;
+    if (!player) {
+      track("listen_unavailable");
+      setState("idle");
+      return;
+    }
+    player.play();
   };
 
   const onRate = (next: SpeechRate) => {
@@ -432,7 +448,7 @@ export function ListenControls({ slug }: { slug: string }) {
   return (
     <div
       ref={setRoot}
-      className="flex items-center gap-3 rounded-lg border border-border bg-card py-2 pr-2 pl-2 shadow-sm dark:border-white/40"
+      className="flex items-center gap-3 rounded-lg border border-border bg-card p-2 shadow-sm dark:border-white/40"
     >
       <Button
         onClick={onToggle}
@@ -484,7 +500,7 @@ export function ListenControls({ slug }: { slug: string }) {
             size="sm"
             disabled={!supported}
             aria-label="Playback speed"
-            // w-14 (not auto): a stored 1.75x would otherwise widen the pill
+            // w-14 (not auto): a stored 1.25x would otherwise widen the pill
             // after hydration and nudge the row.
             className="h-7 w-14 shrink-0 rounded-full px-2.5 text-xs font-semibold tabular-nums"
           >
