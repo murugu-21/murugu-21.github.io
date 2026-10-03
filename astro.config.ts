@@ -3,7 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
-import { defineConfig } from "astro/config";
+import { defineConfig, envField } from "astro/config";
+import { parse as parseJsonc, printParseErrorCode, type ParseError } from "jsonc-parser";
 import cloudflare from "@astrojs/cloudflare";
 import { unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
@@ -15,6 +16,7 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 import remarkMermaid from "./src/blog/utils/remark-mermaid";
 import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
+import { contactConfigProblem } from "./worker/contact-config";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
 
@@ -119,6 +121,28 @@ function buildArtifacts(): AstroIntegration {
   };
 }
 
+// Fails the build, and so the Workers Builds deploy, on a malformed inbox or one
+// the EMAIL binding isn't locked to.
+function contactInbox(): AstroIntegration {
+  return {
+    name: "contact-inbox",
+    hooks: {
+      // config:setup, not build:start, so it fails before content sync and fetches.
+      "astro:config:setup": ({ command }) => {
+        if (command !== "build") return;
+        const errors: ParseError[] = [];
+        const config: unknown = parseJsonc(fs.readFileSync("wrangler.jsonc", "utf8"), errors);
+        if (errors.length) {
+          const where = errors.map(e => `${printParseErrorCode(e.error)} at offset ${e.offset}`);
+          throw new Error(`contact-inbox: wrangler.jsonc does not parse: ${where.join(", ")}`);
+        }
+        const problem = contactConfigProblem(config);
+        if (problem) throw new Error(`contact-inbox: wrangler.jsonc:\n${problem}`);
+      }
+    }
+  };
+}
+
 // `client:interaction`: hydrate on first input (src/directives/interaction.ts).
 function clientInteractionDirective(): AstroIntegration {
   return {
@@ -211,6 +235,34 @@ export default defineConfig({
   }),
   // otherwise the adapter provisions an unused SESSION KV namespace
   session: false,
+  // Validated at build, so a malformed value fails the build instead of shipping.
+  env: {
+    schema: {
+      PUBLIC_CHAT_HOST: envField.string({ context: "client", access: "public", optional: true }),
+      // A public project key (phc_), written into meta tags at build; never the personal phx_ key.
+      POST_HOG_TOKEN: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+        startsWith: "phc_"
+      }),
+      POST_HOG_URL: envField.string({
+        context: "server",
+        access: "public",
+        optional: true,
+        url: true
+      }),
+      GITHUB_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
+      // "1" fails the build instead of falling back when the profile fetch fails.
+      REQUIRE_GITHUB_PROFILE: envField.enum({
+        context: "server",
+        access: "public",
+        values: ["0", "1"],
+        default: "0"
+      }),
+      RESUME_PHONE: envField.string({ context: "server", access: "secret", optional: true })
+    }
+  },
   server: { port: 4399 },
   build: {
     assets: "static",
@@ -219,6 +271,7 @@ export default defineConfig({
     inlineStylesheets: "always"
   },
   integrations: [
+    contactInbox(),
     react(),
     clientInteractionDirective(),
     modulePreloadHints(),

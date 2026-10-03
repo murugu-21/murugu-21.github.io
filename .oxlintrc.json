@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc", "react", "import", "promise"],
+  "options": { "typeAware": true },
   "categories": { "correctness": "error" },
   "rules": {
     "no-irregular-whitespace": ["error", { "skipComments": true }],
@@ -15,6 +16,24 @@
     "no-lonely-if": "error",
     "max-depth": ["error", { "max": 3 }],
     "max-params": ["error", { "max": 3 }],
-    "typescript/no-non-null-assertion": "error"
-  }
+    "typescript/no-non-null-assertion": "error",
+    "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-argument": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-return": "error"
+  },
+  "overrides": [
+    {
+      "files": ["scripts/ts-alias.cjs"],
+      "rules": {
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off"
+      }
+    }
+  ]
 }

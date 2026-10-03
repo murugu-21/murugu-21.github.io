@@ -21,7 +21,8 @@ Think about readability and elegance before writing, not after. Every rule a lin
 - Write new code in TypeScript.
 - **Guard clauses.** Return or throw early on edge cases so the main path isn't nested inside `if`/`else`.
 - **Named parameters (an options object).** Lint caps functions at 3 parameters; below that, a new or changed function whose parameters share a type also takes a single destructured object (`fn({ from, to })`, not `fn(from, to)`) so call sites can't silently swap them.
-- Don't use `as` casts to silence a type error; fix the type.
+- **No `as` casts** (lint allows only `as const`). Fix the type instead: `satisfies` to check a value against a type without widening it, a type guard or `in` check to narrow, zod for parsed or untrusted data.
+- **No `any` leaks.** Type-aware lint rejects annotating an `any` (`const x: T = JSON.parse(...)`, `await res.json()`). Take it as `unknown` and narrow it. Lint can't catch two cases, so check them by hand: `.astro` scripts (type-aware rules don't run there), and the Workers generics `res.json<T>()` / `storage.get<T>()`, which are casts in disguise (call them without a type argument and parse the result).
 - **DRY and YAGNI.** Extract a helper once logic repeats, not before. Don't add options, abstractions or config for needs that don't exist yet.
 
 ## Research before building

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { VERSIONED_API_BASE } from "../api/routes";
 import { MCP_TOOLS } from "../mcp/tools";
@@ -8,7 +9,7 @@ import {
   LINKSET_MEDIA_TYPE,
   MCP_SERVER_NAME
 } from "../well-known";
-import { fetchWorker } from "./fixtures";
+import { fetchWorker, readJson } from "./fixtures";
 
 describe("buildApiCatalog", () => {
   const catalog = buildApiCatalog("https://murugappan.dev");
@@ -89,7 +90,10 @@ describe("/.well-known/api-catalog", () => {
 
   it("names the host that answered", async () => {
     const res = await fetchWorker("https://preview.example/.well-known/api-catalog");
-    const body = await res.json<{ linkset: Array<{ anchor: string }> }>();
+    const body = await readJson(
+      res,
+      z.object({ linkset: z.array(z.object({ anchor: z.string() })) })
+    );
     expect(body.linkset[0].anchor).toBe(`https://preview.example${VERSIONED_API_BASE}`);
   });
 });
@@ -100,12 +104,12 @@ describe("the MCP manifest endpoint", () => {
     const res = await fetchWorker(path);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    expect((await res.json<{ name: string }>()).name).toBe(MCP_SERVER_NAME);
+    expect((await readJson(res, z.object({ name: z.string() }))).name).toBe(MCP_SERVER_NAME);
   });
 
   it("names the host that answered", async () => {
     const res = await fetchWorker("https://preview.example/mcp.json");
-    const body = await res.json<{ remotes: Array<{ url: string }> }>();
+    const body = await readJson(res, z.object({ remotes: z.array(z.object({ url: z.string() })) }));
     expect(body.remotes[0].url).toBe("https://preview.example/mcp");
   });
 

@@ -5,80 +5,55 @@ import { ChatRoom, parseClientMessage } from "../chat-room";
 import {
   GREETING,
   MAX_MESSAGE_LENGTH,
+  parseServerMessage,
   parseVisitorContext,
+  type ServerMessage,
   toolFrame,
   VISITOR_COUNTRY_HEADER,
   VISITOR_IP_HEADER
 } from "../protocol";
-import { recordingEmail, testEnv, visitorMeta } from "./fixtures";
-
-// `ConnectionContext` is only the upgrade request to the room.
-function connectContext(headers: Record<string, string> = {}): { request: Request } {
-  return {
-    request: new Request("https://example.com/parties/chat-room/x", { headers })
-  };
-}
-
-// onConnect only ever calls send() on the connection.
-const fakeConnection = (sent: string[] = []) =>
-  ({ send: (d: string) => void sent.push(d) }) as never;
+import { connectRoom, recordingEmail, testEnv, visitorMeta } from "./fixtures";
 
 describe("ChatRoom storage", () => {
   it("seeds the greeting exactly once on first connect", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-greet"));
+    await connectRoom("room-greet");
+    // A reconnect must not seed again.
+    const { stub, history } = await connectRoom("room-greet");
+    expect(parseServerMessage(history)).toEqual({
+      type: "history",
+      messages: [{ role: "assistant", content: GREETING }]
+    });
     await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      const sent: string[] = [];
-      const conn = fakeConnection(sent);
-      const ctx = connectContext();
-      instance.onConnect(conn, ctx);
-      // A reconnect must not seed again.
-      instance.onConnect(conn, ctx);
       const rows = instance.ctx.storage.sql
         .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
         .toArray();
       expect(rows).toEqual([{ role: "assistant", content: GREETING }]);
-      expect(JSON.parse(sent[1]).messages).toEqual([{ role: "assistant", content: GREETING }]);
     });
   });
 
   it("records the visitor's country and IP, keeping first-seen across reconnects", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-visitor"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      const conn = fakeConnection();
-      const connect = (headers: Record<string, string>) =>
-        instance.onConnect(conn, connectContext(headers));
+    const meta = async (headers: Record<string, string>) => {
+      const { stub } = await connectRoom("room-visitor", headers);
+      return await runInDurableObject(stub, visitorMeta);
+    };
 
-      connect({
-        [VISITOR_COUNTRY_HEADER]: "IN",
-        [VISITOR_IP_HEADER]: "203.0.113.7"
-      });
-      const first = visitorMeta(instance);
-      expect(first).toMatchObject({
-        visitor_country: "IN",
-        visitor_ip: "203.0.113.7"
-      });
-
-      connect({ [VISITOR_COUNTRY_HEADER]: "DE" });
-      const second = visitorMeta(instance);
-      expect(second.visitor_country).toBe("DE"); // the latest country wins
-      expect(second.visitor_ip).toBe("203.0.113.7"); // but a missing value never erases one
-      expect(second.visitor_first_seen).toBe(first.visitor_first_seen);
-      expect(Number(second.visitor_last_seen)).toBeGreaterThanOrEqual(
-        Number(first.visitor_last_seen)
-      );
+    const first = await meta({ "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.7" });
+    expect(first).toMatchObject({
+      visitor_country: "IN",
+      visitor_ip: "203.0.113.7"
     });
+
+    const second = await meta({ "CF-IPCountry": "DE" });
+    expect(second.visitor_country).toBe("DE"); // the latest country wins
+    expect(second.visitor_ip).toBe("203.0.113.7"); // but a missing value never erases one
+    expect(second.visitor_first_seen).toBe(first.visitor_first_seen);
+    expect(Number(second.visitor_last_seen)).toBeGreaterThanOrEqual(
+      Number(first.visitor_last_seen)
+    );
   });
 
   it("mirrors one rooms row per room to D1, refreshed on reconnect", async () => {
     const room = "room-mirror";
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName(room));
-    const connect = (headers: Record<string, string>) =>
-      runInDurableObject(stub, async (instance: ChatRoom) => {
-        instance.onStart();
-        instance.onConnect(fakeConnection(), connectContext(headers));
-      });
 
     type RoomRow = {
       country: string | null;
@@ -103,15 +78,12 @@ describe("ChatRoom storage", () => {
         { timeout: 2000, interval: 5 }
       );
 
-    await connect({
-      [VISITOR_COUNTRY_HEADER]: "IN",
-      [VISITOR_IP_HEADER]: "203.0.113.9"
-    });
+    await connectRoom(room, { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" });
     const first = await mirrored({ country: "IN", ip: "203.0.113.9" });
 
     // A reconnect without an IP refreshes the country and last_seen, but must
     // not erase the address already known.
-    await connect({ [VISITOR_COUNTRY_HEADER]: "DE" });
+    await connectRoom(room, { "CF-IPCountry": "DE" });
     const second = await mirrored({ country: "DE", ip: "203.0.113.9" });
     expect(second.first_seen).toBe(first.first_seen);
     expect(second.last_seen).toBeGreaterThanOrEqual(first.last_seen);
@@ -131,6 +103,30 @@ describe("ChatRoom leads", () => {
       expect(sent).toHaveLength(1);
       expect(sent[0].to).toBe("inbox@example.com");
     });
+  });
+});
+
+describe("parseServerMessage", () => {
+  it.each<ServerMessage>([
+    { type: "history", messages: [{ role: "assistant", content: GREETING }] },
+    { type: "visitor", text: "hi" },
+    { type: "delta", text: "hel" },
+    toolFrame("fetch_page", "https://murugappan.dev/blog/x/"),
+    toolFrame("capture_opportunity"),
+    { type: "done" },
+    { type: "limit", message: "budget" },
+    { type: "error", message: "oops" }
+  ])("round-trips a $type frame the room sends", frame => {
+    expect(parseServerMessage(JSON.stringify(frame))).toEqual(frame);
+  });
+
+  it.each([
+    ["an unknown type", { type: "nope" }],
+    ["a delta without text", { type: "delta" }],
+    ["an unknown tool", { type: "tool", name: "rm_rf" }],
+    ["a history entry with a bad role", { type: "history", messages: [{ role: "x", content: "" }] }]
+  ])("rejects %s", (_label, frame) => {
+    expect(parseServerMessage(JSON.stringify(frame))).toBeNull();
   });
 });
 

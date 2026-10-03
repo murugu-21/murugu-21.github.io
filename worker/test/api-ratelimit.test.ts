@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
 import {
@@ -13,7 +14,7 @@ import {
   secondsUntilUtcMidnight,
   takeReadSlot
 } from "../api/ratelimit";
-import { fetchWorker } from "./fixtures";
+import { fetchWorker, readJson } from "./fixtures";
 
 beforeEach(() => resetReadWindows());
 
@@ -158,9 +159,10 @@ describe("read limiting through the worker", () => {
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("Retry-After"))).toBeGreaterThan(0);
     expect(res.headers.get("RateLimit")).toMatch(/^"reads";r=0;t=\d+$/);
-    const body = await res.json<{
-      error: { code: string; hint: string };
-    }>();
+    const body = await readJson(
+      res,
+      z.object({ error: z.object({ code: z.string(), hint: z.string() }) })
+    );
     expect(body.error.code).toBe("rate_limited");
     expect(body.error.hint).toContain("RateLimit");
   });
@@ -199,7 +201,8 @@ describe("contact limiting through the worker", () => {
     const res = await postContact(validMessage, "198.51.100.7");
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toMatch(/^\d+$/);
-    expect((await res.json<{ error: { code: string } }>()).error.code).toBe("rate_limited");
+    const { error } = await readJson(res, z.object({ error: z.object({ code: z.string() }) }));
+    expect(error.code).toBe("rate_limited");
   });
 
   it("does not spend a slot on an invalid request", async () => {

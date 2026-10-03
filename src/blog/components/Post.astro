@@ -13,7 +13,7 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
   .toLowerCase();
 ---
 
-<li class="mb-4 pl-0" data-search={haystack} data-tags={JSON.stringify(post.tags)}>
+<li class="mb-4 pl-0" data-search={haystack} data-tags={post.tags.join(" ")}>
   <article class="mt-8" itemscope itemtype="http://schema.org/Article">
     <header class="mb-4">
       <h2 class="mt-0 mb-2 text-[1.728rem] leading-[1.1] font-bold tracking-tight text-navy dark:text-blue-light">

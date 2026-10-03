@@ -2,10 +2,11 @@
 // deployed build looks like, so the two surfaces are exercised against the
 // same content instead of drifting fixtures.
 import { env } from "cloudflare:test";
+import { assert, expect } from "vitest";
+import { z } from "zod";
 
 import { buildDataset, type DatasetInput } from "../api/dataset";
 import type { ChatRoom } from "../chat-room";
-import type { EmailLike } from "../email";
 import worker from "../server";
 
 export const DATASET_INPUT: DatasetInput = {
@@ -110,52 +111,65 @@ function assetPath(input: RequestInfo | URL): string {
   return new URL(input.url).pathname;
 }
 
-export function fakeAssets(overrides: Record<string, string | null> = {}) {
-  const files = siteFiles(overrides);
+/** A Fetcher binding answering with `fetch`; no test opens a socket through one. */
+export function fakeFetcher(fetch: (input: RequestInfo | URL) => Promise<Response>): Fetcher {
   return {
-    fetch: (input: RequestInfo | URL) => {
-      const path = assetPath(input);
-      const body = files[path];
-      // A miss is an empty 404, which is what the real binding returns under
-      // assets.not_found_handling: "none" (see wrangler.jsonc).
-      return Promise.resolve(
-        body == null
-          ? new Response(null, { status: 404 })
-          : new Response(body, {
-              status: 200,
-              headers:
-                path.endsWith(".html") || HTML_PATHS.has(path)
-                  ? { "Content-Type": "text/html; charset=utf-8" }
-                  : undefined
-            })
-      );
+    fetch,
+    connect: () => {
+      throw new Error("fakeFetcher does not implement connect()");
     }
   };
 }
 
+export function fakeAssets(overrides: Record<string, string | null> = {}): Fetcher {
+  const files = siteFiles(overrides);
+  return fakeFetcher(input => {
+    const path = assetPath(input);
+    const body = files[path];
+    // A miss is an empty 404, which is what the real binding returns under
+    // assets.not_found_handling: "none" (see wrangler.jsonc).
+    return Promise.resolve(
+      body == null
+        ? new Response(null, { status: 404 })
+        : new Response(body, {
+            status: 200,
+            headers:
+              path.endsWith(".html") || HTML_PATHS.has(path)
+                ? { "Content-Type": "text/html; charset=utf-8" }
+                : undefined
+          })
+    );
+  });
+}
+
 export type TestEnvOptions = {
   assets?: Record<string, string | null>;
-  /** null unsets the binding. */
-  inbox?: string | null;
-  /** null unsets the binding. */
-  email?: EmailLike | null;
+  /** "" leaves the inbox unconfigured. */
+  inbox?: string;
+  email?: SendEmail;
 };
 
-type SentEmail = Parameters<EmailLike["send"]>[0];
-
 /** An EMAIL binding that records every message instead of sending it. */
-export function recordingEmail(): { email: EmailLike; sent: SentEmail[] } {
-  const sent: SentEmail[] = [];
-  return { email: { send: async msg => void sent.push(msg) }, sent };
+export function recordingEmail(): { email: SendEmail; sent: EmailMessageBuilder[] } {
+  const sent: EmailMessageBuilder[] = [];
+  const send = async (message: EmailMessage | EmailMessageBuilder) => {
+    // the worker only sends builders; a raw EmailMessage has no subject
+    if (!("subject" in message)) throw new Error("recordingEmail only records message builders");
+    sent.push(message);
+    return { messageId: `test-${sent.length}` };
+  };
+  return { email: { send }, sent };
 }
 
 /** The visitor_* rows a ChatRoom keeps in its meta table. */
 export function visitorMeta(instance: ChatRoom): Record<string, unknown> {
   return Object.fromEntries(
     instance.ctx.storage.sql
-      .exec(`SELECT key, value FROM meta WHERE key LIKE 'visitor_%'`)
+      .exec<{ key: string; value: SqlStorageValue }>(
+        `SELECT key, value FROM meta WHERE key LIKE 'visitor_%'`
+      )
       .toArray()
-      .map(r => [String(r.key), r.value])
+      .map(r => [r.key, r.value])
   );
 }
 
@@ -164,9 +178,16 @@ export function testEnv(options: TestEnvOptions = {}): Env {
   return {
     ...env,
     ASSETS: fakeAssets(options.assets),
-    OPPORTUNITY_INBOX: options.inbox === undefined ? "inbox@example.com" : options.inbox,
-    EMAIL: options.email === undefined ? { send: () => Promise.resolve() } : options.email
-  } as unknown as Env;
+    OPPORTUNITY_INBOX: options.inbox ?? "inbox@example.com",
+    // Env requires it; empty means no key, as in local dev without the secret
+    DEEPSEEK_API_KEY: "",
+    EMAIL: options.email ?? recordingEmail().email
+  };
+}
+
+/** A response's JSON body, checked against `schema`. */
+export async function readJson<S extends z.ZodType>(res: Response, schema: S): Promise<z.infer<S>> {
+  return schema.parse(await res.json());
 }
 
 export type FetchOptions = RequestInit & { ip?: string; env?: TestEnvOptions };
@@ -182,4 +203,24 @@ export async function fetchWorker(
     new Request(new URL(path, "https://murugappan.dev"), { ...init, headers }),
     testEnv(envOptions)
   );
+}
+
+/**
+ * Opens a real WebSocket to a chat room through the worker and closes it after
+ * the first frame (the history the room sends on connect).
+ */
+export async function connectRoom(room: string, headers: Record<string, string> = {}) {
+  const response = await fetchWorker(`/parties/chat-room/${room}`, {
+    headers: { Upgrade: "websocket", ...headers }
+  });
+  expect(response.status).toBe(101);
+  const socket = response.webSocket;
+  assert(socket, "no WebSocket on the upgrade response");
+  const firstFrame = new Promise<string>(resolve =>
+    socket.addEventListener("message", e => resolve(String(e.data)), { once: true })
+  );
+  socket.accept();
+  const history = await firstFrame;
+  socket.close();
+  return { stub: env.ChatRoom.get(env.ChatRoom.idFromName(room)), history };
 }

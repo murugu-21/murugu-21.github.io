@@ -1,5 +1,6 @@
 import { afterEach, assert, beforeAll, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
+import { z } from "zod";
 
 import {
   initClickTracking,
@@ -16,7 +17,7 @@ const fakeSdk = () => {
     capture: vi.fn(),
     register: vi.fn(),
     captureException: vi.fn(),
-    init: vi.fn(),
+    init: vi.fn<(token: string, config: Record<string, unknown>) => void>(),
     startSessionRecording: vi.fn()
   };
   return { sdk, ...sdk };
@@ -24,12 +25,12 @@ const fakeSdk = () => {
 
 const withPostHog = () => {
   const fake = fakeSdk();
-  (globalThis as { posthog?: unknown }).posthog = fake.sdk;
+  globalThis.posthog = fake.sdk;
   return fake;
 };
 
 afterEach(() => {
-  delete (globalThis as { posthog?: unknown }).posthog;
+  delete globalThis.posthog;
 });
 
 // The module keeps state (booted SDK, buffer), so SDK tests need a fresh copy.
@@ -91,7 +92,7 @@ describe("track", () => {
   });
 
   it("swallows failures from inside posthog", () => {
-    (globalThis as { posthog?: unknown }).posthog = {
+    globalThis.posthog = {
       capture: () => {
         throw new Error("blocked");
       },
@@ -182,19 +183,22 @@ describe("redactBlogFilters", () => {
 
 describe("initAnalytics", () => {
   describe("SDK config", () => {
-    let init: ReturnType<typeof vi.fn>;
-    let config: {
-      api_host: string;
-      session_recording: { maskAllInputs: boolean; maskTextSelector: string };
-      sanitize_properties: (properties: Record<string, unknown>) => Record<string, unknown>;
-    };
+    const InitConfig = z.object({
+      api_host: z.string(),
+      session_recording: z.object({ maskAllInputs: z.boolean(), maskTextSelector: z.string() }),
+      sanitize_properties: z.custom<
+        (properties: Record<string, unknown>) => Record<string, unknown>
+      >(value => typeof value === "function")
+    });
+    let init: ReturnType<typeof fakeSdk>["init"];
+    let config: z.infer<typeof InitConfig>;
 
     beforeAll(async () => {
       const fake = fakeSdk();
       const ph = await fresh();
       await ph.initAnalytics("phc_test", "https://e.example.dev", async () => fake.sdk);
       init = fake.init;
-      config = init.mock.calls[0][1];
+      config = InitConfig.parse(init.mock.calls[0][1]);
     });
 
     it("initialises the SDK once with the token and the proxy host", () => {

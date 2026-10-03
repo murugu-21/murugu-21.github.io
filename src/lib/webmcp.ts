@@ -15,9 +15,15 @@ interface ModelContext {
   registerTool(tool: ModelContextTool): void;
 }
 
-const mc = (navigator as Navigator & { modelContext?: ModelContext }).modelContext;
+const isModelContext = (value: unknown): value is ModelContext =>
+  typeof value === "object" &&
+  value !== null &&
+  "registerTool" in value &&
+  typeof value.registerTool === "function";
 
-if (mc && typeof mc.registerTool === "function") {
+const mc = "modelContext" in navigator ? navigator.modelContext : undefined;
+
+if (isModelContext(mc)) {
   // one signal for all tools; aborting on pagehide unregisters them
   const controller = new AbortController();
   addEventListener("pagehide", () => controller.abort());
@@ -61,7 +67,7 @@ if (mc && typeof mc.registerTool === "function") {
         required: ["slug"]
       },
       execute: async args => {
-        const slug = String(args.slug ?? "");
+        const slug = typeof args.slug === "string" ? args.slug : "";
         if (!/^[a-z0-9-]+$/.test(slug))
           return text("Invalid slug. Call list_blog_posts to find slugs.");
         try {
@@ -86,7 +92,7 @@ if (mc && typeof mc.registerTool === "function") {
         required: ["path"]
       },
       execute: async args => {
-        const path = String(args.path ?? "");
+        const path = typeof args.path === "string" ? args.path : "";
         // same-origin only: site-relative, and "//host" would be scheme-relative
         if (!path.startsWith("/") || path.startsWith("//"))
           return text("Only site-relative paths starting with '/' are allowed.");

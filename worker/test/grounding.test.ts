@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { fetchSitePage } from "../fetch-page";
-import { getGrounding } from "../grounding";
+import { getGrounding, type CachedGrounding } from "../grounding";
 import { fakeAssets } from "./fixtures";
 
-function fakeStorage(initial: Record<string, unknown> = {}) {
+function fakeStorage(initial: Record<string, CachedGrounding> = {}) {
   const map = new Map(Object.entries(initial));
   return {
     map,
-    async get<T>(key: string): Promise<T | undefined> {
-      return map.get(key) as T | undefined;
+    async get(key: string): Promise<unknown> {
+      return map.get(key);
     },
-    async put(key: string, value: unknown): Promise<void> {
+    async put(key: string, value: CachedGrounding): Promise<void> {
       map.set(key, value);
     }
   };

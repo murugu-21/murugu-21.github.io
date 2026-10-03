@@ -1,9 +1,9 @@
 ---
-// PostHog: read at build time (hence no PUBLIC_ prefix; the token is a public
-// key) and passed via meta tags, since document.currentScript is null in a
-// bundled module script. Either unset (dev, CI) disables analytics.
-const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
-const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
+// PostHog: passed via meta tags, since document.currentScript is null in a
+// bundled module script.
+import { POST_HOG_TOKEN, POST_HOG_URL } from "astro:env/server";
+
+// Either unset (dev, CI) disables analytics.
 const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 ---
 

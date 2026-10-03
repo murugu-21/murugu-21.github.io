@@ -88,7 +88,7 @@ export async function runDeepseekExchange({
     })
   });
   if (!res.ok || !res.body) throw new DeepseekError(res.status);
-  const result = await consumeSse(res.body, onDelta);
+  const result = await consumeSse(res.body.pipeThrough(new TextDecoderStream()), onDelta);
   result.usage ??= estimateUsage(messages, result.content);
   return result;
 }

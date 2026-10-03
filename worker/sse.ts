@@ -38,11 +38,11 @@ export type StreamResult = {
   usage: Usage | null;
 };
 
+/** Reads a decoded SSE stream (pipe bytes through a TextDecoderStream first). */
 export async function consumeSse(
-  stream: ReadableStream<Uint8Array>,
+  stream: ReadableStream<string>,
   onDelta: (text: string) => void
 ): Promise<StreamResult> {
-  const decoder = new TextDecoder();
   const reader = stream.getReader();
   const toolCalls: ToolCall[] = [];
   let buffer = "";
@@ -83,7 +83,7 @@ export async function consumeSse(
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+    buffer += value;
     const events = buffer.split("\n\n");
     buffer = events.pop() ?? "";
     for (const event of events) for (const line of event.split("\n")) handleLine(line);

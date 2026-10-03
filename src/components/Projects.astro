@@ -76,10 +76,12 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
             <div class="flex grow">
               {repo.primaryLanguage && (
                 <span class="mr-3 flex items-center">
-                  <div
-                    class="mr-1 size-2.5 rounded-full"
-                    style={`background-color:${repo.primaryLanguage.color}`}
-                  />
+                  {repo.primaryLanguage.color && (
+                    <div
+                      class="mr-1 size-2.5 rounded-full"
+                      style={`background-color:${repo.primaryLanguage.color}`}
+                    />
+                  )}
                   <p class="m-0">{repo.primaryLanguage.name}</p>
                 </span>
               )}

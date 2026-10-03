@@ -69,7 +69,7 @@ export const syncThemeOnRestore = (
   apply: (next: Theme) => void
 ): void => {
   win.addEventListener("pageshow", e => {
-    if (!(e as PageTransitionEvent).persisted) return;
+    if (!("persisted" in e) || !e.persisted) return;
     const next = resolveTheme(source.stored(), source.prefersDark());
     if (next !== source.current()) apply(next);
   });

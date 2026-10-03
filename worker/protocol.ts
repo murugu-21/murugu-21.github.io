@@ -45,6 +45,47 @@ export type ServerMessage =
   | { type: "limit"; message: string }
   | { type: "error"; message: string };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const isHistoryEntry = (value: unknown): value is ChatHistoryEntry =>
+  isRecord(value) &&
+  (value.role === "user" || value.role === "assistant") &&
+  typeof value.content === "string";
+
+/** Decodes a socket frame from the room, or null for anything off-contract. */
+export function parseServerMessage(raw: unknown): ServerMessage | null {
+  if (typeof raw !== "string") return null;
+  let msg: unknown;
+  try {
+    msg = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!isRecord(msg)) return null;
+  switch (msg.type) {
+    case "history":
+      return Array.isArray(msg.messages) && msg.messages.every(isHistoryEntry)
+        ? { type: "history", messages: msg.messages }
+        : null;
+    case "visitor":
+    case "delta":
+      return typeof msg.text === "string" ? { type: msg.type, text: msg.text } : null;
+    case "tool":
+      if (msg.name !== "fetch_page" && msg.name !== "capture_opportunity") return null;
+      return typeof msg.detail === "string"
+        ? { type: "tool", name: msg.name, detail: msg.detail }
+        : { type: "tool", name: msg.name };
+    case "done":
+      return { type: "done" };
+    case "limit":
+    case "error":
+      return typeof msg.message === "string" ? { type: msg.type, message: msg.message } : null;
+    default:
+      return null;
+  }
+}
+
 // The widget owns the wording. A capture never gets `detail`: its arguments
 // are the visitor's name and contact details.
 export function toolFrame(name: ToolName, url?: string | null): ServerMessage {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { DOCS_URL } from "../api/errors";
 import { API_PATHS, CURRENT_API_VERSION } from "../api/routes";
@@ -6,6 +7,7 @@ import { API_VERSION } from "../api/versioning";
 import {
   fetchWorker,
   POST_MARKDOWN,
+  readJson,
   recordingEmail,
   type FetchOptions,
   type TestEnvOptions
@@ -25,16 +27,21 @@ const post = (
     body: typeof body === "string" ? body : JSON.stringify(body)
   });
 
+const PostList = z.object({ posts: z.array(z.object({ slug: z.string() })), count: z.number() });
+
 async function errorBody(res: Response) {
-  const body = await res.json<{
-    error: {
-      code: string;
-      message: string;
-      hint: string;
-      documentation_url: string;
-      details?: unknown;
-    };
-  }>();
+  const body = await readJson(
+    res,
+    z.object({
+      error: z.object({
+        code: z.string(),
+        message: z.string(),
+        hint: z.string(),
+        documentation_url: z.string(),
+        details: z.unknown().optional()
+      })
+    })
+  );
   return body.error;
 }
 
@@ -45,10 +52,13 @@ describe("GET /api/profile", () => {
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Cache-Control")).toMatch(/max-age=\d+/);
-    const body = await res.json<{
-      person: { name: string; currentRole: { company: string } };
-      links: Array<{ label: string }>;
-    }>();
+    const body = await readJson(
+      res,
+      z.object({
+        person: z.object({ name: z.string(), currentRole: z.object({ company: z.string() }) }),
+        links: z.array(z.object({ label: z.string() }))
+      })
+    );
     expect(body.person.name).toBe("Murugappan M");
     expect(body.person.currentRole.company).toBe("MedMe Health");
     expect(body.links.map(l => l.label)).toContain("OpenAPI spec");
@@ -98,7 +108,7 @@ describe("path versioning", () => {
     for (const path of [API_PATHS.versions, "/api/versions"]) {
       const res = await get(path);
       expect(res.status, path).toBe(200);
-      const body = await res.json<{ current: string }>();
+      const body = await readJson(res, z.object({ current: z.string() }));
       expect(body.current, path).toBe(CURRENT_API_VERSION);
     }
   });
@@ -144,10 +154,7 @@ describe("GET /api/posts", () => {
   it("lists every post with a count", async () => {
     const res = await get("/api/posts");
     expect(res.status).toBe(200);
-    const body = await res.json<{
-      posts: Array<{ slug: string }>;
-      count: number;
-    }>();
+    const body = await readJson(res, PostList);
     expect(body.count).toBe(2);
     expect(body.posts.map(p => p.slug)).toEqual([
       "cloud-agnostic-rate-limiting",
@@ -157,14 +164,14 @@ describe("GET /api/posts", () => {
 
   it("filters case-insensitively on title and summary", async () => {
     const res = await get("/api/posts?q=RATE+LIMITING");
-    const body = await res.json<{ posts: Array<{ slug: string }>; count: number }>();
+    const body = await readJson(res, PostList);
     expect(body.count).toBe(1);
     expect(body.posts[0].slug).toBe("cloud-agnostic-rate-limiting");
   });
 
   it("caps the list with limit", async () => {
     const res = await get("/api/posts?limit=1");
-    const body = await res.json<{ count: number }>();
+    const body = await readJson(res, PostList);
     expect(body.count).toBe(1);
   });
 
@@ -229,7 +236,7 @@ describe("the OpenAPI spec", () => {
     const res = await get(path);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    expect((await res.json<{ openapi: string }>()).openapi).toBe("3.1.0");
+    expect((await readJson(res, z.object({ openapi: z.string() }))).openapi).toBe("3.1.0");
   });
 
   // The server URL follows the host that was asked, upgraded to https except
@@ -240,7 +247,7 @@ describe("the OpenAPI spec", () => {
     ["http://localhost:8787", "http://localhost:8787"]
   ])("names %s as %s in servers", async (origin, server) => {
     const res = await fetchWorker(`${origin}/openapi.json`);
-    const body = await res.json<{ servers: Array<{ url: string }> }>();
+    const body = await readJson(res, z.object({ servers: z.array(z.object({ url: z.string() })) }));
     expect(body.servers[0].url).toBe(server);
   });
 });
@@ -252,14 +259,11 @@ describe("error handling under /api", () => {
       const res = await get(path);
       expect(res.status).toBe(404);
       expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-      expect(await res.json()).toEqual({
-        error: {
-          code: "not_found",
-          message: expect.stringContaining(path),
-          hint: expect.stringContaining("/openapi.json"),
-          documentation_url: DOCS_URL
-        }
-      });
+      const error = await errorBody(res);
+      expect(error.code).toBe("not_found");
+      expect(error.message).toContain(path);
+      expect(error.hint).toContain("/openapi.json");
+      expect(error.documentation_url).toBe(DOCS_URL);
     }
   );
 
@@ -367,7 +371,7 @@ describe("POST /api/contact", () => {
   });
 
   it("answers 503 when no inbox is configured", async () => {
-    const res = await post("/api/contact", valid, { ip: "203.0.113.15", env: { inbox: null } });
+    const res = await post("/api/contact", valid, { ip: "203.0.113.15", env: { inbox: "" } });
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
   });
@@ -410,7 +414,7 @@ describe("POST /api/contact with dryRun", () => {
   });
 
   it("validates even when no inbox is configured", async () => {
-    const res = await post("/api/contact", body, { ip: "198.51.100.23", env: { inbox: null } });
+    const res = await post("/api/contact", body, { ip: "198.51.100.23", env: { inbox: "" } });
     expect(res.status).toBe(200);
   });
 });

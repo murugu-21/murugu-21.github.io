@@ -4,6 +4,8 @@ import { z } from "zod";
 import { CONTACT_DAILY_PER_CLIENT } from "../api/contact";
 import { buildDataset } from "../api/dataset";
 import { buildOpenApiDocument } from "../api/openapi";
+import { API_VERSION } from "../api/versioning";
+import { JsonObject } from "../json";
 import {
   LATEST_PROTOCOL_VERSION,
   LEGACY_PROTOCOL_VERSIONS,
@@ -32,24 +34,29 @@ const SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
 const POST_URI = `${RESOURCE_ORIGIN}/blog/coin-change-problem/index.md`;
 
-type JsonRpc<R> = {
-  jsonrpc?: "2.0";
-  id?: number | string;
-  result?: R;
-  error?: { code: number; message: string; data?: unknown };
-};
+const JsonRpcReply = z.object({
+  jsonrpc: z.literal("2.0").optional(),
+  id: z.union([z.number(), z.string()]).nullish(),
+  result: z.unknown().optional(),
+  error: z
+    .object({ code: z.number(), message: z.string(), data: z.unknown().optional() })
+    .optional()
+});
+type JsonRpcReply = z.infer<typeof JsonRpcReply>;
 
-type AnyResult = Record<string, unknown>;
-type ToolCallResult = { isError: boolean; content: Array<{ text: string }> };
+const ToolCallResult = z.object({
+  isError: z.boolean(),
+  content: z.array(z.object({ text: z.string() }))
+});
 
-async function send<R = AnyResult>(
+async function send(
   body: unknown,
   init: {
     headers?: Record<string, string>;
     ip?: string;
     method?: string;
   } = {}
-): Promise<{ res: Response; json: JsonRpc<R> }> {
+): Promise<{ res: Response; json: JsonRpcReply }> {
   const res = await fetchWorker("/mcp", {
     method: init.method ?? "POST",
     ip: init.ip ?? "203.0.113.70",
@@ -66,13 +73,13 @@ async function send<R = AnyResult>(
           : JSON.stringify(body)
   });
   const text = await res.text();
-  const json: JsonRpc<R> = text ? JSON.parse(text) : {};
+  const json = JsonRpcReply.parse(text ? JSON.parse(text) : {});
   return { res, json };
 }
 
-function resultOf<R>({ json }: { json: JsonRpc<R> }): R {
+function resultOf<S extends z.ZodType>({ json }: { json: JsonRpcReply }, schema: S): z.infer<S> {
   assert(json.result, `no result: ${JSON.stringify(json.error)}`);
-  return json.result;
+  return schema.parse(json.result);
 }
 
 /** A spec-conformant modern request: `_meta` in the body, mirrored in headers. */
@@ -104,17 +111,17 @@ function modern(
   };
 }
 
-async function callModern<R = AnyResult>(
+async function callModern(
   method: string,
   params: Record<string, unknown> = {},
   init: { ip?: string } = {}
 ) {
   const { body, headers } = modern(method, params);
-  return send<R>(body, { headers, ...init });
+  return send(body, { headers, ...init });
 }
 
-function legacy<R = AnyResult>(method: string, params: Record<string, unknown> = {}) {
-  return send<R>({ jsonrpc: "2.0", id: 1, method, params });
+function legacy(method: string, params: Record<string, unknown> = {}) {
+  return send({ jsonrpc: "2.0", id: 1, method, params });
 }
 
 /** Runs a tool directly, without the transport. */
@@ -329,13 +336,13 @@ describe("server/discover", () => {
   it("reports supported versions, capabilities, identity and instructions", async () => {
     const reply = await callModern("server/discover");
     expect(reply.res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    const result = resultOf(reply);
+    const result = resultOf(reply, JsonObject);
     expect(result.resultType).toBe("complete");
     expect(result.supportedVersions).toEqual(SUPPORTED_PROTOCOL_VERSIONS);
     expect(result.capabilities).toEqual({ tools: {}, resources: {} });
     expect(result).toHaveProperty(["_meta", SERVER_INFO], {
       name: "murugappan.dev",
-      version: expect.any(String)
+      version: API_VERSION
     });
     expect(result.instructions).toBeTruthy();
   });
@@ -346,18 +353,19 @@ describe("server/discover", () => {
       { headers: { "Mcp-Method": "server/discover" } }
     );
     expect(res.status).toBe(200);
-    expect(json.result?.supportedVersions).toEqual(SUPPORTED_PROTOCOL_VERSIONS);
+    expect(json.result).toHaveProperty("supportedVersions", SUPPORTED_PROTOCOL_VERSIONS);
   });
 });
 
 describe("tools over HTTP", () => {
   it("lists every tool as a cacheable complete result", async () => {
     const result = resultOf(
-      await callModern<{
-        resultType: string;
-        tools: Array<{ name: string; outputSchema: object }>;
-        cacheScope: string;
-      }>("tools/list")
+      await callModern("tools/list"),
+      z.object({
+        resultType: z.string(),
+        tools: z.array(z.object({ name: z.string(), outputSchema: JsonObject.optional() })),
+        cacheScope: z.string()
+      })
     );
     expect(result.resultType).toBe("complete");
     expect(result.cacheScope).toBe("public");
@@ -367,12 +375,13 @@ describe("tools over HTTP", () => {
 
   it("runs a read tool and returns structured content", async () => {
     const result = resultOf(
-      await callModern<{
-        resultType: string;
-        isError: boolean;
-        structuredContent: { person: { name: string } };
-        content: Array<{ type: string }>;
-      }>("tools/call", { name: "get_profile", arguments: {} })
+      await callModern("tools/call", { name: "get_profile", arguments: {} }),
+      z.object({
+        resultType: z.string(),
+        isError: z.boolean(),
+        structuredContent: z.object({ person: z.object({ name: z.string() }) }),
+        content: z.array(z.object({ type: z.string() }))
+      })
     );
     expect(result.resultType).toBe("complete");
     expect(result.isError).toBe(false);
@@ -388,12 +397,12 @@ describe("tools over HTTP", () => {
   });
 
   it("passes arguments through and reports a recoverable failure as isError", async () => {
-    const reply = await callModern<ToolCallResult>("tools/call", {
+    const reply = await callModern("tools/call", {
       name: "get_blog_post",
       arguments: { slug: "nope" }
     });
     expect(reply.json.error).toBeUndefined();
-    const result = resultOf(reply);
+    const result = resultOf(reply, ToolCallResult);
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toContain("search_blog_posts");
   });
@@ -413,11 +422,12 @@ describe("tools over HTTP", () => {
       }
     };
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
-      const reply = await callModern<ToolCallResult>("tools/call", args, { ip: "198.51.100.81" });
-      expect(resultOf(reply).isError).toBe(false);
+      const reply = await callModern("tools/call", args, { ip: "198.51.100.81" });
+      expect(resultOf(reply, ToolCallResult).isError).toBe(false);
     }
     const result = resultOf(
-      await callModern<ToolCallResult>("tools/call", args, { ip: "198.51.100.81" })
+      await callModern("tools/call", args, { ip: "198.51.100.81" }),
+      ToolCallResult
     );
     expect(result.isError).toBe(true);
     expect(result.content[0].text).toMatch(/allowance|limit/i);
@@ -427,11 +437,12 @@ describe("tools over HTTP", () => {
 describe("resources over HTTP", () => {
   it("lists the site's documents and every post", async () => {
     const result = resultOf(
-      await callModern<{
-        resultType: string;
-        resources: Array<{ uri: string }>;
-        cacheScope: string;
-      }>("resources/list")
+      await callModern("resources/list"),
+      z.object({
+        resultType: z.string(),
+        resources: z.array(z.object({ uri: z.string() })),
+        cacheScope: z.string()
+      })
     );
     expect(result.resultType).toBe("complete");
     expect(result.cacheScope).toBe("public");
@@ -440,21 +451,20 @@ describe("resources over HTTP", () => {
 
   it("lists the blog post URI template", async () => {
     const result = resultOf(
-      await callModern<{ resourceTemplates: Array<{ uriTemplate: string }> }>(
-        "resources/templates/list"
-      )
+      await callModern("resources/templates/list"),
+      z.object({ resourceTemplates: z.array(z.object({ uriTemplate: z.string() })) })
     );
     expect(result.resourceTemplates[0].uriTemplate).toBe(`${RESOURCE_ORIGIN}/blog/{slug}/index.md`);
   });
 
   it("reads a resource", async () => {
     const uri = `${RESOURCE_ORIGIN}/llms.txt`;
-    const reply = await callModern<{
-      resultType: string;
-      contents: Array<{ uri: string; text: string }>;
-    }>("resources/read", { uri });
+    const reply = await callModern("resources/read", { uri });
     expect(reply.res.status).toBe(200);
-    const result = resultOf(reply);
+    const result = resultOf(
+      reply,
+      z.object({ resultType: z.string(), contents: z.array(JsonObject) })
+    );
     expect(result.resultType).toBe("complete");
     expect(result.contents).toEqual([{ uri, mimeType: "text/plain", text: LLMS_TXT }]);
   });
@@ -471,18 +481,21 @@ describe("resources over HTTP", () => {
 
 describe("legacy (initialize-based) clients", () => {
   it("answers initialize with a negotiated legacy version and capabilities", async () => {
-    const reply = await legacy<{
-      protocolVersion: string;
-      capabilities: object;
-      serverInfo: { name: string };
-      instructions: string;
-    }>("initialize", {
+    const reply = await legacy("initialize", {
       protocolVersion: "2025-06-18",
       capabilities: {},
       clientInfo: { name: "LegacyClient", version: "0.1.0" }
     });
     expect(reply.res.status).toBe(200);
-    const result = resultOf(reply);
+    const result = resultOf(
+      reply,
+      z.looseObject({
+        protocolVersion: z.string(),
+        capabilities: JsonObject,
+        serverInfo: z.object({ name: z.string() }),
+        instructions: z.string()
+      })
+    );
     expect(result.protocolVersion).toBe("2025-06-18");
     expect(result.capabilities).toEqual({ tools: {}, resources: {} });
     expect(result.serverInfo.name).toBe("murugappan.dev");
@@ -491,11 +504,13 @@ describe("legacy (initialize-based) clients", () => {
   });
 
   it("falls back to its newest legacy version for an unknown request", async () => {
-    const reply = await legacy<{ protocolVersion: string }>("initialize", {
+    const reply = await legacy("initialize", {
       protocolVersion: "1999-01-01",
       capabilities: {}
     });
-    expect(resultOf(reply).protocolVersion).toBe(LEGACY_PROTOCOL_VERSIONS[0]);
+    expect(resultOf(reply, z.object({ protocolVersion: z.string() })).protocolVersion).toBe(
+      LEGACY_PROTOCOL_VERSIONS[0]
+    );
   });
 
   it("names the protocol versions it supports when it cannot serve initialize", async () => {
@@ -512,16 +527,18 @@ describe("legacy (initialize-based) clients", () => {
   });
 
   it("lists and calls tools without the modern headers", async () => {
-    const list = await legacy<{ tools: unknown[] }>("tools/list");
+    const list = await legacy("tools/list");
     expect(list.res.status).toBe(200);
-    expect(resultOf(list).tools).toHaveLength(MCP_TOOLS.length);
+    expect(resultOf(list, z.object({ tools: z.array(z.unknown()) })).tools).toHaveLength(
+      MCP_TOOLS.length
+    );
     expect(list.json.result).not.toHaveProperty("resultType");
 
-    const called = await legacy<ToolCallResult>("tools/call", {
+    const called = await legacy("tools/call", {
       name: "list_skills",
       arguments: {}
     });
-    expect(resultOf(called).isError).toBe(false);
+    expect(resultOf(called, ToolCallResult).isError).toBe(false);
   });
 
   it.each([
@@ -533,14 +550,19 @@ describe("legacy (initialize-based) clients", () => {
   });
 
   it("lists and reads resources without the modern headers", async () => {
-    const list = await legacy<{ resources: unknown[] }>("resources/list");
-    expect(resultOf(list).resources).toContainEqual(expect.objectContaining({ uri: POST_URI }));
+    const list = await legacy("resources/list");
+    expect(resultOf(list, z.object({ resources: z.array(z.unknown()) })).resources).toContainEqual(
+      expect.objectContaining({ uri: POST_URI })
+    );
     expect(list.json.result).not.toHaveProperty("resultType");
 
-    const read = await legacy<{ contents: Array<{ text: string }> }>("resources/read", {
+    const read = await legacy("resources/read", {
       uri: `${RESOURCE_ORIGIN}/AGENTS.md`
     });
-    const { contents } = resultOf(read);
+    const { contents } = resultOf(
+      read,
+      z.object({ contents: z.array(z.object({ text: z.string() })) })
+    );
     expect(contents[0].text).toBe(AGENTS_MD);
   });
 
@@ -700,7 +722,7 @@ describe("send_message", () => {
   });
 
   it.each<[string, TestEnvOptions & { ip: string }]>([
-    ["an unconfigured inbox", { ip: "198.51.100.64", inbox: null }],
+    ["an unconfigured inbox", { ip: "198.51.100.64", inbox: "" }],
     [
       "a failed delivery",
       { ip: "198.51.100.65", email: { send: () => Promise.reject(new Error("relay down")) } }
@@ -772,7 +794,9 @@ describe("readResource", () => {
     const [content] = contents ?? [];
     assert(content, "openapi.json returned no contents");
     expect(content.mimeType).toBe("application/json");
-    const doc: { openapi: string; servers: Array<{ url: string }> } = JSON.parse(content.text);
+    const doc = z
+      .object({ openapi: z.string(), servers: z.array(z.object({ url: z.string() })) })
+      .parse(JSON.parse(content.text));
     expect(doc.openapi).toBe("3.1.0");
     expect(doc.servers[0].url).toBe(RESOURCE_ORIGIN);
   });

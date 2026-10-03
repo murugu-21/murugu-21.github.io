@@ -4,11 +4,10 @@ import { fetchDeepseekBalance, isInsufficientBalance, runDeepseekExchange } from
 import { buildMessages, MAX_HISTORY_MESSAGES, type ModelMessage } from "../prompt";
 import { consumeSse } from "../sse";
 
-function sseStream(events: string[]): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
+function sseStream(events: string[]): ReadableStream<string> {
   return new ReadableStream({
     start(controller) {
-      for (const e of events) controller.enqueue(encoder.encode(e));
+      for (const e of events) controller.enqueue(e);
       controller.close();
     }
   });
@@ -18,13 +17,13 @@ describe("runDeepseekExchange", () => {
   it("sends an OpenAI chat-completions request and parses the stream", async () => {
     const calls: { url: string; init: RequestInit }[] = [];
     const fetcher: typeof fetch = async (url, init) => {
-      calls.push({ url: String(url), init: init ?? {} });
+      calls.push({ url: new Request(url).url, init: init ?? {} });
       return new Response(
-        sseStream([
+        [
           'data: {"choices":[{"delta":{"content":"hi there"}}]}\n\n',
           'data: {"choices":[],"usage":{"prompt_tokens":2100,"completion_tokens":12}}\n\n',
           "data: [DONE]\n\n"
-        ])
+        ].join("")
       );
     };
 
@@ -40,15 +39,16 @@ describe("runDeepseekExchange", () => {
     assert(captured, "no request was sent");
     expect(captured.url).toBe("https://api.deepseek.com/chat/completions");
     expect(new Headers(captured.init.headers).get("authorization")).toBe("Bearer sk-test");
-    const body = JSON.parse(String(captured.init.body));
-    expect(body.stream).toBe(true);
-    expect(body.stream_options).toEqual({ include_usage: true });
+    assert(typeof captured.init.body === "string", "request body is not a JSON string");
+    const body: unknown = JSON.parse(captured.init.body);
+    expect(body).toHaveProperty("stream", true);
+    expect(body).toHaveProperty("stream_options", { include_usage: true });
     // Reasoning sharpens tool selection; with no max_tokens it can't starve the reply.
-    expect(body.thinking).toEqual({ type: "enabled" });
+    expect(body).toHaveProperty("thinking", { type: "enabled" });
     // Truncating a concierge answer mid-sentence is worse than the tokens it
     // saves; length is the prompt's job and spend is the RateLimiter's.
-    expect(body.max_tokens).toBeUndefined();
-    expect(body.tools[0].function.name).toBe("capture_opportunity");
+    expect(body).not.toHaveProperty("max_tokens");
+    expect(body).toHaveProperty(["tools", 0, "function", "name"], "capture_opportunity");
 
     expect(result.content).toBe("hi there");
     expect(deltas).toEqual(["hi there"]);

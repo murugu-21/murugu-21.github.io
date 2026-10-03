@@ -22,8 +22,10 @@ app.use(
       // `request.cf` exists only on the edge request, so forward country and IP
       // as headers. Delete before set so a client-sent value can't pass as ours.
       onBeforeConnect: (req, _lobby, c) => {
-        const cf = c.req.raw.cf as IncomingRequestCfProperties | undefined;
-        const country = cf?.country ?? c.req.header("CF-IPCountry");
+        const { cf } = c.req.raw;
+        const edgeCountry =
+          cf && "country" in cf && typeof cf.country === "string" ? cf.country : undefined;
+        const country = edgeCountry ?? c.req.header("CF-IPCountry");
         const ip = c.req.header("CF-Connecting-IP");
 
         const headers = new Headers(req.headers);

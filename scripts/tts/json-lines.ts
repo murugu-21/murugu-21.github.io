@@ -26,10 +26,11 @@ export function startJsonLines(command: string, args: string[]) {
   const exited = new Promise<void>(res => proc.on("exit", () => res()));
   return {
     next,
-    send(line: string) {
+    // Arrow properties: callers destructure these off the returned object.
+    send: (line: string) => {
       proc.stdin.write(`${line}\n`);
     },
-    async close() {
+    close: async () => {
       proc.stdin.write("quit\n");
       proc.stdin.end();
       await exited;

@@ -11,8 +11,9 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { z } from "zod";
 
-import { alignWords, type TimedWord, type WhisperWord } from "../src/blog/utils/audio-words.ts";
+import { alignWords, type TimedWord } from "../src/blog/utils/audio-words.ts";
 import {
   PYTHON,
   ROOT,
@@ -33,17 +34,18 @@ const WORKER = join(ROOT, "scripts", "tts", "whisper.py");
 
 const r2 = r2Store(flags.has("--local"));
 
-interface WhisperReply {
-  error?: string;
-  words?: WhisperWord[];
-}
+const WhisperReply = z.object({
+  error: z.string().optional(),
+  words: z.array(z.object({ word: z.string(), start: z.number(), end: z.number() })).optional()
+});
+type WhisperReply = z.infer<typeof WhisperReply>;
 
 function startWorker() {
   const { next, send, close } = startJsonLines(PYTHON, [WORKER]);
   return {
     async transcribe(job: { id: string; wav: string; text: string }): Promise<WhisperReply> {
       send(JSON.stringify(job));
-      return (await next()) as WhisperReply;
+      return WhisperReply.parse(await next());
     },
     close
   };
@@ -59,10 +61,11 @@ interface TimingBlock {
   end: number;
   words?: TimedWord[];
 }
-interface Timings {
-  version: number;
-  blocks: TimingBlock[];
-}
+// Loose: every field is written back untouched.
+const Timings = z.looseObject({
+  version: z.number(),
+  blocks: z.array(z.looseObject({ text: z.string(), start: z.number(), end: z.number() }))
+});
 
 async function alignPost(slug: string, worker: Worker) {
   const tmp = mkdtempSync(join(tmpdir(), `align-${slug}-`));
@@ -73,7 +76,7 @@ async function alignPost(slug: string, worker: Worker) {
       log(`${slug}: no audio in R2, skipping`);
       return;
     }
-    const timings: Timings = JSON.parse(readFileSync(jsonPath, "utf8"));
+    const timings = Timings.parse(JSON.parse(readFileSync(jsonPath, "utf8")));
     if (timings.version >= 2 && !flags.has("--force")) {
       log(`${slug}: already aligned, skipping`);
       return;

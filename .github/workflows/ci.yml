@@ -27,10 +27,7 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
       - run: bun install --frozen-lockfile
-      # Secrets live in gitignored .dev.vars locally; wrangler types needs the
-      # keys present so the generated Env includes them.
-      - run: printf 'OPPORTUNITY_INBOX=ci@example.com\nDEEPSEEK_API_KEY=placeholder-key\n' > .dev.vars
-      - run: bunx wrangler types
+      - run: bun run cf-typegen
       - run: bun run check-format
       - run: bun run lint
       - run: bun run check:astro

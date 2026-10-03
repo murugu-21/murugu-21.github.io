@@ -155,6 +155,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     monthsBetween,
     totalExperienceMonths
   } from "../lib/experience";
+  import { parseStringArray } from "../lib/data-attributes";
 
   const now = currentMonth();
   const parse = (v: string) => {
@@ -169,7 +170,6 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
   const total = document.querySelector<HTMLElement>(".experience-total-value");
   const periods = total?.dataset.periods;
   if (total && periods) {
-    const list: string[] = JSON.parse(periods);
-    total.textContent = formatDuration(totalExperienceMonths(list, now));
+    total.textContent = formatDuration(totalExperienceMonths(parseStringArray(periods), now));
   }
 </script>

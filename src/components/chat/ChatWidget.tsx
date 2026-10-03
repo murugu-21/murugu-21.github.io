@@ -1,10 +1,11 @@
 // Jarvis chat island, shared by the portfolio and blog via ChatWidget.astro.
 import React, { useEffect, useRef, useState } from "react";
+import { PUBLIC_CHAT_HOST } from "astro:env/client";
 import { nanoid } from "nanoid";
 import { PartySocket } from "partysocket";
 import { Download, EllipsisVertical, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 
-import { GREETING, type ServerMessage } from "../../../worker/protocol";
+import { GREETING, parseServerMessage, type ServerMessage } from "../../../worker/protocol";
 import { ActivityRow, type Activity } from "./ActivityRow";
 import { Button } from "../ui/button";
 import { Card, CardFooter, CardHeader } from "../ui/card";
@@ -50,7 +51,9 @@ const URL_SPLIT = /(https?:\/\/[^\s]+)/;
 const MD_LINK = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
 
 function renderWithLinks(raw: string) {
-  const text = raw.replace(MD_LINK, (_m, label, url) => (label ? `${label}: ${url}` : url));
+  const text = raw.replace(MD_LINK, (_m, label: string, url: string) =>
+    label ? `${label}: ${url}` : url
+  );
   return text.split(URL_SPLIT).map((part, i) => {
     if (i % 2 === 0) return part;
     const trailing = /[.,!?;:)]+$/.exec(part)?.[0] ?? "";
@@ -176,13 +179,15 @@ export function ChatWidget() {
   const connect = (): PartySocket => {
     if (socketRef.current) return socketRef.current;
     const socket = new PartySocket({
-      host: import.meta.env.PUBLIC_CHAT_HOST || window.location.host,
+      host: PUBLIC_CHAT_HOST || window.location.host,
       party: "chat-room",
       room: roomId()
     });
     socket.addEventListener("message", event => {
       try {
-        handleServerMessage(JSON.parse(event.data));
+        const msg = parseServerMessage(event.data);
+        if (!msg) throw new Error("chat frame off the protocol");
+        handleServerMessage(msg);
       } catch (err) {
         // A protocol bug worth tracking; nothing the visitor typed is passed.
         reportError(err, { surface: "chat" });

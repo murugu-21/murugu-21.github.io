@@ -204,11 +204,9 @@ export class ChatRoom extends Server<Env> {
     return result;
   }
 
-  // Typed non-optional, but a deploy can lack the secret and `.dev.vars` holds
-  // a placeholder.
+  // Typed required (secrets.required gates deploy), but local dev may lack it.
   private deepseekKey(): string | null {
-    const trimmed = this.env.DEEPSEEK_API_KEY?.trim();
-    return trimmed && !trimmed.startsWith("placeholder") ? trimmed : null;
+    return this.env.DEEPSEEK_API_KEY?.trim() || null;
   }
 
   // Stores the lead, emails once per room, and has the model phrase the

@@ -26,6 +26,7 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseHTML } from "linkedom";
+import { z } from "zod";
 
 import { speechBlocks } from "../src/blog/utils/speech.ts";
 import { normalizeSpeechText, packSentences, spokenHash } from "../src/blog/utils/audio-prep.ts";
@@ -96,11 +97,13 @@ function extractBlocks(slug: string): string[] {
 }
 
 // synth.py replies: one after model load, one per chunk, `done` per job.
-interface ReadyMsg {
-  loadSeconds: number;
-}
-type ChunkMsg = { id: string; error: string } | { id: string; seconds: number; wall: number };
-type JobMsg = { done: true } | ({ done?: false } & ChunkMsg);
+const ReadyMsg = z.object({ loadSeconds: z.number() });
+const ChunkMsg = z.union([
+  z.object({ id: z.string(), error: z.string() }),
+  z.object({ id: z.string(), seconds: z.number(), wall: z.number() })
+]);
+type ChunkMsg = z.infer<typeof ChunkMsg>;
+const JobMsg = z.union([z.object({ done: z.literal(true) }), ChunkMsg]);
 
 interface Chunk {
   id: string;
@@ -110,12 +113,12 @@ interface Chunk {
 function startWorker() {
   const { next, send, close } = startJsonLines(PYTHON, [WORKER]);
   return {
-    ready: next() as Promise<ReadyMsg>,
+    ready: next().then(msg => ReadyMsg.parse(msg)),
     async runJob(jobPath: string, onChunk: (msg: ChunkMsg) => void) {
       send(jobPath);
       for (;;) {
-        const msg = (await next()) as JobMsg;
-        if (msg.done) return;
+        const msg = JobMsg.parse(await next());
+        if ("done" in msg) return;
         onChunk(msg);
       }
     },
@@ -129,8 +132,10 @@ function existingHash(slug: string, tmp: string): string | null {
   const file = join(tmp, "existing.json");
   if (!r2.get(`${AUDIO_PREFIX}/${slug}.json`, file)) return null;
   try {
-    const { hash }: { hash?: string } = JSON.parse(readFileSync(file, "utf8"));
-    return hash ?? null;
+    const existing = z
+      .object({ hash: z.string() })
+      .safeParse(JSON.parse(readFileSync(file, "utf8")));
+    return existing.data?.hash ?? null;
   } catch {
     return null;
   }

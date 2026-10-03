@@ -10,25 +10,26 @@ import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "../protocol";
 import worker from "../server";
 import {
   BLOG_NOT_FOUND_HTML,
+  connectRoom,
   fakeAssets,
+  fakeFetcher,
   fetchWorker,
   LLMS_TXT,
   NOT_FOUND_HTML,
+  testEnv,
   visitorMeta
 } from "./fixtures";
 
 // Every response from this ASSETS stub is marked, proving whether a request
 // fell through to assets or was claimed by the worker.
-function envWithAssets(onFetch?: (request: Request) => void): Env {
+function envWithAssets(onFetch: (request: Request) => void): Env {
   return {
-    ...env,
-    ASSETS: {
-      fetch: (input: RequestInfo | URL) => {
-        onFetch?.(new Request(input));
-        return Promise.resolve(new Response("asset", { status: 200 }));
-      }
-    }
-  } as unknown as Env;
+    ...testEnv(),
+    ASSETS: fakeFetcher(input => {
+      onFetch(new Request(input));
+      return Promise.resolve(new Response("asset", { status: 200 }));
+    })
+  };
 }
 
 describe("routing", () => {
@@ -66,35 +67,8 @@ describe("routing", () => {
 });
 
 describe("the chat-room WebSocket", () => {
-  const upgrade = async (room: string, headers: Record<string, string> = {}) => {
-    const response = await worker.fetch(
-      new Request(`https://example.com/parties/chat-room/${room}`, {
-        headers: { Upgrade: "websocket", ...headers }
-      }),
-      envWithAssets()
-    );
-    expect(response.status).toBe(101);
-    expect(response.webSocket).not.toBeNull();
-    response.webSocket?.accept();
-    response.webSocket?.close();
-    return env.ChatRoom.get(env.ChatRoom.idFromName(room));
-  };
-
-  it("passes the visitor's country and IP to the room on upgrade", async () => {
-    const stub = await upgrade("geo-room-ws", {
-      "CF-Connecting-IP": "198.51.100.42",
-      "CF-IPCountry": "IN"
-    });
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      expect(visitorMeta(instance)).toMatchObject({
-        visitor_country: "IN",
-        visitor_ip: "198.51.100.42"
-      });
-    });
-  });
-
   it("drops a client-supplied visitor header when Cloudflare knows nothing", async () => {
-    const stub = await upgrade("spoof-room-ws", {
+    const { stub } = await connectRoom("spoof-room-ws", {
       [VISITOR_COUNTRY_HEADER]: "XX",
       [VISITOR_IP_HEADER]: "203.0.113.66"
     });

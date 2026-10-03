@@ -1,3 +1,5 @@
+import { RESUME_PHONE } from "astro:env/server";
+
 import { SITE_ORIGIN } from "../lib/site";
 import { socialMediaLinks } from "./portfolio";
 
@@ -20,7 +22,7 @@ export const resumeContact: ResumeContact = {
   title: "Full Stack Engineer",
   location: "Bangalore, India",
   email: socialMediaLinks.gmail,
-  phone: import.meta.env.RESUME_PHONE ?? "",
+  phone: RESUME_PHONE ?? "",
   linkedin: socialMediaLinks.linkedin,
   github: socialMediaLinks.github,
   site: SITE_ORIGIN

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import type { Browser, Page } from "puppeteer";
 import sharp from "sharp";
 import subsetFont from "subset-font";
+import { z } from "zod";
 
 import { launchBrowser } from "./launch-browser.ts";
 import {
@@ -29,16 +30,27 @@ import {
 // otherwise a substitute face's widths make labels overrun their boxes. The
 // theme background is baked in so the zoomed copy keeps a card behind labels.
 
+// Set by the mermaid bundle that renderOne's page loads.
+declare global {
+  interface Window {
+    mermaid?: typeof import("mermaid").default;
+  }
+}
+
 const CONTENT_DIR = fileURLToPath(new URL("../content/blog/", import.meta.url));
 const MERMAID_JS = fileURLToPath(
   new URL("../node_modules/mermaid/dist/mermaid.min.js", import.meta.url)
 );
-const MERMAID_VERSION: string = JSON.parse(
-  readFileSync(
-    fileURLToPath(new URL("../node_modules/mermaid/package.json", import.meta.url)),
-    "utf8"
-  )
-).version;
+const MERMAID_VERSION = z
+  .object({ version: z.string() })
+  .parse(
+    JSON.parse(
+      readFileSync(
+        fileURLToPath(new URL("../node_modules/mermaid/package.json", import.meta.url)),
+        "utf8"
+      )
+    )
+  ).version;
 const FONT_FILE = fileURLToPath(
   new URL(
     "../node_modules/@fontsource-variable/fira-code/files/fira-code-latin-wght-normal.woff2",
@@ -190,7 +202,8 @@ async function renderOne({
   return page.evaluate(
     async ({ src, themeName, fontFamily, svgId }) => {
       // "strict": no click callbacks, labels escaped; files are also served directly.
-      const m = (window as unknown as { mermaid: typeof import("mermaid").default }).mermaid;
+      const m = window.mermaid;
+      if (!m) throw new Error("mermaid did not load in the page");
       m.initialize({ startOnLoad: false, theme: themeName, securityLevel: "strict", fontFamily });
       const { svg } = await m.render(svgId, src);
       // mermaid emits HTML (bare `<br>` in labels); <img> parses as XML and

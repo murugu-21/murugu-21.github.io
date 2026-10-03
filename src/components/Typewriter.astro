@@ -17,11 +17,13 @@ const { roles } = Astro.props;
 </span>
 
 <script>
+  import { parseStringArray } from "../lib/data-attributes";
+
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   document.querySelectorAll<HTMLElement>(".typewriter").forEach(el => {
     if (reduced) return;
-    const roles: string[] = JSON.parse(el.dataset.roles || "[]");
+    const roles = parseStringArray(el.dataset.roles || "[]");
     const text = el.querySelector<HTMLElement>(".typewriter-text");
     if (!text || roles.length < 2) return;
 

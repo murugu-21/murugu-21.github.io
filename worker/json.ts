@@ -10,7 +10,7 @@ export const lenient = <T extends z.ZodType>(schema: T) => schema.optional().cat
 export const jsonString = <T extends z.ZodType>(schema: T) =>
   z
     .string()
-    .transform((text, ctx) => {
+    .transform((text, ctx): unknown => {
       try {
         return JSON.parse(text);
       } catch {

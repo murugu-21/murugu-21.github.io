@@ -13,6 +13,19 @@ interface PostHog {
   startSessionRecording(): void;
 }
 
+declare global {
+  // The PostHog snippet and toolbar share this global; anything may sit there.
+  var posthog: unknown;
+}
+
+const isPostHog = (p: unknown): p is PostHog =>
+  typeof p === "object" &&
+  p !== null &&
+  "capture" in p &&
+  typeof p.capture === "function" &&
+  "register" in p &&
+  typeof p.register === "function";
+
 /** Injectable for tests; production dynamic-imports the real browser SDK. */
 type SdkLoader = () => Promise<PostHog>;
 
@@ -35,10 +48,7 @@ const stopEarlyErrorCapture = () => {
 
 const client = (): PostHog | null => {
   if (sdk) return sdk;
-  const p = (globalThis as { posthog?: Partial<PostHog> }).posthog;
-  return typeof p?.capture === "function" && typeof p.register === "function"
-    ? (p as PostHog)
-    : null;
+  return isPostHog(globalThis.posthog) ? globalThis.posthog : null;
 };
 
 // Run now if the SDK is up, buffer while it loads, drop otherwise.
@@ -80,19 +90,25 @@ export function reportError(error: unknown, props?: Record<string, string>): voi
 
 const TRACKED = new WeakSet<object>();
 
+// Not `instanceof Element`: the Workers test pool has no DOM globals.
+const isElement = (target: EventTarget | null): target is Element =>
+  target !== null && "closest" in target && typeof target.closest === "function";
+
 /**
  * Delegated click tracking via `data-ph-event`, plus optional `data-ph-prop` /
  * `data-ph-value`. One listener per document, so later-rendered islands work.
  */
 export function initClickTracking(root?: Document): void {
-  const doc = root ?? (globalThis as { document?: Document }).document;
+  // lib.dom types this as always defined; it is undefined outside a browser
+  const doc: Document | undefined = root ?? globalThis.document;
   if (!doc || TRACKED.has(doc)) return;
   TRACKED.add(doc);
   doc.addEventListener(
     "click",
     event => {
-      const target = event.target as Element | null;
-      const el = target?.closest?.<HTMLElement>("[data-ph-event]");
+      const target = event.target;
+      if (!isElement(target)) return;
+      const el = target.closest<HTMLElement>("[data-ph-event]");
       const name = el?.dataset.phEvent;
       if (!el || !name) return;
       const { phProp, phValue } = el.dataset;
@@ -159,7 +175,7 @@ export async function initAnalytics(
     });
     sdk = ph;
     stopEarlyErrorCapture();
-    const win = (globalThis as { window?: EventTarget }).window;
+    const win: EventTarget | undefined = globalThis.window;
     if (win) {
       onFirstInteraction(() => {
         try {
@@ -170,7 +186,7 @@ export async function initAnalytics(
       }, win);
     }
     // the PostHog toolbar looks for the global
-    (globalThis as { posthog?: PostHog }).posthog = ph;
+    globalThis.posthog = ph;
     const queued = pending;
     pending = null;
     for (const fn of queued) {
@@ -218,7 +234,7 @@ export function scheduleSdkLoad(
  * the SDK boots, since its own autocapture misses everything before that.
  */
 export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> {
-  const doc = root ?? (globalThis as { document?: Document }).document;
+  const doc: Document | undefined = root ?? globalThis.document;
   if (!doc) return Promise.resolve();
   const meta = (name: string) =>
     doc.querySelector<HTMLMetaElement>(`meta[name="${name}"]`)?.getAttribute("content") ??

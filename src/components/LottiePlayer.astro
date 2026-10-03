@@ -24,7 +24,7 @@ const { src, label } = Astro.props;
       if (!src) throw new Error("lottie holder has no data-lottie-src");
       const res = await fetch(src);
       if (!res.ok) throw new Error(`lottie fetch ${res.status}`);
-      const data = await res.json();
+      const data: unknown = await res.json();
       lottie.loadAnimation({
         container: el,
         renderer: "svg",

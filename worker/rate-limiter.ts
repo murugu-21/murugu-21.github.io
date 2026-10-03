@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { z } from "zod";
 
 import { fetchDeepseekBalance, type DeepseekBalance } from "./ai";
 // Limits live in api/contact.ts so the Astro bundle can quote them without
@@ -15,7 +16,12 @@ const BALANCE_TTL_MS = 10 * 60 * 1000;
 
 const BALANCE_KEY = "deepseek:balance";
 
-type CachedBalance = DeepseekBalance & { checkedAt: number };
+const CachedBalance = z.object({
+  available: z.boolean(),
+  totalUsd: z.number(),
+  checkedAt: z.number()
+}) satisfies z.ZodType<DeepseekBalance>;
+type CachedBalance = z.infer<typeof CachedBalance>;
 
 const hasFunds = ({ available, totalUsd }: DeepseekBalance): boolean =>
   available && totalUsd > BALANCE_RESERVE_USD;
@@ -49,7 +55,7 @@ export class RateLimiter extends DurableObject<Env> {
     // Injected by tests only; an RPC caller passes just the key.
     fetcher: typeof fetch = fetch
   ): Promise<boolean> {
-    const cached = await this.ctx.storage.get<CachedBalance>(BALANCE_KEY);
+    const cached = CachedBalance.safeParse(await this.ctx.storage.get(BALANCE_KEY)).data;
     if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) return hasFunds(cached);
     try {
       const balance = await fetchDeepseekBalance(apiKey, fetcher);

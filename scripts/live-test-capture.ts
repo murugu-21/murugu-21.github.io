@@ -8,7 +8,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { buildMessages, TOOLS, type ModelMessage, type ModelToolCall } from "../worker/prompt.ts";
+import { z } from "zod";
+
+import { jsonString } from "../worker/json.ts";
+import { buildMessages, TOOLS, type ModelMessage } from "../worker/prompt.ts";
 import { SITE_DIR } from "./site-dir.ts";
 
 // ai.ts uses bundler resolution bare Node can't follow, so read its constants
@@ -39,9 +42,28 @@ const visitorTurns = [
 const CLAIMS_RECORDED =
   /\b(noted (it|this|that)|pass(ed|ing)? (it |this )?(on|along)|forwarded|be in touch|let him know)\b/i;
 
-type Completion = {
-  choices: { message: { content?: string; tool_calls?: ModelToolCall[] } }[];
-};
+const Completion = z.object({
+  choices: z
+    .array(
+      z.object({
+        message: z.object({
+          content: z.string().nullish(),
+          tool_calls: z
+            .array(
+              z.object({
+                id: z.string(),
+                type: z.literal("function"),
+                function: z.object({ name: z.string(), arguments: z.string() })
+              })
+            )
+            .optional()
+        })
+      })
+    )
+    .min(1)
+});
+// Loose so the report prints every argument the model sent.
+const CaptureArguments = jsonString(z.looseObject({ contact: z.string().optional() }));
 
 const history: ModelMessage[] = [];
 let captured: { contact?: string } | null = null;
@@ -62,7 +84,7 @@ for (const turn of visitorTurns) {
   });
   if (!res.ok) throw new Error(`${model}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
 
-  const { choices }: Completion = await res.json();
+  const { choices } = Completion.parse(await res.json());
   const message = choices[0].message;
   const toolCalls = message.tool_calls ?? [];
   const content = (message.content ?? "").trim();
@@ -72,7 +94,7 @@ for (const turn of visitorTurns) {
   console.log(`tools  : ${toolCalls.map(c => c.function.name).join(", ") || "(none)"}`);
 
   const capture = toolCalls.find(c => c.function.name === "capture_opportunity");
-  if (capture) captured = JSON.parse(capture.function.arguments);
+  if (capture) captured = CaptureArguments.parse(capture.function.arguments);
   if (!captured && CLAIMS_RECORDED.test(content)) falseClaim ??= content;
 
   history.push({

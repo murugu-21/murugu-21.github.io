@@ -10,6 +10,7 @@ One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so 
 
 ```bash
 bun install
+bunx astro sync && bun run cf-typegen   # once after cloning: lint and the typechecks need the generated types
 bun run dev       # Astro dev server with the Worker in workerd, on :4399
 bun run build     # site → dist/client, Worker → dist/server, plus markdown renditions and the resume PDF
 bun run preview   # the production build in workerd, API and chat included
@@ -59,7 +60,8 @@ GITHUB_TOKEN=ghp_xxx bun run build
 
 ```bash
 bun run check-format   # oxfmt, plus prettier for .astro and content markdown
-bun run lint           # oxlint
+bun run lint           # astro sync, then oxlint (type-aware via oxlint-tsgolint)
+bun run cf-typegen     # regenerate worker-configuration.d.ts (vars typed as string, so tests can override them)
 bun run check:astro    # type-check .astro files
 bun run check:src      # type-check src/, scripts/ and the config files
 bun run check:worker   # type-check worker/
@@ -81,8 +83,9 @@ The build and deploy commands are dashboard settings (Workers → this applicati
 
 - **Build command.** `bun run build`. Workers Builds installs dependencies from `bun.lock` before running it.
 - **Deploy command.** `bun run deploy`, not `bunx wrangler deploy`. It applies pending D1 migrations from `./migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
-- **Build env vars.** `BUN_VERSION` (match `packageManager`; the image's default Bun is too old), `GITHUB_TOKEN`, `REQUIRE_GITHUB_PROFILE=1` (fail the build instead of falling back when the profile fetch fails), `POST_HOG_TOKEN`, `POST_HOG_URL`, `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and optionally `RESUME_PHONE`.
-- **Worker secrets.** `OPPORTUNITY_INBOX` and `DEEPSEEK_API_KEY`, set with `bunx wrangler secret put <name>`.
+- **Build env vars.** `BUN_VERSION` (match `packageManager`; the image's default Bun is too old), `GITHUB_TOKEN`, `REQUIRE_GITHUB_PROFILE=1` (fail the build instead of falling back when the profile fetch fails), `POST_HOG_TOKEN`, `POST_HOG_URL`, `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and optionally `RESUME_PHONE`. Those the site code reads are declared in `env.schema` in `astro.config.ts`; the build fails on a malformed value.
+- **Worker secrets.** `DEEPSEEK_API_KEY`, set with `bunx wrangler secret put DEEPSEEK_API_KEY`. It is listed in `secrets.required` in `wrangler.jsonc`, so a deploy fails while it is unset. The build itself lacks it, so its log warns "Missing required secrets"; that warning is harmless.
+- **Contact inbox.** `OPPORTUNITY_INBOX` is a plain var in `wrangler.jsonc`, and the `send_email` binding is locked to the same address (`destination_address`, which must be verified in Email Routing). `astro build` fails if it isn't a valid address or the two differ, so Workers Builds never deploys a bad inbox.
 
 ## Analytics
 
@@ -250,7 +253,7 @@ A public, unauthenticated JSON API over the site's content, for agents and devel
 - **Rate limits** (`worker/api/ratelimit.ts`). Every response carries `RateLimit-Policy` and `RateLimit` (draft-ietf-httpapi-ratelimit-headers), mirrored as `X-RateLimit-*`, plus `Retry-After` on a 429. Reads allow 600 per 60 s per client, counted per isolate so they never wait on a Durable Object; the limit is therefore per edge location. Contact responses report the real daily allowance from `RateLimiter.takeContactSlot()` / `contactUsage()`.
 - **One copy of the data.** `src/pages/api/dataset.json.ts` runs `src/data/portfolio.ts` and `resume.ts` through `buildDataset()` (`worker/api/dataset.ts`) and prerenders `dist/client/api/dataset.json`, which the Worker reads through `ASSETS`. Posts come from the root `llms.txt` and the per-post `index.md` renditions, and `/developers` renders its endpoint table from the served OpenAPI document, so none of them can drift from the source data.
 - **Worker-owned paths.** `run_worker_first` in `wrangler.jsonc` claims `/api/*`, `/openapi.json`, `/mcp*`, `/mcp.json`, `/.well-known/*`, `/parties/*` and `/blog/audio/*`. That keeps API errors in the JSON envelope rather than HTML, and lets generated discovery documents name the host that answered. Keep the list in sync with `worker/server.ts`.
-- **`POST /api/v1/contact`.** It emails `OPPORTUNITY_INBOX` through the `send_email` binding the chat also uses. The `RateLimiter` Durable Object caps it at 3 per client IP per UTC day and 20 site-wide. `"dryRun": true` validates a payload without sending or using a slot. Without the secret it answers 503.
+- **`POST /api/v1/contact`.** It emails `OPPORTUNITY_INBOX` through the `send_email` binding the chat also uses. The `RateLimiter` Durable Object caps it at 3 per client IP per UTC day and 20 site-wide. `"dryRun": true` validates a payload without sending or using a slot. Without the EMAIL binding or inbox it answers 503.
 
 ## Discovery documents and the 404
 
@@ -283,7 +286,7 @@ Jarvis, an AI concierge on every portfolio and blog page.
 - **Widget.** `src/components/chat/`, which the blog imports too. While a turn is in flight, `ActivityRow` shows a rotating label ("Discombobulating…") with an elapsed counter, then the real action when the Worker sends a `tool` frame ("Reading blog/…", "Noting your details"). The frame carries only the tool name and a page path, never arguments, and isn't persisted. The row is `aria-hidden` behind a stable `sr-only` "Jarvis is typing", so the live region stays quiet.
 - **Visitor context.** The Worker reads the country from the WebSocket upgrade (`request.cf.country`, falling back to `CF-IPCountry`) and the IP from `CF-Connecting-IP`, and passes both to the room as headers, since a Durable Object never sees `request.cf`. Client-sent copies are deleted first so they can't be spoofed. `ChatRoom.onConnect` stores them under `visitor_*` meta keys and upserts one `rooms` row per room into D1 (`migrations/0002_rooms.sql`), keeping `first_seen`. IPs are personal data: they stay in the room and that table, never in analytics.
 - **Limits.** 40 messages per day per conversation (`ROOM_DAILY_LIMIT`), 1000 characters per message (`MAX_MESSAGE_LENGTH`). The `RateLimiter` Durable Object reads DeepSeek's `GET /user/balance` (cached 10 minutes, shared by every room, fails open) and stops chat below `BALANCE_RESERVE_USD`. A 402 from a chat call stops every room immediately. A top-up takes effect at the next cache expiry, with no deploy. At about $0.003 per turn, the account balance is the spending cap.
-- **Local dev.** Put `OPPORTUNITY_INBOX=you@example.com` and `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored), then use `bun run dev` or `bun run build && bun run preview` (http://localhost:4399). The widget connects on the same origin with full Durable Objects. Without the key the chat disables itself. Dev calls hit the real DeepSeek API and are billed.
+- **Local dev.** Put `DEEPSEEK_API_KEY=sk-...` in `.dev.vars` (gitignored), then use `bun run dev` or `bun run build && bun run preview` (http://localhost:4399). The widget connects on the same origin with full Durable Objects. Without the key the chat disables itself. Dev calls hit the real DeepSeek API and are billed. Don't put `OPPORTUNITY_INBOX` there: it would override the var, and the binding's `destination_address` lock rejects any other address.
 
 ## Credits
 

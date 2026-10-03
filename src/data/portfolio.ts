@@ -1,4 +1,5 @@
 import type { ImageMetadata } from "astro";
+import { RESUME_PHONE } from "astro:env/server";
 
 import medmeLogo from "../assets/images/medmeLogo.png";
 import hypervergeLogo from "../assets/images/hypervergeLogo.png";
@@ -314,7 +315,7 @@ export const contactInfo = {
   subtitle: "Want to discuss a project, a role, or just say hi? My inbox is open.",
   // Never hardcoded: comes from RESUME_PHONE. Renders only in GithubCard's
   // no-profile fallback.
-  number: import.meta.env.RESUME_PHONE ?? "",
+  number: RESUME_PHONE ?? "",
   emailAddress: socialMediaLinks.gmail
 };
 

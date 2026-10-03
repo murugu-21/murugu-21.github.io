@@ -28,7 +28,7 @@ type ContactParseResult =
   { ok: true; value: ContactRequest; dryRun: boolean } | { ok: false; issues: FieldIssue[] };
 
 // Deliberately loose: stricter patterns reject deliverable addresses.
-const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+export const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 // Blank after trimming counts as absent.
 const optionalText = (max: number) =>
