@@ -7,7 +7,6 @@
 //   bun run audio --force        # regenerate even if unchanged
 //   bun run audio --local        # target the local R2 that `bun run dev` serves
 //   bun run audio --dry-run      # extract + hash only, no synthesis/upload
-//   bun run audio --keep         # leave the temp dir behind for inspection
 //   bun run audio --upload-voice # push .voice/* to R2 once
 //
 // Per post: built HTML → speechBlocks (same as the page) → ≤300-char sentence
@@ -151,6 +150,7 @@ async function renderPost(
   const blocks = extractBlocks(slug);
   const hash = await spokenHash(blocks);
   const tmp = mkdtempSync(join(tmpdir(), `audio-${slug}-`));
+  let rendering = false;
   try {
     if (!flags.has("--force") && existingHash(slug, tmp) === hash) {
       log(`${slug}: unchanged, skipping`);
@@ -168,6 +168,8 @@ async function renderPost(
       `${slug}: ${blocks.length} blocks, ${chunks.length} chunks, ${blocks.join(" ").length} chars`
     );
     if (!worker) return;
+    rendering = true;
+    log(`${slug}: rendering in ${tmp}`);
 
     const outDir = join(tmp, "chunks");
     const jobPath = join(tmp, "job.json");
@@ -257,8 +259,8 @@ async function renderPost(
     r2.put(`${AUDIO_PREFIX}/${slug}.json`, json, "application/json");
     log(`${slug}: uploaded ${(duration / 60).toFixed(1)} min`);
   } finally {
-    if (flags.has("--keep")) log(`${slug}: kept ${tmp}`);
-    else rmSync(tmp, { recursive: true, force: true });
+    // A started render stays on disk, so a failed upload can be pushed by hand.
+    if (!rendering) rmSync(tmp, { recursive: true, force: true });
   }
 }
 
