@@ -14,11 +14,11 @@ import { onFirstInteraction } from "./first-interaction";
 
 const fakeSdk = () => {
   const sdk = {
-    capture: vi.fn(),
-    register: vi.fn(),
-    captureException: vi.fn(),
+    capture: vi.fn<(event: string, properties?: Record<string, string>) => void>(),
+    register: vi.fn<(properties: Record<string, string>) => void>(),
+    captureException: vi.fn<(error: unknown, properties?: Record<string, string>) => void>(),
     init: vi.fn<(token: string, config: Record<string, unknown>) => void>(),
-    startSessionRecording: vi.fn()
+    startSessionRecording: vi.fn<() => void>()
   };
   return { sdk, ...sdk };
 };
@@ -44,33 +44,36 @@ const doc = (html: string) => parseHTML(html).document;
 describe("onFirstInteraction", () => {
   it("fires once, on the first input, then stops listening", () => {
     const target = new EventTarget();
-    const cb = vi.fn();
-    onFirstInteraction(cb, target);
-    expect(cb).not.toHaveBeenCalled();
+    let fired = 0;
+    onFirstInteraction(() => fired++, target);
+    expect(fired).toBe(0);
     target.dispatchEvent(new Event("pointermove"));
     target.dispatchEvent(new Event("wheel"));
     target.dispatchEvent(new Event("keydown"));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(fired).toBe(1);
   });
 
-  it("does not fire for a page that is only loaded (a Lighthouse run)", () => {
+  it("waits through a page that is only loaded (a Lighthouse run) for real input", () => {
     const target = new EventTarget();
-    const cb = vi.fn();
-    onFirstInteraction(cb, target);
+    let fired = 0;
+    onFirstInteraction(() => fired++, target);
     target.dispatchEvent(new Event("load"));
     target.dispatchEvent(new Event("DOMContentLoaded"));
     // Chrome fires a trusted scroll during load with no user input.
     target.dispatchEvent(new Event("scroll"));
-    expect(cb).not.toHaveBeenCalled();
+    expect(fired).toBe(0);
+    target.dispatchEvent(new Event("pointerdown"));
+    expect(fired).toBe(1);
   });
 
   it("never fires after being cancelled", () => {
     const target = new EventTarget();
-    const cb = vi.fn();
-    const cancel = onFirstInteraction(cb, target);
-    cancel();
+    let cancelled = 0;
+    let kept = 0;
+    onFirstInteraction(() => cancelled++, target)();
+    onFirstInteraction(() => kept++, target);
     target.dispatchEvent(new Event("pointerdown"));
-    expect(cb).not.toHaveBeenCalled();
+    expect({ cancelled, kept }).toEqual({ cancelled: 0, kept: 1 });
   });
 });
 
@@ -87,18 +90,25 @@ describe("track", () => {
     expect(capture.mock.calls).toEqual([["blog_card_click", undefined]]);
   });
 
-  it("does nothing when the snippet was never loaded", () => {
-    expect(() => track("resume_download")).not.toThrow();
+  it("drops events while no SDK is loaded instead of queueing them", () => {
+    track("resume_download");
+    const { capture } = withPostHog();
+    track("social_click");
+    expect(capture.mock.calls).toEqual([["social_click", undefined]]);
   });
 
-  it("swallows failures from inside posthog", () => {
+  it("swallows a failure inside posthog and keeps sending later events", () => {
+    const sent: string[] = [];
     globalThis.posthog = {
-      capture: () => {
-        throw new Error("blocked");
+      capture: (event: string) => {
+        sent.push(event);
+        if (event === "resume_download") throw new Error("blocked");
       },
       register: () => {}
     };
-    expect(() => track("resume_download")).not.toThrow();
+    track("resume_download");
+    track("social_click");
+    expect(sent).toEqual(["resume_download", "social_click"]);
   });
 });
 
@@ -112,17 +122,11 @@ describe("reportError", () => {
 });
 
 describe("tag", () => {
-  it("registers a super property", () => {
-    const { register, capture } = withPostHog();
-    tag("theme", "dark");
-    expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
-    expect(capture).not.toHaveBeenCalled();
-  });
-
-  it("ignores a blank value", () => {
+  it("registers a super property, ignoring a blank value", () => {
     const { register } = withPostHog();
     tag("theme", "");
-    expect(register).not.toHaveBeenCalled();
+    tag("theme", "dark");
+    expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
   });
 });
 
@@ -134,22 +138,15 @@ describe("initClickTracking", () => {
     target.dispatchEvent(new win.Event("click", { bubbles: true }));
   };
 
-  it("captures the nearest annotated ancestor of the click target", () => {
+  it("captures the nearest annotated ancestor of the click target, and nothing else", () => {
     const { capture } = withPostHog();
     const d = doc(
-      `<a data-ph-event="social_click" data-ph-prop="social" data-ph-value="github"><svg id="glyph"></svg></a>`
+      `<a id="plain" href="/">Home</a><a data-ph-event="social_click" data-ph-prop="social" data-ph-value="github"><svg id="glyph"></svg></a>`
     );
     initClickTracking(d);
+    click(d, "plain");
     click(d, "glyph");
     expect(capture.mock.calls).toEqual([["social_click", { social: "github" }]]);
-  });
-
-  it("ignores clicks with no annotated ancestor", () => {
-    const { capture } = withPostHog();
-    const d = doc(`<a id="plain" href="/">Home</a>`);
-    initClickTracking(d);
-    click(d, "plain");
-    expect(capture).not.toHaveBeenCalled();
   });
 
   it("attaches one listener however many times it is called", () => {
@@ -158,7 +155,7 @@ describe("initClickTracking", () => {
     initClickTracking(d);
     initClickTracking(d);
     click(d, "cv");
-    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
   });
 });
 
@@ -202,8 +199,7 @@ describe("initAnalytics", () => {
     });
 
     it("initialises the SDK once with the token and the proxy host", () => {
-      expect(init).toHaveBeenCalledTimes(1);
-      expect(init.mock.calls[0][0]).toBe("phc_test");
+      expect(init.mock.calls.map(([token]) => token)).toEqual(["phc_test"]);
       expect(config.api_host).toBe("https://e.example.dev");
     });
 
@@ -234,9 +230,9 @@ describe("initAnalytics", () => {
       const ph = await fresh();
       await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
       expect(init.mock.calls[0][1].disable_session_recording).toBe(true);
-      expect(startSessionRecording).not.toHaveBeenCalled();
+      expect(startSessionRecording.mock.calls).toEqual([]);
       win.dispatchEvent(new Event("pointermove"));
-      expect(startSessionRecording).toHaveBeenCalledTimes(1);
+      expect(startSessionRecording.mock.calls).toEqual([[]]);
     } finally {
       vi.unstubAllGlobals();
     }
@@ -259,21 +255,26 @@ describe("initAnalytics", () => {
     expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
   });
 
-  it("does nothing without a token or host", async () => {
+  it("does nothing until it has both a token and a host", async () => {
     const { sdk, init } = fakeSdk();
     const ph = await fresh();
     await ph.initAnalytics("", "https://e.example.dev", async () => sdk);
     await ph.initAnalytics("phc_test", "", async () => sdk);
-    expect(init).not.toHaveBeenCalled();
+    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+    expect(init.mock.calls.map(([token]) => token)).toEqual(["phc_test"]);
   });
 
-  it("survives the SDK failing to load", async () => {
+  it("drops what it buffered when the SDK fails to load, and can boot later", async () => {
+    const { sdk, capture } = fakeSdk();
     const ph = await fresh();
-    await expect(
-      ph.initAnalytics("phc_test", "https://e.example.dev", async () => {
-        throw new Error("chunk load failed");
-      })
-    ).resolves.toBeUndefined();
+    const failing = ph.initAnalytics("phc_test", "https://e.example.dev", async () => {
+      throw new Error("chunk load failed");
+    });
+    ph.track("resume_download");
+    await failing;
+    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+    ph.track("social_click");
+    expect(capture.mock.calls).toEqual([["social_click", undefined]]);
   });
 });
 
@@ -281,20 +282,15 @@ describe("bootAnalytics", () => {
   const metas = `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`;
   const page = (head: string) => doc(`<html><head>${head}</head><body></body></html>`);
 
-  it("reads the token and host from the page's meta tags", async () => {
+  it("reads the token and host from the page's meta tags, and no-ops without them", async () => {
     const { sdk, init } = fakeSdk();
     const ph = await fresh();
-    await ph.bootAnalytics(page(metas), async () => sdk);
-    expect(init).toHaveBeenCalledTimes(1);
-    expect(init.mock.calls[0][0]).toBe("phc_test");
-    expect(init.mock.calls[0][1].api_host).toBe("https://e.example.dev");
-  });
-
-  it("no-ops when the meta tags are absent (local dev, CI)", async () => {
-    const { sdk, init } = fakeSdk();
-    const ph = await fresh();
+    // local dev and CI pages carry no meta tags
     await ph.bootAnalytics(page(""), async () => sdk);
-    expect(init).not.toHaveBeenCalled();
+    await ph.bootAnalytics(page(metas), async () => sdk);
+    expect(init.mock.calls.map(([token, config]) => [token, config.api_host])).toEqual([
+      ["phc_test", "https://e.example.dev"]
+    ]);
   });
 
   it("buffers errors and rejections thrown before the SDK boots and replays them", async () => {
@@ -320,7 +316,7 @@ describe("bootAnalytics", () => {
     ]);
     // detached once PostHog's autocapture takes over, so nothing doubles
     win.dispatchEvent(new win.Event("error"));
-    expect(captureException).toHaveBeenCalledTimes(2);
+    expect(captureException.mock.calls).toHaveLength(2);
   });
 });
 
@@ -330,25 +326,23 @@ describe("scheduleSdkLoad", () => {
   it("loads on the first interaction and cancels the fallback timer", () => {
     vi.useFakeTimers();
     const target = new EventTarget();
-    const load = vi.fn();
-    scheduleSdkLoad(load, target, 10_000);
-    expect(load).not.toHaveBeenCalled();
+    let loads = 0;
+    scheduleSdkLoad(() => loads++, target, 10_000);
+    expect(loads).toBe(0);
     target.dispatchEvent(new Event("pointermove"));
-    expect(load).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(20_000);
-    expect(load).toHaveBeenCalledTimes(1);
+    expect(loads).toBe(1);
   });
 
   it("falls back to the timer for a visitor who never interacts", () => {
     vi.useFakeTimers();
     const target = new EventTarget();
-    const load = vi.fn();
-    scheduleSdkLoad(load, target, 10_000);
+    let loads = 0;
+    scheduleSdkLoad(() => loads++, target, 10_000);
     vi.advanceTimersByTime(9_999);
-    expect(load).not.toHaveBeenCalled();
+    expect(loads).toBe(0);
     vi.advanceTimersByTime(1);
-    expect(load).toHaveBeenCalledTimes(1);
     target.dispatchEvent(new Event("keydown"));
-    expect(load).toHaveBeenCalledTimes(1);
+    expect(loads).toBe(1);
   });
 });

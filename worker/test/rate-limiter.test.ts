@@ -10,16 +10,8 @@ function inLimiter(name: string, fn: (instance: RateLimiter) => Promise<void> | 
   return runInDurableObject(stub, fn);
 }
 
-function balanceResponse(
-  body: unknown,
-  status = 200
-): { fetcher: typeof fetch; calls: () => number } {
-  let calls = 0;
-  const fetcher: typeof fetch = async () => {
-    calls++;
-    return new Response(JSON.stringify(body), { status });
-  };
-  return { fetcher, calls: () => calls };
+function balanceResponse(body: unknown, status = 200): typeof fetch {
+  return async () => new Response(JSON.stringify(body), { status });
 }
 
 const usd = (total: number | string, available = true) => ({
@@ -29,12 +21,11 @@ const usd = (total: number | string, available = true) => ({
 
 describe("chatAvailable", () => {
   it("allows chat on a funded account and caches the reading", async () => {
-    const { fetcher, calls } = balanceResponse(usd("1.99"));
     await inLimiter("bal-ok", async instance => {
-      expect(await instance.chatAvailable("sk-test", fetcher)).toBe(true);
-      // Every room shares this instance, so N conversations = 1 balance check.
-      expect(await instance.chatAvailable("sk-test", fetcher)).toBe(true);
-      expect(calls()).toBe(1);
+      expect(await instance.chatAvailable("sk-test", balanceResponse(usd("1.99")))).toBe(true);
+      // Every room shares this instance, so N conversations = 1 balance check:
+      // the second answer comes from the cache, not this empty account.
+      expect(await instance.chatAvailable("sk-test", balanceResponse(usd("0", false)))).toBe(true);
     });
   });
 
@@ -56,20 +47,18 @@ describe("chatAvailable", () => {
     },
     { label: "fails open when the balance lookup errors", body: {}, status: 500, expected: true }
   ])("$label", async ({ label, body, status, expected }) => {
-    const { fetcher } = balanceResponse(body, status);
     await inLimiter(`bal-${label}`, async instance => {
-      expect(await instance.chatAvailable("sk-test", fetcher)).toBe(expected);
+      expect(await instance.chatAvailable("sk-test", balanceResponse(body, status))).toBe(expected);
     });
   });
 
   it("gates every room immediately once DeepSeek reports a 402", async () => {
-    const { fetcher, calls } = balanceResponse(usd("1.99"));
+    const funded = balanceResponse(usd("1.99"));
     await inLimiter("bal-402", async instance => {
-      expect(await instance.chatAvailable("sk-test", fetcher)).toBe(true);
+      expect(await instance.chatAvailable("sk-test", funded)).toBe(true);
       await instance.markChatExhausted();
-      // Gated without re-asking DeepSeek: the 402 already settled it.
-      expect(await instance.chatAvailable("sk-test", fetcher)).toBe(false);
-      expect(calls()).toBe(1);
+      // Gated even though the balance still reads funded: the 402 settled it.
+      expect(await instance.chatAvailable("sk-test", funded)).toBe(false);
     });
   });
 });

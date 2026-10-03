@@ -71,7 +71,7 @@ describe("GET /api/profile", () => {
     expect(res.status).toBe(503);
     const error = await errorBody(res);
     expect(error.code).toBe("service_unavailable");
-    expect(error.hint).toBeTruthy();
+    expect(error.hint).toContain("retry");
     expect(error.documentation_url).toBe(DOCS_URL);
   });
 

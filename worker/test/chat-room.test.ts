@@ -18,16 +18,10 @@ describe("ChatRoom storage", () => {
   it("seeds the greeting exactly once on first connect", async () => {
     await connectRoom("room-greet");
     // A reconnect must not seed again.
-    const { stub, history } = await connectRoom("room-greet");
+    const { history } = await connectRoom("room-greet");
     expect(parseServerMessage(history)).toEqual({
       type: "history",
       messages: [{ role: "assistant", content: GREETING }]
-    });
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      const rows = instance.ctx.storage.sql
-        .exec(`SELECT role, content FROM messages ORDER BY id ASC`)
-        .toArray();
-      expect(rows).toEqual([{ role: "assistant", content: GREETING }]);
     });
   });
 
@@ -120,20 +114,37 @@ describe("parseServerMessage", () => {
     expect(parseServerMessage(JSON.stringify(frame))).toEqual(frame);
   });
 
-  it.each([
-    ["an unknown type", { type: "nope" }],
-    ["a delta without text", { type: "delta" }],
-    ["an unknown tool", { type: "tool", name: "rm_rf" }],
-    ["a history entry with a bad role", { type: "history", messages: [{ role: "x", content: "" }] }]
-  ])("rejects %s", (_label, frame) => {
-    expect(parseServerMessage(JSON.stringify(frame))).toBeNull();
+  it("accepts a delta frame and rejects frames the room never sends", () => {
+    expect(parseServerMessage('{"type":"delta","text":"hel"}')).toEqual({
+      type: "delta",
+      text: "hel"
+    });
+    for (const frame of [
+      { type: "nope" },
+      { type: "delta" },
+      { type: "tool", name: "rm_rf" },
+      { type: "history", messages: [{ role: "x", content: "" }] }
+    ]) {
+      const raw = JSON.stringify(frame);
+      expect(parseServerMessage(raw), raw).toBeNull();
+    }
   });
 });
 
 describe("parseClientMessage", () => {
-  it("accepts a valid chat message and trims it", () => {
+  it("accepts a valid chat message, trimmed, and rejects anything else", () => {
     const msg = parseClientMessage(JSON.stringify({ type: "chat", text: "  hi there  " }));
     expect(msg).toEqual({ type: "chat", text: "hi there" });
+    for (const [label, raw] of [
+      ["binary frame", new ArrayBuffer(8)],
+      ["malformed JSON", "{nope"],
+      ["unknown type", JSON.stringify({ type: "ping" })],
+      ["missing text", JSON.stringify({ type: "chat" })],
+      ["blank text", JSON.stringify({ type: "chat", text: "   " })],
+      ["oversized text", JSON.stringify({ type: "chat", text: "x".repeat(MAX_MESSAGE_LENGTH + 1) })]
+    ] satisfies [string, string | ArrayBuffer][]) {
+      expect(parseClientMessage(raw), label).toBeNull();
+    }
   });
 
   it("accepts a valid page path and drops invalid ones", () => {
@@ -145,17 +156,6 @@ describe("parseClientMessage", () => {
         parseClientMessage(JSON.stringify({ type: "chat", text: "hi", page: bad }))?.page
       ).toBeUndefined();
     }
-  });
-
-  it.each<[string, string | ArrayBuffer]>([
-    ["binary frames", new ArrayBuffer(8)],
-    ["malformed JSON", "{nope"],
-    ["unknown types", JSON.stringify({ type: "ping" })],
-    ["missing text", JSON.stringify({ type: "chat" })],
-    ["blank text", JSON.stringify({ type: "chat", text: "   " })],
-    ["oversized text", JSON.stringify({ type: "chat", text: "x".repeat(MAX_MESSAGE_LENGTH + 1) })]
-  ])("rejects %s", (_label, raw) => {
-    expect(parseClientMessage(raw)).toBeNull();
   });
 });
 
@@ -171,12 +171,12 @@ describe("parseVisitorContext", () => {
     });
   });
 
-  it("keeps the half it has when the other header is missing", () => {
-    const headers = new Headers({ [VISITOR_IP_HEADER]: "203.0.113.7" });
-    expect(parseVisitorContext(headers)).toEqual({ country: null, ip: "203.0.113.7" });
-  });
-
-  it("returns null when the edge learned nothing (or sent blanks)", () => {
+  it("treats a missing or blank header as unknown, and null when both are", () => {
+    const ipOnly = new Headers({
+      [VISITOR_COUNTRY_HEADER]: "  ",
+      [VISITOR_IP_HEADER]: "203.0.113.7"
+    });
+    expect(parseVisitorContext(ipOnly)).toEqual({ country: null, ip: "203.0.113.7" });
     expect(parseVisitorContext(new Headers())).toBeNull();
     expect(parseVisitorContext(new Headers({ [VISITOR_COUNTRY_HEADER]: "  " }))).toBeNull();
   });

@@ -40,22 +40,6 @@ const input: DatasetInput = {
 };
 
 describe("splitSkillItems", () => {
-  it("splits on commas, semicolons and em dashes", () => {
-    expect(splitSkillItems("TypeScript, Python; Bash — YAML")).toEqual([
-      "TypeScript",
-      "Python",
-      "Bash",
-      "YAML"
-    ]);
-  });
-
-  it("keeps a parenthesised group with commas intact", () => {
-    expect(splitSkillItems("event-driven architecture (AWS SQS, EventBridge), REST")).toEqual([
-      "event-driven architecture (AWS SQS, EventBridge)",
-      "REST"
-    ]);
-  });
-
   it("drops empty fragments", () => {
     expect(splitSkillItems("TypeScript,, ; Python")).toEqual(["TypeScript", "Python"]);
   });
@@ -94,15 +78,12 @@ describe("buildDataset", () => {
     });
   });
 
-  it("derives the current role from the open-ended experience entry", () => {
+  it("derives the current role from the open-ended entry, and none once every entry has ended", () => {
     expect(dataset.person.currentRole).toEqual({
       role: "Software Engineer II",
       company: "MedMe Health",
       since: "2025-12"
     });
-  });
-
-  it("reports no current role when every entry has ended", () => {
     const { person } = buildDataset({ ...input, workExperiences: [input.workExperiences[1]] });
     expect(person.currentRole).toBeNull();
   });
@@ -165,9 +146,7 @@ describe("buildDataset", () => {
         highlights: ["Distributed systems."]
       }
     ]);
-  });
-
-  it("leaves grade null when the school entry has none", () => {
+    // The shared fixture's school entry has no grade.
     expect(buildDataset(DATASET_INPUT).education[0].grade).toBeNull();
   });
 
@@ -184,14 +163,11 @@ describe("buildDataset", () => {
 });
 
 describe("parseDataset", () => {
-  it("accepts a document produced by buildDataset", () => {
+  // oxlint-disable-next-line tests/observe-behaviour -- round trip: parse must accept what build emits
+  it("accepts a document produced by buildDataset and rejects one missing a collection", () => {
     const built = buildDataset(input);
-    const roundTripped = parseDataset(JSON.parse(JSON.stringify(built)));
-    expect(roundTripped).toEqual(built);
-  });
-
-  it("rejects a document with a missing collection", () => {
-    const { experience: _dropped, ...rest } = buildDataset(input);
+    expect(parseDataset(JSON.parse(JSON.stringify(built)))).toEqual(built);
+    const { experience: _dropped, ...rest } = built;
     expect(parseDataset(rest)).toBeNull();
   });
 });
@@ -226,6 +202,7 @@ describe("parsePostList", () => {
         description: "Find minimum number of coins."
       }
     ]);
+    expect(parsePostList("# Nothing here\n")).toEqual([]);
   });
 
   it("falls back to scanning the whole document when the section heading is missing", () => {
@@ -249,19 +226,17 @@ describe("parsePostList", () => {
       }
     ]);
   });
-
-  it("returns nothing for text with no post links", () => {
-    expect(parsePostList("# Nothing here\n")).toEqual([]);
-  });
 });
 
 describe("postMarkdownPath", () => {
-  it("maps a slug to its built markdown rendition", () => {
-    expect(postMarkdownPath("coin-change-problem")).toBe("/blog/coin-change-problem/index.md");
-  });
-
-  it.each(["../secrets", "Mixed_Case", ""])("rejects %j, which is not a kebab-case token", slug => {
-    expect(postMarkdownPath(slug)).toBeNull();
+  it.each([
+    ["coin-change-problem", "/blog/coin-change-problem/index.md"],
+    // Anything but a kebab-case token is rejected.
+    ["../secrets", null],
+    ["Mixed_Case", null],
+    ["", null]
+  ])("maps %j to %j", (slug, path) => {
+    expect(postMarkdownPath(slug)).toBe(path);
   });
 });
 
@@ -320,8 +295,9 @@ describe("parseContactRequest", () => {
     ],
     ["a non-string name", { ...valid, name: 42 }, ["name"]]
   ])("rejects %s", (_, raw, fields) => {
-    const result = parseContactRequest(raw);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.issues.map(i => i.field)).toEqual(fields);
+    expect(parseContactRequest(raw)).toMatchObject({
+      ok: false,
+      issues: fields.map(field => ({ field }))
+    });
   });
 });

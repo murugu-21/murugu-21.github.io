@@ -8,10 +8,13 @@ const config = ({ inbox, destination }: { inbox: string; destination?: string })
 });
 
 describe("contactConfigProblem", () => {
-  it("accepts an inbox the email binding is locked to", () => {
+  it("accepts an inbox the email binding is locked to, and only that one", () => {
     expect(
       contactConfigProblem(config({ inbox: "ada@example.com", destination: "ada@example.com" }))
     ).toBeNull();
+    expect(
+      contactConfigProblem(config({ inbox: "ada@example.com", destination: "bob@example.com" }))
+    ).toContain("destination_address");
   });
 
   it.each([
@@ -19,11 +22,6 @@ describe("contactConfigProblem", () => {
       "a malformed inbox",
       config({ inbox: "ada-at-example.com", destination: "ada-at-example.com" }),
       "must be a valid email address"
-    ],
-    [
-      "a binding locked to another address",
-      config({ inbox: "ada@example.com", destination: "bob@example.com" }),
-      "destination_address"
     ],
     ["an unlocked binding", config({ inbox: "ada@example.com" }), "destination_address"],
     ["a missing inbox", { vars: {}, send_email: [] }, "OPPORTUNITY_INBOX"]

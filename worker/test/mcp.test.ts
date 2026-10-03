@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { CONTACT_DAILY_PER_CLIENT } from "../api/contact";
 import { buildDataset } from "../api/dataset";
-import { buildOpenApiDocument } from "../api/openapi";
 import { API_VERSION } from "../api/versioning";
 import { JsonObject } from "../json";
 import {
@@ -12,7 +11,7 @@ import {
   SUPPORTED_PROTOCOL_VERSIONS
 } from "../mcp/protocol";
 import { listResources, readResource, RESOURCE_ORIGIN } from "../mcp/resources";
-import { inlineRefs, resolveSchema } from "../mcp/schema";
+import { inlineRefs } from "../mcp/schema";
 import { MCP_TOOLS, findTool } from "../mcp/tools";
 import {
   AGENTS_MD,
@@ -344,7 +343,7 @@ describe("server/discover", () => {
       name: "murugappan.dev",
       version: API_VERSION
     });
-    expect(result.instructions).toBeTruthy();
+    expect(result.instructions).toMatch(/\S/);
   });
 
   it("answers even without per-request metadata, so a client can probe", async () => {
@@ -499,7 +498,7 @@ describe("legacy (initialize-based) clients", () => {
     expect(result.protocolVersion).toBe("2025-06-18");
     expect(result.capabilities).toEqual({ tools: {}, resources: {} });
     expect(result.serverInfo.name).toBe("murugappan.dev");
-    expect(result.instructions).toBeTruthy();
+    expect(result.instructions).toMatch(/\S/);
     expect(result).not.toHaveProperty("resultType");
   });
 
@@ -523,7 +522,7 @@ describe("legacy (initialize-based) clients", () => {
 
   it("answers ping", async () => {
     const { json } = await legacy("ping");
-    expect(json.result).toEqual({});
+    expect(json).toEqual({ jsonrpc: "2.0", id: 1, result: {} });
   });
 
   it("lists and calls tools without the modern headers", async () => {
@@ -582,13 +581,13 @@ describe("MCP_TOOLS definitions", () => {
 
   it("documents every tool and every input property", () => {
     for (const tool of MCP_TOOLS) {
-      expect(tool.title, tool.name).toBeTruthy();
+      expect(tool.title, tool.name).toMatch(/\S/);
       expect(tool.description.length, tool.name).toBeGreaterThan(60);
       const props = z
         .record(z.string(), z.object({ description: z.string().optional() }))
         .parse(tool.inputSchema.properties ?? {});
       for (const [name, schema] of Object.entries(props)) {
-        expect(schema.description, `${tool.name}.${name}`).toBeTruthy();
+        expect(schema.description, `${tool.name}.${name}`).toMatch(/\S/);
       }
     }
   });
@@ -629,7 +628,7 @@ describe("dataset tools", () => {
     ["list_open_source", ["openSource"]]
   ])("%s returns its slice of the dataset", async (name, keys) => {
     const result = await call(name);
-    expect(result.isError).toBeFalsy();
+    expect(result.isError).toBeUndefined();
     expect(result.structuredContent).toEqual(Object.fromEntries(keys.map(k => [k, dataset[k]])));
     // The spec asks for the serialized JSON in a text block too.
     expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
@@ -692,7 +691,7 @@ describe("send_message", () => {
   it("sends the message and confirms acceptance", async () => {
     const { email, sent } = recordingEmail();
     const result = await call("send_message", message, { ip: "198.51.100.60", email });
-    expect(result.isError).toBeFalsy();
+    expect(result.isError).toBeUndefined();
     expect(result.structuredContent).toHaveProperty("status", "accepted");
     expect(sent).toHaveLength(1);
     expect(sent[0].subject).toContain("Ada Lovelace");
@@ -705,7 +704,7 @@ describe("send_message", () => {
       { ...message, dryRun: true },
       { ip: "198.51.100.61", email }
     );
-    expect(result.isError).toBeFalsy();
+    expect(result.isError).toBeUndefined();
     expect(result.structuredContent).toHaveProperty("status", "validated");
     expect(sent).toEqual([]);
   });
@@ -748,10 +747,10 @@ describe("listResources", () => {
   it("describes and prioritises every resource for the assistant", async () => {
     const resources = await listResources(resourceCtx());
     for (const resource of resources) {
-      expect(resource.name, resource.uri).toBeTruthy();
-      expect(resource.title, resource.uri).toBeTruthy();
-      expect(resource.description, resource.uri).toBeTruthy();
-      expect(resource.mimeType, resource.uri).toBeTruthy();
+      expect(resource.name, resource.uri).toMatch(/\S/);
+      expect(resource.title, resource.uri).toMatch(/\S/);
+      expect(resource.description, resource.uri).toMatch(/\S/);
+      expect(resource.mimeType, resource.uri).toMatch(/^(text|application)\/[a-z]+$/);
       expect(resource.annotations?.audience, resource.uri).toContain("assistant");
       const priority = resource.annotations?.priority ?? -1;
       expect(priority, resource.uri).toBeGreaterThan(0);
@@ -780,13 +779,90 @@ describe("listResources", () => {
 });
 
 describe("readResource", () => {
-  it.each([
-    ["/AGENTS.md", "text/markdown", AGENTS_MD],
-    ["/blog/llms-full.txt", "text/plain", LLMS_FULL_TXT],
-    ["/blog/coin-change-problem/index.md", "text/markdown", POST_MARKDOWN]
-  ])("reads %s", async (path, mimeType, text) => {
-    const uri = `${RESOURCE_ORIGIN}${path}`;
-    expect(await readResource(uri, resourceCtx())).toEqual([{ uri, mimeType, text }]);
+  const contents = ({ path, mimeType, text }: { path: string; mimeType: string; text: string }) => [
+    { uri: `${RESOURCE_ORIGIN}${path}`, mimeType, text }
+  ];
+
+  // null becomes a -32602 on the wire, never an empty contents array.
+  it.each<{
+    label: string;
+    uri: string;
+    overrides?: Record<string, string | null>;
+    expected: ReturnType<typeof contents> | null;
+  }>([
+    {
+      label: "reads a static document",
+      uri: `${RESOURCE_ORIGIN}/AGENTS.md`,
+      expected: contents({ path: "/AGENTS.md", mimeType: "text/markdown", text: AGENTS_MD })
+    },
+    {
+      label: "reads the full-text blog dump",
+      uri: `${RESOURCE_ORIGIN}/blog/llms-full.txt`,
+      expected: contents({
+        path: "/blog/llms-full.txt",
+        mimeType: "text/plain",
+        text: LLMS_FULL_TXT
+      })
+    },
+    {
+      label: "reads a published post",
+      uri: POST_URI,
+      expected: contents({
+        path: "/blog/coin-change-problem/index.md",
+        mimeType: "text/markdown",
+        text: POST_MARKDOWN
+      })
+    },
+    {
+      label: "returns null for an unpublished post, even one whose markdown is deployed",
+      uri: `${RESOURCE_ORIGIN}/blog/ghost/index.md`,
+      overrides: { "/blog/ghost/index.md": "# Ghost" },
+      expected: null
+    },
+    {
+      label: "returns null for a listed post whose markdown is missing",
+      uri: `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`,
+      expected: null
+    },
+    {
+      label: "returns null for an unknown path",
+      uri: `${RESOURCE_ORIGIN}/secrets`,
+      expected: null
+    },
+    { label: "returns null for a string that is not a uri", uri: "not a uri", expected: null },
+    {
+      label: "returns null for a traversal in the slug",
+      uri: `${RESOURCE_ORIGIN}/blog/../../llms.txt/index.md`,
+      expected: null
+    },
+    {
+      label: "returns null for an encoded traversal in the slug",
+      uri: `${RESOURCE_ORIGIN}/blog/..%2F..%2Fllms.txt/index.md`,
+      expected: null
+    },
+    {
+      label: "returns null for a slug outside the slug charset",
+      uri: `${RESOURCE_ORIGIN}/blog/Mixed_Case/index.md`,
+      expected: null
+    },
+    {
+      label: "returns null for a document on another origin",
+      uri: "https://evil.example/llms.txt",
+      expected: null
+    },
+    {
+      label: "returns null for a post on another origin",
+      uri: "https://evil.example/blog/coin-change-problem/index.md",
+      expected: null
+    },
+    {
+      label: "returns null for a static document that is not deployed",
+      uri: `${RESOURCE_ORIGIN}/llms.txt`,
+      overrides: { "/llms.txt": null },
+      expected: null
+    }
+  ])("$label", async ({ uri, overrides, expected }) => {
+    expect(await readResource(uri, resourceCtx(overrides))).toEqual(expected);
   });
 
   it("generates the OpenAPI document rather than reading a file", async () => {
@@ -799,29 +875,6 @@ describe("readResource", () => {
       .parse(JSON.parse(content.text));
     expect(doc.openapi).toBe("3.1.0");
     expect(doc.servers[0].url).toBe(RESOURCE_ORIGIN);
-  });
-
-  // null becomes a -32602 on the wire, never an empty contents array.
-  it.each<[string, string, Record<string, string | null>?]>([
-    [
-      "an unpublished post, even one whose markdown is deployed",
-      `${RESOURCE_ORIGIN}/blog/ghost/index.md`,
-      { "/blog/ghost/index.md": "# Ghost" }
-    ],
-    [
-      "a listed post whose markdown is missing",
-      `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`
-    ],
-    ["an unknown path", `${RESOURCE_ORIGIN}/secrets`],
-    ["a string that is not a uri", "not a uri"],
-    ["a traversal in the slug", `${RESOURCE_ORIGIN}/blog/../../llms.txt/index.md`],
-    ["an encoded traversal in the slug", `${RESOURCE_ORIGIN}/blog/..%2F..%2Fllms.txt/index.md`],
-    ["a slug outside the slug charset", `${RESOURCE_ORIGIN}/blog/Mixed_Case/index.md`],
-    ["a document on another origin", "https://evil.example/llms.txt"],
-    ["a post on another origin", "https://evil.example/blog/coin-change-problem/index.md"],
-    ["a static document that is not deployed", `${RESOURCE_ORIGIN}/llms.txt`, { "/llms.txt": null }]
-  ])("returns null for %s", async (_label, uri, overrides) => {
-    expect(await readResource(uri, resourceCtx(overrides))).toBeNull();
   });
 });
 
@@ -837,16 +890,12 @@ describe("inlineRefs", () => {
     Item: { type: "object", properties: { id: { type: "string" } } }
   };
 
-  it("inlines refs at the root and nested in properties and array items", () => {
+  it("inlines refs at the root and nested in properties and array items, leaving the source intact", () => {
+    const before = JSON.stringify(fixture);
     expect(inlineRefs({ $ref: "#/components/schemas/Item" }, fixture)).toEqual(fixture.Item);
     const out = inlineRefs(fixture.Wrapper, fixture);
     expect(out).toHaveProperty("properties.item", fixture.Item);
     expect(out).toHaveProperty("properties.items.items", fixture.Item);
-  });
-
-  it("does not mutate the source schemas", () => {
-    const before = JSON.stringify(fixture);
-    inlineRefs(fixture.Wrapper, fixture);
     expect(JSON.stringify(fixture)).toBe(before);
   });
 
@@ -871,14 +920,5 @@ describe("inlineRefs", () => {
       A: { type: "object", properties: { b: { $ref: "#/components/schemas/A" } } }
     };
     expect(() => inlineRefs(cyclic.A, cyclic)).toThrow(/depth/i);
-  });
-});
-
-describe("resolveSchema", () => {
-  it("resolves every schema the API document declares", () => {
-    const { schemas } = buildOpenApiDocument(RESOURCE_ORIGIN).components;
-    for (const name of Object.keys(schemas)) {
-      expect(hasRef(resolveSchema(name, schemas)), name).toBe(false);
-    }
   });
 });

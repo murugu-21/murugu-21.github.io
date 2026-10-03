@@ -282,10 +282,8 @@ describe("blog light code palette", () => {
   // white fence; the dark section after it is not parsed here.
   const lightSection = __CODE_CSS__.split("/* --- Dark palette")[0];
   const inks = [...lightSection.matchAll(/(?<![\w-])color:\s*(#[0-9a-f]{6})/gi)].map(m => m[1]);
-
-  it("finds the light palette's inks", () => {
-    expect(inks.length).toBeGreaterThan(0);
-  });
+  // An empty match would make the it.each below pass vacuously.
+  if (inks.length === 0) throw new Error("no inks in code.css's light palette");
 
   it.each(inks)("keeps %s readable on the white fence", hex => {
     expect(contrast(hex, "#ffffff")).toBeGreaterThanOrEqual(4.5);

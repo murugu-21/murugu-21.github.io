@@ -50,13 +50,14 @@ describe("packSentences", () => {
 });
 
 describe("spokenHash", () => {
-  it("is stable for the same texts and differs when a block changes", async () => {
-    const a = await spokenHash(["Hello.", "World."]);
-    const b = await spokenHash(["Hello.", "World."]);
-    const c = await spokenHash(["Hello.", "World!"]);
-    expect(a).toBe(b);
-    expect(a).not.toBe(c);
-    expect(a).toMatch(/^[0-9a-f]{64}$/);
+  // The hash keys the generated audio, so a changed block must change it.
+  it("hashes the spoken texts, and changes when a block changes", async () => {
+    expect(await spokenHash(["Hello.", "World."])).toBe(
+      "7d13afdeb11f0525de841ec656b6519daa6bce7b8abd6a7c3682b30c54b01c45"
+    );
+    expect(await spokenHash(["Hello.", "World!"])).toBe(
+      "5205687253ec22df1f1e4bcbd38c27691c5c2d2f4521df5cf81345d81eb7a7d8"
+    );
   });
 });
 
@@ -150,7 +151,7 @@ describe("matchBlocks", () => {
       { el: "p2", text: "Second paragraph." },
       { el: "p3", text: "New paragraph." }
     ];
-    expect(matchBlocks(page, timedBlocks)[3]).toBeNull();
+    expect(matchBlocks(page, timedBlocks)).toEqual(["h1", "p1", "p2", null]);
   });
 });
 
@@ -176,12 +177,9 @@ describe("scrollTarget", () => {
   const vh = 1000;
   const rect = (top: number, height: number) => ({ top, height });
 
-  it("leaves a block alone while its top sits in the reading band", () => {
+  it("centres a block once it drifts below the reading band, long before it leaves the screen", () => {
     expect(scrollTarget(rect(100, 200), vh)).toBeNull();
     expect(scrollTarget(rect(450, 200), vh)).toBeNull();
-  });
-
-  it("centres a block that has drifted below the band, long before it leaves the screen", () => {
     expect(scrollTarget(rect(600, 200), vh)).toBe("center");
     expect(scrollTarget(rect(950, 200), vh)).toBe("center");
   });
@@ -191,12 +189,9 @@ describe("scrollTarget", () => {
     expect(scrollTarget(rect(40, 200), vh)).toBe("center");
   });
 
-  it("shows the start of a block taller than the screen instead of its middle", () => {
+  it("shows the start of a block taller than the screen, unless it is already near the top", () => {
     expect(scrollTarget(rect(700, 1400), vh)).toBe("start");
     expect(scrollTarget(rect(-900, 1400), vh)).toBe("start");
-  });
-
-  it("leaves a tall block alone while its start is still near the top", () => {
     expect(scrollTarget(rect(60, 1400), vh)).toBeNull();
   });
 
@@ -274,10 +269,12 @@ describe("alignWords", () => {
     ]);
   });
 
-  it("gives up when too few words match", () => {
-    expect(
-      alignWords("one two three four five", [{ word: " banana", start: 0, end: 1 }], block)
-    ).toBeNull();
+  it("gives up when fewer than three in five words match", () => {
+    const one = { word: " one", start: 0, end: 1 };
+    const four = { word: " four", start: 3, end: 4 };
+    const five = { word: " five", start: 4, end: 5 };
+    expect(alignWords("one two three four five", [one, four], block)).toBeNull();
+    expect(alignWords("one two three four five", [one, four, five], block)?.length).toBe(5);
   });
 });
 
@@ -317,8 +314,9 @@ describe("wrapWords", () => {
     const p = paragraph("<p><em>a</em>b c</p>");
     const first = wrapWords(p);
     const second = wrapWords(p);
+    expect(texts(first)).toEqual(["ab", "c"]);
     expect(texts(second)).toEqual(["ab", "c"]);
-    expect(second.map(w => w.length)).toEqual(first.map(w => w.length));
+    expect(second.map(w => w.length)).toEqual([2, 1]);
     expect(p.querySelectorAll("span").length).toBe(3);
   });
 });
@@ -340,17 +338,14 @@ describe("matchWordSpans", () => {
     expect(matchWordSpans(words, timed)).toEqual([words[0], words[2]]);
   });
 
-  it("joins the pieces of a word before comparing", () => {
+  it("joins the pieces of a word before comparing, and returns null on any mismatch", () => {
     const words = [[span("SiteGPT"), span("’s")], [span("founder")]];
     const timed = [
       { w: "SiteGPT’s", s: 0, e: 1 },
       { w: "founder", s: 1, e: 2 }
     ];
     expect(matchWordSpans(words, timed)).toEqual(words);
-  });
-
-  it("returns null on any mismatch", () => {
-    expect(matchWordSpans([[span("a")], [span("b")]], [{ w: "a", s: 0, e: 1 }])).toBeNull();
+    expect(matchWordSpans(words, timed.slice(0, 1))).toBeNull();
   });
 
   // The generator speaks 0.30000000000000004 as "0.3, then zero repeated 15
@@ -370,23 +365,14 @@ describe("matchWordSpans", () => {
       { w: "4", s: 8, e: 9 },
       { w: "here", s: 9, e: 10 }
     ];
-    const spans = matchWordSpans(words, timed);
-    assert(spans);
-    expect(spans).toHaveLength(timed.length);
-    expect(spans[0]).toEqual(words[0]);
-    for (let k = 1; k <= 8; k++) expect(spans[k]).toEqual(words[1]);
-    expect(spans[9]).toEqual(words[2]);
-  });
-
-  it("still returns null when an expanded word disagrees with the timings", () => {
-    const words = [[span("0.30000000000000004")]];
-    expect(
-      matchWordSpans(words, [
-        { w: "0.3,", s: 0, e: 1 },
-        { w: "then", s: 1, e: 2 },
-        { w: "nine", s: 2, e: 3 }
-      ])
-    ).toBeNull();
+    expect(matchWordSpans(words, timed)).toEqual([
+      words[0],
+      ...Array<HTMLElement[]>(8).fill(words[1]),
+      words[2]
+    ]);
+    // the expansion must agree with the timings word for word
+    const misheard = timed.map(t => (t.w === "zero" ? { ...t, w: "nine" } : t));
+    expect(matchWordSpans(words, misheard)).toBeNull();
   });
 });
 

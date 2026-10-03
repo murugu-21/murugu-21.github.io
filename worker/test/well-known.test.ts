@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { VERSIONED_API_BASE } from "../api/routes";
 import { MCP_TOOLS } from "../mcp/tools";
 import {
   buildApiCatalog,
@@ -13,13 +12,6 @@ import { fetchWorker, readJson } from "./fixtures";
 
 describe("buildApiCatalog", () => {
   const catalog = buildApiCatalog("https://murugappan.dev");
-
-  it("is a linkset that anchors each entry at the API's own base URL", () => {
-    expect(catalog.linkset.map(e => e.anchor)).toEqual([
-      `https://murugappan.dev${VERSIONED_API_BASE}`,
-      "https://murugappan.dev/mcp"
-    ]);
-  });
 
   // RFC 9727 requires at least one of service-desc / service-doc per entry.
   it("gives every entry a description and human documentation", () => {
@@ -88,13 +80,16 @@ describe("/.well-known/api-catalog", () => {
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 
-  it("names the host that answered", async () => {
+  it("anchors each entry at the answering host's API and MCP endpoints", async () => {
     const res = await fetchWorker("https://preview.example/.well-known/api-catalog");
     const body = await readJson(
       res,
       z.object({ linkset: z.array(z.object({ anchor: z.string() })) })
     );
-    expect(body.linkset[0].anchor).toBe(`https://preview.example${VERSIONED_API_BASE}`);
+    expect(body.linkset.map(e => e.anchor)).toEqual([
+      "https://preview.example/api/v1",
+      "https://preview.example/mcp"
+    ]);
   });
 });
 

@@ -32,6 +32,10 @@ describe("tocEntries", () => {
   it("returns nothing when fewer than two headings remain", () => {
     expect(tocEntries([heading(2, "Only")])).toEqual([]);
     expect(tocEntries([heading(2, "", ""), heading(2, "Only")])).toEqual([]);
+    expect(tocEntries([heading(2, "Only"), heading(2, "Next")]).map(e => e.text)).toEqual([
+      "Only",
+      "Next"
+    ]);
   });
 });
 

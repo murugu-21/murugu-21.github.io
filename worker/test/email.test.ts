@@ -11,7 +11,7 @@ import {
 } from "../email";
 
 describe("parseLeadArguments", () => {
-  it("parses valid tool arguments", () => {
+  it("parses valid tool arguments, rejecting missing contact or summary and malformed JSON", () => {
     expect(
       parseLeadArguments('{"name":"Ada","contact":"ada@lovelace.dev","summary":"CTO role"}')
     ).toEqual({
@@ -19,9 +19,6 @@ describe("parseLeadArguments", () => {
       contact: "ada@lovelace.dev",
       summary: "CTO role"
     });
-  });
-
-  it("rejects missing contact or summary, and malformed JSON", () => {
     expect(parseLeadArguments('{"summary":"x"}')).toBeNull();
     expect(parseLeadArguments('{"contact":"x"}')).toBeNull();
     expect(parseLeadArguments("nope")).toBeNull();
@@ -57,7 +54,7 @@ describe("formatOpportunityEmail", () => {
       },
       []
     );
-    expect(subject).not.toMatch(/[\r\n]/);
+    expect(subject).toBe("New opportunity via murugappan.dev chat — line1 line2");
   });
 });
 

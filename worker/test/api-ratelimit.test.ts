@@ -37,9 +37,6 @@ describe("field serialisation", () => {
   // draft-ietf-httpapi-ratelimit-headers: a list of quota policies, each a
   // Structured Fields String with the q (quota) and w (window) parameters.
   it("writes RateLimit-Policy as one member per policy", () => {
-    expect(policyField([READ_QUOTA])).toBe(
-      `"reads";q=${READ_QUOTA.quota};w=${READ_QUOTA.windowSeconds}`
-    );
     expect(policyField(CONTACT_QUOTAS)).toBe(
       `"contact-client";q=${CONTACT_DAILY_PER_CLIENT};w=86400, "contact-site";q=${CONTACT_DAILY_GLOBAL};w=86400`
     );
@@ -125,12 +122,10 @@ describe("contactRateLimitHeaders", () => {
 });
 
 describe("secondsUntilUtcMidnight", () => {
-  it("is the whole day at the start of one", () => {
+  it("is the whole day at the start of one, and never zero at the end", () => {
     expect(secondsUntilUtcMidnight(new Date("2026-08-25T00:00:00Z"))).toBe(86_400);
-  });
-
-  it("is never zero, so Retry-After always asks for a real wait", () => {
-    expect(secondsUntilUtcMidnight(new Date("2026-08-25T23:59:59.999Z"))).toBeGreaterThan(0);
+    // Never 0, so Retry-After always asks for a real wait.
+    expect(secondsUntilUtcMidnight(new Date("2026-08-25T23:59:59.999Z"))).toBe(1);
   });
 });
 

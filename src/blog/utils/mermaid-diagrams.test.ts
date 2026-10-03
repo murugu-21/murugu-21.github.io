@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  DIAGRAMS_DIR,
-  diagramHash,
-  findMermaidFences,
-  replaceMermaidFences
-} from "./mermaid-diagrams";
+import { diagramHash, findMermaidFences, replaceMermaidFences } from "./mermaid-diagrams";
 
 const post = `# Title
 
@@ -63,9 +58,9 @@ describe("findMermaidFences", () => {
   });
 
   it("accepts an info string after the language", () => {
-    expect(findMermaidFences("```mermaid title=Flow\nflowchart LR\n  A --> B\n```\n")).toHaveLength(
-      1
-    );
+    expect(
+      findMermaidFences("```mermaid title=Flow\nflowchart LR\n  A --> B\n```\n").map(f => f.source)
+    ).toEqual(["flowchart LR\n  A --> B"]);
   });
 
   it("finds fences nested in a list item or blockquote, with the container indent stripped", () => {
@@ -81,34 +76,26 @@ describe("findMermaidFences", () => {
 });
 
 describe("diagramHash", () => {
-  it("is stable for the same source and differs when the source changes", async () => {
-    const a = await diagramHash("flowchart LR\n  A --> B");
-    const b = await diagramHash("flowchart LR\n  A --> B");
-    const c = await diagramHash("flowchart LR\n  A --> C");
-    expect(a).toBe(b);
-    expect(a).not.toBe(c);
-    expect(a).toMatch(/^[0-9a-f]{12}$/);
+  // The hash names the rendered PNG, so it must change with the diagram and
+  // with nothing else, or reformatting a post would re-render its diagrams.
+  it.each([
+    ["the source", "flowchart LR\n  A --> B"],
+    ["surrounding whitespace", "\n  flowchart LR\n  A --> B  \n\n"],
+    ["CRLF line endings", "flowchart LR\r\n  A --> B\r\n"]
+  ])("hashes %s to the same 12-hex name", async (_, source) => {
+    expect(await diagramHash(source)).toBe("2fb62bdab16d");
   });
 
-  it("ignores surrounding whitespace, so reformatting the fence never re-renders", async () => {
-    expect(await diagramHash("\n  flowchart LR\n  A --> B  \n\n")).toBe(
-      await diagramHash("flowchart LR\n  A --> B")
-    );
-  });
-
-  it("hashes CRLF and LF sources the same, so a checkout's line endings never re-render", async () => {
-    expect(await diagramHash("flowchart LR\r\n  A --> B\r\n")).toBe(
-      await diagramHash("flowchart LR\n  A --> B\n")
-    );
+  it("gives a changed diagram a new name", async () => {
+    expect(await diagramHash("flowchart LR\n  A --> C")).toBe("a8e4cdbc5032");
   });
 });
 
 describe("replaceMermaidFences", () => {
   it("swaps each fence for a markdown image of the PNG rendering and leaves the rest untouched", async () => {
     const out = await replaceMermaidFences(post);
-    const [first, second] = await Promise.all(postFences.map(f => diagramHash(f.source)));
-    expect(out).toContain(`![Diagram 1](${DIAGRAMS_DIR}/${first}.png)`);
-    expect(out).toContain(`![Diagram 2](${DIAGRAMS_DIR}/${second}.png)`);
+    expect(out).toContain("![Diagram 1](diagrams/f367cfc9c9f4.png)");
+    expect(out).toContain("![Diagram 2](diagrams/516350518f75.png)");
     expect(out).not.toContain("```mermaid\nflowchart LR");
     expect(out).not.toContain("~~~mermaid");
     // the js fence, the nested sample and the prose survive

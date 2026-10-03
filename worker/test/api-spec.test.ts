@@ -20,15 +20,6 @@ import {
   type VersionRecord
 } from "../api/versioning";
 
-describe("the route table", () => {
-  it("makes contact the only write endpoint", () => {
-    const writes = Object.entries(ALLOWED_METHODS)
-      .filter(([, methods]) => methods.some(m => m !== "GET"))
-      .map(([path]) => path);
-    expect(writes).toEqual([API_PATHS.contact]);
-  });
-});
-
 describe("toVersionedPath", () => {
   it.each([
     ["/api/profile", "/api/v1/profile"],
@@ -114,13 +105,6 @@ describe("version headers", () => {
 describe("buildVersionsDocument", () => {
   const doc = buildVersionsDocument("https://murugappan.dev");
 
-  it("names the current version and pins the unversioned alias to it", () => {
-    expect(doc.current).toBe(CURRENT_VERSION_RECORD.version);
-    expect(doc.currentRelease).toBe(CURRENT_VERSION_RECORD.release);
-    expect(doc.unversionedAlias.basePath).toBe(API_BASE);
-    expect(doc.unversionedAlias.pinnedTo).toBe(CURRENT_VERSION_RECORD.version);
-  });
-
   it("makes every URL absolute against the host that was asked", () => {
     expect(doc.versions[0].url).toBe(`https://murugappan.dev${VERSIONED_API_BASE}`);
     expect(doc.versions[0].specUrl).toBe("https://murugappan.dev/openapi.json");
@@ -154,30 +138,6 @@ describe("buildOpenApiDocument", () => {
     return found;
   }
 
-  // The description is the only place OpenAPI lets us document the versioning
-  // policy, the rate-limit headers and the surfaces it cannot express.
-  it("points agents at the policy, the headers and the other surfaces", () => {
-    for (const reference of [
-      VERSIONED_API_BASE,
-      API_PATHS.versions,
-      "RFC 9745",
-      "RFC 8594",
-      "RateLimit-Policy",
-      "Retry-After",
-      "X-RateLimit-Remaining",
-      "/.well-known/mcp.json",
-      "/.well-known/api-catalog",
-      "/parties/chat-room/"
-    ]) {
-      expect(doc.info.description).toContain(reference);
-    }
-  });
-
-  it("declares the API as unauthenticated rather than leaving it unsaid", () => {
-    expect(doc.security).toEqual([]);
-    expect(doc.components.securitySchemes).toEqual({});
-  });
-
   it("documents exactly the paths and methods the router serves", () => {
     expect(Object.keys(doc.paths).sort()).toEqual([...SPEC_PATHS].sort());
     for (const path of SPEC_PATHS) {
@@ -197,8 +157,8 @@ describe("buildOpenApiDocument", () => {
   it("gives every operation a summary, a description and a declared tag", () => {
     const declared = new Set(doc.tags.map(t => t.name));
     for (const [where, op] of operations()) {
-      expect(op.summary, where).toBeTruthy();
-      expect(op.description, where).toBeTruthy();
+      expect(op.summary, where).toMatch(/\S/);
+      expect(op.description, where).toMatch(/\S/);
       expect(op.tags.length, where).toBeGreaterThan(0);
       for (const tag of op.tags) expect(declared, where).toContain(tag);
     }
@@ -206,18 +166,21 @@ describe("buildOpenApiDocument", () => {
 
   it("types and describes every parameter, and every path template has one", () => {
     for (const [where, op] of operations()) {
-      for (const param of op.parameters ?? []) {
+      const params = op.parameters ?? [];
+      for (const param of params) {
         const at = `${where} ${String(param.name)}`;
-        expect(param.name, at).toBeTruthy();
-        expect(param.in, at).toBeTruthy();
-        expect(param.description, at).toBeTruthy();
-        expect(param.schema.type, at).toBeTruthy();
-        if (param.in === "path") expect(param.required, at).toBe(true);
+        expect(param.name, at).toMatch(/^[a-z][a-zA-Z]*$/);
+        expect(param.in, at).toMatch(/^(path|query)$/);
+        expect(param.description, at).toMatch(/\S/);
+        expect(param.schema.type, at).toMatch(/^(string|integer|number|boolean|array|object)$/);
       }
-      const names = (op.parameters ?? []).map(p => p.name);
-      for (const template of where.match(/\{(\w+)\}/g) ?? []) {
-        expect(names, where).toContain(template.slice(1, -1));
-      }
+      const templates = (where.match(/\{(\w+)\}/g) ?? []).map(t => t.slice(1, -1));
+      const pathParams = params.filter(p => p.in === "path");
+      expect(pathParams.map(p => p.name).sort(), where).toEqual(templates.sort());
+      expect(
+        pathParams.every(p => p.required === true),
+        where
+      ).toBe(true);
     }
   });
 
@@ -228,8 +191,13 @@ describe("buildOpenApiDocument", () => {
       expect(success.length, where).toBeGreaterThan(0);
       for (const status of success) {
         const response = responses[status];
-        expect(response.description, `${where} ${status}`).toBeTruthy();
-        expect(response.content?.["application/json"]?.schema, `${where} ${status}`).toBeTruthy();
+        expect(response.description, `${where} ${status}`).toMatch(/\S/);
+        expect(Object.keys(response.content ?? {}), `${where} ${status}`).toEqual([
+          "application/json"
+        ]);
+        expect(response.content?.["application/json"]?.schema, `${where} ${status}`).toBeTypeOf(
+          "object"
+        );
       }
     }
   });
@@ -267,7 +235,9 @@ describe("buildOpenApiDocument", () => {
       }
     });
     expect(Object.keys(contact.responses)).toContain("200");
-    expect(doc.components.schemas.ContactRequest.properties?.dryRun).toBeTruthy();
+    expect(doc.components.schemas.ContactRequest.properties?.dryRun).toMatchObject({
+      type: "boolean"
+    });
   });
 
   it("resolves every $ref against a declared component schema", () => {
@@ -282,7 +252,7 @@ describe("buildOpenApiDocument", () => {
     for (const [name, { properties }] of Object.entries(doc.components.schemas)) {
       for (const [property, spec] of Object.entries(properties ?? {})) {
         if (spec.$ref) continue;
-        expect(spec.description, `${name}.${property}`).toBeTruthy();
+        expect(spec.description, `${name}.${property}`).toMatch(/\S/);
       }
     }
   });

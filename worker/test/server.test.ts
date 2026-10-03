@@ -40,8 +40,7 @@ describe("routing", () => {
       envWithAssets(r => seen.push(r))
     );
     expect(await response.text()).toBe("asset");
-    expect(seen).toHaveLength(1);
-    expect(new URL(seen[0].url).pathname).toBe("/blog/some-post");
+    expect(seen.map(r => new URL(r.url).pathname)).toEqual(["/blog/some-post"]);
   });
 
   // /mcp is 405 because this revision of Streamable HTTP defines POST only;
@@ -67,14 +66,18 @@ describe("routing", () => {
 });
 
 describe("the chat-room WebSocket", () => {
-  it("drops a client-supplied visitor header when Cloudflare knows nothing", async () => {
+  it("replaces client-supplied visitor headers with what Cloudflare reports", async () => {
     const { stub } = await connectRoom("spoof-room-ws", {
+      "CF-IPCountry": "IN",
       [VISITOR_COUNTRY_HEADER]: "XX",
       [VISITOR_IP_HEADER]: "203.0.113.66"
     });
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      expect(visitorMeta(instance)).toEqual({});
-    });
+    const meta = await runInDurableObject(stub, async (instance: ChatRoom) =>
+      visitorMeta(instance)
+    );
+    expect(meta.visitor_country).toBe("IN");
+    // Cloudflare sent no IP, so the forged one must not survive either.
+    expect(meta.visitor_ip).toBeUndefined();
   });
 });
 

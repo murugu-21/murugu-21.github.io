@@ -43,13 +43,27 @@ describe("groupByCompany", () => {
     expect(groups[0].roles.map(r => r.role)).toEqual(["SDE 2", "SDE 1", "Intern"]);
   });
 
-  it("spans a stint from the oldest start to the newest end, at the shared location", () => {
+  it("spans a stint from the oldest start to the newest end", () => {
     const [stint] = groupByCompany([
       role({ company: "HyperVerge", date: "April 2025 – December 2025", role: "SDE 2" }),
       role({ company: "HyperVerge", date: "August 2022 – June 2023", role: "Intern" })
     ]);
     expect(stint.span).toBe("August 2022 – December 2025");
-    expect(stint.location).toBe("Bangalore");
+  });
+
+  it("shows a stint's location only when all its roles shared it", () => {
+    const stint = (secondLocation: string) =>
+      groupByCompany([
+        role({ company: "HyperVerge", date: "April 2025 – December 2025", role: "SDE 2" }),
+        role({
+          company: "HyperVerge",
+          date: "August 2022 – June 2023",
+          role: "Intern",
+          location: secondLocation
+        })
+      ])[0].location;
+    expect(stint("Bangalore")).toBe("Bangalore");
+    expect(stint("Toronto")).toBeNull();
   });
 
   it("keeps a single role's own date string as the span", () => {
@@ -61,24 +75,6 @@ describe("groupByCompany", () => {
 
   it("splits a return to a former company into separate stints", () => {
     expect(groupByCompany(returning).map(g => g.company)).toEqual(["Acme", "Other", "Acme"]);
-  });
-
-  it("leaves the stint location empty when roles were in different places", () => {
-    const [stint] = groupByCompany([
-      role({
-        company: "HyperVerge",
-        date: "April 2025 – December 2025",
-        role: "SDE 2",
-        location: "Toronto"
-      }),
-      role({
-        company: "HyperVerge",
-        date: "August 2022 – June 2023",
-        role: "Intern",
-        location: "Bangalore"
-      })
-    ]);
-    expect(stint.location).toBeNull();
   });
 });
 

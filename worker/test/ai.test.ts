@@ -60,16 +60,19 @@ describe("runDeepseekExchange", () => {
       (status: number): typeof fetch =>
       async () =>
         new Response("no", { status });
-    const error = (status: number) =>
-      runDeepseekExchange({
-        apiKey: "sk-test",
-        messages: [],
-        onDelta: () => {},
-        fetcher: failing(status)
-      }).then(
-        () => expect.unreachable(),
-        (e: unknown) => e
-      );
+    const error = async (status: number): Promise<unknown> => {
+      try {
+        await runDeepseekExchange({
+          apiKey: "sk-test",
+          messages: [],
+          onDelta: () => {},
+          fetcher: failing(status)
+        });
+      } catch (e) {
+        return e;
+      }
+      throw new Error(`a ${status} response did not reject`);
+    };
 
     expect(isInsufficientBalance(await error(402))).toBe(true);
     expect(isInsufficientBalance(await error(500))).toBe(false);

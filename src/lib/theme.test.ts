@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { resolveTheme, syncThemeOnRestore, type Theme, type ThemeSource } from "./theme";
 
@@ -27,29 +27,28 @@ describe("syncThemeOnRestore", () => {
     current: () => current
   });
 
+  // The themes applied after a back/forward restore.
   const restore = (src: ThemeSource, persisted = true) => {
     const win = new EventTarget();
-    const apply = vi.fn();
-    syncThemeOnRestore(win, src, apply);
+    const applied: Theme[] = [];
+    syncThemeOnRestore(win, src, next => applied.push(next));
     win.dispatchEvent(show(persisted));
-    return apply;
+    return applied;
   };
 
-  it("applies the stored choice when the restored page shows the other theme", () => {
-    expect(restore(source("true", "light")).mock.calls).toEqual([["dark"]]);
-    expect(restore(source("false", "dark")).mock.calls).toEqual([["light"]]);
-  });
-
-  it("does nothing when the restored page already shows the stored choice", () => {
-    expect(restore(source("true", "dark"))).not.toHaveBeenCalled();
+  it("applies the stored choice only when the restored page shows the other theme", () => {
+    expect(restore(source("true", "light"))).toEqual(["dark"]);
+    expect(restore(source("false", "dark"))).toEqual(["light"]);
+    expect(restore(source("true", "dark"))).toEqual([]);
   });
 
   it("follows the OS when nothing is stored", () => {
-    expect(restore(source(null, "light", true)).mock.calls).toEqual([["dark"]]);
-    expect(restore(source(null, "dark", true))).not.toHaveBeenCalled();
+    expect(restore(source(null, "light", true))).toEqual(["dark"]);
+    expect(restore(source(null, "dark", true))).toEqual([]);
   });
 
   it("leaves a fresh load alone (the bootstrap already ran)", () => {
-    expect(restore(source("true", "light"), false)).not.toHaveBeenCalled();
+    expect(restore(source("true", "light"), false)).toEqual([]);
+    expect(restore(source("true", "light"), true)).toEqual(["dark"]);
   });
 });
