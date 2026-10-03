@@ -165,8 +165,7 @@ const OPEN_ENDED = /^(present|current|now)$/i;
 // wrong date is worse for an agent than an absent one.
 export function parsePeriod(period: string): Period {
   const parts = period.split(/\s+[–—-]\s+/);
-  if (parts.length !== 2) return { startDate: null, endDate: null, current: false };
-  const startDate = toYearMonth(parts[0]);
+  const startDate = parts.length === 2 ? toYearMonth(parts[0]) : null;
   if (!startDate) return { startDate: null, endDate: null, current: false };
   const tail = parts[1].trim();
   if (OPEN_ENDED.test(tail)) return { startDate, endDate: null, current: true };

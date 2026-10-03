@@ -1,7 +1,7 @@
 // Groups the most-recent-first workExperiences into stints by *consecutive*
 // company, so a return to a former employer is its own stint.
 
-export interface Stint<T> {
+interface Stint<T> {
   company: string;
   /** "oldest start – newest end", or the role's own date for a single role. */
   span: string;
@@ -52,7 +52,7 @@ export function groupByCompany<T extends RoleLike>(roles: T[]): Stint<T>[] {
 // Ranges are "Month YYYY – Month YYYY" or "Month YYYY – Present". Months count
 // inclusively (LinkedIn's convention): "April 2025 – December 2025" is 9.
 
-export interface YearMonth {
+interface YearMonth {
   year: number;
   month: number; // 1-12
 }
@@ -98,7 +98,7 @@ export function currentMonth(now = new Date()): YearMonth {
 
 const toIndex = (ym: YearMonth) => ym.year * 12 + (ym.month - 1);
 
-export function monthsBetween(start: YearMonth, end: YearMonth): number {
+export function monthsBetween({ start, end }: { start: YearMonth; end: YearMonth }): number {
   return Math.max(0, toIndex(end) - toIndex(start) + 1);
 }
 

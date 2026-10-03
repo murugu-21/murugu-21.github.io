@@ -285,7 +285,7 @@ describe("wrapWords", () => {
   const paragraph = (html: string) => {
     const p = parseHTML(html).document.querySelector("p");
     assert(p, "fixture has no <p>");
-    return p as unknown as HTMLElement;
+    return p;
   };
   const texts = (words: HTMLElement[][]) =>
     words.map(pieces => pieces.map(p => p.textContent).join(""));
@@ -324,7 +324,12 @@ describe("wrapWords", () => {
 });
 
 describe("matchWordSpans", () => {
-  const span = (text: string) => ({ textContent: text }) as unknown as HTMLElement;
+  const { document } = parseHTML("");
+  const span = (text: string) => {
+    const el = document.createElement("span");
+    el.textContent = text;
+    return el;
+  };
 
   it("pairs words with timings by position when the normalised tokens agree", () => {
     const words = [[span("0.3???")], [span("😕")], [span("Hey")]];

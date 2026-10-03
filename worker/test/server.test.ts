@@ -11,9 +11,9 @@ import worker from "../server";
 import {
   BLOG_NOT_FOUND_HTML,
   fakeAssets,
+  fetchWorker,
   LLMS_TXT,
   NOT_FOUND_HTML,
-  testEnv,
   visitorMeta
 } from "./fixtures";
 
@@ -30,9 +30,6 @@ function envWithAssets(onFetch?: (request: Request) => void): Env {
     }
   } as unknown as Env;
 }
-
-const fetchPath = (path: string, init?: RequestInit) =>
-  worker.fetch(new Request(`https://murugappan.dev${path}`, init), testEnv());
 
 describe("routing", () => {
   it("falls through to static assets for a request it does not claim", async () => {
@@ -216,7 +213,7 @@ describe("GET /blog/audio/:file", () => {
   });
 
   it("serves the mp3 with content type, etag and cache headers", async () => {
-    const res = await fetchPath("/blog/audio/first-post.mp3");
+    const res = await fetchWorker("/blog/audio/first-post.mp3");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("audio/mpeg");
     expect(res.headers.get("Accept-Ranges")).toBe("bytes");
@@ -226,14 +223,14 @@ describe("GET /blog/audio/:file", () => {
   });
 
   it("serves the timing json", async () => {
-    const res = await fetchPath("/blog/audio/first-post.json");
+    const res = await fetchWorker("/blog/audio/first-post.json");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("application/json");
     expect(await res.json()).toEqual(JSON.parse(JSON_BODY));
   });
 
   it("honours a byte range", async () => {
-    const res = await fetchPath("/blog/audio/first-post.mp3", {
+    const res = await fetchWorker("/blog/audio/first-post.mp3", {
       headers: { Range: "bytes=100-199" }
     });
     expect(res.status).toBe(206);
@@ -243,7 +240,7 @@ describe("GET /blog/audio/:file", () => {
   });
 
   it("rejects an unsatisfiable range", async () => {
-    const res = await fetchPath("/blog/audio/first-post.mp3", {
+    const res = await fetchWorker("/blog/audio/first-post.mp3", {
       headers: { Range: "bytes=5000-6000" }
     });
     expect(res.status).toBe(416);
@@ -251,10 +248,10 @@ describe("GET /blog/audio/:file", () => {
   });
 
   it("answers 304 to a matching If-None-Match", async () => {
-    const first = await fetchPath("/blog/audio/first-post.mp3");
+    const first = await fetchWorker("/blog/audio/first-post.mp3");
     const etag = first.headers.get("ETag");
     assert(etag, "first response has no ETag");
-    const res = await fetchPath("/blog/audio/first-post.mp3", {
+    const res = await fetchWorker("/blog/audio/first-post.mp3", {
       headers: { "If-None-Match": etag }
     });
     expect(res.status).toBe(304);
@@ -263,7 +260,7 @@ describe("GET /blog/audio/:file", () => {
   it.each(["/blog/audio/nope.mp3", "/blog/audio/..%2Fsecret.mp3", "/blog/audio/first-post.wav"])(
     "falls through to the negotiated 404 for %s",
     async path => {
-      const res = await fetchPath(path);
+      const res = await fetchWorker(path);
       expect(res.status).toBe(404);
       expect(res.headers.get("Content-Type")).toContain("text/markdown");
     }

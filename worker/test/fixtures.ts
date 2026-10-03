@@ -6,6 +6,7 @@ import { env } from "cloudflare:test";
 import { buildDataset, type DatasetInput } from "../api/dataset";
 import type { ChatRoom } from "../chat-room";
 import type { EmailLike } from "../email";
+import worker from "../server";
 
 export const DATASET_INPUT: DatasetInput = {
   greeting: {
@@ -166,4 +167,19 @@ export function testEnv(options: TestEnvOptions = {}): Env {
     OPPORTUNITY_INBOX: options.inbox === undefined ? "inbox@example.com" : options.inbox,
     EMAIL: options.email === undefined ? { send: () => Promise.resolve() } : options.email
   } as unknown as Env;
+}
+
+export type FetchOptions = RequestInit & { ip?: string; env?: TestEnvOptions };
+
+/** Sends a request through the worker entry; a bare path resolves against the site. */
+export async function fetchWorker(
+  path: string,
+  { ip, env: envOptions, ...init }: FetchOptions = {}
+): Promise<Response> {
+  const headers = new Headers(init.headers);
+  if (ip) headers.set("CF-Connecting-IP", ip);
+  return await worker.fetch(
+    new Request(new URL(path, "https://murugappan.dev"), { ...init, headers }),
+    testEnv(envOptions)
+  );
 }

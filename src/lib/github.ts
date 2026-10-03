@@ -58,7 +58,6 @@ export async function fetchGithubProfile(): Promise<GithubProfile | null> {
 }
 
 export interface GithubRepo {
-  id: string;
   name: string;
   description: string | null;
   url: string;
@@ -85,7 +84,7 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
     user: { pinnedItems?: { edges?: { node: PinnedRepoNode }[] } } | null;
   }>({
     query: `{ user(login: "murugu-21") { pinnedItems(first: 6, types: REPOSITORY) { edges { node { ... on Repository {
-          id name description url homepageUrl forkCount diskUsage
+          name description url homepageUrl forkCount diskUsage
           primaryLanguage { name color }
           stargazers { totalCount }
           repositoryTopics(first: 12) { nodes { topic { name } } }

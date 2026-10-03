@@ -28,7 +28,7 @@ import { parseRate, SPEECH_RATES, speechBlocks, type SpeechRate } from "../utils
 type State = "idle" | "loading" | "speaking" | "paused";
 
 interface Block {
-  el: HTMLElement;
+  el: Element;
   text: string;
 }
 
@@ -116,13 +116,13 @@ const fetchTimings = async (slug: string): Promise<AudioTimings | null> => {
 // Same extraction + normalisation as the generator, so texts line up with
 // the timing JSON. The title is read first.
 const collectBlocks = (): Block[] => {
-  const article = document.querySelector<HTMLElement>("article.blog-post");
-  const body = article?.querySelector<HTMLElement>("section[itemprop='articleBody']");
+  const article = document.querySelector("article.blog-post");
+  const body = article?.querySelector("section[itemprop='articleBody']");
   if (!body) return [];
   const blocks: Block[] = speechBlocks(body)
     .map(b => ({ el: b.el, text: normalizeSpeechText(b.text) }))
     .filter(b => b.text);
-  const title = article?.querySelector<HTMLElement>("header h1");
+  const title = article?.querySelector("header h1");
   if (title) {
     const text = normalizeSpeechText(title.textContent ?? "");
     if (text) blocks.unshift({ el: title, text });
@@ -147,9 +147,9 @@ export function ListenControls({ slug }: { slug: string }) {
   const stateRef = useRef<State>("idle");
   const blocksRef = useRef<Block[]>([]);
   const playerRef = useRef<Player | null>(null);
-  const highlightedRef = useRef<HTMLElement | null>(null);
+  const highlightedRef = useRef<Element | null>(null);
 
-  const highlight = useCallback((el: HTMLElement | null) => {
+  const highlight = useCallback((el: Element | null) => {
     if (el === highlightedRef.current) return;
     highlightedRef.current?.classList.remove("is-speaking");
     highlightedRef.current = el;

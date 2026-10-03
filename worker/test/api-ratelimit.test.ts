@@ -13,29 +13,19 @@ import {
   secondsUntilUtcMidnight,
   takeReadSlot
 } from "../api/ratelimit";
-import worker from "../server";
-import { testEnv } from "./fixtures";
+import { fetchWorker } from "./fixtures";
 
 beforeEach(() => resetReadWindows());
 
-const get = async (path: string, ip?: string): Promise<Response> =>
-  await worker.fetch(
-    new Request(
-      `https://murugappan.dev${path}`,
-      ip ? { headers: { "CF-Connecting-IP": ip } } : undefined
-    ),
-    testEnv()
-  );
+const get = (path: string, ip?: string) => fetchWorker(path, { ip });
 
-const postContact = async (body: unknown, ip: string): Promise<Response> =>
-  await worker.fetch(
-    new Request("https://murugappan.dev/api/v1/contact", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "CF-Connecting-IP": ip },
-      body: JSON.stringify(body)
-    }),
-    testEnv()
-  );
+const postContact = (body: unknown, ip: string) =>
+  fetchWorker("/api/v1/contact", {
+    ip,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
 
 const validMessage = {
   email: "ada@example.com",

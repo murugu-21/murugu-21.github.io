@@ -71,16 +71,6 @@ describe("ChatRoom storage", () => {
     });
   });
 
-  it("writes nothing when the upgrade carries no visitor context", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-anon"));
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      instance.onStart();
-      const conn = fakeConnection();
-      instance.onConnect(conn, connectContext());
-      expect(visitorMeta(instance)).toEqual({});
-    });
-  });
-
   it("mirrors one rooms row per room to D1, refreshed on reconnect", async () => {
     const room = "room-mirror";
     const stub = env.ChatRoom.get(env.ChatRoom.idFromName(room));

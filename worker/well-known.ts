@@ -40,8 +40,7 @@ type LinksetEntry = { anchor: string } & Partial<
 
 /** RFC 9727 requires `service-desc` or `service-doc` per entry. */
 export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
-  const base = origin.replace(/\/$/, "");
-  const abs = (path: string): string => `${base}${path}`;
+  const abs = (path: string): string => `${origin}${path}`;
   const target = ({ path, type, title }: { path: string; type: string; title: string }) => ({
     href: abs(path),
     type,
@@ -114,7 +113,6 @@ export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
 
 /** The tool list rides in `_meta`, the only place the schema allows extra data. */
 export function buildMcpManifest(origin: string) {
-  const base = origin.replace(/\/$/, "");
   return {
     $schema: MCP_SERVER_SCHEMA,
     name: MCP_SERVER_NAME,
@@ -122,9 +120,9 @@ export function buildMcpManifest(origin: string) {
     description:
       "First-party facts about Murugappan M: profile, experience, skills, writing, and a way to reach him.",
     version: API_VERSION,
-    websiteUrl: `${base}/developers/#mcp`,
+    websiteUrl: `${origin}/developers/#mcp`,
     repository: { url: MCP_REPOSITORY, source: "github" },
-    remotes: [{ type: "streamable-http", url: `${base}/mcp` }],
+    remotes: [{ type: "streamable-http", url: `${origin}/mcp` }],
     _meta: {
       "dev.murugappan/server": {
         transport: "streamable-http",
@@ -132,8 +130,8 @@ export function buildMcpManifest(origin: string) {
         protocolVersion: LATEST_PROTOCOL_VERSION,
         serverName: SERVER_NAME,
         tools: MCP_TOOLS.map(tool => tool.name),
-        documentation: `${base}/developers/#mcp`,
-        openapi: `${base}${API_PATHS.openapiRoot}`
+        documentation: `${origin}/developers/#mcp`,
+        openapi: `${origin}${API_PATHS.openapiRoot}`
       }
     }
   };
@@ -149,15 +147,14 @@ wellKnown.on(READ_METHODS, "/api-catalog", c =>
   document(buildApiCatalog(publicOrigin(c.req.url)), LINKSET_MEDIA_TYPE)
 );
 
-wellKnown.on(READ_METHODS, "/mcp.json", c =>
-  document(buildMcpManifest(publicOrigin(c.req.url)), "application/json")
-);
+const manifestResponse = (requestUrl: string) =>
+  document(buildMcpManifest(publicOrigin(requestUrl)), "application/json");
+
+wellKnown.on(READ_METHODS, "/mcp.json", c => manifestResponse(c.req.url));
 
 /** The same manifest at the site root, where clients look first. */
 export const mcpManifest = new Hono<{ Bindings: Env }>();
 
 mcpManifest.use("*", readCors);
 
-mcpManifest.on(READ_METHODS, "/", c =>
-  document(buildMcpManifest(publicOrigin(c.req.url)), "application/json")
-);
+mcpManifest.on(READ_METHODS, "/", c => manifestResponse(c.req.url));

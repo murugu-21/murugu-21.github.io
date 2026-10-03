@@ -3,7 +3,7 @@
 
 import { API_BASE, API_PATHS, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./routes";
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT, CONTACT_LIMITS } from "./contact";
-import { POSTS_LIMIT_MAX } from "./posts";
+import { POSTS_LIMIT_MAX, SLUG_PATTERN } from "./posts";
 import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "./ratelimit";
 import { API_VERSION, DEPRECATION_NOTICE_DAYS, VERSIONS } from "./versioning";
 
@@ -109,7 +109,6 @@ const stringProp = (description: string, extra: object = {}) => ({
 });
 
 export function buildOpenApiDocument(origin: string): OpenApiDocument {
-  const base = origin.replace(/\/$/, "");
   return {
     openapi: "3.1.0",
     info: {
@@ -125,7 +124,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
       },
       license: { name: "CC BY 4.0", identifier: "CC-BY-4.0" }
     },
-    servers: [{ url: base, description: "Production" }],
+    servers: [{ url: origin, description: "Production" }],
     externalDocs: {
       url: "https://murugappan.dev/developers/",
       description: "Developer portal: quickstart, examples and agent notes."
@@ -274,7 +273,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
               required: true,
               description:
                 "The post's slug — the last path segment of its URL, e.g. `cloud-agnostic-rate-limiting`.",
-              schema: { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+              schema: { type: "string", pattern: SLUG_PATTERN }
             }
           ],
           responses: {
@@ -718,7 +717,7 @@ export const API_SCHEMAS: Record<string, SchemaObject> = {
     additionalProperties: false,
     properties: {
       slug: stringProp("Identifier to pass to getBlogPost.", {
-        pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        pattern: SLUG_PATTERN
       }),
       title: stringProp("Post title."),
       url: stringProp("Canonical URL of the post.", { format: "uri" }),

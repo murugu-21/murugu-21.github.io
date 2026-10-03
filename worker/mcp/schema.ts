@@ -9,44 +9,42 @@ const REF_PREFIX = "#/components/schemas/";
 // Headroom over the API's nesting; a cycle trips it instead of hanging.
 const MAX_DEPTH = 16;
 
-export function inlineRefs(node: unknown, schemas: Record<string, unknown>, depth = 0): unknown {
-  if (depth > MAX_DEPTH) {
-    throw new Error(`inlineRefs: exceeded maximum schema depth (${MAX_DEPTH}) — is a $ref cyclic?`);
-  }
+export function inlineRefs(node: unknown, schemas: Record<string, JsonSchema>, depth = 0): unknown {
   if (Array.isArray(node)) {
     return node.map(item => inlineRefs(item, schemas, depth + 1));
   }
   const parsed = JsonObject.safeParse(node);
-  if (!parsed.success) return node;
+  return parsed.success ? inlineObject(parsed.data, schemas, depth) : node;
+}
 
-  const entries = Object.entries(parsed.data);
-  const ref = parsed.data.$ref;
-  if (typeof ref === "string") {
-    if (!ref.startsWith(REF_PREFIX)) {
-      throw new Error(`inlineRefs: refusing to resolve external $ref '${ref}'`);
-    }
-    const name = ref.slice(REF_PREFIX.length);
-    if (!(name in schemas)) {
-      throw new Error(`inlineRefs: no schema named '${name}'`);
-    }
-    const resolved = inlineRefs(schemas[name], schemas, depth + 1) as JsonSchema;
-    // JSON Schema 2020-12 allows keywords alongside $ref; the siblings win.
-    const siblings: JsonSchema = {};
-    for (const [key, value] of entries) {
-      if (key === "$ref") continue;
-      siblings[key] = inlineRefs(value, schemas, depth + 1);
-    }
-    return { ...resolved, ...siblings };
+function inlineObject(
+  node: JsonSchema,
+  schemas: Record<string, JsonSchema>,
+  depth: number
+): JsonSchema {
+  if (depth > MAX_DEPTH) {
+    throw new Error(`inlineRefs: exceeded maximum schema depth (${MAX_DEPTH}) — is a $ref cyclic?`);
   }
-
+  const { $ref: ref, ...siblings } = node;
+  const isRef = typeof ref === "string";
   const out: JsonSchema = {};
-  for (const [key, value] of entries) {
+  for (const [key, value] of Object.entries(isRef ? siblings : node)) {
     out[key] = inlineRefs(value, schemas, depth + 1);
   }
-  return out;
+  if (!isRef) return out;
+
+  if (!ref.startsWith(REF_PREFIX)) {
+    throw new Error(`inlineRefs: refusing to resolve external $ref '${ref}'`);
+  }
+  const name = ref.slice(REF_PREFIX.length);
+  if (!(name in schemas)) {
+    throw new Error(`inlineRefs: no schema named '${name}'`);
+  }
+  // JSON Schema 2020-12 allows keywords alongside $ref; the siblings win.
+  return { ...inlineObject(schemas[name], schemas, depth + 1), ...out };
 }
 
 /** A named API schema as a self-contained JSON Schema 2020-12 document. */
-export function resolveSchema(name: string, schemas: Record<string, unknown>): JsonSchema {
-  return inlineRefs({ $ref: `${REF_PREFIX}${name}` }, schemas) as JsonSchema;
+export function resolveSchema(name: string, schemas: Record<string, JsonSchema>): JsonSchema {
+  return inlineObject({ $ref: `${REF_PREFIX}${name}` }, schemas, 0);
 }

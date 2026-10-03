@@ -10,14 +10,14 @@ import type { Dataset } from "./dataset";
 import { apiError } from "./errors";
 import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "./openapi";
-import { POSTS_LIMIT_MAX, searchPosts } from "./posts";
+import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts } from "./posts";
 import {
   contactRateLimitHeaders,
   globalLimiter,
   RATE_LIMIT_EXPOSED_HEADERS,
   secondsUntilUtcMidnight
 } from "./ratelimit";
-import { ALLOWED_METHODS, API_PATHS, matchApiPath, READ_METHODS } from "./routes";
+import { ALLOWED_METHODS, API_PATHS, type ApiPath, matchApiPath, READ_METHODS } from "./routes";
 import { loadDataset, loadPost, loadPosts } from "./store";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
@@ -54,8 +54,8 @@ export function publicOrigin(requestUrl: string): string {
 }
 
 // Adds HEAD for GET endpoints and OPTIONS for all.
-function allowHeader(path: string): string {
-  const declared = ALLOWED_METHODS[path] ?? ["GET"];
+function allowHeader(path: ApiPath): string {
+  const declared = ALLOWED_METHODS[path];
   return [...declared, ...(declared.includes("GET") ? ["HEAD"] : []), "OPTIONS"].join(", ");
 }
 
@@ -134,7 +134,7 @@ api.on(
 api.on(READ_METHODS, "/posts", async c => {
   const rawLimit = c.req.query("limit");
   const limit = rawLimit === undefined ? undefined : Number(rawLimit);
-  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > POSTS_LIMIT_MAX)) {
+  if (limit !== undefined && !isPostsLimit(limit)) {
     return apiError({
       status: 400,
       code: "invalid_request",

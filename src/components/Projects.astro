@@ -8,7 +8,6 @@ let repos = await fetchPinnedRepos();
 
 // Dev-only sample card for when no repos are pinned (or no token); never ships.
 const SAMPLE_REPO: GithubRepo = {
-  id: "sample-eventform",
   name: "eventform",
   description:
     "Event-driven form builder — transactional outbox → Debezium CDC → Redpanda → idempotent webhook delivery. NestJS, Postgres (Neon), Cognito, AWS.",

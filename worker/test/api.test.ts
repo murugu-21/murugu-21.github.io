@@ -3,32 +3,27 @@ import { describe, expect, it } from "vitest";
 import { DOCS_URL } from "../api/errors";
 import { API_PATHS, CURRENT_API_VERSION } from "../api/routes";
 import { API_VERSION } from "../api/versioning";
-import worker from "../server";
-import { POST_MARKDOWN, recordingEmail, testEnv, type TestEnvOptions } from "./fixtures";
+import {
+  fetchWorker,
+  POST_MARKDOWN,
+  recordingEmail,
+  type FetchOptions,
+  type TestEnvOptions
+} from "./fixtures";
 
-async function get(path: string, options?: TestEnvOptions): Promise<Response> {
-  return await worker.fetch(new Request(`https://murugappan.dev${path}`), testEnv(options));
-}
+const get = (path: string, env?: TestEnvOptions) => fetchWorker(path, { env });
 
-async function post(
+const post = (
   path: string,
   body: unknown,
-  options: { ip?: string; contentType?: string | null; env?: TestEnvOptions } = {}
-): Promise<Response> {
-  const headers: Record<string, string> = {
-    "CF-Connecting-IP": options.ip ?? "203.0.113.1"
-  };
-  if (options.contentType !== null)
-    headers["Content-Type"] = options.contentType ?? "application/json";
-  return await worker.fetch(
-    new Request(`https://murugappan.dev${path}`, {
-      method: "POST",
-      headers,
-      body: typeof body === "string" ? body : JSON.stringify(body)
-    }),
-    testEnv(options.env)
-  );
-}
+  { contentType = "application/json", ...options }: FetchOptions & { contentType?: string } = {}
+) =>
+  fetchWorker(path, {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": contentType },
+    body: typeof body === "string" ? body : JSON.stringify(body)
+  });
 
 async function errorBody(res: Response) {
   const body = await res.json<{
@@ -124,12 +119,9 @@ describe("path versioning", () => {
   });
 
   it("exposes the signalling headers to a browser client", async () => {
-    const res = await worker.fetch(
-      new Request("https://murugappan.dev/api/v1/profile", {
-        headers: { Origin: "https://agent.example" }
-      }),
-      testEnv()
-    );
+    const res = await fetchWorker("/api/v1/profile", {
+      headers: { Origin: "https://agent.example" }
+    });
     const exposed = res.headers.get("Access-Control-Expose-Headers") ?? "";
     for (const name of [
       "RateLimit",
@@ -247,7 +239,7 @@ describe("the OpenAPI spec", () => {
     ["http://murugappan.dev", "https://murugappan.dev"],
     ["http://localhost:8787", "http://localhost:8787"]
   ])("names %s as %s in servers", async (origin, server) => {
-    const res = await worker.fetch(new Request(`${origin}/openapi.json`), testEnv());
+    const res = await fetchWorker(`${origin}/openapi.json`);
     const body = await res.json<{ servers: Array<{ url: string }> }>();
     expect(body.servers[0].url).toBe(server);
   });
@@ -292,16 +284,10 @@ describe("error handling under /api", () => {
   });
 
   it("answers a CORS preflight", async () => {
-    const res = await worker.fetch(
-      new Request("https://murugappan.dev/api/contact", {
-        method: "OPTIONS",
-        headers: {
-          Origin: "https://agent.example",
-          "Access-Control-Request-Method": "POST"
-        }
-      }),
-      testEnv()
-    );
+    const res = await fetchWorker("/api/contact", {
+      method: "OPTIONS",
+      headers: { Origin: "https://agent.example", "Access-Control-Request-Method": "POST" }
+    });
     expect(res.status).toBeLessThan(300);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Access-Control-Allow-Methods")).toContain("POST");

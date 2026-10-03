@@ -3,7 +3,9 @@ import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../lib/fonts";
 import { SITE_ORIGIN } from "../lib/site";
 import "../styles/global.css";
 import ChatWidget from "../components/chat/ChatWidget.astro";
+import Favicons from "../components/Favicons.astro";
 import Particles from "../components/Particles.astro";
+import SiteScripts from "../components/SiteScripts.astro";
 import { sameAs, skillsCategories, socialMediaLinks } from "../data/portfolio";
 
 interface Props {
@@ -135,13 +137,6 @@ if (!noindex) {
 }
 const jsonLd = { "@context": "https://schema.org", "@graph": graph };
 
-// PostHog: read at build time (hence no PUBLIC_ prefix; the token is a public
-// key) and passed via meta tags, since document.currentScript is null in a
-// bundled module script. Either unset (dev, CI) disables analytics.
-const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
-const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
-const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
-
 // scroll-pt-20 (80px) clears the fixed header. It lives here, not in global.css,
 // which the blog (no fixed header) shares.
 ---
@@ -195,12 +190,7 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
     <meta name="theme-color" content="#06038d" />
     <meta name="theme-color" content="#282c35" media="(prefers-color-scheme: dark)" />
 
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-    <link rel="shortcut icon" href="/favicon.ico" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/manifest.json" />
+    <Favicons />
 
     {/* Preloaded: with no metric-tuned fallback (../lib/fonts.ts), a late swap shifts layout. */}
     <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
@@ -221,34 +211,8 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
         if (dark) document.documentElement.classList.add("dark-mode");
       })();
     </script>
-    {analyticsEnabled && (
-      <>
-        <meta name="ph-token" content={POST_HOG_TOKEN} />
-        <meta name="ph-host" content={POST_HOG_URL} />
-      </>
-    )}
-
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
-    <script>
-      import "../lib/webmcp";
-      import { bootAnalytics, initClickTracking, tag } from "../lib/analytics";
-      import {
-        currentTheme,
-        documentThemeSource,
-        setTheme,
-        syncThemeOnRestore
-      } from "../lib/theme";
-
-      // Must run first: tags/events sent before it are dropped, not buffered.
-      bootAnalytics();
-
-      initClickTracking();
-      tag("theme", currentTheme());
-      window.addEventListener("themechange", () => tag("theme", currentTheme()));
-
-      // The inline bootstrap doesn't rerun on a bfcache restore.
-      syncThemeOnRestore(window, documentThemeSource, setTheme);
-    </script>
+    <SiteScripts />
   </head>
   <body>
     <Particles />

@@ -1,7 +1,7 @@
 import { assert, describe, expect, it } from "vitest";
 
 import { fetchDeepseekBalance, isInsufficientBalance, runDeepseekExchange } from "../ai";
-import { buildMessages, MAX_HISTORY_MESSAGES } from "../prompt";
+import { buildMessages, MAX_HISTORY_MESSAGES, type ModelMessage } from "../prompt";
 import { consumeSse } from "../sse";
 
 function sseStream(events: string[]): ReadableStream<Uint8Array> {
@@ -39,9 +39,8 @@ describe("runDeepseekExchange", () => {
     const [captured] = calls;
     assert(captured, "no request was sent");
     expect(captured.url).toBe("https://api.deepseek.com/chat/completions");
-    const headers = captured.init.headers as Record<string, string>;
-    expect(headers.authorization).toBe("Bearer sk-test");
-    const body = JSON.parse(captured.init.body as string);
+    expect(new Headers(captured.init.headers).get("authorization")).toBe("Bearer sk-test");
+    const body = JSON.parse(String(captured.init.body));
     expect(body.stream).toBe(true);
     expect(body.stream_options).toEqual({ include_usage: true });
     // Reasoning sharpens tool selection; with no max_tokens it can't starve the reply.
@@ -160,9 +159,9 @@ describe("consumeSse", () => {
 
 describe("buildMessages", () => {
   it("puts grounding into a single system message followed by history", () => {
-    const history = [
-      { role: "user" as const, content: "hi" },
-      { role: "assistant" as const, content: "hello" }
+    const history: ModelMessage[] = [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "hello" }
     ];
     const messages = buildMessages("GROUNDING", history);
     expect(messages[0].role).toBe("system");
@@ -171,7 +170,7 @@ describe("buildMessages", () => {
   });
 
   it("appends a page-context system message only when a page is given", () => {
-    const history = [{ role: "user" as const, content: "hi" }];
+    const history: ModelMessage[] = [{ role: "user", content: "hi" }];
     const last = buildMessages("g", history, "/blog/react/").at(-1);
     expect(last?.role).toBe("system");
     expect(last?.content).toContain("https://murugappan.dev/blog/react/");
@@ -179,8 +178,8 @@ describe("buildMessages", () => {
   });
 
   it("clips history to the most recent MAX_HISTORY_MESSAGES", () => {
-    const history = Array.from({ length: 50 }, (_, i) => ({
-      role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+    const history = Array.from({ length: 50 }, (_, i): ModelMessage => ({
+      role: i % 2 === 0 ? "user" : "assistant",
       content: `m${i}`
     }));
     const messages = buildMessages("g", history);

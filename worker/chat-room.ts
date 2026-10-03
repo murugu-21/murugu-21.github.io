@@ -120,17 +120,14 @@ export class ChatRoom extends Server<Env> {
     await turn;
   }
 
-  private async handleTurn(
-    connection: Connection,
-    msg: { text: string; page?: string }
-  ): Promise<void> {
-    if (this.userMessagesSince(Date.now() - DAY_MS) >= ROOM_DAILY_LIMIT) {
-      this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
-      return;
-    }
+  private async handleTurn(connection: Connection, msg: ClientMessage): Promise<void> {
     // A missing key gates like an empty account; the visitor can't fix either.
     const key = this.deepseekKey();
-    if (!key || !(await globalLimiter(this.env).chatAvailable(key))) {
+    if (
+      this.userMessagesSince(Date.now() - DAY_MS) >= ROOM_DAILY_LIMIT ||
+      !key ||
+      !(await globalLimiter(this.env).chatAvailable(key))
+    ) {
       this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
       return;
     }

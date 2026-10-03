@@ -1,0 +1,32 @@
+---
+// PostHog: read at build time (hence no PUBLIC_ prefix; the token is a public
+// key) and passed via meta tags, since document.currentScript is null in a
+// bundled module script. Either unset (dev, CI) disables analytics.
+const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
+const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
+const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
+---
+
+{analyticsEnabled && (
+  <>
+    <meta name="ph-token" content={POST_HOG_TOKEN} />
+    <meta name="ph-host" content={POST_HOG_URL} />
+  </>
+)}
+
+<script>
+  import "../lib/webmcp";
+  import { bootAnalytics, initClickTracking, tag } from "../lib/analytics";
+  import { currentTheme, documentThemeSource, setTheme, syncThemeOnRestore } from "../lib/theme";
+
+  // Must run first: tags/events sent before it are dropped, not buffered.
+  bootAnalytics();
+
+  // Deferred, so the layout's inline theme bootstrap has already run.
+  initClickTracking();
+  tag("theme", currentTheme());
+  window.addEventListener("themechange", () => tag("theme", currentTheme()));
+
+  // The inline bootstrap doesn't rerun on a bfcache restore.
+  syncThemeOnRestore(window, documentThemeSource, setTheme);
+</script>

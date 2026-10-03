@@ -2,17 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { VERSIONED_API_BASE } from "../api/routes";
 import { MCP_TOOLS } from "../mcp/tools";
-import worker from "../server";
 import {
   buildApiCatalog,
   buildMcpManifest,
   LINKSET_MEDIA_TYPE,
   MCP_SERVER_NAME
 } from "../well-known";
-import { testEnv } from "./fixtures";
-
-const get = (path: string, origin = "https://murugappan.dev") =>
-  worker.fetch(new Request(`${origin}${path}`), testEnv());
+import { fetchWorker } from "./fixtures";
 
 describe("buildApiCatalog", () => {
   const catalog = buildApiCatalog("https://murugappan.dev");
@@ -85,14 +81,14 @@ describe("buildMcpManifest", () => {
 
 describe("/.well-known/api-catalog", () => {
   it("is served cross-origin with the RFC 9727 media type", async () => {
-    const res = await get("/.well-known/api-catalog");
+    const res = await fetchWorker("/.well-known/api-catalog");
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe(`${LINKSET_MEDIA_TYPE}; charset=utf-8`);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 
   it("names the host that answered", async () => {
-    const res = await get("/.well-known/api-catalog", "https://preview.example");
+    const res = await fetchWorker("https://preview.example/.well-known/api-catalog");
     const body = await res.json<{ linkset: Array<{ anchor: string }> }>();
     expect(body.linkset[0].anchor).toBe(`https://preview.example${VERSIONED_API_BASE}`);
   });
@@ -101,20 +97,20 @@ describe("/.well-known/api-catalog", () => {
 describe("the MCP manifest endpoint", () => {
   // /mcp.json must not be mistaken for a JSON-RPC call to /mcp.
   it.each(["/.well-known/mcp.json", "/mcp.json"])("is served at %s", async path => {
-    const res = await get(path);
+    const res = await fetchWorker(path);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
     expect((await res.json<{ name: string }>()).name).toBe(MCP_SERVER_NAME);
   });
 
   it("names the host that answered", async () => {
-    const res = await get("/mcp.json", "https://preview.example");
+    const res = await fetchWorker("https://preview.example/mcp.json");
     const body = await res.json<{ remotes: Array<{ url: string }> }>();
     expect(body.remotes[0].url).toBe("https://preview.example/mcp");
   });
 
   it("404s an unknown well-known path as markdown, not as the HTML page", async () => {
-    const res = await get("/.well-known/nope.json");
+    const res = await fetchWorker("/.well-known/nope.json");
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
   });

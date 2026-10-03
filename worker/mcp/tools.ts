@@ -5,7 +5,7 @@
 import { API_SCHEMAS } from "../api/openapi";
 import { CONTACT_DAILY_PER_CLIENT, CONTACT_LIMITS, parseContactRequest } from "../api/contact";
 import type { Dataset } from "../api/dataset";
-import { POSTS_LIMIT_MAX, searchPosts } from "../api/posts";
+import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts, SLUG_PATTERN } from "../api/posts";
 import { globalLimiter } from "../api/ratelimit";
 import { loadDataset, loadPost, loadPosts, type AssetsLike } from "../api/store";
 import { contactMailer, sendContactEmail } from "../email";
@@ -183,7 +183,7 @@ export const MCP_TOOLS: McpTool[] = [
       let limit: number | undefined;
       if (args.limit !== undefined && args.limit !== null) {
         const parsed = Number(args.limit);
-        if (!Number.isInteger(parsed) || parsed < 1 || parsed > POSTS_LIMIT_MAX)
+        if (!isPostsLimit(parsed))
           return fail(
             `The 'limit' argument must be an integer between 1 and ${POSTS_LIMIT_MAX}, or omitted.`
           );
@@ -206,7 +206,7 @@ export const MCP_TOOLS: McpTool[] = [
           type: "string",
           description:
             "The post's slug — the last path segment of its URL, e.g. 'cloud-agnostic-rate-limiting'.",
-          pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          pattern: SLUG_PATTERN
         }
       },
       required: ["slug"],

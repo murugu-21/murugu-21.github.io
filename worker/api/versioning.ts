@@ -72,7 +72,6 @@ type VersionsDocument = {
 
 /** URLs are absolute against the host that was asked. */
 export function buildVersionsDocument(origin: string): VersionsDocument {
-  const base = origin.replace(/\/$/, "");
   return {
     current: CURRENT_API_VERSION,
     currentRelease: API_VERSION,
@@ -83,14 +82,14 @@ export function buildVersionsDocument(origin: string): VersionsDocument {
     },
     versions: VERSIONS.map(record => ({
       ...record,
-      url: `${base}${record.basePath}`,
-      specUrl: `${base}${record.specUrl}`
+      url: `${origin}${record.basePath}`,
+      specUrl: `${origin}${record.specUrl}`
     })),
     policy: {
       scheme: "url-path",
       deprecationNoticeDays: DEPRECATION_NOTICE_DAYS,
       rules: POLICY_RULES,
-      documentationUrl: `${base}/developers/#versioning`,
+      documentationUrl: `${origin}/developers/#versioning`,
       headers: {
         "API-Version": "The semantic release that answered this request.",
         "API-Supported-Versions": "Every path version this deployment still answers.",

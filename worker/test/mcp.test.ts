@@ -12,11 +12,11 @@ import {
 import { listResources, readResource, RESOURCE_ORIGIN } from "../mcp/resources";
 import { inlineRefs, resolveSchema } from "../mcp/schema";
 import { MCP_TOOLS, findTool } from "../mcp/tools";
-import worker from "../server";
 import {
   AGENTS_MD,
   DATASET_INPUT,
   fakeAssets,
+  fetchWorker,
   LLMS_FULL_TXT,
   LLMS_TXT,
   POST_MARKDOWN,
@@ -48,27 +48,23 @@ async function send<R = AnyResult>(
     headers?: Record<string, string>;
     ip?: string;
     method?: string;
-    options?: TestEnvOptions;
   } = {}
 ): Promise<{ res: Response; json: JsonRpc<R> }> {
-  const res = await worker.fetch(
-    new Request("https://murugappan.dev/mcp", {
-      method: init.method ?? "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json, text/event-stream",
-        "CF-Connecting-IP": init.ip ?? "203.0.113.70",
-        ...init.headers
-      },
-      body:
-        init.method && init.method !== "POST"
-          ? undefined
-          : typeof body === "string"
-            ? body
-            : JSON.stringify(body)
-    }),
-    testEnv(init.options)
-  );
+  const res = await fetchWorker("/mcp", {
+    method: init.method ?? "POST",
+    ip: init.ip ?? "203.0.113.70",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      ...init.headers
+    },
+    body:
+      init.method && init.method !== "POST"
+        ? undefined
+        : typeof body === "string"
+          ? body
+          : JSON.stringify(body)
+  });
   const text = await res.text();
   const json: JsonRpc<R> = text ? JSON.parse(text) : {};
   return { res, json };
@@ -111,7 +107,7 @@ function modern(
 async function callModern<R = AnyResult>(
   method: string,
   params: Record<string, unknown> = {},
-  init: { ip?: string; options?: TestEnvOptions } = {}
+  init: { ip?: string } = {}
 ) {
   const { body, headers } = modern(method, params);
   return send<R>(body, { headers, ...init });
@@ -155,17 +151,14 @@ describe("the MCP endpoint", () => {
   );
 
   it("answers a CORS preflight so browser clients can connect", async () => {
-    const res = await worker.fetch(
-      new Request("https://murugappan.dev/mcp", {
-        method: "OPTIONS",
-        headers: {
-          Origin: "https://agent.example",
-          "Access-Control-Request-Method": "POST",
-          "Access-Control-Request-Headers": "mcp-protocol-version"
-        }
-      }),
-      testEnv()
-    );
+    const res = await fetchWorker("/mcp", {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://agent.example",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "mcp-protocol-version"
+      }
+    });
     expect(res.status).toBeLessThan(300);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     expect(res.headers.get("Access-Control-Allow-Headers")?.toLowerCase()).toContain(

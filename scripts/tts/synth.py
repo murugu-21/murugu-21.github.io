@@ -8,7 +8,6 @@ Plain clone on purpose: the reference was already designed (design-voice.py);
 an instruction here doubles the cost (CFG runs the backbone twice) and lets
 delivery drift. 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
 """
-import contextlib
 import json
 import sys
 import time
@@ -88,8 +87,7 @@ def main() -> int:
 
     t0 = time.time()
     mx.set_cache_limit(CACHE_LIMIT)
-    with contextlib.redirect_stdout(sys.stderr):
-        model = load(MODEL)
+    model = load(MODEL)
     emit({"ready": True, "model": MODEL, "loadSeconds": round(time.time() - t0, 1)})
     for line in sys.stdin:
         line = line.strip()

@@ -14,9 +14,9 @@ interface PostHog {
 }
 
 /** Injectable for tests; production dynamic-imports the real browser SDK. */
-export type SdkLoader = () => Promise<PostHog>;
+type SdkLoader = () => Promise<PostHog>;
 
-const loadSdk: SdkLoader = () => import("posthog-js").then(m => m.default as unknown as PostHog);
+const loadSdk: SdkLoader = () => import("posthog-js").then(m => m.default);
 
 // Checked before the global in case something reassigns window.posthog.
 let sdk: PostHog | null = null;
@@ -226,7 +226,7 @@ export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> 
   const token = meta("ph-token");
   const host = meta("ph-host");
   if (!token || !host) return Promise.resolve();
-  const win = doc.defaultView as (Window & typeof globalThis) | null;
+  const win = doc.defaultView;
   if (win && !stopEarlyErrors) {
     // Buffering must start now: onError pushes straight into pending.
     pending ??= [];

@@ -1,6 +1,8 @@
 ---
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, TWITTER_HANDLE } from "../consts";
 import { SITE_ORIGIN } from "../../lib/site";
+import Favicons from "../../components/Favicons.astro";
+import SiteScripts from "../../components/SiteScripts.astro";
 
 // Declared inline and preloaded so the face is usually in hand by first paint.
 import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../../lib/fonts";
@@ -35,11 +37,6 @@ const ogTitle = title || SITE_TITLE;
 const pathname = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`;
 const canonical = `${SITE_ORIGIN}${pathname}`;
 const ogImage = `${SITE_URL}/og-image.png`;
-
-// See ../../layouts/Layout.astro for why PostHog config goes through meta tags.
-const POST_HOG_TOKEN = import.meta.env.POST_HOG_TOKEN?.trim();
-const POST_HOG_URL = import.meta.env.POST_HOG_URL?.trim();
-const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 ---
 
 <meta charset="utf-8" />
@@ -55,12 +52,7 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
   title="murugappan.dev API — OpenAPI 3.1.0"
 />
 <link rel="service-doc" type="text/html" href={`${SITE_ORIGIN}/developers/`} />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-<link rel="shortcut icon" href="/favicon.ico" />
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-<link rel="manifest" href="/manifest.json" />
+<Favicons />
 <meta name="theme-color" content="#06038d" />
 <meta name="description" content={metaDescription} />
 <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
@@ -90,27 +82,4 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
   href="/blog/rss.xml"
 />
 {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />}
-{analyticsEnabled && (
-  <>
-    <meta name="ph-token" content={POST_HOG_TOKEN} />
-    <meta name="ph-host" content={POST_HOG_URL} />
-  </>
-)}
-
-<script>
-  import "../../lib/webmcp";
-  import { bootAnalytics, initClickTracking, tag } from "../../lib/analytics";
-  import { currentTheme, documentThemeSource, setTheme, syncThemeOnRestore } from "../../lib/theme";
-
-  // Must run first: tags or events sent before boot are dropped, not buffered.
-  bootAnalytics();
-
-  // The theme is a super property, re-tagged on every switch. This module is
-  // deferred, so BaseLayout's theme bootstrap has already run.
-  initClickTracking();
-  tag("theme", currentTheme());
-  window.addEventListener("themechange", () => tag("theme", currentTheme()));
-
-  // The bootstrap doesn't re-run on a bfcache restore.
-  syncThemeOnRestore(window, documentThemeSource, setTheme);
-</script>
+<SiteScripts />

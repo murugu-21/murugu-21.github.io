@@ -52,13 +52,12 @@ export class RateLimiter extends DurableObject<Env> {
     const cached = await this.ctx.storage.get<CachedBalance>(BALANCE_KEY);
     if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) return hasFunds(cached);
     try {
-      const { available, totalUsd } = await fetchDeepseekBalance(apiKey, fetcher);
+      const balance = await fetchDeepseekBalance(apiKey, fetcher);
       await this.ctx.storage.put(BALANCE_KEY, {
-        available,
-        totalUsd,
+        ...balance,
         checkedAt: Date.now()
       } satisfies CachedBalance);
-      return hasFunds({ available, totalUsd });
+      return hasFunds(balance);
     } catch (err) {
       console.error("deepseek balance check failed", err);
       return true;
@@ -87,30 +86,39 @@ export class RateLimiter extends DurableObject<Env> {
       return {
         allowed: false,
         scope: "client",
-        ...this.remaining(clientUsed, this.contactCount(globalKey))
+        ...this.remaining({ clientUsed, globalUsed: this.contactCount(globalKey) })
       };
     const globalUsed = this.contactCount(globalKey);
     if (globalUsed >= CONTACT_DAILY_GLOBAL)
       return {
         allowed: false,
         scope: "global",
-        ...this.remaining(clientUsed, globalUsed)
+        ...this.remaining({ clientUsed, globalUsed })
       };
     this.bumpContact(clientKey);
     this.bumpContact(globalKey);
-    return { allowed: true, ...this.remaining(clientUsed + 1, globalUsed + 1) };
+    return {
+      allowed: true,
+      ...this.remaining({ clientUsed: clientUsed + 1, globalUsed: globalUsed + 1 })
+    };
   }
 
   /** Remaining allowance without spending any, for a dry run. */
   contactUsage(client: string): ContactUsage {
     const day = this.today();
-    return this.remaining(
-      this.contactCount(`${day}:client:${client}`),
-      this.contactCount(`${day}:global`)
-    );
+    return this.remaining({
+      clientUsed: this.contactCount(`${day}:client:${client}`),
+      globalUsed: this.contactCount(`${day}:global`)
+    });
   }
 
-  private remaining(clientUsed: number, globalUsed: number): ContactUsage {
+  private remaining({
+    clientUsed,
+    globalUsed
+  }: {
+    clientUsed: number;
+    globalUsed: number;
+  }): ContactUsage {
     return {
       clientRemaining: Math.max(0, CONTACT_DAILY_PER_CLIENT - clientUsed),
       globalRemaining: Math.max(0, CONTACT_DAILY_GLOBAL - globalUsed)

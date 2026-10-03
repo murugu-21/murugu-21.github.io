@@ -19,7 +19,7 @@ const duration = (period: string) => {
   const b = periodBounds(period);
   if (!b) return null;
   return {
-    label: formatDuration(monthsBetween(b.start, b.end ?? now)),
+    label: formatDuration(monthsBetween({ start: b.start, end: b.end ?? now })),
     start: ym(b.start),
     end: b.end ? ym(b.end) : "present"
   };
@@ -164,7 +164,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
   document.querySelectorAll<HTMLElement>('.duration[data-end="present"]').forEach(el => {
     const start = el.dataset.start;
     if (!start) return;
-    el.textContent = ` · ${formatDuration(monthsBetween(parse(start), now))}`;
+    el.textContent = ` · ${formatDuration(monthsBetween({ start: parse(start), end: now }))}`;
   });
   const total = document.querySelector<HTMLElement>(".experience-total-value");
   const periods = total?.dataset.periods;

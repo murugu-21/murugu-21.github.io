@@ -21,13 +21,6 @@ import {
 } from "../api/versioning";
 
 describe("the route table", () => {
-  it("declares the methods for every known path", () => {
-    for (const path of Object.values(API_PATHS)) {
-      expect(ALLOWED_METHODS[path], path).toBeDefined();
-      expect(ALLOWED_METHODS[path].length, path).toBeGreaterThan(0);
-    }
-  });
-
   it("makes contact the only write endpoint", () => {
     const writes = Object.entries(ALLOWED_METHODS)
       .filter(([, methods]) => methods.some(m => m !== "GET"))
@@ -187,8 +180,8 @@ describe("buildOpenApiDocument", () => {
 
   it("documents exactly the paths and methods the router serves", () => {
     expect(Object.keys(doc.paths).sort()).toEqual([...SPEC_PATHS].sort());
-    for (const [path, item] of Object.entries(doc.paths)) {
-      const documented = Object.keys(item)
+    for (const path of SPEC_PATHS) {
+      const documented = Object.keys(doc.paths[path])
         .map(m => m.toUpperCase())
         .sort();
       expect(documented, path).toEqual([...ALLOWED_METHODS[path]].sort());

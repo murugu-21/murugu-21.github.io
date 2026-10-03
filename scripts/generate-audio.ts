@@ -129,7 +129,7 @@ function existingHash(slug: string, tmp: string): string | null {
   const file = join(tmp, "existing.json");
   if (!r2.get(`${AUDIO_PREFIX}/${slug}.json`, file)) return null;
   try {
-    const { hash } = JSON.parse(readFileSync(file, "utf8")) as { hash?: string };
+    const { hash }: { hash?: string } = JSON.parse(readFileSync(file, "utf8"));
     return hash ?? null;
   } catch {
     return null;
@@ -162,7 +162,7 @@ async function renderPost(
     log(
       `${slug}: ${blocks.length} blocks, ${chunks.length} chunks, ${blocks.join(" ").length} chars`
     );
-    if (flags.has("--dry-run") || !worker) return;
+    if (!worker) return;
 
     const outDir = join(tmp, "chunks");
     const jobPath = join(tmp, "job.json");

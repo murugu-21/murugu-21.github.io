@@ -38,7 +38,7 @@ const fresh = async () => {
   return await import("./analytics");
 };
 
-const doc = (html: string) => parseHTML(html).document as unknown as Document;
+const doc = (html: string) => parseHTML(html).document;
 
 describe("onFirstInteraction", () => {
   it("fires once, on the first input, then stops listening", () => {
@@ -127,10 +127,10 @@ describe("tag", () => {
 
 describe("initClickTracking", () => {
   const click = (d: Document, id: string) => {
-    const Ctor = (d.defaultView as unknown as { Event: typeof Event }).Event;
+    const win = d.defaultView;
     const target = d.getElementById(id);
-    assert(target, `no #${id} in the fixture`);
-    target.dispatchEvent(new Ctor("click", { bubbles: true }));
+    assert(win && target, `no window or #${id} in the fixture`);
+    target.dispatchEvent(new win.Event("click", { bubbles: true }));
   };
 
   it("captures the nearest annotated ancestor of the click target", () => {
@@ -297,8 +297,8 @@ describe("bootAnalytics", () => {
     const { sdk, captureException } = fakeSdk();
     const { promise: gate, resolve: release } = Promise.withResolvers<void>();
     const d = page(metas);
-    assert(d.defaultView, "fixture page has no window");
-    const win = d.defaultView as unknown as typeof globalThis;
+    const win = d.defaultView;
+    assert(win, "fixture page has no window");
     const ph = await fresh();
     const booting = ph.bootAnalytics(d, async () => {
       await gate;

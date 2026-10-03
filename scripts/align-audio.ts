@@ -73,7 +73,7 @@ async function alignPost(slug: string, worker: Worker) {
       log(`${slug}: no audio in R2, skipping`);
       return;
     }
-    const timings = JSON.parse(readFileSync(jsonPath, "utf8")) as Timings;
+    const timings: Timings = JSON.parse(readFileSync(jsonPath, "utf8"));
     if (timings.version >= 2 && !flags.has("--force")) {
       log(`${slug}: already aligned, skipping`);
       return;

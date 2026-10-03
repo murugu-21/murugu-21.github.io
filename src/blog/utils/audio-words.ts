@@ -122,7 +122,7 @@ const WORD_ATTR = "data-w";
 // Wraps each word of `el` in <span class="rw">, grouped per word in document
 // order. Words span text nodes, so "<a>SiteGPT</a>’s" is one word of two
 // spans. Idempotent: existing spans are regrouped by word index.
-export function wrapWords(el: HTMLElement): HTMLElement[][] {
+export function wrapWords(el: Element): HTMLElement[][] {
   const existing = Array.from(el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`));
   if (existing.length > 0) {
     const grouped: HTMLElement[][] = [];
