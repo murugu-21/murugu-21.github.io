@@ -1,9 +1,9 @@
 ---
 import SocialMedia from "./SocialMedia.astro";
-import { contactInfo } from "../data/portfolio";
-import { fetchGithubProfile } from "../lib/github";
-import { accentTitle } from "../lib/accent";
-import { resumeContact } from "../data/resume";
+import { contactInfo } from "#src/data/portfolio.ts";
+import { fetchGithubProfile } from "#src/lib/github.ts";
+import { accentTitle } from "#src/lib/accent.ts";
+import { resumeContact } from "#src/data/resume.ts";
 
 const prof = await fetchGithubProfile();
 

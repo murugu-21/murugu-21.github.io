@@ -1,8 +1,8 @@
 ---
 import Button from "./Button.astro";
-import { projectsSection, socialMediaLinks } from "../data/portfolio";
-import { fetchPinnedRepos, formatRepoSize, type GithubRepo } from "../lib/github";
-import { accentTitle } from "../lib/accent";
+import { projectsSection, socialMediaLinks } from "#src/data/portfolio.ts";
+import { fetchPinnedRepos, formatRepoSize, type GithubRepo } from "#src/lib/github.ts";
+import { accentTitle } from "#src/lib/accent.ts";
 
 let repos = await fetchPinnedRepos();
 

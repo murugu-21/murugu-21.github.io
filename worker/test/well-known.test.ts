@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { MCP_TOOLS } from "../mcp/tools";
+import { MCP_TOOLS } from "#worker/mcp/tools.ts";
 import {
   buildApiCatalog,
   buildMcpManifest,
   LINKSET_MEDIA_TYPE,
   MCP_SERVER_NAME
-} from "../well-known";
+} from "#worker/well-known.ts";
 import { fetchWorker, readJson } from "./fixtures";
 
 describe("buildApiCatalog", () => {

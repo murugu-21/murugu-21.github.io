@@ -1,11 +1,11 @@
 ---
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, TWITTER_HANDLE } from "../consts";
-import { SITE_ORIGIN } from "../../lib/site";
-import Favicons from "../../components/Favicons.astro";
-import SiteScripts from "../../components/SiteScripts.astro";
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, TWITTER_HANDLE } from "#src/blog/consts.ts";
+import { SITE_ORIGIN } from "#src/lib/site.ts";
+import Favicons from "#src/components/Favicons.astro";
+import SiteScripts from "#src/components/SiteScripts.astro";
 
 // Declared inline and preloaded so the face is usually in hand by first paint.
-import { FIRA_CODE_FACE, FIRA_CODE_URL } from "../../lib/fonts";
+import { FIRA_CODE_FACE, FIRA_CODE_URL } from "#src/lib/fonts.ts";
 
 export interface Props {
   // Omitted for the blog index, which gets the homepage title.

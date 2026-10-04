@@ -4,8 +4,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
-import { API_VERSION } from "../api/versioning";
-import { JsonObject } from "../../utils/json";
+import { API_VERSION } from "#worker/api/versioning.ts";
+import { JsonObject } from "#utils/json.ts";
 import {
   checkModernVersion,
   isAllowedOrigin,

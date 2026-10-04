@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { fetchSitePage } from "../fetch-page";
-import { getGrounding, type CachedGrounding } from "../grounding";
+import { fetchSitePage } from "#worker/fetch-page.ts";
+import { getGrounding, type CachedGrounding } from "#worker/grounding.ts";
 import { fakeAssets } from "./fixtures";
 
 function fakeStorage(initial: Record<string, CachedGrounding> = {}) {

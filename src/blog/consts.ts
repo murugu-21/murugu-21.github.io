@@ -1,5 +1,5 @@
-import { sameAs, socialMediaLinks } from "../data/portfolio";
-import { SITE_ORIGIN } from "../lib/site";
+import { sameAs, socialMediaLinks } from "#src/data/portfolio.ts";
+import { SITE_ORIGIN } from "#src/lib/site.ts";
 
 export const SITE_TITLE = "SDE Journey";
 export const SITE_DESCRIPTION = "A Technical blog on my experiences in the tech industry";

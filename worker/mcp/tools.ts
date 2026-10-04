@@ -2,13 +2,17 @@
 // schemas inlined as outputSchema. Anything a model could fix by retrying with
 // other arguments is an `isError` result, not a protocol error.
 
-import { API_SCHEMAS } from "../api/openapi";
-import { CONTACT_DAILY_PER_CLIENT, CONTACT_LIMITS, parseContactRequest } from "../api/contact";
-import type { Dataset } from "../api/dataset";
-import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts, SLUG_PATTERN } from "../api/posts";
-import { globalLimiter } from "../api/ratelimit";
-import { loadDataset, loadPost, loadPosts, type AssetsLike } from "../api/store";
-import { contactMailer, sendContactEmail } from "../email";
+import { API_SCHEMAS } from "#worker/api/openapi.ts";
+import {
+  CONTACT_DAILY_PER_CLIENT,
+  CONTACT_LIMITS,
+  parseContactRequest
+} from "#worker/api/contact.ts";
+import type { Dataset } from "#worker/api/dataset.ts";
+import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts, SLUG_PATTERN } from "#worker/api/posts.ts";
+import { globalLimiter } from "#worker/api/ratelimit.ts";
+import { loadDataset, loadPost, loadPosts, type AssetsLike } from "#worker/api/store.ts";
+import { contactMailer, sendContactEmail } from "#worker/email.ts";
 import { resolveSchema, type JsonSchema } from "./schema";
 
 export type ToolContext = {

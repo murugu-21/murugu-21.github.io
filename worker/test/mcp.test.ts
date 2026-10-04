@@ -1,18 +1,18 @@
 import { assert, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_PER_CLIENT } from "../api/contact";
-import { buildDataset } from "../api/dataset";
-import { API_VERSION } from "../api/versioning";
-import { JsonObject } from "../../utils/json";
+import { CONTACT_DAILY_PER_CLIENT } from "#worker/api/contact.ts";
+import { buildDataset } from "#worker/api/dataset.ts";
+import { API_VERSION } from "#worker/api/versioning.ts";
+import { JsonObject } from "#utils/json.ts";
 import {
   LATEST_PROTOCOL_VERSION,
   LEGACY_PROTOCOL_VERSIONS,
   SUPPORTED_PROTOCOL_VERSIONS
-} from "../mcp/protocol";
-import { listResources, readResource, RESOURCE_ORIGIN } from "../mcp/resources";
-import { inlineRefs } from "../mcp/schema";
-import { MCP_TOOLS, findTool } from "../mcp/tools";
+} from "#worker/mcp/protocol.ts";
+import { listResources, readResource, RESOURCE_ORIGIN } from "#worker/mcp/resources.ts";
+import { inlineRefs } from "#worker/mcp/schema.ts";
+import { MCP_TOOLS, findTool } from "#worker/mcp/tools.ts";
 import {
   AGENTS_MD,
   DATASET_INPUT,

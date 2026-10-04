@@ -17,7 +17,7 @@ const { roles } = Astro.props;
 </span>
 
 <script>
-  import { parseStringArray } from "../lib/data-attributes";
+  import { parseStringArray } from "#src/lib/data-attributes.ts";
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 

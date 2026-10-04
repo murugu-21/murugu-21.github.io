@@ -14,9 +14,9 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { z } from "zod";
 
-import { jsonString } from "../utils/json.ts";
+import { jsonString } from "#utils/json.ts";
 
-import { alignWords, type TimedWord } from "../src/blog/utils/audio-words.ts";
+import { alignWords, type TimedWord } from "#src/blog/utils/audio-words.ts";
 import {
   PYTHON,
   ROOT,

@@ -3,11 +3,11 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
-import { parseRange } from "../audio";
-import { ChatRoom } from "../chat-room";
-import { markdownNotFound, prefersMarkdown, serveAsset } from "../not-found";
-import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "../protocol";
-import worker from "../server";
+import { parseRange } from "#worker/audio.ts";
+import { ChatRoom } from "#worker/chat-room.ts";
+import { markdownNotFound, prefersMarkdown, serveAsset } from "#worker/not-found.ts";
+import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/protocol.ts";
+import worker from "#worker/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,
   connectRoom,

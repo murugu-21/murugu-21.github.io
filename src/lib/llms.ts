@@ -1,8 +1,8 @@
 // /llms.txt and the markdown renditions served for Accept: text/markdown.
 // The preamble is a ?raw .txt because it contains backticks.
-import LLMS_PREAMBLE from "../data/llms-preamble.txt?raw";
-import { SITE_DESCRIPTION, SITE_TITLE } from "../blog/consts";
-import { postLines } from "../blog/utils/llms";
+import LLMS_PREAMBLE from "#src/data/llms-preamble.txt?raw";
+import { SITE_DESCRIPTION, SITE_TITLE } from "#src/blog/consts.ts";
+import { postLines } from "#src/blog/utils/llms.ts";
 
 /** /llms.txt: the hand-written site summary plus every blog post. */
 export async function siteLlmsText(): Promise<string> {

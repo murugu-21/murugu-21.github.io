@@ -6,7 +6,7 @@ import sharp from "sharp";
 import subsetFont from "subset-font";
 import { z } from "zod";
 
-import { jsonString } from "../utils/json.ts";
+import { jsonString } from "#utils/json.ts";
 import { launchBrowser } from "./launch-browser.ts";
 import {
   DIAGRAMS_DIR,
@@ -15,7 +15,7 @@ import {
   diagramRaster,
   findMermaidFences,
   type DiagramTheme
-} from "../src/blog/utils/mermaid-diagrams";
+} from "#src/blog/utils/mermaid-diagrams.ts";
 
 // Renders every ```mermaid fence under content/blog to
 // <slug>/diagrams/<hash>.<theme>.svg plus a light <hash>.png for RSS (feed

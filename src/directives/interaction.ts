@@ -1,6 +1,6 @@
 import type { ClientDirective } from "astro";
 
-import { onFirstInteraction } from "../lib/first-interaction";
+import { onFirstInteraction } from "#src/lib/first-interaction.ts";
 
 // `client:interaction`: hydrate an island on the visitor's first input anywhere
 // on the page. The chat island is ~130 KB gzipped with a ~100 ms hydration task;

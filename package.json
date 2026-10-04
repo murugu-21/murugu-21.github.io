@@ -5,6 +5,12 @@
   "type": "module",
   "version": "2.0.0",
   "packageManager": "bun@1.4.2",
+  "imports": {
+    "#src/*": "./src/*",
+    "#worker/*": "./worker/*",
+    "#utils/*": "./utils/*",
+    "#scripts/*": "./scripts/*"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

@@ -11,10 +11,10 @@ import { join } from "node:path";
 import { z } from "zod";
 
 // oxlint-disable-next-line no-restricted-imports -- the Worker's model config is what this tests
-import { DEEPSEEK_BASE_URL, DEEPSEEK_MODEL } from "@worker/ai.ts";
-import { jsonString } from "../utils/json.ts";
+import { DEEPSEEK_BASE_URL, DEEPSEEK_MODEL } from "#worker/ai.ts";
+import { jsonString } from "#utils/json.ts";
 // oxlint-disable-next-line no-restricted-imports -- the Worker's prompt is what this tests
-import { buildMessages, TOOLS, type ModelMessage } from "@worker/prompt.ts";
+import { buildMessages, TOOLS, type ModelMessage } from "#worker/prompt.ts";
 import { SITE_DIR } from "./site-dir.ts";
 
 const model = process.argv[2] ?? DEEPSEEK_MODEL;

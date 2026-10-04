@@ -1,8 +1,8 @@
 // Inline import() types: tsgolint (type-aware lint) leaves `import type` inside this block unresolved.
 declare module "cloudflare:test" {
   export interface ProvidedEnv {
-    ChatRoom: DurableObjectNamespace<import("../chat-room").ChatRoom>;
-    RateLimiter: DurableObjectNamespace<import("../rate-limiter").RateLimiter>;
+    ChatRoom: DurableObjectNamespace<import("#worker/chat-room.ts").ChatRoom>;
+    RateLimiter: DurableObjectNamespace<import("#worker/rate-limiter.ts").RateLimiter>;
     AUDIO: R2Bucket;
     CHAT_DB: D1Database;
   }

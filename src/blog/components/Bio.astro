@@ -1,11 +1,11 @@
 ---
 import { Image } from "astro:assets";
-import Icon from "../../components/Icon.astro";
-import { socialMediaLinks } from "../../data/portfolio";
-import { AUTHOR } from "../consts";
+import Icon from "#src/components/Icon.astro";
+import { socialMediaLinks } from "#src/data/portfolio.ts";
+import { AUTHOR } from "#src/blog/consts.ts";
 // The portfolio's portrait, cropped to a 50px circle. It is a full-body square
 // (face around x 21% to 79%, y 8% to 67%), hence the 171% scale and translate below.
-import portrait from "../../assets/images/portrait.webp";
+import portrait from "#src/assets/images/portrait.webp";
 
 const links = [
   { href: socialMediaLinks.github, icon: "github", value: "github", label: "GitHub profile" },

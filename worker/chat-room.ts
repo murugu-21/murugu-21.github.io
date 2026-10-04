@@ -6,7 +6,7 @@ import { globalLimiter } from "./api/ratelimit";
 import { contactMailer, parseLeadArguments, sendOpportunityEmail, type Lead } from "./email";
 import { fetchSitePage } from "./fetch-page";
 import { getGrounding } from "./grounding";
-import { jsonString, lenient } from "../utils/json";
+import { jsonString, lenient } from "#utils/json.ts";
 import { buildMessages, parseFetchArguments, ROOM_DAILY_LIMIT, type ModelMessage } from "./prompt";
 import type { StreamResult, ToolCall } from "./sse";
 import {

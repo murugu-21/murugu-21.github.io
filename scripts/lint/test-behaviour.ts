@@ -46,7 +46,7 @@ type ImportKind = "subject" | "helper";
 
 // `cloudflare:test` exports SELF and env, which are how tests reach the Worker.
 const isLocalSource = (source: string) =>
-  source.startsWith(".") || source.startsWith("@/") || source.startsWith("cloudflare:");
+  source.startsWith(".") || source.startsWith("#") || source.startsWith("cloudflare:");
 
 const isNode = (value: unknown): value is Node =>
   typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";

@@ -1,14 +1,14 @@
 ---
-import "../../styles/global.css";
-import Icon from "../../components/Icon.astro";
-import "../styles/code.css";
-import "../styles/post.css";
+import "#src/styles/global.css";
+import Icon from "#src/components/Icon.astro";
+import "#src/blog/styles/code.css";
+import "#src/blog/styles/post.css";
 
-import BaseHead, { type Props as HeadProps } from "../components/BaseHead.astro";
-import ThemeToggle from "../../components/ThemeToggle.astro";
-import ChatWidget from "../../components/chat/ChatWidget.astro";
-import Particles from "../../components/Particles.astro";
-import { SITE_TITLE } from "../consts";
+import BaseHead, { type Props as HeadProps } from "#src/blog/components/BaseHead.astro";
+import ThemeToggle from "#src/components/ThemeToggle.astro";
+import ChatWidget from "#src/components/chat/ChatWidget.astro";
+import Particles from "#src/components/Particles.astro";
+import { SITE_TITLE } from "#src/blog/consts.ts";
 
 type Props = HeadProps;
 

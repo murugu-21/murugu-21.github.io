@@ -4,7 +4,7 @@
 
 import { z } from "zod";
 
-import { JsonObject, lenient } from "../../utils/json";
+import { JsonObject, lenient } from "#utils/json.ts";
 
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
 const MODERN_PROTOCOL_VERSIONS: readonly string[] = [LATEST_PROTOCOL_VERSION];

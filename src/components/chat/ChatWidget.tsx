@@ -5,20 +5,20 @@ import { nanoid } from "nanoid";
 import { PartySocket } from "partysocket";
 import { Download, EllipsisVertical, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 
-import { GREETING, parseServerMessage, type ServerMessage } from "@worker/protocol";
+import { GREETING, parseServerMessage, type ServerMessage } from "#worker/protocol.ts";
 import { ActivityRow, type Activity } from "./ActivityRow";
-import { Button } from "../ui/button";
-import { Card, CardFooter, CardHeader } from "../ui/card";
+import { Button } from "#src/components/ui/button.tsx";
+import { Card, CardFooter, CardHeader } from "#src/components/ui/card.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
-} from "../ui/dropdown-menu";
-import { ScrollArea } from "../ui/scroll-area";
-import { Textarea } from "../ui/textarea";
-import { cn } from "../../lib/utils";
-import { track, reportError } from "../../lib/analytics";
+} from "#src/components/ui/dropdown-menu.tsx";
+import { ScrollArea } from "#src/components/ui/scroll-area.tsx";
+import { Textarea } from "#src/components/ui/textarea.tsx";
+import { cn } from "#src/lib/utils.ts";
+import { track, reportError } from "#src/lib/analytics.ts";
 
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";

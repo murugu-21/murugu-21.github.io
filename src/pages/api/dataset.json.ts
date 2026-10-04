@@ -3,7 +3,7 @@
 // (it imports .png files as ImageMetadata). Not public: /api/* hits the Worker first.
 import type { APIRoute } from "astro";
 
-import { buildDataset, Dataset } from "@worker/api/dataset";
+import { buildDataset, Dataset } from "#worker/api/dataset.ts";
 import {
   educationInfo,
   greeting,
@@ -14,8 +14,8 @@ import {
   socialMediaLinks,
   techStack,
   workExperiences
-} from "../../data/portfolio";
-import { resumeContact } from "../../data/resume";
+} from "#src/data/portfolio.ts";
+import { resumeContact } from "#src/data/resume.ts";
 
 export const prerender = true;
 

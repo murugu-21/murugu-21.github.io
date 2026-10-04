@@ -5,9 +5,9 @@ import { env } from "cloudflare:test";
 import { assert, expect } from "vitest";
 import { z } from "zod";
 
-import { buildDataset, type DatasetInput } from "../api/dataset";
-import type { ChatRoom } from "../chat-room";
-import worker from "../server";
+import { buildDataset, type DatasetInput } from "#worker/api/dataset.ts";
+import type { ChatRoom } from "#worker/chat-room.ts";
+import worker from "#worker/server.ts";
 
 export const DATASET_INPUT: DatasetInput = {
   greeting: {

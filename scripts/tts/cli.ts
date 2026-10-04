@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { SITE_DIR } from "../site-dir.ts";
+import { SITE_DIR } from "#scripts/site-dir.ts";
 
 export const ROOT = join(import.meta.dirname, "../..");
 export const PYTHON = join(ROOT, ".venv-tts", "bin", "python");

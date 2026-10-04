@@ -29,9 +29,9 @@ import { parseArgs } from "node:util";
 import { parseHTML } from "linkedom";
 import { z } from "zod";
 
-import { jsonString } from "../utils/json.ts";
-import { speechBlocks } from "../src/blog/utils/speech.ts";
-import { normalizeSpeechText, packSentences, spokenHash } from "../src/blog/utils/audio-prep.ts";
+import { jsonString } from "#utils/json.ts";
+import { speechBlocks } from "#src/blog/utils/speech.ts";
+import { normalizeSpeechText, packSentences, spokenHash } from "#src/blog/utils/audio-prep.ts";
 import {
   BLOG_DIST,
   PYTHON,

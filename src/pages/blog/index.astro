@@ -1,9 +1,9 @@
 ---
-import BaseLayout from "../../blog/layouts/BaseLayout.astro";
-import PostList from "../../blog/components/PostList.astro";
-import Bio from "../../blog/components/Bio.astro";
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, PERSON } from "../../blog/consts";
-import { SITE_ORIGIN } from "../../lib/site";
+import BaseLayout from "#src/blog/layouts/BaseLayout.astro";
+import PostList from "#src/blog/components/PostList.astro";
+import Bio from "#src/blog/components/Bio.astro";
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, PERSON } from "#src/blog/consts.ts";
+import { SITE_ORIGIN } from "#src/lib/site.ts";
 import {
   getPublishedPosts,
   postPath,
@@ -11,7 +11,7 @@ import {
   timeToRead,
   excerpt,
   type SerializedPost
-} from "../../blog/utils/posts";
+} from "#src/blog/utils/posts.ts";
 
 const posts = (await getPublishedPosts()).reverse();
 
