@@ -200,7 +200,7 @@ export class ChatRoom extends Server<Env> {
     onDelta: (text: string) => void
   ): Promise<StreamResult> {
     const result = await runDeepseekExchange({ apiKey: key, messages, onDelta });
-    // Keeps spend visible in `wrangler tail`.
+    // Keeps spend visible in the Worker logs.
     console.log("deepseek usage", JSON.stringify(result.usage));
     return result;
   }

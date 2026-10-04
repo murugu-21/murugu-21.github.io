@@ -1,6 +1,6 @@
 // Content-negotiated 404: the styled page for a browser, a markdown list of
-// entry points for everything else. Relies on `not_found_handling: "none"`
-// (wrangler.jsonc) so misses reach the Worker, which fetches the 404 page itself.
+// entry points for everything else. Relies on `notFoundHandling: "none"`
+// (cloudflare.config.ts) so misses reach the Worker, which fetches the 404 page itself.
 
 import { API_PATHS, VERSIONED_API_BASE } from "./api/routes";
 

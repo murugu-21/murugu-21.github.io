@@ -10,17 +10,17 @@ One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so 
 
 ```bash
 bun install
-bunx astro sync && bun run cf-typegen   # once after cloning; lint and the typechecks need the generated types
+bunx astro sync && bun run types   # once after cloning; lint and the typechecks need the generated types
 bun run dev       # Astro dev server with the Worker in workerd, on :4399
-bun run build     # site to dist/client, Worker to dist/server, plus markdown renditions and the resume PDF
+bun run build     # site and Worker to .cloudflare/output, plus markdown renditions and the resume PDF
 bun run preview   # the production build in workerd, API and chat included
 ```
 
 ### Build
 
-`@astrojs/cloudflare` builds the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) as part of `astro build`. Besides `dist/client` and `dist/server`, it writes a deployable `dist/server/wrangler.json` and `.wrangler/deploy/config.json`, which points every `wrangler` command at the generated config. Deploy only after a build.
+`@astrojs/cloudflare` builds the Worker (`worker/server.ts`, the `entrypoint` in `cloudflare.config.ts`) as part of `astro build`. It writes the Build Output to `.cloudflare/output`: the site under `v0/workers/default/assets`, the bundle and a `worker.config.json` with every binding. `cf deploy --prebuilt` uploads exactly that, so deploy only after a build.
 
-Astro prerenders every page. The adapter still builds the Worker because the config names a custom `main`, which needs [withastro/astro#18202](https://github.com/withastro/astro/pull/18202). Without it, `@astrojs/cloudflare` 14.3.3 deploys the static site and drops the Worker ([#18201](https://github.com/withastro/astro/issues/18201)). The adapter is pinned to that PR's `pkg.pr.new` build; move to the first release that ships it.
+Astro prerenders every page. The adapter still builds the Worker because the config names a custom `entrypoint`, which needs [withastro/astro#18209](https://github.com/withastro/astro/pull/18209). Without it, `@astrojs/cloudflare` 15.0.0-beta.1 deploys the static site and drops the Worker ([#18208](https://github.com/withastro/astro/issues/18208)). The adapter is pinned to a `pkg.pr.new` build of that PR, published from the `preview/18209` branch of the `murugu-21/astro` fork because Astro's preview workflow skips fork PRs; move to the first release that ships it. `astro` is pinned to the matching 7.4 beta.
 
 `astro build` produces everything:
 
@@ -28,15 +28,14 @@ Astro prerenders every page. The adapter still builds the Worker because the con
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
 - Scripts that read the build find it through `scripts/site-dir.ts`.
 
-Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](#discovery-documents-and-the-404).
+Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`runWorkerFirst` in `cloudflare.config.ts`) and for requests that match no asset (`notFoundHandling: "none"`), which get the negotiated 404 described under [Discovery](#discovery-documents-and-the-404).
 
 ### Bun and Node
 
-[Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`; 1.4.2 is the floor, because Bun 1.3.x breaks the production build and `astro check`. Node (version in `.nvmrc`) runs Wrangler, `tsc`, `astro dev` and `astro preview`.
+[Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Vitest, `cf` and `tsc`, because `cloudflare.config.ts` refuses to load under Bun ("cloudflare.config.ts loading is not supported on Bun"). Under Bun, miniflare also cannot reach workerd ("Unable to connect. Is the computer able to access the url?" from `fetchWorkerExportTypes`) and `astro preview` hangs.
 
-- `build` runs Astro under `bun --bun`.
-- `test` is `bun --bun vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`. Use `bun run test`, not `bun test`, which is Bun's own runner.
-- `dev` and `preview` call `astro` on Node. Under Bun, miniflare's requests to workerd fail ("Unable to connect. Is the computer able to access the url?" from `fetchWorkerExportTypes`) and `astro preview` hangs.
+- `build`, `dev` and `preview` call `astro` on Node.
+- `test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`. Use `bun run test`, not `bun test`, which is Bun's own runner.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -61,7 +60,7 @@ GITHUB_TOKEN=ghp_xxx bun run build
 ```bash
 bun run check-format   # oxfmt, plus prettier for .astro and content markdown
 bun run lint           # astro sync, then oxlint (type-aware via oxlint-tsgolint)
-bun run cf-typegen     # regenerate worker-configuration.d.ts (vars typed as string, so tests can override them)
+bun run types          # regenerate .cloudflare/types from cloudflare.config.ts (Env plus the runtime types)
 bun run check:astro    # type-check .astro files
 bun run check:src      # type-check src/, scripts/ and the config files
 bun run check:worker   # type-check worker/
@@ -82,10 +81,10 @@ Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Action
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 
 - **Build command.** `bun run build`. Workers Builds installs dependencies from `bun.lock` before running it.
-- **Deploy command.** `bun run deploy`, not `bunx wrangler deploy`. It applies pending D1 migrations from `./migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
+- **Deploy command.** `bun run deploy` (`cf deploy --prebuilt`), not a bare `cf deploy`. It applies pending D1 migrations from `./migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
 - **Build env vars.** `BUN_VERSION` (match `packageManager`; the image's default Bun is too old), `GITHUB_TOKEN`, `REQUIRE_GITHUB_PROFILE=1` (fail the build instead of falling back when the profile fetch fails), `POST_HOG_TOKEN`, `POST_HOG_URL`, `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and optionally `RESUME_PHONE`. Those the site code reads are declared in `env.schema` in `astro.config.ts`; the build fails on a malformed value.
-- **Worker secrets.** `DEEPSEEK_API_KEY`, set with `bunx wrangler secret put DEEPSEEK_API_KEY`. It is listed in `secrets.required` in `wrangler.jsonc`, so a deploy fails while it is unset. The build itself lacks it, so its log warns "Missing required secrets"; that warning is harmless.
-- **Contact inbox.** `OPPORTUNITY_INBOX` is a plain var in `wrangler.jsonc`, and the `send_email` binding is locked to the same address (`destination_address`, which must be verified in Email Routing). `astro build` fails if it isn't a valid address or the two differ, so Workers Builds never deploys a bad inbox.
+- **Worker secrets.** `DEEPSEEK_API_KEY`, declared as `bindings.secret()` in `cloudflare.config.ts` and set with `bunx cf workers secrets update DEEPSEEK_API_KEY`. Locally it comes from `.dev.vars`.
+- **Contact inbox.** `OPPORTUNITY_INBOX` is a text binding in `cloudflare.config.ts`, and the `EMAIL` binding is locked to the same address (`destinationAddress`, which must be verified in Email Routing). Both read one constant, so they can't differ.
 
 ## Analytics
 
@@ -137,7 +136,7 @@ Super properties: `theme` (`dark` / `light`, set on load and on every toggle) an
 
 `/resume` (`src/pages/resume.astro`) is a print-styled page built entirely from `src/data/portfolio.ts` and `src/data/resume.ts`, so it can't drift from the site.
 
-At the end of `bun run build`, `scripts/generate-resume.ts` serves `dist/client` locally, opens `/resume/` in headless Chromium through Puppeteer and prints `resume.pdf`. It then parses the PDF with `pdf-parse` and fails the build if any ATS-critical string (name, email, section headings, current title, headline stats) isn't extractable text. On Workers Builds, which has no system Chrome, it falls back to `@sparticuz/chromium`.
+At the end of `bun run build`, `scripts/generate-resume.ts` serves the built site locally, opens `/resume/` in headless Chromium through Puppeteer and prints `resume.pdf`. It then parses the PDF with `pdf-parse` and fails the build if any ATS-critical string (name, email, section headings, current title, headline stats) isn't extractable text. On Workers Builds, which has no system Chrome, it falls back to `@sparticuz/chromium`.
 
 No phone number is in source. Set `RESUME_PHONE` (Workers Builds env in production, `.env` locally) to add one; leaving it unset omits the line. The contact section in `GithubCard.astro` reads it only in its no-GitHub fallback, which production never renders.
 
@@ -238,13 +237,13 @@ bun run build && bun run audio <slug>   # ~2.8 s of compute per second of audio 
 bun run audio:align <slug>             # word timings, ~5 s per post
 ```
 
-Then push as usual. With no slug, `bun run audio` renders every changed post. `--force` re-renders, `--dry-run` only extracts and hashes, and `--local` writes to the local R2 state that `bun run dev` serves (`.wrangler/state`).
+Then push as usual. With no slug, `bun run audio` renders every changed post. `--force` re-renders, `--dry-run` only extracts and hashes, and `--local` writes to the local R2 state that `bun run dev` serves (`.cloudflare/state`).
 
 Every render stays in the `$TMPDIR/audio-<slug>-*` directory the script logs, about 370 MB for a 45-minute post, and nothing deletes it. If an upload fails, push the files from there instead of rendering again, MP3 first because the JSON's hash marks the post as done:
 
 ```bash
-bunx wrangler r2 object put murugappan-dev-audio/blog/breeze/<slug>.mp3 --file <dir>/<slug>.mp3 --content-type audio/mpeg --remote
-bunx wrangler r2 object put murugappan-dev-audio/blog/breeze/<slug>.json --file <dir>/<slug>.json --content-type application/json --remote
+bunx cf r2 objects put blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio --file <dir>/<slug>.mp3 --content-type audio/mpeg
+bunx cf r2 objects put blog/breeze/<slug>.json --bucket-name murugappan-dev-audio --file <dir>/<slug>.json --content-type application/json
 ```
 
 `bun run audio:align` (`scripts/align-audio.ts`) runs after synthesis, never at the same time. It slices each paragraph out of the MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (`whisper-large-v3-turbo`, 1.6 GB, downloaded automatically), maps them onto the known text (`src/blog/utils/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per paragraph.
@@ -258,8 +257,8 @@ A public, unauthenticated JSON API over the site's content, for agents and devel
 - **Versioning** (`worker/api/versioning.ts`). The version is a path segment. `toVersionedPath()` (`routes.ts`) maps the unversioned `/api/...` alias onto the `/api/v1/...` templates in `API_PATHS`, so `server.ts` mounts one Hono app at both prefixes. The alias is permanently pinned to v1; a v2 would live only at `/api/v2/...`.
 - **Deprecation.** Adding a record to `VERSIONS` turns on the `Deprecation` (RFC 9745) and `Sunset` (RFC 8594) headers, the `deprecation` / `successor-version` links and the `/api/v1/versions` document. `worker/api/middleware.ts` adds `API-Version`, `API-Supported-Versions` and the discovery `Link` relations to every response.
 - **Rate limits** (`worker/api/ratelimit.ts`). Every response carries `RateLimit-Policy` and `RateLimit` (draft-ietf-httpapi-ratelimit-headers), mirrored as `X-RateLimit-*`, plus `Retry-After` on a 429. Reads allow 600 per 60 s per client, counted per isolate so they never wait on a Durable Object; the limit is therefore per edge location. Contact responses report the real daily allowance from `RateLimiter.takeContactSlot()` / `contactUsage()`.
-- **One copy of the data.** `src/pages/api/dataset.json.ts` runs `src/data/portfolio.ts` and `resume.ts` through `buildDataset()` (`worker/api/dataset.ts`) and prerenders `dist/client/api/dataset.json`, which the Worker reads through `ASSETS`. Posts come from the root `llms.txt` and the per-post `index.md` renditions, and `/developers` renders its endpoint table from the served OpenAPI document, so none of them can drift from the source data.
-- **Worker-owned paths.** `run_worker_first` in `wrangler.jsonc` claims `/api/*`, `/openapi.json`, `/mcp*`, `/mcp.json`, `/.well-known/*`, `/parties/*` and `/blog/audio/*`. That keeps API errors in the JSON envelope rather than HTML, and lets generated discovery documents name the host that answered. Keep the list in sync with `worker/server.ts`.
+- **One copy of the data.** `src/pages/api/dataset.json.ts` runs `src/data/portfolio.ts` and `resume.ts` through `buildDataset()` (`worker/api/dataset.ts`) and prerenders `api/dataset.json` into the site, which the Worker reads through `ASSETS`. Posts come from the root `llms.txt` and the per-post `index.md` renditions, and `/developers` renders its endpoint table from the served OpenAPI document, so none of them can drift from the source data.
+- **Worker-owned paths.** `runWorkerFirst` in `cloudflare.config.ts` claims `/api/*`, `/openapi.json`, `/mcp*`, `/mcp.json`, `/.well-known/*`, `/parties/*` and `/blog/audio/*`. That keeps API errors in the JSON envelope rather than HTML, and lets generated discovery documents name the host that answered. Keep the list in sync with `worker/server.ts`.
 - **`POST /api/v1/contact`.** It emails `OPPORTUNITY_INBOX` through the `send_email` binding the chat also uses. The `RateLimiter` Durable Object caps it at 3 per client IP per UTC day and 20 site-wide. `"dryRun": true` validates a payload without sending or using a slot. Without the EMAIL binding or inbox it answers 503.
 
 ## Discovery documents and the 404

@@ -13,10 +13,11 @@ dist/
 .env.test.local
 .env.production.local
 
-# cloudflare worker
+# cloudflare worker: Build Output and generated types, local secrets, and the
+# miniflare state the test pool writes
+.cloudflare/
 .wrangler/
 .dev.vars
-worker-configuration.d.ts
 
 # blog read-aloud: voice reference and the local TTS python env
 .voice/
