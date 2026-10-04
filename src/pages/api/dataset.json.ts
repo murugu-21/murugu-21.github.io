@@ -3,7 +3,7 @@
 // (it imports .png files as ImageMetadata). Not public: /api/* hits the Worker first.
 import type { APIRoute } from "astro";
 
-import { buildDataset, Dataset } from "../../../worker/api/dataset";
+import { buildDataset, Dataset } from "@worker/api/dataset";
 import {
   educationInfo,
   greeting,

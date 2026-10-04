@@ -27,6 +27,22 @@
   },
   "overrides": [
     {
+      "files": ["src/**", "scripts/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(\\.\\./)+worker(/|$)",
+                "message": "Import worker modules through the @worker/* alias (tsconfig.json)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["scripts/ts-alias.cjs"],
       "rules": {
         "typescript/no-unsafe-assignment": "off",

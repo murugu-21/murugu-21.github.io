@@ -11,6 +11,7 @@
   "exclude": ["dist"],
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "react"
+    "jsxImportSource": "react",
+    "paths": { "@worker/*": ["./worker/*"] }
   }
 }

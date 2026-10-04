@@ -20,6 +20,8 @@ export default defineConfig({
     __CODE_CSS__: JSON.stringify(codeCss),
     __D1_MIGRATIONS__: JSON.stringify(d1Migrations)
   },
+  // Astro and Bun read the @worker/* alias from tsconfig.json; Vitest needs this.
+  resolve: { tsconfigPaths: true },
   plugins: [
     cloudflareTest({
       experimental: { newConfig: { configPath: "./worker/test/cloudflare.config.ts" } },

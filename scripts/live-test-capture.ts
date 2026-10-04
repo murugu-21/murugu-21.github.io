@@ -10,8 +10,8 @@ import { join } from "node:path";
 
 import { z } from "zod";
 
-import { jsonString } from "../worker/json.ts";
-import { buildMessages, TOOLS, type ModelMessage } from "../worker/prompt.ts";
+import { jsonString } from "@worker/json.ts";
+import { buildMessages, TOOLS, type ModelMessage } from "@worker/prompt.ts";
 import { SITE_DIR } from "./site-dir.ts";
 
 // ai.ts uses bundler resolution bare Node can't follow, so read its constants

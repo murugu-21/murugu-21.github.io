@@ -5,7 +5,7 @@ import { nanoid } from "nanoid";
 import { PartySocket } from "partysocket";
 import { Download, EllipsisVertical, MessageCircle, RotateCcw, Send, X } from "lucide-react";
 
-import { GREETING, parseServerMessage, type ServerMessage } from "../../../worker/protocol";
+import { GREETING, parseServerMessage, type ServerMessage } from "@worker/protocol";
 import { ActivityRow, type Activity } from "./ActivityRow";
 import { Button } from "../ui/button";
 import { Card, CardFooter, CardHeader } from "../ui/card";

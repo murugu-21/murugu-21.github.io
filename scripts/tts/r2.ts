@@ -6,7 +6,7 @@ import { writeFileSync } from "node:fs";
 
 import { z } from "zod";
 
-import { jsonString } from "../../worker/json.ts";
+import { jsonString } from "@worker/json.ts";
 import { fail, run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";
