@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { lenient } from "./json";
+import { lenient } from "../utils/json";
 import { TOOLS, type ModelMessage } from "./prompt";
 import { consumeSse, type StreamResult, type Usage } from "./sse";
 

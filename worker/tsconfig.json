@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["./**/*.ts", "../.cloudflare/types/index.d.ts"]
+  "include": ["./**/*.ts", "../utils/**/*.ts", "../.cloudflare/types/index.d.ts"]
 }

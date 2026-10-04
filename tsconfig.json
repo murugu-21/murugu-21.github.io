@@ -4,6 +4,7 @@
     ".astro/types.d.ts",
     "src/**/*",
     "scripts/**/*",
+    "utils/**/*",
     "astro.config.ts",
     "cloudflare.config.ts",
     "vitest.config.ts"

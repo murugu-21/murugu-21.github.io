@@ -43,6 +43,22 @@
       }
     },
     {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(@worker/|(\\.\\./)+worker(/|$))",
+                "message": "Scripts don't import Worker code; move app-agnostic helpers to utils/."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["scripts/ts-alias.cjs"],
       "rules": {
         "typescript/no-unsafe-assignment": "off",

@@ -6,7 +6,7 @@ import { spawnSync } from "node:child_process";
 
 import { z } from "zod";
 
-import { jsonString } from "@worker/json.ts";
+import { jsonString } from "../../utils/json.ts";
 import { run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";

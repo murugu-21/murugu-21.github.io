@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { jsonString, lenient } from "./json";
+import { jsonString, lenient } from "../utils/json";
 
 // Upstream chunks are untrusted: a malformed field or array element is dropped, not fatal to
 // the stream.

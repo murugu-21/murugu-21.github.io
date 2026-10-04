@@ -27,6 +27,7 @@ Astro prerenders every page. The adapter still builds the Worker because the con
 - Markdown renditions (`index.md` next to each `index.html`, served for `Accept: text/markdown`) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `src/lib/llms.ts` with `/llms.txt`.
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
 - Scripts that read the build find it through `scripts/site-dir.ts`.
+- Helpers with no app logic (`utils/`, such as the zod JSON helpers) are shared by the Worker and `scripts/`. Lint stops scripts from importing `worker/` directly.
 
 Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`runWorkerFirst` in `cloudflare.config.ts`) and for requests that match no asset (`notFoundHandling: "none"`), which get the negotiated 404 described under [Discovery](#discovery-documents-and-the-404).
 

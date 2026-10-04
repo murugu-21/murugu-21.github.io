@@ -4,7 +4,7 @@ import { z } from "zod";
 import { CONTACT_DAILY_PER_CLIENT } from "../api/contact";
 import { buildDataset } from "../api/dataset";
 import { API_VERSION } from "../api/versioning";
-import { JsonObject } from "../json";
+import { JsonObject } from "../../utils/json";
 import {
   LATEST_PROTOCOL_VERSION,
   LEGACY_PROTOCOL_VERSIONS,

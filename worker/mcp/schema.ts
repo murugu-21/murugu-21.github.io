@@ -1,7 +1,7 @@
 // MCP output schemas must stand alone (the spec forbids resolving network
 // `$ref`s), so the API's `components.schemas` refs are inlined.
 
-import { JsonObject } from "../json";
+import { JsonObject } from "../../utils/json";
 
 export type JsonSchema = Record<string, unknown>;
 

@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { API_VERSION } from "../api/versioning";
-import { JsonObject } from "../json";
+import { JsonObject } from "../../utils/json";
 import {
   checkModernVersion,
   isAllowedOrigin,

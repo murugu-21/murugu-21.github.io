@@ -6,7 +6,7 @@ import sharp from "sharp";
 import subsetFont from "subset-font";
 import { z } from "zod";
 
-import { jsonString } from "@worker/json.ts";
+import { jsonString } from "../utils/json.ts";
 import { launchBrowser } from "./launch-browser.ts";
 import {
   DIAGRAMS_DIR,

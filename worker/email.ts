@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { ContactRequest } from "./api/contact";
-import { jsonString, lenient } from "./json";
+import { jsonString, lenient } from "../utils/json";
 import type { ChatHistoryEntry } from "./protocol";
 
 export const SENDER_ADDRESS = "chatbot@murugappan.dev";
