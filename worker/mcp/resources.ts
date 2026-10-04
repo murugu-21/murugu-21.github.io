@@ -1,5 +1,5 @@
-// MCP resources. `https://` URIs because each is also a public URL a client
-// can GET directly. Reads accept only the allowlist or a validated blog slug.
+// MCP resources. The URIs are `https://` because each is also a public URL a
+// client can GET directly. Reads accept only the allowlist or a validated blog slug.
 
 import { buildOpenApiDocument } from "../api/openapi";
 import { loadPost, loadPosts, readAsset, type AssetsLike } from "../api/store";
@@ -71,7 +71,7 @@ const STATIC_RESOURCES: Array<ResourceDescriptor & { assetPath: string | null }>
     name: "llms-full.txt",
     title: "Full text of every blog post",
     description:
-      "The complete body of every post on the SDE Journey blog in one file. Large — prefer search_blog_posts and get_blog_post unless you genuinely want everything.",
+      "The complete body of every post on the SDE Journey blog in one file. It is large, so prefer search_blog_posts and get_blog_post unless you want everything.",
     mimeType: "text/plain",
     annotations: forAssistant(0.5)
   }
@@ -82,7 +82,7 @@ export const BLOG_POST_TEMPLATE = {
   name: "blog-post",
   title: "Blog post (markdown)",
   description:
-    "The markdown source of one SDE Journey post, frontmatter included. `slug` is the last path segment of the post's URL — call resources/list or search_blog_posts to discover slugs.",
+    "The markdown source of one SDE Journey post, frontmatter included. `slug` is the last path segment of the post's URL. Call resources/list or search_blog_posts to discover slugs.",
   mimeType: "text/markdown"
 };
 
@@ -106,7 +106,7 @@ export async function listResources(ctx: ResourceContext): Promise<ResourceDescr
 
 const BLOG_URI = new RegExp(`^${RESOURCE_ORIGIN}/blog/([^/]+)/index\\.md$`);
 
-/** null means "no such resource" — never an empty contents array, per the spec. */
+/** null means "no such resource". The spec forbids answering that with an empty contents array. */
 export async function readResource(
   uri: string,
   ctx: ResourceContext

@@ -15,7 +15,7 @@ import { API_PATHS, matchApiPath } from "./routes";
 import { versionHeaders, versionLinkHeader } from "./versioning";
 
 type ApiHeaderOptions = {
-  /** False for the OpenAPI document: a throttled client must still be able to learn why. */
+  /** False for the OpenAPI document, because a throttled client must still be able to learn why. */
   enforceReads: boolean;
 };
 
@@ -34,7 +34,7 @@ export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings
         status: 429,
         code: "rate_limited",
         message: `More than ${READ_QUOTA.quota} read requests in ${READ_QUOTA.windowSeconds} seconds from this client.`,
-        hint: `Wait ${slot.resetSeconds} seconds. Read responses are cacheable for 5 minutes — reuse the ones you already have, and read the RateLimit header to see what is left.`,
+        hint: `Wait ${slot.resetSeconds} seconds. Read responses are cacheable for 5 minutes, so reuse the ones you already have, and read the RateLimit header to see what is left.`,
         headers: {
           "Retry-After": String(slot.resetSeconds),
           ...readRateLimitHeaders(slot),

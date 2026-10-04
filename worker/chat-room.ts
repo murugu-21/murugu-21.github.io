@@ -40,10 +40,11 @@ const MAX_FETCH_ROUNDS = 2;
 type CountRow = { n: number };
 
 const LIMIT_MESSAGE =
-  "I've hit my chat budget for now — please reach Murugappan directly " +
+  "I've hit my chat budget for now. Please reach Murugappan directly " +
   "through the social links on this site instead.";
 
-// Strict OpenAI shape (assistant.tool_calls → tool) so any provider accepts it.
+// Strict OpenAI shape, an assistant message with tool_calls followed by a tool
+// message, so any provider accepts it.
 function toolExchange({
   call,
   content,
@@ -140,7 +141,7 @@ export class ChatRoom extends Server<Env> {
       await this.generate(key, msg.page);
     } catch (err) {
       console.error("chat generation failed", err);
-      // A 402 beats the cached balance: gate every room until the next check.
+      // A 402 beats the cached balance, so gate every room until the next check.
       if (isInsufficientBalance(err)) {
         await globalLimiter(this.env).markChatExhausted();
         this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
@@ -148,7 +149,7 @@ export class ChatRoom extends Server<Env> {
       }
       this.send(connection, {
         type: "error",
-        message: "Something went wrong on my end — please try again."
+        message: "Something went wrong on my end. Please try again."
       });
     }
   }
@@ -171,7 +172,7 @@ export class ChatRoom extends Server<Env> {
       if (!fetchCall || round >= MAX_FETCH_ROUNDS) break;
 
       const url = parseFetchArguments(fetchCall.arguments);
-      // Announce before the await: fetch plus follow-up is a turn's longest silence.
+      // Announce before the await, since fetch plus follow-up is a turn's longest silence.
       this.broadcastMsg(toolFrame("fetch_page", url));
       const pageText = url
         ? await fetchSitePage(this.env.ASSETS, url)
@@ -343,8 +344,8 @@ export class ChatRoom extends Server<Env> {
       content,
       createdAt
     );
-    // Fire-and-forget D1 mirror: rooms aren't enumerable, so it is the only
-    // global view. The DO's SQLite stays the source of truth.
+    // The D1 mirror is fire-and-forget. Rooms aren't enumerable, so it is the
+    // only global view. The DO's SQLite stays the source of truth.
     this.env.CHAT_DB?.prepare(
       `INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)`
     )

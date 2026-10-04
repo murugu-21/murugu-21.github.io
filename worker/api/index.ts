@@ -41,7 +41,7 @@ const datasetUnavailable = () =>
     status: 503,
     code: "service_unavailable",
     message: "The site's content dataset is not available right now.",
-    hint: "This is a transient deployment state — retry in a minute. If it persists, the site's /api/dataset.json build artifact is missing."
+    hint: "This is a transient deployment state, so retry in a minute. If it persists, the site's /api/dataset.json build artifact is missing."
   });
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
@@ -192,7 +192,7 @@ api.post("/contact", async c => {
           status: 413,
           code: "payload_too_large",
           message: "The request body is larger than this endpoint accepts.",
-          hint: `Keep the whole JSON body under ${MAX_CONTACT_BODY_BYTES} bytes — see the ContactRequest schema for the per-field limits.`
+          hint: `Keep the whole JSON body under ${MAX_CONTACT_BODY_BYTES} bytes. See the ContactRequest schema for the per-field limits.`
         })
       : null;
 
@@ -230,7 +230,7 @@ api.post("/contact", async c => {
   const clientIp = c.req.header("CF-Connecting-IP") ?? "unknown";
 
   if (parsed.dryRun) {
-    // Reports the real allowance: it is how a client sizes a real send.
+    // Reports the real allowance, which is how a client sizes a real send.
     const usage = await limiter.contactUsage(clientIp);
     return contactResponse(
       200,
@@ -262,7 +262,7 @@ api.post("/contact", async c => {
         slot.scope === "client"
           ? `This client has already sent ${CONTACT_DAILY_PER_CLIENT} messages today.`
           : "The site-wide daily message allowance is spent.",
-      hint: `The allowance resets at 00:00 UTC — the Retry-After and RateLimit headers on this response say when and how much. For anything urgent, use the email link in GET ${API_PATHS.profile}.`,
+      hint: `The allowance resets at 00:00 UTC. The Retry-After and RateLimit headers on this response say when and how much. For anything urgent, use the email link in GET ${API_PATHS.profile}.`,
       headers: {
         "Retry-After": String(secondsUntilUtcMidnight()),
         ...contactRateLimitHeaders({
@@ -289,13 +289,14 @@ api.post("/contact", async c => {
     202,
     {
       status: "accepted",
-      message: "Message accepted — Murugappan will reply to the address you gave."
+      message: "Message accepted. Murugappan will reply to the address you gave."
     },
     slot
   );
 });
 
-// Known path, wrong method: 405 with Allow. Anything else: 404 pointing at the spec.
+// A known path with the wrong method gets 405 with Allow.
+// Anything else gets 404 pointing at the spec.
 api.all("*", c => {
   const pathname = new URL(c.req.url).pathname;
   const known = matchApiPath(pathname);

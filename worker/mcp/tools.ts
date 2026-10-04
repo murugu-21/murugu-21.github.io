@@ -1,4 +1,4 @@
-// MCP tools: thin adapters over the REST API's loaders, with its response
+// MCP tools are thin adapters over the REST API's loaders, with its response
 // schemas inlined as outputSchema. Anything a model could fix by retrying with
 // other arguments is an `isError` result, not a protocol error.
 
@@ -71,7 +71,7 @@ function fail(text: string): ToolResult {
 }
 
 const DATASET_UNAVAILABLE =
-  "The site's content dataset is not available right now — this is a transient deployment state. Retry in a minute, or read https://murugappan.dev/llms.txt instead.";
+  "The site's content dataset is not available right now. This is a transient deployment state. Retry in a minute, or read https://murugappan.dev/llms.txt instead.";
 
 function datasetTool({
   name,
@@ -115,7 +115,7 @@ export const MCP_TOOLS: McpTool[] = [
     name: "get_profile",
     title: "Profile of Murugappan M",
     description:
-      "Returns the canonical summary of Murugappan M — a full stack engineer (TypeScript, Node.js, React, AWS) based in Bangalore, India: name, headline, elevator pitch, location, email, whether he is open to work, his current role with a start month, his stated focus areas, and every public link (site, about page, blog, RSS, resume PDF, GitHub, LinkedIn, X, developer portal, OpenAPI spec). Call this first — it is one request and answers most questions about who he is.",
+      "Returns the canonical summary of Murugappan M, a full stack engineer (TypeScript, Node.js, React, AWS) based in Bangalore, India. It includes his name, headline, elevator pitch, location, email, whether he is open to work, his current role with a start month, his stated focus areas, and every public link (site, about page, blog, RSS, resume PDF, GitHub, LinkedIn, X, developer portal, OpenAPI spec). Call this first. It is one request and answers most questions about who he is.",
     schema: "Profile",
     project: data => ({ person: data.person, links: data.links })
   }),
@@ -123,7 +123,7 @@ export const MCP_TOOLS: McpTool[] = [
     name: "list_experience",
     title: "Work experience",
     description:
-      "Returns every role Murugappan M has held, newest first, each with company, location, the human-readable period, ISO 8601 year-month start and end dates, a `current` flag, a one-line summary, and the concrete achievements of that role. Use this instead of parsing his resume PDF whenever you need dated, per-role facts — for example to check whether he has production experience with a technology, and when.",
+      "Returns every role Murugappan M has held, newest first, each with company, location, the human-readable period, ISO 8601 year-month start and end dates, a `current` flag, a one-line summary, and the concrete achievements of that role. Use this instead of parsing his resume PDF whenever you need dated, per-role facts, for example to check whether he has production experience with a technology, and when.",
     schema: "ExperienceList",
     project: data => ({ experience: data.experience })
   }),
@@ -155,7 +155,7 @@ export const MCP_TOOLS: McpTool[] = [
     name: "search_blog_posts",
     title: "Search the blog",
     description:
-      "Searches the SDE Journey blog (murugappan.dev/blog) — Murugappan M's technical writing on distributed systems, cloud architecture, rate limiting, event-driven pipelines and realtime chat. Returns each match's slug, title, canonical URL and summary, newest first. Omit `query` to list every post. Pass a returned `slug` to get_blog_post to read the full text.",
+      "Searches the SDE Journey blog (murugappan.dev/blog), Murugappan M's technical writing on distributed systems, cloud architecture, rate limiting, event-driven pipelines and realtime chat. Returns each match's slug, title, canonical URL and summary, newest first. Omit `query` to list every post. Pass a returned `slug` to get_blog_post to read the full text.",
     inputSchema: {
       type: "object",
       properties: {
@@ -205,7 +205,7 @@ export const MCP_TOOLS: McpTool[] = [
         slug: {
           type: "string",
           description:
-            "The post's slug — the last path segment of its URL, e.g. 'cloud-agnostic-rate-limiting'.",
+            "The post's slug, the last path segment of its URL, e.g. 'cloud-agnostic-rate-limiting'.",
           pattern: SLUG_PATTERN
         }
       },
@@ -230,14 +230,14 @@ export const MCP_TOOLS: McpTool[] = [
   {
     name: "send_message",
     title: "Send Murugappan M a message",
-    description: `Delivers a message to Murugappan M's inbox by email. Use it to relay one concrete opportunity, role or question on a human's behalf — say who you are writing for, what the work is, and what needs a decision. Not for newsletters, bulk outreach or automated pings: the allowance is ${CONTACT_DAILY_PER_CLIENT} messages per client per UTC day. Set dryRun to validate a payload first without sending it or spending the allowance. No reply comes back through this tool; he answers the email address you supply, so it must be one a human reads.`,
+    description: `Delivers a message to Murugappan M's inbox by email. Use it to relay one concrete opportunity, role or question on a human's behalf. Say who you are writing for, what the work is, and what needs a decision. The allowance is ${CONTACT_DAILY_PER_CLIENT} messages per client per UTC day, so it is not for newsletters, bulk outreach or automated pings. Set dryRun to validate a payload first without sending it or spending the allowance. No reply comes back through this tool; he answers the email address you supply, so it must be one a human reads.`,
     inputSchema: {
       type: "object",
       properties: {
         email: {
           type: "string",
           description:
-            "Reply-to address. This is where Murugappan replies, so it must be an address the sender actually reads.",
+            "Reply-to address. This is where Murugappan replies, so it must be an address the sender reads.",
           format: "email"
         },
         message: {
@@ -300,8 +300,8 @@ export const MCP_TOOLS: McpTool[] = [
       if (!slot.allowed)
         return fail(
           slot.scope === "client"
-            ? `This client has already used its daily allowance of ${CONTACT_DAILY_PER_CLIENT} messages. It resets at 00:00 UTC — until then, use one of the contact links from get_profile.`
-            : "The site-wide daily message allowance is spent. It resets at 00:00 UTC — until then, use one of the contact links from get_profile."
+            ? `This client has already used its daily allowance of ${CONTACT_DAILY_PER_CLIENT} messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile.`
+            : "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
         );
 
       try {
@@ -314,7 +314,7 @@ export const MCP_TOOLS: McpTool[] = [
       }
       return ok({
         status: "accepted",
-        message: "Message accepted — Murugappan will reply to the address you gave."
+        message: "Message accepted. Murugappan will reply to the address you gave."
       });
     }
   }

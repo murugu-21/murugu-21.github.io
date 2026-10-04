@@ -19,7 +19,7 @@ const ENTRY_POINTS: ReadonlyArray<[string, string]> = [
   ["/sitemap.xml", "Every indexable URL on this site"],
   ["/llms.txt", "One-page summary of the whole site, for LLMs"],
   ["/AGENTS.md", "Agent instructions: when to use this site, and how"],
-  ["/developers/", "Developer portal — murugappan.dev API documentation"],
+  ["/developers/", "Developer portal with the murugappan.dev API documentation"],
   ["/openapi.json", "OpenAPI 3.1.0 specification for the API"],
   ["/.well-known/api-catalog", "API catalogue (RFC 9727 linkset)"],
   ["/.well-known/mcp.json", "MCP server manifest (server.json)"],
@@ -29,7 +29,7 @@ const ENTRY_POINTS: ReadonlyArray<[string, string]> = [
 
 const PAGES: ReadonlyArray<[string, string]> = [
   ["/", "Portfolio"],
-  ["/about/", "About Murugappan M — the canonical entity page"],
+  ["/about/", "About Murugappan M, the canonical entity page"],
   ["/resume/", "Resume"],
   ["/blog/", "SDE Journey blog"],
   ["/developers/", "Developer portal"]
@@ -42,7 +42,7 @@ const list = (entries: ReadonlyArray<[string, string]>): string =>
 function notFoundMarkdown(pathname: string): string {
   return `# 404 Not Found
 
-\`${pathname}\` is not a path on murugappan.dev. Nothing was moved — this URL has never been served, so do not retry it.
+\`${pathname}\` is not a path on murugappan.dev. Nothing was moved. This URL has never been served, so do not retry it.
 
 ## Where to look next
 

@@ -1,5 +1,5 @@
-// Grounds on root llms.txt (~900 tokens), which lists every post as title +
-// summary + link. blog/llms-full.txt costs ~20x the tokens and grows per post.
+// Grounds on root llms.txt (~900 tokens), which lists every post with its
+// title, summary and link. blog/llms-full.txt costs ~20x the tokens and grows per post.
 import { z } from "zod";
 
 import { readAsset, type AssetsLike } from "./api/store";

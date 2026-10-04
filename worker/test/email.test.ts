@@ -54,7 +54,7 @@ describe("formatOpportunityEmail", () => {
       },
       []
     );
-    expect(subject).toBe("New opportunity via murugappan.dev chat — line1 line2");
+    expect(subject).toBe("New opportunity via murugappan.dev chat from line1 line2");
   });
 });
 

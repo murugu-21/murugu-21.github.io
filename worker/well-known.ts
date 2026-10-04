@@ -49,7 +49,7 @@ export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
   const agentInstructions = target({
     path: "/AGENTS.md",
     type: "text/markdown",
-    title: "murugappan.dev — agent instructions"
+    title: "Agent instructions for murugappan.dev"
   });
   const author = { href: abs("/about/"), title: "Murugappan M" };
 
@@ -61,21 +61,21 @@ export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
           target({
             path: API_PATHS.openapiRoot,
             type: "application/json",
-            title: "murugappan.dev API — OpenAPI 3.1.0 specification"
+            title: "OpenAPI 3.1.0 specification for the murugappan.dev API"
           })
         ],
         "service-doc": [
           target({
             path: "/developers/",
             type: "text/html",
-            title: "murugappan.dev API — developer portal"
+            title: "Developer portal for the murugappan.dev API"
           })
         ],
         "service-meta": [
           target({
             path: API_PATHS.versions,
             type: "application/json",
-            title: "murugappan.dev API — version and deprecation policy"
+            title: "Version and deprecation policy for the murugappan.dev API"
           })
         ],
         describedby: [agentInstructions],
@@ -83,7 +83,7 @@ export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
           target({
             path: "/developers/#versioning",
             type: "text/html",
-            title: "murugappan.dev API — versioning and deprecation status"
+            title: "Versioning and deprecation status for the murugappan.dev API"
           })
         ],
         author: [author]
@@ -94,14 +94,14 @@ export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
           target({
             path: "/.well-known/mcp.json",
             type: "application/json",
-            title: "murugappan.dev MCP server — server.json manifest"
+            title: "server.json manifest for the murugappan.dev MCP server"
           })
         ],
         "service-doc": [
           target({
             path: "/developers/#mcp",
             type: "text/html",
-            title: "murugappan.dev MCP server — documentation"
+            title: "Documentation for the murugappan.dev MCP server"
           })
         ],
         describedby: [agentInstructions],
@@ -111,7 +111,7 @@ export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
   };
 }
 
-/** The tool list rides in `_meta`, the only place the schema allows extra data. */
+/** The tool list goes in `_meta`, the only place the schema allows extra data. */
 export function buildMcpManifest(origin: string) {
   return {
     $schema: MCP_SERVER_SCHEMA,

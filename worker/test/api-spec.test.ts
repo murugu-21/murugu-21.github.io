@@ -77,7 +77,7 @@ describe("version headers", () => {
 
   it("announces a deprecation with the RFC 9745 and RFC 8594 fields", () => {
     const headers = versionHeaders(deprecated);
-    // RFC 9745: a Date structured field — "@" then a Unix timestamp.
+    // RFC 9745: a Date structured field, "@" then a Unix timestamp.
     expect(headers.Deprecation).toBe("@1798761600");
     // RFC 8594: an HTTP-date, the same format Retry-After uses.
     expect(headers.Sunset).toBe("Thu, 01 Jul 2027 00:00:00 GMT");
@@ -216,7 +216,7 @@ describe("buildOpenApiDocument", () => {
     }
   });
 
-  it("documents the 429 the read ceiling can actually produce", () => {
+  it("documents the 429 the read ceiling can produce", () => {
     for (const [where, op] of operations()) {
       if (!where.startsWith("GET ")) continue;
       expect(Object.keys(op.responses), where).toContain("429");

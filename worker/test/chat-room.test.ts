@@ -207,7 +207,7 @@ describe("toolFrame", () => {
     });
   });
 
-  it("never carries a detail for a capture — contact details stay server-side", () => {
+  it("never carries a detail for a capture, so contact details stay server-side", () => {
     expect(toolFrame("capture_opportunity")).toEqual({
       type: "tool",
       name: "capture_opportunity"

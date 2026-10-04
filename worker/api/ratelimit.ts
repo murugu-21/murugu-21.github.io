@@ -65,8 +65,8 @@ type ReadSlot = {
 
 type Window = { resetAt: number; used: number };
 
-// Fixed windows in the isolate, not a DO: a cross-region round trip per read costs more than the
-// limit is worth. So the ceiling is per edge location, as /developers/ documents.
+// Fixed windows in the isolate, not a DO, because a cross-region round trip per read costs more
+// than the limit is worth. So the ceiling is per edge location, as /developers/ documents.
 const windows = new Map<string, Window>();
 
 // Caps memory under a flood of distinct addresses; insertion order drops the oldest first.

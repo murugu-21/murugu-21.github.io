@@ -322,7 +322,7 @@ describe("POST /api/contact", () => {
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({
       status: "accepted",
-      message: "Message accepted — Murugappan will reply to the address you gave."
+      message: "Message accepted. Murugappan will reply to the address you gave."
     });
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe("inbox@example.com");

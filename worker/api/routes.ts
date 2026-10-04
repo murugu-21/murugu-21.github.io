@@ -1,5 +1,6 @@
-// The API's surface: the router uses it to tell 405 from 404, and the OpenAPI document is tested
-// against it. Unversioned `/api/...` is a permanent alias for v1, so paths are normalised first.
+// The API's route table. The router uses it to tell 405 from 404, and the OpenAPI document is
+// tested against it. Unversioned `/api/...` is a permanent alias for v1, so paths are
+// normalised first.
 
 export const CURRENT_API_VERSION = "v1";
 

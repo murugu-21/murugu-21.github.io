@@ -8,7 +8,7 @@ import { JsonObject, lenient } from "../json";
 
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
 const MODERN_PROTOCOL_VERSIONS: readonly string[] = [LATEST_PROTOCOL_VERSION];
-// Newest first — the first entry is what `initialize` falls back to.
+// Newest first. `initialize` falls back to the first entry.
 export const LEGACY_PROTOCOL_VERSIONS: readonly string[] = [
   "2025-11-25",
   "2025-06-18",
@@ -187,7 +187,7 @@ export function checkModernVersion(message: JsonRpcMessage): RpcFailure | null {
  * web origin is allowed; an opaque "null", `file:`, app schemes and garbage are not.
  */
 export function isAllowedOrigin(origin: string | null): boolean {
-  if (origin === null) return true; // non-browser client: no Origin header
+  if (origin === null) return true; // a non-browser client sends no Origin header
   try {
     const { protocol } = new URL(origin);
     return protocol === "http:" || protocol === "https:";

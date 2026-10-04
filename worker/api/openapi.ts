@@ -55,23 +55,23 @@ type OpenApiDocument = {
   };
 };
 
-const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishes about Murugappan M — profile, work experience, skills, education, open-source work and blog posts — plus one write endpoint (\`POST ${API_PATHS.contact}\`) for passing along an opportunity.
+const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishes about Murugappan M: profile, work experience, skills, education, open-source work and blog posts. One write endpoint, \`POST ${API_PATHS.contact}\`, passes along an opportunity.
 
-**When to use this API.** Reach for it when you need grounded facts about Murugappan M as a candidate or collaborator: what he has shipped, which technologies he has production experience with, when he held which role, or what he has written about a technical topic. \`GET ${API_PATHS.profile}\` is the cheapest single call for "who is this person"; \`GET ${API_PATHS.post}\` returns a post's full markdown when you need to cite or summarise his writing. Use \`POST ${API_PATHS.contact}\` only to relay a real, specific opportunity or question on a human's behalf.
+**When to use this API.** Use it when you need grounded, first-party facts about Murugappan M as a candidate or collaborator: what he has shipped, which technologies he has production experience with, when he held which role, or what he has written about a technical topic. \`GET ${API_PATHS.profile}\` is the cheapest single call for "who is this person"; \`GET ${API_PATHS.post}\` returns a post's full markdown when you need to cite or summarise his writing. Use \`POST ${API_PATHS.contact}\` only to relay a real, specific opportunity or question on a human's behalf.
 
 **When not to use it.** It is not a general-purpose search, resume-parsing or job-matching service, and it holds data about exactly one person.
 
 **Authentication.** None. Every endpoint is public and unauthenticated; no key, token or signup is required. Read endpoints are cached for 5 minutes.
 
-**Versioning.** The version is a path segment: \`${VERSIONED_API_BASE}/…\`. The unversioned \`${API_BASE}/…\` prefix is a permanent alias for \`${CURRENT_API_VERSION}\` and is never repointed at a later major version, so either form is safe to hard-code. Additive changes ship inside a version without notice — ignore response fields you do not recognise. Breaking changes only ever ship as a new path version. Every response carries \`API-Version\` and \`API-Supported-Versions\`; \`GET ${API_PATHS.versions}\` is the machine-readable policy.
+**Versioning.** The version is a path segment, \`${VERSIONED_API_BASE}/…\`. The unversioned \`${API_BASE}/…\` prefix is a permanent alias for \`${CURRENT_API_VERSION}\` and is never repointed at a later major version, so either form is safe to hard-code. Additive changes ship inside a version without notice, so ignore response fields you do not recognise. Breaking changes only ever ship as a new path version. Every response carries \`API-Version\` and \`API-Supported-Versions\`; \`GET ${API_PATHS.versions}\` is the machine-readable policy.
 
 **Deprecation.** A deprecated version answers every request with \`Deprecation\` (RFC 9745) and \`Sunset\` (RFC 8594) headers plus \`Link\` relations \`deprecation\` and \`successor-version\`, and at least ${DEPRECATION_NOTICE_DAYS} days pass between the first \`Deprecation\` header and the sunset date. After sunset the version answers \`410\`. Nothing is currently deprecated: ${VERSIONS.map(v => `\`${v.version}\` is ${v.status}`).join(", ")}.
 
-**Rate limits.** Every response carries \`RateLimit-Policy\` and \`RateLimit\` (draft-ietf-httpapi-ratelimit-headers), mirrored as \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\`, and a \`429\` adds \`Retry-After\`. Reads have a fair-use ceiling of ${READ_QUOTA.quota} requests per ${READ_QUOTA.windowSeconds} seconds per client, counted in the edge location that serves you — \`${policyField([READ_QUOTA])}\`. \`POST ${API_PATHS.contact}\` really is metered: \`${policyField(CONTACT_QUOTAS)}\` — ${CONTACT_DAILY_PER_CLIENT} per client IP per UTC day and ${CONTACT_DAILY_GLOBAL} site-wide.
+**Rate limits.** Every response carries \`RateLimit-Policy\` and \`RateLimit\` (draft-ietf-httpapi-ratelimit-headers), mirrored as \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\`, and a \`429\` adds \`Retry-After\`. Reads have a fair-use ceiling of ${READ_QUOTA.quota} requests per ${READ_QUOTA.windowSeconds} seconds per client, counted in the edge location that serves you. The read policy is published as \`${policyField([READ_QUOTA])}\`. \`POST ${API_PATHS.contact}\` is metered at ${CONTACT_DAILY_PER_CLIENT} per client IP per UTC day and ${CONTACT_DAILY_GLOBAL} site-wide, published as \`${policyField(CONTACT_QUOTAS)}\`.
 
-**Errors.** Every failure — including 404s on unknown \`${API_BASE}/*\` paths — returns the \`Error\` schema below: a stable \`code\`, a human \`message\`, a \`hint\` describing the fix, and \`documentation_url\`. No HTML error pages are served under \`${API_BASE}\`. Off the API, a request for a path that does not exist gets a real \`404\` whose body is short markdown pointing at the sitemap and these entry points, so an agent can recover without parsing a styled page.
+**Errors.** Every failure, including a 404 on an unknown \`${API_BASE}/*\` path, returns the \`Error\` schema below: a stable \`code\`, a human \`message\`, a \`hint\` describing the fix, and \`documentation_url\`. Nothing under \`${API_BASE}\` serves an HTML error page. Off the API, a request for a path that does not exist gets a real \`404\` whose body is short markdown pointing at the sitemap and these entry points, so an agent can recover without parsing a styled page.
 
-**MCP.** The same content is served as a Model Context Protocol server (Streamable HTTP) at \`POST /mcp\`, protocol revision 2026-07-28 with backward compatibility for the \`initialize\`-based revisions. Eight tools (\`get_profile\`, \`list_experience\`, \`list_skills\`, \`list_education\`, \`list_open_source\`, \`search_blog_posts\`, \`get_blog_post\`, \`send_message\`) plus resources for the site's documents and every blog post. Add it to an MCP client as \`https://murugappan.dev/mcp\` — no auth. Its manifest (\`server.json\`) is at \`https://murugappan.dev/.well-known/mcp.json\`.
+**MCP.** The same content is served as a Model Context Protocol server (Streamable HTTP) at \`POST /mcp\`, protocol revision 2026-07-28 with backward compatibility for the \`initialize\`-based revisions. Eight tools (\`get_profile\`, \`list_experience\`, \`list_skills\`, \`list_education\`, \`list_open_source\`, \`search_blog_posts\`, \`get_blog_post\`, \`send_message\`) plus resources for the site's documents and every blog post. Add it to an MCP client as \`https://murugappan.dev/mcp\`. No auth is needed. Its manifest (\`server.json\`) is at \`https://murugappan.dev/.well-known/mcp.json\`.
 
 **Conversational alternative.** The site also runs an AI assistant ("Jarvis") over a WebSocket at \`/parties/chat-room/{roomId}\`, which OpenAPI cannot describe. Send \`{"type":"chat","text":"..."}\` and read \`delta\`/\`done\` frames back. Prefer this API when you want structured data, and the socket when you want a conversation.
 
@@ -86,14 +86,14 @@ const errorResponse = (description: string) =>
   jsonResponse(description, "#/components/schemas/Error");
 
 const rateLimited = errorResponse(
-  "The client's read allowance for the current window is spent (`rate_limited`). `Retry-After` and the `RateLimit` header say when to come back — see the Rate limits section above."
+  "The client's read allowance for the current window is spent (`rate_limited`). `Retry-After` and the `RateLimit` header say when to come back. See the Rate limits section above."
 );
 
-// The dataset is a build artifact, so "not deployed yet" is a real state: 503, not 500.
+// The dataset is a build artifact, so "not deployed yet" is a real state and answers 503, not 500.
 const readFailures = {
   "429": rateLimited,
   "500": errorResponse("Unexpected server error."),
-  "503": errorResponse("The site's content dataset is missing or unreadable — retry shortly.")
+  "503": errorResponse("The site's content dataset is missing or unreadable. Retry shortly.")
 };
 
 // Self-describing endpoints read nothing from the build (no 503) but share the read allowance.
@@ -115,7 +115,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
       title: "murugappan.dev API",
       version: API_VERSION,
       summary:
-        "Structured facts about Murugappan M — full stack engineer — for agents and developers.",
+        "Structured facts about Murugappan M, full stack engineer, for agents and developers.",
       description: DESCRIPTION,
       contact: {
         name: "Murugappan M",
@@ -272,14 +272,14 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
               in: "path",
               required: true,
               description:
-                "The post's slug — the last path segment of its URL, e.g. `cloud-agnostic-rate-limiting`.",
+                "The post's slug, the last path segment of its URL, e.g. `cloud-agnostic-rate-limiting`.",
               schema: { type: "string", pattern: SLUG_PATTERN }
             }
           ],
           responses: {
             "200": jsonResponse("The post and its markdown source.", "#/components/schemas/Post"),
             "404": errorResponse(
-              "No post exists with that slug — call listBlogPosts for the current set."
+              "No post exists with that slug. Call listBlogPosts for the current set."
             ),
             ...readFailures
           }
@@ -289,7 +289,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
         post: {
           operationId: "sendContactMessage",
           summary: "Send Murugappan M a message",
-          description: `Delivers a message to Murugappan M's inbox by email and answers 202 once it is accepted. Send \`"dryRun": true\` first to validate a payload without sending it — that is this endpoint's sandbox, and it spends no allowance. Use it to relay a concrete opportunity, role or question on a human's behalf — include who you are writing for and how to reply. Not for newsletters, bulk outreach or automated pings: the endpoint allows ${CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day and ${CONTACT_DAILY_GLOBAL} site-wide. No reply is delivered over the API; Murugappan answers the address you supply.`,
+          description: `Delivers a message to Murugappan M's inbox by email and answers 202 once it is accepted. Send \`"dryRun": true\` first to validate a payload without sending it. That is this endpoint's sandbox, and it spends no allowance. Use it to relay a concrete opportunity, role or question on a human's behalf, and include who you are writing for and how to reply. The endpoint allows ${CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day and ${CONTACT_DAILY_GLOBAL} site-wide, so it is not for newsletters, bulk outreach or automated pings. No reply comes back over the API; Murugappan answers the address you supply.`,
           tags: ["contact"],
           requestBody: {
             required: true,
@@ -326,7 +326,7 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
           operationId: "getApiVersions",
           summary: "Get the version and deprecation policy",
           description:
-            "Returns every version of this API, its status, the release it serves and its sunset date if it has one, together with the policy in force: how versions are selected, what may change inside one, and which headers announce a deprecation. Read this before hard-coding a base path — it is the machine-readable form of the promise the API makes about not changing under you. Also reachable unversioned at `/api/versions`.",
+            "Returns every version of this API, its status, the release it serves and its sunset date if it has one, together with the policy in force: how versions are selected, what may change inside one, and which headers announce a deprecation. Read this before hard-coding a base path. It is the machine-readable form of the promise the API makes about not changing under you. Also reachable unversioned at `/api/versions`.",
           tags: ["meta"],
           responses: {
             "200": jsonResponse(
@@ -387,7 +387,7 @@ export const API_SCHEMAS: Record<string, SchemaObject> = {
         properties: {
           code: {
             type: "string",
-            description: "Stable machine-readable failure code — safe to branch on.",
+            description: "Stable machine-readable failure code, safe to branch on.",
             enum: [
               "not_found",
               "method_not_allowed",
@@ -400,7 +400,9 @@ export const API_SCHEMAS: Record<string, SchemaObject> = {
             ]
           },
           message: stringProp("What went wrong, in one sentence."),
-          hint: stringProp("What to do about it — the corrective action, not a restatement."),
+          hint: stringProp(
+            "What to do about it, as a corrective action rather than a restatement."
+          ),
           documentation_url: stringProp("Where the endpoint is documented.", {
             format: "uri"
           }),
@@ -487,8 +489,7 @@ export const API_SCHEMAS: Record<string, SchemaObject> = {
       },
       focus: {
         type: "array",
-        description:
-          "What he does, in his own words — one statement per line of the site's 'What I do' section.",
+        description: "One statement per line of the site's 'What I do' section, in his own words.",
         items: { type: "string" }
       }
     }
@@ -785,7 +786,7 @@ export const API_SCHEMAS: Record<string, SchemaObject> = {
         enum: ["current", "deprecated", "sunset"]
       },
       release: stringProp(
-        "The semantic release this version serves right now — the value of the `API-Version` response header.",
+        "The semantic release this version serves right now. The `API-Version` response header carries the same value.",
         { examples: [API_VERSION] }
       ),
       basePath: stringProp("Path prefix every endpoint of this version has.", {
@@ -837,7 +838,7 @@ export const API_SCHEMAS: Record<string, SchemaObject> = {
       rules: {
         type: "array",
         description:
-          "The policy in full sentences, one commitment per entry — the same text the developer portal publishes.",
+          "The policy in full sentences, one commitment per entry. The developer portal publishes the same text.",
         items: { type: "string" }
       },
       documentationUrl: stringProp("Where the policy is documented for people.", {
@@ -889,7 +890,7 @@ export const API_SCHEMAS: Record<string, SchemaObject> = {
     additionalProperties: false,
     properties: {
       email: stringProp(
-        "Reply-to address. Murugappan answers here, so it must be an address the sender actually reads.",
+        "Reply-to address. Murugappan answers here, so it must be an address the sender reads.",
         { format: "email", maxLength: CONTACT_LIMITS.email }
       ),
       message: stringProp(
@@ -908,7 +909,7 @@ export const API_SCHEMAS: Record<string, SchemaObject> = {
       dryRun: {
         type: "boolean",
         description:
-          "Set true to validate the request without sending anything and without spending a rate-limit slot — the sandbox for this endpoint. Answers 200 with status `validated` instead of 202 with status `accepted`.",
+          "Set true to validate the request without sending anything and without spending a rate-limit slot. This is the sandbox for this endpoint. Answers 200 with status `validated` instead of 202 with status `accepted`.",
         default: false
       }
     }

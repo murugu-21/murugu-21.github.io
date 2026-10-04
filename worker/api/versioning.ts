@@ -47,7 +47,7 @@ export const VERSIONS: readonly VersionRecord[] = [
 export const CURRENT_VERSION_RECORD = VERSIONS[0];
 
 export const POLICY_RULES: readonly string[] = [
-  `The version is a path segment: every endpoint lives under ${VERSIONED_API_BASE}. There is no version header and no version query parameter — the URL is the version.`,
+  `The version is a path segment. Every endpoint lives under ${VERSIONED_API_BASE}. There is no version header and no version query parameter. The URL is the version.`,
   `The unversioned ${API_BASE}/... prefix is a permanent alias for ${CURRENT_API_VERSION} and will never be repointed at a later major version. Code against either; both keep answering ${CURRENT_API_VERSION} for as long as ${CURRENT_API_VERSION} exists.`,
   "Additive changes ship inside a version without notice: new endpoints, new optional request fields, new response fields. Ignore fields you do not know rather than rejecting them.",
   "Breaking changes never ship inside a version. Removing or renaming a field or endpoint, changing a field's type, narrowing an enum, or changing what a status code means all require a new path version.",
