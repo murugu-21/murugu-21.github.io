@@ -1,7 +1,7 @@
 import puppeteer, { type Browser } from "puppeteer";
 
 // Headless Chrome for the build-time renderers (diagrams, resume PDF).
-// --no-sandbox: CI AppArmor blocks Chrome's sandbox; safe for our own pages.
+// --no-sandbox because CI AppArmor blocks Chrome's sandbox; it's safe for our own pages.
 const LAUNCH_ARGS = ["--no-sandbox", "--disable-setuid-sandbox"];
 
 export async function launchBrowser(tag: string): Promise<Browser> {

@@ -1,10 +1,10 @@
-// A long-lived child process that talks JSON lines: each `send` writes one
-// line to stdin, each stdout line is parsed and handed out FIFO.
+// A long-lived child process that talks JSON lines. Each `send` writes one
+// line to stdin, and `next` returns the parsed stdout lines in FIFO order.
 import { spawn } from "node:child_process";
 
 export function startJsonLines(command: string, args: string[]) {
   const proc = spawn(command, args, { stdio: ["pipe", "pipe", "inherit"] });
-  // Queue lines: two often arrive in one data event with only one waiter.
+  // Queue lines, since two often arrive in one data event with only one waiter.
   let buffer = "";
   const pending: unknown[] = [];
   const waiters: ((msg: unknown) => void)[] = [];
@@ -26,7 +26,7 @@ export function startJsonLines(command: string, args: string[]) {
   const exited = new Promise<void>(res => proc.on("exit", () => res()));
   return {
     next,
-    // Arrow properties: callers destructure these off the returned object.
+    // Arrow properties, because callers destructure these off the returned object.
     send: (line: string) => {
       proc.stdin.write(`${line}\n`);
     },

@@ -1,4 +1,4 @@
-// subset-font ships no typings; only the surface render-mermaid.ts uses.
+// subset-font ships no typings; this declares only what render-mermaid.ts uses.
 declare module "subset-font" {
   export interface SubsetFontOptions {
     targetFormat?: "sfnt" | "woff" | "woff2";

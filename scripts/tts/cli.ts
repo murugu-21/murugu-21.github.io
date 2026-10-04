@@ -21,9 +21,9 @@ export const fail = (msg: string): never => {
 };
 
 export function requirePython(module: string): void {
-  if (!existsSync(PYTHON)) fail('no .venv-tts — see README "Read-aloud audio"');
+  if (!existsSync(PYTHON)) fail('no .venv-tts; see README "Read-aloud audio"');
   if (spawnSync(PYTHON, ["-c", `import ${module}`]).status !== 0) {
-    fail(`.venv-tts cannot import ${module} — reinstall scripts/tts/requirements.txt`);
+    fail(`.venv-tts cannot import ${module}; reinstall scripts/tts/requirements.txt`);
   }
 }
 
@@ -43,7 +43,7 @@ export function run(cmd: string, cmdArgs: string[]): string {
 
 // Post dirs under the built blog; the articleBody check skips the blog's 404.
 export function publishedSlugs(): string[] {
-  if (!existsSync(BLOG_DIST)) fail(`${BLOG_DIST} missing — run \`bun run build\` first`);
+  if (!existsSync(BLOG_DIST)) fail(`${BLOG_DIST} missing; run \`bun run build\` first`);
   return readdirSync(BLOG_DIST, { withFileTypes: true })
     .filter(d => {
       const page = join(BLOG_DIST, d.name, "index.html");
@@ -68,7 +68,7 @@ export async function runEach(
       await fn(slug);
     } catch (err) {
       failures.push(slug);
-      log(`${slug}: FAILED — ${message(err)}`);
+      log(`${slug} FAILED: ${message(err)}`);
     }
   }
   const minutes = ((Date.now() - t0) / 60000).toFixed(1);

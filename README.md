@@ -10,9 +10,9 @@ One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so 
 
 ```bash
 bun install
-bunx astro sync && bun run cf-typegen   # once after cloning: lint and the typechecks need the generated types
+bunx astro sync && bun run cf-typegen   # once after cloning; lint and the typechecks need the generated types
 bun run dev       # Astro dev server with the Worker in workerd, on :4399
-bun run build     # site → dist/client, Worker → dist/server, plus markdown renditions and the resume PDF
+bun run build     # site to dist/client, Worker to dist/server, plus markdown renditions and the resume PDF
 bun run preview   # the production build in workerd, API and chat included
 ```
 
@@ -20,7 +20,7 @@ bun run preview   # the production build in workerd, API and chat included
 
 `@astrojs/cloudflare` builds the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) as part of `astro build`. Besides `dist/client` and `dist/server`, it writes a deployable `dist/server/wrangler.json` and `.wrangler/deploy/config.json`, which points every `wrangler` command at the generated config. Deploy only after a build.
 
-Every page is prerendered. The adapter still builds the Worker because the config names a custom `main`, which needs [withastro/astro#18202](https://github.com/withastro/astro/pull/18202). Without it, `@astrojs/cloudflare` 14.3.3 deploys the static site and drops the Worker ([#18201](https://github.com/withastro/astro/issues/18201)). The adapter is pinned to that PR's `pkg.pr.new` build; move to the first release that ships it.
+Astro prerenders every page. The adapter still builds the Worker because the config names a custom `main`, which needs [withastro/astro#18202](https://github.com/withastro/astro/pull/18202). Without it, `@astrojs/cloudflare` 14.3.3 deploys the static site and drops the Worker ([#18201](https://github.com/withastro/astro/issues/18201)). The adapter is pinned to that PR's `pkg.pr.new` build; move to the first release that ships it.
 
 `astro build` produces everything:
 
@@ -28,11 +28,11 @@ Every page is prerendered. The adapter still builds the Worker because the confi
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
 - Scripts that read the build find it through `scripts/site-dir.ts`.
 
-Pages are served straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](#discovery-documents-and-the-404).
+Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](#discovery-documents-and-the-404).
 
 ### Bun and Node
 
-[Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `package.json` → `packageManager`; 1.4.2 is the floor, because Bun 1.3.x breaks the production build and `astro check`. Node (version in `.nvmrc`) runs Wrangler, `tsc`, `astro dev` and `astro preview`.
+[Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`; 1.4.2 is the floor, because Bun 1.3.x breaks the production build and `astro check`. Node (version in `.nvmrc`) runs Wrangler, `tsc`, `astro dev` and `astro preview`.
 
 - `build` runs Astro under `bun --bun`.
 - `test` is `bun --bun vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`. Use `bun run test`, not `bun test`, which is Bun's own runner.
@@ -68,7 +68,7 @@ bun run check:worker   # type-check worker/
 bun run test           # vitest in the workers pool
 ```
 
-The project compiler is TypeScript 7, whose native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` supports TypeScript 7.
+The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` supports TypeScript 7.
 
 Having both compilers installed has two side effects:
 
@@ -79,7 +79,7 @@ Having both compilers installed has two side effects:
 
 Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, lint, type-checks, tests and a full build including the resume.
 
-The build and deploy commands are dashboard settings (Workers → this application), not read from this repo:
+The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 
 - **Build command.** `bun run build`. Workers Builds installs dependencies from `bun.lock` before running it.
 - **Deploy command.** `bun run deploy`, not `bunx wrangler deploy`. It applies pending D1 migrations from `./migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
@@ -91,7 +91,7 @@ The build and deploy commands are dashboard settings (Workers → this applicati
 
 [PostHog](https://posthog.com); see [Build-time environment](#build-time-environment) for the env vars that turn it on. Replay and error tracking must also be enabled in the PostHog project.
 
-- **Ingestion.** Events go through `https://e.murugappan.dev`, PostHog's managed reverse proxy: a CNAME to `…cf-prod-us-proxy.proxyhog.com` (US region), set as the SDK's `api_host`. Nothing in this repo or the Worker sits in that path. The DNS record must stay **DNS only (grey cloud)**, because proxying it breaks PostHog's certificate issuance. `ui_host` stays `https://us.posthog.com` so the toolbar works.
+- **Ingestion.** Events go through `https://e.murugappan.dev`, PostHog's managed reverse proxy. It is a CNAME to `…cf-prod-us-proxy.proxyhog.com` (US region), set as the SDK's `api_host`. Nothing in this repo or the Worker sits in that path. The DNS record must stay **DNS only (grey cloud)**, because proxying it breaks PostHog's certificate issuance. `ui_host` stays `https://us.posthog.com` so the toolbar works.
 - **Loading.** `posthog-js` is `import()`ed as its own chunk on the first input, or after 10 s without one (`scheduleSdkLoad`), so it stays outside Lighthouse's measured window. The token and host reach the client through `<meta name="ph-token">` and `<meta name="ph-host">`, because Astro bundles `<script>` as a module, where `document.currentScript` is `null`. They're read at build time, so the env vars need no `PUBLIC_` prefix.
 - **Session replay** starts on the first pointer, touch, key or wheel event (`onFirstInteraction` in `src/lib/first-interaction.ts`), not on `scroll`, which Chrome fires during load. The recorder is the SDK's heaviest extension, and loading it right after paint counted against Lighthouse's blocking time. Surveys and dead-click capture are off, so the SDK doesn't fetch their scripts.
 - **Error tracking.** `capture_exceptions: true` turns uncaught errors and rejections into `$exception` events. Since the SDK waits for the first interaction, `bootAnalytics` listens for `error` and `unhandledrejection` from page load, buffers them, replays them once the SDK arrives, then detaches. Errors the code catches on purpose go through `reportError`.
@@ -108,7 +108,7 @@ The build and deploy commands are dashboard settings (Workers → this applicati
 
 Each one no-ops without the SDK, buffers while it loads and swallows failures, so they're safe to call anywhere. Pageviews, autocapture and heatmaps come from PostHog itself.
 
-Links opt in with `data-ph-event` and optional `data-ph-prop` / `data-ph-value`. A single delegated `click` listener per document handles them, React-rendered markup included. `initClickTracking()` is called from `src/components/SiteScripts.astro`, which both the portfolio and blog layouts include.
+Links opt in with `data-ph-event` and optional `data-ph-prop` / `data-ph-value`. A single delegated `click` listener per document handles them, React-rendered markup included. `src/components/SiteScripts.astro`, which both the portfolio and blog layouts include, calls `initClickTracking()`.
 
 | Event                                            | Fired on                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------- |
@@ -175,17 +175,17 @@ description: One-line description shown in lists, search and feeds.
 
 ### Mermaid diagrams
 
-`scripts/render-mermaid.ts` renders each ` ```mermaid ` fence to a light and a dark SVG (with a Fira Code subset embedded, so labels measure the same inside `<img>`) and a light PNG, under `content/blog/<slug>/diagrams/`, named by a hash of the fence. Renderings no fence uses are pruned.
+`scripts/render-mermaid.ts` renders each ` ```mermaid ` fence to a light and a dark SVG (with a Fira Code subset embedded, so labels measure the same inside `<img>`) and a light PNG, under `content/blog/<slug>/diagrams/`, named by a hash of the fence. It prunes renderings no fence uses.
 
 The renderings are gitignored; only the fence source is committed. `bun run build` renders them first, the markdown plugin renders any fence that has no rendering yet (useful under `astro dev`), and `bun run diagrams` renders on demand. Each file records the mermaid version that rendered it, so an upgrade re-renders automatically; `--force` re-renders everything. If you change the renderer's own output (theme, font), bump `RENDERER_VERSION` in `src/blog/utils/mermaid-diagrams.ts` so the hashes change.
 
 The RSS feed uses the PNG. Feed readers and mirrors like dev.to rasterize images without an HTML engine or web fonts, so mermaid's `foreignObject` labels come out blank in the SVG.
 
-The `blogPostBodies` integration in `astro.config.ts` checks after the build that every post rendered one figure per fence. Without it, a markdown failure would ship a blank article: the content layer only logs the error and caches the empty result in `node_modules/.astro`.
+The `blogPostBodies` integration in `astro.config.ts` checks after the build that every post rendered one figure per fence. Without it, a markdown failure would ship a blank article, because the content layer only logs the error and caches the empty result in `node_modules/.astro`.
 
 ### Tag vocabulary
 
-Tags are the index's filter chips, so they name broad reader intents that recur across posts. `src/content.config.ts` constrains them (an unknown tag fails the build): **1–3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`, `debezium`, `floating-point`) go in `keywords`, which feeds JSON-LD, `article:tag` and the search index but never renders as a chip.
+Tags are the index's filter chips, so they name broad reader intents that recur across posts. `src/content.config.ts` constrains them (an unknown tag fails the build): **1 to 3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`, `debezium`, `floating-point`) go in `keywords`, which feeds JSON-LD, `article:tag` and the search index but never renders as a chip.
 
 | Tag             | What it covers                                          |
 | --------------- | ------------------------------------------------------- |
@@ -205,16 +205,16 @@ To add a tag, add it to `BLOG_TAGS` in `src/content.config.ts`, document it here
 
 Every post has a **Listen** control. When `/blog/audio/<slug>.json` exists, the page plays a pre-rendered MP3 and highlights the paragraph (or word) being read. Otherwise it falls back to the browser's speech synthesis, which highlights words from `boundary` events.
 
-Audio is generated **on a laptop, never in CI**: the model is 3.9 GB and needs Apple Silicon.
+Audio generation runs **on a laptop, never in CI**, because the model is 3.9 GB and needs Apple Silicon.
 
 **Pipeline** (`scripts/generate-audio.ts`):
 
 1. Extract text from the built HTML with the same `speechBlocks()` the page uses, then normalize emoji, punctuation and long digit runs. Breeze loops on runs like `0.30000000000000004`, so `normalizeSpeechText` describes them instead of reading them out.
-2. Synthesize ≤300-character sentence groups with Breeze TTS 2 ([mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit) via [mlx-audio](https://github.com/Blaizzy/mlx-audio), `scripts/tts/synth.py`), cloning `.voice/reference.wav` with no instruction prompt. Use the 8-bit build; bf16 swaps on a 24 GB machine.
+2. Synthesize sentence groups of at most 300 characters with Breeze TTS 2 ([mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit) via [mlx-audio](https://github.com/Blaizzy/mlx-audio), `scripts/tts/synth.py`), cloning `.voice/reference.wav` with no instruction prompt. Use the 8-bit build; bf16 swaps on a 24 GB machine.
 3. Speed up each chunk (`atempo=1.08`), join with 0.15 s gaps inside a paragraph and 0.45 s between paragraphs, and normalize loudness (`loudnorm I=-16`).
 4. Upload a 64 kbps MP3 and a `{blocks:[{text,start,end}]}` JSON to the R2 bucket `murugappan-dev-audio` (`infra/main.tf`, bound as `AUDIO`) under `blog/breeze/`. `worker/audio.ts` serves them with Range and ETag support.
 
-Posts whose spoken text hasn't changed are skipped. The `blog/<slug>.*` objects in R2 are unused and safe to delete.
+The script skips posts whose spoken text hasn't changed. The `blog/<slug>.*` objects in R2 are unused and safe to delete.
 
 The voice reference is a synthetic clip designed once from the persona prompt in `scripts/tts/design-voice.py`, so every paragraph clones the same clean source. Breeze TTS 2 weights are under the BreezeBlue Research and Non-Commercial License, which this personal blog satisfies.
 
@@ -224,7 +224,7 @@ The voice reference is a synthetic clip designed once from the persona prompt in
 terraform -chdir=infra apply   # creates the R2 bucket
 brew install ffmpeg
 python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/tts/requirements.txt
-.venv-tts/bin/python scripts/tts/design-voice.py 3   # persona prompt → .voice/candidates/{0,1,2}.wav
+.venv-tts/bin/python scripts/tts/design-voice.py 3   # writes .voice/candidates/{0,1,2}.wav from the persona prompt
 cp .voice/candidates/<k>.wav .voice/reference.wav && cp .voice/candidates/reference.txt .voice/reference.txt
 bun run audio --upload-voice     # durable copy in R2
 ```
@@ -253,7 +253,7 @@ bunx wrangler r2 object put murugappan-dev-audio/blog/breeze/<slug>.json --file 
 
 A public, unauthenticated JSON API over the site's content, for agents and developers. Documented at [`/developers`](https://murugappan.dev/developers/), [`/openapi.json`](https://murugappan.dev/openapi.json) (OpenAPI 3.1.0) and [`/AGENTS.md`](https://murugappan.dev/AGENTS.md).
 
-- **Code.** It lives in `worker/api/`. `routes.ts` defines the surface, and both the router and the spec are checked against it. `openapi.ts` generates the spec, `errors.ts` is the JSON error envelope, `store.ts` reads the data and `index.ts` is the Hono app.
+- **Code.** It lives in `worker/api/`. `routes.ts` defines the route list, and both the router and the spec are checked against it. `openapi.ts` generates the spec, `errors.ts` is the JSON error envelope, `store.ts` reads the data and `index.ts` is the Hono app.
 - **Endpoints.** `GET /api/v1/profile`, `/experience`, `/skills`, `/education`, `/open-source`, `/posts` (`?q=`, `?limit=`), `/posts/{slug}` (full markdown), `/versions`, `POST /api/v1/contact`, and the spec at `/openapi.json` and `/api/v1/openapi.json`.
 - **Versioning** (`worker/api/versioning.ts`). The version is a path segment. `toVersionedPath()` (`routes.ts`) maps the unversioned `/api/...` alias onto the `/api/v1/...` templates in `API_PATHS`, so `server.ts` mounts one Hono app at both prefixes. The alias is permanently pinned to v1; a v2 would live only at `/api/v2/...`.
 - **Deprecation.** Adding a record to `VERSIONS` turns on the `Deprecation` (RFC 9745) and `Sunset` (RFC 8594) headers, the `deprecation` / `successor-version` links and the `/api/v1/versions` document. `worker/api/middleware.ts` adds `API-Version`, `API-Supported-Versions` and the discovery `Link` relations to every response.
@@ -266,7 +266,7 @@ A public, unauthenticated JSON API over the site's content, for agents and devel
 
 These let an agent that has never seen the site find its way in, and recover from a wrong guess.
 
-- **`/.well-known/api-catalog`** (`worker/well-known.ts`): an RFC 9727 API catalogue as an RFC 9264 link set (`application/linkset+json`). It has one entry for the REST API (anchored at `/api/v1`, with `service-desc` → `/openapi.json`, `service-doc` → `/developers/`, `service-meta` → `/api/v1/versions`) and one for the MCP server. Pages advertise it with `Link: rel="api-catalog"` and a `<link>` in the layout head.
+- **`/.well-known/api-catalog`** (`worker/well-known.ts`): an RFC 9727 API catalogue as an RFC 9264 link set (`application/linkset+json`). It has one entry for the REST API (anchored at `/api/v1`, with `service-desc` pointing to `/openapi.json`, `service-doc` to `/developers/` and `service-meta` to `/api/v1/versions`) and one for the MCP server. Pages advertise it with `Link: rel="api-catalog"` and a `<link>` in the layout head.
 - **`/.well-known/mcp.json`** and **`/mcp.json`**: the MCP `server.json` manifest, following the published schema, with a reverse-DNS `name` (`dev.murugappan/murugappan-dev`), a `description` under the 100-character cap and one `streamable-http` remote. Extras go in `_meta` under a reverse-DNS key. It's generated, so the remote URL names the host that answered.
 - **The 404** (`worker/not-found.ts`). With `not_found_handling: "none"`, every asset miss reaches the Worker, which negotiates on `Accept`. `text/html` gets the styled page (the blog's under `/blog/`, the site's elsewhere). Anything else, including no `Accept` header as sent by curl and `fetch`, gets a short markdown body that points to the sitemap, `llms.txt`, `AGENTS.md`, `/developers/`, the OpenAPI document, the API catalogue, the MCP manifest and the pages that exist. Both carry `Vary: Accept`, the discovery links and a real 404 status.
 
@@ -287,7 +287,7 @@ The same content as a [Model Context Protocol](https://modelcontextprotocol.io) 
 Jarvis, an AI concierge on every portfolio and blog page.
 
 - **Server.** The `ChatRoom` Durable Object in `worker/` (partyserver, SQLite) streams replies over WebSocket at `/parties/chat-room/:roomId`.
-- **Model.** DeepSeek `deepseek-flash`, the only provider. The name tracks DeepSeek's current Flash generation, so behaviour can change without a deploy. It authenticates with the `DEEPSEEK_API_KEY` secret. Thinking is on (`thinking: {type: "enabled"}`) to sharpen tool selection, and `reasoning_content` is dropped so visitors see only the reply. There's deliberately no `max_tokens`: reasoning can use up a cap and leave an empty reply.
+- **Model.** DeepSeek `deepseek-flash`, the only provider. The name tracks DeepSeek's current Flash generation, so behaviour can change without a deploy. It authenticates with the `DEEPSEEK_API_KEY` secret. Thinking is on (`thinking: {type: "enabled"}`) to improve tool selection, and `reasoning_content` is dropped so visitors see only the reply. There's no `max_tokens` on purpose, because reasoning can use up a cap and leave an empty reply.
 - **Changing the model.** Run `bun run test:capture` first. It drives a real lead-capture conversation against the live model and fails unless `capture_opportunity` is called with the visitor's contact detail. Unit tests can't catch a model that claims a capture it never made. It needs `.dev.vars` and a built `llms.txt`, and costs a fraction of a cent.
 - **Loading.** The widget is a React island hydrated with `client:interaction`, a custom directive (`src/directives/interaction.ts`, registered in `astro.config.ts`) that loads React and the widget on the visitor's first input. A page that's only loaded, such as a Lighthouse run, never downloads it. A tap on the server-rendered launcher while the bundle is loading is remembered, and the panel opens once mounted.
 - **Widget.** `src/components/chat/`, which the blog imports too. While a turn is in flight, `ActivityRow` shows a rotating label ("Discombobulating…") with an elapsed counter, then the real action when the Worker sends a `tool` frame ("Reading blog/…", "Noting your details"). The frame carries only the tool name and a page path, never arguments, and isn't persisted. The row is `aria-hidden` behind a stable `sr-only` "Jarvis is typing", so the live region stays quiet.
