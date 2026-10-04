@@ -2,7 +2,6 @@ import { createServer, type Server } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
-import type { Browser } from "puppeteer";
 import { PDFParse } from "pdf-parse";
 
 import { launchBrowser } from "./launch-browser.ts";
@@ -87,18 +86,16 @@ const ATS_REQUIRED_TOKENS = [
   "$300k"
 ];
 
-let server: Server | undefined;
-let browser: Browser | undefined;
-try {
-  server = createStaticServer(DIST_DIR);
+// Its own scope, so the server and browser close before the PDF is parsed.
+async function printResume(): Promise<void> {
+  await using server = createStaticServer(DIST_DIR);
   await listen(server, 0);
   const address = server.address();
   if (!address || typeof address === "string") throw new Error("static server has no port");
-  const url = `http://127.0.0.1:${address.port}/resume/`;
 
-  browser = await launchBrowser("generate-resume");
+  await using browser = await launchBrowser("generate-resume");
   const page = await browser.newPage();
-  await page.goto(url, { waitUntil: "networkidle0" });
+  await page.goto(`http://127.0.0.1:${address.port}/resume/`, { waitUntil: "networkidle0" });
   // wait for the webfont, or the PDF gets fallback metrics and line breaks
   await page.evaluate(() => document.fonts.ready);
   await page.pdf({
@@ -107,38 +104,28 @@ try {
     printBackground: true,
     margin: { top: 0, right: 0, bottom: 0, left: 0 }
   });
-
-  const { size } = await stat(OUT_PATH);
-  const buffer = await readFile(OUT_PATH);
-  const parser = new PDFParse({ data: buffer });
-  const { text } = await parser.getText();
-  const info = await parser.getInfo().catch(() => null);
-  await parser.destroy();
-
-  const missing = ATS_REQUIRED_TOKENS.filter(token => !text.includes(token));
-  const pageCount = info?.total ?? null;
-  if (missing.length > 0) {
-    console.error(
-      `[generate-resume] ATS gate FAILED: missing tokens ${missing.map(t => JSON.stringify(t)).join(", ")}`
-    );
-    process.exitCode = 1;
-  } else if (pageCount !== null && pageCount > MAX_PAGES) {
-    // @sparticuz's fallback fonts are wider than local Chrome's, so overflow
-    // can be CI-only.
-    console.error(`[generate-resume] page gate FAILED: ${pageCount} pages (max ${MAX_PAGES})`);
-    process.exitCode = 1;
-  } else {
-    console.log(
-      `[generate-resume] wrote ${OUT_PATH} (${(size / 1024).toFixed(1)} KB, ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"}); ` +
-        `ATS gate passed, all ${ATS_REQUIRED_TOKENS.length} required tokens found`
-    );
-  }
-} finally {
-  if (browser) await browser.close();
-  if (server) {
-    const s = server;
-    await new Promise<void>(resolve => s.close(() => resolve()));
-  }
 }
 
-if (process.exitCode) process.exit(process.exitCode);
+await printResume();
+
+const buffer = await readFile(OUT_PATH);
+const parser = new PDFParse({ data: buffer });
+const { text } = await parser.getText();
+const info = await parser.getInfo().catch(() => null);
+await parser.destroy();
+
+const missing = ATS_REQUIRED_TOKENS.filter(token => !text.includes(token));
+if (missing.length > 0) {
+  throw new Error(
+    `ATS gate FAILED: missing tokens ${missing.map(t => JSON.stringify(t)).join(", ")}`
+  );
+}
+const pageCount = info?.total ?? null;
+// @sparticuz's fallback fonts are wider than local Chrome's, so overflow can be CI-only.
+if (pageCount !== null && pageCount > MAX_PAGES) {
+  throw new Error(`page gate FAILED: ${pageCount} pages (max ${MAX_PAGES})`);
+}
+console.log(
+  `[generate-resume] wrote ${OUT_PATH} (${(buffer.length / 1024).toFixed(1)} KB, ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"}); ` +
+    `ATS gate passed, all ${ATS_REQUIRED_TOKENS.length} required tokens found`
+);

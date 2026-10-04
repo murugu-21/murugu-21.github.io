@@ -23,7 +23,16 @@ export function startJsonLines(command: string, args: string[]) {
   });
   const next = (): Promise<unknown> =>
     pending.length ? Promise.resolve(pending.shift()) : new Promise(res => waiters.push(res));
-  const exited = new Promise<void>(res => proc.on("exit", () => res()));
+  // A crashed worker never replies, and Bun spins forever on the pending await
+  // even after an uncaught throw, so exit outright.
+  let closing = false;
+  const exited = new Promise<void>(res =>
+    proc.on("exit", code => {
+      if (closing) return res();
+      console.error(`error: ${command} exited with code ${code}`);
+      process.exit(1);
+    })
+  );
   return {
     next,
     // Arrow properties, because callers destructure these off the returned object.
@@ -31,6 +40,7 @@ export function startJsonLines(command: string, args: string[]) {
       proc.stdin.write(`${line}\n`);
     },
     close: async () => {
+      closing = true;
       proc.stdin.write("quit\n");
       proc.stdin.end();
       await exited;

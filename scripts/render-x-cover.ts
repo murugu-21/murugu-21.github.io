@@ -14,23 +14,18 @@ const SCALES = [
   { deviceScaleFactor: 2, suffix: "@2x" }
 ] as const;
 
-const browser = await launchBrowser("render-x-cover");
-
-try {
-  const page = await browser.newPage();
-  for (const theme of THEMES) {
-    for (const { deviceScaleFactor, suffix } of SCALES) {
-      await page.setViewport({ width: 1500, height: 500, deviceScaleFactor });
-      await page.goto(`${pathToFileURL(SOURCE).href}?theme=${theme}`, {
-        waitUntil: "networkidle0"
-      });
-      // wait for the webfont, or the shot uses the fallback face
-      await page.evaluate(() => document.fonts.ready);
-      const out = join("brand", `x-cover-${theme}${suffix}.png`);
-      await page.screenshot({ path: out });
-      console.log(out);
-    }
+await using browser = await launchBrowser("render-x-cover");
+const page = await browser.newPage();
+for (const theme of THEMES) {
+  for (const { deviceScaleFactor, suffix } of SCALES) {
+    await page.setViewport({ width: 1500, height: 500, deviceScaleFactor });
+    await page.goto(`${pathToFileURL(SOURCE).href}?theme=${theme}`, {
+      waitUntil: "networkidle0"
+    });
+    // wait for the webfont, or the shot uses the fallback face
+    await page.evaluate(() => document.fonts.ready);
+    const out = join("brand", `x-cover-${theme}${suffix}.png`);
+    await page.screenshot({ path: out });
+    console.log(out);
   }
-} finally {
-  await browser.close();
 }

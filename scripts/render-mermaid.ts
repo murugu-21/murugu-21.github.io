@@ -1,11 +1,12 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import type { Browser, Page } from "puppeteer";
 import sharp from "sharp";
 import subsetFont from "subset-font";
 import { z } from "zod";
 
+import { jsonString } from "@worker/json.ts";
 import { launchBrowser } from "./launch-browser.ts";
 import {
   DIAGRAMS_DIR,
@@ -37,25 +38,16 @@ declare global {
   }
 }
 
-const CONTENT_DIR = fileURLToPath(new URL("../content/blog/", import.meta.url));
-const MERMAID_JS = fileURLToPath(
-  new URL("../node_modules/mermaid/dist/mermaid.min.js", import.meta.url)
-);
-const MERMAID_VERSION = z
-  .object({ version: z.string() })
-  .parse(
-    JSON.parse(
-      readFileSync(
-        fileURLToPath(new URL("../node_modules/mermaid/package.json", import.meta.url)),
-        "utf8"
-      )
-    )
-  ).version;
-const FONT_FILE = fileURLToPath(
-  new URL(
-    "../node_modules/@fontsource-variable/fira-code/files/fira-code-latin-wght-normal.woff2",
-    import.meta.url
-  )
+const ROOT = join(import.meta.dirname, "..");
+const CONTENT_DIR = join(ROOT, "content/blog");
+const MERMAID_DIR = join(ROOT, "node_modules/mermaid");
+const MERMAID_JS = join(MERMAID_DIR, "dist/mermaid.min.js");
+const MERMAID_VERSION = jsonString(z.object({ version: z.string() })).parse(
+  readFileSync(join(MERMAID_DIR, "package.json"), "utf8")
+).version;
+const FONT_FILE = join(
+  ROOT,
+  "node_modules/@fontsource-variable/fira-code/files/fira-code-latin-wght-normal.woff2"
 );
 const FONT_FAMILY = "Fira Code, ui-monospace, monospace";
 
@@ -91,8 +83,8 @@ const THEMES: Record<DiagramTheme, { mermaid: "neutral" | "dark"; background: st
   dark: { mermaid: "dark", background: "#282c35" }
 };
 
-const args = new Set(process.argv.slice(2));
-const force = args.has("--force");
+const { values: options } = parseArgs({ options: { force: { type: "boolean" } } });
+const force = options.force ?? false;
 
 interface Job {
   post: string; // path of index.md
@@ -168,8 +160,7 @@ async function embedStyle(svg: string, theme: DiagramTheme, font: Buffer): Promi
     );
 }
 
-async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Page }> {
-  const browser = await launchBrowser("render-mermaid");
+async function openRenderer(browser: Browser, font: Buffer): Promise<Page> {
   const page = await browser.newPage();
   // 2x for high-density screens; widened per screenshot when needed
   await page.setViewport({ width: 1200, height: 900, deviceScaleFactor: 2 });
@@ -183,7 +174,7 @@ async function openRenderer(font: Buffer): Promise<{ browser: Browser; page: Pag
     await document.fonts.load('16px "Fira Code"');
     await document.fonts.ready;
   });
-  return { browser, page };
+  return page;
 }
 
 // The id lands in the SVG and its stylesheet, so it derives from the hash (not
@@ -327,16 +318,10 @@ async function main(): Promise<void> {
   }
 
   const font = readFileSync(FONT_FILE);
-  const { browser, page } = await openRenderer(font);
-  try {
-    await renderMissing({ page, font, missing });
-  } finally {
-    await browser.close();
-  }
+  await using browser = await launchBrowser("render-mermaid");
+  const page = await openRenderer(browser, font);
+  await renderMissing({ page, font, missing });
   console.log(`render-mermaid: ${missing.length} files written for ${jobs.length} diagrams`);
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+await main();

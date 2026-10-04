@@ -8,31 +8,34 @@
 //
 // Poorly aligned blocks keep no `words` (paragraph highlight only).
 // Don't run alongside `bun run audio`: both want the GPU.
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempDisposableSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
 import { z } from "zod";
+
+import { jsonString } from "@worker/json.ts";
 
 import { alignWords, type TimedWord } from "../src/blog/utils/audio-words.ts";
 import {
   PYTHON,
   ROOT,
-  flags,
-  log,
+  ffmpeg,
   publishedSlugs,
   requireFfmpeg,
   requirePython,
-  run,
-  runEach,
-  runMain,
-  slugs
+  runEach
 } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
 import { AUDIO_PREFIX, r2Store } from "./tts/r2.ts";
 
 const WORKER = join(ROOT, "scripts", "tts", "whisper.py");
 
-const r2 = r2Store(flags.has("--local"));
+const { values: options, positionals: slugs } = parseArgs({
+  allowPositionals: true,
+  options: { force: { type: "boolean" }, local: { type: "boolean" } }
+});
+const r2 = r2Store(options.local ?? false);
 
 const WhisperReply = z.object({
   error: z.string().optional(),
@@ -47,7 +50,7 @@ function startWorker() {
       send(JSON.stringify(job));
       return WhisperReply.parse(await next());
     },
-    close
+    [Symbol.asyncDispose]: close
   };
 }
 
@@ -62,91 +65,66 @@ interface TimingBlock {
   words?: TimedWord[];
 }
 // Loose, so every field round-trips untouched.
-const Timings = z.looseObject({
-  version: z.number(),
-  blocks: z.array(z.looseObject({ text: z.string(), start: z.number(), end: z.number() }))
-});
+const Timings = jsonString(
+  z.looseObject({
+    version: z.number(),
+    blocks: z.array(z.looseObject({ text: z.string(), start: z.number(), end: z.number() }))
+  })
+);
 
 async function alignPost(slug: string, worker: Worker) {
-  const tmp = mkdtempSync(join(tmpdir(), `align-${slug}-`));
-  try {
-    const jsonPath = join(tmp, "timings.json");
-    const mp3 = join(tmp, "post.mp3");
-    if (!r2.get(`${AUDIO_PREFIX}/${slug}.json`, jsonPath)) {
-      log(`${slug}: no audio in R2, skipping`);
-      return;
-    }
-    const timings = Timings.parse(JSON.parse(readFileSync(jsonPath, "utf8")));
-    if (timings.version >= 2 && !flags.has("--force")) {
-      log(`${slug}: already aligned, skipping`);
-      return;
-    }
-    if (!r2.get(`${AUDIO_PREFIX}/${slug}.mp3`, mp3)) throw new Error("mp3 missing in R2");
-
-    const wav = join(tmp, "post.wav");
-    run("ffmpeg", ["-y", "-loglevel", "error", "-i", mp3, "-ac", "1", "-ar", "16000", wav]);
-
-    let aligned = 0;
-    const blocks: TimingBlock[] = [];
-    for (const [i, block] of timings.blocks.entries()) {
-      const slice = join(tmp, `b${i}.wav`);
-      run("ffmpeg", [
-        "-y",
-        "-loglevel",
-        "error",
-        "-ss",
-        String(block.start),
-        "-to",
-        String(block.end),
-        "-i",
-        wav,
-        slice
-      ]);
-      const reply = await worker.transcribe({
-        id: `b${i}`,
-        wav: slice,
-        text: block.text
-      });
-      const { words: _drop, ...rest } = block;
-      if (reply.error) {
-        log(`  b${i}: whisper failed: ${reply.error}`);
-        blocks.push(rest);
-        continue;
-      }
-      const whisperWords = reply.words ?? [];
-      const words = alignWords(block.text, whisperWords, block);
-      if (!words) {
-        log(`  b${i}: poor match (${whisperWords.length} whisper words), paragraph only`);
-        blocks.push(rest);
-        continue;
-      }
-      aligned++;
-      blocks.push({ ...rest, words });
-    }
-
-    const out = { ...timings, version: 2, blocks };
-    writeFileSync(jsonPath, JSON.stringify(out));
-    r2.put(`${AUDIO_PREFIX}/${slug}.json`, jsonPath, "application/json");
-    log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
-  } finally {
-    rmSync(tmp, { recursive: true, force: true });
+  const stored = r2.get(`${AUDIO_PREFIX}/${slug}.json`);
+  if (!stored) {
+    console.log(`${slug}: no audio in R2, skipping`);
+    return;
   }
+  const timings = Timings.parse(stored.toString());
+  if (timings.version >= 2 && !options.force) {
+    console.log(`${slug}: already aligned, skipping`);
+    return;
+  }
+  const mp3Body = r2.get(`${AUDIO_PREFIX}/${slug}.mp3`);
+  if (!mp3Body) throw new Error("mp3 missing in R2");
+
+  using tmp = mkdtempDisposableSync(join(tmpdir(), `align-${slug}-`));
+  const mp3 = join(tmp.path, "post.mp3");
+  const wav = join(tmp.path, "post.wav");
+  writeFileSync(mp3, mp3Body);
+  ffmpeg(["-i", mp3, "-ac", "1", "-ar", "16000", wav]);
+
+  let aligned = 0;
+  const blocks: TimingBlock[] = [];
+  for (const [i, block] of timings.blocks.entries()) {
+    const slice = join(tmp.path, `b${i}.wav`);
+    ffmpeg(["-ss", String(block.start), "-to", String(block.end), "-i", wav, slice]);
+    const reply = await worker.transcribe({ id: `b${i}`, wav: slice, text: block.text });
+    const { words: _drop, ...rest } = block;
+    if (reply.error) {
+      console.log(`  b${i}: whisper failed: ${reply.error}`);
+      blocks.push(rest);
+      continue;
+    }
+    const whisperWords = reply.words ?? [];
+    const words = alignWords(block.text, whisperWords, block);
+    if (!words) {
+      console.log(`  b${i}: poor match (${whisperWords.length} whisper words), paragraph only`);
+      blocks.push(rest);
+      continue;
+    }
+    aligned++;
+    blocks.push({ ...rest, words });
+  }
+
+  const jsonPath = join(tmp.path, "timings.json");
+  writeFileSync(jsonPath, JSON.stringify({ ...timings, version: 2, blocks }));
+  r2.put(`${AUDIO_PREFIX}/${slug}.json`, jsonPath, "application/json");
+  console.log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
 }
 
-async function main() {
-  requirePython("mlx_whisper");
-  requireFfmpeg();
-
-  r2.checkLogin();
-  const targets = slugs.length ? slugs : publishedSlugs();
-  const worker = startWorker();
-  let failures: string[];
-  try {
-    failures = await runEach(targets, slug => alignPost(slug, worker));
-  } finally {
-    await worker.close();
-  }
-  if (failures.length) process.exit(1);
-}
-
-runMain(main);
+requirePython("mlx_whisper");
+requireFfmpeg();
+r2.checkLogin();
+const targets = slugs.length ? slugs : publishedSlugs();
+await using worker = startWorker();
+const failures = await runEach(targets, slug => alignPost(slug, worker));
+if (failures.length) process.exitCode = 1;

@@ -1,13 +1,13 @@
 // cf R2 helpers for the audio scripts: object get/put and a login check,
 // against the real bucket or, with --local, the local state `astro dev` serves
 // (.cloudflare/state, not cf's default --persist-to).
+import type { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
 
 import { z } from "zod";
 
 import { jsonString } from "@worker/json.ts";
-import { fail, run } from "./cli.ts";
+import { run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";
 // Namespaced per voice so a new one never overwrites the last; worker/audio.ts
@@ -35,16 +35,13 @@ export function r2Store(local: boolean) {
     ...(local ? ["--local", "--persist-to", ".cloudflare/state"] : [])
   ];
 
-  // False only when the object is absent; other failures (expired login,
+  // Null only when the object is absent; other failures (expired login,
   // network) throw so they aren't mistaken for "nothing there yet".
-  function get(key: string, file: string): boolean {
+  function get(key: string): Buffer | null {
     const r = spawnSync("bunx", args({ verb: "get", key }), { maxBuffer: MAX_OBJECT_BYTES });
-    if (r.status === 0) {
-      writeFileSync(file, r.stdout);
-      return true;
-    }
+    if (r.status === 0) return r.stdout;
     const err = `${r.stderr.toString()}\n${r.stdout.toString()}`;
-    if (/10007|does not exist|NoSuchKey|404 Not Found/i.test(err)) return false;
+    if (/10007|does not exist|NoSuchKey|404 Not Found/i.test(err)) return null;
     throw new Error(`cf r2 objects get ${key} failed:\n${err.trim()}`);
   }
 
@@ -57,7 +54,7 @@ export function r2Store(local: boolean) {
     if (local) return;
     const r = spawnSync("bunx", ["cf", "auth", "whoami"], { encoding: "utf8" });
     if (r.status !== 0 || !WhoAmI.safeParse(r.stdout).data?.tokenValid) {
-      fail(
+      throw new Error(
         "cf is not logged in (or the OAuth token expired); run `bunx cf auth login` in an interactive terminal, then retry"
       );
     }
