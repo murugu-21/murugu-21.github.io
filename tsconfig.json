@@ -5,6 +5,7 @@
     "src/**/*",
     "scripts/**/*",
     "astro.config.ts",
+    "cloudflare.config.ts",
     "vitest.config.ts"
   ],
   "exclude": ["dist"],

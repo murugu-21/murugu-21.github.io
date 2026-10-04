@@ -4,7 +4,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
 import { defineConfig, envField } from "astro/config";
-import { parse as parseJsonc, printParseErrorCode, type ParseError } from "jsonc-parser";
 import cloudflare from "@astrojs/cloudflare";
 import { unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
@@ -16,7 +15,6 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 import remarkMermaid from "./src/blog/utils/remark-mermaid";
 import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
-import { contactConfigProblem } from "./worker/contact-config";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
 
@@ -47,7 +45,7 @@ function singleFileSitemap(): AstroIntegration {
           throw new Error("single-file-sitemap: more than one sitemap chunk was written");
         }
         if (!fs.existsSync(chunk)) {
-          throw new Error("single-file-sitemap: dist/sitemap-0.xml is missing");
+          throw new Error("single-file-sitemap: sitemap-0.xml is missing from the build");
         }
         fs.renameSync(chunk, new URL("sitemap.xml", dir));
         fs.rmSync(new URL("sitemap-index.xml", dir), { force: true });
@@ -72,13 +70,13 @@ function blogPostBodies(): AstroIntegration {
           if (!fs.existsSync(source)) continue; // draft/ holds nested posts, unpublished
           const page = new URL(`blog/${slug}/index.html`, dir);
           if (!fs.existsSync(page)) {
-            throw new Error(`blog-post-bodies: dist/blog/${slug}/index.html was not built`);
+            throw new Error(`blog-post-bodies: blog/${slug}/index.html was not built`);
           }
           const html = fs.readFileSync(page, "utf8");
           const body = html.match(/<section itemprop="articleBody">([\s\S]*?)<\/section>/);
           if (!body || body[1].trim() === "") {
             throw new Error(
-              `blog-post-bodies: dist/blog/${slug}/index.html has an empty article body. ` +
+              `blog-post-bodies: blog/${slug}/index.html has an empty article body. ` +
                 "Its markdown failed to render (see the [glob-loader] error above). " +
                 "Fix it and clear node_modules/.astro, which caches the empty render."
             );
@@ -87,7 +85,7 @@ function blogPostBodies(): AstroIntegration {
           const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
           if (fences !== figures) {
             throw new Error(
-              `blog-post-bodies: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in dist. ` +
+              `blog-post-bodies: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +
                 "Clear node_modules/.astro, which caches the stale render."
             );
           }
@@ -117,28 +115,6 @@ function buildArtifacts(): AstroIntegration {
       "astro:build:start": () => run("scripts/render-mermaid.ts"),
       // Registered last, so the site it prints from is final.
       "astro:build:done": ({ dir }) => run("scripts/generate-resume.ts", fileURLToPath(dir))
-    }
-  };
-}
-
-// Fails the build, and so the Workers Builds deploy, on a malformed inbox or one
-// the EMAIL binding isn't locked to.
-function contactInbox(): AstroIntegration {
-  return {
-    name: "contact-inbox",
-    hooks: {
-      // config:setup, not build:start, so it fails before content sync and fetches.
-      "astro:config:setup": ({ command }) => {
-        if (command !== "build") return;
-        const errors: ParseError[] = [];
-        const config: unknown = parseJsonc(fs.readFileSync("wrangler.jsonc", "utf8"), errors);
-        if (errors.length) {
-          const where = errors.map(e => `${printParseErrorCode(e.error)} at offset ${e.offset}`);
-          throw new Error(`contact-inbox: wrangler.jsonc does not parse: ${where.join(", ")}`);
-        }
-        const problem = contactConfigProblem(config);
-        if (problem) throw new Error(`contact-inbox: wrangler.jsonc:\n${problem}`);
-      }
     }
   };
 }
@@ -223,10 +199,11 @@ const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
-  // Builds the Worker (wrangler.jsonc `main`) alongside the prerendered site.
-  // Pinned to a pkg.pr.new preview of withastro/astro#18202, because released
-  // versions drop a custom-entrypoint Worker from a static site without an
-  // error (withastro/astro#18201). Move to the release that ships it.
+  // Builds the Worker in cloudflare.config.ts alongside the prerendered site.
+  // Pinned to a pkg.pr.new preview of withastro/astro#18209 (published from
+  // the murugu-21/astro fork), because 15.0.0-beta.1 drops a custom-entrypoint
+  // Worker from a static site without an error (withastro/astro#18208). Move
+  // to the release that ships it.
   adapter: cloudflare({
     // build-time sharp only, so no Images binding
     imageService: "compile",
@@ -271,7 +248,6 @@ export default defineConfig({
     inlineStylesheets: "always"
   },
   integrations: [
-    contactInbox(),
     react(),
     clientInteractionDirective(),
     modulePreloadHints(),

@@ -78,10 +78,10 @@ export const LLMS_FULL_TXT = "# SDE Journey\n\nEvery post, in full.\n";
 
 export const AGENTS_MD = "# AGENTS.md — murugappan.dev\n\nWhen to use.\n";
 
-/** The site's styled 404 page (dist/client/404.html). */
+/** The site's styled 404 page (404.html in the build). */
 export const NOT_FOUND_HTML = "<!doctype html><h1>404</h1>";
 
-/** The blog's styled 404 page (dist/client/blog/404/index.html). */
+/** The blog's styled 404 page (blog/404/index.html in the build). */
 export const BLOG_NOT_FOUND_HTML = "<!doctype html><h1>SDE Journey: 404</h1>";
 
 // Served as text/html, like the real binding does for .html files and the
@@ -127,7 +127,7 @@ export function fakeAssets(overrides: Record<string, string | null> = {}): Fetch
     const path = assetPath(input);
     const body = files[path];
     // A miss is an empty 404, which is what the real binding returns under
-    // assets.not_found_handling: "none" (see wrangler.jsonc).
+    // assets.notFoundHandling: "none" (see cloudflare.config.ts).
     return Promise.resolve(
       body == null
         ? new Response(null, { status: 404 })
@@ -173,7 +173,7 @@ export function visitorMeta(instance: ChatRoom): Record<string, unknown> {
   );
 }
 
-/** The pool's env plus the bindings the test wrangler config leaves out. */
+/** The pool's env plus the bindings the test cf config leaves out. */
 export function testEnv(options: TestEnvOptions = {}): Env {
   return {
     ...env,
