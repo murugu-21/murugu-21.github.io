@@ -200,10 +200,10 @@ export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
   // Builds the Worker in cloudflare.config.ts alongside the prerendered site.
-  // Pinned to a pkg.pr.new preview of withastro/astro#18209 (published from
-  // the murugu-21/astro fork), because 15.0.0-beta.1 drops a custom-entrypoint
-  // Worker from a static site without an error (withastro/astro#18208). Move
-  // to the release that ships it.
+  // 15.0.0-beta.1 drops a custom-entrypoint Worker from a static site without an
+  // error (withastro/astro#18208). The package is a pkg.pr.new build of the fix,
+  // withastro/astro#18209, published from the murugu-21/astro fork. Move to the
+  // release that ships it.
   adapter: cloudflare({
     // build-time sharp only, so no Images binding
     imageService: "compile",

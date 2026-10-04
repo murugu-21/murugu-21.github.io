@@ -86,7 +86,7 @@ const ATS_REQUIRED_TOKENS = [
   "$300k"
 ];
 
-// Its own scope, so the server and browser close before the PDF is parsed.
+// A separate function, so the server and browser close before the gate reads the PDF.
 async function printResume(): Promise<void> {
   await using server = createStaticServer(DIST_DIR);
   await listen(server, 0);

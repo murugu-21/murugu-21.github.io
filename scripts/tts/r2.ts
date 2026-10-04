@@ -1,5 +1,5 @@
-// cf R2 helpers for the audio scripts: object get/put and a login check,
-// against the real bucket or, with --local, the local state `astro dev` serves
+// R2 helpers for the audio scripts, built on the cf CLI: get, put and a login
+// check. With --local they use the local state that `astro dev` serves
 // (.cloudflare/state, not cf's default --persist-to).
 import type { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";

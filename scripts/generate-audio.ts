@@ -147,7 +147,7 @@ function existingHash(slug: string): string | null {
 
 const round3 = (n: number) => Math.round(n * 1000) / 1000;
 
-// Tempo per chunk, so timings measured afterwards are exact.
+// Applies tempo per chunk, so the timings measured afterwards are exact.
 function tempoChunk({ outDir, id }: { outDir: string; id: string }) {
   const src = join(outDir, `${id}.wav`);
   const dst = join(outDir, `${id}.tempo.wav`);
@@ -182,7 +182,7 @@ async function renderPost(
   );
   if (!worker) return;
 
-  // Never removed, so a failed upload can be pushed by hand.
+  // Nothing deletes this dir, so you can push a failed upload by hand.
   const tmp = mkdtempSync(join(tmpdir(), `audio-${slug}-`));
   console.log(`${slug}: rendering in ${tmp}`);
   const outDir = join(tmp, "chunks");
