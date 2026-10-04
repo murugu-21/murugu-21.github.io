@@ -16,11 +16,11 @@ across paragraphs. Design is sampled, so candidates differ.
 import contextlib
 import sys
 import time
-import wave
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+from wavfile import write_wav
 
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"
 SAMPLE_RATE = 24000
@@ -40,15 +40,6 @@ SENTENCE = (
 )
 
 
-def write_wav(path: Path, audio: np.ndarray) -> None:
-    pcm = (np.clip(audio, -1.0, 1.0) * 32767).astype("<i2")
-    with wave.open(str(path), "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(SAMPLE_RATE)
-        w.writeframes(pcm.tobytes())
-
-
 def main() -> int:
     from mlx_audio.tts import load
 
@@ -66,7 +57,7 @@ def main() -> int:
             for c in model.generate(text=SENTENCE, instruct=PERSONA, cfg_scale=CFG_SCALE)
         ]
         audio = np.concatenate(parts)
-        write_wav(out / f"{k}.wav", audio)
+        write_wav(out / f"{k}.wav", audio, SAMPLE_RATE)
         print(f"candidate {k}: {len(audio) / SAMPLE_RATE:.1f}s in {time.time() - t0:.0f}s, wrote {out / f'{k}.wav'}")
     return 0
 

@@ -10,21 +10,12 @@ import { join } from "node:path";
 
 import { z } from "zod";
 
+import { DEEPSEEK_BASE_URL, DEEPSEEK_MODEL } from "@worker/ai.ts";
 import { jsonString } from "@worker/json.ts";
 import { buildMessages, TOOLS, type ModelMessage } from "@worker/prompt.ts";
 import { SITE_DIR } from "./site-dir.ts";
 
-// ai.ts uses bundler resolution bare Node can't follow, so read its constants
-// from source.
-const aiSource = readFileSync("worker/ai.ts", "utf8");
-const constant = (name: string): string =>
-  aiSource.match(new RegExp(`^export const ${name} = "(.*)";$`, "m"))?.[1] ??
-  (() => {
-    throw new Error(`${name} not found in worker/ai.ts`);
-  })();
-
-const DEEPSEEK_BASE_URL = constant("DEEPSEEK_BASE_URL");
-const model = process.argv[2] ?? constant("DEEPSEEK_MODEL");
+const model = process.argv[2] ?? DEEPSEEK_MODEL;
 const apiKey = readFileSync(".dev.vars", "utf8")
   .match(/^DEEPSEEK_API_KEY=(.*)$/m)?.[1]
   .trim();
