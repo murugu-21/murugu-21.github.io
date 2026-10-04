@@ -1,7 +1,8 @@
 ---
+import { greeting } from "#src/data/portfolio.ts";
 import ThemeToggle from "./ThemeToggle.astro";
 
-// "/#hash" so the links work from other pages. /about is deliberately left out
+// Root-relative so the links work from other pages. /about is deliberately left out
 // (machine entity page, linked via sitemap/llms.txt/rel=author).
 const links = [
   { href: "/#skills", label: "Skills" },
@@ -9,7 +10,12 @@ const links = [
   { href: "/#projects", label: "Projects" },
   { href: "/#achievements", label: "Achievements" },
   { href: "/#blogs", label: "Blogs" },
-  { href: "/#resume", label: "Resume" },
+  {
+    href: greeting.resumePath,
+    label: "Resume",
+    download: greeting.resumeFileName,
+    event: "resume_download"
+  },
   { href: "/#contact", label: "Contact Me" }
 ];
 
@@ -105,7 +111,7 @@ const menu = [
     <ul class:list={menu}>
       {links.map(l => (
         <li class="min-[768px]:float-left">
-          <a href={l.href} class:list={navLink}>
+          <a href={l.href} download={l.download} data-ph-event={l.event} class:list={navLink}>
             {l.label}
           </a>
         </li>

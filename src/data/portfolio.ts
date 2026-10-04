@@ -12,7 +12,8 @@ export const greeting = {
   nickname: "Muru",
   subTitle:
     "I build B2B SaaS that ships in regulated industries, using TypeScript end-to-end and event-driven services on AWS. I was the founding engineer who took a product from 0 to $300k ARR, and now I automate pharmacy workflows with LLMs at MedMe Health.",
-  resumePath: "/resume.pdf"
+  resumePath: "/resume.pdf",
+  resumeFileName: "Murugappan-M-Resume.pdf"
 };
 
 // Roles looped by the hero typewriter
