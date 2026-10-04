@@ -2,7 +2,7 @@
 // The blog index's searchable, tag-filterable post list. Plain script, no
 // React island: hydration cost ~70 KB ahead of LCP on mobile. Filter state
 // mirrors into the URL (`?q=`, one `?tag=` per chip), which wins on load.
-import type { SerializedPost } from "../utils/posts";
+import type { SerializedPost } from "#src/blog/utils/posts.ts";
 import SearchBar from "./SearchBar.astro";
 import Tag, { type TagCount } from "./Tag.astro";
 import Post from "./Post.astro";

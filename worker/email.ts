@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import type { ContactRequest } from "./api/contact";
-import { jsonString, lenient } from "./json";
+import { jsonString, lenient } from "#utils/json.ts";
 import type { ChatHistoryEntry } from "./protocol";
 
 export const SENDER_ADDRESS = "chatbot@murugappan.dev";
@@ -22,8 +22,8 @@ export type EmailLike = {
 
 /** The configured relay and inbox, or null when either is missing. */
 export function contactMailer(env: Env): { email: EmailLike; inbox: string } | null {
-  // cloudflare.config.ts always sets both; kept so a misconfigured env
-  // answers "not configured" instead of throwing.
+  // cloudflare.config.ts always sets both. The check stays so a misconfigured
+  // env answers "not configured" instead of throwing.
   const inbox = env.OPPORTUNITY_INBOX?.trim();
   return env.EMAIL && inbox ? { email: env.EMAIL, inbox } : null;
 }

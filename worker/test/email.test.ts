@@ -8,7 +8,7 @@ import {
   sendContactEmail,
   sendOpportunityEmail,
   type EmailLike
-} from "../email";
+} from "#worker/email.ts";
 
 describe("parseLeadArguments", () => {
   it("parses valid tool arguments, rejecting missing contact or summary and malformed JSON", () => {

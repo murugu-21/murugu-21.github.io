@@ -1,8 +1,8 @@
 import { assert, describe, expect, it } from "vitest";
 
-import { fetchDeepseekBalance, isInsufficientBalance, runDeepseekExchange } from "../ai";
-import { buildMessages, MAX_HISTORY_MESSAGES, type ModelMessage } from "../prompt";
-import { consumeSse } from "../sse";
+import { fetchDeepseekBalance, isInsufficientBalance, runDeepseekExchange } from "#worker/ai.ts";
+import { buildMessages, MAX_HISTORY_MESSAGES, type ModelMessage } from "#worker/prompt.ts";
+import { consumeSse } from "#worker/sse.ts";
 
 function sseStream(events: string[]): ReadableStream<string> {
   return new ReadableStream({

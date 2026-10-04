@@ -2,7 +2,7 @@
 // OpenAPI document generated from them, checked against each other.
 import { assert, describe, expect, it } from "vitest";
 
-import { buildOpenApiDocument } from "../api/openapi";
+import { buildOpenApiDocument } from "#worker/api/openapi.ts";
 import {
   ALLOWED_METHODS,
   API_BASE,
@@ -11,14 +11,14 @@ import {
   SPEC_PATHS,
   toVersionedPath,
   VERSIONED_API_BASE
-} from "../api/routes";
+} from "#worker/api/routes.ts";
 import {
   buildVersionsDocument,
   CURRENT_VERSION_RECORD,
   versionHeaders,
   versionLinkHeader,
   type VersionRecord
-} from "../api/versioning";
+} from "#worker/api/versioning.ts";
 
 describe("toVersionedPath", () => {
   it.each([

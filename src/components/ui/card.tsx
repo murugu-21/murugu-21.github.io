@@ -1,7 +1,7 @@
 // shadcn/ui card (new-york, Tailwind v4), vendored; trimmed to what the chat widget uses.
 import * as React from "react";
 
-import { cn } from "../../lib/utils";
+import { cn } from "#src/lib/utils.ts";
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (

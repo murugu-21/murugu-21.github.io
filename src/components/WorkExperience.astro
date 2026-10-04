@@ -1,7 +1,7 @@
 ---
 import { Image } from "astro:assets";
-import { workExperiences } from "../data/portfolio";
-import { accentTitle } from "../lib/accent";
+import { workExperiences } from "#src/data/portfolio.ts";
+import { accentTitle } from "#src/lib/accent.ts";
 import {
   countCompanies,
   currentMonth,
@@ -10,7 +10,7 @@ import {
   monthsBetween,
   periodBounds,
   totalExperienceMonths
-} from "../lib/experience";
+} from "#src/lib/experience.ts";
 
 // Ongoing durations are recomputed in the browser (script below) to stay current.
 const now = currentMonth();
@@ -154,8 +154,8 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     formatDuration,
     monthsBetween,
     totalExperienceMonths
-  } from "../lib/experience";
-  import { parseStringArray } from "../lib/data-attributes";
+  } from "#src/lib/experience.ts";
+  import { parseStringArray } from "#src/lib/data-attributes.ts";
 
   const now = currentMonth();
   const parse = (v: string) => {

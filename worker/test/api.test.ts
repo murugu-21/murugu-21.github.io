@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { DOCS_URL } from "../api/errors";
-import { API_PATHS, CURRENT_API_VERSION } from "../api/routes";
-import { API_VERSION } from "../api/versioning";
+import { DOCS_URL } from "#worker/api/errors.ts";
+import { API_PATHS, CURRENT_API_VERSION } from "#worker/api/routes.ts";
+import { API_VERSION } from "#worker/api/versioning.ts";
 import {
   fetchWorker,
   POST_MARKDOWN,

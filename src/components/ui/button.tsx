@@ -3,7 +3,7 @@ import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
-import { cn } from "../../lib/utils";
+import { cn } from "#src/lib/utils.ts";
 
 const buttonVariants = cva(
   // cursor-pointer: Tailwind v4 preflight no longer sets it on buttons.

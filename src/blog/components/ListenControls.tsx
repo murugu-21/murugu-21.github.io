@@ -5,25 +5,31 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Loader2, Pause, Play } from "lucide-react";
 
-import { Button } from "../../components/ui/button";
+import { Button } from "#src/components/ui/button.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
-} from "../../components/ui/dropdown-menu";
-import { Slider } from "../../components/ui/slider";
-import { tag, track } from "../../lib/analytics";
-import { normalizeSpeechText } from "../utils/audio-prep";
+} from "#src/components/ui/dropdown-menu.tsx";
+import { Slider } from "#src/components/ui/slider.tsx";
+import { tag, track } from "#src/lib/analytics.ts";
+import { normalizeSpeechText } from "#src/blog/utils/audio-prep.ts";
 import {
   WORD_BAND,
   blockAt,
   matchBlocks,
   scrollTarget,
   type AudioTimings
-} from "../utils/audio-sync";
-import { matchWordSpans, tokenize, wordAt, wrapWords, type TimedWord } from "../utils/audio-words";
-import { parseRate, SPEECH_RATES, speechBlocks, type SpeechRate } from "../utils/speech";
+} from "#src/blog/utils/audio-sync.ts";
+import {
+  matchWordSpans,
+  tokenize,
+  wordAt,
+  wrapWords,
+  type TimedWord
+} from "#src/blog/utils/audio-words.ts";
+import { parseRate, SPEECH_RATES, speechBlocks, type SpeechRate } from "#src/blog/utils/speech.ts";
 
 type State = "idle" | "loading" | "speaking" | "paused";
 

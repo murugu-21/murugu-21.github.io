@@ -1,8 +1,8 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
-import { BALANCE_RESERVE_USD, RateLimiter } from "../rate-limiter";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#worker/api/contact.ts";
+import { BALANCE_RESERVE_USD, RateLimiter } from "#worker/rate-limiter.ts";
 
 /** Runs inside the instance, so the synchronous contact methods skip an RPC per call. */
 function inLimiter(name: string, fn: (instance: RateLimiter) => Promise<void> | void) {

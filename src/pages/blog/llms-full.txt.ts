@@ -1,7 +1,7 @@
-import { SITE_TITLE, SITE_DESCRIPTION, AUTHOR } from "../../blog/consts";
-import { oneLineDescription } from "../../blog/utils/llms";
-import { getPublishedPosts, postUrl } from "../../blog/utils/posts";
-import { textResponse } from "../../lib/llms";
+import { SITE_TITLE, SITE_DESCRIPTION, AUTHOR } from "#src/blog/consts.ts";
+import { oneLineDescription } from "#src/blog/utils/llms.ts";
+import { getPublishedPosts, postUrl } from "#src/blog/utils/posts.ts";
+import { textResponse } from "#src/lib/llms.ts";
 
 // /blog/llms-full.txt (https://llmstxt.org): every post's markdown body in one file.
 export async function GET() {

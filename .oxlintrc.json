@@ -27,6 +27,38 @@
   },
   "overrides": [
     {
+      "files": ["**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^\\.\\./",
+                "message": "Import across folders through the #src, #worker, #utils and #scripts subpath imports (package.json)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(#worker/|\\.\\./)",
+                "message": "Scripts don't import Worker code (move app-agnostic helpers to utils/), and cross-folder imports use the #src, #utils and #scripts subpath imports."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["scripts/ts-alias.cjs"],
       "rules": {
         "typescript/no-unsafe-assignment": "off",

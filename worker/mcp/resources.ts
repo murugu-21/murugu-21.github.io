@@ -1,8 +1,8 @@
 // MCP resources. The URIs are `https://` because each is also a public URL a
 // client can GET directly. Reads accept only the allowlist or a validated blog slug.
 
-import { buildOpenApiDocument } from "../api/openapi";
-import { loadPost, loadPosts, readAsset, type AssetsLike } from "../api/store";
+import { buildOpenApiDocument } from "#worker/api/openapi.ts";
+import { loadPost, loadPosts, readAsset, type AssetsLike } from "#worker/api/store.ts";
 
 export const RESOURCE_ORIGIN = "https://murugappan.dev";
 

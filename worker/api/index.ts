@@ -4,7 +4,7 @@
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 
-import { contactMailer, sendContactEmail } from "../email";
+import { contactMailer, sendContactEmail } from "#worker/email.ts";
 import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "./contact";
 import type { Dataset } from "./dataset";
 import { apiError } from "./errors";

@@ -11,11 +11,11 @@ delivery drift. 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
 import json
 import sys
 import time
-import wave
 from pathlib import Path
 
 import mlx.core as mx
 import numpy as np
+from wavfile import write_wav
 
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"
 SAMPLE_RATE = 24000
@@ -32,15 +32,6 @@ sys.stdout = sys.stderr
 def emit(obj: dict[str, object]) -> None:
     PROTOCOL.write(json.dumps(obj) + "\n")
     PROTOCOL.flush()
-
-
-def write_wav(path: Path, audio: np.ndarray) -> None:
-    pcm = (np.clip(audio, -1.0, 1.0) * 32767).astype("<i2")
-    with wave.open(str(path), "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(SAMPLE_RATE)
-        w.writeframes(pcm.tobytes())
 
 
 def synthesize(model, text: str, reference: dict[str, str]) -> np.ndarray:
@@ -68,7 +59,7 @@ def run_job(model, job_path: str) -> None:
             audio = synthesize(model, chunk["text"], reference)
             if audio.size == 0:
                 raise RuntimeError("model produced no audio")
-            write_wav(out / f"{chunk['id']}.wav", audio)
+            write_wav(out / f"{chunk['id']}.wav", audio, SAMPLE_RATE)
             mx.clear_cache()
             emit(
                 {

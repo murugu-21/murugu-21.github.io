@@ -15,9 +15,14 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 )}
 
 <script>
-  import "../lib/webmcp";
-  import { bootAnalytics, initClickTracking, tag } from "../lib/analytics";
-  import { currentTheme, documentThemeSource, setTheme, syncThemeOnRestore } from "../lib/theme";
+  import "#src/lib/webmcp.ts";
+  import { bootAnalytics, initClickTracking, tag } from "#src/lib/analytics.ts";
+  import {
+    currentTheme,
+    documentThemeSource,
+    setTheme,
+    syncThemeOnRestore
+  } from "#src/lib/theme.ts";
 
   // Must run first: tags/events sent before it are dropped, not buffered.
   bootAnalytics();

@@ -1,7 +1,7 @@
 import { env, runInDurableObject } from "cloudflare:test";
 import { assert, describe, expect, it, vi } from "vitest";
 
-import { ChatRoom, parseClientMessage } from "../chat-room";
+import { ChatRoom, parseClientMessage } from "#worker/chat-room.ts";
 import {
   GREETING,
   MAX_MESSAGE_LENGTH,
@@ -11,7 +11,7 @@ import {
   toolFrame,
   VISITOR_COUNTRY_HEADER,
   VISITOR_IP_HEADER
-} from "../protocol";
+} from "#worker/protocol.ts";
 import { connectRoom, recordingEmail, testEnv, visitorMeta } from "./fixtures";
 
 describe("ChatRoom storage", () => {

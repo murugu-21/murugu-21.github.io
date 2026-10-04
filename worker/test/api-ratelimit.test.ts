@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "../api/contact";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#worker/api/contact.ts";
 import {
   CONTACT_CLIENT_QUOTA,
   CONTACT_GLOBAL_QUOTA,
@@ -13,7 +13,7 @@ import {
   resetReadWindows,
   secondsUntilUtcMidnight,
   takeReadSlot
-} from "../api/ratelimit";
+} from "#worker/api/ratelimit.ts";
 import { fetchWorker, readJson } from "./fixtures";
 
 beforeEach(() => resetReadWindows());

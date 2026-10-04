@@ -1,10 +1,10 @@
 import type { ImageMetadata } from "astro";
 import { RESUME_PHONE } from "astro:env/server";
 
-import medmeLogo from "../assets/images/medmeLogo.png";
-import hypervergeLogo from "../assets/images/hypervergeLogo.png";
-import samsungLogo from "../assets/images/samsungLogo.png";
-import kumaraguruLogo from "../assets/images/kumaraguruLogo.png";
+import medmeLogo from "#src/assets/images/medmeLogo.png";
+import hypervergeLogo from "#src/assets/images/hypervergeLogo.png";
+import samsungLogo from "#src/assets/images/samsungLogo.png";
+import kumaraguruLogo from "#src/assets/images/kumaraguruLogo.png";
 
 export const greeting = {
   username: "Murugappan M",

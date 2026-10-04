@@ -1,6 +1,6 @@
 import { RESUME_PHONE } from "astro:env/server";
 
-import { SITE_ORIGIN } from "../lib/site";
+import { SITE_ORIGIN } from "#src/lib/site.ts";
 import { socialMediaLinks } from "./portfolio";
 
 // The phone number is never hardcoded: it comes from the RESUME_PHONE build

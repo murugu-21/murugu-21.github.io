@@ -3,10 +3,10 @@ import type { ImageMetadata } from "astro";
 import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
 
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "../../blog/consts";
-import { getPublishedPosts, postDescription, postUrl } from "../../blog/utils/posts";
-import { replaceMermaidFences } from "../../blog/utils/mermaid-diagrams";
-import { SITE_ORIGIN } from "../../lib/site";
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "#src/blog/consts.ts";
+import { getPublishedPosts, postDescription, postUrl } from "#src/blog/utils/posts.ts";
+import { replaceMermaidFences } from "#src/blog/utils/mermaid-diagrams.ts";
+import { SITE_ORIGIN } from "#src/lib/site.ts";
 
 const parser = new MarkdownIt();
 

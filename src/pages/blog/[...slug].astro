@@ -1,8 +1,8 @@
 ---
 import { render } from "astro:content";
-import BaseLayout from "../../blog/layouts/BaseLayout.astro";
-import Bio from "../../blog/components/Bio.astro";
-import { SITE_TITLE, SITE_URL, PERSON } from "../../blog/consts";
+import BaseLayout from "#src/blog/layouts/BaseLayout.astro";
+import Bio from "#src/blog/components/Bio.astro";
+import { SITE_TITLE, SITE_URL, PERSON } from "#src/blog/consts.ts";
 import {
   getPublishedPosts,
   postPath,
@@ -12,10 +12,10 @@ import {
   tagPath,
   formatDate,
   timeToRead
-} from "../../blog/utils/posts";
-import { formatReadingTime } from "../../blog/utils/helpers";
-import { ListenControls } from "../../blog/components/ListenControls";
-import TableOfContents from "../../blog/components/TableOfContents.astro";
+} from "#src/blog/utils/posts.ts";
+import { formatReadingTime } from "#src/blog/utils/helpers.ts";
+import { ListenControls } from "#src/blog/components/ListenControls.tsx";
+import TableOfContents from "#src/blog/components/TableOfContents.astro";
 
 // prev/next follow date-ascending order.
 export async function getStaticPaths() {
