@@ -126,7 +126,7 @@ const machineFiles = [
   },
   {
     path: "/openapi.json",
-    what: "OpenAPI 3.1.0 description of this API — the canonical machine-readable contract."
+    what: "OpenAPI 3.1.0 description of this API, the canonical machine-readable contract."
   },
   {
     path: API_PATHS.openapi,
@@ -180,7 +180,7 @@ const apiJsonLd = {
     {
       "@type": "TechArticle",
       "@id": `${SITE_ORIGIN}/developers/#docs`,
-      headline: "murugappan.dev API — developer portal and agent documentation",
+      headline: "murugappan.dev API developer portal and agent documentation",
       description:
         "API reference, authentication, versioning and deprecation policy, rate-limit headers, sandbox, OpenAPI 3.1.0 specification and MCP server for murugappan.dev.",
       url: `${SITE_ORIGIN}/developers/`,
@@ -212,24 +212,24 @@ const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[ove
 ---
 
 <Layout
-  title="murugappan.dev API — Developer Portal, OpenAPI Spec & MCP Server | Murugappan M"
+  title="murugappan.dev API: Developer Portal, OpenAPI Spec & MCP Server | Murugappan M"
   description="Developer docs for the murugappan.dev API: REST endpoints, OpenAPI 3.1.0 spec, MCP server, authentication, versioning and deprecation policy, rate-limit headers. No key, no signup."
 >
   <Header />
   {/* /about's column, widened to 900px for tables. pt-28 clears the fixed navbar. */}
   <main class="box-content mx-auto max-w-[900px] px-5 pt-28 pb-16">
     <h1 class="mt-[0.67em] mb-2 text-[clamp(1.7rem,6vw,2.2rem)] font-bold">
-      murugappan.dev API — developer portal
+      murugappan.dev API developer portal
     </h1>
     <p class="my-[1em] text-[1.15rem] leading-[1.6]">
       A public, unauthenticated JSON API over everything this site publishes about{" "}
       <a class={linkCls} href="/about/">
         Murugappan M
-      </a>{" "}
-      — profile, work experience, skills, education, open-source work and blog posts — plus one
-      write endpoint for passing along an opportunity. Built for AI agents and for anyone who would
-      rather parse JSON than scrape HTML. This page is the whole developer reference: endpoints,
-      authentication,{" "}
+      </a>
+      : profile, work experience, skills, education, open-source work and blog posts. It also has
+      one write endpoint for passing along an opportunity. Built for AI agents and for anyone who
+      would rather parse JSON than scrape HTML. This page is the whole developer reference:
+      endpoints, authentication,{" "}
       <a class={linkCls} href="#versioning">
         versioning and deprecation
       </a>
@@ -262,34 +262,34 @@ const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[ove
         When to use this API
       </h2>
       <p class={proseP}>
-        Reach for it when you need grounded facts about Murugappan M as a candidate or a
+        Use it when you need grounded, first-party facts about Murugappan M as a candidate or a
         collaborator:
       </p>
       <ul class={proseUl}>
         <li class={proseLi}>
-          <strong class="font-bold">“Who is this person?”</strong> — one call to{" "}
+          <strong class="font-bold">"Who is this person?"</strong> One call to{" "}
           <code class={codeCls}>GET /api/profile</code> returns the pitch, current role, location
           and every public link.
         </li>
         <li class={proseLi}>
-          <strong class="font-bold">“Has he actually shipped X?”</strong> —{" "}
+          <strong class="font-bold">"Has he actually shipped X?"</strong>{" "}
           <code class={codeCls}>GET /api/experience</code> gives dated roles with concrete, per-role
           achievements, and <code class={codeCls}>GET /api/open-source</code> links the individual
           merged pull requests so a claim can be checked at the source.
         </li>
         <li class={proseLi}>
-          <strong class="font-bold">“Does he know technology Y?”</strong> —{" "}
+          <strong class="font-bold">"Does he know technology Y?"</strong>{" "}
           <code class={codeCls}>GET /api/skills</code> answers from a typed list instead of an
           inference over prose.
         </li>
         <li class={proseLi}>
-          <strong class="font-bold">“What has he written about Z?”</strong> —{" "}
+          <strong class="font-bold">"What has he written about Z?"</strong>{" "}
           <code class={codeCls}>GET /api/posts?q=…</code> searches titles and summaries;{" "}
           <code class={codeCls}>GET /api/posts/&#123;slug&#125;</code> returns a post's full
           markdown for quoting or summarising.
         </li>
         <li class={proseLi}>
-          <strong class="font-bold">“Reach out about a role.”</strong> —{" "}
+          <strong class="font-bold">"Reach out about a role."</strong>{" "}
           <code class={codeCls}>POST /api/contact</code> delivers a message to his inbox. Use it for
           one concrete, specific opportunity on a human's behalf.
         </li>
@@ -310,8 +310,8 @@ const tdCls = `${cellCls} leading-[1.6] [&_code]:whitespace-nowrap [&_code]:[ove
         <code class={codeCls}>
           {SITE_ORIGIN}
           {VERSIONED_API_BASE}
-        </code>{" "}
-        — see{" "}
+        </code>
+        . See{" "}
         <a class={linkCls} href="#versioning">
           Versioning
         </a>{" "}
@@ -364,7 +364,7 @@ curl -s {SITE_ORIGIN}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</co
         </table>
       </div>
       <p class={proseP}>
-        Full parameter and response schemas — including the ones the table summarises — live in the{" "}
+        Full parameter and response schemas, including the ones the table summarises, live in the{" "}
         <a class={linkCls} href="/openapi.json">
           OpenAPI document
         </a>
@@ -389,9 +389,9 @@ curl -s {SITE_ORIGIN}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</co
         Versioning &amp; deprecation policy
       </h2>
       <p class={proseP}>
-        The version is a path segment: every endpoint lives under{" "}
+        The version is a path segment. Every endpoint lives under{" "}
         <code class={codeCls}>{VERSIONED_API_BASE}</code>. There is no version header and no version
-        query parameter — the URL <em>is</em> the version. The unversioned{" "}
+        query parameter. The URL <em>is</em> the version. The unversioned{" "}
         <code class={codeCls}>{API_BASE}/…</code> prefix is a{" "}
         <strong class="font-bold">permanent alias</strong> for{" "}
         <code class={codeCls}>{CURRENT_API_VERSION}</code> and will never be repointed at a later
@@ -411,7 +411,7 @@ API-Supported-Versions: {VERSIONS.filter(v => v.status !== "sunset")
           .join(", ")}
 Link: &lt;{API_PATHS.versions}&gt;; rel="version-history"</code></pre>
       <p class={proseP}>
-        Once a version is deprecated, every one of its responses additionally carries{" "}
+        Once a version is deprecated, every one of its responses also carries{" "}
         <code class={codeCls}>Deprecation</code> (
         <a class={linkCls} href="https://www.rfc-editor.org/rfc/rfc9745">
           RFC 9745
@@ -430,7 +430,7 @@ Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;;
         At least {DEPRECATION_NOTICE_DAYS} days pass between the first{" "}
         <code class={codeCls}>Deprecation</code> header and the sunset date; after sunset the
         version answers <code class={codeCls}>410</code> with the usual error envelope pointing at
-        its successor. Nothing is deprecated today —{" "}
+        its successor. Nothing is deprecated today.{" "}
         <code class={codeCls}>{CURRENT_VERSION_RECORD.version}</code> is
         {CURRENT_VERSION_RECORD.status}, released {CURRENT_VERSION_RECORD.releasedOn}. The whole of
         this section is served as data at{" "}
@@ -454,11 +454,12 @@ Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;;
         >
           IETF <code class={codeCls}>RateLimit</code> header fields
         </a>
-        , so a client can self-throttle without reading this page:{" "}
+        , so a client can self-throttle without reading this page.{" "}
         <code class={codeCls}>RateLimit-Policy</code> lists the quota policies that apply, and{" "}
-        <code class={codeCls}>RateLimit</code> is the live snapshot of the one closest to exhaustion
-        — <code class={codeCls}>r</code> is what is left, <code class={codeCls}>t</code> is seconds
-        until it resets. The de-facto <code class={codeCls}>X-RateLimit-Limit</code>,{" "}
+        <code class={codeCls}>RateLimit</code> is the live snapshot of the one closest to
+        exhaustion, where <code class={codeCls}>r</code> is what is left and{" "}
+        <code class={codeCls}>t</code> is seconds until it resets. The de-facto{" "}
+        <code class={codeCls}>X-RateLimit-Limit</code>,{" "}
         <code class={codeCls}>X-RateLimit-Remaining</code> and{" "}
         <code class={codeCls}>X-RateLimit-Reset</code> trio mirrors the same numbers for tooling
         that only looks for those, and a <code class={codeCls}>429</code> adds{" "}
@@ -469,9 +470,9 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
           READ_QUOTA.windowSeconds
         }</code></pre>
       <p class={proseP}>
-        <strong class="font-bold">Reads</strong> are effectively unmetered: the fair-use ceiling is
+        <strong class="font-bold">Reads</strong> are effectively unmetered. The fair-use ceiling is{" "}
         {READ_QUOTA.quota} requests per {READ_QUOTA.windowSeconds} seconds per client address,
-        counted in the edge location that serves you — a client spread across several locations gets
+        counted in the edge location that serves you. A client spread across several locations gets
         that allowance in each, so the advertised number is a floor, not a cap. Read responses are
         cacheable for five minutes, so a cached response may carry a stale{" "}
         <code class={codeCls}>RateLimit</code> snapshot; treat it as advisory and trust the freshest
@@ -481,7 +482,7 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
         <strong class="font-bold">
           <code class={codeCls}>POST {API_PATHS.contact}</code>
         </strong>{" "}
-        sends real email, so it is metered:
+        sends real email, so it is metered at
         {CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day and {CONTACT_DAILY_GLOBAL}{" "}
         site-wide. Past either it answers <code class={codeCls}>429</code> with code{" "}
         <code class={codeCls}>rate_limited</code>, a <code class={codeCls}>Retry-After</code>{" "}
@@ -491,9 +492,9 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
 RateLimit: "{CONTACT_QUOTAS[0].name}";r=0;t=39122
 Retry-After: 39122</code></pre>
       <p class={proseP}>
-        A rejected request never spends a slot, and neither does a dry run — but a dry run still
-        reports the allowance, so it is the cheapest way to size a real send. All of these headers
-        are listed in <code class={codeCls}>Access-Control-Expose-Headers</code>, so a browser-side
+        A rejected request never spends a slot, and neither does a dry run. A dry run still reports
+        the allowance, so it is the cheapest way to size a real send. All of these headers are
+        listed in <code class={codeCls}>Access-Control-Expose-Headers</code>, so a browser-side
         agent can read them too.
       </p>
     </section>
@@ -503,17 +504,17 @@ Retry-After: 39122</code></pre>
         Sandbox
       </h2>
       <p class={proseP}>
-        The read endpoints <em>are</em> the sandbox: they are public, unauthenticated and
-        side-effect free, so production is safe to explore as much as you like — there is no
-        separate environment to provision.
+        The read endpoints <em>are</em> the sandbox. They are public, unauthenticated and
+        side-effect free, so production is safe to explore as much as you like. There is no separate
+        environment to provision.
       </p>
       <p class={proseP}>
         The one endpoint with a side effect has a dry-run mode instead. Send{" "}
         <code class={codeCls}>"dryRun": true</code> to{" "}
-        <code class={codeCls}>POST /api/contact</code> and the request is validated exactly as a
-        real one would be, then answered <code class={codeCls}>200</code> with{" "}
-        <code class={codeCls}>status: "validated"</code> — no email, no rate-limit slot. Repeat
-        until it validates, then resend without the flag.
+        <code class={codeCls}>POST /api/contact</code> and the endpoint validates the request
+        exactly as it would a real one, then answers <code class={codeCls}>200</code> with{" "}
+        <code class={codeCls}>status: "validated"</code>. It sends no email and spends no rate-limit
+        slot. Repeat until it validates, then resend without the flag.
       </p>
     </section>
 
@@ -522,8 +523,8 @@ Retry-After: 39122</code></pre>
         Errors
       </h2>
       <p class={proseP}>
-        Every failure under <code class={codeCls}>/api</code> — including a 404 on a path that does
-        not exist — returns the same JSON envelope. No HTML error page is ever served under{" "}
+        Every failure under <code class={codeCls}>/api</code>, including a 404 on a path that does
+        not exist, returns the same JSON envelope. No HTML error page is ever served under{" "}
         <code class={codeCls}>/api</code>. Branch on <code class={codeCls}>error.code</code>, not on
         the message.
       </p>
@@ -541,11 +542,12 @@ Retry-After: 39122</code></pre>
       </p>
       <p class={proseP}>
         <strong class="font-bold">Off the API</strong>, a path that does not exist answers a real{" "}
-        <code class={codeCls}>404</code> — never a <code class={codeCls}>200</code> with the app
-        shell, which would make every URL look valid. The body is content-negotiated: a browser gets
-        the styled 404 page, and anything that did not ask for HTML gets a short markdown body
-        listing the sitemap, this portal, the OpenAPI document, the API catalog and the MCP
-        manifest, so a guessed or stale URL can be recovered from in one request.
+        <code class={codeCls}>404</code>, never a <code class={codeCls}>200</code> with the app
+        shell, which would make every URL look valid. The body depends on the{" "}
+        <code class={codeCls}>Accept</code> header. A browser gets the styled 404 page, and anything
+        that did not ask for HTML gets a short markdown body listing the sitemap, this portal, the
+        OpenAPI document, the API catalog and the MCP manifest, so a guessed or stale URL can be
+        recovered in one request.
       </p>
     </section>
 
@@ -554,8 +556,8 @@ Retry-After: 39122</code></pre>
         Webhooks &amp; callbacks
       </h2>
       <p class={proseP}>
-        There are none, and that is deliberate: this API has no events to push. Content changes when
-        the site redeploys, so poll instead — read endpoints are cacheable for five minutes, the{" "}
+        There are none, and that is deliberate. This API has no events to push. Content changes when
+        the site redeploys, so poll instead. Read endpoints are cacheable for five minutes, the{" "}
         <a class={linkCls} href="/blog/rss.xml">
           blog RSS feed
         </a>{" "}
@@ -571,8 +573,8 @@ Retry-After: 39122</code></pre>
       </h2>
       <p class={proseP}>
         Every operation in the spec carries a unique <code class={codeCls}>operationId</code>, a
-        description, typed parameters and a response schema, which is what makes the document
-        directly convertible to tool definitions. Point your OpenAPI-to-tools converter at{" "}
+        description, typed parameters and a response schema, so the document converts directly into
+        tool definitions. Point your OpenAPI-to-tools converter at{" "}
         <code class={codeCls}>{SITE_ORIGIN}/openapi.json</code>; the{" "}
         <code class={codeCls}>operationId</code> becomes the tool name. For example,{" "}
         <code class={codeCls}>getBlogPost</code> yields:
@@ -592,7 +594,7 @@ Retry-After: 39122</code></pre>
         <code class={codeCls}>
           wss://{SITE_ORIGIN.replace("https://", "")}/parties/chat-room/&#123;roomId&#125;
         </code>
-        , which OpenAPI cannot describe — so it is documented here instead. Pick any room id; the
+        , which OpenAPI cannot describe, so this page documents it instead. Pick any room id; the
         room persists its history.
       </p>
       <pre class={preCls}><code class={preCodeCls}>{wsExample}</code></pre>
@@ -619,8 +621,8 @@ Retry-After: 39122</code></pre>
       <pre class={preCls}><code class={preCodeCls}>{SITE_ORIGIN}/mcp</code></pre>
       <p class={proseP}>
         Streamable HTTP, <code class={codeCls}>POST</code> only, no authentication and no session.
-        It implements protocol revision <code class={codeCls}>{LATEST_PROTOCOL_VERSION}</code> —
-        stateless, with per-request metadata — and keeps backward compatibility with the{" "}
+        It implements protocol revision <code class={codeCls}>{LATEST_PROTOCOL_VERSION}</code>,
+        which is stateless with per-request metadata, and keeps backward compatibility with the{" "}
         <code class={codeCls}>initialize</code>-based revisions (
         {LEGACY_PROTOCOL_VERSIONS.join(", ")}) that most clients still speak. Call{" "}
         <code class={codeCls}>server/discover</code> to see what a given deployment supports. There
@@ -648,8 +650,8 @@ Retry-After: 39122</code></pre>
         </table>
       </div>
       <p class={proseP}>
-        It also serves <strong class="font-bold">resources</strong> — documents a client can attach
-        as context directly, rather than calling a tool for them:{" "}
+        It also serves <strong class="font-bold">resources</strong>, documents a client can attach
+        as context directly rather than calling a tool for them:{" "}
         <code class={codeCls}>/llms.txt</code>, <code class={codeCls}>/AGENTS.md</code>, the OpenAPI
         specification, the full blog text, and every post's markdown (URI template{" "}
         <code class={codeCls}>{SITE_ORIGIN}/blog/&#123;slug&#125;/index.md</code>). They use{" "}
@@ -660,8 +662,8 @@ Retry-After: 39122</code></pre>
         Every tool declares a typed, self-contained <code class={codeCls}>outputSchema</code> (the
         REST response schemas, inlined), so a client can validate{" "}
         <code class={codeCls}>structuredContent</code> without fetching anything else. Recoverable
-        problems — an unknown slug, a bad email, a spent allowance — come back as tool execution
-        errors with text explaining the fix, not as protocol errors.
+        problems such as an unknown slug, a bad email or a spent allowance come back as tool
+        execution errors with text explaining the fix, not as protocol errors.
       </p>
       <pre class={preCls}><code class={preCodeCls}>{mcpExample}</code></pre>
       <h3 id="mcp-manifest" class={h3Cls}>
@@ -699,8 +701,8 @@ Retry-After: 39122</code></pre>
         <a class={linkCls} href="https://www.rfc-editor.org/rfc/rfc9727">
           RFC 9727
         </a>{" "}
-        link set that names every API here and where each one is described — the one URL to probe if
-        you know nothing else about this site.
+        link set that names every API here and where each one is described. It is the one URL to
+        probe if you know nothing else about this site.
       </p>
     </section>
 
@@ -759,15 +761,15 @@ Retry-After: 39122</code></pre>
       </h2>
       <p class={proseP}>
         Spec version <code class={codeCls}>{spec.info.version}</code>, serving API version{" "}
-        <code class={codeCls}>{CURRENT_API_VERSION}</code> — the full{" "}
+        <code class={codeCls}>{CURRENT_API_VERSION}</code>. The full{" "}
         <a class={linkCls} href="#versioning">
           versioning and deprecation policy
         </a>{" "}
         says what may change inside a version and how a deprecation is announced. Data is licensed{" "}
         <a class={linkCls} href="https://creativecommons.org/licenses/by/4.0/">
           CC BY 4.0
-        </a>{" "}
-        — cite{" "}
+        </a>
+        . Cite{" "}
         <a class={linkCls} href={SITE_ORIGIN + "/"}>
           murugappan.dev
         </a>

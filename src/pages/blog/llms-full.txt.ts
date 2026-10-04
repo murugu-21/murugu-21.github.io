@@ -8,9 +8,9 @@ export async function GET() {
   const posts = (await getPublishedPosts()).reverse(); // newest first
 
   const lines = [
-    `# ${SITE_TITLE} — full content`,
+    `# ${SITE_TITLE}: full content`,
     ``,
-    `> ${SITE_DESCRIPTION} — by ${AUTHOR.name}.`,
+    `> ${SITE_DESCRIPTION}, by ${AUTHOR.name}.`,
     ...posts.flatMap(post => [
       ``,
       `---`,

@@ -296,7 +296,7 @@ export function ChatWidget() {
     const lines = transcript.map(b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`);
     if (greeted) lines.unshift(`Jarvis: ${GREETING}`);
     const date = new Date().toISOString().slice(0, 10);
-    const body = `Chat with Jarvis — murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;
+    const body = `Chat with Jarvis on murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;
     const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
     const a = document.createElement("a");
     a.href = url;
@@ -411,7 +411,7 @@ export function ChatWidget() {
             <div className="min-w-0 flex-1">
               <h2 className="text-base font-semibold">Chat with Jarvis</h2>
               <p className="text-xs opacity-90">
-                Murugappan's AI assistant — answers from this site
+                Murugappan's AI assistant, answering from this site
               </p>
             </div>
             <DropdownMenu>

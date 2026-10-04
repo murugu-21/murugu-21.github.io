@@ -5,7 +5,7 @@ blue-hour sky, in the site's own tokens.
 
 | File                   | Size      | Use                                     |
 | ---------------------- | --------- | --------------------------------------- |
-| `x-cover-dark.png`     | 1500×500  | night sky — X's recommended banner size |
+| `x-cover-dark.png`     | 1500×500  | night sky, X's recommended banner size  |
 | `x-cover-light.png`    | 1500×500  | blue-hour sky (the light theme)         |
 | `x-cover-dark@2x.png`  | 3000×1000 | same two banners, 2x for retina screens |
 | `x-cover-light@2x.png` | 3000×1000 |                                         |

@@ -30,7 +30,7 @@ const {
 } = Astro.props;
 
 const metaDescription = description || SITE_DESCRIPTION;
-const fullTitle = title ? `${title} | ${SITE_TITLE}` : `${SITE_TITLE} — ${SITE_DESCRIPTION}`;
+const fullTitle = title ? `${title} | ${SITE_TITLE}` : `${SITE_TITLE} | ${SITE_DESCRIPTION}`;
 const ogTitle = title || SITE_TITLE;
 
 // Trailing slash to match the served directory URL and the sitemap.
@@ -49,7 +49,7 @@ const ogImage = `${SITE_URL}/og-image.png`;
   rel="service-desc"
   type="application/json"
   href={`${SITE_ORIGIN}/openapi.json`}
-  title="murugappan.dev API — OpenAPI 3.1.0"
+  title="OpenAPI 3.1.0 description of the murugappan.dev API"
 />
 <link rel="service-doc" type="text/html" href={`${SITE_ORIGIN}/developers/`} />
 <Favicons />

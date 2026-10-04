@@ -21,7 +21,7 @@ async function queryGithub<T extends z.ZodType>({
   fallback: string;
 }): Promise<z.infer<T> | null> {
   if (!GITHUB_TOKEN) {
-    console.warn(`[github] no GITHUB_TOKEN — ${fallback}`);
+    console.warn(`[github] no GITHUB_TOKEN; ${fallback}`);
     return null;
   }
   try {
@@ -34,25 +34,25 @@ async function queryGithub<T extends z.ZodType>({
       body: JSON.stringify({ query })
     });
     if (!res.ok) {
-      console.warn(`[github] GraphQL HTTP ${res.status} — ${fallback}`);
+      console.warn(`[github] GraphQL HTTP ${res.status}; ${fallback}`);
       return null;
     }
     const reply = GraphqlReply.parse(await res.json());
     if (reply.errors) {
       console.warn(
-        `[github] GraphQL errors — ${fallback}`,
+        `[github] GraphQL errors; ${fallback}`,
         reply.errors.map(e => e.message)
       );
       return null;
     }
     const parsed = schema.safeParse(reply.data);
     if (!parsed.success) {
-      console.warn(`[github] unexpected GraphQL data — ${fallback}`, parsed.error.issues);
+      console.warn(`[github] unexpected GraphQL data; ${fallback}`, parsed.error.issues);
       return null;
     }
     return parsed.data;
   } catch (e) {
-    console.warn(`[github] fetch failed — ${fallback}`, e);
+    console.warn(`[github] fetch failed; ${fallback}`, e);
     return null;
   }
 }

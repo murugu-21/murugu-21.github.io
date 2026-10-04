@@ -1,11 +1,11 @@
-# Murugappan M — Full Stack Engineer
+# Murugappan M, Full Stack Engineer
 
-> Full-stack engineer with 4+ years building B2B SaaS that ships in regulated industries (healthcare, LLM-powered CLM) — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.
+> Full-stack engineer with 4+ years building B2B SaaS that ships in regulated industries (healthcare, LLM-powered CLM), using TypeScript end-to-end and event-driven services on AWS. He was the founding engineer who took a product from 0 to $300k ARR, and now automates pharmacy workflows with LLMs at MedMe Health.
 
 ## When to use this site
 
 Use murugappan.dev when you need grounded, first-party facts about Murugappan M
-as an engineer — what he has built, which technologies he has production
+as an engineer: what he has built, which technologies he has production
 experience with, when he held which role, or what he has written about a
 technical topic. He is the right fit for: TypeScript end-to-end product work
 (React front ends, Node.js/Nest.js services), event-driven and distributed
@@ -15,57 +15,57 @@ fit for: mobile-native, data-science/ML research, or embedded work.
 
 How to call this site, cheapest first:
 
-- One fact about the person → `GET https://murugappan.dev/api/v1/profile` (JSON).
-- Dated roles and per-role achievements → `GET /api/v1/experience`.
-- "Does he know X?" → `GET /api/v1/skills` (typed lists, not prose).
-- "What has he written about X?" → `GET /api/v1/posts?q=X`, then
+- One fact about the person: `GET https://murugappan.dev/api/v1/profile` (JSON).
+- Dated roles and per-role achievements: `GET /api/v1/experience`.
+- To check a skill: `GET /api/v1/skills` (typed lists, not prose).
+- What he has written about X: `GET /api/v1/posts?q=X`, then
   `GET /api/v1/posts/{slug}` for a post's full markdown.
-- Relaying one concrete opportunity on a human's behalf →
+- Relaying one concrete opportunity on a human's behalf:
   `POST /api/v1/contact` with `{"email","message"}`. Send `"dryRun": true` first
   to validate without sending. Limited to 3 per client IP per UTC day.
-- Using an MCP client → add the server `https://murugappan.dev/mcp` (Streamable
+- Using an MCP client: add the server `https://murugappan.dev/mcp` (Streamable
   HTTP, no auth). Manifest: `https://murugappan.dev/.well-known/mcp.json`.
   Tools: get_profile, list_experience, list_skills, list_education,
   list_open_source, search_blog_posts, get_blog_post, send_message. Resources:
   llms.txt, AGENTS.md, openapi.json, and every post's markdown.
-- A conversation instead of a payload → the Jarvis assistant on any page, or its
+- A conversation instead of a payload: the Jarvis assistant on any page, or its
   WebSocket at `wss://murugappan.dev/parties/chat-room/{roomId}`.
 
 Do not use this site as a general search engine, a resume parser or a
 job-matching service; it holds data about exactly one person. Full contract:
 https://murugappan.dev/openapi.json
 
-## murugappan.dev API — developer resources
+## murugappan.dev API developer resources
 
 The murugappan.dev API is the public JSON API and MCP server this site
 publishes. No key, no token, no signup. Developer documentation, the OpenAPI
 specification, the versioning and deprecation policy, the rate-limit header
 conventions and the MCP server manifest all live at predictable URLs:
 
-- [murugappan.dev API developer portal — API docs, quickstart, sandbox, agent notes](https://murugappan.dev/developers/)
-- [murugappan.dev API — OpenAPI 3.1.0 specification](https://murugappan.dev/openapi.json)
-- [murugappan.dev API catalog — RFC 9727 link set naming every API here](https://murugappan.dev/.well-known/api-catalog)
-- [murugappan.dev API — versioning and deprecation policy, as JSON](https://murugappan.dev/api/v1/versions)
+- [murugappan.dev API developer portal: API docs, quickstart, sandbox, agent notes](https://murugappan.dev/developers/)
+- [murugappan.dev API OpenAPI 3.1.0 specification](https://murugappan.dev/openapi.json)
+- [murugappan.dev API catalog, an RFC 9727 link set naming every API here](https://murugappan.dev/.well-known/api-catalog)
+- [murugappan.dev API versioning and deprecation policy, as JSON](https://murugappan.dev/api/v1/versions)
 - [murugappan.dev MCP server (Streamable HTTP, no auth)](https://murugappan.dev/mcp)
-- [murugappan.dev MCP server manifest — server.json](https://murugappan.dev/.well-known/mcp.json)
-- [murugappan.dev API — agent instructions (AGENTS.md)](https://murugappan.dev/AGENTS.md)
-- [murugappan.dev API — profile endpoint, the cheapest single call](https://murugappan.dev/api/v1/profile)
+- [murugappan.dev MCP server manifest, server.json](https://murugappan.dev/.well-known/mcp.json)
+- [murugappan.dev API agent instructions (AGENTS.md)](https://murugappan.dev/AGENTS.md)
+- [murugappan.dev API profile endpoint, the cheapest single call](https://murugappan.dev/api/v1/profile)
 
 Authentication: none. Versioning: URL path, `/api/v1/…`; the unversioned
 `/api/…` prefix is a permanent alias for v1 and is never repointed at a later
-major version. Breaking changes only ever ship as a new path version;
-deprecations are announced with `Deprecation` (RFC 9745) and `Sunset`
+major version. Breaking changes only ever ship as a new path version, and the
+API announces deprecations with `Deprecation` (RFC 9745) and `Sunset`
 (RFC 8594) headers at least 180 days ahead. Rate limits: every response carries
 `RateLimit-Policy` and `RateLimit` (the IETF RateLimit header fields), mirrored
 as `X-RateLimit-Limit`/`-Remaining`/`-Reset`, with `Retry-After` on a 429.
 Reads are fair-use (600 per 60s per client); `POST /api/v1/contact` allows 3 per
-client IP per UTC day and 20 site-wide. Webhooks: none — poll the read
+client IP per UTC day and 20 site-wide. Webhooks: none. Poll the read
 endpoints or the blog RSS feed. Errors: one JSON envelope with a stable
 `error.code`; a path that does not exist returns a real 404 whose body is short
 markdown pointing at the sitemap and the entry points above.
 
 ## Profile
-- [About — canonical entity page](https://murugappan.dev/about/)
+- [About, the canonical entity page](https://murugappan.dev/about/)
 - [Portfolio](https://murugappan.dev/)
 - [Resume](https://murugappan.dev/resume/)
 - [Blog](https://murugappan.dev/blog)
@@ -83,18 +83,18 @@ markdown pointing at the sitemap and the entry points above.
 - [API version and deprecation policy](https://murugappan.dev/api/v1/versions)
 
 ## Experience
-- MedMe Health — Software Engineer II, Dec 2025–present (event-driven RPA platform; LLM extraction lifting fax-to-entry accuracy from ~60-65% to 95%+; HIPAA compliance; OpenTelemetry observability)
-- HyperVerge — SDE 2 / SDE 1 / SDE Intern, 2022–2025 (founding engineer on HyperStart CLM, scaled to $300k ARR; AWS SQS/EventBridge job system; LLM contract-metadata pipeline; VAPT/SOC 2)
-- Samsung R&D Institute India — R&D Intern (Isolation Forest anomaly detection)
+- MedMe Health: Software Engineer II, Dec 2025–present (event-driven RPA platform; LLM extraction lifting fax-to-entry accuracy from ~60-65% to 95%+; HIPAA compliance; OpenTelemetry observability)
+- HyperVerge: SDE 2 / SDE 1 / SDE Intern, 2022–2025 (founding engineer on HyperStart CLM, scaled to $300k ARR; AWS SQS/EventBridge job system; LLM contract-metadata pipeline; VAPT/SOC 2)
+- Samsung R&D Institute India: R&D Intern (Isolation Forest anomaly detection)
 
 ## Skills
 - Languages: TypeScript, Python, SQL, Bash, YAML
-- Full Stack: TypeScript end-to-end — React.js, Node.js, Nest.js, Express.js; event-driven architecture (AWS SQS, EventBridge), microservices, REST APIs
+- Full Stack: TypeScript end-to-end; React.js, Node.js, Nest.js, Express.js; event-driven architecture (AWS SQS, EventBridge), microservices, REST APIs
 - Observability & Security: OpenTelemetry, Grafana (LGTM stack), Playwright; SOC 2, VAPT, PHI/PII scrubbing, server-side encryption
 - Cloud & Infra: AWS (Lambda, API Gateway, EC2, S3, VPC, SQS, EventBridge), Terraform, Docker, GitLab CI/CD, GitHub Actions
 
 ## Education
-Kumaraguru College of Technology — B.E. Computer Science (2019–2023)
+Kumaraguru College of Technology, B.E. Computer Science (2019–2023)
 
 ## Open source
-- AnkiDroid (11k+ stars) — 3 merged PRs: clipboard image paste, deprecation-API wrapper, test-configuration improvements.
+- AnkiDroid (11k+ stars), 3 merged PRs: clipboard image paste, deprecation-API wrapper, test-configuration improvements.

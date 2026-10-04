@@ -25,7 +25,7 @@ export function tokenize(text: string): string[] {
 // "dont" and "fine." ≈ "fine".
 const key = (token: string) => token.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
-// Longest common subsequence over match keys → pairs of [textIndex, whisperIndex].
+// Longest common subsequence over match keys, as pairs of [textIndex, whisperIndex].
 function lcsPairs(a: string[], b: string[]): Array<[number, number]> {
   const n = a.length;
   const m = b.length;
@@ -120,7 +120,7 @@ const WORD_CLASS = "rw";
 const WORD_ATTR = "data-w";
 
 // Wraps each word of `el` in <span class="rw">, grouped per word in document
-// order. Words span text nodes, so "<a>SiteGPT</a>’s" is one word of two
+// order. Words span text nodes, so "<a>SiteGPT</a>'s" is one word of two
 // spans. Idempotent: existing spans are regrouped by word index.
 export function wrapWords(el: Element): HTMLElement[][] {
   const existing = Array.from(el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`));

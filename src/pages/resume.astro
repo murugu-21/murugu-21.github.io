@@ -21,8 +21,8 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {/* Duplicates homepage content and nothing links here. */}
     <meta name="robots" content="noindex" />
-    <title>Murugappan M — Resume</title>
-    <meta name="description" content={`${resumeContact.title} resume — ${greeting.subTitle}`} />
+    <title>Murugappan M | Resume</title>
+    <meta name="description" content={`${resumeContact.title} resume. ${greeting.subTitle}`} />
     <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
     <style is:inline set:html={FIRA_CODE_FACE}></style>
   </head>
@@ -118,7 +118,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
                 {repo.name}
                 {repo.homepageUrl && (
                   <>
-                    {" — "}
+                    {" | "}
                     <a href={repo.homepageUrl} target="_blank" rel="noopener noreferrer">
                       {displayUrl(repo.homepageUrl)}
                     </a>
@@ -136,7 +136,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
         {educationInfo.map(edu => (
           <div class="role-block">
             <p class="role-heading">
-              {edu.schoolName}, {edu.desc.replace(/\.$/, "")} —{" "}
+              {edu.schoolName}, {edu.desc.replace(/\.$/, "")} |{" "}
               <span class="role-title">{edu.subHeader}</span>
             </p>
             <p class="role-date">

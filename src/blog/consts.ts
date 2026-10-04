@@ -6,7 +6,7 @@ export const SITE_DESCRIPTION = "A Technical blog on my experiences in the tech 
 export const SITE_URL = `${SITE_ORIGIN}/blog`;
 export const AUTHOR = {
   name: "Murugappan M",
-  summary: "Hard-won lessons from building software that actually runs in production"
+  summary: "Hard-won lessons from building software that runs in production"
 };
 export const TWITTER_HANDLE = new URL(socialMediaLinks.twitter).pathname.replace(/^\//, "");
 // Same @id as src/layouts/Layout.astro so crawlers merge the blog author with

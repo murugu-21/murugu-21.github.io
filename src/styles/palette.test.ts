@@ -76,7 +76,7 @@ const ink = (name: string) => token(`color-${name}`);
 
 describe("blue-hour light palette", () => {
   // Body copy, headings, section subtitles and the post blockquote ink can
-  // cross any part of the sky, including its deepest stop — normal text
+  // cross any part of the sky, including its deepest stop. Normal text
   // (19px, and the 19.2px blockquote) needs 4.5:1.
   it.each(["text", "title", "subtitle", "text-light"])(
     "keeps --color-%s readable on the sky's deep stop",
@@ -87,8 +87,8 @@ describe("blue-hour light palette", () => {
 
   // The .accent word is bold display type in every heading (>= 24px), so it
   // answers to the large-text bar on the sky, and to normal text on the card,
-  // where the hover accents live. It also lands on the sky's WARM end — every
-  // link hovers to it, at 16px — so the horizon needs the normal-text bar.
+  // where the hover accents live. It also lands on the sky's WARM end, and every
+  // link hovers to it at 16px, so the horizon needs the normal-text bar.
   it("keeps --color-amber-ink legible as the accent word (>= 3:1 on the sky)", () => {
     expect(contrast(ink("amber-ink"), sky.deep)).toBeGreaterThanOrEqual(3);
     expect(contrast(ink("amber-ink"), sky.mid)).toBeGreaterThanOrEqual(4.5);
@@ -111,7 +111,7 @@ describe("blue-hour light palette", () => {
 
   // The blog's link hover/focus ink (post.css `.blog-post a:hover`). It sits
   // on 16px links that can cross the sky's deep stop, so it needs the
-  // normal-text bar there — the plain amber-ink only clears 3:1 on it.
+  // normal-text bar there. The plain amber-ink only clears 3:1 on it.
   it("keeps --color-amber-ink-deep readable as 16px link hover on every stop", () => {
     for (const stop of stops) {
       expect(contrast(ink("amber-ink-deep"), stop)).toBeGreaterThanOrEqual(4.5);

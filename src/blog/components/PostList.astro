@@ -78,7 +78,7 @@ const tags: TagCount[] = [...totals]
       history.replaceState(null, "", `${location.pathname}${qs ? `?${qs}` : ""}${location.hash}`);
     };
 
-    // URL → DOM, on load, popstate and pageshow (bfcache restores don't fire
+    // URL to DOM, on load, popstate and pageshow (bfcache restores don't fire
     // popstate). Also overrides the browser's form restoration.
     const readUrl = () => {
       const params = new URLSearchParams(location.search);

@@ -42,7 +42,7 @@ const logo = [
   "max-[360px]:mt-6 max-[360px]:text-[0.85em]"
 ];
 
-// The 961–1320 band tightens the padding, so the underline's inset follows.
+// The 961 to 1320px band tightens the padding, so the underline's inset follows.
 const navLink = [
   "relative block px-5 py-[15px] text-text no-underline dark:text-white",
   "after:absolute after:bottom-2 after:left-5 after:h-[3px] after:w-0 after:rounded-[3px]",
@@ -88,7 +88,7 @@ const menu = [
     <span class="px-2.5 font-bold text-navy dark:text-white">Murugappan M</span>
     <span class="text-subtitle dark:text-white/65">/&gt;</span>
   </a>
-  {/* Kept over the icon (48px, opacity 0 — not sr-only) for hit area + focus order. */}
+  {/* Kept over the icon (48px, opacity 0, not sr-only) for hit area and focus order. */}
   <input
     class="menu-btn peer absolute top-2 right-2 z-[1] m-0 h-12 w-12 cursor-pointer opacity-0 min-[768px]:hidden"
     type="checkbox"

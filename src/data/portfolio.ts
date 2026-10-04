@@ -11,7 +11,7 @@ export const greeting = {
   // short, candid form used only by the hero line ("I'm Muru")
   nickname: "Muru",
   subTitle:
-    "I build B2B SaaS that ships in regulated industries — TypeScript end-to-end, event-driven on AWS. Founding engineer who took a product from 0 to $300k ARR; now automating pharmacy workflows with LLMs at MedMe Health.",
+    "I build B2B SaaS that ships in regulated industries, using TypeScript end-to-end and event-driven services on AWS. I was the founding engineer who took a product from 0 to $300k ARR, and now I automate pharmacy workflows with LLMs at MedMe Health.",
   resumePath: "/resume.pdf"
 };
 
@@ -42,9 +42,9 @@ export const skillsSection = {
   title: "What I do",
   subTitle: "FULL-STACK ENGINEER BUILDING CLOUD-NATIVE, EVENT-DRIVEN SYSTEMS END-TO-END",
   skills: [
-    "⚡ Build TypeScript end-to-end — event-driven Node.js / Nest.js services and React frontends",
+    "⚡ Build TypeScript end-to-end: event-driven Node.js / Nest.js services and React frontends",
     "⚡ Design distributed, event-driven systems on AWS (Lambda, API Gateway, SQS, EventBridge)",
-    "⚡ Ship with observability and security built in — OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
+    "⚡ Ship with observability and security built in: OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],
   // iconName is a <symbol id> in src/assets/icons.svg
   softwareSkills: [
@@ -134,9 +134,9 @@ export const workExperiences: WorkExperience[] = [
     date: "December 2025 – Present",
     desc: "Leading design of the event-driven RPA platform that automates pharmacy admin work at this YC-backed healthtech startup.",
     descBullets: [
-      "Led development of an LLM-based extractor that turns unstructured patient questionnaire answers into structured medication data — solving a long tail of edge cases to lift fax-to-entry accuracy from ~60-65% to 95%+.",
+      "Led development of an LLM-based extractor that turns unstructured patient questionnaire answers into structured medication data. Working through its long tail of edge cases lifted fax-to-entry accuracy from ~60-65% to 95%+.",
       "Drove HIPAA compliance: access-logged S3 buckets, PHI/PII scrubbing from logs, and server-side encryption of data at rest.",
-      "Made every service debuggable from one Grafana view — vendor-agnostic OpenTelemetry traces and metrics across the platform."
+      "Made every service debuggable from one Grafana view, with vendor-agnostic OpenTelemetry traces and metrics across the platform."
     ]
   },
   {
@@ -148,9 +148,9 @@ export const workExperiences: WorkExperience[] = [
     desc: "Owned core platform architecture for HyperStart, the company's contract lifecycle management (CLM) product.",
     descBullets: [
       "Cut infrastructure spend to a 10% MRR-to-server-cost ratio by profiling usage and reallocating resources over 3 months.",
-      "Built the platform's backbone for all async and scheduled work — an event-driven job system on AWS SQS and EventBridge.",
-      "Led the architecture for CRM integrations (Salesforce, HubSpot), automating data prefilling to streamline the client deal-closure pipeline.",
-      "Mentored junior engineers and established standardized code-review protocols to raise code quality."
+      "Built the event-driven job system on AWS SQS and EventBridge that runs all of the platform's async and scheduled work.",
+      "Led the architecture for CRM integrations (Salesforce, HubSpot) that prefill deal data to speed up the client deal-closure pipeline.",
+      "Mentored junior engineers and introduced a standard code-review process to raise code quality."
     ]
   },
   {
@@ -161,12 +161,12 @@ export const workExperiences: WorkExperience[] = [
     date: "July 2023 – March 2025",
     desc: "Founding engineer on HyperStart CLM, owning features from design through to customer outcome as the product scaled to $300k ARR.",
     descBullets: [
-      "Architected an LLM-based pipeline that extracts metadata from signed contracts — a core driver of the product's value proposition.",
+      "Architected an LLM-based pipeline that extracts metadata from signed contracts, one of the product's main selling points.",
       "Cut contract-listing latency to under 5 seconds across 15,000+ records by restructuring responses and tuning queries.",
-      "Spearheaded VAPT and static code analysis for SOC 2 compliance, hardening API Gateways and Auto Scaling Groups.",
-      "Built an end-to-end testing pipeline in GitLab CI using Playwright and Docker to ensure stability before deployments.",
-      "Designed and deployed a PDF-conversion microservice, benchmarking and operationalizing an open-source tool for production use.",
-      "Built a config-driven UI for stamp-paper procurement, reducing the effort to add new Article codes to a single JSON change."
+      "Led VAPT and static code analysis for SOC 2 compliance, hardening API Gateways and Auto Scaling Groups.",
+      "Built an end-to-end testing pipeline in GitLab CI with Playwright and Docker that gates deployments.",
+      "Benchmarked an open-source PDF converter, then designed and deployed it as a production microservice.",
+      "Built a config-driven UI for stamp-paper procurement, so adding a new Article code is a single JSON change."
     ]
   },
   {
@@ -177,8 +177,8 @@ export const workExperiences: WorkExperience[] = [
     date: "August 2022 – June 2023",
     desc: "Built core ingestion and access-control foundations for the CLM platform.",
     descBullets: [
-      "Built a Role-Based Access Control (RBAC) system — database schemas and APIs to manage resource access via user groups.",
-      "Developed Google Drive and OneDrive integrations enabling seamless PDF ingestion for AI extraction workflows."
+      "Built a Role-Based Access Control (RBAC) system, with database schemas and APIs that manage resource access through user groups.",
+      "Built Google Drive and OneDrive integrations that ingest PDFs for the AI extraction workflows."
     ]
   },
   {
@@ -190,7 +190,7 @@ export const workExperiences: WorkExperience[] = [
     partTime: true,
     desc: "Applied machine learning to anomaly detection for security use cases.",
     descBullets: [
-      "Built an unsupervised Isolation Forest model to detect anomalous user activity from IP, API URL, and MAC-address signals — applicable to fraud detection.",
+      "Built an unsupervised Isolation Forest model that detects anomalous user activity from IP, API URL, and MAC-address signals, an approach that also applies to fraud detection.",
       "Generated synthetic training datasets and deployed the inference endpoint with Python/Django on Heroku."
     ]
   }
@@ -202,7 +202,7 @@ export const skillsCategories = [
   {
     category: "Full Stack",
     items:
-      "TypeScript end-to-end — React.js, Node.js, Nest.js, Express.js; event-driven architecture (AWS SQS, EventBridge), microservices, REST APIs"
+      "TypeScript end-to-end; React.js, Node.js, Nest.js, Express.js; event-driven architecture (AWS SQS, EventBridge), microservices, REST APIs"
   },
   {
     category: "Observability & Security",
@@ -245,7 +245,7 @@ export const educationInfo: Education[] = [
 // some exist.
 export const projectsSection = {
   title: "Projects 🛠️",
-  subtitle: "A few things I've built — pinned from my GitHub."
+  subtitle: "A few things I've built, pinned from my GitHub."
 };
 
 export const openSourceSection = {
@@ -282,30 +282,30 @@ export const openSourceCard = {
 export const blogSection = {
   title: "Blogs",
   subtitle:
-    "I write about real-world software engineering — distributed systems, cloud architecture, and lessons from production.",
+    "I write about real-world software engineering: distributed systems, cloud architecture, and lessons from production.",
   blogs: [
     {
       url: "https://murugappan.dev/blog/sitegpt-partykit-durable-objects/",
       title: "Why SiteGPT's chat runs on PartyKit, not socket.io + Redis",
       description:
-        "How a one-process-per-room architecture replaces socket.io + Redis for realtime chat — with production code, cost math, and the actor-model tradeoffs, drawn from the chatbot running on this site."
+        "How a one-process-per-room architecture replaces socket.io + Redis for realtime chat, with production code, cost math and the actor-model tradeoffs from the chatbot running on this site."
     },
     {
       url: "https://murugappan.dev/blog/eventform-outbox-pipeline-claude/",
       title: "Forms in, webhooks out: an event-driven pipeline",
       description:
-        "Building a multi-tenant form builder with a transactional outbox, Debezium CDC, idempotent webhook delivery, and OAuth handed off to Cognito — and what it taught me about event-driven design."
+        "Building a multi-tenant form builder with a transactional outbox, Debezium CDC, idempotent webhook delivery and OAuth handed off to Cognito, and what it taught me about event-driven design."
     },
     {
       url: "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/",
       title: "Modern distributed rate limiting in the cloud",
       description:
-        "A portable two-tier IP and per-user rate-limiting pattern that protects your compute budget as LLM agents make per-user limits essential — without locking you to one cloud."
+        "A portable two-tier IP and per-user rate-limiting pattern that protects your compute budget now that LLM agents make per-user limits essential, without locking you to one cloud."
     },
     {
       url: "https://murugappan.dev/blog/",
-      title: "SDE Journey — my technical blog",
-      description: "Hard-won lessons from building software that actually runs in production."
+      title: "SDE Journey, my technical blog",
+      description: "Hard-won lessons from building software that runs in production."
     }
   ]
 };
