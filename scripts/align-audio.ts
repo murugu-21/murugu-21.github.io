@@ -61,7 +61,7 @@ interface TimingBlock {
   end: number;
   words?: TimedWord[];
 }
-// Loose: every field is written back untouched.
+// Loose, so every field round-trips untouched.
 const Timings = z.looseObject({
   version: z.number(),
   blocks: z.array(z.looseObject({ text: z.string(), start: z.number(), end: z.number() }))
@@ -109,7 +109,7 @@ async function alignPost(slug: string, worker: Worker) {
       });
       const { words: _drop, ...rest } = block;
       if (reply.error) {
-        log(`  b${i}: whisper failed — ${reply.error}`);
+        log(`  b${i}: whisper failed: ${reply.error}`);
         blocks.push(rest);
         continue;
       }

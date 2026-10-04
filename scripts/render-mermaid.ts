@@ -201,7 +201,7 @@ async function renderOne({
 }): Promise<string> {
   return page.evaluate(
     async ({ src, themeName, fontFamily, svgId }) => {
-      // "strict": no click callbacks, labels escaped; files are also served directly.
+      // "strict" means no click callbacks and escaped labels; the files are also served directly.
       const m = window.mermaid;
       if (!m) throw new Error("mermaid did not load in the page");
       m.initialize({ startOnLoad: false, theme: themeName, securityLevel: "strict", fontFamily });
@@ -234,7 +234,7 @@ async function assertWellFormed(page: Page, svg: string, path: string): Promise<
   if (error) throw new Error(`render-mermaid: ${rel(path)} is not well-formed XML: ${error}`);
 }
 
-// Palette-quantized: line art compresses far smaller with no visible loss.
+// Palette-quantized, since line art compresses far smaller with no visible loss.
 async function rasterize(page: Page, styledSvg: string): Promise<Buffer> {
   const size = await page.evaluate(svgMarkup => {
     document.body.innerHTML = `<div id="shot" style="display:inline-block;background:#fff">${svgMarkup}</div>`;

@@ -20,7 +20,7 @@ import { contactConfigProblem } from "./worker/contact-config";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
 
-// slug -> ISO publish date, for sitemap <lastmod>.
+// Maps each slug to its ISO publish date, for the sitemap's <lastmod>.
 function postDates(): Record<string, string> {
   const dates: Record<string, string> = {};
   for (const dir of fs.readdirSync(BLOG_CONTENT)) {
@@ -57,7 +57,7 @@ function singleFileSitemap(): AstroIntegration {
   };
 }
 
-// A markdown render error doesn't fail the build: the glob loader logs it,
+// A markdown render error doesn't fail the build. The glob loader logs it,
 // caches the empty result in node_modules/.astro and ships a blank article.
 // So check every post has a body and one figure per ```mermaid fence
 // (which also catches a stale cached render).
@@ -78,17 +78,17 @@ function blogPostBodies(): AstroIntegration {
           const body = html.match(/<section itemprop="articleBody">([\s\S]*?)<\/section>/);
           if (!body || body[1].trim() === "") {
             throw new Error(
-              `blog-post-bodies: dist/blog/${slug}/index.html has an empty article body — ` +
-                "its markdown failed to render (see the [glob-loader] error above); " +
-                "fix it and clear node_modules/.astro, the empty render is cached"
+              `blog-post-bodies: dist/blog/${slug}/index.html has an empty article body. ` +
+                "Its markdown failed to render (see the [glob-loader] error above). " +
+                "Fix it and clear node_modules/.astro, which caches the empty render."
             );
           }
           const fences = findMermaidFences(fs.readFileSync(source, "utf8")).length;
           const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
           if (fences !== figures) {
             throw new Error(
-              `blog-post-bodies: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in dist — ` +
-                "clear node_modules/.astro, the stale render is cached"
+              `blog-post-bodies: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in dist. ` +
+                "Clear node_modules/.astro, which caches the stale render."
             );
           }
           checked++;
@@ -143,7 +143,7 @@ function contactInbox(): AstroIntegration {
   };
 }
 
-// `client:interaction`: hydrate on first input (src/directives/interaction.ts).
+// Registers `client:interaction`, which hydrates on first input (src/directives/interaction.ts).
 function clientInteractionDirective(): AstroIntegration {
   return {
     name: "client-interaction-directive",
@@ -215,8 +215,8 @@ function modulePreloadHints(): AstroIntegration {
   };
 }
 
-// PostHog source maps: uploaded then deleted, so no .map is served. Set only in
-// the Workers Builds production env.
+// PostHog source maps are uploaded then deleted, so no .map is served. Workers
+// Builds sets these env vars only in production.
 const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
@@ -224,13 +224,13 @@ export default defineConfig({
   site: "https://murugappan.dev",
   output: "static",
   // Builds the Worker (wrangler.jsonc `main`) alongside the prerendered site.
-  // Pinned to a pkg.pr.new preview of withastro/astro#18202: released
-  // versions silently drop a custom-entrypoint Worker from a static site
-  // (withastro/astro#18201). Move to the release that ships it.
+  // Pinned to a pkg.pr.new preview of withastro/astro#18202, because released
+  // versions drop a custom-entrypoint Worker from a static site without an
+  // error (withastro/astro#18201). Move to the release that ships it.
   adapter: cloudflare({
     // build-time sharp only, so no Images binding
     imageService: "compile",
-    // Node, not workerd: build hooks and several pages read the filesystem.
+    // Node, not workerd, because build hooks and several pages read the filesystem.
     prerenderEnvironment: "node"
   }),
   // otherwise the adapter provisions an unused SESSION KV namespace
@@ -280,12 +280,12 @@ export default defineConfig({
       filter: page => !/\/404\/?$/.test(page),
       serialize(item) {
         const { pathname } = new URL(item.url);
-        // explicit: /blog/ strips to "" below, not "blog"
+        // Matched before the strip below, which turns /blog/ into "", not "blog".
         if (pathname === "/blog/") {
           item.lastmod = NEWEST_POST;
           return item;
         }
-        // portfolio pages get no <lastmod>: nothing tracks their edits
+        // portfolio pages get no <lastmod>, since nothing tracks their edits
         const slug = pathname.replace(/^\/blog\//, "").replace(/\/$/, "");
         const lastmod = POST_DATES[slug];
         if (lastmod) item.lastmod = lastmod;
@@ -297,7 +297,7 @@ export default defineConfig({
     buildArtifacts()
   ],
   vite: {
-    // Dev only: started on a warm node_modules/.vite/deps_ssr cache, every page
+    // Dev only. Started on a warm node_modules/.vite/deps_ssr cache, every page
     // renders as a 51-byte /@vite/client stub ("Unable to resolve
     // Layout.astro?astro&type=script…"). Re-optimizing each start avoids it.
     environments: { ssr: { optimizeDeps: { force: true } } },

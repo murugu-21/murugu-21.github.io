@@ -17,7 +17,7 @@ Rules for coding agents working in this repo. (`public/AGENTS.md` is a different
 
 A test calls the code the way its users do and asserts the result they observe against a literal expected value. A test that only asserts which calls the code made, or restates a constant from it, observes nothing.
 
-**The check:** before you keep a test, ask whether it would still pass if every function it imports returned `undefined`. If yes, it cannot fail for a defect: it costs CI time and review attention and catches nothing. Rewrite the assertion or delete the test. A constant pin also fails when someone edits the constant or prompt it restates, so it blocks that edit.
+**The check.** Before you keep a test, ask whether it would still pass if every function it imports returned `undefined`. If yes, it cannot fail for a defect. It costs CI time and review attention and catches nothing. Rewrite the assertion or delete the test. A constant pin also fails when someone edits the constant or prompt it restates, so it blocks that edit.
 
 Five shapes that still pass when every imported function returns `undefined`:
 
@@ -27,7 +27,7 @@ Five shapes that still pass when every imported function returns `undefined`:
 4. **Constant pin.** The assertion restates a hand-maintained constant, config default, table row or prompt: `expect(LIMITS.maxTools).toBe(8)`, `expect(PROMPT).toContain("You are")`.
 5. **Fixture asserts fixture.** The assertion reads data the test built, and the code under test never runs.
 
-**The fix:** call the subject with one concrete input and assert the literal output or the observable effect: `expect(slugify("Hello, World!")).toBe("hello-world")`.
+**The fix.** Call the subject with one concrete input and assert the literal output or the observable effect: `expect(slugify("Hello, World!")).toBe("hello-world")`.
 
 - For an absence, assert the presence on another input in the same test.
 - For a constant, test the mechanism that reads it with one input instead of restating the value.
@@ -36,7 +36,7 @@ Five shapes that still pass when every imported function returns `undefined`:
 
 Keep a test of a relation across a table's rows (a key present in two tables, a parent that exists), and a compile-time check in a `*.test-d.ts` file.
 
-`tests/observe-behaviour` (`scripts/lint/test-behaviour.ts`) flags the direct forms of each shape, per test: shapes 1–3, a constant read straight into `expect`, and a test that never touches the code under test. Because a helper import counts as touching it, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule on that test with a reason (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`). The reviewers check what it can't see.
+`tests/observe-behaviour` (`scripts/lint/test-behaviour.ts`) flags the direct forms of each shape, per test: shapes 1 to 3, a constant read straight into `expect`, and a test that never touches the code under test. Because a helper import counts as touching it, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule on that test with a reason (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`). The reviewers check what it can't see.
 
 ## Code style
 
@@ -73,7 +73,7 @@ Never call a task complete until both of the following have happened.
 
 1. `.githooks/pre-push` passes (format, lint, typechecks, tests). For UI changes, also run `bun run build` and `bun run preview`, then check the page in the browser in both light and dark themes.
 2. Two independent reviewers (separate subagents, each starting fresh with only the diff and these rules) have reviewed the change:
-   - **Behaviour/QA reviewer:** does it do what was asked, are edge cases and regressions covered, does it actually work when run. For every test the diff adds or changes, applies the check in "Test behaviour, not implementation".
-   - **Code-style reviewer:** checks the diff against every rule in this file and `.oxlintrc.json`.
+   - **Behaviour/QA reviewer.** Checks that it does what was asked, that edge cases and regressions are covered, and that it works when run. For every test the diff adds or changes, applies the check in "Test behaviour, not implementation".
+   - **Code-style reviewer.** Checks the diff against every rule in this file and `.oxlintrc.json`.
 
    Fix what they find, or explain why a finding doesn't apply, before reporting the task as done.

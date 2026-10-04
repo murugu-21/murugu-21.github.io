@@ -1,7 +1,8 @@
-// Oxlint JS plugin enforcing AGENTS.md › Tests: a test must call the code under
-// test and compare what it observes against an independent expected value.
-// Heuristic by design: it catches the shapes syntax can decide and leaves the
-// rest (and the documented exceptions) to an `oxlint-disable` with a reason.
+// Oxlint JS plugin for the AGENTS.md "Test behaviour, not implementation" rule.
+// A test must call the code under test and compare what it observes against an
+// independent expected value. The rule is a heuristic by design. It catches the
+// shapes syntax can decide and leaves the rest (and the documented exceptions)
+// to an `oxlint-disable` with a reason.
 import type { RuleTester } from "oxlint/plugins-dev";
 
 // oxlint doesn't export its plugin or AST types; derive them from RuleTester.
@@ -66,7 +67,7 @@ function containsNode(node: Node, match: (node: Node, key: string) => boolean, k
   return children(node).some(({ child, key: childKey }) => containsNode(child, match, childKey));
 }
 
-// `a.b.c` and `a().b` → `a`.
+// The root identifier of `a.b.c` or `a().b`, which is `a`.
 function rootName(node: Node): string | undefined {
   if (node.type === "Identifier") return node.name;
   if (node.type === "MemberExpression") return rootName(node.object);
@@ -113,14 +114,14 @@ function declaredIn(scope: Node, name: string): Node | undefined {
 }
 
 const isTestFn = (node: Node) => node.type === "Identifier" && TEST_FNS.has(node.name);
-// `it.only`, `test.each`: a test function with a modifier from `names`.
+// `it.only` or `test.each`, a test function with a modifier from `names`.
 const isModified = (node: Node, names: Set<string>) =>
   node.type === "MemberExpression" &&
   isTestFn(node.object) &&
   node.property.type === "Identifier" &&
   names.has(node.property.name);
 
-// `it(…)`, `it.only(…)` and `it.each(table)(…)` → the test's callback.
+// The test's callback from `it(…)`, `it.only(…)` or `it.each(table)(…)`.
 function testCallback(call: CallExpression): Node | undefined {
   const { callee } = call;
   const isTest =
@@ -135,7 +136,7 @@ function testCallback(call: CallExpression): Node | undefined {
 
 type Assertion = { subject: Node; matcher: string; negated: boolean; args: Node[] };
 
-// `expect(x).not.resolves.toBe(y)` → { subject: x, matcher: "toBe", negated, args: [y] }.
+// Parses `expect(x).not.resolves.toBe(y)` into { subject: x, matcher: "toBe", negated, args: [y] }.
 function assertionAt(call: CallExpression): Assertion | undefined {
   const { callee } = call;
   if (callee.type !== "MemberExpression" || callee.property.type !== "Identifier") return undefined;
@@ -157,7 +158,7 @@ function assertionAt(call: CallExpression): Assertion | undefined {
   };
 }
 
-// `null`, `undefined`, `[]`, `{}`: the shapes that also match "returned nothing".
+// `null`, `undefined`, `[]` and `{}`, the shapes that also match "returned nothing".
 function isEmptyValue(node: Node): boolean {
   if (node.type === "Literal") return node.value === null;
   if (node.type === "Identifier") return node.name === "undefined";
@@ -174,12 +175,12 @@ export default {
     "observe-behaviour": {
       meta: {
         type: "problem",
-        docs: { description: "Tests must observe behaviour (AGENTS.md › Tests)." },
+        docs: { description: "Tests must observe behaviour (see the Tests section of AGENTS.md)." },
         messages: {
           noSubjectCall:
-            "This test never calls the code under test in its body, so it cannot fail for a defect. Call the subject with a concrete input here (see AGENTS.md › Tests).",
+            "This test never calls the code under test in its body, so it cannot fail for a defect. Call the subject with a concrete input here (see the Tests section of AGENTS.md).",
           noStrongAssertion:
-            "No assertion here would fail if the code under test returned undefined. Compare the observed output against a literal expected value (see AGENTS.md › Tests)."
+            "No assertion here would fail if the code under test returned undefined. Compare the observed output against a literal expected value (see the Tests section of AGENTS.md)."
         }
       },
       create(context) {
@@ -220,8 +221,8 @@ export default {
         };
 
         // `toBe(f(a))`, `toBe(buildUrl(…))`, or `toBe(want)` after `const want = f(a)`
-        // in the same test: the expected value is computed by the code under test.
-        // Reading one of its constants is fine.
+        // in the same test. In each, the code under test computes the expected
+        // value. Reading one of its constants is fine.
         const callsSubject = (node: Node, test: Node): boolean =>
           containsNode(node, (n, key) => {
             if (isReference(n, key)) {
@@ -232,7 +233,7 @@ export default {
             const name = rootName(n.callee);
             return name !== undefined && subjectNames().has(name);
           });
-        // `expect(LIMITS.maxTools)`: reads a constant without running anything.
+        // `expect(LIMITS.maxTools)` reads a constant without running anything.
         const isConstantPin = (node: Node) => {
           const name = rootName(node);
           return (
@@ -280,7 +281,7 @@ export default {
             if (node.id && node.body) locals.set(node.id.name, node.body);
           },
           VariableDeclaration(node) {
-            // `declare const __GLOBAL_CSS__`: build-time input injected by vitest.config.ts.
+            // `declare const __GLOBAL_CSS__` is build-time input that vitest.config.ts injects.
             if (!node.declare) return;
             for (const { id } of node.declarations) {
               for (const name of boundNames(id)) imports.set(name, "subject");
@@ -290,8 +291,8 @@ export default {
             if (!node.init) return;
             for (const name of boundNames(node.id)) locals.set(name, node.init);
           },
-          // `let x; beforeAll(() => { …subject…; x = … })`: x carries whatever the
-          // enclosing setup ran, not just its right-hand side.
+          // In `let x; beforeAll(() => { …subject…; x = … })`, x carries whatever
+          // the enclosing setup ran, not only its right-hand side.
           AssignmentExpression(node) {
             const scope = enclosingFunctionBody(node) ?? node.right;
             for (const name of boundNames(node.left)) locals.set(name, scope);

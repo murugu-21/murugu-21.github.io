@@ -39,7 +39,7 @@ export function formatOpportunityEmail(
 ): { subject: string; text: string } {
   const lines = transcript.map(m => `${m.role === "user" ? "visitor" : "assistant"}: ${m.content}`);
   return {
-    subject: `New opportunity via murugappan.dev chat — ${subjectName(lead.name || lead.contact)}`,
+    subject: `New opportunity via murugappan.dev chat from ${subjectName(lead.name || lead.contact)}`,
     text: [
       `Name:    ${lead.name ?? "(not given)"}`,
       `Contact: ${lead.contact}`,
@@ -71,7 +71,7 @@ export function formatContactEmail(msg: ContactRequest): {
   text: string;
 } {
   return {
-    subject: `New message via the murugappan.dev API — ${subjectName(msg.name || msg.email)}`,
+    subject: `New message via the murugappan.dev API from ${subjectName(msg.name || msg.email)}`,
     text: [
       `Name:    ${msg.name ?? "(not given)"}`,
       `Email:   ${msg.email}`,

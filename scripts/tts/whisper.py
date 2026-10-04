@@ -4,7 +4,8 @@ Reads JSON lines from stdin: {"id", "wav", "text"} where wav is a 16 kHz mono
 slice of one block and text is what it says. Replies with one JSON line per
 job: {"id", "words": [{"word", "start", "end"}]} in seconds relative to the
 slice, or {"id", "error"}. The known text is the initial_prompt so whisper
-spells names and numbers like the post, easing the match in audio-words.ts.
+spells names and numbers like the post, which makes the match in
+audio-words.ts easier.
 """
 import json
 import sys
@@ -55,7 +56,7 @@ def main() -> int:
                 if len(retry) > len(words):
                     words = retry
             emit({"id": job["id"], "words": words})
-        except Exception as exc:  # noqa: BLE001 — report and keep serving
+        except Exception as exc:  # noqa: BLE001  # report and keep serving
             emit({"id": job["id"], "error": f"{type(exc).__name__}: {exc}"})
     return 0
 

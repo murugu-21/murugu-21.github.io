@@ -9,9 +9,12 @@
 //   bun run audio --dry-run      # extract + hash only, no synthesis/upload
 //   bun run audio --upload-voice # push .voice/* to R2 once
 //
-// Per post: built HTML → speechBlocks (same as the page) → ≤300-char sentence
-// chunks → synth.py (Breeze TTS 2 via mlx-audio) → per-chunk atempo →
-// sample-accurate assembly → loudnorm → 64 kbps MP3 + timing JSON → R2.
+// Per post:
+// 1. speechBlocks, the same extractor the page uses, pulls text from the built HTML.
+// 2. packSentences splits it into chunks of at most 300 characters.
+// 3. synth.py (Breeze TTS 2 via mlx-audio) renders each chunk, and ffmpeg applies atempo.
+// 4. assemble() joins the chunks sample-accurately and loudnorm levels the result.
+// 5. The 64 kbps MP3 and its timing JSON go to R2.
 import type { Buffer } from "node:buffer";
 import {
   copyFileSync,
@@ -62,13 +65,13 @@ const VOICE_ID = "breeze-tts-2-8bit/chennai-2026-09-09";
 const CHUNK_MAX = 300;
 const GAPS = { intra: 0.15, inter: 0.45 };
 const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
-// Loudness only: Breeze is ~-60 dBFS between words, so no denoise or gate.
+// Loudness only. Breeze is ~-60 dBFS between words, so no denoise or gate.
 const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
 
 const r2 = r2Store(flags.has("--local"));
 
 function checkPreconditions(): { audio: string; text: string } {
-  if (!existsSync(BLOG_DIST)) fail(`${BLOG_DIST} missing — run \`bun run build\` first`);
+  if (!existsSync(BLOG_DIST)) fail(`${BLOG_DIST} missing; run \`bun run build\` first`);
   requireFfmpeg();
   if (!flags.has("--dry-run")) requirePython("mlx_audio");
   if (!existsSync(VOICE_WAV) || !existsSync(VOICE_TXT)) {
@@ -78,7 +81,7 @@ function checkPreconditions(): { audio: string; text: string } {
       !r2.get(`${VOICE_PREFIX}/reference.wav`, VOICE_WAV) ||
       !r2.get(`${VOICE_PREFIX}/reference.txt`, VOICE_TXT)
     ) {
-      fail("voice reference missing locally and in R2 — restore .voice/reference.{wav,txt}");
+      fail("voice reference missing locally and in R2; restore .voice/reference.{wav,txt}");
     }
   }
   return { audio: VOICE_WAV, text: readFileSync(VOICE_TXT, "utf8").trim() };

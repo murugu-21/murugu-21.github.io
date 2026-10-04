@@ -42,7 +42,7 @@ export function r2Store(local: boolean) {
     const r = spawnSync("bunx", ["wrangler", "whoami"], { encoding: "utf8" });
     if (r.status !== 0 || /not logged in|expired/i.test(`${r.stderr}${r.stdout}`)) {
       fail(
-        "wrangler is not logged in (or the OAuth token expired) — run `bunx wrangler login` in an interactive terminal, then retry"
+        "wrangler is not logged in (or the OAuth token expired); run `bunx wrangler login` in an interactive terminal, then retry"
       );
     }
   }

@@ -24,7 +24,7 @@ import numpy as np
 
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"
 SAMPLE_RATE = 24000
-CFG_SCALE = 4  # the upstream voice-design default; needed for the prompt to bite
+CFG_SCALE = 4  # the upstream voice-design default; needed for the prompt to take effect
 
 PERSONA = (
     "A 25-year-old male software engineer from Chennai with a light Tamil-influenced "
@@ -33,7 +33,7 @@ PERSONA = (
     "on key terms, brief pauses between ideas."
 )
 
-# ~10 s spoken: long enough to anchor a clone, short enough to design fast.
+# About 10 s spoken, long enough to anchor a clone and short enough to design fast.
 SENTENCE = (
     "Hey there, if you are reading this in a desktop, press ctrl + shift + i and "
     "open console and paste the below code."
@@ -67,7 +67,7 @@ def main() -> int:
         ]
         audio = np.concatenate(parts)
         write_wav(out / f"{k}.wav", audio)
-        print(f"candidate {k}: {len(audio) / SAMPLE_RATE:.1f}s in {time.time() - t0:.0f}s → {out / f'{k}.wav'}")
+        print(f"candidate {k}: {len(audio) / SAMPLE_RATE:.1f}s in {time.time() - t0:.0f}s, wrote {out / f'{k}.wav'}")
     return 0
 
 

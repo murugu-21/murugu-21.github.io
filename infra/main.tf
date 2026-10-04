@@ -1,5 +1,5 @@
-# Email Routing enablement is a dashboard click (zone -> Email -> Email
-# Routing -> Enable): cloudflare_email_routing_settings fails every apply in
+# Enabling Email Routing is a dashboard click (zone -> Email -> Email
+# Routing -> Enable). cloudflare_email_routing_settings fails every apply in
 # provider ~5.23 ("support_subaddress" Value Conversion Error).
 
 # Cloudflare emails a verification link on create; that click is manual.
@@ -8,15 +8,15 @@ resource "cloudflare_email_routing_address" "opportunity_inbox" {
   email      = var.opportunity_inbox
 }
 
-# The hello@ -> inbox forward rule is dashboard-managed: zone-level Email
-# Routing writes 403 for this account-owned token. Recreate via Email ->
-# Email Routing -> Routing rules -> Create address.
+# The hello@ -> inbox forward rule is dashboard-managed because zone-level
+# Email Routing writes return 403 for this account-owned token. Recreate it
+# via Email -> Email Routing -> Routing rules -> Create address.
 
 # Rewrite Accept: text/markdown page requests to the static **/index.md
 # renditions at the edge, so the Worker never runs. Two rules because the free
 # plan has no regex rewrites. Pages without a rendition (/resume/) 404.
-# This owns the zone's http_request_transform entrypoint, so an apply
-# overwrites dashboard-added rewrite rules: keep them all here.
+# This owns the zone's http_request_transform entrypoint, and an apply
+# overwrites dashboard-added rewrite rules, so keep them all here.
 resource "cloudflare_ruleset" "markdown_for_agents" {
   zone_id = var.zone_id
   name    = "Markdown for Agents"

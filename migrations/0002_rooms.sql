@@ -3,11 +3,11 @@
 -- in its own `meta` table; one row per room, refreshed on every reconnect, so
 -- the dash shows where a conversation came from without joining transcripts.
 --
--- Same permissive stance as messages: writes are fire-and-forget (the
+-- Same permissive stance as messages. Writes are fire-and-forget (the
 -- .catch() in recordVisitor() logs and moves on), so a constraint that starts
 -- rejecting rows would lose the datum silently. Both context columns are
--- nullable because the Worker only forwards the headers it actually has —
--- local dev has neither.
+-- nullable because the Worker only forwards the headers it has, and local
+-- dev has neither.
 CREATE TABLE IF NOT EXISTS rooms (
   room_id TEXT PRIMARY KEY,
   country TEXT,

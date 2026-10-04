@@ -161,8 +161,8 @@ type Period = {
 
 const OPEN_ENDED = /^(present|current|now)$/i;
 
-// Parses "December 2025 – Present" / "June 2019 - April 2023". Anything else yields nulls: a
-// wrong date is worse for an agent than an absent one.
+// Parses "December 2025 – Present" / "June 2019 - April 2023". Anything else yields nulls,
+// because a wrong date is worse for an agent than an absent one.
 export function parsePeriod(period: string): Period {
   const parts = period.split(/\s+[–—-]\s+/);
   const startDate = parts.length === 2 ? toYearMonth(parts[0]) : null;

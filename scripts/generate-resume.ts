@@ -33,7 +33,7 @@ const MIME_TYPES: Record<string, string> = {
   ".pdf": "application/pdf"
 };
 
-/** Static server over the built site; foo/ -> foo/index.html. */
+/** Static server over the built site; a request for foo/ serves foo/index.html. */
 function createStaticServer(rootDir: string): Server {
   return createServer(async (req, res) => {
     try {
@@ -72,7 +72,7 @@ function listen(server: Server, port: number): Promise<void> {
   });
 }
 
-// ATS gate: the build fails unless each token is in the PDF's extracted text.
+// ATS gate. The build fails unless each token is in the PDF's extracted text.
 const MAX_PAGES = 2;
 
 const ATS_REQUIRED_TOKENS = [
@@ -119,13 +119,13 @@ try {
   const pageCount = info?.total ?? null;
   if (missing.length > 0) {
     console.error(
-      `[generate-resume] ATS gate FAILED — missing tokens: ${missing.map(t => JSON.stringify(t)).join(", ")}`
+      `[generate-resume] ATS gate FAILED: missing tokens ${missing.map(t => JSON.stringify(t)).join(", ")}`
     );
     process.exitCode = 1;
   } else if (pageCount !== null && pageCount > MAX_PAGES) {
     // @sparticuz's fallback fonts are wider than local Chrome's, so overflow
     // can be CI-only.
-    console.error(`[generate-resume] page gate FAILED — ${pageCount} pages (max ${MAX_PAGES})`);
+    console.error(`[generate-resume] page gate FAILED: ${pageCount} pages (max ${MAX_PAGES})`);
     process.exitCode = 1;
   } else {
     console.log(

@@ -49,7 +49,7 @@ export class RateLimiter extends DurableObject<Env> {
     );
   }
 
-  // Fails OPEN on a lookup error: an empty account is caught by the next 402.
+  // Fails OPEN on a lookup error, since the next 402 catches an empty account.
   async chatAvailable(
     apiKey: string,
     // Injected by tests only; an RPC caller passes just the key.

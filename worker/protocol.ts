@@ -3,11 +3,11 @@
 
 export const MAX_MESSAGE_LENGTH = 1000;
 
-// Shared: the ChatRoom persists it as each room's first message, and the
-// widget shows it when the socket can't deliver history.
+// Shared by the ChatRoom, which persists it as each room's first message, and
+// the widget, which shows it when the socket can't deliver history.
 export const GREETING =
-  "Hi, I'm Jarvis — Murugappan's AI assistant. Ask me about his experience, " +
-  "projects, or blog posts — or tell me about an opportunity for him.";
+  "Hi, I'm Jarvis, Murugappan's AI assistant. Ask me about his experience, " +
+  "projects, or blog posts, or tell me about an opportunity for him.";
 
 export type ChatHistoryEntry = { role: "user" | "assistant"; content: string };
 
@@ -39,7 +39,7 @@ export type ServerMessage =
   // Another tab's user message; the sender renders its own optimistically.
   | { type: "visitor"; text: string }
   | { type: "delta"; text: string }
-  // Ephemeral: never persisted, cleared by the next delta/done/limit/error.
+  // Ephemeral. Never persisted; the next delta, done, limit or error frame clears it.
   | { type: "tool"; name: ToolName; detail?: string }
   | { type: "done" }
   | { type: "limit"; message: string }

@@ -24,4 +24,4 @@ The blog consistently achieves 90+ performance in lighthouse for mobile devices.
 
 ---
 
-**Update (September 2026):** I've since migrated this blog from Gatsby to Astro — [why I migrated from Gatsby to Astro](https://murugappan.dev/blog/gatsby-to-astro/).
+**Update (September 2026):** I've since moved this blog from Gatsby to Astro and wrote up [why](https://murugappan.dev/blog/gatsby-to-astro/).

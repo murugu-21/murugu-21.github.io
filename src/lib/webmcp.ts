@@ -61,7 +61,7 @@ if (isModelContext(mc)) {
         properties: {
           slug: {
             type: "string",
-            description: "Post slug — the last path segment of the post URL"
+            description: "Post slug, the last path segment of the post URL"
           }
         },
         required: ["slug"]

@@ -101,9 +101,9 @@ I hope you can use this idea to solve your rate limit problems in external servi
 
 ## Update, September 2026
 
-Four years on, the circular queue above got replaced, and the reason was memory, not rate limits. It solves the throughput puzzle nicely, but look at how it is driven: `Promise.all(urls.map(slowFetch))` creates every promise up front, so with a big enough inbox the process holds every pending call and, as they resolve, every response, until the last one lands. How long that takes is not something you control either. Each call lives for its own response time plus the sleep chained behind it, so the number of results sitting in memory at any moment depends on how fast Google answers, and there is no knob that bounds it. On the cloud machines this runs on that meant one thing: process massive amounts of data and it dies with an out-of-memory error, part way through, with no record of what had already been synced. And because `Promise.all` rejects on the first failure, even a run that survived lost the whole batch on one bad request.
+Four years on, I replaced the circular queue above, and the reason was memory, not rate limits. The queue handles throughput fine, but look at the call that drives it. `Promise.all(urls.map(slowFetch))` creates every promise up front, so with a big enough inbox the process holds every pending call, and then every response as it resolves, until the last one lands. You don't control how long that takes either. Each call lives for its own response time plus the sleep chained behind it, so the number of results in memory at any moment depends on how fast Google answers, and no setting bounds it. On the cloud machines it ran on, a large sync would die with an out-of-memory error part way through, with no record of what it had already synced. And because `Promise.all` rejects on the first failure, even a run that survived lost the whole batch to one bad request.
 
-The version I use now is boring on purpose: slice the work into batches of 49, sleep for a second after each batch so the server gets breathing space, and write what succeeded and what failed to disk after every batch.
+The version I use now is simple. It slices the work into batches of 49, sleeps for a second after each batch with nothing in flight, and writes what succeeded and what failed to disk after every batch.
 
 ```js
 import fs from "fs/promises"
@@ -142,17 +142,17 @@ for (let i = 0; i < items.length; i += batchSize) {
 
 Why this beats the rate limiter for a backfill:
 
-- **Memory is bounded, and you pick the bound.** At most 49 requests and 49 responses exist at any moment, and each batch is processed and dropped before the next one is created. The high-water mark is `batchSize`, whatever the response times do and however large `data.json` is. That is the property the queue could not offer.
-- **It resumes.** If the process still dies at item 4,000 of 10,000, the next run skips the 4,000 in `success.json` and carries on. The old version started from zero every time and re-spent quota on work already done.
-- **Failures are data, not exceptions.** `Promise.allSettled` lets one bad item fail without taking the other 48 with it, and `failure.json` tells you which id failed and why. Rerunning the script retries exactly those, because they never made it into the success set.
-- **The ceiling is hard.** The sliding window in the circular queue is correct, but it depends on timers lining up. Here a batch has to finish and then the process sleeps a full second before the next one starts, so the worst case is 49 requests in any one-second window, whichever way Google counts.
-- **No cleverness.** One loop, one sleep, two files. Nothing to explain to the next person who reads it.
+- **Memory is bounded, and you pick the bound.** At most 49 requests and 49 responses exist at any moment, and the loop processes and drops each batch before it creates the next one. The high-water mark is `batchSize`, whatever the response times and however large `data.json` is. The queue couldn't guarantee that.
+- **It resumes.** If the process still dies at item 4,000 of 10,000, the next run skips the 4,000 in `success.json` and carries on. The old version started from zero every time and spent quota again on work it had already done.
+- **Failures go to a file.** `Promise.allSettled` lets one bad item fail without taking the other 48 with it, and `failure.json` records which id failed and why. Rerunning the script retries those, along with anything the last run never reached, because none of them made it into the success set.
+- **The ceiling is hard.** The sliding window in the circular queue is correct, but it depends on timers lining up. Here a batch has to finish, and then the process sleeps a full second before the next one starts. The worst case is 49 requests in any one-second window, however Google counts.
+- **It's short.** The whole thing is one loop, one sleep and two files.
 
-The trade-off is throughput: a batch is only as fast as its slowest request, and the sleep on top of it is dead time, so this makes fewer requests per minute than the queue when responses are quick. For a sync that runs once and has to finish, I will take slower and resumable every time. The [npm package](https://www.npmjs.com/package/rate-limit-concurrent) is still the right tool when the requests arrive continuously and you cannot batch them.
+The cost is throughput. A batch is only as fast as its slowest request, and the sleep after it is dead time, so this makes fewer requests per minute than the queue when responses are quick. For a sync that runs once and has to finish, I'll take slower and resumable every time. The [npm package](https://www.npmjs.com/package/rate-limit-concurrent) is still the right tool when requests arrive continuously and you can't batch them.
 
 ### Going distributed
 
-The batch loop above is one process on one machine. Once the sync runs as a service, the same idea moves into Postgres: the table is the queue, `SELECT … FOR UPDATE SKIP LOCKED` hands each row to exactly one worker, and the sleep at the end of every job is what turns "N workers" into "at most N requests per second", however many pods those workers are spread across.
+The batch loop above is one process on one machine. Once the sync runs as a service, the same idea works in Postgres. The table is the queue, and `SELECT … FOR UPDATE SKIP LOCKED` hands each row to exactly one worker. The sleep at the end of every job turns "N workers" into "at most N requests per second", however many pods those workers run on.
 
 ```sql
 create table jobs (
@@ -166,7 +166,7 @@ create table jobs (
 create index jobs_pending on jobs (id) where status = 'pending';
 ```
 
-Enqueue is one insert; `data.json` from before becomes rows.
+Enqueueing is one insert, and `data.json` from before becomes rows.
 
 ```sql
 insert into jobs (payload) select * from jsonb_array_elements($1::jsonb);
@@ -229,12 +229,12 @@ async function worker() {
 await Promise.all(Array.from({ length: WORKERS }, worker))
 ```
 
-Three details carry the whole design:
+Three details make this work:
 
-- **The lock is the lease.** The row stays locked from `select` to `commit`. A worker that dies mid-request rolls back, the row is `pending` again and the next `SKIP LOCKED` picks it up. No heartbeat table, no visibility timeout, no stuck "running" state to sweep.
-- **Concurrency is a deploy setting, not code.** Seven workers per pod and seven replicas is 49 consumers; scale the deployment and the ceiling moves with it. `SKIP LOCKED` is what makes that safe: two pods can never claim the same row, so adding a pod adds throughput without adding duplicates.
-- **The sleep sits inside the job.** Because a worker holds its row for at least a second, the fleet-wide rate is bounded by the number of workers, exactly like the circular queue at the top of this post, but enforced by the database rather than by timers inside one process.
+- **The row lock replaces a lease.** The row stays locked from `select` to `commit`. If a worker dies mid-request, its transaction rolls back, the row is `pending` again, and the next `SKIP LOCKED` picks it up. You don't need a heartbeat table, a visibility timeout or a sweep for stuck "running" rows.
+- **Concurrency is a deploy setting, not code.** Seven workers per pod and seven replicas make 49 consumers. Scale the deployment and the ceiling moves with it. The row lock means two pods never get the same row, and `SKIP LOCKED` lets them claim rows without waiting on each other. Adding a pod adds throughput without adding duplicates.
+- **The sleep is part of the job.** A worker holds its row for at least a second, so the number of workers bounds the fleet-wide rate. That's the same limit as the circular queue at the top of this post, but the database enforces it instead of timers inside one process.
 
-Failures and retries fall out of the schema. A failed request bumps `attempts`, keeps the row `pending` up to three tries, then parks it as `failed` with the error text next to it, which is `failure.json` with a `WHERE` clause. The whole state of the sync is one query away, and a second producer can keep inserting while consumers drain.
+The `attempts` and `last_error` columns cover failures and retries. A failed request bumps `attempts` and keeps the row `pending` after the first two failures, then marks it `failed` on the third with the error text next to it. That's `failure.json` with a `WHERE` clause. One query shows the whole state of the sync, and a second producer can keep inserting while consumers drain the table.
 
-Three caveats. The worker returns when it finds no `pending` row, which suits a sync started by a cron job: a row put back to `pending` by a failure after every worker has exited simply waits for the next run, and a long-lived service would poll with a sleep instead of returning. Each worker holds a connection for the length of its job, so 49 consumers is 49 connections; fine here, and the reason the worker count is capped rather than the pool size. And the Gmail quota is per user, so if one deployment syncs many inboxes the budget must be per user too: add a `user_id` column, run a worker set per user, or claim with `where status = 'pending' and user_id = $1`. The rate limit that started this post was never about your service; it was about one person's inbox.
+There are three caveats. First, the worker returns when it finds no `pending` row, which suits a sync run from cron. If a failure puts a row back to `pending` after every worker has exited, that row waits for the next run. A long-lived service would poll with a sleep instead of returning. Second, each worker holds a connection for the length of its job, so 49 consumers means 49 connections. That's fine here, and it's why I cap the worker count rather than the pool size. Third, the Gmail quota applies per inbox, so if one deployment syncs many inboxes, the budget has to be per user too. You can add a `user_id` column, run a set of workers per user, or claim with `where status = 'pending' and user_id = $1`.

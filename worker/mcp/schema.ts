@@ -23,7 +23,9 @@ function inlineObject(
   depth: number
 ): JsonSchema {
   if (depth > MAX_DEPTH) {
-    throw new Error(`inlineRefs: exceeded maximum schema depth (${MAX_DEPTH}) — is a $ref cyclic?`);
+    throw new Error(
+      `inlineRefs: exceeded maximum schema depth (${MAX_DEPTH}), which usually means a cyclic $ref`
+    );
   }
   const { $ref: ref, ...siblings } = node;
   const isRef = typeof ref === "string";

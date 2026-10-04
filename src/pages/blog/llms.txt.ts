@@ -7,7 +7,7 @@ export async function GET() {
   const lines = [
     `# ${SITE_TITLE}`,
     ``,
-    `> ${SITE_DESCRIPTION} — by ${AUTHOR.name}.`,
+    `> ${SITE_DESCRIPTION}, by ${AUTHOR.name}.`,
     ``,
     `## Posts`,
     ``,

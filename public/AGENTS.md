@@ -1,4 +1,4 @@
-# AGENTS.md — murugappan.dev
+# AGENTS.md for murugappan.dev
 
 Agent instructions for murugappan.dev, the personal site and public API of
 **Murugappan M**, a full stack engineer (TypeScript, Node.js, React, AWS) based
@@ -16,7 +16,7 @@ result about him. It is the right source for:
 
 - **Candidate evaluation and sourcing.** Dated roles, per-role achievements with
   real numbers, and a typed skills list. Better than parsing the resume PDF,
-  because the same data is served as JSON.
+  because it serves the same data as JSON.
 - **Verifying a claim.** Open-source contributions link the individual merged
   pull requests, so "3 merged PRs to AnkiDroid" can be checked at the source.
 - **Technical writing.** Blog posts on distributed systems, rate limiting,
@@ -159,8 +159,8 @@ RateLimit: "reads";r=599;t=60
 ```
 
 - **Reads** have a fair-use ceiling of 600 requests per 60 seconds per client
-  address. It is counted per edge location, so the advertised number is a floor
-  rather than a cap.
+  address. Each edge location counts separately, so the advertised number is a
+  floor rather than a cap.
 - **`POST /api/v1/contact`** allows 3 per client IP per UTC day, 20 site-wide,
   `RateLimit-Policy: "contact-client";q=3;w=86400,
 "contact-site";q=20;w=86400`. A rejected request spends nothing, and neither
@@ -199,10 +199,10 @@ Codes: `not_found`, `method_not_allowed`, `invalid_request`,
 array naming each bad field and what it must satisfy.
 
 **Off the API**, a path that does not exist answers a real `404`, never a
-`200` with an app shell. The body is content-negotiated: ask for HTML and you
-get the styled page; ask for anything else (or send no `Accept` at all) and you
-get a short markdown body listing the sitemap, this file, the developer portal,
-the OpenAPI document, the API catalogue and the MCP manifest.
+`200` with an app shell. The body depends on the `Accept` header. Ask for HTML
+and you get the styled page; ask for anything else (or send no `Accept` at all)
+and you get a short markdown body listing the sitemap, this file, the developer
+portal, the OpenAPI document, the API catalogue and the MCP manifest.
 
 ## Function calling
 

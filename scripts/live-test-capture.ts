@@ -31,11 +31,11 @@ const apiKey = readFileSync(".dev.vars", "utf8")
 if (!apiKey) throw new Error("DEEPSEEK_API_KEY missing from .dev.vars");
 const grounding = readFileSync(join(SITE_DIR, "llms.txt"), "utf8");
 
-// A visitor who is unmistakably a lead: intent, then specifics, then contact.
+// A visitor who is an obvious lead: intent, then specifics, then contact.
 const visitorTurns = [
   "hey, are you available for contract work?",
   "we need a senior TS/Node engineer for a 3 month contract, starting October, remote.",
-  "I'm Dana Okafor, dana.okafor@northlane.io — can you pass this to Murugappan?"
+  "I'm Dana Okafor, dana.okafor@northlane.io. Can you pass this to Murugappan?"
 ];
 
 // Prose claiming the lead is handled; a failure only if no capture follows.

@@ -4,8 +4,8 @@ Reads job-file paths from stdin, one per line. For each job, synthesises every
 chunk to <outDir>/<id>.wav as a plain clone of the voice reference and reports
 one JSON line per chunk plus a final {"done": true} line.
 
-Plain clone on purpose: the reference was already designed (design-voice.py);
-an instruction here doubles the cost (CFG runs the backbone twice) and lets
+Plain clone on purpose. The reference was already designed (design-voice.py),
+and an instruction here doubles the cost (CFG runs the backbone twice) and lets
 delivery drift. 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
 """
 import json
@@ -19,7 +19,7 @@ import numpy as np
 
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"
 SAMPLE_RATE = 24000
-MAX_TOKENS = 1500  # 12.5 frames/s → 120 s; chunks are ≤300 chars (~30 s)
+MAX_TOKENS = 1500  # 120 s at 12.5 frames/s; chunks are at most 300 chars (~30 s)
 # MLX's Metal buffer cache grows every chunk until the OS swaps; cap it and
 # clear it after each chunk.
 CACHE_LIMIT = 1 << 30
@@ -77,7 +77,7 @@ def run_job(model, job_path: str) -> None:
                     "wall": round(time.time() - t0, 1),
                 }
             )
-        except Exception as exc:  # noqa: BLE001 — report and keep going; the orchestrator decides
+        except Exception as exc:  # noqa: BLE001  # report and keep going; the orchestrator decides
             emit({"id": chunk["id"], "error": f"{type(exc).__name__}: {exc}"})
     emit({"done": True})
 

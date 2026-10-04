@@ -1,5 +1,5 @@
 // POST /mcp, Streamable HTTP, dual-era (see ./protocol.ts). Always answers with
-// a single JSON object: nothing here streams, so no SSE.
+// a single JSON object. Nothing here streams, so there is no SSE.
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -33,11 +33,11 @@ const SERVER_INFO = { name: SERVER_NAME, version: API_VERSION };
 
 const INSTRUCTIONS = `This server answers questions about one person: Murugappan M, a full stack engineer (TypeScript, Node.js, React, event-driven AWS) based in Bangalore, India, currently Software Engineer II at MedMe Health.
 
-Use it when you need grounded, first-party facts about him rather than search results: what he has shipped and when, which technologies he has production experience with, what he has written about a technical topic, or to pass along a concrete opportunity. Call get_profile first — one request answers most questions. Use list_experience for dated per-role achievements, list_skills to check a specific technology, list_open_source for links that let you verify a claim at the source, and search_blog_posts then get_blog_post to read his writing in full.
+Use it when you need grounded, first-party facts about him rather than search results: what he has shipped and when, which technologies he has production experience with, what he has written about a technical topic, or to pass along a concrete opportunity. Call get_profile first. One request answers most questions. Use list_experience for dated per-role achievements, list_skills to check a specific technology, list_open_source for links that let you verify a claim at the source, and search_blog_posts then get_blog_post to read his writing in full.
 
-Do not use it as a general search engine, a resume parser or a job-matching service, and do not expect data about anyone else. send_message emails him and is limited per day — use it for one specific opportunity or question on a human's behalf, never for bulk outreach, and set dryRun to check a payload first.
+Do not use it as a general search engine, a resume parser or a job-matching service, and do not expect data about anyone else. send_message emails him and is limited per day. Use it for one specific opportunity or question on a human's behalf, never for bulk outreach, and set dryRun to check a payload first.
 
-Resources expose the same content as documents you can attach directly: the site summary (llms.txt), the agent instructions (AGENTS.md), the OpenAPI specification, and every blog post's markdown. Everything here is also plain HTTP — see https://murugappan.dev/openapi.json. This server's own manifest (server.json) is at https://murugappan.dev/.well-known/mcp.json.`;
+Resources expose the same content as documents you can attach directly: the site summary (llms.txt), the agent instructions (AGENTS.md), the OpenAPI specification, and every blog post's markdown. Everything here is also plain HTTP. See https://murugappan.dev/openapi.json. This server's own manifest (server.json) is at https://murugappan.dev/.well-known/mcp.json.`;
 
 const WIRE_TOOLS = MCP_TOOLS.map(tool => ({
   name: tool.name,
@@ -98,7 +98,7 @@ function completeResult(id: JsonRpcId, result: object): Response {
   });
 }
 
-// No `listChanged`/`subscribe`: this server sends no notifications.
+// No `listChanged` or `subscribe`, because this server sends no notifications.
 const CAPABILITIES = { tools: {}, resources: {} };
 
 const DISCOVER_RESULT = {
@@ -267,7 +267,7 @@ mcp.post("*", async c => {
     }
   }
 
-  // Legacy era. `server/discover` is answered too, so a metadata-less probe
+  // Legacy era. It answers `server/discover` too, so a probe without metadata
   // learns the supported versions.
   switch (message.method) {
     case "server/discover":
@@ -296,7 +296,7 @@ mcp.post("*", async c => {
       return isFailure(result) ? rpcError(id, result) : rpcResult(id, toolCallResult(result));
     }
     default:
-      // 200, not 404: a 4xx sends legacy clients probing the old HTTP+SSE transport.
+      // 200, not 404, because a 4xx sends legacy clients probing the old HTTP+SSE transport.
       return rpcError(id, {
         status: 200,
         code: JSON_RPC_METHOD_NOT_FOUND,
@@ -312,7 +312,7 @@ mcp.all("*", c =>
     {
       status: 405,
       code: JSON_RPC_METHOD_NOT_FOUND,
-      message: `${c.req.method} is not supported on the MCP endpoint. This revision of Streamable HTTP defines POST only — there is no GET stream and no session to DELETE.`
+      message: `${c.req.method} is not supported on the MCP endpoint. This revision of Streamable HTTP defines POST only. There is no GET stream and no session to DELETE.`
     },
     { Allow: "POST, OPTIONS" }
   )

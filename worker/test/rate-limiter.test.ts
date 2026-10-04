@@ -23,8 +23,8 @@ describe("chatAvailable", () => {
   it("allows chat on a funded account and caches the reading", async () => {
     await inLimiter("bal-ok", async instance => {
       expect(await instance.chatAvailable("sk-test", balanceResponse(usd("1.99")))).toBe(true);
-      // Every room shares this instance, so N conversations = 1 balance check:
-      // the second answer comes from the cache, not this empty account.
+      // Every room shares this instance, so N conversations cost one balance check.
+      // The second answer comes from the cache, not this empty account.
       expect(await instance.chatAvailable("sk-test", balanceResponse(usd("0", false)))).toBe(true);
     });
   });
