@@ -184,3 +184,29 @@
     }
   }
 }
+
+/* Chrome and Firefox draw img::after only when the image fails, so this centres
+   the alt text the round frame would clip. Safari ignores it and shows its centred icon. */
+@utility alt-fallback {
+  position: relative;
+  overflow: hidden;
+  container-type: inline-size;
+  font-size: 0;
+  &::after {
+    content: attr(alt);
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 15%;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font-size: clamp(0.625rem, 6cqi, 1.5rem);
+    line-height: 1.2;
+    text-align: center;
+  }
+  :where(html.dark-mode) &::after {
+    background-color: var(--color-dark-base);
+    color: white;
+  }
+}

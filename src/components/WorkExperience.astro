@@ -63,7 +63,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
           <header class="mb-5 flex items-center gap-5">
             {/* Rendered at 4.5rem (3rem on phones), so 72px + 2x instead of the 256px source. */}
             <Image
-              class="size-18 flex-none rounded-full object-cover shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-md:size-12"
+              class="alt-fallback size-18 flex-none rounded-full object-cover shadow-[0_0.5rem_1rem_var(--color-shadow-darker)] max-md:size-12"
               src={stint.logo}
               width={72}
               height={72}
