@@ -4,7 +4,7 @@ Personal portfolio and blog of Murugappan, built with [Astro 7](https://astro.bu
 
 **Live site:** https://murugappan.dev
 
-One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. The blog's other code (layout, islands, styles, post helpers) lives under `src/blog/`, and posts are markdown in `content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
+One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. Every page except the print-only résumé renders through `src/layouts/Layout.astro`, whose `section` prop picks the portfolio or blog head defaults and page classes. The blog's other code (its header layout, islands, styles, post helpers) lives under `src/blog/`, and posts are markdown in `content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
 
 ## Development
 
@@ -111,7 +111,7 @@ The build and deploy commands are dashboard settings on the Worker's page, not r
 
 Each one no-ops without the SDK, buffers while it loads and swallows failures, so they're safe to call anywhere. Pageviews, autocapture and heatmaps come from PostHog itself.
 
-Links opt in with `data-ph-event` and optional `data-ph-prop` / `data-ph-value`. A single delegated `click` listener per document handles them, React-rendered markup included. `src/components/SiteScripts.astro`, which both the portfolio and blog layouts include, calls `initClickTracking()`.
+Links opt in with `data-ph-event` and optional `data-ph-prop` / `data-ph-value`. A single delegated `click` listener per document handles them, React-rendered markup included. `src/components/SiteScripts.astro`, which `src/layouts/Layout.astro` includes on every page, calls `initClickTracking()`.
 
 | Event                                            | Fired on                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------- |
@@ -150,7 +150,7 @@ No phone number is in source. Set `RESUME_PHONE` (Workers Builds env in producti
 content/blog/          # one directory per post: <slug>/index.md (+ images)
   draft/               # drafts: visible in dev, excluded from production builds
 src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
-src/blog/              # layout, head, components (search, tags, table of contents,
+src/blog/              # header layout, components (search, tags, table of contents,
                        # Listen control), styles, post helpers, consts.ts site metadata
 src/content.config.ts  # content collection schema
 public/blog/           # static files served verbatim (og-image, sw.js)

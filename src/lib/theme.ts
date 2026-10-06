@@ -14,7 +14,7 @@ interface ThemeHost extends Pick<Window, "addEventListener" | "dispatchEvent"> {
  * Applies the stored choice, else the OS's, before first paint, then owns
  * every later change: `__setPreferredTheme` for the toggle, an OS flip (which
  * drops the stored choice, so the site follows the OS again), and a bfcache
- * restore (which skips inline scripts). Both layouts inline its source as
+ * restore (which skips inline scripts). Layout.astro inlines its source as
  * `themeBootstrapScript`, so it must not reference anything outside itself.
  */
 export function bootstrapTheme(win: ThemeHost): void {

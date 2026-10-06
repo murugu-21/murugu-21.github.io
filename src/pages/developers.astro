@@ -6,7 +6,7 @@ import "#src/styles/prose.css";
 import Layout from "#src/layouts/Layout.astro";
 import Header from "#src/components/Header.astro";
 import ScrollTop from "#src/components/ScrollTop.astro";
-import { SITE_ORIGIN } from "#src/lib/site.ts";
+import { PERSON_ID, SITE_ORIGIN } from "#src/lib/site.ts";
 import { socialMediaLinks } from "#src/data/portfolio.ts";
 import { buildOpenApiDocument } from "#worker/api/openapi.ts";
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#worker/api/contact.ts";
@@ -150,44 +150,42 @@ const machineFiles = [
   }
 ];
 // So API searches resolve to this page rather than the pages about the person.
-const apiJsonLd = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebAPI",
-      "@id": `${SITE_ORIGIN}/developers/#api`,
-      name: "murugappan.dev API",
-      alternateName: [
-        "murugappan.dev REST API",
-        "Murugappan M profile API",
-        "murugappan.dev MCP server"
-      ],
-      description: spec.info.summary,
-      documentation: `${SITE_ORIGIN}/developers/`,
-      termsOfService: "https://creativecommons.org/licenses/by/4.0/",
-      provider: { "@id": `${SITE_ORIGIN}/#person` },
-      potentialAction: spec.tags.map(tag => ({
-        "@type": "ConsumeAction",
-        name: tag.name,
-        description: tag.description
-      }))
-    },
-    {
-      "@type": "TechArticle",
-      "@id": `${SITE_ORIGIN}/developers/#docs`,
-      headline: "murugappan.dev API developer portal and agent documentation",
-      description:
-        "API reference, authentication, versioning and deprecation policy, rate-limit headers, sandbox, OpenAPI 3.1.0 specification and MCP server for murugappan.dev.",
-      url: `${SITE_ORIGIN}/developers/`,
-      about: { "@id": `${SITE_ORIGIN}/developers/#api` },
-      author: { "@id": `${SITE_ORIGIN}/#person` },
-      inLanguage: "en"
-    }
-  ]
-};
+const apiGraph = [
+  {
+    "@type": "WebAPI",
+    "@id": `${SITE_ORIGIN}/developers/#api`,
+    name: "murugappan.dev API",
+    alternateName: [
+      "murugappan.dev REST API",
+      "Murugappan M profile API",
+      "murugappan.dev MCP server"
+    ],
+    description: spec.info.summary,
+    documentation: `${SITE_ORIGIN}/developers/`,
+    termsOfService: "https://creativecommons.org/licenses/by/4.0/",
+    provider: { "@id": PERSON_ID },
+    potentialAction: spec.tags.map(tag => ({
+      "@type": "ConsumeAction",
+      name: tag.name,
+      description: tag.description
+    }))
+  },
+  {
+    "@type": "TechArticle",
+    "@id": `${SITE_ORIGIN}/developers/#docs`,
+    headline: "murugappan.dev API developer portal and agent documentation",
+    description:
+      "API reference, authentication, versioning and deprecation policy, rate-limit headers, sandbox, OpenAPI 3.1.0 specification and MCP server for murugappan.dev.",
+    url: `${SITE_ORIGIN}/developers/`,
+    about: { "@id": `${SITE_ORIGIN}/developers/#api` },
+    author: { "@id": PERSON_ID },
+    inLanguage: "en"
+  }
+];
 ---
 
 <Layout
+  graph={apiGraph}
   title="murugappan.dev API: Developer Portal, OpenAPI Spec & MCP Server | Murugappan M"
   description="Developer docs for the murugappan.dev API: REST endpoints, OpenAPI 3.1.0 spec, MCP server, authentication, versioning and deprecation policy, rate-limit headers. No key, no signup."
 >
@@ -624,5 +622,4 @@ Retry-After: 39122</code></pre>
     </section>
   </main>
   <ScrollTop />
-  <script type="application/ld+json" is:inline set:html={JSON.stringify(apiJsonLd)} />
 </Layout>

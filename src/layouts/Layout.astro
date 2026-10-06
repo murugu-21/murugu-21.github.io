@@ -1,6 +1,7 @@
 ---
 import { Font } from "astro:assets";
-import { SITE_ORIGIN } from "#src/lib/site.ts";
+import { PERSON_ID, SITE_ORIGIN, WEBSITE_ID } from "#src/lib/site.ts";
+import { SITE_DESCRIPTION, SITE_TITLE, SITE_URL } from "#src/blog/consts.ts";
 import { themeBootstrapScript } from "#src/lib/theme.ts";
 import "#src/styles/global.css";
 import ChatWidget from "#src/components/chat/ChatWidget.astro";
@@ -9,28 +10,76 @@ import Particles from "#src/components/Particles.astro";
 import SiteScripts from "#src/components/SiteScripts.astro";
 import { sameAs, skillsCategories, socialMediaLinks } from "#src/data/portfolio.ts";
 
-interface Props {
+export interface Props {
   title?: string;
-  // Defaults to the site pitch; pages not about the person need their own.
+  // og:title and twitter:title, when they drop the <title>'s suffix.
+  socialTitle?: string;
+  // Defaults to the section's pitch; pages not about the person need their own.
   description?: string;
   noindex?: boolean;
   // the canonical entity page (/about)
   profilePage?: boolean;
+  section?: keyof typeof sections;
+  article?: { published: Date; tags: string[] };
+  // The page's own schema.org nodes, merged into the site-wide @graph.
+  graph?: object[];
 }
 
 const description =
   "I build B2B SaaS that ships in regulated industries, using TypeScript end-to-end and event-driven services on AWS. I was the founding engineer who took a product from 0 to $300k ARR, and now I automate pharmacy workflows with LLMs at MedMe Health.";
-// Under 160 chars so Google doesn't truncate it; og/twitter/JSON-LD keep the full pitch.
-const metaDescription =
-  "I build B2B SaaS that ships in regulated industries. I took a product from 0 to $300k ARR and now automate pharmacy workflows with LLMs at MedMe Health.";
+
+interface Section {
+  siteName: string;
+  ogImage: string;
+  metaDescription: string;
+  socialDescription: string;
+  htmlClass: string;
+  // What the section's WebPage nodes are about; blog posts are about their topic.
+  pageAbout?: { "@id": string };
+  bodyClass?: string;
+  particlesClass?: string;
+}
+
+const sections = {
+  portfolio: {
+    siteName: "Murugappan M",
+    ogImage: `${SITE_ORIGIN}/og-image.png`,
+    // Under 160 chars so Google doesn't truncate it; og/twitter/JSON-LD keep the full pitch.
+    metaDescription:
+      "I build B2B SaaS that ships in regulated industries. I took a product from 0 to $300k ARR and now automate pharmacy workflows with LLMs at MedMe Health.",
+    socialDescription: description,
+    // 80px clears the fixed header. The blog has none; its headings carry their
+    // own scroll-margin (post.css).
+    htmlClass: "scroll-pt-20",
+    pageAbout: { "@id": PERSON_ID }
+  },
+  blog: {
+    siteName: SITE_TITLE,
+    ogImage: `${SITE_URL}/og-image.png`,
+    metaDescription: SITE_DESCRIPTION,
+    socialDescription: SITE_DESCRIPTION,
+    htmlClass: "motion-reduce:scroll-auto",
+    // Overrides the shared base layer's 19px/23px.
+    bodyClass: "text-base leading-normal text-text dark:text-text-dark",
+    // Dimmed for reading: stars between words read as stray bullets.
+    particlesClass: "opacity-50 dark:opacity-70"
+  }
+} satisfies Record<string, Section>;
+
 const {
   title = "Murugappan M | Full Stack Engineer | TypeScript, Node.js, React & AWS",
+  socialTitle = title,
   description: pageDescription,
   noindex = false,
-  profilePage = false
+  profilePage = false,
+  section: sectionName = "portfolio",
+  article,
+  graph: pageGraph = []
 } = Astro.props;
-const pageMetaDescription = pageDescription ?? metaDescription;
-const socialDescription = pageDescription ?? description;
+const section: Section = sections[sectionName];
+const pageMetaDescription = pageDescription ?? section.metaDescription;
+const socialDescription = pageDescription ?? section.socialDescription;
+const twitterHandle = new URL(socialMediaLinks.twitter).pathname.replace(/^\//, "");
 
 // Canonical on the custom domain, so other hosts (workers.dev previews) consolidate to it.
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
@@ -63,10 +112,6 @@ for (const { items } of skillsCategories) {
 }
 const knowsAbout = [...handWrittenKnowsAbout, ...extraKnowsAbout];
 
-// Stable @ids so crawlers merge every page into one entity; keep PERSON_ID in
-// sync with src/blog/consts.ts.
-const PERSON_ID = `${SITE_ORIGIN}/#person`;
-const WEBSITE_ID = `${SITE_ORIGIN}/#website`;
 const personNode = {
   "@type": "Person",
   "@id": PERSON_ID,
@@ -132,19 +177,17 @@ if (!noindex) {
     url: canonicalUrl,
     name: title,
     isPartOf: { "@id": WEBSITE_ID },
-    about: { "@id": PERSON_ID },
+    about: section.pageAbout,
     ...(profilePage ? { mainEntity: { "@id": PERSON_ID } } : {}),
     inLanguage: "en"
   });
 }
+graph.push(...pageGraph);
 const jsonLd = { "@context": "https://schema.org", "@graph": graph };
-
-// scroll-pt-20 (80px) clears the fixed header. It lives here, not in global.css,
-// which the blog (no fixed header) shares.
 ---
 
 <!doctype html>
-<html lang="en" class="scroll-smooth scroll-pt-20">
+<html lang="en" class:list={["scroll-smooth", section.htmlClass]}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -172,21 +215,34 @@ const jsonLd = { "@context": "https://schema.org", "@graph": graph };
     <link
       rel="alternate"
       type="application/rss+xml"
-      title="SDE Journey RSS Feed"
+      title={`${SITE_TITLE} RSS Feed`}
       href="/blog/rss.xml"
     />
 
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={article ? "article" : "website"} />
     {!noindex && <meta property="og:url" content={canonicalUrl} />}
-    <meta property="og:title" content={title} />
+    <meta property="og:site_name" content={section.siteName} />
+    <meta property="og:title" content={socialTitle} />
     <meta property="og:description" content={socialDescription} />
-    <meta property="og:image" content={`${SITE_ORIGIN}/og-image.png`} />
+    <meta property="og:image" content={section.ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={section.siteName} />
+    {article && (
+      <>
+        <meta property="article:published_time" content={article.published.toISOString()} />
+        {article.tags.map(tag => (
+          <meta property="article:tag" content={tag} />
+        ))}
+      </>
+    )}
 
     <meta name="twitter:card" content="summary_large_image" />
     {!noindex && <meta name="twitter:url" content={canonicalUrl} />}
-    <meta name="twitter:title" content={title} />
+    <meta name="twitter:creator" content={twitterHandle} />
+    <meta name="twitter:title" content={socialTitle} />
     <meta name="twitter:description" content={socialDescription} />
-    <meta name="twitter:image" content={`${SITE_ORIGIN}/og-image.png`} />
+    <meta name="twitter:image" content={section.ogImage} />
 
     <meta name="msapplication-TileColor" content="#06038d" />
     <meta name="theme-color" content="#06038d" />
@@ -200,8 +256,8 @@ const jsonLd = { "@context": "https://schema.org", "@graph": graph };
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <SiteScripts />
   </head>
-  <body>
-    <Particles />
+  <body class={section.bodyClass}>
+    <Particles class={section.particlesClass} />
     <slot />
     <ChatWidget />
   </body>

@@ -1,13 +1,13 @@
 ---
 // Restates post.css's h1/p rules, which are scoped to `.blog-post`.
-import BaseLayout from "#src/blog/layouts/BaseLayout.astro";
+import BlogLayout from "#src/blog/layouts/BlogLayout.astro";
 ---
 
-<BaseLayout title="404: Not Found" noindex={true}>
+<BlogLayout title="404: Not Found" noindex>
   <h1 class="mt-12 mb-6 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-title dark:text-white">
     404: Not Found
   </h1>
   <p class="mt-0 mb-8 p-0 leading-relaxed">
     You just hit a route that doesn&#39;t exist... the sadness.
   </p>
-</BaseLayout>
+</BlogLayout>

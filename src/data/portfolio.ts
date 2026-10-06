@@ -32,7 +32,7 @@ export const socialMediaLinks = {
   rss: "https://murugappan.dev/blog/rss.xml"
 };
 
-// schema.org Person.sameAs, shared so both apps' JSON-LD describe one entity.
+// schema.org Person.sameAs.
 export const sameAs = [
   socialMediaLinks.github,
   socialMediaLinks.linkedin,

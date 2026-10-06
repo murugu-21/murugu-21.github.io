@@ -1,8 +1,9 @@
 ---
 import { render } from "astro:content";
-import BaseLayout from "#src/blog/layouts/BaseLayout.astro";
+import BlogLayout from "#src/blog/layouts/BlogLayout.astro";
 import Bio from "#src/blog/components/Bio.astro";
-import { SITE_TITLE, SITE_URL, PERSON } from "#src/blog/consts.ts";
+import { SITE_TITLE, SITE_URL } from "#src/blog/consts.ts";
+import { PERSON_ID } from "#src/lib/site.ts";
 import {
   getPublishedPosts,
   postPath,
@@ -38,8 +39,7 @@ const { Content, headings } = await render(post);
 const description = postDescription(post);
 
 const url = postUrl(post.id);
-const jsonLd = {
-  "@context": "https://schema.org",
+const postNode = {
   "@type": "BlogPosting",
   headline: post.data.title,
   description,
@@ -49,8 +49,8 @@ const jsonLd = {
   dateModified: post.data.date.toISOString(),
   keywords: postKeywords(post).join(", "),
   image: `${SITE_URL}/og-image.png`,
-  author: PERSON,
-  publisher: PERSON,
+  author: { "@id": PERSON_ID },
+  publisher: { "@id": PERSON_ID },
   isPartOf: {
     "@type": "Blog",
     "@id": `${SITE_URL}/#blog`,
@@ -60,13 +60,11 @@ const jsonLd = {
 };
 ---
 
-<BaseLayout
+<BlogLayout
+  graph={[postNode]}
   title={post.data.title}
   description={description}
-  ogType="article"
-  publishedTime={post.data.date}
-  tags={postKeywords(post)}
-  jsonLd={jsonLd}
+  article={{ published: post.data.date, tags: postKeywords(post) }}
 >
   <article class="blog-post" itemscope itemtype="http://schema.org/Article">
     <header>
@@ -140,7 +138,7 @@ const jsonLd = {
       </li>
     </ul>
   </nav>
-</BaseLayout>
+</BlogLayout>
 
 <script>
   // `.pinned` once the sentinel scrolls out: paints the frosted band behind a

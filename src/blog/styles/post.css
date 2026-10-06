@@ -18,7 +18,7 @@
 @layer components {
   /* --- Article root ------------------------------------------------------- */
   .blog-post {
-    /* Restates BaseLayout's body type so the article doesn't depend on it. */
+    /* Restates the blog section's body type so the article doesn't depend on it. */
     font-size: 1rem;
     line-height: 1.5;
     color: var(--color-text);
