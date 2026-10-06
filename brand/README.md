@@ -18,8 +18,8 @@ bun scripts/render-x-cover.ts
 
 `x-cover.html` is one self-contained page. It renders the night sky by default
 and blue hour with `?theme=light`. Every colour is a token from
-`src/styles/global.css`, and the type is the same Fira Code latin variable file
-the layouts preload. The lockup mirrors the header (`<Murugappan M />`, muted
+`src/styles/global.css`, and the type is the full Fira Code 6.2 variable font
+the site's subset is cut from. The lockup mirrors the header (`<Murugappan M />`, muted
 brackets); the tagline and subline mirror the OG image's.
 
 X overlays the profile photo on the banner's bottom-left corner (≈200×110 in

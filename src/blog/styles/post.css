@@ -71,7 +71,7 @@
   .blog-post h6 {
     margin-top: 3rem;
     margin-bottom: 1.5rem;
-    /* At least Fira Code's 1.306em content box, or a wrapped heading's
+    /* At least Fira Code's 1.23em content box, or a wrapped heading's
        selection highlight doubles up between lines. Rounded to whole pixels
        so the seam lands on a pixel boundary. */
     line-height: 1.32;

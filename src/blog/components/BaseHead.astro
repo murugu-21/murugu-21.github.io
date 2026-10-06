@@ -1,11 +1,9 @@
 ---
+import { Font } from "astro:assets";
 import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, TWITTER_HANDLE } from "#src/blog/consts.ts";
 import { SITE_ORIGIN } from "#src/lib/site.ts";
 import Favicons from "#src/components/Favicons.astro";
 import SiteScripts from "#src/components/SiteScripts.astro";
-
-// Declared inline and preloaded so the face is usually in hand by first paint.
-import { FIRA_CODE_FACE, FIRA_CODE_URL } from "#src/lib/fonts.ts";
 
 export interface Props {
   // Omitted for the blog index, which gets the homepage title.
@@ -55,8 +53,7 @@ const ogImage = `${SITE_URL}/og-image.png`;
 <Favicons />
 <meta name="theme-color" content="#06038d" />
 <meta name="description" content={metaDescription} />
-<link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
-<style is:inline set:html={FIRA_CODE_FACE}></style>
+<Font cssVariable="--font-fira-code" preload />
 <meta property="og:title" content={ogTitle} />
 <meta property="og:description" content={metaDescription} />
 <meta property="og:type" content={ogType} />

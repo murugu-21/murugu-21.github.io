@@ -6,7 +6,7 @@ import { resumeContact } from "#src/data/resume.ts";
 import { groupByCompany } from "#src/lib/experience.ts";
 import { fetchPinnedRepos } from "#src/lib/github.ts";
 // A webfont, so the CF build image's Chromium prints the same glyphs as local Chrome.
-import { FIRA_CODE_FACE, FIRA_CODE_URL } from "#src/lib/fonts.ts";
+import { Font } from "astro:assets";
 
 const repos = (await fetchPinnedRepos()).filter(r => r.description);
 // Groups by *consecutive* company, so returning to an employer stays two blocks.
@@ -23,8 +23,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
     <meta name="robots" content="noindex" />
     <title>Murugappan M | Resume</title>
     <meta name="description" content={`${resumeContact.title} resume. ${greeting.subTitle}`} />
-    <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
-    <style is:inline set:html={FIRA_CODE_FACE}></style>
+    <Font cssVariable="--font-fira-code" preload />
   </head>
   <body>
     <main class="sheet">
@@ -33,24 +32,25 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
         <h1 class="name">{resumeContact.name}</h1>
         <p class="title">{resumeContact.title}</p>
         <p class="contact-line">
+          {/* A no-break space before each pipe, and nowrap links and phone (below), so a wrapped line never starts with a pipe. */}
           {resumeContact.location}
-          {" | "}
+          {"\u00A0| "}
           {resumeContact.phone && (
             <>
-              {resumeContact.phone}
-              {" | "}
+              <span>{resumeContact.phone}</span>
+              {"\u00A0| "}
             </>
           )}
           <a href={`mailto:${resumeContact.email}`}>{resumeContact.email}</a>
-          {" | "}
+          {"\u00A0| "}
           <a href={resumeContact.linkedin} target="_blank" rel="noopener noreferrer">
             {displayUrl(resumeContact.linkedin)}
           </a>
-          {" | "}
+          {"\u00A0| "}
           <a href={resumeContact.github} target="_blank" rel="noopener noreferrer">
             {displayUrl(resumeContact.github)}
           </a>
-          {" | "}
+          {"\u00A0| "}
           <a href={resumeContact.site} target="_blank" rel="noopener noreferrer">
             {displayUrl(resumeContact.site)}
           </a>
@@ -176,7 +176,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
       }
 
       body {
-        font-family: "Fira Code", ui-monospace, Menlo, monospace;
+        font-family: var(--font-fira-code);
         font-size: 9.5pt;
         line-height: 1.36;
         /* Fira Code's programming ligatures (-> => ==) are wrong in prose. */
@@ -224,6 +224,10 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
       .contact-line {
         font-size: 8pt;
         margin: 0;
+      }
+
+      .contact-line :is(a, span) {
+        white-space: nowrap;
       }
 
       .resume-section {

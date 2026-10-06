@@ -1,5 +1,5 @@
 ---
-import { FIRA_CODE_FACE, FIRA_CODE_URL } from "#src/lib/fonts.ts";
+import { Font } from "astro:assets";
 import { SITE_ORIGIN } from "#src/lib/site.ts";
 import { themeBootstrapScript } from "#src/lib/theme.ts";
 import "#src/styles/global.css";
@@ -194,9 +194,7 @@ const jsonLd = { "@context": "https://schema.org", "@graph": graph };
 
     <Favicons />
 
-    {/* Preloaded: with no metric-tuned fallback (../lib/fonts.ts), a late swap shifts layout. */}
-    <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
-    <style is:inline set:html={FIRA_CODE_FACE}></style>
+    <Font cssVariable="--font-fira-code" preload />
 
     <script is:inline set:html={themeBootstrapScript} />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
-import { defineConfig, envField } from "astro/config";
+import { defineConfig, envField, fontProviders } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
 import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
@@ -14,6 +14,7 @@ import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 import remarkMermaid from "./src/blog/utils/remark-mermaid";
 import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
+import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
 
@@ -116,6 +117,15 @@ function buildArtifacts(): AstroIntegration {
       "astro:build:done": ({ dir }) =>
         run("node", ["scripts/generate-resume.ts", fileURLToPath(dir)])
     }
+  };
+}
+
+// Writes the font file the `fonts` entry below reads. config:setup runs before
+// the Fonts API resolves its sources, in dev and build alike.
+function firaCodeSubset(): AstroIntegration {
+  return {
+    name: "fira-code-subset",
+    hooks: { "astro:config:setup": () => writeFiraCodeSubset() }
   };
 }
 
@@ -240,6 +250,27 @@ export default defineConfig({
       RESUME_PHONE: envField.string({ context: "server", access: "secret", optional: true })
     }
   },
+  // Also generates a fallback sized to Fira Code's metrics (local Courier New),
+  // so the swap to Fira Code doesn't rewrap text; global.css's metric fallback
+  // covers platforms without Courier New.
+  fonts: [
+    {
+      provider: fontProviders.local(),
+      name: "Fira Code",
+      cssVariable: "--font-fira-code",
+      fallbacks: [
+        "Fira Code metric fallback",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Consolas",
+        "monospace"
+      ],
+      options: {
+        variants: [{ src: [FIRA_CODE_SUBSET], weight: "300 700", style: "normal" }]
+      }
+    }
+  ],
   server: { port: 4399 },
   build: {
     assets: "static",
@@ -248,6 +279,7 @@ export default defineConfig({
     inlineStylesheets: "always"
   },
   integrations: [
+    firaCodeSubset(),
     react(),
     clientInteractionDirective(),
     modulePreloadHints(),

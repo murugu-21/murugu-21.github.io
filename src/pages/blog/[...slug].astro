@@ -155,26 +155,6 @@ const jsonLd = {
 </script>
 
 <script>
-  // Re-land a heading link after the font swap reflows the prose (Chrome doesn't
-  // re-scroll). Skipped once the reader has scrolled, so it never yanks the page.
-  if (location.hash) {
-    const target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
-    if (target) {
-      let readerMoved = false;
-      const noteIntent = () => {
-        readerMoved = true;
-      };
-      for (const type of ["wheel", "touchstart", "keydown", "pointerdown"]) {
-        window.addEventListener(type, noteIntent, { passive: true, once: true });
-      }
-      document.fonts.ready.then(() => {
-        if (!readerMoved) target.scrollIntoView({ block: "start", behavior: "instant" });
-      });
-    }
-  }
-</script>
-
-<script>
   // Image zoom, loaded on hover/click. Scoped to the body <section> to skip the Bio avatar.
   const imgs = document.querySelectorAll<HTMLImageElement>("article.blog-post section img");
   if (imgs.length > 0) {

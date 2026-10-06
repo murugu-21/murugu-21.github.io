@@ -83,19 +83,19 @@ describe("diagramHash", () => {
     ["surrounding whitespace", "\n  flowchart LR\n  A --> B  \n\n"],
     ["CRLF line endings", "flowchart LR\r\n  A --> B\r\n"]
   ])("hashes %s to the same 12-hex name", async (_, source) => {
-    expect(await diagramHash(source)).toBe("4377fdbe2b0f");
+    expect(await diagramHash(source)).toBe("7cbc16dbcd5f");
   });
 
   it("gives a changed diagram a new name", async () => {
-    expect(await diagramHash("flowchart LR\n  A --> C")).toBe("fa71bd2e4f68");
+    expect(await diagramHash("flowchart LR\n  A --> C")).toBe("e22fba402df1");
   });
 });
 
 describe("replaceMermaidFences", () => {
   it("swaps each fence for a markdown image of the PNG rendering and leaves the rest untouched", async () => {
     const out = await replaceMermaidFences(post);
-    expect(out).toContain("![Diagram 1](diagrams/f80224d8d539.png)");
-    expect(out).toContain("![Diagram 2](diagrams/98e96d74e745.png)");
+    expect(out).toContain("![Diagram 1](diagrams/082f83bf03db.png)");
+    expect(out).toContain("![Diagram 2](diagrams/99d2cdad7c76.png)");
     expect(out).not.toContain("```mermaid\nflowchart LR");
     expect(out).not.toContain("~~~mermaid");
     // the js fence, the nested sample and the prose survive

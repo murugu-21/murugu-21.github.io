@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { renderMermaid, type ParseMDDOptions } from "@mermaid-js/mermaid-cli";
 import type { Browser } from "puppeteer";
@@ -9,6 +8,7 @@ import subsetFont from "subset-font";
 import { z } from "zod";
 
 import { jsonString } from "#utils/json.ts";
+import { FIRA_CODE_FEATURES, FIRA_CODE_VF } from "./fira-code-subset.ts";
 import { launchBrowser } from "./launch-browser.ts";
 import { ROOT } from "./site-dir.ts";
 import {
@@ -38,11 +38,8 @@ const CONTENT_DIR = join(ROOT, "content/blog");
 const MERMAID_VERSION = jsonString(z.object({ version: z.string() })).parse(
   readFileSync(join(ROOT, "node_modules/mermaid/package.json"), "utf8")
 ).version;
-const FONT = readFileSync(
-  fileURLToPath(
-    import.meta.resolve("@fontsource-variable/fira-code/files/fira-code-latin-wght-normal.woff2")
-  )
-);
+// The full font: each SVG embeds its own subset, so no latin cut is needed here.
+const FONT = readFileSync(FIRA_CODE_VF);
 const fontFace = (woff2: Buffer) =>
   `@font-face{font-family:"Fira Code";font-style:normal;font-weight:300 700;` +
   `src:url(data:font/woff2;base64,${woff2.toString("base64")}) format("woff2-variations")}`;
@@ -182,7 +179,8 @@ async function renderSvg({
   });
   const svg = Buffer.from(data).toString("utf8");
   const subset = await subsetFont(FONT, usedText(svg), {
-    targetFormat: "woff2"
+    targetFormat: "woff2",
+    keepFeatures: FIRA_CODE_FEATURES
   });
   return svg
     .replace(/<svg\b/, `<svg ${STAMP_ATTR}="${STAMP}"`)
