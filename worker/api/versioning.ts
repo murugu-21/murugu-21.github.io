@@ -56,7 +56,7 @@ export const ApiVersionPolicy = z
       description:
         "Minimum days between a version's first `Deprecation` header and its sunset date."
     }),
-    rules: z.array(z.string()).meta({
+    rules: z.array(z.string()).readonly().meta({
       description:
         "The policy in full sentences, one commitment per entry. The developer portal publishes the same text."
     }),
@@ -136,7 +136,7 @@ export function buildVersionsDocument(origin: string): z.infer<typeof ApiVersion
     policy: {
       scheme: "url-path",
       deprecationNoticeDays: DEPRECATION_NOTICE_DAYS,
-      rules: [...POLICY_RULES],
+      rules: POLICY_RULES,
       documentationUrl: `${origin}/developers/#versioning`,
       headers: {
         "API-Version": "The semantic release that answered this request.",

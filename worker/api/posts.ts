@@ -38,7 +38,7 @@ export const PostList = z
 
 export const Post = z
   .object({
-    slug: text("The post's slug."),
+    slug: z.string().regex(SLUG).meta({ description: "The post's slug." }),
     ...postFields,
     markdown: text("The post's complete markdown source, frontmatter included.")
   })

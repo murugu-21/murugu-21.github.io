@@ -134,6 +134,51 @@ const metaFailures = {
   "500": errorResponse("Unexpected server error.")
 };
 
+// Schemas as the API emits them, each a named component; nesting becomes a `$ref`.
+const OUTPUT_SCHEMAS = {
+  Error: ErrorBody,
+  FieldIssue,
+  Link,
+  CurrentRole,
+  Person,
+  Profile,
+  ExperienceEntry,
+  ExperienceList,
+  SkillCategory,
+  Proficiency,
+  SkillsResponse,
+  EducationEntry,
+  EducationList,
+  OpenSourceContribution,
+  OpenSourceList,
+  PostSummary,
+  PostList,
+  Post,
+  ApiVersionRecord,
+  ApiVersionPolicy,
+  UnversionedAlias,
+  ApiVersions,
+  ContactAccepted
+};
+
+function components(schemas: Record<string, z.ZodType>, io: "input" | "output") {
+  const registry = z.registry<{ id: string }>();
+  for (const [id, schema] of Object.entries(schemas)) registry.add(schema, { id });
+  const generated = z.toJSONSchema(registry, { io, uri: id => `#/components/schemas/${id}` });
+  // A component is a fragment of the OpenAPI document, not a standalone JSON Schema document.
+  for (const schema of Object.values(generated.schemas)) {
+    delete schema.$schema;
+    delete schema.$id;
+  }
+  return generated.schemas;
+}
+
+// Requests are described as clients send them, before ContactRequest's trimming and defaults.
+const COMPONENT_SCHEMAS = {
+  ...components(OUTPUT_SCHEMAS, "output"),
+  ...components({ ContactRequest }, "input")
+};
+
 export function buildOpenApiDocument(origin: string): OpenApiDocument {
   return {
     openapi: "3.1.0",
@@ -394,48 +439,3 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
     }
   };
 }
-
-// Response bodies, each a named component. A schema nested in another becomes a `$ref` to its own.
-const RESPONSE_SCHEMAS = {
-  Error: ErrorBody,
-  FieldIssue,
-  Link,
-  CurrentRole,
-  Person,
-  Profile,
-  ExperienceEntry,
-  ExperienceList,
-  SkillCategory,
-  Proficiency,
-  SkillsResponse,
-  EducationEntry,
-  EducationList,
-  OpenSourceContribution,
-  OpenSourceList,
-  PostSummary,
-  PostList,
-  Post,
-  ApiVersionRecord,
-  ApiVersionPolicy,
-  UnversionedAlias,
-  ApiVersions,
-  ContactAccepted
-};
-
-function components(schemas: Record<string, z.ZodType>, io: "input" | "output") {
-  const registry = z.registry<{ id: string }>();
-  for (const [id, schema] of Object.entries(schemas)) registry.add(schema, { id });
-  const generated = z.toJSONSchema(registry, { io, uri: id => `#/components/schemas/${id}` });
-  // A component is a fragment of the OpenAPI document, not a standalone JSON Schema document.
-  for (const schema of Object.values(generated.schemas)) {
-    delete schema.$schema;
-    delete schema.$id;
-  }
-  return generated.schemas;
-}
-
-// Requests are described as clients send them, before ContactRequest's trimming and defaults.
-const COMPONENT_SCHEMAS = {
-  ...components(RESPONSE_SCHEMAS, "output"),
-  ...components({ ContactRequest }, "input")
-};

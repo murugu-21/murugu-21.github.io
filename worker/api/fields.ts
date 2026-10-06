@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 
-type Extra = Record<string, unknown>;
+type Extra = Omit<z.GlobalMeta, "description">;
 
 export const text = (description: string, extra: Extra = {}) =>
   z.string().meta({ description, ...extra });

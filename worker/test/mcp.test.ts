@@ -415,13 +415,7 @@ describe("tools over HTTP", () => {
   it("lists every tool with our schemas as a cacheable complete result", async () => {
     const result = resultOf(
       await callModern("tools/list"),
-      z.object({
-        resultType: z.string(),
-        tools: z.array(
-          z.object({ name: z.string(), inputSchema: JsonObject, outputSchema: JsonObject })
-        ),
-        cacheScope: z.string()
-      })
+      ListedTools.extend({ resultType: z.string(), cacheScope: z.string() })
     );
     expect(result.resultType).toBe("complete");
     expect(result.cacheScope).toBe("public");

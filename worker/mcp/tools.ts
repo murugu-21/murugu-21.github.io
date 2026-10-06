@@ -11,8 +11,7 @@ import {
   ExperienceList,
   OpenSourceList,
   Profile,
-  SkillsResponse,
-  type Dataset
+  SkillsResponse
 } from "#worker/api/dataset.ts";
 import { Post, PostList, POSTS_LIMIT_MAX, searchPosts, SLUG } from "#worker/api/posts.ts";
 import { globalLimiter } from "#worker/api/ratelimit.ts";
@@ -79,14 +78,12 @@ function datasetTool({
   name,
   title,
   description,
-  schema,
-  project
+  schema
 }: {
   name: string;
   title: string;
   description: string;
   schema: z.ZodType;
-  project: (data: Dataset) => unknown;
 }): McpTool {
   return {
     name,
@@ -97,7 +94,7 @@ function datasetTool({
     annotations: READ_ONLY,
     async run(_args, ctx) {
       const data = await loadDataset(ctx.assets);
-      return data ? ok(project(data)) : fail(DATASET_UNAVAILABLE);
+      return data ? ok(schema.parse(data)) : fail(DATASET_UNAVAILABLE);
     }
   };
 }
@@ -125,6 +122,7 @@ const PostArgs = z.strictObject({
   })
 });
 
+// Strict, unlike REST: a misspelt argument should fail the call, not vanish.
 const SendMessageArgs = z.strictObject(ContactRequest.shape);
 
 export const MCP_TOOLS: McpTool[] = [
@@ -133,40 +131,35 @@ export const MCP_TOOLS: McpTool[] = [
     title: "Profile of Murugappan M",
     description:
       "Returns the canonical summary of Murugappan M, a full stack engineer (TypeScript, Node.js, React, AWS) based in Bangalore, India. It includes his name, headline, elevator pitch, location, email, whether he is open to work, his current role with a start month, his stated focus areas, and every public link (site, about page, blog, RSS, resume PDF, GitHub, LinkedIn, X, developer portal, OpenAPI spec). Call this first. It is one request and answers most questions about who he is.",
-    schema: Profile,
-    project: data => ({ person: data.person, links: data.links })
+    schema: Profile
   }),
   datasetTool({
     name: "list_experience",
     title: "Work experience",
     description:
       "Returns every role Murugappan M has held, newest first, each with company, location, the human-readable period, ISO 8601 year-month start and end dates, a `current` flag, a one-line summary, and the concrete achievements of that role. Use this instead of parsing his resume PDF whenever you need dated, per-role facts, for example to check whether he has production experience with a technology, and when.",
-    schema: ExperienceList,
-    project: data => ({ experience: data.experience })
+    schema: ExperienceList
   }),
   datasetTool({
     name: "list_skills",
     title: "Skills and proficiencies",
     description:
       "Returns the technologies Murugappan M works with, grouped into categories (languages, full stack, observability and security, cloud and infrastructure), plus self-reported proficiency levels per broad area. Use this to answer 'does he know X' from a typed list rather than inferring it from prose.",
-    schema: SkillsResponse,
-    project: data => ({ skills: data.skills, proficiencies: data.proficiencies })
+    schema: SkillsResponse
   }),
   datasetTool({
     name: "list_education",
     title: "Education",
     description:
       "Returns Murugappan M's formal education: institution, credential, location, the human-readable period, ISO 8601 year-month start and end dates, and any highlights. One entry today; the shape is a list so it stays stable.",
-    schema: EducationList,
-    project: data => ({ education: data.education })
+    schema: EducationList
   }),
   datasetTool({
     name: "list_open_source",
     title: "Open-source contributions",
     description:
       "Returns Murugappan M's public open-source work: the project, the role he held, what the contributions were, and links to the individual merged pull requests. Use this when you need to verify a claim about his open-source work at the source rather than repeat it.",
-    schema: OpenSourceList,
-    project: data => ({ openSource: data.openSource })
+    schema: OpenSourceList
   }),
   {
     name: "search_blog_posts",

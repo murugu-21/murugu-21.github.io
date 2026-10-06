@@ -47,7 +47,7 @@ const INVALID_EMAIL = { error: "must be a valid email address" };
 const MESSAGE = CONTACT_LIMITS.message;
 const MESSAGE_LENGTH = { error: `must be between ${MESSAGE.min} and ${MESSAGE.max} characters` };
 
-// Key order is the order issues are reported in. Also the send_message tool's input schema.
+// Key order is the order issues are reported in. Its shape is also send_message's input.
 export const ContactRequest = z
   .object(
     {
@@ -73,7 +73,7 @@ export const ContactRequest = z
         .transform(value => value ?? false)
         .meta({
           description:
-            "Set true to validate the request without sending anything and without spending the allowance."
+            "Set true to validate the request without sending anything and without spending the allowance. The reply's status is then `validated` instead of `accepted`."
         }),
       message: requiredText.min(MESSAGE.min, MESSAGE_LENGTH).max(MESSAGE.max, MESSAGE_LENGTH).meta({
         description:
@@ -108,15 +108,6 @@ export function parseContactRequest(raw: unknown): ContactParseResult {
       }))
     };
   }
-  const { dryRun, name, email, company, message } = parsed.data;
-  return {
-    ok: true,
-    dryRun,
-    value: {
-      ...(name ? { name } : {}),
-      email,
-      ...(company ? { company } : {}),
-      message
-    }
-  };
+  const { dryRun, ...value } = parsed.data;
+  return { ok: true, dryRun, value };
 }

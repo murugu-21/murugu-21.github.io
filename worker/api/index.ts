@@ -5,10 +5,11 @@ import { Hono, type Context } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { methodNotAllowed } from "hono/method-not-allowed";
+import type { z } from "zod";
 
 import { contactMailer, sendContactEmail } from "#worker/email.ts";
 import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "./contact";
-import type { Dataset } from "./dataset";
+import { EducationList, ExperienceList, OpenSourceList, Profile, SkillsResponse } from "./dataset";
 import { apiError } from "./errors";
 import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "./openapi";
@@ -56,7 +57,7 @@ export function publicOrigin(requestUrl: string): string {
 }
 
 // Hono finds the methods registered for the path (HEAD with GET); CORS answers OPTIONS everywhere.
-const wrongMethod = (app: Hono<{ Bindings: Env }>) =>
+const jsonMethodNotAllowed = (app: Hono<{ Bindings: Env }>) =>
   methodNotAllowed({
     app,
     onMethodNotAllowed: (c, methods) => {
@@ -105,44 +106,23 @@ api.use(
 );
 
 api.use("*", apiHeaders({ enforceReads: true }));
-api.use("*", wrongMethod(api));
+api.use("*", jsonMethodNotAllowed(api));
 
-const datasetRoute =
-  <T>(project: (data: Dataset) => T) =>
-  async (c: Context<{ Bindings: Env }>) => {
-    const data = await loadDataset(c.env.ASSETS);
-    return data ? json(project(data)) : datasetUnavailable();
-  };
+// Each slice schema picks its keys from the dataset; parsing drops the rest.
+const datasetRoute = (slice: z.ZodType) => async (c: Context<{ Bindings: Env }>) => {
+  const data = await loadDataset(c.env.ASSETS);
+  return data ? json(slice.parse(data)) : datasetUnavailable();
+};
 
-api.on(
-  READ_METHODS,
-  "/profile",
-  datasetRoute(d => ({ person: d.person, links: d.links }))
-);
+api.on(READ_METHODS, "/profile", datasetRoute(Profile));
 
-api.on(
-  READ_METHODS,
-  "/experience",
-  datasetRoute(d => ({ experience: d.experience }))
-);
+api.on(READ_METHODS, "/experience", datasetRoute(ExperienceList));
 
-api.on(
-  READ_METHODS,
-  "/skills",
-  datasetRoute(d => ({ skills: d.skills, proficiencies: d.proficiencies }))
-);
+api.on(READ_METHODS, "/skills", datasetRoute(SkillsResponse));
 
-api.on(
-  READ_METHODS,
-  "/education",
-  datasetRoute(d => ({ education: d.education }))
-);
+api.on(READ_METHODS, "/education", datasetRoute(EducationList));
 
-api.on(
-  READ_METHODS,
-  "/open-source",
-  datasetRoute(d => ({ openSource: d.openSource }))
-);
+api.on(READ_METHODS, "/open-source", datasetRoute(OpenSourceList));
 
 api.on(READ_METHODS, "/posts", async c => {
   const rawLimit = c.req.query("limit");
@@ -187,21 +167,18 @@ api.on(READ_METHODS, "/versions", c => json(buildVersionsDocument(publicOrigin(c
 
 api.on(READ_METHODS, "/openapi.json", c => specResponse(c.req.url));
 
-api.use(
-  "/contact",
-  bodyLimit({
-    maxSize: MAX_CONTACT_BODY_BYTES,
-    onError: () =>
-      apiError({
-        status: 413,
-        code: "payload_too_large",
-        message: "The request body is larger than this endpoint accepts.",
-        hint: `Keep the whole JSON body under ${MAX_CONTACT_BODY_BYTES} bytes. See the ContactRequest schema for the per-field limits.`
-      })
-  })
-);
+const contactBodyLimit = bodyLimit({
+  maxSize: MAX_CONTACT_BODY_BYTES,
+  onError: () =>
+    apiError({
+      status: 413,
+      code: "payload_too_large",
+      message: "The request body is larger than this endpoint accepts.",
+      hint: `Keep the whole JSON body under ${MAX_CONTACT_BODY_BYTES} bytes. See the ContactRequest schema for the per-field limits.`
+    })
+});
 
-api.post("/contact", async c => {
+api.post("/contact", contactBodyLimit, async c => {
   const contentType = c.req.header("Content-Type") ?? "";
   if (!contentType.split(";")[0].trim().endsWith("/json")) {
     return apiError({
@@ -304,7 +281,7 @@ api.post("/contact", async c => {
   );
 });
 
-// wrongMethod turns this into a 405 when the path exists under another method.
+// jsonMethodNotAllowed turns this into a 405 when the path exists under another method.
 api.all("*", c =>
   apiError({
     status: 404,
@@ -334,6 +311,6 @@ specRoutes.use(
 
 // A throttled client must still reach the spec, so reads are advertised but not enforced.
 specRoutes.use("*", apiHeaders({ enforceReads: false }));
-specRoutes.use("*", wrongMethod(specRoutes));
+specRoutes.use("*", jsonMethodNotAllowed(specRoutes));
 
 specRoutes.on(READ_METHODS, "/", c => specResponse(c.req.url));
