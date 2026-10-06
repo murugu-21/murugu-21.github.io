@@ -70,6 +70,7 @@
         "typescript": "^7.0.2",
         "vfile": "^6.0.3",
         "vitest": "^4.1.11",
+        "webmcp-types": "^0.1.10",
       },
     },
   },
@@ -2204,6 +2205,8 @@
     "web-vitals-soft-navs": ["web-vitals@6.2.1", "", {}, "sha512-rLcLXA2sx6+9dE88NHFubwTtGxpK4yYBLj6qHPdFoCaLr0cXGb4efOqtKLlm4loGA4OEKHIQKMKzZkKyOh5ctw=="],
 
     "webdriver-bidi-protocol": ["webdriver-bidi-protocol@0.4.3", "", {}, "sha512-uuN0goWfxP22B7J/uAgBpOYNPttC+XVseYE+rSY5+rQ+YBeVz/VORw8WbmLVcqW78zNg5A4qnjNXYUWR3il2ig=="],
+
+    "webmcp-types": ["webmcp-types@0.1.10", "", {}, "sha512-U4GQ1RpJ0tqCUt2ALMV9Pnhi+hsy8L31f/Q1v4mLVhW64r5sYhh+2+SjP/Lq4/9jP33vZgNkuRZARJl65A/ZIg=="],
 
     "which": ["which@2.0.2", "", { "dependencies": { "isexe": "^2.0.0" }, "bin": { "node-which": "./bin/node-which" } }, "sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA=="],
 

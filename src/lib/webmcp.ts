@@ -1,34 +1,20 @@
 // WebMCP (https://webmachinelearning.github.io/webmcp/): site actions as tools
 // for in-browser agents via document.modelContext. No-op without the API.
 
-interface ModelContextTool {
-  name: string;
-  description: string;
-  inputSchema: object;
-  // Plain text, since the browser hands an object to the agent as a JSON string.
-  execute(args: Record<string, unknown>): Promise<string>;
-}
+import type { WebMCP } from "webmcp-types";
 
-interface ModelContext {
-  registerTool(tool: ModelContextTool): Promise<undefined>;
-}
+const mc = document.modelContext;
 
-const isModelContext = (value: unknown): value is ModelContext =>
-  typeof value === "object" &&
-  value !== null &&
-  "registerTool" in value &&
-  typeof value.registerTool === "function";
-
-const mc = "modelContext" in document ? document.modelContext : undefined;
-
-if (isModelContext(mc)) {
+if (mc) {
   const fetchText = async (path: string): Promise<string> => {
     const res = await fetch(path);
     if (!res.ok) throw new Error(`${res.status} for ${path}`);
     return res.text();
   };
 
-  const tools: ModelContextTool[] = [
+  // Each execute resolves to plain text, since the browser hands an object to
+  // the agent as a JSON string.
+  const tools: WebMCP.ModelContextTool[] = [
     {
       name: "get_profile",
       description:
@@ -94,7 +80,7 @@ if (isModelContext(mc)) {
 
   // Async, so a polyfill that throws or returns no promise rejects instead of
   // throwing here, which would stop the analytics bundled into the same script.
-  const register = async (tool: ModelContextTool) => mc.registerTool(tool);
+  const register = async (tool: WebMCP.ModelContextTool) => mc.registerTool(tool);
 
   // Tools live as long as the document, bfcache included, so none needs an abort signal.
   for (const tool of tools) {
