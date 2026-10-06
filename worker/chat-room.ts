@@ -12,9 +12,9 @@ import { z } from "zod";
 
 import { deepseek, isInsufficientBalance, jarvisCall } from "./ai";
 import { globalLimiter } from "./api/ratelimit";
+import { readAsset } from "./api/store";
 import { contactMailer, sendOpportunityEmail } from "./email";
 import { fetchSitePage } from "./fetch-page";
-import { getGrounding } from "./grounding";
 import { jsonString, lenient } from "#utils/json.ts";
 import { buildMessages, jarvisTools, ROOM_DAILY_LIMIT, type Lead } from "./prompt";
 import {
@@ -228,7 +228,9 @@ export class ChatRoom extends AIChatAgent<Env> {
     let wroteText = false;
     let failure: Notice | null = null;
     try {
-      const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
+      // Root llms.txt (~900 tokens) lists every post with its title, summary and link.
+      // blog/llms-full.txt costs ~20x the tokens and grows per post.
+      const grounding = (await readAsset(this.env.ASSETS, "/llms.txt")) ?? "";
       const result = streamText({
         ...jarvisCall({
           model: this.languageModel(key),

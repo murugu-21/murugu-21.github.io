@@ -1,38 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { fetchSitePage } from "#worker/fetch-page.ts";
-import { getGrounding, type CachedGrounding } from "#worker/grounding.ts";
 import { fakeAssets } from "./fixtures";
-
-function fakeStorage(initial: Record<string, CachedGrounding> = {}) {
-  const map = new Map(Object.entries(initial));
-  return {
-    async get(key: string): Promise<unknown> {
-      return map.get(key);
-    },
-    async put(key: string, value: CachedGrounding): Promise<void> {
-      map.set(key, value);
-    }
-  };
-}
-
-describe("getGrounding", () => {
-  // fakeAssets also serves blog/llms-full.txt, so the first answer proves the
-  // root llms.txt was chosen.
-  it("grounds on the root llms.txt and serves it from cache on the next call", async () => {
-    const storage = fakeStorage();
-    expect(await getGrounding(storage, fakeAssets({ "/llms.txt": "FIRST" }))).toBe("FIRST");
-    expect(await getGrounding(storage, fakeAssets({ "/llms.txt": "SECOND" }))).toBe("FIRST");
-  });
-
-  it("refetches after the TTL, keeping the stale copy while the fetch fails", async () => {
-    const storage = fakeStorage({
-      "grounding:v2": { text: "STALE", fetchedAt: Date.now() - 25 * 60 * 60 * 1000 }
-    });
-    expect(await getGrounding(storage, fakeAssets({ "/llms.txt": null }))).toBe("STALE");
-    expect(await getGrounding(storage, fakeAssets({ "/llms.txt": "FRESH" }))).toBe("FRESH");
-  });
-});
 
 describe("fetchSitePage", () => {
   const LLMS_FULL = `# SDE Journey — full content

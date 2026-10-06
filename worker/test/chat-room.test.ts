@@ -23,6 +23,7 @@ import {
   readJson,
   recordingEmail,
   testEnv,
+  type TestEnvOptions,
   visitorMeta
 } from "./fixtures";
 
@@ -160,12 +161,16 @@ async function fundChat(): Promise<void> {
   );
 }
 
-/** Gives a room a key, a scripted model and an EMAIL binding that records instead of sending. */
-async function scriptRoom(stub: DurableObjectStub<ChatRoom>, model: MockLanguageModelV4) {
+/** Gives a room a key, a scripted model, site assets and an EMAIL binding that records instead of sending. */
+async function scriptRoom(
+  stub: DurableObjectStub<ChatRoom>,
+  model: MockLanguageModelV4,
+  assets?: TestEnvOptions["assets"]
+) {
   const { email, sent } = recordingEmail();
   await runInDurableObject(stub, (instance: ChatRoom) => {
     Object.assign(instance, {
-      env: { ...testEnv({ email }), DEEPSEEK_API_KEY: "sk-test" },
+      env: { ...testEnv({ email, assets }), DEEPSEEK_API_KEY: "sk-test" },
       languageModel: () => model
     });
   });
@@ -310,6 +315,24 @@ describe("a chat turn", () => {
       { role: "user", parts: [{ type: "text", text: "first" }] },
       { role: "assistant", parts: [{ type: "text", text: "First.", state: "done" }] }
     ]);
+  });
+
+  it("grounds every turn on the deployed llms.txt, so a redeploy shows at once", async () => {
+    await fundChat();
+    const { socket, frames, stub } = await openRoom("room-redeploy");
+    const model = scriptedModel(textStep("One."), textStep("Two."));
+    await scriptRoom(stub, model, { "/llms.txt": "DEPLOY-ONE" });
+    socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "one" })] }));
+    expect(replyText(await streamedChunks(frames, "r1"))).toBe("One.");
+
+    await scriptRoom(stub, model, { "/llms.txt": "DEPLOY-TWO" });
+    socket.send(chatRequest({ id: "r2", messages: [userMessage({ id: "u2", text: "two" })] }));
+    expect(replyText(await streamedChunks(frames, "r2"))).toBe("Two.");
+
+    const grounding = model.doStreamCalls.map(c =>
+      JSON.stringify(c.prompt[0]).match(/DEPLOY-\w+/g)
+    );
+    expect(grounding).toEqual([["DEPLOY-ONE"], ["DEPLOY-TWO"]]);
   });
 
   it("answers a room's last message of the day, then gates the next one", async () => {
