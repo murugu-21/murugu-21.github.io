@@ -50,8 +50,15 @@ https://murugappan.dev/mcp
 
 Streamable HTTP, `POST` only, no authentication, no session. Protocol revision
 `2026-07-28`, with backward compatibility for the `initialize`-based revisions
-(`2025-11-25`, `2025-06-18`, `2025-03-26`). Call `server/discover` to see what
-is supported. Eight tools, each with a typed `outputSchema`:
+(`2025-11-25`, `2025-06-18`, `2025-03-26`). `server/discover` (sent with
+`2026-07-28` `_meta`) lists the per-request revision; the older ones are
+negotiated by `initialize`. Every `POST` needs
+`Content-Type: application/json`; `initialize`-era messages also
+need `Accept: application/json, text/event-stream`, because their replies
+arrive as a one-event SSE stream. Arguments that fail a tool's `inputSchema`
+come back as an `isError` result naming each bad field (for example
+`#/email: String does not match format "email"`), so fix them and call again.
+Eight tools, each with a typed `outputSchema`:
 
 | Tool                | What it does                                                      |
 | ------------------- | ----------------------------------------------------------------- |

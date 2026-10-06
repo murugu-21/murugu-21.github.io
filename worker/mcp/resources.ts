@@ -1,6 +1,12 @@
 // MCP resources. The URIs are `https://` because each is also a public URL a
 // client can GET directly. Reads accept only the allowlist or a validated blog slug.
 
+import {
+  ResourceNotFoundError,
+  ResourceTemplate,
+  type McpServer
+} from "@modelcontextprotocol/server";
+
 import { buildOpenApiDocument } from "#worker/api/openapi.ts";
 import { loadPost, loadPosts, readAsset, type AssetsLike } from "#worker/api/store.ts";
 
@@ -77,7 +83,7 @@ const STATIC_RESOURCES: Array<ResourceDescriptor & { assetPath: string | null }>
   }
 ];
 
-export const BLOG_POST_TEMPLATE = {
+const BLOG_POST_TEMPLATE = {
   uriTemplate: `${RESOURCE_ORIGIN}/blog/{slug}/index.md`,
   name: "blog-post",
   title: "Blog post (markdown)",
@@ -88,20 +94,17 @@ export const BLOG_POST_TEMPLATE = {
 
 const postUri = (slug: string) => `${RESOURCE_ORIGIN}/blog/${slug}/index.md`;
 
-/** A missing post list degrades to the static documents rather than failing. */
-export async function listResources(ctx: ResourceContext): Promise<ResourceDescriptor[]> {
+/** A missing post list yields no posts, so resources/list still returns the static documents. */
+async function listPostResources(ctx: ResourceContext): Promise<ResourceDescriptor[]> {
   const posts = await loadPosts(ctx.assets);
-  return [
-    ...STATIC_RESOURCES.map(({ assetPath: _assetPath, ...resource }) => resource),
-    ...posts.map(post => ({
-      uri: postUri(post.slug),
-      name: post.slug,
-      title: post.title,
-      description: post.description || `Blog post: ${post.title}.`,
-      mimeType: "text/markdown",
-      annotations: forAssistant(0.4)
-    }))
-  ];
+  return posts.map(post => ({
+    uri: postUri(post.slug),
+    name: post.slug,
+    title: post.title,
+    description: post.description || `Blog post: ${post.title}.`,
+    mimeType: "text/markdown",
+    annotations: forAssistant(0.4)
+  }));
 }
 
 const BLOG_URI = new RegExp(`^${RESOURCE_ORIGIN}/blog/([^/]+)/index\\.md$`);
@@ -130,4 +133,18 @@ export async function readResource(
   if (!slug) return null;
   const post = await loadPost(ctx.assets, slug);
   return post ? [{ uri, mimeType: "text/markdown", text: post.markdown }] : null;
+}
+
+export function registerResources(server: McpServer, ctx: ResourceContext): void {
+  const read = async (uri: URL) => {
+    const contents = await readResource(uri.href, ctx);
+    if (!contents) throw new ResourceNotFoundError(uri.href);
+    return { contents };
+  };
+  for (const { assetPath: _assetPath, uri, name, ...metadata } of STATIC_RESOURCES) {
+    server.registerResource(name, uri, metadata, read);
+  }
+  const { uriTemplate, name, ...metadata } = BLOG_POST_TEMPLATE;
+  const list = async () => ({ resources: await listPostResources(ctx) });
+  server.registerResource(name, new ResourceTemplate(uriTemplate, { list }), metadata, read);
 }

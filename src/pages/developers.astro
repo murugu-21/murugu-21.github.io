@@ -624,10 +624,17 @@ Retry-After: 39122</code></pre>
         It implements protocol revision <code class={codeCls}>{LATEST_PROTOCOL_VERSION}</code>,
         which is stateless with per-request metadata, and keeps backward compatibility with the{" "}
         <code class={codeCls}>initialize</code>-based revisions (
-        {LEGACY_PROTOCOL_VERSIONS.join(", ")}) that most clients still speak. Call{" "}
-        <code class={codeCls}>server/discover</code> to see what a given deployment supports. There
-        is no <code class={codeCls}>GET</code> stream and nothing to{" "}
-        <code class={codeCls}>DELETE</code>; both answer <code class={codeCls}>405</code>.
+        {LEGACY_PROTOCOL_VERSIONS.join(", ")}) that most clients still speak.{" "}
+        <code class={codeCls}>server/discover</code> (sent with{" "}
+        <code class={codeCls}>{LATEST_PROTOCOL_VERSION}</code> <code class={codeCls}>_meta</code>)
+        lists the per-request revision; the older ones are negotiated by{" "}
+        <code class={codeCls}>initialize</code>. Every <code class={codeCls}>POST</code> needs{" "}
+        <code class={codeCls}>Content-Type: application/json</code>;{" "}
+        <code class={codeCls}>initialize</code>-era messages also need{" "}
+        <code class={codeCls}>Accept: application/json, text/event-stream</code>, because their
+        replies arrive as a one-event SSE stream. There is no <code class={codeCls}>GET</code>{" "}
+        stream and nothing to <code class={codeCls}>DELETE</code>; both answer{" "}
+        <code class={codeCls}>405</code>.
       </p>
       <div class={tableWrapCls}>
         <table class={tableCls}>
@@ -663,7 +670,9 @@ Retry-After: 39122</code></pre>
         REST response schemas, inlined), so a client can validate{" "}
         <code class={codeCls}>structuredContent</code> without fetching anything else. Recoverable
         problems such as an unknown slug, a bad email or a spent allowance come back as tool
-        execution errors with text explaining the fix, not as protocol errors.
+        execution errors (<code class={codeCls}>isError</code>), not as protocol errors. Arguments
+        that fail a tool's <code class={codeCls}>inputSchema</code> are reported field by field, for
+        example <code class={codeCls}>#/email: String does not match format "email"</code>.
       </p>
       <pre class={preCls}><code class={preCodeCls}>{mcpExample}</code></pre>
       <h3 id="mcp-manifest" class={h3Cls}>

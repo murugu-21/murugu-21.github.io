@@ -2,6 +2,10 @@
 // schemas inlined as outputSchema. Anything a model could fix by retrying with
 // other arguments is an `isError` result, not a protocol error.
 
+import { fromJsonSchema, type McpServer } from "@modelcontextprotocol/server";
+import { CfWorkerJsonSchemaValidator } from "@modelcontextprotocol/server/validators/cf-worker";
+import { z } from "zod";
+
 import { API_SCHEMAS } from "#worker/api/openapi.ts";
 import {
   CONTACT_DAILY_PER_CLIENT,
@@ -9,7 +13,7 @@ import {
   parseContactRequest
 } from "#worker/api/contact.ts";
 import type { Dataset } from "#worker/api/dataset.ts";
-import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts, SLUG_PATTERN } from "#worker/api/posts.ts";
+import { POSTS_LIMIT_MAX, searchPosts, SLUG_PATTERN } from "#worker/api/posts.ts";
 import { globalLimiter } from "#worker/api/ratelimit.ts";
 import { loadDataset, loadPost, loadPosts, type AssetsLike } from "#worker/api/store.ts";
 import { contactMailer, sendContactEmail } from "#worker/email.ts";
@@ -24,7 +28,7 @@ export type ToolContext = {
 
 type ToolTextContent = { type: "text"; text: string };
 
-export type ToolResult = {
+type ToolResult = {
   content: ToolTextContent[];
   structuredContent?: unknown;
   isError?: boolean;
@@ -37,14 +41,14 @@ type ToolAnnotations = {
   openWorldHint: boolean;
 };
 
-export type McpTool = {
+type McpTool = {
   name: string;
   title: string;
   description: string;
   inputSchema: JsonSchema;
-  outputSchema?: JsonSchema;
+  outputSchema: JsonSchema;
   annotations: ToolAnnotations;
-  run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
+  run(args: unknown, ctx: ToolContext): Promise<ToolResult>;
 };
 
 const READ_ONLY: ToolAnnotations = {
@@ -104,15 +108,10 @@ function datasetTool({
   };
 }
 
-function optionalString(
-  args: Record<string, unknown>,
-  field: string
-): { value?: string; error?: string } {
-  const raw = args[field];
-  if (raw === undefined || raw === null) return {};
-  if (typeof raw !== "string") return { error: `The '${field}' argument must be a string.` };
-  return { value: raw };
-}
+// The SDK has already validated `inputSchema`; these only narrow `unknown`, so they must
+// stay in step with the JSON schemas below.
+const SearchArgs = z.object({ query: z.string().optional(), limit: z.number().optional() });
+const PostArgs = z.object({ slug: z.string() });
 
 export const MCP_TOOLS: McpTool[] = [
   datasetTool({
@@ -181,20 +180,8 @@ export const MCP_TOOLS: McpTool[] = [
     outputSchema: out("PostList"),
     annotations: READ_ONLY,
     async run(args, ctx) {
-      const query = optionalString(args, "query");
-      if (query.error) return fail(query.error);
-
-      let limit: number | undefined;
-      if (args.limit !== undefined && args.limit !== null) {
-        const parsed = Number(args.limit);
-        if (!isPostsLimit(parsed))
-          return fail(
-            `The 'limit' argument must be an integer between 1 and ${POSTS_LIMIT_MAX}, or omitted.`
-          );
-        limit = parsed;
-      }
-
-      const posts = searchPosts({ posts: await loadPosts(ctx.assets), query: query.value, limit });
+      const { query, limit } = SearchArgs.parse(args);
+      const posts = searchPosts({ posts: await loadPosts(ctx.assets), query, limit });
       return ok({ posts, count: posts.length });
     }
   },
@@ -219,15 +206,11 @@ export const MCP_TOOLS: McpTool[] = [
     outputSchema: out("Post"),
     annotations: READ_ONLY,
     async run(args, ctx) {
-      const slug = optionalString(args, "slug");
-      if (slug.error) return fail(slug.error);
-      if (!slug.value)
-        return fail("The 'slug' argument is required. Call search_blog_posts to discover slugs.");
-
-      const post = await loadPost(ctx.assets, slug.value);
+      const { slug } = PostArgs.parse(args);
+      const post = await loadPost(ctx.assets, slug);
       if (post) return ok(post);
       return fail(
-        `No published post has the slug '${slug.value}'. Call search_blog_posts to see which slugs exist.`
+        `No published post has the slug '${slug}'. Call search_blog_posts to see which slugs exist.`
       );
     }
   },
@@ -300,15 +283,15 @@ export const MCP_TOOLS: McpTool[] = [
           "Message delivery is not configured on this deployment. Use one of the contact links from get_profile instead."
         );
 
-      const slot = await globalLimiter(ctx.env).takeContactSlot(ctx.clientIp);
-      if (!slot.allowed)
-        return fail(
-          slot.scope === "client"
-            ? `This client has already used its daily allowance of ${CONTACT_DAILY_PER_CLIENT} messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile.`
-            : "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
-        );
-
+      // Without this catch the SDK would send the raw error message as the isError text and log nothing.
       try {
+        const slot = await globalLimiter(ctx.env).takeContactSlot(ctx.clientIp);
+        if (!slot.allowed)
+          return fail(
+            slot.scope === "client"
+              ? `This client has already used its daily allowance of ${CONTACT_DAILY_PER_CLIENT} messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile.`
+              : "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
+          );
         await sendContactEmail({ ...mailer, msg: parsed.value });
       } catch (err) {
         console.error("mcp send_message failed", err);
@@ -324,9 +307,21 @@ export const MCP_TOOLS: McpTool[] = [
   }
 ];
 
-const BY_NAME = new Map(MCP_TOOLS.map(tool => [tool.name, tool]));
+// Reports every invalid field rather than the first, so a model can fix them all in one retry.
+const validator = new CfWorkerJsonSchemaValidator({ shortcircuit: false });
 
-/** Case-sensitive, as the spec requires for tool names. */
-export function findTool(name: string): McpTool | undefined {
-  return BY_NAME.get(name);
+export function registerTools(server: McpServer, ctx: ToolContext): void {
+  for (const tool of MCP_TOOLS) {
+    server.registerTool(
+      tool.name,
+      {
+        title: tool.title,
+        description: tool.description,
+        inputSchema: fromJsonSchema(tool.inputSchema, validator),
+        outputSchema: fromJsonSchema(tool.outputSchema, validator),
+        annotations: tool.annotations
+      },
+      args => tool.run(args, ctx)
+    );
+  }
 }
