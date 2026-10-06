@@ -1,18 +1,28 @@
 ---
-// Restated from Layout: Astro emits a module's own CSS before its components',
-// and the blog sheets must follow global.css's @layer order declaration.
-import "#src/styles/global.css";
+import Layout, { type Props as LayoutProps, type Section } from "#src/layouts/Layout.astro";
 import "#src/blog/styles/code.css";
 import "#src/blog/styles/post.css";
-import Layout, { type Props as LayoutProps } from "#src/layouts/Layout.astro";
 import Icon from "#src/components/Icon.astro";
 import ThemeToggle from "#src/components/ThemeToggle.astro";
-import { SITE_TITLE, SITE_DESCRIPTION } from "#src/blog/consts.ts";
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "#src/blog/consts.ts";
 
 // title is omitted for the blog index, which gets the homepage title.
 type Props = Pick<LayoutProps, "title" | "description" | "noindex" | "article" | "graph">;
 
 const { title, ...rest } = Astro.props;
+
+const blog: Section = {
+  siteName: SITE_TITLE,
+  ogImage: `${SITE_URL}/og-image.png`,
+  metaDescription: SITE_DESCRIPTION,
+  socialDescription: SITE_DESCRIPTION,
+  // No fixed header to clear; headings carry their own scroll-margin (post.css).
+  htmlClass: "motion-reduce:scroll-auto",
+  // Overrides the shared base layer's 19px/23px.
+  bodyClass: "text-base leading-normal text-text dark:text-text-dark",
+  // Dimmed for reading: stars between words read as stray bullets.
+  particlesClass: "opacity-50 dark:opacity-70"
+};
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
 const rootPath = "/blog/";
@@ -20,7 +30,7 @@ const isRootPath = Astro.url.pathname === rootPath;
 ---
 
 <Layout
-  section="blog"
+  section={blog}
   title={title ? `${title} | ${SITE_TITLE}` : `${SITE_TITLE} | ${SITE_DESCRIPTION}`}
   socialTitle={title ?? SITE_TITLE}
   {...rest}

@@ -3,6 +3,11 @@
    src/blog/utils/code-themes.ts), which this file maps to the site theme.
    In @layer components so a utility class on a fence still wins. */
 
+/* Astro may emit this sheet before global.css, so it declares Tailwind's layer
+   order too, or `components` would rank below preflight's `base` and
+   `properties` above everything. */
+@layer properties, theme, base, components, utilities;
+
 @layer components {
   .blog-post .astro-code {
     padding: 1em;
