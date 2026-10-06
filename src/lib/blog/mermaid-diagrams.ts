@@ -5,7 +5,7 @@
 import { fromMarkdown } from "mdast-util-from-markdown";
 import type { Code, Parent } from "mdast";
 
-import { sha256Hex } from "./helpers";
+import { sha256Hex } from "#src/lib/hash.ts";
 
 export const DIAGRAMS_DIR = "diagrams";
 export type DiagramTheme = "light" | "dark";

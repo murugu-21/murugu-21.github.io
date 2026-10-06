@@ -3,10 +3,9 @@ import type { ImageMetadata } from "astro";
 import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
 
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "#src/lib/blog/consts.ts";
 import { getPublishedPosts, postDescription, postUrl } from "#src/lib/blog/posts.ts";
 import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
-import { SITE_ORIGIN } from "#src/lib/site.ts";
+import { BLOG_DESCRIPTION, BLOG_TITLE, BLOG_URL, SITE_ORIGIN } from "#src/lib/site.ts";
 
 const parser = new MarkdownIt();
 
@@ -60,9 +59,9 @@ export async function GET() {
   );
 
   return rss({
-    title: `${SITE_TITLE} RSS Feed`,
-    description: SITE_DESCRIPTION,
-    site: SITE_URL,
+    title: `${BLOG_TITLE} RSS Feed`,
+    description: BLOG_DESCRIPTION,
+    site: BLOG_URL,
     items
   });
 }

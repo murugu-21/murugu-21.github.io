@@ -2,8 +2,7 @@
 import { render } from "astro:content";
 import BlogLayout from "#src/layouts/BlogLayout.astro";
 import Bio from "#src/components/blog/Bio.astro";
-import { SITE_TITLE, SITE_URL } from "#src/lib/blog/consts.ts";
-import { PERSON_ID } from "#src/lib/site.ts";
+import { BLOG_TITLE, BLOG_URL, PERSON_ID } from "#src/lib/site.ts";
 import {
   getPublishedPosts,
   postPath,
@@ -12,9 +11,9 @@ import {
   postKeywords,
   tagPath,
   formatDate,
-  timeToRead
+  timeToRead,
+  formatReadingTime
 } from "#src/lib/blog/posts.ts";
-import { formatReadingTime } from "#src/lib/blog/helpers.ts";
 import { ListenControls } from "#src/components/blog/ListenControls.tsx";
 import TableOfContents from "#src/components/blog/TableOfContents.astro";
 
@@ -48,14 +47,14 @@ const postNode = {
   datePublished: post.data.date.toISOString(),
   dateModified: post.data.date.toISOString(),
   keywords: postKeywords(post).join(", "),
-  image: `${SITE_URL}/og-image.png`,
+  image: `${BLOG_URL}/og-image.png`,
   author: { "@id": PERSON_ID },
   publisher: { "@id": PERSON_ID },
   isPartOf: {
     "@type": "Blog",
-    "@id": `${SITE_URL}/#blog`,
-    name: SITE_TITLE,
-    url: `${SITE_URL}/`
+    "@id": `${BLOG_URL}/#blog`,
+    name: BLOG_TITLE,
+    url: `${BLOG_URL}/`
   }
 };
 ---

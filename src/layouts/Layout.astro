@@ -1,7 +1,6 @@
 ---
 import { Font } from "astro:assets";
-import { PERSON_ID, SITE_ORIGIN, WEBSITE_ID } from "#src/lib/site.ts";
-import { SITE_TITLE } from "#src/lib/blog/consts.ts";
+import { BLOG_TITLE, PERSON_ID, SITE_ORIGIN, WEBSITE_ID } from "#src/lib/site.ts";
 import { themeBootstrapScript } from "#src/lib/theme.ts";
 import "#src/styles/global.css";
 import ChatWidget from "#src/components/chat/ChatWidget.astro";
@@ -202,7 +201,7 @@ const jsonLdHtml = JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
     <link
       rel="alternate"
       type="application/rss+xml"
-      title={`${SITE_TITLE} RSS Feed`}
+      title={`${BLOG_TITLE} RSS Feed`}
       href="/blog/rss.xml"
     />
 

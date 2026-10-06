@@ -1,7 +1,7 @@
 // Text prep shared by the audio generator and the client, which must normalise
 // identically so block texts match the timing JSON.
 
-import { sha256Hex } from "./helpers";
+import { sha256Hex } from "#src/lib/hash.ts";
 
 // Emoji, pictographs and their modifiers. Punctuation is kept.
 const SYMBOLS = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE0F}\u{200D}]/gu;

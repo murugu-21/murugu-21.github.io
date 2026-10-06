@@ -1,11 +1,3 @@
-export function formatReadingTime(minutes: number): string {
-  const cups = Math.round(minutes / 5);
-  if (cups > 5) {
-    return `${Array.from({ length: Math.round(cups / Math.E) }, () => "🍱").join("")} ${minutes} min read`;
-  }
-  return `${Array.from({ length: cups || 1 }, () => "☕️").join("")} ${minutes} min read`;
-}
-
 // Hex SHA-256 via Web Crypto, so it runs in the browser, the build and the
 // Workers test pool alike.
 export async function sha256Hex(text: string): Promise<string> {
