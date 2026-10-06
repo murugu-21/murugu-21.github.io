@@ -15,6 +15,7 @@ import { autolinkConfig } from "./src/lib/blog/rehype-autolink-config";
 import remarkMermaid from "./src/lib/blog/remark-mermaid";
 import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
 import { NIGHT_OWL } from "./src/lib/blog/code-themes";
+import { SITE_ORIGIN } from "./src/lib/site";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
@@ -208,7 +209,7 @@ const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
 export default defineConfig({
-  site: "https://murugappan.dev",
+  site: SITE_ORIGIN,
   output: "static",
   // Builds the Worker in cloudflare.config.ts alongside the prerendered site.
   // 15.0.0-beta.1 drops a custom-entrypoint Worker from a static site without an
