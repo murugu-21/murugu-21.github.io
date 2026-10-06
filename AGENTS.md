@@ -63,10 +63,6 @@ Agents tend to hand-roll what a library or platform feature already does. Before
 - Stop or kill a dev server you didn't start. The user's `astro dev` is shared; stop only the ones your own session spun up.
 - Bypass a failing gate: no `--no-verify`, skipped tests, or loosened lint rules to get green. Fix the cause.
 
-## Commits
-
-`.githooks/commit-msg` enforces the format and lists the allowed types.
-
 ## Definition of done
 
 Never call a task complete until both of the following have happened.
