@@ -30,7 +30,11 @@ const blog = defineCollection({
     date: z.coerce.date(),
     description: z.string().optional(),
     tags: z.array(z.enum(BLOG_TAGS)).min(1).max(3),
-    keywords: z.array(z.string()).default([])
+    keywords: z.array(z.string()).default([]),
+    // Shown as a card in the homepage's Blogs section.
+    featured: z.boolean().default(false),
+    // The card's title, when the full one doesn't fit its two lines.
+    shortTitle: z.string().optional()
   })
 });
 

@@ -37,7 +37,7 @@ src/data/         # hand-written portfolio and resume data
 
 A file lives in the narrowest folder that holds every importer: a component only the homepage uses goes in `home/`, and one both halves use stays at the root of `components/`.
 
-Lint enforces the direction (`no-restricted-imports` in `.oxlintrc.json`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it lists the latest posts. Pages compose both halves freely, and so does `lib/llms.ts`, which renders the whole site for agents.
+Lint enforces the direction (`no-restricted-imports` in `.oxlintrc.json`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely, and so does `lib/llms.ts`, which renders the whole site for agents.
 
 ### Build
 
@@ -193,6 +193,8 @@ title: My post title
 date: "2026-06-10T10:00:00.000Z"
 tags: ["system-design"]
 keywords: ["kafka", "outbox"] # optional: SEO and search terms, never shown as chips
+featured: true # optional: a card in the homepage's Blogs section, newest first
+shortTitle: Short title # optional: the card's title when the full one runs past two lines
 description: One-line description shown in lists, search and feeds.
 ---
 ```

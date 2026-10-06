@@ -1,6 +1,17 @@
 ---
 import { blogSection } from "#src/data/portfolio.ts";
 import { accentTitle } from "#src/lib/accent.ts";
+import { getPublishedPosts, postDescription, postPath } from "#src/lib/blog/posts.ts";
+
+const featured = (await getPublishedPosts()).filter(post => post.data.featured).reverse();
+const cards = [
+  ...featured.map(post => ({
+    url: postPath(post.id),
+    title: post.data.shortTitle ?? post.data.title,
+    description: postDescription(post)
+  })),
+  blogSection.blogIndexCard
+];
 ---
 
 <div class="section-animate mx-auto mt-16 box-content w-[90%] px-2.5 py-5 max-xs:w-auto" id="blogs">
@@ -16,7 +27,7 @@ import { accentTitle } from "#src/lib/accent.ts";
   </div>
   <div class="flex">
     <div class="mb-[30px] grid flex-1 grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-8 min-[300px]:max-[481px]:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
-      {blogSection.blogs.map(blog => (
+      {cards.map(blog => (
         <div class="glow-card box-content h-[200px] cursor-pointer text-blog-container dark:text-white">
           {/* `group` drives the ::before hover wipe; its scale is tuned per
                 breakpoint so it always covers the card. */}

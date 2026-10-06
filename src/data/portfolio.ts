@@ -284,31 +284,12 @@ export const blogSection = {
   title: "Blogs",
   subtitle:
     "I write about real-world software engineering: distributed systems, cloud architecture, and lessons from production.",
-  blogs: [
-    {
-      url: "https://murugappan.dev/blog/sitegpt-partykit-durable-objects/",
-      title: "Why SiteGPT's chat runs on PartyKit, not socket.io + Redis",
-      description:
-        "How a one-process-per-room architecture replaces socket.io + Redis for realtime chat, with production code, cost math and the actor-model tradeoffs from the chatbot running on this site."
-    },
-    {
-      url: "https://murugappan.dev/blog/eventform-outbox-pipeline-claude/",
-      title: "Forms in, webhooks out: an event-driven pipeline",
-      description:
-        "Building a multi-tenant form builder with a transactional outbox, Debezium CDC, idempotent webhook delivery and OAuth handed off to Cognito, and what it taught me about event-driven design."
-    },
-    {
-      url: "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/",
-      title: "Modern distributed rate limiting in the cloud",
-      description:
-        "A portable two-tier IP and per-user rate-limiting pattern that protects your compute budget now that LLM agents make per-user limits essential, without locking you to one cloud."
-    },
-    {
-      url: "https://murugappan.dev/blog/",
-      title: "SDE Journey, my technical blog",
-      description: "Hard-won lessons from building software that runs in production."
-    }
-  ]
+  // Follows the featured posts (content/blog, `featured: true`).
+  blogIndexCard: {
+    url: "/blog/",
+    title: "SDE Journey, my technical blog",
+    description: "Hard-won lessons from building software that runs in production."
+  }
 };
 
 export const contactInfo = {
