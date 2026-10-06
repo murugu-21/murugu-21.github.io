@@ -62,7 +62,8 @@ const {
 } = Astro.props;
 const pageMetaDescription = pageDescription ?? section.metaDescription;
 const socialDescription = pageDescription ?? section.socialDescription;
-const twitterHandle = new URL(socialMediaLinks.twitter).pathname.replace(/^\//, "");
+// X reads twitter:creator as "@username".
+const twitterHandle = new URL(socialMediaLinks.twitter).pathname.replace(/^\//, "@");
 
 // Canonical on the custom domain, so other hosts (workers.dev previews) consolidate to it.
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
