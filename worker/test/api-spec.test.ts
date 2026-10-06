@@ -1,17 +1,10 @@
-// The API's contract as data: the route table, the version catalogue and the
-// OpenAPI document generated from them, checked against each other.
+// The API's contract as data: the router, the version catalogue and the OpenAPI
+// document, checked against each other.
 import { assert, describe, expect, it } from "vitest";
 
+import { api } from "#worker/api/index.ts";
 import { buildOpenApiDocument } from "#worker/api/openapi.ts";
-import {
-  ALLOWED_METHODS,
-  API_BASE,
-  API_PATHS,
-  matchApiPath,
-  SPEC_PATHS,
-  toVersionedPath,
-  VERSIONED_API_BASE
-} from "#worker/api/routes.ts";
+import { API_BASE, API_PATHS, VERSIONED_API_BASE } from "#worker/api/routes.ts";
 import {
   buildVersionsDocument,
   CURRENT_VERSION_RECORD,
@@ -19,45 +12,6 @@ import {
   versionLinkHeader,
   type VersionRecord
 } from "#worker/api/versioning.ts";
-
-describe("toVersionedPath", () => {
-  it.each([
-    ["/api/profile", "/api/v1/profile"],
-    ["/api/posts/some-slug", "/api/v1/posts/some-slug"],
-    ["/api/v1/profile", "/api/v1/profile"],
-    // A bare prefix names no endpoint, so it is left alone.
-    ["/api", "/api"],
-    ["/api/v1", "/api/v1"],
-    ["/openapi.json", "/openapi.json"],
-    ["/blog/some-post", "/blog/some-post"]
-  ])("maps %s to %s", (input, expected) => {
-    expect(toVersionedPath(input)).toBe(expected);
-  });
-});
-
-describe("matchApiPath", () => {
-  it.each([
-    ["/api/profile", API_PATHS.profile],
-    ["/api/open-source", API_PATHS.openSource],
-    ["/api/profile/", API_PATHS.profile],
-    ["/api/posts/coin-change-problem", API_PATHS.post],
-    ["/api/posts/coin-change-problem/", API_PATHS.post],
-    // The literal collection path wins over the {slug} template.
-    ["/api/posts", API_PATHS.posts],
-    ["/openapi.json", API_PATHS.openapiRoot],
-    ["/api/v1/profile", API_PATHS.profile],
-    ["/api/v1/posts/coin-change-problem", API_PATHS.post],
-    ["/api/v1/versions", API_PATHS.versions],
-    ["/api/versions", API_PATHS.versions],
-    ["/api/nope", null],
-    ["/api/posts/a/b", null],
-    ["/api", null],
-    ["/api/v1", null],
-    ["/api/v2/profile", null]
-  ])("matches %s to %s", (input, expected) => {
-    expect(matchApiPath(input)).toBe(expected);
-  });
-});
 
 describe("version headers", () => {
   const deprecated: VersionRecord = {
@@ -138,14 +92,16 @@ describe("buildOpenApiDocument", () => {
     return found;
   }
 
+  // oxlint-disable-next-line tests/observe-behaviour -- relation: spec paths against the router's own table
   it("documents exactly the paths and methods the router serves", () => {
-    expect(Object.keys(doc.paths).sort()).toEqual([...SPEC_PATHS].sort());
-    for (const path of SPEC_PATHS) {
-      const documented = Object.keys(doc.paths[path])
-        .map(m => m.toUpperCase())
-        .sort();
-      expect(documented, path).toEqual([...ALLOWED_METHODS[path]].sort());
-    }
+    // HEAD rides along with GET and is not a separate operation; ALL is middleware or the 404.
+    const served = api.routes
+      .filter(r => r.method !== "ALL" && r.method !== "HEAD")
+      .map(r => `${r.method} ${VERSIONED_API_BASE}${r.path.replace(/:(\w+)/g, "{$1}")}`);
+    const documented = Object.entries(doc.paths).flatMap(([path, item]) =>
+      Object.keys(item).map(method => `${method.toUpperCase()} ${path}`)
+    );
+    expect(documented.sort()).toEqual([...new Set(served)].sort());
   });
 
   it("gives every operation a unique operationId", () => {

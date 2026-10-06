@@ -273,18 +273,19 @@ describe("error handling under /api", () => {
     expect((await errorBody(res)).code).toBe("not_found");
   });
 
-  it("405s a write to a read-only endpoint and says which methods work", async () => {
-    const res = await post("/api/profile", {});
+  it.each([
+    ["POST", "/api/profile", "GET, HEAD, OPTIONS"],
+    ["GET", "/api/contact", "POST, OPTIONS"],
+    ["GET", "/api/v1/contact", "POST, OPTIONS"],
+    ["DELETE", "/api/posts/coin-change-problem", "GET, HEAD, OPTIONS"],
+    ["POST", "/openapi.json", "GET, HEAD, OPTIONS"]
+  ])("405s %s %s and allows %s", async (method, path, allow) => {
+    const res = await fetchWorker(path, { method });
     expect(res.status).toBe(405);
-    expect(res.headers.get("Allow")).toBe("GET, HEAD, OPTIONS");
-    expect((await errorBody(res)).code).toBe("method_not_allowed");
-  });
-
-  it("405s a read of the write-only endpoint", async () => {
-    const res = await get("/api/contact");
-    expect(res.status).toBe(405);
-    expect(res.headers.get("Allow")).toBe("POST, OPTIONS");
-    expect((await errorBody(res)).code).toBe("method_not_allowed");
+    expect(res.headers.get("Allow")).toBe(allow);
+    const error = await errorBody(res);
+    expect(error.code).toBe("method_not_allowed");
+    expect(error.message).toBe(`${method} is not supported on ${path}.`);
   });
 
   it("answers a CORS preflight", async () => {
@@ -366,6 +367,25 @@ describe("POST /api/contact", () => {
       { email: "ada@example.com", message: "x".repeat(40_000) },
       { ip: "203.0.113.14" }
     );
+    expect(res.status).toBe(413);
+    expect((await errorBody(res)).code).toBe("payload_too_large");
+  });
+
+  it("rejects an oversized streamed body that declares no length", async () => {
+    const chunk = new TextEncoder().encode("x".repeat(8 * 1024));
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent++ < 3) controller.enqueue(chunk);
+        else controller.close();
+      }
+    });
+    const res = await fetchWorker("/api/contact", {
+      method: "POST",
+      ip: "203.0.113.16",
+      headers: { "Content-Type": "application/json" },
+      body
+    });
     expect(res.status).toBe(413);
     expect((await errorBody(res)).code).toBe("payload_too_large");
   });
