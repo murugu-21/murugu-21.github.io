@@ -12,12 +12,13 @@ const interaction: ClientDirective = (load, _options, el) => {
     el.dataset.openOnHydrate = "true";
   };
   el.addEventListener("click", rememberClick);
-  onFirstInteraction(async () => {
+  const hydrateNow = async () => {
     const hydrate = await load();
     await hydrate();
     // From here React owns the click.
     el.removeEventListener("click", rememberClick);
-  });
+  };
+  onFirstInteraction(() => void hydrateNow());
 };
 
 export default interaction;

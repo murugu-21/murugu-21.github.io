@@ -199,7 +199,7 @@ export async function fetchWorker(
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   if (ip) headers.set("CF-Connecting-IP", ip);
-  return await worker.fetch(
+  return worker.fetch(
     new Request(new URL(path, "https://murugappan.dev"), { ...init, headers }),
     testEnv(envOptions)
   );

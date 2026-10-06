@@ -16,13 +16,16 @@ export default defineConfig({
       ChatRoom: exports.durableObject({ storage: "sqlite" }),
       RateLimiter: exports.durableObject({ storage: "sqlite" })
     },
-    compatibilityDate: "2026-08-01",
-    compatibilityFlags: ["nodejs_compat"],
+    compatibilityDate: "2026-10-01",
     domains: ["murugappan.dev"],
     // Turns off the *.workers.dev URL so crawlers don't index a second copy of the
     // site. Preview URLs still work.
     workersDev: false,
-    observability: { enabled: true },
+    observability: {
+      enabled: true,
+      // Spans count toward the Workers Logs event quota, so trace a sample.
+      traces: { enabled: true, headSamplingRate: 0.2 }
+    },
     assets: {
       // Misses go to the Worker so worker/not-found.ts can content-negotiate the
       // 404; "404-page" would answer every miss with 404.html.

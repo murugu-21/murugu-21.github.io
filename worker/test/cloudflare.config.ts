@@ -8,8 +8,7 @@ export default defineConfig({
   worker: {
     name: "murugappan-dev-test",
     entrypoint: "../server.ts",
-    compatibilityDate: "2026-08-01",
-    compatibilityFlags: ["nodejs_compat"],
+    compatibilityDate: "2026-10-01",
     exports: {
       ChatRoom: exports.durableObject({ storage: "sqlite" }),
       RateLimiter: exports.durableObject({ storage: "sqlite" })

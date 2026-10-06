@@ -135,7 +135,7 @@ version query parameter.
   path version.
 - Every response carries `API-Version` (the release that answered) and
   `API-Supported-Versions`, plus `Link: </api/v1/versions>;
-rel="version-history"`.
+  rel="version-history"`.
 - A deprecated version answers every request with `Deprecation` (RFC 9745) and
   `Sunset` (RFC 8594) headers and `Link` relations `deprecation` and
   `successor-version`. At least 180 days pass between the first `Deprecation`
@@ -163,7 +163,7 @@ RateLimit: "reads";r=599;t=60
   floor rather than a cap.
 - **`POST /api/v1/contact`** allows 3 per client IP per UTC day, 20 site-wide,
   `RateLimit-Policy: "contact-client";q=3;w=86400,
-"contact-site";q=20;w=86400`. A rejected request spends nothing, and neither
+  "contact-site";q=20;w=86400`. A rejected request spends nothing, and neither
   does a dry run. A dry run still reports the allowance, so use it to size a
   real send.
 

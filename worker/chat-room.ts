@@ -281,17 +281,16 @@ export class ChatRoom extends Server<Env> {
     this.upsertMeta("visitor_last_seen", String(now));
     if (knownFirstSeen === null) this.upsertMeta("visitor_first_seen", String(now));
 
-    this.env.CHAT_DB?.prepare(
-      `INSERT INTO rooms (room_id, country, ip, first_seen, last_seen)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT (room_id) DO UPDATE SET
-         country = COALESCE(excluded.country, rooms.country),
-         ip = COALESCE(excluded.ip, rooms.ip),
-         last_seen = excluded.last_seen`
-    )
-      .bind(this.name, visitor.country, visitor.ip, firstSeen, now)
-      .run()
-      .catch((err: unknown) => console.error("d1 mirror failed", err));
+    this.mirrorToD1(
+      this.env.CHAT_DB?.prepare(
+        `INSERT INTO rooms (room_id, country, ip, first_seen, last_seen)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT (room_id) DO UPDATE SET
+           country = COALESCE(excluded.country, rooms.country),
+           ip = COALESCE(excluded.ip, rooms.ip),
+           last_seen = excluded.last_seen`
+      ).bind(this.name, visitor.country, visitor.ip, firstSeen, now)
+    );
   }
 
   private metaValue(key: string): string | null {
@@ -344,14 +343,20 @@ export class ChatRoom extends Server<Env> {
       content,
       createdAt
     );
-    // The D1 mirror is fire-and-forget. Rooms aren't enumerable, so it is the
-    // only global view. The DO's SQLite stays the source of truth.
-    this.env.CHAT_DB?.prepare(
-      `INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)`
-    )
-      .bind(this.name, role, content, createdAt)
-      .run()
-      .catch((err: unknown) => console.error("d1 mirror failed", err));
+    this.mirrorToD1(
+      this.env.CHAT_DB?.prepare(
+        `INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)`
+      ).bind(this.name, role, content, createdAt)
+    );
+  }
+
+  // D1 is the only global view (rooms aren't enumerable) but the DO's SQLite is the
+  // source of truth, so the write is fire-and-forget; waitUntil holds off eviction.
+  private mirrorToD1(statement: D1PreparedStatement | undefined): void {
+    if (!statement) return;
+    this.ctx.waitUntil(
+      statement.run().catch((err: unknown) => console.error("d1 mirror failed", err))
+    );
   }
 
   private broadcastMsg(message: ServerMessage, exclude?: string[]): void {

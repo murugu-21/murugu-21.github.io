@@ -15,7 +15,7 @@ import {
 import { connectRoom, recordingEmail, testEnv, visitorMeta } from "./fixtures";
 
 describe("ChatRoom storage", () => {
-  it("seeds the greeting exactly once on first connect", async () => {
+  it("seeds the greeting exactly once on first connect, and mirrors it to D1", async () => {
     await connectRoom("room-greet");
     // A reconnect must not seed again.
     const { history } = await connectRoom("room-greet");
@@ -23,12 +23,27 @@ describe("ChatRoom storage", () => {
       type: "history",
       messages: [{ role: "assistant", content: GREETING }]
     });
+
+    // The mirror write is fire-and-forget, so poll until it lands.
+    const mirrored = await vi.waitFor(
+      async () => {
+        const { results } = await env.CHAT_DB.prepare(
+          `SELECT role, content FROM messages WHERE room_id = ?`
+        )
+          .bind("room-greet")
+          .all();
+        assert(results.length > 0, "no messages row yet");
+        return results;
+      },
+      { timeout: 2000, interval: 5 }
+    );
+    expect(mirrored).toEqual([{ role: "assistant", content: GREETING }]);
   });
 
   it("records the visitor's country and IP, keeping first-seen across reconnects", async () => {
     const meta = async (headers: Record<string, string>) => {
       const { stub } = await connectRoom("room-visitor", headers);
-      return await runInDurableObject(stub, visitorMeta);
+      return runInDurableObject(stub, visitorMeta);
     };
 
     const first = await meta({ "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.7" });

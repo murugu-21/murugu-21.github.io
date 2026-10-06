@@ -60,7 +60,7 @@ GITHUB_TOKEN=ghp_xxx bun run build
 ## Checks
 
 ```bash
-bun run check-format   # oxfmt, plus prettier for .astro and content markdown
+bun run check-format   # oxfmt, plus prettier for .astro
 bun run lint           # astro sync, then oxlint (type-aware via oxlint-tsgolint)
 bun run types          # regenerate .cloudflare/types from cloudflare.config.ts (Env plus the runtime types)
 bun run check:astro    # type-check .astro files

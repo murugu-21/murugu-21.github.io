@@ -3,5 +3,14 @@
   "trailingComma": "none",
   "arrowParens": "avoid",
   "printWidth": 100,
-  "sortPackageJson": false
+  "sortPackageJson": false,
+  "overrides": [
+    {
+      "files": ["content/**/*.md"],
+      "options": {
+        "semi": false,
+        "trailingComma": "all"
+      }
+    }
+  ]
 }
