@@ -1,85 +1,159 @@
-import { Server, type Connection, type ConnectionContext } from "partyserver";
+import { AIChatAgent, type ChatResponseResult } from "@cloudflare/ai-chat";
+import type { Connection, ConnectionContext, WSMessage } from "agents";
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  streamText,
+  type LanguageModel,
+  type LanguageModelUsage,
+  type UIMessageStreamWriter
+} from "ai";
 import { z } from "zod";
 
-import { isInsufficientBalance, runDeepseekExchange } from "./ai";
+import { deepseek, isInsufficientBalance, jarvisCall } from "./ai";
 import { globalLimiter } from "./api/ratelimit";
-import { contactMailer, parseLeadArguments, sendOpportunityEmail, type Lead } from "./email";
+import { contactMailer, sendOpportunityEmail } from "./email";
 import { fetchSitePage } from "./fetch-page";
 import { getGrounding } from "./grounding";
 import { jsonString, lenient } from "#utils/json.ts";
-import { buildMessages, parseFetchArguments, ROOM_DAILY_LIMIT, type ModelMessage } from "./prompt";
-import type { StreamResult, ToolCall } from "./sse";
+import { buildMessages, jarvisTools, ROOM_DAILY_LIMIT, type Lead } from "./prompt";
 import {
-  GREETING,
+  ERROR_NOTICE,
+  fetchActivity,
+  LIMIT_NOTICE,
   MAX_MESSAGE_LENGTH,
+  messageText,
   parseVisitorContext,
-  toolFrame,
   type ChatHistoryEntry,
-  type ServerMessage
+  type JarvisMessage,
+  type Notice
 } from "./protocol";
 
-const PAGE_PATH = /^\/[^\s]{0,199}$/;
-
-const ClientMessage = jsonString(
-  z.object({
-    type: z.literal("chat"),
-    text: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
-    // The visitor's current site path; never persisted. A malformed one is dropped, not rejected.
-    page: lenient(z.string().regex(PAGE_PATH))
-  })
-);
-
-type ClientMessage = z.infer<typeof ClientMessage>;
-
-export const parseClientMessage = (raw: unknown): ClientMessage | null =>
-  ClientMessage.safeParse(raw).data ?? null;
-
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MAX_FETCH_ROUNDS = 2;
 
 type CountRow = { n: number };
 
-const LIMIT_MESSAGE =
-  "I've hit my chat budget for now. Please reach Murugappan directly " +
-  "through the social links on this site instead.";
+const UNREADABLE = "Sorry, I couldn't read that message.";
 
-// Strict OpenAI shape, an assistant message with tool_calls followed by a tool
-// message, so any provider accepts it.
-function toolExchange({
-  call,
-  content,
-  result
-}: {
-  call: ToolCall;
-  content: string;
-  result: string;
-}): ModelMessage[] {
-  return [
-    {
-      role: "assistant",
-      content,
-      tool_calls: [
-        { id: call.id, type: "function", function: { name: call.name, arguments: call.arguments } }
-      ]
-    },
-    { role: "tool", tool_call_id: call.id, content: result }
-  ];
+// Frames that can't start a model call or touch stored messages, passed through as sent.
+const PASSTHROUGH_FRAMES = new Set([
+  "cf_agent_stream_resume_request",
+  "cf_agent_stream_resume_ack",
+  "cf_agent_chat_request_cancel"
+]);
+
+const FrameType = jsonString(z.looseObject({ type: z.string(), id: lenient(z.string()) }));
+
+const ChatRequest = jsonString(
+  z.object({
+    type: z.literal("cf_agent_use_chat_request"),
+    id: z.string().min(1).max(100),
+    init: z.object({
+      method: z.literal("POST"),
+      body: jsonString(
+        z.object({
+          // Only the newest message is read; the room's stored history replaces the rest.
+          messages: z.array(z.unknown()).min(1),
+          trigger: z.literal("submit-message"),
+          // The visitor's current site path; never persisted. A malformed one is dropped.
+          page: lenient(z.string().regex(/^\/[^\s]{0,199}$/))
+        })
+      )
+    })
+  })
+);
+
+const UserMessage = z.object({
+  id: z.string().min(1).max(100),
+  role: z.literal("user"),
+  parts: z.tuple([
+    z.object({ type: z.literal("text"), text: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH) })
+  ])
+});
+
+const RequestBody = z.object({ page: lenient(z.string()) });
+
+// Keeps spend visible in the Worker logs, one line per model call.
+function logUsage(usage: LanguageModelUsage): void {
+  console.log(
+    "deepseek usage",
+    JSON.stringify({ promptTokens: usage.inputTokens, completionTokens: usage.outputTokens })
+  );
 }
 
-export class ChatRoom extends Server<Env> {
-  static options = { hibernate: true };
+function noticeResponse(notice: Notice): Response {
+  return createUIMessageStreamResponse({
+    stream: createUIMessageStream<JarvisMessage>({
+      execute: ({ writer }) => writer.write({ type: "data-notice", data: notice })
+    })
+  });
+}
+
+export class ChatRoom extends AIChatAgent<Env> {
+  maxPersistedMessages = 200;
+  // A message sent while a turn runs (another tab, say) is refused, so turns never interleave.
+  messageConcurrency = "drop" as const;
 
   // Public so tests can drive `ctx.storage.sql` via `runInDurableObject`.
   declare public ctx: DurableObjectState<Record<string, unknown>>;
 
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    // AIChatAgent trusts the client's whole transcript: it persists whatever
+    // history a frame carries and runs turns for tool results. Its handler is an
+    // instance property, so wrapping it here sees every frame first.
+    const handle = this.onMessage.bind(this);
+    this.onMessage = (connection, message) => {
+      const frame = this.admit(connection, message);
+      return frame === null ? undefined : handle(connection, frame);
+    };
+  }
+
+  // Lets through a new visitor message, rebased on the stored history, and the
+  // resume and cancel frames. Everything else is dropped.
+  private admit(connection: Connection, message: WSMessage): string | null {
+    if (typeof message !== "string") return null;
+    const frame = FrameType.safeParse(message).data;
+    if (!frame) return null;
+    if (PASSTHROUGH_FRAMES.has(frame.type)) return message;
+    if (frame.type !== "cf_agent_use_chat_request") return null;
+
+    const request = ChatRequest.safeParse(message).data;
+    const { messages, page } = request?.init.body ?? {};
+    const latest = UserMessage.safeParse(messages?.at(-1)).data;
+    if (!request || !latest || this.messages.some(m => m.id === latest.id)) {
+      if (frame.id) this.rejectRequest(connection, frame.id);
+      return null;
+    }
+    return JSON.stringify({
+      type: request.type,
+      id: request.id,
+      init: {
+        method: "POST",
+        body: JSON.stringify({
+          messages: [...this.messages, latest],
+          trigger: "submit-message",
+          page
+        })
+      }
+    });
+  }
+
+  private rejectRequest(connection: Connection, id: string): void {
+    connection.send(
+      JSON.stringify({
+        type: "cf_agent_use_chat_response",
+        id,
+        body: UNREADABLE,
+        done: true,
+        error: true
+      })
+    );
+  }
+
   onStart(): void {
     this.ctx.storage.sql.exec(
-      `CREATE TABLE IF NOT EXISTS messages (
-         id INTEGER PRIMARY KEY AUTOINCREMENT,
-         role TEXT NOT NULL,
-         content TEXT NOT NULL,
-         created_at INTEGER NOT NULL
-       );
+      `CREATE TABLE IF NOT EXISTS user_messages (created_at INTEGER NOT NULL);
        CREATE TABLE IF NOT EXISTS leads (
          id INTEGER PRIMARY KEY AUTOINCREMENT,
          name TEXT,
@@ -94,115 +168,118 @@ export class ChatRoom extends Server<Env> {
     );
   }
 
-  onConnect(connection: Connection, ctx: ConnectionContext): void {
-    // Synchronous check-and-insert, so the greeting can't be seeded twice.
-    const { n } = this.ctx.storage.sql.exec<CountRow>(`SELECT COUNT(*) AS n FROM messages`).one();
-    if (n === 0) this.persist("assistant", GREETING);
+  onConnect(_connection: Connection, ctx: ConnectionContext): void {
     this.recordVisitor(ctx.request);
-    this.send(connection, { type: "history", messages: this.history() });
   }
 
-  // Serializes turns: concurrent tabs would otherwise interleave across awaits
-  // and garble the broadcast stream.
-  private pendingTurn: Promise<void> = Promise.resolve();
-
-  async onMessage(connection: Connection, raw: unknown): Promise<void> {
-    const msg = parseClientMessage(raw);
-    if (!msg) {
-      this.send(connection, {
-        type: "error",
-        message: "Sorry, I couldn't read that message."
-      });
-      return;
-    }
-
-    const turn = this.pendingTurn.then(() => this.handleTurn(connection, msg));
-    this.pendingTurn = turn.catch(() => {});
-    await turn;
+  // An interrupted turn is dropped rather than retried, since a retry bills the model again.
+  async onChatRecovery(): Promise<{ continue: false }> {
+    return { continue: false };
   }
 
-  private async handleTurn(connection: Connection, msg: ClientMessage): Promise<void> {
-    // A missing key gates like an empty account; the visitor can't fix either.
-    const key = this.deepseekKey();
-    if (
-      this.userMessagesSince(Date.now() - DAY_MS) >= ROOM_DAILY_LIMIT ||
-      !key ||
-      !(await globalLimiter(this.env).chatAvailable(key))
-    ) {
-      this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
-      return;
-    }
-
-    this.persist("user", msg.text);
-    // The sender already rendered its bubble optimistically.
-    this.broadcastMsg({ type: "visitor", text: msg.text }, [connection.id]);
-
+  async onChatMessage(
+    _onFinish: unknown,
+    options?: { abortSignal?: AbortSignal; body?: Record<string, unknown> }
+  ): Promise<Response> {
     try {
-      await this.generate(key, msg.page);
+      // A missing key gates like an empty account; the visitor can't fix either.
+      const key = this.deepseekKey();
+      if (
+        this.userMessagesSince(Date.now() - DAY_MS) >= ROOM_DAILY_LIMIT ||
+        !key ||
+        !(await globalLimiter(this.env).chatAvailable(key))
+      ) {
+        return noticeResponse(LIMIT_NOTICE);
+      }
+      this.recordUserMessage();
+
+      const { page } = RequestBody.parse(options?.body ?? {});
+      return createUIMessageStreamResponse({
+        stream: createUIMessageStream<JarvisMessage>({
+          execute: ({ writer }) =>
+            this.reply({ writer, key, page, abortSignal: options?.abortSignal })
+        })
+      });
+    } catch (err) {
+      console.error("chat turn failed", err);
+      return noticeResponse(ERROR_NOTICE);
+    }
+  }
+
+  protected onChatResponse({ message }: ChatResponseResult): void {
+    const content = messageText(message);
+    if (content) this.mirrorMessage("assistant", content);
+  }
+
+  // One reply through the AI SDK tool loop. Only prose and the running tool's
+  // name reach the client: tool inputs hold contact details, and outputs hold whole pages.
+  private async reply({
+    writer,
+    key,
+    page,
+    abortSignal
+  }: {
+    writer: UIMessageStreamWriter<JarvisMessage>;
+    key: string;
+    page?: string;
+    abortSignal?: AbortSignal;
+  }): Promise<void> {
+    writer.write({ type: "start" });
+    let wroteText = false;
+    let failure: Notice | null = null;
+    try {
+      const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
+      const result = streamText({
+        ...jarvisCall({
+          model: this.languageModel(key),
+          messages: buildMessages(grounding, this.history(), page),
+          tools: jarvisTools({
+            fetchPage: url => fetchSitePage(this.env.ASSETS, url),
+            captureLead: lead => this.captureLead(lead)
+          })
+        }),
+        abortSignal
+      });
+      for await (const part of result.stream) {
+        if (part.type === "text-start") {
+          writer.write({ type: "text-start", id: part.id });
+        } else if (part.type === "text-delta") {
+          wroteText ||= part.text.trim() !== "";
+          writer.write({ type: "text-delta", id: part.id, delta: part.text });
+        } else if (part.type === "text-end") {
+          writer.write({ type: "text-end", id: part.id });
+        } else if (part.type === "tool-call" && !part.dynamic) {
+          // Sent as the call is parsed, before its tool runs: a page fetch is a turn's longest silence.
+          writer.write({
+            type: "data-activity",
+            data:
+              part.toolName === "fetch_page"
+                ? fetchActivity(part.input.url)
+                : { name: "capture_opportunity" }
+          });
+        } else if (part.type === "finish-step") {
+          logUsage(part.usage);
+        } else if (part.type === "error") {
+          throw part.error;
+        }
+      }
     } catch (err) {
       console.error("chat generation failed", err);
       // A 402 beats the cached balance, so gate every room until the next check.
-      if (isInsufficientBalance(err)) {
-        await globalLimiter(this.env).markChatExhausted();
-        this.send(connection, { type: "limit", message: LIMIT_MESSAGE });
-        return;
-      }
-      this.send(connection, {
-        type: "error",
-        message: "Something went wrong on my end. Please try again."
-      });
+      const exhausted = isInsufficientBalance(err);
+      if (exhausted) await globalLimiter(this.env).markChatExhausted();
+      failure = exhausted ? LIMIT_NOTICE : ERROR_NOTICE;
     }
+    // Every turn ends in prose or a notice; the widget waits for one or the other.
+    // A cancelled turn ends quietly.
+    const notice = abortSignal?.aborted ? null : (failure ?? (wroteText ? null : ERROR_NOTICE));
+    if (notice) writer.write({ type: "data-notice", data: notice });
+    writer.write({ type: "finish" });
   }
 
-  // One reply turn: up to MAX_FETCH_ROUNDS fetch_page rounds, an optional
-  // capture exchange, then persist. Everything is broadcast to the room.
-  private async generate(key: string, page?: string): Promise<void> {
-    const onDelta = (text: string) => this.broadcastMsg({ type: "delta", text });
-    const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
-    const messages = buildMessages(grounding, this.history(), page);
-
-    let reply = "";
-    let capture: ToolCall | undefined;
-    for (let round = 0; ; round++) {
-      const result = await this.exchange(key, messages, onDelta);
-      reply += result.content;
-      capture ??= result.toolCalls.find(t => t.name === "capture_opportunity");
-
-      const fetchCall = result.toolCalls.find(t => t.name === "fetch_page");
-      if (!fetchCall || round >= MAX_FETCH_ROUNDS) break;
-
-      const url = parseFetchArguments(fetchCall.arguments);
-      // Announce before the await, since fetch plus follow-up is a turn's longest silence.
-      this.broadcastMsg(toolFrame("fetch_page", url));
-      const pageText = url
-        ? await fetchSitePage(this.env.ASSETS, url)
-        : "The url argument was missing.";
-      messages.push(
-        ...toolExchange({ call: fetchCall, content: result.content, result: pageText })
-      );
-    }
-
-    if (capture) {
-      if (reply) this.broadcastMsg({ type: "delta", text: "\n" });
-      const followUp = await this.handleCapture(capture, key, onDelta);
-      reply = reply && followUp ? `${reply}\n${followUp}` : reply || followUp;
-    }
-
-    // Collapse stray blank lines left between exchanges.
-    reply = reply.replace(/\n{3,}/g, "\n\n").trim();
-    if (reply) this.persist("assistant", reply);
-    this.broadcastMsg({ type: "done" });
-  }
-
-  private async exchange(
-    key: string,
-    messages: ModelMessage[],
-    onDelta: (text: string) => void
-  ): Promise<StreamResult> {
-    const result = await runDeepseekExchange({ apiKey: key, messages, onDelta });
-    // Keeps spend visible in the Worker logs.
-    console.log("deepseek usage", JSON.stringify(result.usage));
-    return result;
+  // Tests swap in a scripted model here.
+  protected languageModel(key: string): LanguageModel {
+    return deepseek({ apiKey: key });
   }
 
   // Typed required (secrets.required gates deploy), but local dev may lack it.
@@ -210,37 +287,9 @@ export class ChatRoom extends Server<Env> {
     return this.env.DEEPSEEK_API_KEY?.trim() || null;
   }
 
-  // Stores the lead, emails once per room, and has the model phrase the
-  // confirmation.
-  private async handleCapture(
-    capture: ToolCall,
-    key: string,
-    onDelta: (text: string) => void
-  ): Promise<string> {
-    const lead = parseLeadArguments(capture.arguments);
-    if (!lead) return "";
-
-    this.broadcastMsg(toolFrame("capture_opportunity"));
+  private async captureLead(lead: Lead): Promise<void> {
     this.storeLead(lead);
     await this.emailLeadOnce(lead);
-
-    const grounding = await getGrounding(this.ctx.storage, this.env.ASSETS);
-    const followUp = await this.exchange(
-      key,
-      [
-        ...buildMessages(grounding, this.history()),
-        ...toolExchange({
-          call: capture,
-          content: "",
-          result: JSON.stringify({
-            status: "recorded",
-            note: "Murugappan will be notified by email."
-          })
-        })
-      ],
-      onDelta
-    );
-    return followUp.content;
   }
 
   private async emailLeadOnce(lead: Lead): Promise<void> {
@@ -250,19 +299,18 @@ export class ChatRoom extends Server<Env> {
       console.error("opportunity email skipped: no EMAIL binding or inbox");
       return;
     }
+    // Claimed before the send: two captures in one step run in parallel.
+    this.upsertMeta("lead_captured", new Date().toISOString());
     try {
       await sendOpportunityEmail({
         ...mailer,
         lead,
         transcript: this.history()
       });
-      this.ctx.storage.sql.exec(
-        `INSERT INTO meta (key, value) VALUES ('lead_captured', ?)`,
-        new Date().toISOString()
-      );
     } catch (err) {
       // Lead is already in SQLite; losing the email must not kill the chat.
       console.error("opportunity email failed", err);
+      this.ctx.storage.sql.exec(`DELETE FROM meta WHERE key = 'lead_captured'`);
     }
   }
 
@@ -321,32 +369,32 @@ export class ChatRoom extends Server<Env> {
   }
 
   private history(): ChatHistoryEntry[] {
-    return this.ctx.storage.sql
-      .exec<ChatHistoryEntry>(`SELECT role, content FROM messages ORDER BY id ASC`)
-      .toArray();
+    return this.messages.flatMap(message => {
+      const content = messageText(message);
+      return content && (message.role === "user" || message.role === "assistant")
+        ? [{ role: message.role, content }]
+        : [];
+    });
   }
 
   private userMessagesSince(cutoff: number): number {
     return this.ctx.storage.sql
-      .exec<CountRow>(
-        `SELECT COUNT(*) AS n FROM messages WHERE role = 'user' AND created_at > ?`,
-        cutoff
-      )
+      .exec<CountRow>(`SELECT COUNT(*) AS n FROM user_messages WHERE created_at > ?`, cutoff)
       .one().n;
   }
 
-  private persist(role: "user" | "assistant", content: string): void {
-    const createdAt = Date.now();
-    this.ctx.storage.sql.exec(
-      `INSERT INTO messages (role, content, created_at) VALUES (?, ?, ?)`,
-      role,
-      content,
-      createdAt
-    );
+  // Counts the visitor's newest message toward the room's daily limit and mirrors it to D1.
+  private recordUserMessage(): void {
+    this.ctx.storage.sql.exec(`INSERT INTO user_messages (created_at) VALUES (?)`, Date.now());
+    const latest = this.messages.filter(m => m.role === "user").at(-1);
+    if (latest) this.mirrorMessage("user", messageText(latest));
+  }
+
+  private mirrorMessage(role: "user" | "assistant", content: string): void {
     this.mirrorToD1(
       this.env.CHAT_DB?.prepare(
         `INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)`
-      ).bind(this.name, role, content, createdAt)
+      ).bind(this.name, role, content, Date.now())
     );
   }
 
@@ -357,13 +405,5 @@ export class ChatRoom extends Server<Env> {
     this.ctx.waitUntil(
       statement.run().catch((err: unknown) => console.error("d1 mirror failed", err))
     );
-  }
-
-  private broadcastMsg(message: ServerMessage, exclude?: string[]): void {
-    this.broadcast(JSON.stringify(message), exclude);
-  }
-
-  private send(connection: Connection, message: ServerMessage): void {
-    connection.send(JSON.stringify(message));
   }
 }

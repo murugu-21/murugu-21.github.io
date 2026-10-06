@@ -1,83 +1,55 @@
+import { tool, type ModelMessage } from "ai";
 import { z } from "zod";
 
-import { jsonString } from "#utils/json.ts";
+import { lenient } from "#utils/json.ts";
 
 export const MAX_HISTORY_MESSAGES = 20;
 // Per-room cap over a rolling 24h; the only pacing on spend.
 export const ROOM_DAILY_LIMIT = 40;
 
-// OpenAI-compatible, so any chat-completions provider can serve them.
-export type ModelToolCall = {
-  id: string;
-  type: "function";
-  function: { name: string; arguments: string };
-};
+const LeadInput = z.object({
+  // A non-string name is dropped; the lead is still worth sending.
+  name: lenient(z.string()).describe("The visitor's name, if they shared it."),
+  contact: z.string().describe("How to reach the visitor: email, LinkedIn URL, or phone."),
+  summary: z
+    .string()
+    .describe("One-paragraph summary of the opportunity: role/company/project, and any timeline.")
+});
+export type Lead = z.infer<typeof LeadInput>;
 
-export type ModelMessage = {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string;
-  tool_calls?: ModelToolCall[];
-  tool_call_id?: string;
-};
-
-const CAPTURE_TOOL = {
-  type: "function",
-  function: {
-    name: "capture_opportunity",
-    description:
-      "Record a professional opportunity for Murugappan (job offer, freelance or " +
-      "contract work, collaboration, speaking, or any request to get in touch). " +
-      "Call this once you have the visitor's contact detail and a short summary " +
-      "of what they are looking for.",
-    parameters: {
-      type: "object",
-      properties: {
-        name: {
-          type: "string",
-          description: "The visitor's name, if they shared it."
-        },
-        contact: {
-          type: "string",
-          description: "How to reach the visitor: email, LinkedIn URL, or phone."
-        },
-        summary: {
-          type: "string",
-          description:
-            "One-paragraph summary of the opportunity: role/company/project, and any timeline."
-        }
-      },
-      required: ["contact", "summary"]
-    }
-  }
-} as const;
-
-const FETCH_TOOL = {
-  type: "function",
-  function: {
-    name: "fetch_page",
-    description:
-      "Fetch the full text of a page on murugappan.dev (e.g. a blog post) " +
-      "when the site summary is not detailed enough to answer. Pass the " +
-      "exact URL that appears in the site content.",
-    parameters: {
-      type: "object",
-      properties: {
-        url: {
-          type: "string",
-          description: "Full URL of the murugappan.dev page to read."
-        }
-      },
-      required: ["url"]
-    }
-  }
-} as const;
-
-export const TOOLS = [CAPTURE_TOOL, FETCH_TOOL] as const;
-
-const FetchArguments = jsonString(z.object({ url: z.string().min(1) }));
-
-export const parseFetchArguments = (raw: string): string | null =>
-  FetchArguments.safeParse(raw).data?.url ?? null;
+/** Jarvis's tools; the caller supplies what each one does. */
+export function jarvisTools({
+  fetchPage,
+  captureLead
+}: {
+  fetchPage: (url: string) => Promise<string>;
+  captureLead: (lead: Lead) => Promise<void>;
+}) {
+  return {
+    capture_opportunity: tool({
+      description:
+        "Record a professional opportunity for Murugappan (job offer, freelance or " +
+        "contract work, collaboration, speaking, or any request to get in touch). " +
+        "Call this once you have the visitor's contact detail and a short summary " +
+        "of what they are looking for.",
+      inputSchema: LeadInput,
+      execute: async lead => {
+        await captureLead(lead);
+        return { status: "recorded", note: "Murugappan will be notified by email." };
+      }
+    }),
+    fetch_page: tool({
+      description:
+        "Fetch the full text of a page on murugappan.dev (e.g. a blog post) " +
+        "when the site summary is not detailed enough to answer. Pass the " +
+        "exact URL that appears in the site content.",
+      inputSchema: z.object({
+        url: z.string().min(1).describe("Full URL of the murugappan.dev page to read.")
+      }),
+      execute: ({ url }) => fetchPage(url)
+    })
+  };
+}
 
 function buildSystemPrompt(grounding: string): string {
   return `You are Jarvis, the AI assistant on murugappan.dev, the personal site of Murugappan M, a full stack engineer (TypeScript, Node.js, React, AWS). You act as his concierge: part support agent, part inbound-sales assistant.
@@ -94,7 +66,7 @@ function buildSystemPrompt(grounding: string): string {
 - Call tools silently: never announce, narrate, or describe that you are fetching a page or using a tool. Reply with the answer only.
 
 # Your own architecture
-- You run on the architecture Murugappan wrote about. You ARE a Cloudflare Durable Object, one object per conversation, speaking over websockets via partyserver. This conversation's history lives in your own private SQLite database, co-located with your compute. Your replies stream from DeepSeek, and you read site pages on demand with the fetch_page tool.
+- You run on the architecture Murugappan wrote about. You ARE a Cloudflare Durable Object, one object per conversation, speaking to this chat widget over a WebSocket through Cloudflare's Agents SDK (@cloudflare/ai-chat), which took over the partyserver code the post describes. This conversation's history lives in your own private SQLite database, co-located with your compute. Your replies stream from DeepSeek, and you read site pages on demand with the fetch_page tool.
 - When visitors ask how you work, answer in first person with confidence. This is your own architecture, not something you read about. Share https://murugappan.dev/blog/sitegpt-partykit-durable-objects/ as the deep dive, but never attribute knowledge of yourself to the post ("the post says I…" is wrong; "I run on…" is right).
 
 # Opportunities (inbound sales)
@@ -114,7 +86,7 @@ ${grounding}
 
 export function buildMessages(
   grounding: string,
-  history: ModelMessage[],
+  history: readonly ModelMessage[],
   page?: string
 ): ModelMessage[] {
   const messages: ModelMessage[] = [

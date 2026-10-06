@@ -221,9 +221,8 @@ into tool definitions. Use the `operationId` as the tool name.
 
 - **MCP.** `https://murugappan.dev/mcp`; see [MCP server](#mcp-server) above.
 - **Conversation.** An AI assistant ("Jarvis") is on every page, grounded on
-  this same content. Programmatically:
-  `wss://murugappan.dev/parties/chat-room/{roomId}`. Send
-  `{"type":"chat","text":"..."}`, read `history` / `delta` / `done` frames.
+  this same content. Its WebSocket is private to the chat widget and has no
+  published protocol, so programs should use the REST API or MCP.
 - **In-browser tools.** Every page registers `get_profile`, `list_blog_posts`,
   `read_blog_post` and `navigate_to` on `navigator.modelContext`
   ([WebMCP](https://webmachinelearning.github.io/webmcp/)) where the browser

@@ -22,6 +22,6 @@ declare module "cloudflare:test" {
 
   export function runInDurableObject<T, R>(
     stub: DurableObjectStub<T>,
-    fn: (instance: T) => R | Promise<R>
+    fn: (instance: T, state: DurableObjectState) => R | Promise<R>
   ): Promise<R>;
 }

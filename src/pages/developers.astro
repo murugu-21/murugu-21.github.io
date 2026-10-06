@@ -94,11 +94,6 @@ const mcpExample = `curl -s ${SITE_ORIGIN}/mcp \\
       }
     }
   }'`;
-const wsExample = `const ws = new WebSocket("wss://murugappan.dev/parties/chat-room/my-room-id");
-ws.onmessage = e => console.log(JSON.parse(e.data)); // history | delta | done
-ws.onopen = () =>
-  ws.send(JSON.stringify({type: "chat", text: "What has Murugappan shipped?"}));`;
-
 const portalLinks = [
   { href: "/openapi.json", label: "OpenAPI 3.1.0 spec" },
   { href: "#mcp", label: "MCP server" },
@@ -478,22 +473,12 @@ Retry-After: 39122</code></pre>
     </section>
 
     <section>
-      <h2 id="chat">Conversational endpoint (WebSocket)</h2>
+      <h2 id="chat">Conversation</h2>
       <p>
-        The site also runs an AI assistant, Jarvis, grounded on this same content. It speaks
-        WebSocket at{" "}
-        <code>
-          wss://{SITE_ORIGIN.replace("https://", "")}/parties/chat-room/&#123;roomId&#125;
-        </code>
-        , which OpenAPI cannot describe, so this page documents it instead. Pick any room id; the
-        room persists its history.
-      </p>
-      <pre><code>{wsExample}</code></pre>
-      <p>
-        Frames in: <code>&#123;"type":"chat","text":"…"&#125;</code>. Frames out:{" "}
-        <code>history</code>, <code>visitor</code>, <code>delta</code>, <code>done</code>,{" "}
-        <code>limit</code>, <code>error</code>. Prefer the REST API when you want structured data,
-        and the socket when you want a conversation.
+        The site also runs an AI assistant, Jarvis, grounded on this same content. Talk to it
+        through the chat button on any page. Its WebSocket is private to that widget, has no
+        published protocol and can change without notice. For a program, use the REST API or the MCP
+        server above.
       </p>
     </section>
 

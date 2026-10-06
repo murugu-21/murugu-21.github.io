@@ -16,6 +16,8 @@ export default defineConfig({
       ChatRoom: exports.durableObject({ storage: "sqlite" }),
       RateLimiter: exports.durableObject({ storage: "sqlite" })
     },
+    // Dates from 2026-08-04 turn nodejs_compat on, which `agents` needs (node:crypto,
+    // node:async_hooks). An earlier date needs the flag set here.
     compatibilityDate: "2026-10-01",
     domains: ["murugappan.dev"],
     // Turns off the *.workers.dev URL so crawlers don't index a second copy of the
@@ -39,7 +41,7 @@ export default defineConfig({
         "/mcp/*",
         "/mcp.json",
         "/.well-known/*",
-        "/parties/*",
+        "/agents/*",
         "/blog/audio/*"
       ]
     },

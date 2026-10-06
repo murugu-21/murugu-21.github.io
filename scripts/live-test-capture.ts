@@ -8,13 +8,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { z } from "zod";
+import { generateText, type ModelMessage } from "ai";
 
 // oxlint-disable-next-line no-restricted-imports -- the Worker's model config is what this tests
-import { DEEPSEEK_BASE_URL, DEEPSEEK_MODEL } from "#worker/ai.ts";
-import { jsonString } from "#utils/json.ts";
-// oxlint-disable-next-line no-restricted-imports -- the Worker's prompt is what this tests
-import { buildMessages, TOOLS, type ModelMessage } from "#worker/prompt.ts";
+import { deepseek, DEEPSEEK_MODEL, jarvisCall } from "#worker/ai.ts";
+// oxlint-disable-next-line no-restricted-imports -- the Worker's prompt and tools are what this tests
+import { buildMessages, jarvisTools, type Lead } from "#worker/prompt.ts";
 import { SITE_DIR } from "./site-dir.ts";
 
 const model = process.argv[2] ?? DEEPSEEK_MODEL;
@@ -35,73 +34,40 @@ const visitorTurns = [
 const CLAIMS_RECORDED =
   /\b(noted (it|this|that)|pass(ed|ing)? (it |this )?(on|along)|forwarded|be in touch|let him know)\b/i;
 
-const Completion = z.object({
-  choices: z
-    .array(
-      z.object({
-        message: z.object({
-          content: z.string().nullish(),
-          tool_calls: z
-            .array(
-              z.object({
-                id: z.string(),
-                type: z.literal("function"),
-                function: z.object({ name: z.string(), arguments: z.string() })
-              })
-            )
-            .optional()
-        })
-      })
-    )
-    .min(1)
-});
-// Loose so the report prints every argument the model sent.
-const CaptureArguments = jsonString(z.looseObject({ contact: z.string().optional() }));
-
 const history: ModelMessage[] = [];
-let captured: { contact?: string } | null = null;
+const captures: Lead[] = [];
 let falseClaim: string | null = null;
+
+const tools = jarvisTools({
+  fetchPage: async () => "This page has no further detail.",
+  captureLead: async lead => {
+    captures.push(lead);
+  }
+});
 
 for (const turn of visitorTurns) {
   history.push({ role: "user", content: turn });
-  const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
-    method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      // Unlike the Worker, this feeds tool round-trips back.
+  const result = await generateText(
+    jarvisCall({
+      model: deepseek({ apiKey, model }),
       messages: buildMessages(grounding, history),
-      tools: TOOLS,
-      thinking: { type: "enabled" }
+      tools
     })
-  });
-  if (!res.ok) throw new Error(`${model}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
-
-  const { choices } = Completion.parse(await res.json());
-  const message = choices[0].message;
-  const toolCalls = message.tool_calls ?? [];
-  const content = (message.content ?? "").trim();
+  );
+  const content = result.text.trim();
+  const toolNames = result.steps.flatMap(step => step.toolCalls.map(call => call.toolName));
 
   console.log(`\nvisitor: ${turn}`);
   console.log(`jarvis : ${content || "(no prose)"}`);
-  console.log(`tools  : ${toolCalls.map(c => c.function.name).join(", ") || "(none)"}`);
+  console.log(`tools  : ${toolNames.join(", ") || "(none)"}`);
 
-  const capture = toolCalls.find(c => c.function.name === "capture_opportunity");
-  if (capture) captured = CaptureArguments.parse(capture.function.arguments);
-  if (!captured && CLAIMS_RECORDED.test(content)) falseClaim ??= content;
-
-  history.push({
-    role: "assistant",
-    content,
-    tool_calls: toolCalls.length ? toolCalls : undefined
-  });
-  for (const call of toolCalls) {
-    history.push({ role: "tool", tool_call_id: call.id, content: '{"ok":true}' });
-  }
+  if (!captures.length && CLAIMS_RECORDED.test(content)) falseClaim ??= content;
+  history.push(...result.responseMessages);
 }
 
+const captured = captures.at(-1);
 // A capture without the contact detail is unreplyable.
-const carriesContact = captured?.contact?.includes("dana.okafor@northlane.io") ?? false;
+const carriesContact = captured?.contact.includes("dana.okafor@northlane.io") ?? false;
 
 console.log(`\n--- ${model} ---`);
 console.log(`capture_opportunity called: ${captured ? "yes" : "NO"}`);

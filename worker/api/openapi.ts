@@ -105,7 +105,7 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 
 **MCP.** The same content is served as a Model Context Protocol server (Streamable HTTP) at \`POST /mcp\`, protocol revision 2026-07-28 with backward compatibility for the \`initialize\`-based revisions. Eight tools (\`get_profile\`, \`list_experience\`, \`list_skills\`, \`list_education\`, \`list_open_source\`, \`search_blog_posts\`, \`get_blog_post\`, \`send_message\`) plus resources for the site's documents and every blog post. Add it to an MCP client as \`https://murugappan.dev/mcp\`. No auth is needed. Its manifest (\`server.json\`) is at \`https://murugappan.dev/.well-known/mcp.json\`.
 
-**Conversational alternative.** The site also runs an AI assistant ("Jarvis") over a WebSocket at \`/parties/chat-room/{roomId}\`, which OpenAPI cannot describe. Send \`{"type":"chat","text":"..."}\` and read \`delta\`/\`done\` frames back. Prefer this API when you want structured data, and the socket when you want a conversation.
+**Conversation.** The site also runs an AI assistant ("Jarvis") in the chat widget on every page. Its WebSocket is private to the widget and has no published protocol, so programs should use this API or the MCP server.
 
 **Other machine-readable entry points.** \`/.well-known/api-catalog\` (RFC 9727 linkset of every API here), \`/.well-known/mcp.json\` (MCP server manifest), \`/mcp\` (MCP server), \`/llms.txt\` (site summary + every blog post), \`/AGENTS.md\` (agent instructions), \`/blog/llms-full.txt\` (full post text), \`/sitemap.xml\`, and \`Accept: text/markdown\` on any page URL.`;
 

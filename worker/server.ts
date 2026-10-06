@@ -1,5 +1,5 @@
-import { Hono } from "hono";
-import { partyserverMiddleware } from "hono-party";
+import { routeAgentRequest } from "agents";
+import { Hono, type Context } from "hono";
 
 import { api, specRoutes } from "./api";
 import { audio } from "./audio";
@@ -14,30 +14,38 @@ export { ChatRoom, RateLimiter };
 
 const app = new Hono<{ Bindings: Env }>();
 
-// Claims /parties/:party/:room for the Durable Objects; the rest falls through.
-app.use(
-  "*",
-  partyserverMiddleware<{ Bindings: Env }>({
-    options: {
-      // `request.cf` exists only on the edge request, so forward country and IP
-      // as headers. Delete before set so a client-sent value can't pass as ours.
-      onBeforeConnect: (req, _lobby, c) => {
-        const { cf } = c.req.raw;
-        const edgeCountry =
-          cf && "country" in cf && typeof cf.country === "string" ? cf.country : undefined;
-        const country = edgeCountry ?? c.req.header("CF-IPCountry");
-        const ip = c.req.header("CF-Connecting-IP");
+type AppContext = Context<{ Bindings: Env }>;
 
-        const headers = new Headers(req.headers);
-        headers.delete(VISITOR_COUNTRY_HEADER);
-        headers.delete(VISITOR_IP_HEADER);
-        if (country) headers.set(VISITOR_COUNTRY_HEADER, country);
-        if (ip) headers.set(VISITOR_IP_HEADER, ip);
-        return new Request(req, { headers });
-      }
-    }
-  })
+// `request.cf` exists only on the edge request, so forward country and IP as
+// headers. Delete before set so a client-sent value can't pass as ours.
+function withVisitorHeaders(c: AppContext, request: Request): Request {
+  const { cf } = c.req.raw;
+  const edgeCountry =
+    cf && "country" in cf && typeof cf.country === "string" ? cf.country : undefined;
+  const country = edgeCountry ?? c.req.header("CF-IPCountry");
+  const ip = c.req.header("CF-Connecting-IP");
+
+  const headers = new Headers(request.headers);
+  headers.delete(VISITOR_COUNTRY_HEADER);
+  headers.delete(VISITOR_IP_HEADER);
+  if (country) headers.set(VISITOR_COUNTRY_HEADER, country);
+  if (ip) headers.set(VISITOR_IP_HEADER, ip);
+  return new Request(request, { headers });
+}
+
+async function chatRoom(c: AppContext): Promise<Response> {
+  const response = await routeAgentRequest(c.req.raw, c.env, {
+    onBeforeConnect: request => withVisitorHeaders(c, request)
+  });
+  return response ?? serveAsset(c.req.raw, c.env.ASSETS);
+}
+
+// Only the chat room's socket and the history its widget loads. routeAgentRequest
+// alone would expose every Durable Object, RateLimiter included.
+app.get("/agents/chat-room/:room", c =>
+  c.req.header("Upgrade") === "websocket" ? chatRoom(c) : serveAsset(c.req.raw, c.env.ASSETS)
 );
+app.get("/agents/chat-room/:room/get-messages", chatRoom);
 
 // Keep cloudflare.config.ts's runWorkerFirst list in sync with these routes.
 // /api/v1 must mount before /api, the permanent unversioned alias for v1.
