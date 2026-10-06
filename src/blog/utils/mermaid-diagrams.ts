@@ -13,7 +13,7 @@ export const DIAGRAM_THEMES: readonly DiagramTheme[] = ["light", "dark"];
 
 // Folded into every hash. Bump when render output changes in a way the mermaid
 // version stamp doesn't capture (theme, font, embedded style).
-const RENDERER_VERSION = "2";
+const RENDERER_VERSION = "3";
 
 interface MermaidFence {
   // Diagram source exactly as the markdown parser hands it to the build:
