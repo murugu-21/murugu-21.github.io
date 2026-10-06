@@ -15,8 +15,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "format": "oxfmt src worker scripts utils vitest.config.ts cloudflare.config.ts astro.config.ts && prettier --write \"src/**/*.astro\" \"content/**/*.md\"",
-    "check-format": "oxfmt src worker scripts utils vitest.config.ts cloudflare.config.ts astro.config.ts --check && prettier --check \"src/**/*.astro\" \"content/**/*.md\"",
+    "format": "oxfmt src worker scripts utils content vitest.config.ts cloudflare.config.ts astro.config.ts && prettier --write \"src/**/*.astro\"",
+    "check-format": "oxfmt src worker scripts utils content vitest.config.ts cloudflare.config.ts astro.config.ts --check && prettier --check \"src/**/*.astro\"",
     "lint": "astro sync && oxlint src worker scripts utils vitest.config.ts cloudflare.config.ts astro.config.ts",
     "lint:fix": "astro sync && oxlint src worker scripts utils vitest.config.ts cloudflare.config.ts astro.config.ts --fix",
     "db:migrate": "cf d1 migrations apply a1111792-fb35-470f-85c9-13c3aab0662c",
@@ -83,7 +83,7 @@
     "linkedom": "^0.18.13",
     "lint-staged": "^17.6.0",
     "mermaid": "^12.0.0",
-    "oxfmt": "^0.71.0",
+    "oxfmt": "^0.72.0",
     "oxlint": "^1.86.0",
     "oxlint-tsgolint": "^7.0.2003",
     "pdf-parse": "^2.4.5",
@@ -105,7 +105,7 @@
       "oxlint --fix",
       "oxfmt"
     ],
-    "*.{json,jsonc,css}": "oxfmt",
-    "*.{astro,md}": "prettier --write --ignore-unknown"
+    "*.{json,jsonc,css,md}": "oxfmt",
+    "*.astro": "prettier --write"
   }
 }
