@@ -1,5 +1,6 @@
 ---
 import { Font } from "astro:assets";
+import type { Thing } from "schema-dts";
 import { jsonLdHtml } from "#src/lib/schema.ts";
 import { BLOG_TITLE, PERSON_ID, SITE_DESCRIPTION, SITE_ORIGIN } from "#src/lib/site.ts";
 import { themeBootstrapScript } from "#src/lib/theme.ts";
@@ -22,7 +23,7 @@ export interface Props {
   section?: Section;
   article?: { published: Date; tags: string[] };
   // The page's own schema.org nodes, merged into the site-wide @graph.
-  graph?: object[];
+  graph?: Thing[];
 }
 
 export interface Section {

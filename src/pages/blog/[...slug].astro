@@ -2,6 +2,7 @@
 import { render } from "astro:content";
 import BlogLayout from "#src/layouts/BlogLayout.astro";
 import Bio from "#src/components/blog/Bio.astro";
+import type { BlogPosting } from "schema-dts";
 import { blog } from "#src/lib/schema.ts";
 import { BLOG_ID, BLOG_URL, PERSON_ID } from "#src/lib/site.ts";
 import {
@@ -39,7 +40,7 @@ const { Content, headings } = await render(post);
 const description = postDescription(post);
 
 const url = postUrl(post.id);
-const postNode = {
+const postNode: BlogPosting = {
   "@type": "BlogPosting",
   headline: post.data.title,
   description,

@@ -1,5 +1,6 @@
 // The schema.org nodes every page shares. Layout puts them in each page's
 // JSON-LD @graph, next to the page's own nodes.
+import type { Blog, Graph, Person, Thing, WebPage, WebSite } from "schema-dts";
 import { sameAs, skillsCategories, socialMediaLinks } from "#src/data/portfolio.ts";
 import {
   AUTHOR,
@@ -42,7 +43,7 @@ function knowsAbout(): string[] {
   return [...HAND_WRITTEN_KNOWS_ABOUT, ...extra];
 }
 
-const website = {
+const website: WebSite = {
   "@type": "WebSite",
   "@id": WEBSITE_ID,
   url: `${SITE_ORIGIN}/`,
@@ -52,7 +53,7 @@ const website = {
   inLanguage: "en"
 };
 
-const person = {
+const person: Person = {
   "@type": "Person",
   "@id": PERSON_ID,
   name: AUTHOR.name,
@@ -99,7 +100,7 @@ const person = {
   mainEntityOfPage: { "@id": `${SITE_ORIGIN}/about/` }
 };
 
-export const blog = {
+export const blog: Blog = {
   "@type": "Blog",
   "@id": BLOG_ID,
   name: BLOG_TITLE,
@@ -113,15 +114,15 @@ export const blog = {
 interface PageGraph {
   // null for noindex pages, which get no WebPage node.
   page: { url: string; name: string; about?: { "@id": string }; profilePage: boolean } | null;
-  nodes: object[];
+  nodes: Thing[];
 }
 
 // The page's <script type="application/ld+json"> body: one @graph, so crawlers
 // resolve every @id within the page.
 export function jsonLdHtml({ page, nodes }: PageGraph): string {
-  const graph: object[] = [website, person];
+  const graph: Thing[] = [website, person];
   if (page) {
-    graph.push({
+    const webPage: WebPage = {
       "@type": page.profilePage ? "ProfilePage" : "WebPage",
       "@id": page.url,
       url: page.url,
@@ -130,12 +131,11 @@ export function jsonLdHtml({ page, nodes }: PageGraph): string {
       about: page.about,
       ...(page.profilePage ? { mainEntity: { "@id": PERSON_ID } } : {}),
       inLanguage: "en"
-    });
+    };
+    graph.push(webPage);
   }
   graph.push(...nodes);
   // set:html doesn't escape, so a "</script>" in a post title would end the block.
-  return JSON.stringify({ "@context": "https://schema.org", "@graph": graph }).replaceAll(
-    "<",
-    "\\u003c"
-  );
+  const jsonLd: Graph = { "@context": "https://schema.org", "@graph": graph };
+  return JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
 }

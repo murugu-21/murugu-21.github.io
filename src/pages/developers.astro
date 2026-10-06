@@ -1,4 +1,5 @@
 ---
+import type { Thing } from "schema-dts";
 // Endpoint table and tool example are generated from the served OpenAPI
 // document (worker/api/openapi.ts), so they can't drift from the API.
 
@@ -150,7 +151,7 @@ const machineFiles = [
   }
 ];
 // So API searches resolve to this page rather than the pages about the person.
-const apiGraph = [
+const apiGraph: Thing[] = [
   {
     "@type": "WebAPI",
     "@id": `${SITE_ORIGIN}/developers/#api`,
