@@ -224,7 +224,7 @@ into tool definitions. Use the `operationId` as the tool name.
   this same content. Its WebSocket is private to the chat widget and has no
   published protocol, so programs should use the REST API or MCP.
 - **In-browser tools.** Every page registers `get_profile`, `list_blog_posts`,
-  `read_blog_post` and `navigate_to` on `navigator.modelContext`
+  `read_blog_post` and `navigate_to` on `document.modelContext`
   ([WebMCP](https://webmachinelearning.github.io/webmcp/)) where the browser
   supports it.
 - **Markdown.** The home, about and blog pages and every post return markdown

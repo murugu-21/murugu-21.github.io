@@ -1,18 +1,16 @@
 // WebMCP (https://webmachinelearning.github.io/webmcp/): site actions as tools
-// for in-browser agents via navigator.modelContext. No-op without the API.
-
-type ToolResult = { content: Array<{ type: "text"; text: string }> };
+// for in-browser agents via document.modelContext. No-op without the API.
 
 interface ModelContextTool {
   name: string;
   description: string;
   inputSchema: object;
-  signal?: AbortSignal;
-  execute(args: Record<string, unknown>): Promise<ToolResult>;
+  // Plain text, since the browser hands an object to the agent as a JSON string.
+  execute(args: Record<string, unknown>): Promise<string>;
 }
 
 interface ModelContext {
-  registerTool(tool: ModelContextTool): void;
+  registerTool(tool: ModelContextTool): Promise<undefined>;
 }
 
 const isModelContext = (value: unknown): value is ModelContext =>
@@ -21,16 +19,9 @@ const isModelContext = (value: unknown): value is ModelContext =>
   "registerTool" in value &&
   typeof value.registerTool === "function";
 
-const mc = "modelContext" in navigator ? navigator.modelContext : undefined;
+const mc = "modelContext" in document ? document.modelContext : undefined;
 
 if (isModelContext(mc)) {
-  // one signal for all tools; aborting on pagehide unregisters them
-  const controller = new AbortController();
-  addEventListener("pagehide", () => controller.abort());
-
-  const text = (t: string): ToolResult => ({
-    content: [{ type: "text", text: t }]
-  });
   const fetchText = async (path: string): Promise<string> => {
     const res = await fetch(path);
     if (!res.ok) throw new Error(`${res.status} for ${path}`);
@@ -43,14 +34,14 @@ if (isModelContext(mc)) {
       description:
         "Murugappan M's full professional profile as markdown: pitch, work experience, skills, education, open-source work, and links (resume PDF, GitHub, LinkedIn, blog, RSS).",
       inputSchema: { type: "object", properties: {} },
-      execute: async () => text(await fetchText("/llms.txt"))
+      execute: () => fetchText("/llms.txt")
     },
     {
       name: "list_blog_posts",
       description:
         "List every post on the SDE Journey blog with title, URL, and summary (markdown). Post slugs for read_blog_post are the last path segment of each URL.",
       inputSchema: { type: "object", properties: {} },
-      execute: async () => text(await fetchText("/blog/index.md"))
+      execute: () => fetchText("/blog/index.md")
     },
     {
       name: "read_blog_post",
@@ -68,12 +59,11 @@ if (isModelContext(mc)) {
       },
       execute: async args => {
         const slug = typeof args.slug === "string" ? args.slug : "";
-        if (!/^[a-z0-9-]+$/.test(slug))
-          return text("Invalid slug. Call list_blog_posts to find slugs.");
+        if (!/^[a-z0-9-]+$/.test(slug)) return "Invalid slug. Call list_blog_posts to find slugs.";
         try {
-          return text(await fetchText(`/blog/${slug}/index.md`));
+          return await fetchText(`/blog/${slug}/index.md`);
         } catch {
-          return text(`No post found for slug '${slug}'. Call list_blog_posts to see what exists.`);
+          return `No post found for slug '${slug}'. Call list_blog_posts to see what exists.`;
         }
       }
     },
@@ -95,19 +85,21 @@ if (isModelContext(mc)) {
         const path = typeof args.path === "string" ? args.path : "";
         // same-origin only: site-relative, and "//host" would be scheme-relative
         if (!path.startsWith("/") || path.startsWith("//"))
-          return text("Only site-relative paths starting with '/' are allowed.");
+          return "Only site-relative paths starting with '/' are allowed.";
         location.assign(path);
-        return text(`Navigating to ${path}`);
+        return `Navigating to ${path}`;
       }
     }
   ];
 
+  // Async, so a polyfill that throws or returns no promise rejects instead of
+  // throwing here, which would stop the analytics bundled into the same script.
+  const register = async (tool: ModelContextTool) => mc.registerTool(tool);
+
+  // Tools live as long as the document, bfcache included, so none needs an abort signal.
   for (const tool of tools) {
-    tool.signal = controller.signal;
-    try {
-      mc.registerTool(tool);
-    } catch {
-      // draft API: shape may shift between engine versions; never break the page
-    }
+    register(tool).catch((error: unknown) => {
+      console.warn(`[webmcp] couldn't register ${tool.name}`, error);
+    });
   }
 }
