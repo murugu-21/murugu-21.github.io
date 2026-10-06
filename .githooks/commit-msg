@@ -1,15 +1,2 @@
 #!/bin/sh
-# Enforces Conventional Commits on the subject line; `content` is this repo's type for site copy.
-subject=$(head -n 1 "$1")
-
-case "$subject" in
-  Merge\ * | Revert\ * | fixup!\ * | squash!\ * | amend!\ *) exit 0 ;;
-esac
-
-types='feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert|content'
-echo "$subject" | grep -qE "^($types)(\([a-z0-9._/-]+\))?!?: .+" && exit 0
-
-echo "commit-msg: subject must be a Conventional Commit: <type>(<scope>)?: <summary>" >&2
-echo "  types: $(echo "$types" | tr '|' ' ')" >&2
-echo "  got:   $subject" >&2
-exit 1
+bunx commitlint --edit "$1"

@@ -3,27 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   formatContactEmail,
   formatOpportunityEmail,
-  parseLeadArguments,
   SENDER_ADDRESS,
   sendContactEmail,
   sendOpportunityEmail,
   type EmailLike
 } from "#worker/email.ts";
-
-describe("parseLeadArguments", () => {
-  it("parses valid tool arguments, rejecting missing contact or summary and malformed JSON", () => {
-    expect(
-      parseLeadArguments('{"name":"Ada","contact":"ada@lovelace.dev","summary":"CTO role"}')
-    ).toEqual({
-      name: "Ada",
-      contact: "ada@lovelace.dev",
-      summary: "CTO role"
-    });
-    expect(parseLeadArguments('{"summary":"x"}')).toBeNull();
-    expect(parseLeadArguments('{"contact":"x"}')).toBeNull();
-    expect(parseLeadArguments("nope")).toBeNull();
-  });
-});
 
 describe("formatOpportunityEmail", () => {
   it("includes lead fields and full transcript", () => {

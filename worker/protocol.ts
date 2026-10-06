@@ -1,10 +1,10 @@
 // The wire contract shared with the chat widget, so it stays free of runtime dependencies
 // that would ship in the client bundle.
+import type { UIMessage } from "ai";
 
 export const MAX_MESSAGE_LENGTH = 1000;
 
-// Shared by the ChatRoom, which persists it as each room's first message, and
-// the widget, which shows it when the socket can't deliver history.
+// The widget shows it above every conversation; rooms never store it.
 export const GREETING =
   "Hi, I'm Jarvis, Murugappan's AI assistant. Ask me about his experience, " +
   "projects, or blog posts, or tell me about an opportunity for him.";
@@ -34,65 +34,44 @@ function cleanHeader(value: string | null): string | null {
 // Tools the widget knows how to narrate in its activity row.
 export type ToolName = "fetch_page" | "capture_opportunity";
 
-export type ServerMessage =
-  | { type: "history"; messages: ChatHistoryEntry[] }
-  // Another tab's user message; the sender renders its own optimistically.
-  | { type: "visitor"; text: string }
-  | { type: "delta"; text: string }
-  // Ephemeral. Never persisted; the next delta, done, limit or error frame clears it.
-  | { type: "tool"; name: ToolName; detail?: string }
-  | { type: "done" }
-  | { type: "limit"; message: string }
-  | { type: "error"; message: string };
+/** The tool a turn is running. The widget owns the wording. */
+export type Activity = { name: ToolName; detail?: string };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+/** What the room says instead of a reply: the spend limit, or a failure. */
+export type Notice = { kind: "limit" | "error"; text: string };
 
-const isHistoryEntry = (value: unknown): value is ChatHistoryEntry =>
-  isRecord(value) &&
-  (value.role === "user" || value.role === "assistant") &&
-  typeof value.content === "string";
+export const LIMIT_NOTICE: Notice = {
+  kind: "limit",
+  text:
+    "I've hit my chat budget for now. Please reach Murugappan directly " +
+    "through the social links on this site instead."
+};
 
-/** Decodes a socket frame from the room, or null for anything off-contract. */
-export function parseServerMessage(raw: unknown): ServerMessage | null {
-  if (typeof raw !== "string") return null;
-  let msg: unknown;
-  try {
-    msg = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (!isRecord(msg)) return null;
-  switch (msg.type) {
-    case "history":
-      return Array.isArray(msg.messages) && msg.messages.every(isHistoryEntry)
-        ? { type: "history", messages: msg.messages }
-        : null;
-    case "visitor":
-    case "delta":
-      return typeof msg.text === "string" ? { type: msg.type, text: msg.text } : null;
-    case "tool":
-      if (msg.name !== "fetch_page" && msg.name !== "capture_opportunity") return null;
-      return typeof msg.detail === "string"
-        ? { type: "tool", name: msg.name, detail: msg.detail }
-        : { type: "tool", name: msg.name };
-    case "done":
-      return { type: "done" };
-    case "limit":
-    case "error":
-      return typeof msg.message === "string" ? { type: msg.type, message: msg.message } : null;
-    default:
-      return null;
-  }
+export const ERROR_NOTICE: Notice = {
+  kind: "error",
+  text: "Something went wrong on my end. Please try again."
+};
+
+/**
+ * A Jarvis message: text parts, plus `activity` parts where a tool step began
+ * and a `notice` part. Tool inputs and results never reach the client.
+ */
+export type JarvisMessage = UIMessage<unknown, { activity: Activity; notice: Notice }>;
+
+/** A message's prose. Each step of a reply is its own text part. */
+export function messageText(message: Pick<UIMessage, "parts">): string {
+  return message.parts
+    .flatMap(part => (part.type === "text" ? [part.text] : []))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
-// The widget owns the wording. A capture never gets `detail`: its arguments
-// are the visitor's name and contact details.
-export function toolFrame(name: ToolName, url?: string | null): ServerMessage {
-  if (name !== "fetch_page" || !url) return { type: "tool", name };
+// Only a page fetch has a detail. A capture's input is the visitor's name and contact details.
+export function fetchActivity(url: string): Activity {
   try {
-    return { type: "tool", name, detail: new URL(url).pathname };
+    return { name: "fetch_page", detail: new URL(url).pathname };
   } catch {
-    return { type: "tool", name };
+    return { name: "fetch_page" };
   }
 }

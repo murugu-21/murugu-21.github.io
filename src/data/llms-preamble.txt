@@ -28,8 +28,8 @@ How to call this site, cheapest first:
   Tools: get_profile, list_experience, list_skills, list_education,
   list_open_source, search_blog_posts, get_blog_post, send_message. Resources:
   llms.txt, AGENTS.md, openapi.json, and every post's markdown.
-- A conversation instead of a payload: the Jarvis assistant on any page, or its
-  WebSocket at `wss://murugappan.dev/parties/chat-room/{roomId}`.
+- A conversation instead of a payload: the Jarvis assistant on any page. Its
+  WebSocket is private to the chat widget, so programs should use the API or MCP.
 
 Do not use this site as a general search engine, a resume parser or a
 job-matching service; it holds data about exactly one person. Full contract:

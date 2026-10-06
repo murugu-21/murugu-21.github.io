@@ -2,7 +2,7 @@
 // deployed build looks like, so the two surfaces are exercised against the
 // same content instead of drifting fixtures.
 import { env } from "cloudflare:test";
-import { assert, expect } from "vitest";
+import { assert, expect, vi } from "vitest";
 import { z } from "zod";
 
 import { buildDataset, type DatasetInput } from "#worker/api/dataset.ts";
@@ -205,22 +205,26 @@ export async function fetchWorker(
   );
 }
 
-/**
- * Opens a real WebSocket to a chat room through the worker and closes it after
- * the first frame (the history the room sends on connect).
- */
-export async function connectRoom(room: string, headers: Record<string, string> = {}) {
-  const response = await fetchWorker(`/parties/chat-room/${room}`, {
+/** A real WebSocket to a chat room through the worker, recording every frame it receives. */
+export async function openRoom(room: string, headers: Record<string, string> = {}) {
+  const response = await fetchWorker(`/agents/chat-room/${room}`, {
     headers: { Upgrade: "websocket", ...headers }
   });
   expect(response.status).toBe(101);
   const socket = response.webSocket;
   assert(socket, "no WebSocket on the upgrade response");
-  const firstFrame = new Promise<string>(resolve =>
-    socket.addEventListener("message", e => resolve(String(e.data)), { once: true })
-  );
+  const frames: unknown[] = [];
+  socket.addEventListener("message", e => {
+    frames.push(JSON.parse(String(e.data)));
+  });
   socket.accept();
-  const history = await firstFrame;
+  return { socket, frames, stub: env.ChatRoom.get(env.ChatRoom.idFromName(room)) };
+}
+
+/** Connects to a room, waits for the agent to introduce itself, then hangs up. */
+export async function connectRoom(room: string, headers: Record<string, string> = {}) {
+  const { socket, frames, stub } = await openRoom(room, headers);
+  await vi.waitFor(() => assert(frames.length >= 2, "the room sent nothing"), { timeout: 2000 });
   socket.close();
-  return { stub: env.ChatRoom.get(env.ChatRoom.idFromName(room)), history };
+  return { stub };
 }

@@ -1,20 +1,8 @@
-import { z } from "zod";
-
 import type { ContactMessage } from "./api/contact";
-import { jsonString, lenient } from "#utils/json.ts";
+import type { Lead } from "./prompt";
 import type { ChatHistoryEntry } from "./protocol";
 
 export const SENDER_ADDRESS = "chatbot@murugappan.dev";
-
-const Lead = z.object({
-  // A non-string name is dropped; the lead is still worth sending.
-  name: lenient(z.string()),
-  contact: z.string(),
-  summary: z.string()
-});
-export type Lead = z.infer<typeof Lead>;
-
-const LeadArguments = jsonString(Lead);
 
 export type EmailLike = {
   send(msg: { to: string; from: string; subject: string; text: string }): Promise<unknown>;
@@ -27,9 +15,6 @@ export function contactMailer(env: Env): { email: EmailLike; inbox: string } | n
   const inbox = env.OPPORTUNITY_INBOX?.trim();
   return env.EMAIL && inbox ? { email: env.EMAIL, inbox } : null;
 }
-
-export const parseLeadArguments = (raw: string): Lead | null =>
-  LeadArguments.safeParse(raw).data ?? null;
 
 const subjectName = (who: string): string => who.replace(/\s+/g, " ").slice(0, 80);
 

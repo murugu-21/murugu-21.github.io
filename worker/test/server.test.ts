@@ -43,8 +43,7 @@ describe("routing", () => {
     expect(seen.map(r => new URL(r.url).pathname)).toEqual(["/blog/some-post"]);
   });
 
-  // /mcp is 405 because this revision of Streamable HTTP defines POST only;
-  // a plain GET on the WebSocket-only party is answered by partyserver itself.
+  // /mcp is 405 because this revision of Streamable HTTP defines POST only.
   it.each([
     ["/api/nope", 404],
     ["/api/v1/nope", 404],
@@ -52,8 +51,7 @@ describe("routing", () => {
     ["/mcp", 405],
     ["/.well-known/api-catalog", 200],
     ["/.well-known/mcp.json", 200],
-    ["/mcp.json", 200],
-    ["/parties/chat-room/test-room", 404]
+    ["/mcp.json", 200]
   ])("claims %s itself rather than serving an asset", async (path, status) => {
     let assetHits = 0;
     const response = await worker.fetch(
@@ -66,6 +64,15 @@ describe("routing", () => {
 });
 
 describe("the chat-room WebSocket", () => {
+  it("is the only agent route: no other Durable Object or sub-path upgrades", async () => {
+    const upgrade = (path: string) =>
+      fetchWorker(path, { headers: { Upgrade: "websocket" } }).then(r => r.status);
+    expect(await upgrade("/agents/chat-room/route-room")).toBe(101);
+    expect(await upgrade("/agents/rate-limiter/global")).toBe(404);
+    expect(await upgrade("/agents/chat-room/route-room/sub/chat-room/other")).toBe(404);
+    expect((await fetchWorker("/agents/chat-room/route-room")).status).toBe(404);
+  });
+
   it("replaces client-supplied visitor headers with what Cloudflare reports", async () => {
     const { stub } = await connectRoom("spoof-room-ws", {
       "CF-IPCountry": "IN",

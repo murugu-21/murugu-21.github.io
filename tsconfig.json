@@ -6,6 +6,7 @@
     "scripts/**/*",
     "utils/**/*",
     "astro.config.ts",
+    "commitlint.config.ts",
     "cloudflare.config.ts",
     "vitest.config.ts"
   ],
