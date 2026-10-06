@@ -1,8 +1,8 @@
 ---
 // One blog index entry. `data-search` and `data-tags` feed PostList.astro's
 // filter script; keywords are in the haystack so SEO terms stay searchable.
-import type { SerializedPost } from "#src/blog/utils/posts.ts";
-import { formatReadingTime } from "#src/blog/utils/helpers.ts";
+import type { SerializedPost } from "#src/lib/blog/posts.ts";
+import { formatReadingTime } from "#src/lib/blog/helpers.ts";
 
 interface Props {
   post: SerializedPost;

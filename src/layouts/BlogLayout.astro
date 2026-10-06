@@ -1,10 +1,10 @@
 ---
 import Layout, { type Props as LayoutProps, type Section } from "#src/layouts/Layout.astro";
-import "#src/blog/styles/code.css";
-import "#src/blog/styles/post.css";
+import "#src/styles/blog/code.css";
+import "#src/styles/blog/post.css";
 import Icon from "#src/components/Icon.astro";
 import ThemeToggle from "#src/components/ThemeToggle.astro";
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "#src/blog/consts.ts";
+import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "#src/lib/blog/consts.ts";
 
 // title is omitted for the blog index, which gets the homepage title.
 type Props = Pick<LayoutProps, "title" | "description" | "noindex" | "article" | "graph">;

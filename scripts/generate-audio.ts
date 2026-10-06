@@ -30,8 +30,8 @@ import { parseHTML } from "linkedom";
 import { z } from "zod";
 
 import { jsonString } from "#utils/json.ts";
-import { speechBlocks } from "#src/blog/utils/speech.ts";
-import { normalizeSpeechText, packSentences, spokenHash } from "#src/blog/utils/audio-prep.ts";
+import { speechBlocks } from "#src/lib/blog/speech.ts";
+import { normalizeSpeechText, packSentences, spokenHash } from "#src/lib/blog/audio-prep.ts";
 import {
   BLOG_DIST,
   PYTHON,

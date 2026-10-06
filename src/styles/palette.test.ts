@@ -158,7 +158,7 @@ describe("blue-hour light palette", () => {
     expect(contrast(card, sky.deep)).toBeGreaterThanOrEqual(1.8);
   });
 
-  // The post's table-of-contents rail (src/blog/components/TableOfContents.astro).
+  // The post's table-of-contents rail (src/components/blog/TableOfContents.astro).
   // Collapsed, each heading is a bar drawn straight on the sky: a UI component
   // at 3:1 on every stop. The hr/table rule (accent-grey, 2:1 above) is too
   // faint for that, so the rail has its own translucent navy.

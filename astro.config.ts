@@ -11,10 +11,10 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import posthog from "@posthog/rollup-plugin";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
-import remarkMermaid from "./src/blog/utils/remark-mermaid";
-import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
-import { NIGHT_OWL } from "./src/blog/utils/code-themes";
+import { autolinkConfig } from "./src/lib/blog/rehype-autolink-config";
+import remarkMermaid from "./src/lib/blog/remark-mermaid";
+import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
+import { NIGHT_OWL } from "./src/lib/blog/code-themes";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
@@ -344,7 +344,7 @@ export default defineConfig({
       rehypePlugins: [rehypeHeadingIds, [rehypeAutolinkHeadings, autolinkConfig]]
     }),
     // Both themes ride on each span as --shiki-light / --shiki-dark;
-    // src/blog/styles/code.css picks one per site theme.
+    // src/styles/blog/code.css picks one per site theme.
     syntaxHighlight: "shiki",
     shikiConfig: { themes: NIGHT_OWL, defaultColor: false }
   }

@@ -14,22 +14,22 @@ import {
 } from "#src/components/ui/dropdown-menu.tsx";
 import { Slider } from "#src/components/ui/slider.tsx";
 import { tag, track } from "#src/lib/analytics.ts";
-import { normalizeSpeechText } from "#src/blog/utils/audio-prep.ts";
+import { normalizeSpeechText } from "#src/lib/blog/audio-prep.ts";
 import {
   WORD_BAND,
   blockAt,
   matchBlocks,
   scrollTarget,
   type AudioTimings
-} from "#src/blog/utils/audio-sync.ts";
+} from "#src/lib/blog/audio-sync.ts";
 import {
   matchWordSpans,
   tokenize,
   wordAt,
   wrapWords,
   type TimedWord
-} from "#src/blog/utils/audio-words.ts";
-import { parseRate, SPEECH_RATES, speechBlocks, type SpeechRate } from "#src/blog/utils/speech.ts";
+} from "#src/lib/blog/audio-words.ts";
+import { parseRate, SPEECH_RATES, speechBlocks, type SpeechRate } from "#src/lib/blog/speech.ts";
 
 type State = "idle" | "loading" | "speaking" | "paused";
 

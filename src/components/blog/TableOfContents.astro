@@ -8,7 +8,7 @@
 // always expanded, from 87rem, where the panel clears the 42rem column:
 // 2 × (19.75rem prose half + 22.25rem panel) = 84rem, plus a 1.5rem gap.
 import type { MarkdownHeading } from "astro";
-import { tocEntries } from "#src/blog/utils/toc.ts";
+import { tocEntries } from "#src/lib/blog/toc.ts";
 
 interface Props {
   headings: MarkdownHeading[];
@@ -188,7 +188,7 @@ const entries = tocEntries(headings);
   // an IntersectionObserver: it fires on a heading's bottom edge, so after a
   // hash jump parked a heading on the line nothing fired. Listeners live as
   // long as the page.
-  import { TOC_LINE_SLACK, activeIndex } from "#src/blog/utils/toc.ts";
+  import { TOC_LINE_SLACK, activeIndex } from "#src/lib/blog/toc.ts";
 
   const nav = document.querySelector<HTMLElement>("nav.toc");
   if (nav) {
