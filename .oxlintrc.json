@@ -53,6 +53,7 @@
     },
     {
       // Shared code serves every page, so it can't reach into a page area's folder.
+      // Later overrides replace this rule's options, so each restates the "../" ban.
       "files": [
         "src/components/*",
         "src/components/chat/**",
@@ -68,7 +69,7 @@
           {
             "patterns": [
               {
-                "regex": "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\.\\./",
+                "regex": "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\./(blog|home)/|^\\./BlogLayout|^\\.\\./",
                 "message": "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (README › Source layout). Cross-folder imports use the #src subpath import."
               }
             ]
@@ -77,7 +78,8 @@
       }
     },
     {
-      // Renders /llms.txt from the hand-written summary plus every post.
+      // Exempt from the shared-code boundary: /llms.txt lists every post, so this
+      // imports the blog's post helpers. Only the "../" ban stays.
       "files": ["src/lib/llms.ts"],
       "rules": {
         "no-restricted-imports": [

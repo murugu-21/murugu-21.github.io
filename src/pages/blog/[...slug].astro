@@ -2,13 +2,10 @@
 import { render } from "astro:content";
 import BlogLayout from "#src/layouts/BlogLayout.astro";
 import Bio from "#src/components/blog/Bio.astro";
-import type { BlogPosting } from "schema-dts";
-import { blog } from "#src/lib/schema.ts";
-import { BLOG_ID, BLOG_URL, PERSON_ID } from "#src/lib/site.ts";
+import { blog, blogPosting } from "#src/lib/blog/schema.ts";
 import {
   getPublishedPosts,
   postPath,
-  postUrl,
   postDescription,
   postKeywords,
   tagPath,
@@ -38,26 +35,10 @@ const { post, previous, next } = Astro.props;
 const { Content, headings } = await render(post);
 
 const description = postDescription(post);
-
-const url = postUrl(post.id);
-const postNode: BlogPosting = {
-  "@type": "BlogPosting",
-  headline: post.data.title,
-  description,
-  url,
-  mainEntityOfPage: { "@type": "WebPage", "@id": url },
-  datePublished: post.data.date.toISOString(),
-  dateModified: post.data.date.toISOString(),
-  keywords: postKeywords(post).join(", "),
-  image: `${BLOG_URL}/og-image.png`,
-  author: { "@id": PERSON_ID },
-  publisher: { "@id": PERSON_ID },
-  isPartOf: { "@id": BLOG_ID }
-};
 ---
 
 <BlogLayout
-  graph={[blog, postNode]}
+  graph={[blog, blogPosting(post)]}
   title={post.data.title}
   description={description}
   article={{ published: post.data.date, tags: postKeywords(post) }}

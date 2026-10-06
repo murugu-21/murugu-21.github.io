@@ -68,7 +68,7 @@ const twitterHandle = new URL(socialMediaLinks.twitter).pathname.replace(/^\//, 
 // Canonical on the custom domain, so other hosts (workers.dev previews) consolidate to it.
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 
-const jsonLd = jsonLdHtml({
+const jsonLdScript = jsonLdHtml({
   page: noindex ? null : { url: canonicalUrl, name: title, about: section.pageAbout, profilePage },
   nodes: pageGraph
 });
@@ -141,7 +141,7 @@ const jsonLd = jsonLdHtml({
     <Font cssVariable="--font-fira-code" preload />
 
     <script is:inline set:html={themeBootstrapScript} />
-    <script type="application/ld+json" set:html={jsonLd} />
+    <script type="application/ld+json" set:html={jsonLdScript} />
     <SiteScripts />
   </head>
   <body class={section.bodyClass}>

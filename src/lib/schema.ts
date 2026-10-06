@@ -1,18 +1,7 @@
-// The schema.org nodes every page shares. Layout puts them in each page's
-// JSON-LD @graph, next to the page's own nodes.
-import type { Blog, Graph, Person, Thing, WebPage, WebSite } from "schema-dts";
+// The schema.org nodes every page shares.
+import type { Graph, Person, Thing, WebPage, WebSite } from "schema-dts";
 import { sameAs, skillsCategories, socialMediaLinks } from "#src/data/portfolio.ts";
-import {
-  AUTHOR,
-  BLOG_DESCRIPTION,
-  BLOG_ID,
-  BLOG_TITLE,
-  BLOG_URL,
-  PERSON_ID,
-  SITE_DESCRIPTION,
-  SITE_ORIGIN,
-  WEBSITE_ID
-} from "#src/lib/site.ts";
+import { AUTHOR, PERSON_ID, SITE_DESCRIPTION, SITE_ORIGIN, WEBSITE_ID } from "#src/lib/site.ts";
 
 const HAND_WRITTEN_KNOWS_ABOUT = [
   "TypeScript",
@@ -98,17 +87,6 @@ const person: Person = {
   knowsAbout: knowsAbout(),
   sameAs,
   mainEntityOfPage: { "@id": `${SITE_ORIGIN}/about/` }
-};
-
-export const blog: Blog = {
-  "@type": "Blog",
-  "@id": BLOG_ID,
-  name: BLOG_TITLE,
-  description: BLOG_DESCRIPTION,
-  url: `${BLOG_URL}/`,
-  isPartOf: { "@id": WEBSITE_ID },
-  author: { "@id": PERSON_ID },
-  publisher: { "@id": PERSON_ID }
 };
 
 interface PageGraph {

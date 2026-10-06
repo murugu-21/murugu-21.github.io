@@ -62,14 +62,7 @@ function singleFileSitemap(): AstroIntegration {
 // rather than the constants that produced it: one canonical URL, and a
 // BlogPosting whose author resolves to the Person in the same @graph.
 const jsonLdGraph = z.object({
-  "@graph": z.array(
-    z.looseObject({
-      "@type": z.string(),
-      "@id": z.string().optional(),
-      name: z.string().optional(),
-      author: z.object({ "@id": z.string() }).optional()
-    })
-  )
+  "@graph": z.array(z.record(z.string(), z.unknown()))
 });
 
 function checkPostHead({ slug, html }: { slug: string; html: string }) {
@@ -87,7 +80,8 @@ function checkPostHead({ slug, html }: { slug: string; html: string }) {
     );
   }
   const graph = jsonLdGraph.parse(JSON.parse(scripts[0][1]))["@graph"];
-  const authorId = graph.find(node => node["@type"] === "BlogPosting")?.author?.["@id"];
+  const posting = graph.find(node => node["@type"] === "BlogPosting");
+  const authorId = z.object({ "@id": z.string() }).safeParse(posting?.author).data?.["@id"];
   const author = graph.find(node => node["@id"] === authorId);
   if (!authorId || author?.["@type"] !== "Person" || author.name !== "Murugappan M") {
     throw new Error(

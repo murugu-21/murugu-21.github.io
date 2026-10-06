@@ -41,7 +41,9 @@ export function publishedSlugs(): string[] {
     .filter(d => {
       const page = join(BLOG_DIST, d.name, "index.html");
       return (
-        d.isDirectory() && existsSync(page) && readFileSync(page, "utf8").includes("data-post-body")
+        d.isDirectory() &&
+        existsSync(page) &&
+        readFileSync(page, "utf8").includes("<section data-post-body>")
       );
     })
     .map(d => d.name);
