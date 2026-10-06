@@ -52,6 +52,70 @@
       }
     },
     {
+      // Shared code serves every page, so it can't reach into a page area's folder.
+      "files": [
+        "src/components/*",
+        "src/components/chat/**",
+        "src/components/ui/**",
+        "src/layouts/Layout.astro",
+        "src/lib/*",
+        "src/data/**",
+        "src/directives/**"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\.\\./",
+                "message": "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (README › Source layout). Cross-folder imports use the #src subpath import."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // Renders /llms.txt from the hand-written summary plus every post.
+      "files": ["src/lib/llms.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^\\.\\./",
+                "message": "Import across folders through the #src, #worker, #utils and #scripts subpath imports (package.json)."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      // The homepage may show the blog's posts; the blog never reaches into the homepage.
+      "files": [
+        "src/components/blog/**",
+        "src/lib/blog/**",
+        "src/styles/blog/**",
+        "src/layouts/BlogLayout.astro"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^#src/components/home/|^\\.\\./",
+                "message": "Blog code can't import homepage components. Move a component both use to the root of src/components (README › Source layout). Cross-folder imports use the #src subpath import."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["scripts/**"],
       "rules": {
         "no-restricted-imports": [
