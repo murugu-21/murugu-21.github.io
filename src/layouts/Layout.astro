@@ -169,6 +169,8 @@ if (!noindex) {
 }
 graph.push(...pageGraph);
 const jsonLd = { "@context": "https://schema.org", "@graph": graph };
+// set:html doesn't escape, so a "</script>" in a post title would end the block.
+const jsonLdHtml = JSON.stringify(jsonLd).replaceAll("<", "\\u003c");
 ---
 
 <!doctype html>
@@ -238,7 +240,7 @@ const jsonLd = { "@context": "https://schema.org", "@graph": graph };
     <Font cssVariable="--font-fira-code" preload />
 
     <script is:inline set:html={themeBootstrapScript} />
-    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <script type="application/ld+json" set:html={jsonLdHtml} />
     <SiteScripts />
   </head>
   <body class={section.bodyClass}>
