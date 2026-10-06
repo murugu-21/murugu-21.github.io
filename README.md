@@ -210,7 +210,7 @@ The renderings are gitignored; only the fence source is committed. `bun run buil
 
 The RSS feed uses the PNG. Feed readers and mirrors like dev.to rasterize images without an HTML engine or web fonts, so mermaid's `foreignObject` labels come out blank in the SVG.
 
-The `blogPostBodies` integration in `astro.config.ts` checks after the build that every post rendered one figure per fence. Without it, a markdown failure would ship a blank article, because the content layer only logs the error and caches the empty result in `node_modules/.astro`.
+The `blogPostChecks` integration in `astro.config.ts` checks after the build that every post rendered one figure per fence. Without it, a markdown failure would ship a blank article, because the content layer only logs the error and caches the empty result in `node_modules/.astro`. It also checks each post's head: exactly one canonical URL, the post's own, and a `BlogPosting` whose author resolves to the `Person` in the same JSON-LD `@graph`.
 
 ### Tag vocabulary
 
