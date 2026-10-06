@@ -100,10 +100,10 @@ function blogPostBodies(): AstroIntegration {
 // Hooked into `astro build` itself so deploy tools that run it directly don't
 // skip these steps; `dir` follows the adapter's output location.
 function buildArtifacts(): AstroIntegration {
-  const run = (script: string, ...args: string[]) => {
-    const result = spawnSync("bun", [script, ...args], { stdio: "inherit" });
+  const run = (command: string, args: string[]) => {
+    const result = spawnSync(command, args, { stdio: "inherit" });
     if (result.status !== 0) {
-      throw new Error(`build-artifacts: ${script} ${args.join(" ")} failed`);
+      throw new Error(`build-artifacts: ${command} ${args.join(" ")} failed`);
     }
   };
   return {
@@ -111,9 +111,10 @@ function buildArtifacts(): AstroIntegration {
     hooks: {
       // Diagrams are gitignored. remark-mermaid renders them during content
       // sync, but posts cached in node_modules/.astro skip it.
-      "astro:build:start": () => run("scripts/render-mermaid.ts"),
+      "astro:build:start": () => run("bun", ["scripts/render-mermaid.ts"]),
       // Registered last, so the site it prints from is final.
-      "astro:build:done": ({ dir }) => run("scripts/generate-resume.ts", fileURLToPath(dir))
+      "astro:build:done": ({ dir }) =>
+        run("node", ["scripts/generate-resume.ts", fileURLToPath(dir)])
     }
   };
 }

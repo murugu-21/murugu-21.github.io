@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { jsonString } from "#utils/json.ts";
 import { launchBrowser } from "./launch-browser.ts";
+import { ROOT } from "./site-dir.ts";
 import {
   DIAGRAMS_DIR,
   diagramFile,
@@ -38,7 +39,6 @@ declare global {
   }
 }
 
-const ROOT = join(import.meta.dirname, "..");
 const CONTENT_DIR = join(ROOT, "content/blog");
 const MERMAID_DIR = join(ROOT, "node_modules/mermaid");
 const MERMAID_JS = join(MERMAID_DIR, "dist/mermaid.min.js");
