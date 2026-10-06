@@ -305,7 +305,7 @@
   }
 
   /* --- Post-body images ---------------------------------------------------
-     Scoped to the articleBody <section> so the footer Bio stays plain.
+     Scoped to the post-body <section> so the footer Bio stays plain.
      preflight: inline, or centred diagrams would left-align. */
   .blog-post section img {
     display: inline;

@@ -34,16 +34,14 @@ export function ffmpeg(args: string[]): void {
   run("ffmpeg", ["-y", "-loglevel", "error", ...args]);
 }
 
-// Post dirs under the built blog; the articleBody check skips the blog's 404.
+// Post dirs under the built blog; the post-body check skips the blog's 404.
 export function publishedSlugs(): string[] {
   if (!existsSync(BLOG_DIST)) throw new Error(`${BLOG_DIST} missing; run \`bun run build\` first`);
   return readdirSync(BLOG_DIST, { withFileTypes: true })
     .filter(d => {
       const page = join(BLOG_DIST, d.name, "index.html");
       return (
-        d.isDirectory() &&
-        existsSync(page) &&
-        readFileSync(page, "utf8").includes('itemprop="articleBody"')
+        d.isDirectory() && existsSync(page) && readFileSync(page, "utf8").includes("data-post-body")
       );
     })
     .map(d => d.name);

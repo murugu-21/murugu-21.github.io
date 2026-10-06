@@ -74,7 +74,7 @@ function blogPostBodies(): AstroIntegration {
             throw new Error(`blog-post-bodies: blog/${slug}/index.html was not built`);
           }
           const html = fs.readFileSync(page, "utf8");
-          const body = html.match(/<section itemprop="articleBody">([\s\S]*?)<\/section>/);
+          const body = html.match(/<section data-post-body>([\s\S]*?)<\/section>/);
           if (!body || body[1].trim() === "") {
             throw new Error(
               `blog-post-bodies: blog/${slug}/index.html has an empty article body. ` +

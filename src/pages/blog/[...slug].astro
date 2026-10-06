@@ -65,9 +65,9 @@ const postNode = {
   description={description}
   article={{ published: post.data.date, tags: postKeywords(post) }}
 >
-  <article class="blog-post" itemscope itemtype="http://schema.org/Article">
+  <article class="blog-post">
     <header>
-      <h1 itemprop="headline">{post.data.title}</h1>
+      <h1>{post.data.title}</h1>
       <p>
         {formatDate(post.data.date)}
         {` • ${formatReadingTime(timeToRead(post.body))}`}
@@ -101,7 +101,7 @@ const postNode = {
           lands on the disabled button. */}
       <ListenControls client:interaction slug={post.id} />
     </div>
-    <section itemprop="articleBody">
+    <section data-post-body>
       <Content />
     </section>
     <hr />

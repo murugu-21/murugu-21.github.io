@@ -13,11 +13,11 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
 ---
 
 <li class="mb-4 pl-0" data-search={haystack} data-tags={post.tags.join(" ")}>
-  <article class="mt-8" itemscope itemtype="http://schema.org/Article">
+  <article class="mt-8">
     <header class="mb-4">
       <h2 class="mt-0 mb-2 text-[1.728rem] leading-[1.1] font-bold tracking-tight text-navy dark:text-blue-light">
-        <a href={post.href} itemprop="url" class="text-inherit no-underline">
-          <span itemprop="headline">{post.title}</span>
+        <a href={post.href} class="text-inherit no-underline">
+          {post.title}
         </a>
       </h2>
       <small>
@@ -37,11 +37,7 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
     </header>
     <section>
       {/* Trusted frontmatter / excerpt HTML. */}
-      <p
-        class="leading-relaxed"
-        itemprop="description"
-        set:html={post.description || post.excerpt}
-      />
+      <p class="leading-relaxed" set:html={post.description || post.excerpt} />
     </section>
   </article>
 </li>

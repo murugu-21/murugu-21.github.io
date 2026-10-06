@@ -123,7 +123,7 @@ const fetchTimings = async (slug: string): Promise<AudioTimings | null> => {
 // the timing JSON. The title is read first.
 const collectBlocks = (): Block[] => {
   const article = document.querySelector("article.blog-post");
-  const body = article?.querySelector("section[itemprop='articleBody']");
+  const body = article?.querySelector("section[data-post-body]");
   if (!body) return [];
   const blocks: Block[] = speechBlocks(body)
     .map(b => ({ el: b.el, text: normalizeSpeechText(b.text) }))

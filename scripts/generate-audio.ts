@@ -98,8 +98,8 @@ function extractBlocks(slug: string): string[] {
   const html = readFileSync(join(BLOG_DIST, slug, "index.html"), "utf8");
   const { document } = parseHTML(html);
   const title = document.querySelector("article.blog-post header h1");
-  const body = document.querySelector("section[itemprop='articleBody']");
-  if (!body) throw new Error(`${slug}: no articleBody section`);
+  const body = document.querySelector("section[data-post-body]");
+  if (!body) throw new Error(`${slug}: no post body section`);
   const raw = speechBlocks(body).map(b => b.text);
   if (title) raw.unshift(title.textContent ?? "");
   return raw.map(normalizeSpeechText).filter(t => t.length > 0);
