@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "unicorn", "oxc", "react", "import", "promise"],
-  "options": { "typeAware": true },
+  "options": { "typeAware": true, "reportUnusedDisableDirectives": "error" },
   "jsPlugins": ["./scripts/lint/test-behaviour.ts"],
   "categories": { "correctness": "error" },
   "rules": {
@@ -23,7 +23,16 @@
     "typescript/no-unsafe-argument": "error",
     "typescript/no-unsafe-call": "error",
     "typescript/no-unsafe-member-access": "error",
-    "typescript/no-unsafe-return": "error"
+    "typescript/no-unsafe-return": "error",
+    "typescript/no-unsafe-type-assertion": "error",
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/switch-exhaustiveness-check": "error",
+    "typescript/no-deprecated": "error",
+    "typescript/only-throw-error": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/return-await": "error",
+    // `||` on strings is deliberate: a blank value counts as missing.
+    "typescript/prefer-nullish-coalescing": ["error", { "ignorePrimitives": { "string": true } }]
   },
   "overrides": [
     {

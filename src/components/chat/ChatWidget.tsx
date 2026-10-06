@@ -310,7 +310,6 @@ export function ChatWidget() {
     const island = launcherRef.current?.closest("astro-island");
     if (!(island instanceof HTMLElement) || !island.dataset.openOnHydrate) return;
     delete island.dataset.openOnHydrate;
-    // oxlint-disable-next-line react/set-state-in-effect
     openPanel();
   }, []);
 

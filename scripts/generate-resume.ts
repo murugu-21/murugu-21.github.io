@@ -1,4 +1,4 @@
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { extname, join, normalize, resolve } from "node:path";
@@ -34,7 +34,7 @@ const MIME_TYPES: Record<string, string> = {
 
 /** Static server over the built site; a request for foo/ serves foo/index.html. */
 function createStaticServer(rootDir: string): Server {
-  return createServer(async (req, res) => {
+  const serve = async (req: IncomingMessage, res: ServerResponse) => {
     try {
       const url = new URL(req.url ?? "/", "http://localhost");
       let pathname = decodeURIComponent(url.pathname);
@@ -61,7 +61,8 @@ function createStaticServer(rootDir: string): Server {
       res.writeHead(404);
       res.end("Not found");
     }
-  });
+  };
+  return createServer((req, res) => void serve(req, res));
 }
 
 function listen(server: Server, port: number): Promise<void> {

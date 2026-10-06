@@ -449,7 +449,7 @@ export function ListenControls({ slug }: { slug: string }) {
       className="flex items-center gap-3 rounded-lg border border-border bg-card p-2 shadow-sm dark:border-white/40"
     >
       <Button
-        onClick={onToggle}
+        onClick={() => void onToggle()}
         disabled={busy || !supported}
         aria-label={busy ? "Loading" : playing ? "Pause" : "Listen"}
         aria-pressed={playing}

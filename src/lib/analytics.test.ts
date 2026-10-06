@@ -36,7 +36,7 @@ afterEach(() => {
 // The module keeps state (booted SDK, buffer), so SDK tests need a fresh copy.
 const fresh = async () => {
   vi.resetModules();
-  return await import("./analytics");
+  return import("./analytics");
 };
 
 const doc = (html: string) => parseHTML(html).document;
