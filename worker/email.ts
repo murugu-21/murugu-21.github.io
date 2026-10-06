@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import type { ContactRequest } from "./api/contact";
+import type { ContactMessage } from "./api/contact";
 import { jsonString, lenient } from "#utils/json.ts";
 import type { ChatHistoryEntry } from "./protocol";
 
@@ -66,7 +66,7 @@ export async function sendOpportunityEmail({
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });
 }
 
-export function formatContactEmail(msg: ContactRequest): {
+export function formatContactEmail(msg: ContactMessage): {
   subject: string;
   text: string;
 } {
@@ -91,7 +91,7 @@ export async function sendContactEmail({
 }: {
   email: EmailLike;
   inbox: string;
-  msg: ContactRequest;
+  msg: ContactMessage;
 }): Promise<void> {
   const { subject, text } = formatContactEmail(msg);
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });

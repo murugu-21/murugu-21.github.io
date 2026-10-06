@@ -192,7 +192,8 @@ describe("buildOpenApiDocument", () => {
     });
     expect(Object.keys(contact.responses)).toContain("200");
     expect(doc.components.schemas.ContactRequest.properties?.dryRun).toMatchObject({
-      type: "boolean"
+      type: ["boolean", "null"],
+      default: false
     });
   });
 
@@ -207,7 +208,7 @@ describe("buildOpenApiDocument", () => {
   it("describes every property of every component schema", () => {
     for (const [name, { properties }] of Object.entries(doc.components.schemas)) {
       for (const [property, spec] of Object.entries(properties ?? {})) {
-        if (spec.$ref) continue;
+        if (typeof spec === "boolean" || spec.$ref) continue;
         expect(spec.description, `${name}.${property}`).toMatch(/\S/);
       }
     }

@@ -8,7 +8,6 @@ import { API_VERSION } from "#worker/api/versioning.ts";
 import { JsonObject } from "#utils/json.ts";
 import { LATEST_PROTOCOL_VERSION } from "#worker/mcp/protocol.ts";
 import { readResource, RESOURCE_ORIGIN } from "#worker/mcp/resources.ts";
-import { inlineRefs } from "#worker/mcp/schema.ts";
 import { MCP_TOOLS } from "#worker/mcp/tools.ts";
 import {
   AGENTS_MD,
@@ -133,6 +132,23 @@ async function callModern(
 
 function legacy(method: string, params: Record<string, unknown> = {}) {
   return send({ jsonrpc: "2.0", id: 1, method, params });
+}
+
+const ListedTools = z.object({
+  tools: z.array(
+    z.object({
+      name: z.string(),
+      title: z.string(),
+      description: z.string(),
+      inputSchema: JsonObject,
+      outputSchema: JsonObject
+    })
+  )
+});
+
+/** The tools as a client sees them, JSON Schemas included. */
+async function listedTools() {
+  return resultOf(await callModern("tools/list"), ListedTools).tools;
 }
 
 /** Calls a tool over HTTP, so the SDK's input and output schema checks run too. */
@@ -412,11 +428,16 @@ describe("tools over HTTP", () => {
     expect(result.tools.map(t => t.name)).toEqual(MCP_TOOLS.map(t => t.name));
     const byName = new Map(result.tools.map(t => [t.name, t]));
     expect(byName.get("get_profile")?.inputSchema).toEqual({
+      $schema: "https://json-schema.org/draft/2020-12/schema",
       type: "object",
       properties: {},
       additionalProperties: false
     });
-    expect(result.tools.map(t => t.outputSchema)).toEqual(MCP_TOOLS.map(t => t.outputSchema));
+    expect(byName.get("get_blog_post")?.outputSchema).toMatchObject({
+      type: "object",
+      required: ["slug", "title", "url", "description", "markdown"],
+      additionalProperties: false
+    });
   });
 
   it("reports an unknown tool as a protocol error", async () => {
@@ -603,8 +624,8 @@ describe("MCP_TOOLS definitions", () => {
     }
   });
 
-  it("documents every tool and every input property", () => {
-    for (const tool of MCP_TOOLS) {
+  it("documents every tool and every input property", async () => {
+    for (const tool of await listedTools()) {
       expect(tool.title, tool.name).toMatch(/\S/);
       expect(tool.description.length, tool.name).toBeGreaterThan(60);
       const props = z
@@ -616,8 +637,8 @@ describe("MCP_TOOLS definitions", () => {
     }
   });
 
-  it("declares self-contained schemas with an object output", () => {
-    for (const tool of MCP_TOOLS) {
+  it("lists self-contained schemas with an object output", async () => {
+    for (const tool of await listedTools()) {
       expect(tool.outputSchema.type, tool.name).toBe("object");
       expect(hasRef(tool.inputSchema), tool.name).toBe(false);
       expect(hasRef(tool.outputSchema), tool.name).toBe(false);
@@ -709,27 +730,30 @@ describe("send_message", () => {
     expect(sent).toEqual([]);
   });
 
-  it("reports every invalid field so the model can fix them in one retry", async () => {
-    const result = await call(
-      "send_message",
-      { email: "nope", message: "hi" },
-      { ip: "198.51.100.62" }
-    );
-    expect(result.isError).toBe(true);
-    expect(result.content[0].text).toMatch(/^Input validation error: .*send_message/);
-    expect(result.content[0].text).toContain("#/email");
-    expect(result.content[0].text).toContain("#/message");
-  });
-
-  it("applies the contact endpoint's stricter rules to arguments the schema lets through", async () => {
+  it("reports every invalid field, with the contact endpoint's rules, in one result", async () => {
     const result = await call(
       "send_message",
       { email: "a@b", message: " ".repeat(25) },
-      { ip: "198.51.100.63" }
+      { ip: "198.51.100.62" }
     );
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("- email: must be a valid email address");
-    expect(result.content[0].text).toContain("- message: must be between 20 and 4000 characters");
+    expect(result.content[0].text).toBe(
+      "Input validation error: Invalid arguments for tool send_message: email: must be a valid email address, message: must be between 20 and 4000 characters"
+    );
+  });
+
+  it("rejects an argument the tool does not take", async () => {
+    const { email, sent } = recordingEmail();
+    const result = await call(
+      "send_message",
+      { ...message, subject: "Hello" },
+      { ip: "198.51.100.63", email }
+    );
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toBe(
+      'Input validation error: Invalid arguments for tool send_message: Unrecognized key: "subject"'
+    );
+    expect(sent).toEqual([]);
   });
 
   it.each<[string, TestEnvOptions & { ip: string }]>([
@@ -898,50 +922,5 @@ describe("readResource", () => {
       .parse(JSON.parse(content.text));
     expect(doc.openapi).toBe("3.1.0");
     expect(doc.servers[0].url).toBe(RESOURCE_ORIGIN);
-  });
-});
-
-describe("inlineRefs", () => {
-  const fixture = {
-    Wrapper: {
-      type: "object",
-      properties: {
-        item: { $ref: "#/components/schemas/Item" },
-        items: { type: "array", items: { $ref: "#/components/schemas/Item" } }
-      }
-    },
-    Item: { type: "object", properties: { id: { type: "string" } } }
-  };
-
-  it("inlines refs at the root and nested in properties and array items, leaving the source intact", () => {
-    const before = JSON.stringify(fixture);
-    expect(inlineRefs({ $ref: "#/components/schemas/Item" }, fixture)).toEqual(fixture.Item);
-    const out = inlineRefs(fixture.Wrapper, fixture);
-    expect(out).toHaveProperty("properties.item", fixture.Item);
-    expect(out).toHaveProperty("properties.items.items", fixture.Item);
-    expect(JSON.stringify(fixture)).toBe(before);
-  });
-
-  it("keeps sibling keywords alongside a $ref", () => {
-    const out = inlineRefs({ $ref: "#/components/schemas/Item", description: "one item" }, fixture);
-    expect(out).toHaveProperty("description", "one item");
-    expect(out).toHaveProperty("type", "object");
-  });
-
-  it("throws on a $ref that points nowhere", () => {
-    expect(() => inlineRefs({ $ref: "#/components/schemas/Ghost" }, fixture)).toThrow(/Ghost/);
-  });
-
-  it("throws on an external $ref rather than dereferencing a network URI", () => {
-    expect(() => inlineRefs({ $ref: "https://evil.example/schema.json" }, fixture)).toThrow(
-      /external/i
-    );
-  });
-
-  it("throws rather than looping forever on a cyclic $ref", () => {
-    const cyclic = {
-      A: { type: "object", properties: { b: { $ref: "#/components/schemas/A" } } }
-    };
-    expect(() => inlineRefs(cyclic.A, cyclic)).toThrow(/depth/i);
   });
 });

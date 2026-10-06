@@ -1,11 +1,43 @@
 // OpenAPI 3.1.0 document served at /openapi.json and /api/openapi.json. Generated per request
-// so `servers` names the host that answered; api-spec.test.ts checks it against routes.ts.
+// so `servers` names the host that answered; api-spec.test.ts checks it against the router.
+// The component schemas come from the zod schemas the API and MCP tools validate with.
+
+import { z } from "zod";
 
 import { API_BASE, API_PATHS, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./routes";
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT, CONTACT_LIMITS } from "./contact";
-import { POSTS_LIMIT_MAX, SLUG_PATTERN } from "./posts";
+import {
+  CONTACT_DAILY_GLOBAL,
+  CONTACT_DAILY_PER_CLIENT,
+  ContactAccepted,
+  ContactRequest
+} from "./contact";
+import {
+  CurrentRole,
+  EducationEntry,
+  EducationList,
+  ExperienceEntry,
+  ExperienceList,
+  Link,
+  OpenSourceContribution,
+  OpenSourceList,
+  Person,
+  Proficiency,
+  Profile,
+  SkillCategory,
+  SkillsResponse
+} from "./dataset";
+import { ErrorBody, FieldIssue } from "./errors";
+import { Post, PostList, POSTS_LIMIT_MAX, PostSummary, SLUG_PATTERN } from "./posts";
 import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "./ratelimit";
-import { API_VERSION, DEPRECATION_NOTICE_DAYS, VERSIONS } from "./versioning";
+import {
+  API_VERSION,
+  ApiVersionPolicy,
+  ApiVersionRecord,
+  ApiVersions,
+  DEPRECATION_NOTICE_DAYS,
+  UnversionedAlias,
+  VERSIONS
+} from "./versioning";
 
 type SchemaObject = {
   $ref?: string;
@@ -50,7 +82,7 @@ type OpenApiDocument = {
   security: unknown[];
   paths: Record<string, Partial<Record<"get" | "post", Operation>>>;
   components: {
-    schemas: Record<string, SchemaObject>;
+    schemas: Record<string, z.core.JSONSchema.BaseSchema>;
     securitySchemes: Record<string, unknown>;
   };
 };
@@ -101,12 +133,6 @@ const metaFailures = {
   "429": rateLimited,
   "500": errorResponse("Unexpected server error.")
 };
-
-const stringProp = (description: string, extra: object = {}) => ({
-  type: "string",
-  description,
-  ...extra
-});
 
 export function buildOpenApiDocument(origin: string): OpenApiDocument {
   return {
@@ -364,570 +390,52 @@ export function buildOpenApiDocument(origin: string): OpenApiDocument {
     },
     components: {
       securitySchemes: {},
-      schemas: API_SCHEMAS
+      schemas: COMPONENT_SCHEMAS
     }
   };
 }
 
-// Shared with worker/mcp/tools.ts, which inlines them into self-contained tool schemas.
-export const API_SCHEMAS: Record<string, SchemaObject> = {
-  Error: {
-    type: "object",
-    title: "Error",
-    description:
-      "The single error shape every /api/* failure uses. Branch on `error.code`, not on the status text or the message.",
-    required: ["error"],
-    additionalProperties: false,
-    properties: {
-      error: {
-        type: "object",
-        description: "The failure.",
-        required: ["code", "message", "hint", "documentation_url"],
-        additionalProperties: false,
-        properties: {
-          code: {
-            type: "string",
-            description: "Stable machine-readable failure code, safe to branch on.",
-            enum: [
-              "not_found",
-              "method_not_allowed",
-              "invalid_request",
-              "unsupported_media_type",
-              "payload_too_large",
-              "rate_limited",
-              "service_unavailable",
-              "internal_error"
-            ]
-          },
-          message: stringProp("What went wrong, in one sentence."),
-          hint: stringProp(
-            "What to do about it, as a corrective action rather than a restatement."
-          ),
-          documentation_url: stringProp("Where the endpoint is documented.", {
-            format: "uri"
-          }),
-          details: {
-            type: "array",
-            description:
-              "Present on field-level validation failures: one entry per offending field.",
-            items: { $ref: "#/components/schemas/FieldIssue" }
-          }
-        }
-      }
-    }
-  },
-  FieldIssue: {
-    type: "object",
-    title: "FieldIssue",
-    description: "One rejected request field and why.",
-    required: ["field", "issue"],
-    additionalProperties: false,
-    properties: {
-      field: stringProp("The request field that was rejected."),
-      issue: stringProp("What the field must satisfy instead.")
-    }
-  },
-  Link: {
-    type: "object",
-    title: "Link",
-    description: "A labelled public URL.",
-    required: ["label", "url"],
-    additionalProperties: false,
-    properties: {
-      label: stringProp("Human-readable name for the destination."),
-      url: stringProp("Absolute URL.", { format: "uri" })
-    }
-  },
-  CurrentRole: {
-    type: "object",
-    title: "CurrentRole",
-    description: "The role held right now, if any.",
-    required: ["role", "company", "since"],
-    additionalProperties: false,
-    properties: {
-      role: stringProp("Job title."),
-      company: stringProp("Employer name."),
-      since: {
-        type: ["string", "null"],
-        description: "ISO 8601 year-month the role started, or null if unknown.",
-        examples: ["2025-12"]
-      }
-    }
-  },
-  Person: {
-    type: "object",
-    title: "Person",
-    description: "The single person this API describes.",
-    required: [
-      "name",
-      "headline",
-      "pitch",
-      "location",
-      "email",
-      "site",
-      "availableForWork",
-      "currentRole",
-      "focus"
-    ],
-    additionalProperties: false,
-    properties: {
-      name: stringProp("Full name."),
-      headline: stringProp("Professional title.", {
-        examples: ["Full Stack Engineer"]
-      }),
-      pitch: stringProp("Elevator pitch, as published on the site."),
-      location: stringProp("City and country he is based in."),
-      email: stringProp("Public contact address.", { format: "email" }),
-      site: stringProp("Canonical site URL.", { format: "uri" }),
-      availableForWork: {
-        type: "boolean",
-        description: "Whether he is open to new opportunities."
-      },
-      currentRole: {
-        oneOf: [{ $ref: "#/components/schemas/CurrentRole" }, { type: "null" }],
-        description: "The role held right now, or null between roles."
-      },
-      focus: {
-        type: "array",
-        description: "One statement per line of the site's 'What I do' section, in his own words.",
-        items: { type: "string" }
-      }
-    }
-  },
-  Profile: {
-    type: "object",
-    title: "Profile",
-    description: "Response body of getProfile.",
-    required: ["person", "links"],
-    additionalProperties: false,
-    properties: {
-      person: { $ref: "#/components/schemas/Person" },
-      links: {
-        type: "array",
-        description: "Every public link, including machine-readable ones.",
-        items: { $ref: "#/components/schemas/Link" }
-      }
-    }
-  },
-  ExperienceEntry: {
-    type: "object",
-    title: "ExperienceEntry",
-    description: "One role in the work history.",
-    required: [
-      "role",
-      "company",
-      "location",
-      "period",
-      "startDate",
-      "endDate",
-      "current",
-      "summary",
-      "highlights"
-    ],
-    additionalProperties: false,
-    properties: {
-      role: stringProp("Job title."),
-      company: stringProp("Employer name."),
-      location: stringProp("Where the role was based."),
-      period: stringProp("The range exactly as the site displays it.", {
-        examples: ["December 2025 – Present"]
-      }),
-      startDate: {
-        type: ["string", "null"],
-        description: "ISO 8601 year-month the role started, or null if unparseable.",
-        examples: ["2025-12"]
-      },
-      endDate: {
-        type: ["string", "null"],
-        description: "ISO 8601 year-month the role ended; null while it is ongoing.",
-        examples: ["2025-12"]
-      },
-      current: {
-        type: "boolean",
-        description: "Whether this is the role held right now."
-      },
-      summary: stringProp("One line on what the role was about."),
-      highlights: {
-        type: "array",
-        description: "Concrete achievements in the role.",
-        items: { type: "string" }
-      }
-    }
-  },
-  ExperienceList: {
-    type: "object",
-    title: "ExperienceList",
-    description: "Response body of listExperience.",
-    required: ["experience"],
-    additionalProperties: false,
-    properties: {
-      experience: {
-        type: "array",
-        description: "Roles, newest first.",
-        items: { $ref: "#/components/schemas/ExperienceEntry" }
-      }
-    }
-  },
-  SkillCategory: {
-    type: "object",
-    title: "SkillCategory",
-    description: "One group of related technologies.",
-    required: ["category", "skills"],
-    additionalProperties: false,
-    properties: {
-      category: stringProp("Group name.", { examples: ["Cloud & Infra"] }),
-      skills: {
-        type: "array",
-        description: "The individual technologies in the group.",
-        items: { type: "string" }
-      }
-    }
-  },
-  Proficiency: {
-    type: "object",
-    title: "Proficiency",
-    description: "Self-reported depth in a broad area.",
-    required: ["area", "tools", "level"],
-    additionalProperties: false,
-    properties: {
-      area: stringProp("The area being rated."),
-      tools: {
-        type: "array",
-        description: "Named technologies within the area.",
-        items: { type: "string" }
-      },
-      level: {
-        type: "integer",
-        description: "Self-reported level from 0 to 100.",
-        minimum: 0,
-        maximum: 100
-      }
-    }
-  },
-  SkillsResponse: {
-    type: "object",
-    title: "SkillsResponse",
-    description: "Response body of listSkills.",
-    required: ["skills", "proficiencies"],
-    additionalProperties: false,
-    properties: {
-      skills: {
-        type: "array",
-        description: "Technologies grouped by category.",
-        items: { $ref: "#/components/schemas/SkillCategory" }
-      },
-      proficiencies: {
-        type: "array",
-        description: "Self-reported depth per broad area.",
-        items: { $ref: "#/components/schemas/Proficiency" }
-      }
-    }
-  },
-  EducationEntry: {
-    type: "object",
-    title: "EducationEntry",
-    description: "One formal qualification.",
-    required: [
-      "institution",
-      "credential",
-      "location",
-      "period",
-      "startDate",
-      "endDate",
-      "grade",
-      "highlights"
-    ],
-    additionalProperties: false,
-    properties: {
-      institution: stringProp("School or university name."),
-      credential: stringProp("The degree or certificate earned."),
-      location: stringProp("Where the institution is."),
-      period: stringProp("The range exactly as the site displays it."),
-      startDate: {
-        type: ["string", "null"],
-        description: "ISO 8601 year-month of enrolment, or null."
-      },
-      endDate: {
-        type: ["string", "null"],
-        description: "ISO 8601 year-month of completion, or null."
-      },
-      grade: {
-        type: ["string", "null"],
-        description: 'Final grade as the site displays it (e.g. "CGPA 9.53 / 10"), or null.'
-      },
-      highlights: {
-        type: "array",
-        description: "Notable details about the studies.",
-        items: { type: "string" }
-      }
-    }
-  },
-  EducationList: {
-    type: "object",
-    title: "EducationList",
-    description: "Response body of listEducation.",
-    required: ["education"],
-    additionalProperties: false,
-    properties: {
-      education: {
-        type: "array",
-        description: "Qualifications, newest first.",
-        items: { $ref: "#/components/schemas/EducationEntry" }
-      }
-    }
-  },
-  OpenSourceContribution: {
-    type: "object",
-    title: "OpenSourceContribution",
-    description: "Public contributions to one project.",
-    required: ["project", "role", "description", "links"],
-    additionalProperties: false,
-    properties: {
-      project: stringProp("The project contributed to.", {
-        examples: ["AnkiDroid"]
-      }),
-      role: stringProp("The role held on the project."),
-      description: stringProp("What the contributions were."),
-      links: {
-        type: "array",
-        description:
-          "Links to the individual merged pull requests, so the claim can be checked at the source.",
-        items: { $ref: "#/components/schemas/Link" }
-      }
-    }
-  },
-  OpenSourceList: {
-    type: "object",
-    title: "OpenSourceList",
-    description: "Response body of listOpenSourceContributions.",
-    required: ["openSource"],
-    additionalProperties: false,
-    properties: {
-      openSource: {
-        type: "array",
-        description: "One entry per project.",
-        items: { $ref: "#/components/schemas/OpenSourceContribution" }
-      }
-    }
-  },
-  PostSummary: {
-    type: "object",
-    title: "PostSummary",
-    description: "A blog post without its body.",
-    required: ["slug", "title", "url", "description"],
-    additionalProperties: false,
-    properties: {
-      slug: stringProp("Identifier to pass to getBlogPost.", {
-        pattern: SLUG_PATTERN
-      }),
-      title: stringProp("Post title."),
-      url: stringProp("Canonical URL of the post.", { format: "uri" }),
-      description: stringProp("One-line summary of the post.")
-    }
-  },
-  PostList: {
-    type: "object",
-    title: "PostList",
-    description: "Response body of listBlogPosts.",
-    required: ["posts", "count"],
-    additionalProperties: false,
-    properties: {
-      posts: {
-        type: "array",
-        description: "Matching posts, newest first.",
-        items: { $ref: "#/components/schemas/PostSummary" }
-      },
-      count: {
-        type: "integer",
-        description: "How many posts are in `posts`.",
-        minimum: 0
-      }
-    }
-  },
-  Post: {
-    type: "object",
-    title: "Post",
-    description: "Response body of getBlogPost.",
-    required: ["slug", "title", "url", "description", "markdown"],
-    additionalProperties: false,
-    properties: {
-      slug: stringProp("The post's slug."),
-      title: stringProp("Post title."),
-      url: stringProp("Canonical URL of the post.", { format: "uri" }),
-      description: stringProp("One-line summary of the post."),
-      markdown: stringProp("The post's complete markdown source, frontmatter included.")
-    }
-  },
-  ApiVersionRecord: {
-    type: "object",
-    title: "ApiVersionRecord",
-    description: "One version of this API and where it is in its lifecycle.",
-    required: [
-      "version",
-      "status",
-      "release",
-      "basePath",
-      "url",
-      "specUrl",
-      "releasedOn",
-      "deprecatedOn",
-      "sunsetOn",
-      "successor"
-    ],
-    additionalProperties: false,
-    properties: {
-      version: stringProp("The path segment that selects this version.", {
-        examples: [CURRENT_API_VERSION]
-      }),
-      status: {
-        type: "string",
-        description:
-          "`current` while it is the newest, `deprecated` once a successor exists and a sunset date is set, `sunset` once it stops answering.",
-        enum: ["current", "deprecated", "sunset"]
-      },
-      release: stringProp(
-        "The semantic release this version serves right now. The `API-Version` response header carries the same value.",
-        { examples: [API_VERSION] }
-      ),
-      basePath: stringProp("Path prefix every endpoint of this version has.", {
-        examples: [VERSIONED_API_BASE]
-      }),
-      url: stringProp("Absolute base URL of this version.", { format: "uri" }),
-      specUrl: stringProp("Absolute URL of this version's OpenAPI document.", {
-        format: "uri"
-      }),
-      releasedOn: stringProp("ISO 8601 date the version was published.", {
-        format: "date"
-      }),
-      deprecatedOn: {
-        type: ["string", "null"],
-        format: "date",
-        description:
-          "ISO 8601 date the version was marked deprecated, or null while it is current. Mirrors the `Deprecation` response header."
-      },
-      sunsetOn: {
-        type: ["string", "null"],
-        format: "date",
-        description:
-          "ISO 8601 date the version stops answering, or null while it is current. Mirrors the `Sunset` response header."
-      },
-      successor: {
-        type: ["string", "null"],
-        description: "The version to migrate to, or null when this is the newest."
-      }
-    }
-  },
-  ApiVersionPolicy: {
-    type: "object",
-    title: "ApiVersionPolicy",
-    description: "The rules governing how this API changes.",
-    required: ["scheme", "deprecationNoticeDays", "rules", "documentationUrl", "headers"],
-    additionalProperties: false,
-    properties: {
-      scheme: {
-        type: "string",
-        description: "How a client selects a version.",
-        enum: ["url-path"]
-      },
-      deprecationNoticeDays: {
-        type: "integer",
-        description:
-          "Minimum days between a version's first `Deprecation` header and its sunset date.",
-        minimum: 0
-      },
-      rules: {
-        type: "array",
-        description:
-          "The policy in full sentences, one commitment per entry. The developer portal publishes the same text.",
-        items: { type: "string" }
-      },
-      documentationUrl: stringProp("Where the policy is documented for people.", {
-        format: "uri"
-      }),
-      headers: {
-        type: "object",
-        description:
-          "The response headers that carry version and deprecation state, each mapped to what it means.",
-        additionalProperties: { type: "string" }
-      }
-    }
-  },
-  UnversionedAlias: {
-    type: "object",
-    title: "UnversionedAlias",
-    description: "The unversioned path prefix and the version it is permanently pinned to.",
-    required: ["basePath", "pinnedTo", "note"],
-    additionalProperties: false,
-    properties: {
-      basePath: stringProp("The unversioned prefix.", { examples: [API_BASE] }),
-      pinnedTo: stringProp("The version it always resolves to."),
-      note: stringProp("The promise made about it, in one sentence.")
-    }
-  },
-  ApiVersions: {
-    type: "object",
-    title: "ApiVersions",
-    description: "Response body of getApiVersions.",
-    required: ["current", "currentRelease", "unversionedAlias", "versions", "policy"],
-    additionalProperties: false,
-    properties: {
-      current: stringProp("The newest version's path segment."),
-      currentRelease: stringProp("The semantic release the newest version serves."),
-      unversionedAlias: { $ref: "#/components/schemas/UnversionedAlias" },
-      versions: {
-        type: "array",
-        description: "Every version this deployment knows about, newest first.",
-        items: { $ref: "#/components/schemas/ApiVersionRecord" }
-      },
-      policy: { $ref: "#/components/schemas/ApiVersionPolicy" }
-    }
-  },
-  ContactRequest: {
-    type: "object",
-    title: "ContactRequest",
-    description: "Request body of sendContactMessage.",
-    required: ["email", "message"],
-    additionalProperties: false,
-    properties: {
-      email: stringProp(
-        "Reply-to address. Murugappan answers here, so it must be an address the sender reads.",
-        { format: "email", maxLength: CONTACT_LIMITS.email }
-      ),
-      message: stringProp(
-        "What you are writing about. Be specific: the role or project, the stack, and anything that needs a decision.",
-        {
-          minLength: CONTACT_LIMITS.message.min,
-          maxLength: CONTACT_LIMITS.message.max
-        }
-      ),
-      name: stringProp("Who the message is from.", {
-        maxLength: CONTACT_LIMITS.name
-      }),
-      company: stringProp("The company or team you are writing for.", {
-        maxLength: CONTACT_LIMITS.company
-      }),
-      dryRun: {
-        type: "boolean",
-        description:
-          "Set true to validate the request without sending anything and without spending a rate-limit slot. This is the sandbox for this endpoint. Answers 200 with status `validated` instead of 202 with status `accepted`.",
-        default: false
-      }
-    }
-  },
-  ContactAccepted: {
-    type: "object",
-    title: "ContactAccepted",
-    description: "Response body of a successful sendContactMessage.",
-    required: ["status", "message"],
-    additionalProperties: false,
-    properties: {
-      status: {
-        type: "string",
-        description:
-          "`accepted` when the message was queued for delivery, `validated` when the request was a dry run.",
-        enum: ["accepted", "validated"]
-      },
-      message: stringProp("Human-readable confirmation.")
-    }
+// Response bodies, each a named component. A schema nested in another becomes a `$ref` to its own.
+const RESPONSE_SCHEMAS = {
+  Error: ErrorBody,
+  FieldIssue,
+  Link,
+  CurrentRole,
+  Person,
+  Profile,
+  ExperienceEntry,
+  ExperienceList,
+  SkillCategory,
+  Proficiency,
+  SkillsResponse,
+  EducationEntry,
+  EducationList,
+  OpenSourceContribution,
+  OpenSourceList,
+  PostSummary,
+  PostList,
+  Post,
+  ApiVersionRecord,
+  ApiVersionPolicy,
+  UnversionedAlias,
+  ApiVersions,
+  ContactAccepted
+};
+
+function components(schemas: Record<string, z.ZodType>, io: "input" | "output") {
+  const registry = z.registry<{ id: string }>();
+  for (const [id, schema] of Object.entries(schemas)) registry.add(schema, { id });
+  const generated = z.toJSONSchema(registry, { io, uri: id => `#/components/schemas/${id}` });
+  // A component is a fragment of the OpenAPI document, not a standalone JSON Schema document.
+  for (const schema of Object.values(generated.schemas)) {
+    delete schema.$schema;
+    delete schema.$id;
   }
+  return generated.schemas;
+}
+
+// Requests are described as clients send them, before ContactRequest's trimming and defaults.
+const COMPONENT_SCHEMAS = {
+  ...components(RESPONSE_SCHEMAS, "output"),
+  ...components({ ContactRequest }, "input")
 };
