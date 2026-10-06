@@ -5,12 +5,11 @@ import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
 import { defineConfig, envField } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
-import { unified } from "@astrojs/markdown-remark";
+import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import posthog from "@posthog/rollup-plugin";
-import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 import remarkMermaid from "./src/blog/utils/remark-mermaid";
@@ -308,7 +307,7 @@ export default defineConfig({
     // remarkMermaid swaps fences for the build-rendered SVGs; no diagram code ships.
     processor: unified({
       remarkPlugins: [remarkMermaid],
-      rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig]]
+      rehypePlugins: [rehypeHeadingIds, [rehypeAutolinkHeadings, autolinkConfig]]
     }),
     // token palettes live in src/blog/styles/code.css
     syntaxHighlight: "prism"

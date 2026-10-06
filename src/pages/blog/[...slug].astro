@@ -31,8 +31,8 @@ export async function getStaticPaths() {
 }
 
 const { post, previous, next } = Astro.props;
-// `headings` carries the ids rehype-slug wrote: user rehype plugins run before
-// Astro's heading collector, which keeps an existing id.
+// rehypeHeadingIds runs in astro.config before the autolink plugin; Astro's own
+// pass afterwards keeps those ids, so `headings` matches the anchors.
 const { Content, headings } = await render(post);
 
 const description = postDescription(post);
