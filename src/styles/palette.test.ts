@@ -1,9 +1,8 @@
-// WCAG contrast guards for the design tokens: global.css (sky, card, night),
-// code.css's light palette and islands.css. The CSS is inlined by vitest.config.ts.
+// WCAG contrast guards for the design tokens: global.css (sky, card, night)
+// and islands.css. The CSS is inlined by vitest.config.ts.
 import { describe, expect, it } from "vitest";
 
 declare const __GLOBAL_CSS__: string;
-declare const __CODE_CSS__: string;
 declare const __ISLANDS_CSS__: string;
 const css = __GLOBAL_CSS__;
 
@@ -274,19 +273,6 @@ describe("night palette", () => {
         expect(contrast(ink(name), surface)).toBeGreaterThanOrEqual(4.5);
       }
     }
-  });
-});
-
-describe("blog light code palette", () => {
-  // Every ink in code.css's `--- Light palette` section must clear AA on the
-  // white fence; the dark section after it is not parsed here.
-  const lightSection = __CODE_CSS__.split("/* --- Dark palette")[0];
-  const inks = [...lightSection.matchAll(/(?<![\w-])color:\s*(#[0-9a-f]{6})/gi)].map(m => m[1]);
-  // An empty match would make the it.each below pass vacuously.
-  if (inks.length === 0) throw new Error("no inks in code.css's light palette");
-
-  it.each(inks)("keeps %s readable on the white fence", hex => {
-    expect(contrast(hex, "#ffffff")).toBeGreaterThanOrEqual(4.5);
   });
 });
 

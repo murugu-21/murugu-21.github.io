@@ -1,172 +1,44 @@
-/* The whole theme for Astro's build-time Prism output (`pre.language-*` and
-   `.token.*`); no Prism stylesheet is imported. In @layer components so a
-   utility class on a fence still wins. Dark is "tomorrow night eighties". */
+/* Shiki's fences (`pre.astro-code`). With `defaultColor: false` every colour
+   arrives as --shiki-light* / --shiki-dark* variables (themes in
+   src/blog/utils/code-themes.ts), which this file maps to the site theme.
+   In @layer components so a utility class on a fence still wins. */
 
 @layer components {
-  .blog-post pre[class*="language-"],
-  .blog-post code[class*="language-"] {
-    color: #000000;
-    text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
-    overflow-wrap: normal;
-    line-height: 1.5;
-    tab-size: 4;
-    hyphens: none;
-  }
-
-  .blog-post pre[class*="language-"] {
+  .blog-post .astro-code {
     padding: 1em;
     margin: 0.5em 0;
-    overflow: auto;
-    background: #ffffff;
+    line-height: 1.5;
     border: 1px solid var(--color-border-soft);
     border-radius: 0.5rem;
+    background-color: var(--shiki-light-bg);
   }
 
-  .blog-post pre[class*="language-"] ::selection {
+  .blog-post .astro-code,
+  .blog-post .astro-code span {
+    color: var(--shiki-light);
+    font-weight: var(--shiki-light-font-weight);
+    text-decoration: var(--shiki-light-text-decoration);
+  }
+
+  .blog-post .astro-code ::selection {
     background: #b3d4fc;
   }
 
-  .blog-post .token.namespace {
-    opacity: 0.7;
-  }
-
-  .blog-post .token.important,
-  .blog-post .token.bold {
-    font-weight: bold;
-  }
-
-  .blog-post .token.italic {
-    font-style: italic;
-  }
-
-  .blog-post .token.entity {
-    cursor: help;
-  }
-
-  /* --- Light palette (guarded by palette.test.ts) -------------------------
-     Prism's default hues, darkened where needed to clear 4.5:1 on #ffffff. */
-  .blog-post .token.comment,
-  .blog-post .token.block-comment,
-  .blog-post .token.prolog,
-  .blog-post .token.doctype,
-  .blog-post .token.cdata {
-    color: #5b6675;
-  }
-
-  .blog-post .token.punctuation {
-    color: #6b7280;
-  }
-
-  .blog-post .token.property,
-  .blog-post .token.tag,
-  .blog-post .token.boolean,
-  .blog-post .token.number,
-  .blog-post .token.constant,
-  .blog-post .token.symbol,
-  .blog-post .token.deleted {
-    color: #990055;
-  }
-
-  .blog-post .token.selector,
-  .blog-post .token.attr-name,
-  .blog-post .token.string,
-  .blog-post .token.char,
-  .blog-post .token.builtin,
-  .blog-post .token.inserted {
-    color: #4d6b00;
-  }
-
-  .blog-post .token.operator,
-  .blog-post .token.entity,
-  .blog-post .token.url,
-  .blog-post .language-css .token.string,
-  .blog-post .style .token.string {
-    color: #9a6e3a;
-  }
-
-  .blog-post .token.atrule,
-  .blog-post .token.attr-value,
-  .blog-post .token.keyword {
-    color: #0077aa;
-  }
-
-  .blog-post .token.function,
-  .blog-post .token.class-name {
-    color: #c02a4d;
-  }
-
-  .blog-post .token.regex,
-  .blog-post .token.important,
-  .blog-post .token.variable {
-    color: #8f6200;
-  }
-
-  /* --- Dark palette ------------------------------------------------------- */
-
-  html.dark-mode .blog-post pre[class*="language-"] {
-    background: rgba(255, 255, 255, 0.04);
+  html.dark-mode .blog-post .astro-code {
     /* 12% read as a tint, not a panel edge, on the night canvas. */
     border-color: var(--color-fence-edge-dark);
+    background-color: var(--shiki-dark-bg);
   }
 
-  html.dark-mode .blog-post code[class*="language-"],
-  html.dark-mode .blog-post pre[class*="language-"] {
-    color: #cccccc;
+  html.dark-mode .blog-post .astro-code,
+  html.dark-mode .blog-post .astro-code span {
+    color: var(--shiki-dark);
+    font-weight: var(--shiki-dark-font-weight);
+    text-decoration: var(--shiki-dark-text-decoration);
   }
 
-  html.dark-mode .blog-post .token.comment,
-  html.dark-mode .blog-post .token.block-comment,
-  html.dark-mode .blog-post .token.prolog,
-  html.dark-mode .blog-post .token.doctype,
-  html.dark-mode .blog-post .token.cdata {
-    color: #999999;
-  }
-  html.dark-mode .blog-post .token.punctuation {
-    color: #cccccc;
-  }
-  html.dark-mode .blog-post .token.tag,
-  html.dark-mode .blog-post .token.attr-name,
-  html.dark-mode .blog-post .token.namespace,
-  html.dark-mode .blog-post .token.deleted {
-    color: #e2777a;
-  }
-  html.dark-mode .blog-post .token.function-name {
-    color: #6196cc;
-  }
-  html.dark-mode .blog-post .token.boolean,
-  html.dark-mode .blog-post .token.number,
-  html.dark-mode .blog-post .token.function {
-    color: #f08d49;
-  }
-  html.dark-mode .blog-post .token.property,
-  html.dark-mode .blog-post .token.class-name,
-  html.dark-mode .blog-post .token.constant,
-  html.dark-mode .blog-post .token.symbol {
-    color: #f8c555;
-  }
-  html.dark-mode .blog-post .token.selector,
-  html.dark-mode .blog-post .token.important,
-  html.dark-mode .blog-post .token.atrule,
-  html.dark-mode .blog-post .token.keyword,
-  html.dark-mode .blog-post .token.builtin {
-    color: #cc99cd;
-  }
-  html.dark-mode .blog-post .token.string,
-  html.dark-mode .blog-post .token.char,
-  html.dark-mode .blog-post .token.attr-value,
-  html.dark-mode .blog-post .token.regex,
-  html.dark-mode .blog-post .token.variable {
-    color: #7ec699;
-  }
-  html.dark-mode .blog-post .token.operator,
-  html.dark-mode .blog-post .token.entity,
-  html.dark-mode .blog-post .token.url {
-    color: #67cdcc;
-  }
-  html.dark-mode .blog-post .token.inserted {
-    color: #7ec699;
+  /* Night Owl's own selection: the light-mode blue would drown its pale tokens. */
+  html.dark-mode .blog-post .astro-code ::selection {
+    background: #1d3b53;
   }
 }

@@ -174,6 +174,7 @@ description: One-line description shown in lists, search and feeds.
 
 - **Images** next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build time.
 - **Headings.** On wide screens, `##` and `###` headings feed the table-of-contents rail (`TableOfContents.astro`). Posts with fewer than two get no rail. Use `---` as a separator, never an empty `##`.
+- **Code** fences are highlighted at build time by Shiki in Night Owl, adjusted for AA contrast and without italics (`src/blog/utils/code-themes.ts`). Name the language (` ```ts `), or the fence renders as plain text.
 - **Mermaid** fences render at build time, not in the browser.
 
 ### Mermaid diagrams
