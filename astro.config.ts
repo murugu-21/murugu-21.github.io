@@ -3,18 +3,18 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
-import { defineConfig, envField } from "astro/config";
+import { defineConfig, envField, fontProviders } from "astro/config";
 import cloudflare from "@astrojs/cloudflare";
-import { unified } from "@astrojs/markdown-remark";
+import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import posthog from "@posthog/rollup-plugin";
-import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
 import remarkMermaid from "./src/blog/utils/remark-mermaid";
 import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
+import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
 
@@ -101,10 +101,10 @@ function blogPostBodies(): AstroIntegration {
 // Hooked into `astro build` itself so deploy tools that run it directly don't
 // skip these steps; `dir` follows the adapter's output location.
 function buildArtifacts(): AstroIntegration {
-  const run = (script: string, ...args: string[]) => {
-    const result = spawnSync("bun", [script, ...args], { stdio: "inherit" });
+  const run = (command: string, args: string[]) => {
+    const result = spawnSync(command, args, { stdio: "inherit" });
     if (result.status !== 0) {
-      throw new Error(`build-artifacts: ${script} ${args.join(" ")} failed`);
+      throw new Error(`build-artifacts: ${command} ${args.join(" ")} failed`);
     }
   };
   return {
@@ -112,10 +112,20 @@ function buildArtifacts(): AstroIntegration {
     hooks: {
       // Diagrams are gitignored. remark-mermaid renders them during content
       // sync, but posts cached in node_modules/.astro skip it.
-      "astro:build:start": () => run("scripts/render-mermaid.ts"),
+      "astro:build:start": () => run("bun", ["scripts/render-mermaid.ts"]),
       // Registered last, so the site it prints from is final.
-      "astro:build:done": ({ dir }) => run("scripts/generate-resume.ts", fileURLToPath(dir))
+      "astro:build:done": ({ dir }) =>
+        run("node", ["scripts/generate-resume.ts", fileURLToPath(dir)])
     }
+  };
+}
+
+// Writes the font file the `fonts` entry below reads. config:setup runs before
+// the Fonts API resolves its sources, in dev and build alike.
+function firaCodeSubset(): AstroIntegration {
+  return {
+    name: "fira-code-subset",
+    hooks: { "astro:config:setup": () => writeFiraCodeSubset() }
   };
 }
 
@@ -240,6 +250,27 @@ export default defineConfig({
       RESUME_PHONE: envField.string({ context: "server", access: "secret", optional: true })
     }
   },
+  // Also generates a fallback sized to Fira Code's metrics (local Courier New),
+  // so the swap to Fira Code doesn't rewrap text; global.css's metric fallback
+  // covers platforms without Courier New.
+  fonts: [
+    {
+      provider: fontProviders.local(),
+      name: "Fira Code",
+      cssVariable: "--font-fira-code",
+      fallbacks: [
+        "Fira Code metric fallback",
+        "ui-monospace",
+        "SFMono-Regular",
+        "Menlo",
+        "Consolas",
+        "monospace"
+      ],
+      options: {
+        variants: [{ src: [FIRA_CODE_SUBSET], weight: "300 700", style: "normal" }]
+      }
+    }
+  ],
   server: { port: 4399 },
   build: {
     assets: "static",
@@ -248,6 +279,7 @@ export default defineConfig({
     inlineStylesheets: "always"
   },
   integrations: [
+    firaCodeSubset(),
     react(),
     clientInteractionDirective(),
     modulePreloadHints(),
@@ -308,7 +340,7 @@ export default defineConfig({
     // remarkMermaid swaps fences for the build-rendered SVGs; no diagram code ships.
     processor: unified({
       remarkPlugins: [remarkMermaid],
-      rehypePlugins: [rehypeSlug, [rehypeAutolinkHeadings, autolinkConfig]]
+      rehypePlugins: [rehypeHeadingIds, [rehypeAutolinkHeadings, autolinkConfig]]
     }),
     // token palettes live in src/blog/styles/code.css
     syntaxHighlight: "prism"

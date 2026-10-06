@@ -26,6 +26,7 @@ Astro prerenders every page. The adapter still builds the Worker because the con
 
 - Markdown renditions (`index.md` next to each `index.html`, served for `Accept: text/markdown`) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `src/lib/llms.ts` with `/llms.txt`.
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
+- The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `scripts/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
 - Scripts that read the build find it through `scripts/site-dir.ts`.
 - Helpers with no app logic (`utils/`, such as the zod JSON helpers) are shared by the Worker and `scripts/`. Lint stops scripts from importing `worker/` directly.
 - Imports across top-level folders go through the `#src/*`, `#worker/*`, `#utils/*` and `#scripts/*` subpath imports in `package.json`, with the file extension, because TypeScript resolves them only as exact paths. Node, Bun, Vite and TypeScript read them natively. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
@@ -37,6 +38,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Vitest, `cf` and `tsc`, because `cloudflare.config.ts` refuses to load under Bun ("cloudflare.config.ts loading is not supported on Bun"). Under Bun, miniflare also cannot reach workerd ("Unable to connect. Is the computer able to access the url?" from `fetchWorkerExportTypes`) and `astro preview` hangs.
 
 - `build`, `dev` and `preview` call `astro` on Node.
+- `scripts/generate-resume.ts` runs on Node too, because it prints the resume from `astro preview`.
 - `test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`. Use `bun run test`, not `bun test`, which is Bun's own runner.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
@@ -138,7 +140,7 @@ Super properties: `theme` (`dark` / `light`, set on load and on every toggle) an
 
 `/resume` (`src/pages/resume.astro`) is a print-styled page built entirely from `src/data/portfolio.ts` and `src/data/resume.ts`, so it can't drift from the site.
 
-At the end of `bun run build`, `scripts/generate-resume.ts` serves the built site locally, opens `/resume/` in headless Chromium through Puppeteer and prints `resume.pdf`. It then parses the PDF with `pdf-parse` and fails the build if any ATS-critical string (name, email, section headings, current title, headline stats) isn't extractable text. On Workers Builds, which has no system Chrome, it falls back to `@sparticuz/chromium`.
+At the end of `bun run build`, `scripts/generate-resume.ts` starts `astro preview` on a fixed port, opens `/resume/` in headless Chromium through Puppeteer and prints `resume.pdf`. It then parses the PDF with `pdf-parse` and fails the build if any ATS-critical string (name, email, section headings, current title, headline stats) isn't extractable text. On Workers Builds, which has no system Chrome, it falls back to `@sparticuz/chromium`.
 
 No phone number is in source. Set `RESUME_PHONE` (Workers Builds env in production, `.env` locally) to add one; leaving it unset omits the line. The contact section in `GithubCard.astro` reads it only in its no-GitHub fallback, which production never renders.
 

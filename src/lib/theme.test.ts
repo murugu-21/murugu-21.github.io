@@ -1,54 +1,133 @@
+import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vitest";
 
-import { resolveTheme, syncThemeOnRestore, type Theme, type ThemeSource } from "./theme";
+import { bootstrapTheme, type Theme } from "./theme";
 
-describe("resolveTheme", () => {
-  it("honours a stored choice over the OS preference", () => {
-    expect(resolveTheme("true", false)).toBe("dark");
-    expect(resolveTheme("false", true)).toBe("light");
-  });
+class FakeQuery extends EventTarget {
+  constructor(public matches: boolean) {
+    super();
+  }
+}
 
-  it("falls back to the OS preference when nothing is stored", () => {
-    expect(resolveTheme(null, true)).toBe("dark");
-    expect(resolveTheme(null, false)).toBe("light");
-  });
-
-  it("falls back to the OS preference when the stored value is not JSON", () => {
-    expect(resolveTheme("{oops", true)).toBe("dark");
-  });
-});
-
-describe("syncThemeOnRestore", () => {
-  // the Workers pool has no PageTransitionEvent
-  const show = (persisted: boolean) => Object.assign(new Event("pageshow"), { persisted });
-  const source = (stored: string | null, current: Theme, prefersDark = false): ThemeSource => ({
-    stored: () => stored,
-    prefersDark: () => prefersDark,
-    current: () => current
-  });
-
-  // The themes applied after a back/forward restore.
-  const restore = (src: ThemeSource, persisted = true) => {
-    const win = new EventTarget();
-    const applied: Theme[] = [];
-    syncThemeOnRestore(win, src, next => applied.push(next));
-    win.dispatchEvent(show(persisted));
-    return applied;
+// A page as the bootstrap sees it, with `isDark` and the OS preference preset.
+class FakePage extends EventTarget {
+  document = parseHTML("<html><body></body></html>").document;
+  stored = new Map<string, string>();
+  blocked: boolean;
+  localStorage = {
+    getItem: (key: string) => this.storage().get(key) ?? null,
+    setItem: (key: string, value: string) => void this.storage().set(key, value),
+    removeItem: (key: string) => void this.storage().delete(key)
   };
+  os: FakeQuery;
+  matchMedia = () => this.os;
+  __setPreferredTheme: (theme: Theme) => void = () => {
+    throw new Error("bootstrap not run");
+  };
+  themechanges = 0;
 
-  it("applies the stored choice only when the restored page shows the other theme", () => {
-    expect(restore(source("true", "light"))).toEqual(["dark"]);
-    expect(restore(source("false", "dark"))).toEqual(["light"]);
-    expect(restore(source("true", "dark"))).toEqual([]);
+  constructor({
+    isDark,
+    osDark = false,
+    blocked = false
+  }: {
+    isDark: string | null;
+    osDark?: boolean;
+    blocked?: boolean;
+  }) {
+    super();
+    this.blocked = blocked;
+    if (isDark !== null) this.stored.set("isDark", isDark);
+    this.os = new FakeQuery(osDark);
+    this.addEventListener("themechange", () => {
+      this.themechanges++;
+    });
+  }
+
+  // Safari private mode and blocked site data throw on any access
+  private storage() {
+    if (this.blocked) throw new Error("SecurityError");
+    return this.stored;
+  }
+
+  get dark() {
+    return this.document.documentElement.classList.contains("dark-mode");
+  }
+
+  flipOs() {
+    this.os.matches = !this.os.matches;
+    this.os.dispatchEvent(new Event("change"));
+  }
+
+  // the Workers pool has no PageTransitionEvent
+  show(persisted: boolean) {
+    this.dispatchEvent(Object.assign(new Event("pageshow"), { persisted }));
+  }
+}
+
+describe("bootstrapTheme", () => {
+  it.each([
+    { isDark: "true", osDark: false, dark: true },
+    { isDark: "false", osDark: true, dark: false },
+    { isDark: null, osDark: true, dark: true },
+    { isDark: null, osDark: false, dark: false },
+    { isDark: "{oops", osDark: true, dark: true }
+  ])(
+    "isDark=$isDark, OS dark=$osDark: dark=$dark, storage untouched",
+    ({ isDark, osDark, dark }) => {
+      const page = new FakePage({ isDark, osDark });
+      bootstrapTheme(page);
+      expect(page.dark).toBe(dark);
+      expect(page.stored.get("isDark")).toBe(isDark ?? undefined);
+    }
+  );
+
+  it("applies, stores and announces a toggle", () => {
+    const page = new FakePage({ isDark: null });
+    bootstrapTheme(page);
+    page.__setPreferredTheme("dark");
+    expect(page.dark).toBe(true);
+    expect(page.stored.get("isDark")).toBe("true");
+    expect(page.themechanges).toBe(1);
   });
 
-  it("follows the OS when nothing is stored", () => {
-    expect(restore(source(null, "light", true))).toEqual(["dark"]);
-    expect(restore(source(null, "dark", true))).toEqual([]);
+  it("follows an OS flip after load and drops the stored choice", () => {
+    const page = new FakePage({ isDark: "false", osDark: false });
+    bootstrapTheme(page);
+    page.flipOs();
+    expect(page.dark).toBe(true);
+    expect(page.stored.has("isDark")).toBe(false);
+    expect(page.themechanges).toBe(1);
   });
 
-  it("leaves a fresh load alone (the bootstrap already ran)", () => {
-    expect(restore(source("true", "light"), false)).toEqual([]);
-    expect(restore(source("true", "light"), true)).toEqual(["dark"]);
+  it("still follows the OS and toggles when storage is blocked", () => {
+    const page = new FakePage({ isDark: null, osDark: true, blocked: true });
+    bootstrapTheme(page);
+    expect(page.dark).toBe(true);
+    page.__setPreferredTheme("light");
+    expect(page.dark).toBe(false);
+    expect(page.themechanges).toBe(1);
+  });
+
+  it("re-applies a choice stored on another page when restored from bfcache", () => {
+    const page = new FakePage({ isDark: "false" });
+    bootstrapTheme(page);
+    page.stored.set("isDark", "true");
+    page.show(false);
+    expect(page.dark).toBe(false);
+    page.show(true);
+    expect(page.dark).toBe(true);
+    expect(page.themechanges).toBe(1);
+    page.show(true);
+    expect(page.themechanges).toBe(1);
+  });
+
+  it("applies the OS preference on a bfcache restore without storing it", () => {
+    const page = new FakePage({ isDark: null, osDark: false });
+    bootstrapTheme(page);
+    page.os.matches = true;
+    page.show(true);
+    expect(page.dark).toBe(true);
+    expect(page.stored.has("isDark")).toBe(false);
   });
 });

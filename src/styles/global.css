@@ -9,9 +9,23 @@
 /* No @source: auto-detection covers everything not gitignored. Add one only
    for a directory outside the project (e.g. node_modules). */
 
+/* For platforms without Courier New. These fonts share its 1229/2048 em advance,
+   so Astro's generated overrides apply as-is; copy them again if the font changes. */
+@font-face {
+  font-family: "Fira Code metric fallback";
+  src:
+    local("Droid Sans Mono"), local("DroidSansMono"), local("Cousine Regular"),
+    local("Cousine-Regular"), local("Liberation Mono"), local("LiberationMono");
+  font-weight: 300 700;
+  size-adjust: 102.5474%;
+  ascent-override: 90.0146%;
+  descent-override: 30.0049%;
+  line-gap-override: 0%;
+}
+
 @theme {
-  /* the layout inlines the @font-face (lib/fonts.ts) */
-  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* <Font> in each layout's head defines --font-fira-code (astro.config.ts) */
+  --font-mono: var(--font-fira-code);
   --default-font-family: var(--font-mono);
 
   /* Light theme is "blue hour": violet-slate greys, amber warm end.

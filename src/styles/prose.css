@@ -1,0 +1,101 @@
+/* Long-form pages (/about, /developers): the typography plugin's rhythm in the
+   site's type and palette. Imported only by those pages and emitting only
+   `.prose`, so no other page ships the plugin's CSS and global.css's utilities
+   aren't repeated. In @layer components so utility classes still win; the
+   overrides follow the plugin's output, so they win ties on order.
+   Pages load this before global.css, so it declares Tailwind's layer order too,
+   or `components` would rank below preflight's `base`. */
+@layer theme, base, components, utilities;
+@reference "tailwindcss";
+@plugin "@tailwindcss/typography";
+@source inline("prose");
+
+@layer components {
+  @tailwind utilities source(none);
+
+  .prose {
+    font-size: inherit;
+    line-height: 1.6;
+    --tw-prose-body: currentColor;
+    --tw-prose-headings: currentColor;
+    --tw-prose-bold: currentColor;
+    --tw-prose-bullets: currentColor;
+    --tw-prose-code: currentColor;
+    --tw-prose-pre-code: currentColor;
+    --tw-prose-links: var(--color-navy);
+    --tw-prose-pre-bg: white;
+    --rule: var(--color-border-soft);
+    --tw-prose-th-borders: var(--rule);
+    --tw-prose-td-borders: var(--rule);
+    :where(html.dark-mode) & {
+      --tw-prose-links: var(--color-blue);
+      --tw-prose-pre-bg: rgba(255, 255, 255, 0.04);
+      --rule: rgba(255, 255, 255, 0.12);
+    }
+
+    & h1 {
+      font-size: clamp(1.7rem, 6vw, 2.2rem);
+    }
+    & :is(h2, h3) {
+      scroll-margin-top: 6rem;
+    }
+    /* The plugin colours links too, but skips the not-prose .link-row lists. */
+    & a {
+      color: var(--tw-prose-links);
+      font-weight: inherit;
+      text-decoration: none;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    /* A face apart from the Fira Code body text, so code reads as code. */
+    & code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-weight: inherit;
+      &::before,
+      &::after {
+        content: none;
+      }
+    }
+    & :not(pre) > code {
+      border-radius: 0.25rem;
+      font-size: 0.9em;
+      background-color: rgba(6, 3, 141, 0.08);
+      padding: 0.1em 0.35em;
+      overflow-wrap: anywhere;
+      :where(html.dark-mode) & {
+        background-color: rgba(76, 125, 255, 0.12);
+      }
+    }
+    & pre {
+      border: 1px solid var(--rule);
+    }
+
+    /* The table sits in an overflow-x wrapper, so its margins wouldn't collapse into the heading's. */
+    & table {
+      margin-block: 0;
+    }
+    /* The same pair as .subTitle in global.css. */
+    & th {
+      white-space: nowrap;
+      color: var(--color-subtitle);
+      :where(html.dark-mode) & {
+        color: rgba(255, 255, 255, 0.65);
+      }
+    }
+    /* Chips never break mid-identifier; the table scrolls instead. */
+    & td code {
+      white-space: nowrap;
+      overflow-wrap: normal;
+    }
+  }
+
+  /* A row of links under a heading, no bullets. Pair with `not-prose`. */
+  .link-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+    margin-block: 1em;
+  }
+}

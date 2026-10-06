@@ -1,6 +1,6 @@
 ---
 // Shows the theme you'd switch TO. Shared by both apps: clicks go through
-// setTheme (../lib/theme.ts); the label follows the `themechange` event.
+// window.__setPreferredTheme (../lib/theme.ts); the label follows the `themechange` event.
 // Plain Astro, not an island, so it can't shift the header after paint.
 ---
 
@@ -44,7 +44,7 @@
 </button>
 
 <script>
-  import { currentTheme, setTheme } from "#src/lib/theme.ts";
+  import { currentTheme } from "#src/lib/theme.ts";
 
   const btn = document.getElementById("theme-toggle");
   if (!btn) throw new Error("ThemeToggle: #theme-toggle is missing");
@@ -54,7 +54,9 @@
     btn.setAttribute("aria-label", currentTheme() === "dark" ? "Use light mode" : "Use dark mode");
   label();
 
-  btn.addEventListener("click", () => setTheme(currentTheme() === "dark" ? "light" : "dark"));
+  btn.addEventListener("click", () =>
+    window.__setPreferredTheme(currentTheme() === "dark" ? "light" : "dark")
+  );
   window.addEventListener("themechange", label);
 </script>
 

@@ -9,6 +9,7 @@ import ThemeToggle from "#src/components/ThemeToggle.astro";
 import ChatWidget from "#src/components/chat/ChatWidget.astro";
 import Particles from "#src/components/Particles.astro";
 import { SITE_TITLE } from "#src/blog/consts.ts";
+import { themeBootstrapScript } from "#src/lib/theme.ts";
 
 type Props = HeadProps;
 
@@ -26,41 +27,11 @@ const isRootPath = Astro.url.pathname === rootPath;
 <html lang="en" class="scroll-smooth motion-reduce:scroll-auto">
   <head>
     <BaseHead {...Astro.props} />
+    <script is:inline set:html={themeBootstrapScript} />
   </head>
   <body class="text-base leading-normal text-text dark:text-text-dark">
     {/* Dimmed for reading: stars between words read as stray bullets. */}
     <Particles class="opacity-50 dark:opacity-70" />
-    {/* Theme bootstrap, before first paint to avoid a flash. Exposes
-         window.__setPreferredTheme and fires `themechange` (see
-         ../../lib/theme.ts). */}
-    <script is:inline>
-      // Shared with the portfolio: key "isDark", a JSON bool. Inline scripts
-      // can't import, so keep in step with resolveTheme in ../../lib/theme.ts.
-      var preferredTheme = null;
-      try {
-        var stored = localStorage.getItem("isDark");
-        if (stored !== null) preferredTheme = JSON.parse(stored) ? "dark" : "light";
-      } catch (err) {}
-
-      // Paint and announce without persisting.
-      function applyTheme(newTheme) {
-        document.documentElement.classList.toggle("dark-mode", newTheme === "dark");
-        preferredTheme = newTheme;
-        window.dispatchEvent(new Event("themechange"));
-      }
-
-      window.__setPreferredTheme = function (newTheme) {
-        applyTheme(newTheme);
-        try {
-          localStorage.setItem("isDark", JSON.stringify(newTheme === "dark"));
-        } catch (err) {}
-      };
-      var darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
-      darkQuery.onchange = function (e) {
-        window.__setPreferredTheme(e.matches ? "dark" : "light");
-      };
-      applyTheme(preferredTheme || (darkQuery.matches ? "dark" : "light"));
-    </script>
     {/* Bio sits in the page slot, so its index-page margin is set from the
          wrapper; (0,3,0) beats Bio's own `mb-16`. */}
     <div
