@@ -2,7 +2,8 @@
 import { render } from "astro:content";
 import BlogLayout from "#src/layouts/BlogLayout.astro";
 import Bio from "#src/components/blog/Bio.astro";
-import { BLOG_TITLE, BLOG_URL, PERSON_ID } from "#src/lib/site.ts";
+import { blog } from "#src/lib/schema.ts";
+import { BLOG_ID, BLOG_URL, PERSON_ID } from "#src/lib/site.ts";
 import {
   getPublishedPosts,
   postPath,
@@ -50,17 +51,12 @@ const postNode = {
   image: `${BLOG_URL}/og-image.png`,
   author: { "@id": PERSON_ID },
   publisher: { "@id": PERSON_ID },
-  isPartOf: {
-    "@type": "Blog",
-    "@id": `${BLOG_URL}/#blog`,
-    name: BLOG_TITLE,
-    url: `${BLOG_URL}/`
-  }
+  isPartOf: { "@id": BLOG_ID }
 };
 ---
 
 <BlogLayout
-  graph={[postNode]}
+  graph={[blog, postNode]}
   title={post.data.title}
   description={description}
   article={{ published: post.data.date, tags: postKeywords(post) }}

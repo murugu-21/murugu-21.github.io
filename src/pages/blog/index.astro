@@ -2,7 +2,7 @@
 import BlogLayout from "#src/layouts/BlogLayout.astro";
 import PostList from "#src/components/blog/PostList.astro";
 import Bio from "#src/components/blog/Bio.astro";
-import { BLOG_DESCRIPTION, BLOG_TITLE, BLOG_URL, PERSON_ID, WEBSITE_ID } from "#src/lib/site.ts";
+import { blog } from "#src/lib/schema.ts";
 import {
   getPublishedPosts,
   postPath,
@@ -24,20 +24,9 @@ const serialized: SerializedPost[] = posts.map(post => ({
   description: post.data.description,
   excerpt: excerpt(post.body)
 }));
-
-const blogNode = {
-  "@type": "Blog",
-  "@id": `${BLOG_URL}/#blog`,
-  name: BLOG_TITLE,
-  description: BLOG_DESCRIPTION,
-  url: `${BLOG_URL}/`,
-  isPartOf: { "@id": WEBSITE_ID },
-  author: { "@id": PERSON_ID },
-  publisher: { "@id": PERSON_ID }
-};
 ---
 
-<BlogLayout graph={[blogNode]}>
+<BlogLayout graph={[blog]}>
   <PostList posts={serialized} />
   <Bio />
 </BlogLayout>
