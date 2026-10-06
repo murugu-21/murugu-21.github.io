@@ -1,19 +1,22 @@
-// MCP tools are thin adapters over the REST API's loaders, with its response
-// schemas inlined as outputSchema. Anything a model could fix by retrying with
-// other arguments is an `isError` result, not a protocol error.
+// MCP tools are thin adapters over the REST API's loaders and share its zod schemas,
+// which the SDK validates with and turns into each tool's JSON Schema. Anything a model
+// could fix by retrying with other arguments is an `isError` result, not a protocol error.
 
-import { API_SCHEMAS } from "#worker/api/openapi.ts";
+import type { McpServer } from "@modelcontextprotocol/server";
+import { z } from "zod";
+
+import { CONTACT_DAILY_PER_CLIENT, ContactAccepted, ContactRequest } from "#worker/api/contact.ts";
 import {
-  CONTACT_DAILY_PER_CLIENT,
-  CONTACT_LIMITS,
-  parseContactRequest
-} from "#worker/api/contact.ts";
-import type { Dataset } from "#worker/api/dataset.ts";
-import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts, SLUG_PATTERN } from "#worker/api/posts.ts";
+  EducationList,
+  ExperienceList,
+  OpenSourceList,
+  Profile,
+  SkillsResponse
+} from "#worker/api/dataset.ts";
+import { Post, PostList, POSTS_LIMIT_MAX, searchPosts, SLUG } from "#worker/api/posts.ts";
 import { globalLimiter } from "#worker/api/ratelimit.ts";
 import { loadDataset, loadPost, loadPosts, type AssetsLike } from "#worker/api/store.ts";
 import { contactMailer, sendContactEmail } from "#worker/email.ts";
-import { resolveSchema, type JsonSchema } from "./schema";
 
 export type ToolContext = {
   assets: AssetsLike;
@@ -24,7 +27,7 @@ export type ToolContext = {
 
 type ToolTextContent = { type: "text"; text: string };
 
-export type ToolResult = {
+type ToolResult = {
   content: ToolTextContent[];
   structuredContent?: unknown;
   isError?: boolean;
@@ -37,14 +40,14 @@ type ToolAnnotations = {
   openWorldHint: boolean;
 };
 
-export type McpTool = {
+type McpTool = {
   name: string;
   title: string;
   description: string;
-  inputSchema: JsonSchema;
-  outputSchema?: JsonSchema;
+  inputSchema: z.ZodType;
+  outputSchema: z.ZodType;
   annotations: ToolAnnotations;
-  run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
+  run(args: unknown, ctx: ToolContext): Promise<ToolResult>;
 };
 
 const READ_ONLY: ToolAnnotations = {
@@ -54,13 +57,7 @@ const READ_ONLY: ToolAnnotations = {
   openWorldHint: false
 };
 
-const NO_ARGS: JsonSchema = {
-  type: "object",
-  properties: {},
-  additionalProperties: false
-};
-
-const out = (name: string) => resolveSchema(name, API_SCHEMAS);
+const NO_ARGS = z.strictObject({});
 
 /** The spec asks for the serialized JSON alongside structuredContent. */
 function ok(data: unknown): ToolResult {
@@ -81,38 +78,52 @@ function datasetTool({
   name,
   title,
   description,
-  schema,
-  project
+  schema
 }: {
   name: string;
   title: string;
   description: string;
-  schema: string;
-  project: (data: Dataset) => unknown;
+  schema: z.ZodType;
 }): McpTool {
   return {
     name,
     title,
     description,
     inputSchema: NO_ARGS,
-    outputSchema: out(schema),
+    outputSchema: schema,
     annotations: READ_ONLY,
     async run(_args, ctx) {
       const data = await loadDataset(ctx.assets);
-      return data ? ok(project(data)) : fail(DATASET_UNAVAILABLE);
+      return data ? ok(schema.parse(data)) : fail(DATASET_UNAVAILABLE);
     }
   };
 }
 
-function optionalString(
-  args: Record<string, unknown>,
-  field: string
-): { value?: string; error?: string } {
-  const raw = args[field];
-  if (raw === undefined || raw === null) return {};
-  if (typeof raw !== "string") return { error: `The '${field}' argument must be a string.` };
-  return { value: raw };
-}
+// Each `run` re-parses with its own inputSchema, which the SDK has already checked, to type `args`.
+const SearchArgs = z.strictObject({
+  query: z.string().max(200).optional().meta({
+    description:
+      "Case-insensitive substring matched against post titles and summaries. Omit to list every post."
+  }),
+  limit: z
+    .int()
+    .min(1)
+    .max(POSTS_LIMIT_MAX)
+    .optional()
+    .meta({
+      description: `Maximum number of posts to return, newest first (1-${POSTS_LIMIT_MAX}). Omit for all of them.`
+    })
+});
+
+const PostArgs = z.strictObject({
+  slug: z.string().regex(SLUG).meta({
+    description:
+      "The post's slug, the last path segment of its URL, e.g. 'cloud-agnostic-rate-limiting'."
+  })
+});
+
+// Strict, unlike REST: a misspelt argument should fail the call, not vanish.
+const SendMessageArgs = z.strictObject(ContactRequest.shape);
 
 export const MCP_TOOLS: McpTool[] = [
   datasetTool({
@@ -120,81 +131,47 @@ export const MCP_TOOLS: McpTool[] = [
     title: "Profile of Murugappan M",
     description:
       "Returns the canonical summary of Murugappan M, a full stack engineer (TypeScript, Node.js, React, AWS) based in Bangalore, India. It includes his name, headline, elevator pitch, location, email, whether he is open to work, his current role with a start month, his stated focus areas, and every public link (site, about page, blog, RSS, resume PDF, GitHub, LinkedIn, X, developer portal, OpenAPI spec). Call this first. It is one request and answers most questions about who he is.",
-    schema: "Profile",
-    project: data => ({ person: data.person, links: data.links })
+    schema: Profile
   }),
   datasetTool({
     name: "list_experience",
     title: "Work experience",
     description:
       "Returns every role Murugappan M has held, newest first, each with company, location, the human-readable period, ISO 8601 year-month start and end dates, a `current` flag, a one-line summary, and the concrete achievements of that role. Use this instead of parsing his resume PDF whenever you need dated, per-role facts, for example to check whether he has production experience with a technology, and when.",
-    schema: "ExperienceList",
-    project: data => ({ experience: data.experience })
+    schema: ExperienceList
   }),
   datasetTool({
     name: "list_skills",
     title: "Skills and proficiencies",
     description:
       "Returns the technologies Murugappan M works with, grouped into categories (languages, full stack, observability and security, cloud and infrastructure), plus self-reported proficiency levels per broad area. Use this to answer 'does he know X' from a typed list rather than inferring it from prose.",
-    schema: "SkillsResponse",
-    project: data => ({ skills: data.skills, proficiencies: data.proficiencies })
+    schema: SkillsResponse
   }),
   datasetTool({
     name: "list_education",
     title: "Education",
     description:
       "Returns Murugappan M's formal education: institution, credential, location, the human-readable period, ISO 8601 year-month start and end dates, and any highlights. One entry today; the shape is a list so it stays stable.",
-    schema: "EducationList",
-    project: data => ({ education: data.education })
+    schema: EducationList
   }),
   datasetTool({
     name: "list_open_source",
     title: "Open-source contributions",
     description:
       "Returns Murugappan M's public open-source work: the project, the role he held, what the contributions were, and links to the individual merged pull requests. Use this when you need to verify a claim about his open-source work at the source rather than repeat it.",
-    schema: "OpenSourceList",
-    project: data => ({ openSource: data.openSource })
+    schema: OpenSourceList
   }),
   {
     name: "search_blog_posts",
     title: "Search the blog",
     description:
       "Searches the SDE Journey blog (murugappan.dev/blog), Murugappan M's technical writing on distributed systems, cloud architecture, rate limiting, event-driven pipelines and realtime chat. Returns each match's slug, title, canonical URL and summary, newest first. Omit `query` to list every post. Pass a returned `slug` to get_blog_post to read the full text.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description:
-            "Case-insensitive substring matched against post titles and summaries. Omit to list every post.",
-          maxLength: 200
-        },
-        limit: {
-          type: "integer",
-          description: `Maximum number of posts to return, newest first (1-${POSTS_LIMIT_MAX}). Omit for all of them.`,
-          minimum: 1,
-          maximum: POSTS_LIMIT_MAX
-        }
-      },
-      additionalProperties: false
-    },
-    outputSchema: out("PostList"),
+    inputSchema: SearchArgs,
+    outputSchema: PostList,
     annotations: READ_ONLY,
     async run(args, ctx) {
-      const query = optionalString(args, "query");
-      if (query.error) return fail(query.error);
-
-      let limit: number | undefined;
-      if (args.limit !== undefined && args.limit !== null) {
-        const parsed = Number(args.limit);
-        if (!isPostsLimit(parsed))
-          return fail(
-            `The 'limit' argument must be an integer between 1 and ${POSTS_LIMIT_MAX}, or omitted.`
-          );
-        limit = parsed;
-      }
-
-      const posts = searchPosts({ posts: await loadPosts(ctx.assets), query: query.value, limit });
+      const { query, limit } = SearchArgs.parse(args);
+      const posts = searchPosts({ posts: await loadPosts(ctx.assets), query, limit });
       return ok({ posts, count: posts.length });
     }
   },
@@ -203,31 +180,15 @@ export const MCP_TOOLS: McpTool[] = [
     title: "Read a blog post",
     description:
       "Returns one blog post's metadata together with its complete markdown source, so you can quote or summarise it accurately instead of scraping the HTML page. Slugs come from search_blog_posts.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        slug: {
-          type: "string",
-          description:
-            "The post's slug, the last path segment of its URL, e.g. 'cloud-agnostic-rate-limiting'.",
-          pattern: SLUG_PATTERN
-        }
-      },
-      required: ["slug"],
-      additionalProperties: false
-    },
-    outputSchema: out("Post"),
+    inputSchema: PostArgs,
+    outputSchema: Post,
     annotations: READ_ONLY,
     async run(args, ctx) {
-      const slug = optionalString(args, "slug");
-      if (slug.error) return fail(slug.error);
-      if (!slug.value)
-        return fail("The 'slug' argument is required. Call search_blog_posts to discover slugs.");
-
-      const post = await loadPost(ctx.assets, slug.value);
+      const { slug } = PostArgs.parse(args);
+      const post = await loadPost(ctx.assets, slug);
       if (post) return ok(post);
       return fail(
-        `No published post has the slug '${slug.value}'. Call search_blog_posts to see which slugs exist.`
+        `No published post has the slug '${slug}'. Call search_blog_posts to see which slugs exist.`
       );
     }
   },
@@ -235,43 +196,8 @@ export const MCP_TOOLS: McpTool[] = [
     name: "send_message",
     title: "Send Murugappan M a message",
     description: `Delivers a message to Murugappan M's inbox by email. Use it to relay one concrete opportunity, role or question on a human's behalf. Say who you are writing for, what the work is, and what needs a decision. The allowance is ${CONTACT_DAILY_PER_CLIENT} messages per client per UTC day, so it is not for newsletters, bulk outreach or automated pings. Set dryRun to validate a payload first without sending it or spending the allowance. No reply comes back through this tool; he answers the email address you supply, so it must be one a human reads.`,
-    inputSchema: {
-      type: "object",
-      properties: {
-        email: {
-          type: "string",
-          description:
-            "Reply-to address. This is where Murugappan replies, so it must be an address the sender reads.",
-          format: "email"
-        },
-        message: {
-          type: "string",
-          description:
-            "What you are writing about. Be specific: the role or project, the stack, and anything that needs a decision.",
-          minLength: CONTACT_LIMITS.message.min,
-          maxLength: CONTACT_LIMITS.message.max
-        },
-        name: {
-          type: "string",
-          description: "Who the message is from.",
-          maxLength: CONTACT_LIMITS.name
-        },
-        company: {
-          type: "string",
-          description: "The company or team you are writing on behalf of.",
-          maxLength: CONTACT_LIMITS.company
-        },
-        dryRun: {
-          type: "boolean",
-          description:
-            "Validate the payload and return without sending anything or spending the allowance. Use this to check a message before committing to it.",
-          default: false
-        }
-      },
-      required: ["email", "message"],
-      additionalProperties: false
-    },
-    outputSchema: out("ContactAccepted"),
+    inputSchema: SendMessageArgs,
+    outputSchema: ContactAccepted,
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
@@ -279,15 +205,8 @@ export const MCP_TOOLS: McpTool[] = [
       openWorldHint: true
     },
     async run(args, ctx) {
-      const parsed = parseContactRequest(args);
-      if (!parsed.ok) {
-        const issues = parsed.issues.map(i => `- ${i.field}: ${i.issue}`).join("\n");
-        return fail(
-          `The message was not sent because these arguments are invalid:\n${issues}\nFix them and call send_message again.`
-        );
-      }
-
-      if (parsed.dryRun) {
+      const { dryRun, ...msg } = SendMessageArgs.parse(args);
+      if (dryRun) {
         return ok({
           status: "validated",
           message: "The request is valid. Call again without dryRun to deliver it."
@@ -300,16 +219,16 @@ export const MCP_TOOLS: McpTool[] = [
           "Message delivery is not configured on this deployment. Use one of the contact links from get_profile instead."
         );
 
-      const slot = await globalLimiter(ctx.env).takeContactSlot(ctx.clientIp);
-      if (!slot.allowed)
-        return fail(
-          slot.scope === "client"
-            ? `This client has already used its daily allowance of ${CONTACT_DAILY_PER_CLIENT} messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile.`
-            : "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
-        );
-
+      // Without this catch the SDK would send the raw error message as the isError text and log nothing.
       try {
-        await sendContactEmail({ ...mailer, msg: parsed.value });
+        const slot = await globalLimiter(ctx.env).takeContactSlot(ctx.clientIp);
+        if (!slot.allowed)
+          return fail(
+            slot.scope === "client"
+              ? `This client has already used its daily allowance of ${CONTACT_DAILY_PER_CLIENT} messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile.`
+              : "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
+          );
+        await sendContactEmail({ ...mailer, msg });
       } catch (err) {
         console.error("mcp send_message failed", err);
         return fail(
@@ -324,9 +243,18 @@ export const MCP_TOOLS: McpTool[] = [
   }
 ];
 
-const BY_NAME = new Map(MCP_TOOLS.map(tool => [tool.name, tool]));
-
-/** Case-sensitive, as the spec requires for tool names. */
-export function findTool(name: string): McpTool | undefined {
-  return BY_NAME.get(name);
+export function registerTools(server: McpServer, ctx: ToolContext): void {
+  for (const tool of MCP_TOOLS) {
+    server.registerTool(
+      tool.name,
+      {
+        title: tool.title,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+        outputSchema: tool.outputSchema,
+        annotations: tool.annotations
+      },
+      args => tool.run(args, ctx)
+    );
+  }
 }

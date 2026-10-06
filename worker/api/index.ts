@@ -2,11 +2,14 @@
 // (run_worker_first) so failures are JSON and the spec can name the host that answered.
 
 import { Hono, type Context } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
+import { methodNotAllowed } from "hono/method-not-allowed";
+import type { z } from "zod";
 
 import { contactMailer, sendContactEmail } from "#worker/email.ts";
 import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "./contact";
-import type { Dataset } from "./dataset";
+import { EducationList, ExperienceList, OpenSourceList, Profile, SkillsResponse } from "./dataset";
 import { apiError } from "./errors";
 import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "./openapi";
@@ -17,7 +20,7 @@ import {
   RATE_LIMIT_EXPOSED_HEADERS,
   secondsUntilUtcMidnight
 } from "./ratelimit";
-import { ALLOWED_METHODS, API_PATHS, type ApiPath, matchApiPath, READ_METHODS } from "./routes";
+import { API_PATHS, READ_METHODS } from "./routes";
 import { loadDataset, loadPost, loadPosts } from "./store";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
@@ -53,11 +56,21 @@ export function publicOrigin(requestUrl: string): string {
   return url.origin;
 }
 
-// Adds HEAD for GET endpoints and OPTIONS for all.
-function allowHeader(path: ApiPath): string {
-  const declared = ALLOWED_METHODS[path];
-  return [...declared, ...(declared.includes("GET") ? ["HEAD"] : []), "OPTIONS"].join(", ");
-}
+// Hono finds the methods registered for the path (HEAD with GET); CORS answers OPTIONS everywhere.
+const jsonMethodNotAllowed = (app: Hono<{ Bindings: Env }>) =>
+  methodNotAllowed({
+    app,
+    onMethodNotAllowed: (c, methods) => {
+      const allow = [...methods, "OPTIONS"].join(", ");
+      return apiError({
+        status: 405,
+        code: "method_not_allowed",
+        message: `${c.req.method} is not supported on ${c.req.path}.`,
+        hint: `Use ${allow} on this path instead.`,
+        headers: { Allow: allow }
+      });
+    }
+  });
 
 /** Never cached: the body confirms a side effect and the headers are a snapshot. */
 function contactResponse(
@@ -93,43 +106,23 @@ api.use(
 );
 
 api.use("*", apiHeaders({ enforceReads: true }));
+api.use("*", jsonMethodNotAllowed(api));
 
-const datasetRoute =
-  <T>(project: (data: Dataset) => T) =>
-  async (c: Context<{ Bindings: Env }>) => {
-    const data = await loadDataset(c.env.ASSETS);
-    return data ? json(project(data)) : datasetUnavailable();
-  };
+// Each slice schema picks its keys from the dataset; parsing drops the rest.
+const datasetRoute = (slice: z.ZodType) => async (c: Context<{ Bindings: Env }>) => {
+  const data = await loadDataset(c.env.ASSETS);
+  return data ? json(slice.parse(data)) : datasetUnavailable();
+};
 
-api.on(
-  READ_METHODS,
-  "/profile",
-  datasetRoute(d => ({ person: d.person, links: d.links }))
-);
+api.on(READ_METHODS, "/profile", datasetRoute(Profile));
 
-api.on(
-  READ_METHODS,
-  "/experience",
-  datasetRoute(d => ({ experience: d.experience }))
-);
+api.on(READ_METHODS, "/experience", datasetRoute(ExperienceList));
 
-api.on(
-  READ_METHODS,
-  "/skills",
-  datasetRoute(d => ({ skills: d.skills, proficiencies: d.proficiencies }))
-);
+api.on(READ_METHODS, "/skills", datasetRoute(SkillsResponse));
 
-api.on(
-  READ_METHODS,
-  "/education",
-  datasetRoute(d => ({ education: d.education }))
-);
+api.on(READ_METHODS, "/education", datasetRoute(EducationList));
 
-api.on(
-  READ_METHODS,
-  "/open-source",
-  datasetRoute(d => ({ openSource: d.openSource }))
-);
+api.on(READ_METHODS, "/open-source", datasetRoute(OpenSourceList));
 
 api.on(READ_METHODS, "/posts", async c => {
   const rawLimit = c.req.query("limit");
@@ -174,7 +167,18 @@ api.on(READ_METHODS, "/versions", c => json(buildVersionsDocument(publicOrigin(c
 
 api.on(READ_METHODS, "/openapi.json", c => specResponse(c.req.url));
 
-api.post("/contact", async c => {
+const contactBodyLimit = bodyLimit({
+  maxSize: MAX_CONTACT_BODY_BYTES,
+  onError: () =>
+    apiError({
+      status: 413,
+      code: "payload_too_large",
+      message: "The request body is larger than this endpoint accepts.",
+      hint: `Keep the whole JSON body under ${MAX_CONTACT_BODY_BYTES} bytes. See the ContactRequest schema for the per-field limits.`
+    })
+});
+
+api.post("/contact", contactBodyLimit, async c => {
   const contentType = c.req.header("Content-Type") ?? "";
   if (!contentType.split(";")[0].trim().endsWith("/json")) {
     return apiError({
@@ -185,27 +189,9 @@ api.post("/contact", async c => {
     });
   }
 
-  // Content-Length is advisory: chunked or header-less bodies are measured after reading.
-  const tooLarge = (bytes: number) =>
-    bytes > MAX_CONTACT_BODY_BYTES
-      ? apiError({
-          status: 413,
-          code: "payload_too_large",
-          message: "The request body is larger than this endpoint accepts.",
-          hint: `Keep the whole JSON body under ${MAX_CONTACT_BODY_BYTES} bytes. See the ContactRequest schema for the per-field limits.`
-        })
-      : null;
-
-  const declared = tooLarge(Number(c.req.header("Content-Length") ?? "0"));
-  if (declared) return declared;
-
-  const raw = await c.req.text();
-  const measured = tooLarge(new TextEncoder().encode(raw).byteLength);
-  if (measured) return measured;
-
   let body: unknown;
   try {
-    body = JSON.parse(raw);
+    body = JSON.parse(await c.req.text());
   } catch {
     return apiError({
       status: 400,
@@ -295,27 +281,15 @@ api.post("/contact", async c => {
   );
 });
 
-// A known path with the wrong method gets 405 with Allow.
-// Anything else gets 404 pointing at the spec.
-api.all("*", c => {
-  const pathname = new URL(c.req.url).pathname;
-  const known = matchApiPath(pathname);
-  if (known) {
-    return apiError({
-      status: 405,
-      code: "method_not_allowed",
-      message: `${c.req.method} is not supported on ${known}.`,
-      hint: `Use ${allowHeader(known)} on this path instead.`,
-      headers: { Allow: allowHeader(known) }
-    });
-  }
-  return apiError({
+// jsonMethodNotAllowed turns this into a 405 when the path exists under another method.
+api.all("*", c =>
+  apiError({
     status: 404,
     code: "not_found",
-    message: `There is no API endpoint at ${pathname}.`,
+    message: `There is no API endpoint at ${c.req.path}.`,
     hint: SPEC_HINT
-  });
-});
+  })
+);
 
 /** The OpenAPI document, with `servers` set to the host that was asked. */
 function specResponse(requestUrl: string): Response {
@@ -337,15 +311,6 @@ specRoutes.use(
 
 // A throttled client must still reach the spec, so reads are advertised but not enforced.
 specRoutes.use("*", apiHeaders({ enforceReads: false }));
+specRoutes.use("*", jsonMethodNotAllowed(specRoutes));
 
 specRoutes.on(READ_METHODS, "/", c => specResponse(c.req.url));
-
-specRoutes.all("*", c =>
-  apiError({
-    status: 405,
-    code: "method_not_allowed",
-    message: `${c.req.method} is not supported on ${API_PATHS.openapiRoot}.`,
-    hint: `Use ${allowHeader(API_PATHS.openapiRoot)} on this path instead.`,
-    headers: { Allow: allowHeader(API_PATHS.openapiRoot) }
-  })
-);

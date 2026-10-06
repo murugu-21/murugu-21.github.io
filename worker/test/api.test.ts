@@ -253,7 +253,7 @@ describe("the OpenAPI spec", () => {
 });
 
 describe("error handling under /api", () => {
-  it.each(["/api/nope", "/api/v1/nope", "/api/v9/profile"])(
+  it.each(["/api/nope", "/api/v1/nope", "/api/v9/profile", "/api/profile/", "/api/posts/a/b"])(
     "404s %s as JSON, never as the HTML 404 page",
     async path => {
       const res = await get(path);
@@ -273,18 +273,19 @@ describe("error handling under /api", () => {
     expect((await errorBody(res)).code).toBe("not_found");
   });
 
-  it("405s a write to a read-only endpoint and says which methods work", async () => {
-    const res = await post("/api/profile", {});
+  it.each([
+    ["POST", "/api/profile", "GET, HEAD, OPTIONS"],
+    ["GET", "/api/contact", "POST, OPTIONS"],
+    ["GET", "/api/v1/contact", "POST, OPTIONS"],
+    ["DELETE", "/api/posts/coin-change-problem", "GET, HEAD, OPTIONS"],
+    ["POST", "/openapi.json", "GET, HEAD, OPTIONS"]
+  ])("405s %s %s and allows %s", async (method, path, allow) => {
+    const res = await fetchWorker(path, { method });
     expect(res.status).toBe(405);
-    expect(res.headers.get("Allow")).toBe("GET, HEAD, OPTIONS");
-    expect((await errorBody(res)).code).toBe("method_not_allowed");
-  });
-
-  it("405s a read of the write-only endpoint", async () => {
-    const res = await get("/api/contact");
-    expect(res.status).toBe(405);
-    expect(res.headers.get("Allow")).toBe("POST, OPTIONS");
-    expect((await errorBody(res)).code).toBe("method_not_allowed");
+    expect(res.headers.get("Allow")).toBe(allow);
+    const error = await errorBody(res);
+    expect(error.code).toBe("method_not_allowed");
+    expect(error.message).toBe(`${method} is not supported on ${path}.`);
   });
 
   it("answers a CORS preflight", async () => {
@@ -366,6 +367,40 @@ describe("POST /api/contact", () => {
       { email: "ada@example.com", message: "x".repeat(40_000) },
       { ip: "203.0.113.14" }
     );
+    expect(res.status).toBe(413);
+    expect((await errorBody(res)).code).toBe("payload_too_large");
+  });
+
+  it("checks the size before the Content-Type", async () => {
+    const res = await post("/api/contact", "x".repeat(40_000), {
+      contentType: "text/plain",
+      ip: "203.0.113.17"
+    });
+    expect(res.status).toBe(413);
+    expect((await errorBody(res)).code).toBe("payload_too_large");
+  });
+
+  it("405s an oversized body sent with the wrong method", async () => {
+    const res = await fetchWorker("/api/contact", { method: "PUT", body: "x".repeat(40_000) });
+    expect(res.status).toBe(405);
+    expect(res.headers.get("Allow")).toBe("POST, OPTIONS");
+  });
+
+  it("rejects an oversized streamed body that declares no length", async () => {
+    const chunk = new TextEncoder().encode("x".repeat(8 * 1024));
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent++ < 3) controller.enqueue(chunk);
+        else controller.close();
+      }
+    });
+    const res = await fetchWorker("/api/contact", {
+      method: "POST",
+      ip: "203.0.113.16",
+      headers: { "Content-Type": "application/json" },
+      body
+    });
     expect(res.status).toBe(413);
     expect((await errorBody(res)).code).toBe("payload_too_large");
   });

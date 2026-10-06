@@ -2,6 +2,7 @@
 // be added without them.
 
 import type { MiddlewareHandler } from "hono";
+import { basePath } from "hono/route";
 
 import { apiError } from "./errors";
 import {
@@ -11,7 +12,6 @@ import {
   readRateLimitHeaders,
   takeReadSlot
 } from "./ratelimit";
-import { API_PATHS, matchApiPath } from "./routes";
 import { versionHeaders, versionLinkHeader } from "./versioning";
 
 type ApiHeaderOptions = {
@@ -21,8 +21,8 @@ type ApiHeaderOptions = {
 
 export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings: Env }> {
   return async (c, next) => {
-    const pathname = new URL(c.req.url).pathname;
-    const isContact = matchApiPath(pathname) === API_PATHS.contact;
+    // Path within the mount, so /api/contact and /api/v1/contact both match.
+    const isContact = c.req.path.slice(basePath(c).length) === "/contact";
     const isRead = c.req.method === "GET" || c.req.method === "HEAD";
     // Without a client address every caller would share one window, so nothing is counted.
     // Cloudflare always sets this header in production.
