@@ -1,76 +1,67 @@
-// Theme for both apps: class `html.dark-mode`, localStorage "isDark" (JSON
-// bool). The layouts' inline pre-paint bootstraps duplicate resolveTheme
-// because `is:inline` scripts cannot import; keep them in sync.
+// Theme for both apps: class `html.dark-mode`, localStorage "isDark" ("true" or
+// "false"), set through `window.__setPreferredTheme`.
 
 export type Theme = "light" | "dark";
 
-const THEME_KEY = "isDark";
+interface ThemeHost extends Pick<Window, "addEventListener" | "dispatchEvent"> {
+  document: Pick<Document, "documentElement">;
+  localStorage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
+  matchMedia: (query: string) => Pick<MediaQueryList, "matches" | "addEventListener">;
+  __setPreferredTheme: (theme: Theme) => void;
+}
 
-/** The stored choice, else the OS's. */
-export const resolveTheme = (stored: string | null, prefersDark: boolean): Theme => {
-  if (stored !== null) {
+/**
+ * Applies the stored choice, else the OS's, before first paint, then owns
+ * every later change: `__setPreferredTheme` for the toggle, an OS flip (which
+ * drops the stored choice, so the site follows the OS again), and a bfcache
+ * restore (which skips inline scripts). Both layouts inline its source as
+ * `themeBootstrapScript`, so it must not reference anything outside itself.
+ */
+export function bootstrapTheme(win: ThemeHost): void {
+  const key = "isDark";
+  const root = win.document.documentElement;
+  const os = win.matchMedia("(prefers-color-scheme: dark)");
+  const osTheme = (): Theme => (os.matches ? "dark" : "light");
+
+  const resolve = (): Theme => {
     try {
-      return JSON.parse(stored) ? "dark" : "light";
+      const stored = win.localStorage.getItem(key);
+      if (stored === "true" || stored === "false") return stored === "true" ? "dark" : "light";
     } catch {
-      // not ours; fall through to the OS preference
+      // storage blocked; fall through to the OS preference
     }
-  }
-  return prefersDark ? "dark" : "light";
-};
+    return osTheme();
+  };
+  const apply = (theme: Theme) => root.classList.toggle("dark-mode", theme === "dark");
+  apply(resolve());
+
+  const announce = (theme: Theme) => {
+    apply(theme);
+    win.dispatchEvent(new Event("themechange"));
+  };
+  // storage blocked (private mode): the class still applies this visit
+  const store = (write: () => void) => {
+    try {
+      write();
+    } catch {}
+  };
+
+  win.__setPreferredTheme = theme => {
+    store(() => win.localStorage.setItem(key, JSON.stringify(theme === "dark")));
+    announce(theme);
+  };
+  os.addEventListener("change", () => {
+    store(() => win.localStorage.removeItem(key));
+    announce(osTheme());
+  });
+  win.addEventListener("pageshow", e => {
+    if (!e.persisted) return;
+    const next = resolve();
+    if (next !== (root.classList.contains("dark-mode") ? "dark" : "light")) announce(next);
+  });
+}
+
+export const themeBootstrapScript = `(${bootstrapTheme.toString()})(window);`;
 
 export const currentTheme = (): Theme =>
   document.documentElement.classList.contains("dark-mode") ? "dark" : "light";
-
-/**
- * On the blog, delegate to the bootstrap's `__setPreferredTheme`; on the
- * portfolio, write class and storage here and fire the same `themechange`.
- */
-export const setTheme = (next: Theme): void => {
-  if (window.__setPreferredTheme) {
-    window.__setPreferredTheme(next);
-    return;
-  }
-  document.documentElement.classList.toggle("dark-mode", next === "dark");
-  try {
-    localStorage.setItem(THEME_KEY, JSON.stringify(next === "dark"));
-  } catch {
-    // storage blocked (private mode); the class still applies this visit
-  }
-  window.dispatchEvent(new Event("themechange"));
-};
-
-/** Thunks so a sync reads live values. */
-export interface ThemeSource {
-  stored: () => string | null;
-  prefersDark: () => boolean;
-  current: () => Theme;
-}
-
-export const documentThemeSource: ThemeSource = {
-  stored: () => {
-    try {
-      return localStorage.getItem(THEME_KEY);
-    } catch {
-      return null;
-    }
-  },
-  prefersDark: () => matchMedia("(prefers-color-scheme: dark)").matches,
-  current: currentTheme
-};
-
-/**
- * A bfcache restore skips the bootstrap, so a theme toggled on another page is
- * missing; re-resolve on `pageshow` (persisted) and apply only if it differs.
- * With nothing stored, `apply` persists the OS preference, like the blog does.
- */
-export const syncThemeOnRestore = (
-  win: EventTarget,
-  source: ThemeSource,
-  apply: (next: Theme) => void
-): void => {
-  win.addEventListener("pageshow", e => {
-    if (!("persisted" in e) || !e.persisted) return;
-    const next = resolveTheme(source.stored(), source.prefersDark());
-    if (next !== source.current()) apply(next);
-  });
-};

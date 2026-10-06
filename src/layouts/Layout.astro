@@ -1,6 +1,7 @@
 ---
 import { FIRA_CODE_FACE, FIRA_CODE_URL } from "#src/lib/fonts.ts";
 import { SITE_ORIGIN } from "#src/lib/site.ts";
+import { themeBootstrapScript } from "#src/lib/theme.ts";
 import "#src/styles/global.css";
 import ChatWidget from "#src/components/chat/ChatWidget.astro";
 import Favicons from "#src/components/Favicons.astro";
@@ -197,21 +198,7 @@ const jsonLd = { "@context": "https://schema.org", "@graph": graph };
     <link rel="preload" as="font" type="font/woff2" crossorigin href={FIRA_CODE_URL} />
     <style is:inline set:html={FIRA_CODE_FACE}></style>
 
-    <script is:inline>
-      // Sets html.dark-mode before first paint. Inline, so it can't import;
-      // keep in step with resolveTheme in ../lib/theme.ts.
-      (function () {
-        var dark = false;
-        try {
-          dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        } catch (e) {}
-        try {
-          var stored = localStorage.getItem("isDark");
-          if (stored !== null) dark = JSON.parse(stored);
-        } catch (e) {}
-        if (dark) document.documentElement.classList.add("dark-mode");
-      })();
-    </script>
+    <script is:inline set:html={themeBootstrapScript} />
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
     <SiteScripts />
   </head>

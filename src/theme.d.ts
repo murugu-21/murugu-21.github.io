@@ -1,10 +1,9 @@
 import type { Theme } from "./lib/theme";
 
-// Set by the blog's pre-paint bootstrap in blog/layouts/BaseLayout.astro.
-// Blog pages only, hence optional; lib/theme.ts's setTheme branches on it.
+// Set by bootstrapTheme (lib/theme.ts), which both layouts inline in <head>.
 declare global {
   interface Window {
-    __setPreferredTheme?: (theme: Theme) => void;
+    __setPreferredTheme: (theme: Theme) => void;
   }
 }
 

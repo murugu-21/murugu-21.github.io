@@ -17,12 +17,7 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 <script>
   import "#src/lib/webmcp.ts";
   import { bootAnalytics, initClickTracking, tag } from "#src/lib/analytics.ts";
-  import {
-    currentTheme,
-    documentThemeSource,
-    setTheme,
-    syncThemeOnRestore
-  } from "#src/lib/theme.ts";
+  import { currentTheme } from "#src/lib/theme.ts";
 
   // Must run first: tags/events sent before it are dropped, not buffered.
   bootAnalytics();
@@ -31,7 +26,4 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
   initClickTracking();
   tag("theme", currentTheme());
   window.addEventListener("themechange", () => tag("theme", currentTheme()));
-
-  // The inline bootstrap doesn't rerun on a bfcache restore.
-  syncThemeOnRestore(window, documentThemeSource, setTheme);
 </script>
