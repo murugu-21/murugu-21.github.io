@@ -1,5 +1,5 @@
 // One line of the chat transcript, from a visitor, Jarvis or the room.
-import React from "react";
+import { Fragment } from "react";
 
 import type { JarvisMessage } from "#contracts/chat.ts";
 import { messageText } from "#utils/ui-message.ts";
@@ -37,7 +37,7 @@ function renderWithLinks(raw: string) {
     const trailing = /[.,!?;:)]+$/.exec(part)?.[0] ?? "";
     const url = trailing ? part.slice(0, -trailing.length) : part;
     return (
-      <React.Fragment key={i}>
+      <Fragment key={i}>
         <a
           href={url}
           target="_blank"
@@ -47,7 +47,7 @@ function renderWithLinks(raw: string) {
           {url}
         </a>
         {trailing}
-      </React.Fragment>
+      </Fragment>
     );
   });
 }

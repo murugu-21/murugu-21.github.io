@@ -41,9 +41,6 @@ type Phase =
   | { kind: "working"; activity: Activity | null }
   | { kind: "replying" };
 
-const IDLE: Phase = { kind: "idle" };
-const LOADING: Phase = { kind: "loading" };
-
 // The room's data parts arrive over the network, so they're parsed, not trusted.
 const DATA_SCHEMAS = {
   activity: z.object({
@@ -55,12 +52,10 @@ const DATA_SCHEMAS = {
 
 // A running turn shows its latest tool step or prose, whichever came last.
 function turnPhase(last: JarvisMessage | undefined): Phase {
-  const tail =
-    last?.role === "assistant"
-      ? last.parts.findLast(
-          part => part.type === "data-activity" || (part.type === "text" && part.text.trim() !== "")
-        )
-      : undefined;
+  if (last?.role !== "assistant") return { kind: "working", activity: null };
+  const tail = last.parts.findLast(
+    part => part.type === "data-activity" || (part.type === "text" && part.text.trim() !== "")
+  );
   if (tail?.type === "text") return { kind: "replying" };
   return { kind: "working", activity: tail?.type === "data-activity" ? tail.data : null };
 }
@@ -93,14 +88,14 @@ function roomId(): string {
   return id;
 }
 
-// The room's notices aren't part of the conversation.
 function downloadTranscript(bubbles: Bubble[]) {
   track("chat_transcript_download");
   const lines = [
     `Jarvis: ${GREETING}`,
-    ...bubbles.flatMap(b =>
-      b.kind === "system" ? [] : [`${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`]
-    )
+    // The room's notices aren't part of the conversation.
+    ...bubbles
+      .filter(b => b.kind !== "system")
+      .map(b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`)
   ];
   const date = new Date().toISOString().slice(0, 10);
   const body = `Chat with Jarvis on murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;
@@ -272,11 +267,7 @@ type SessionProps = {
 // Owns the room's socket, so it stays mounted while the panel is closed.
 function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
   const [awaitingReply, setAwaitingReply] = useState(false);
-  const agent = useAgent({
-    agent: "chat-room",
-    name: room,
-    host
-  });
+  const agent = useAgent({ agent: "chat-room", name: room, host });
   const { messages, sendMessage, status, isServerStreaming } = useAgentChat<unknown, JarvisMessage>(
     {
       agent,
@@ -322,7 +313,7 @@ function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
   return (
     <ChatPanel
       bubbles={bubbles}
-      phase={busy ? turnPhase(last) : IDLE}
+      phase={busy ? turnPhase(last) : { kind: "idle" }}
       onSend={onSend}
       onClose={onClose}
       onRestart={onRestart}
@@ -386,7 +377,7 @@ export function ChatWidget({ host }: { host?: string }) {
   const loadingPanel = (
     <ChatPanel
       bubbles={[]}
-      phase={LOADING}
+      phase={{ kind: "loading" }}
       onSend={() => {}}
       onClose={toggleOpen}
       onRestart={restart}
