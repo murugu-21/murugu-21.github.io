@@ -92,8 +92,7 @@ typos                  # spelling, configured in _typos.toml
 bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates
 bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
-bun run check:astro    # type-check .astro files
-bun run check:src      # type-check src/, scripts/ and the config files
+bun run check:src      # type-check src/ (.astro files included), scripts/ and the config files
 bun run check:worker   # type-check worker/
 bun run test           # vitest in the workers pool, on Node and in headless Chromium
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
@@ -101,7 +100,9 @@ bun run test --coverage # the same, plus Istanbul coverage in coverage/
 
 [typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
 
-The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it, and typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` and `lint:astro` preload `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/site/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` and typescript-eslint support TypeScript 7.
+The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
+
+typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:astro` preloads `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
 
 Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, over the `.astro` files in `src/` to cover the templates. It lints nothing else, so its rules don't overlap oxlint's. Delete it, along with ESLint and its plugins, once oxlint can parse Astro templates.
 

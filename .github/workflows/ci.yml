@@ -36,7 +36,6 @@ jobs:
       - run: bun run check-format
       - run: bun run lint
       - run: bun run knip
-      - run: bun run check:astro
       - run: bun run check:src
       - run: bun run check:worker
       # The headless shell is all the "browser" Vitest project needs.

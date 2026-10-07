@@ -1,9 +1,7 @@
-// TypeScript 7 dropped the JS compiler API that Volar (and so `astro check`)
-// and typescript-eslint load via require("typescript"). This preload, used by
-// check:astro and lint:astro, redirects it to the
-// `@typescript/typescript6` compat package. Delete this file, that
-// devDependency and the `typescript` override in package.json once
-// @astrojs/check and typescript-eslint support TypeScript 7.
+// TypeScript 7 dropped the JS compiler API that typescript-eslint loads via
+// require("typescript"). This preload, used by lint:astro, redirects it to the
+// `@typescript/typescript6` compat package. Delete this file and that
+// devDependency once typescript-eslint supports TypeScript 7.
 const Module = require("node:module");
 
 const resolveFilename = Module._resolveFilename;

@@ -12,8 +12,6 @@
   // The husky plugin parses any hook script; ours live in .githooks (core.hooksPath).
   "husky": { "config": [".githooks/*"] },
   "ignoreDependencies": [
-    // Loaded by `astro check` at runtime.
-    "@astrojs/check",
     // Required by name inside scripts/site/ts-alias.cjs.
     "@typescript/typescript6",
     // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.
