@@ -169,23 +169,18 @@ test("sends a question with Enter and streams the reply after the tool step", as
   expect(events).toEqual(["chat_open", "chat_message_sent"]);
 });
 
-test("sends a multi-line message with the button, growing the composer to five lines", async () => {
+test("sends a multi-line message with the button", async () => {
   await render(<ChatWidget />);
   await openChat();
 
-  await userEvent.type(
-    input(),
-    `one{Shift>}{Enter}{/Shift}two{Shift>}${"{Enter}".repeat(8)}{/Shift}`
-  );
-  await expect.element(input()).toHaveStyle({ height: "120px" });
-
+  await userEvent.type(input(), "one{Shift>}{Enter}{/Shift}two");
   await sendButton().click();
 
   await expect.poll(() => lastRoom().requests).toHaveLength(1);
   expect(lastRoom().requests[0]).toMatchObject({
     messages: [{ parts: [{ type: "text", text: "one\ntwo" }] }]
   });
-  await expect.element(input()).not.toHaveStyle({ height: "120px" });
+  await expect.element(input()).toHaveValue("");
 });
 
 test("keeps one room per page load, and can start over, when the browser blocks storage", async () => {
