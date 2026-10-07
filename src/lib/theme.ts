@@ -59,8 +59,9 @@ export function bootstrapTheme(win: ThemeHost): void {
     announce(osTheme());
   });
   win.addEventListener("pageshow", e => {
+    if (!e.persisted) return;
     const next = resolve();
-    if (e.persisted && next !== shown()) announce(next);
+    if (next !== shown()) announce(next);
   });
 }
 

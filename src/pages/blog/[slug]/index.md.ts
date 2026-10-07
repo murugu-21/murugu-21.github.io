@@ -13,7 +13,7 @@ export const getStaticPaths = (async () => {
   );
 }) satisfies GetStaticPaths;
 
-export const GET = (({ props }: { props: InferGetStaticPropsType<typeof getStaticPaths> }) =>
-  markdownResponse(readFileSync(props.filePath, "utf8"))) satisfies APIRoute<
-  InferGetStaticPropsType<typeof getStaticPaths>
->;
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+export const GET = (({ props }: { props: Props }) =>
+  markdownResponse(readFileSync(props.filePath, "utf8"))) satisfies APIRoute<Props>;

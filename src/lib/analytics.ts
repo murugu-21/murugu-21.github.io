@@ -21,7 +21,10 @@ declare global {
 const isPostHog = (p: unknown): p is PostHog =>
   typeof p === "object" &&
   p !== null &&
-  ["capture", "register"].every(method => typeof Reflect.get(p, method) === "function");
+  "capture" in p &&
+  typeof p.capture === "function" &&
+  "register" in p &&
+  typeof p.register === "function";
 
 /** Injectable for tests; production dynamic-imports the real browser SDK. */
 type SdkLoader = () => Promise<PostHog>;

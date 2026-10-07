@@ -104,7 +104,22 @@ describe("fetchGithubProfile", () => {
     const { fetchGithubProfile } = await loadGithub({});
 
     await fetchGithubProfile();
-    expect(warnings[0]?.[1]).toEqual(["Bad credentials"]);
+    expect(warnings).toEqual([
+      ["[github] GraphQL errors; rendering contact fallback", ["Bad credentials"]]
+    ]);
+  });
+
+  it("logs the schema issues as one list", async () => {
+    stubGithub({ body: { data: { user: { bio: 5 } } } });
+    const { fetchGithubProfile } = await loadGithub({});
+
+    await fetchGithubProfile();
+    expect(warnings).toEqual([
+      [
+        "[github] unexpected GraphQL data; rendering contact fallback",
+        [expect.objectContaining({ path: ["user", "bio"] })]
+      ]
+    ]);
   });
 
   it("returns null when the user does not exist, unless the profile is required", async () => {

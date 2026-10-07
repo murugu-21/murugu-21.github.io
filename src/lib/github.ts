@@ -45,15 +45,20 @@ async function queryGithub<T extends z.ZodType>({
     console.warn(`[github] no GITHUB_TOKEN; ${fallback}`);
     return null;
   }
+  let data: unknown;
   try {
-    const parsed = schema.safeParse(await postQuery(query));
-    if (!parsed.success) throw new QueryFailure("unexpected GraphQL data", parsed.error.issues);
-    return parsed.data;
+    data = await postQuery(query);
   } catch (e) {
     const failure = e instanceof QueryFailure ? e : new QueryFailure("fetch failed", [e]);
     console.warn(`[github] ${failure.message}; ${fallback}`, ...failure.detail);
     return null;
   }
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) {
+    console.warn(`[github] unexpected GraphQL data; ${fallback}`, parsed.error.issues);
+    return null;
+  }
+  return parsed.data;
 }
 
 const GithubProfile = z.object({ bio: z.string().nullable() });
