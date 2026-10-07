@@ -79,15 +79,13 @@ export function versionHeaders(
 export function versionLinkHeader(record: VersionRecord = CURRENT_VERSION_RECORD): string {
   const links = [
     `<${API_PATHS.openapiRoot}>; rel="service-desc"; type="application/json"`,
-    `<https://murugappan.dev/developers/>; rel="service-doc"; type="text/html"`,
+    `</developers/>; rel="service-doc"; type="text/html"`,
     `<${API_PATHS.versions}>; rel="version-history"; type="application/json"`,
     `<${CURRENT_VERSION_RECORD.basePath}>; rel="latest-version"`,
     `</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"`
   ];
   if (record.deprecatedOn) {
-    links.push(
-      `<https://murugappan.dev/developers/#versioning>; rel="deprecation"; type="text/html"`
-    );
+    links.push(`</developers/#versioning>; rel="deprecation"; type="text/html"`);
     if (record.successor) links.push(`<${API_BASE}/${record.successor}>; rel="successor-version"`);
   }
   return links.join(", ");

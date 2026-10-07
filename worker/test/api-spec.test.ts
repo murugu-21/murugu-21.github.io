@@ -39,7 +39,7 @@ describe("version headers", () => {
   it("links the spec, the docs and the version history", () => {
     const link = versionLinkHeader();
     expect(link).toContain('</openapi.json>; rel="service-desc"');
-    expect(link).toContain('rel="service-doc"');
+    expect(link).toContain('</developers/>; rel="service-doc"');
     expect(link).toContain('</api/v1/versions>; rel="version-history"');
     expect(link).toContain('rel="latest-version"');
     expect(link).toContain('rel="api-catalog"');
@@ -50,7 +50,7 @@ describe("version headers", () => {
     expect(link).not.toContain('rel="deprecation"');
     expect(link).not.toContain('rel="successor-version"');
     const deprecatedLink = versionLinkHeader(deprecated);
-    expect(deprecatedLink).toContain('rel="deprecation"');
+    expect(deprecatedLink).toContain('</developers/#versioning>; rel="deprecation"');
     expect(deprecatedLink).toContain('</api/v2>; rel="successor-version"');
   });
 });
