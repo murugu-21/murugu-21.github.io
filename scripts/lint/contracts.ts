@@ -5,7 +5,9 @@ import type { RuleTester } from "oxlint/plugins-dev";
 // oxlint doesn't export its plugin or AST types; derive them from RuleTester.
 type Rule = Parameters<RuleTester["run"]>[1];
 type Visitor = ReturnType<NonNullable<Rule["create"]>>;
-type Node = Parameters<NonNullable<Visitor["ExportNamedDeclaration"]>>[0]["parent"];
+type NodeOf<K extends keyof Visitor> = Parameters<NonNullable<Visitor[K]>>[0];
+type Node = NodeOf<"ExportNamedDeclaration">["parent"];
+type Export = { node: Node; value: Node | null; name: string };
 
 const BEHAVIOUR = new Set([
   "FunctionDeclaration",
@@ -14,6 +16,34 @@ const BEHAVIOUR = new Set([
   "ClassDeclaration",
   "ClassExpression"
 ]);
+
+// `export const a = …`, `export function f() {}` and `export class C {}`.
+function declaredExports(node: NodeOf<"ExportNamedDeclaration">): Export[] {
+  const { declaration } = node;
+  if (declaration?.type === "VariableDeclaration") {
+    return declaration.declarations.flatMap(({ id, init }) =>
+      id.type === "Identifier" ? [{ node, value: init, name: id.name }] : []
+    );
+  }
+  if (declaration?.type !== "FunctionDeclaration" && declaration?.type !== "ClassDeclaration") {
+    return [];
+  }
+  return declaration.id ? [{ node, value: declaration, name: declaration.id.name }] : [];
+}
+
+// `export { a, b as c }`. A re-export from another module is that module's to check.
+function specifiedExports(node: NodeOf<"ExportNamedDeclaration">): Export[] {
+  if (node.source) return [];
+  return node.specifiers.flatMap(({ local }) =>
+    local.type === "Identifier" ? [{ node, value: null, name: local.name }] : []
+  );
+}
+
+function defaultExport(node: NodeOf<"ExportDefaultDeclaration">): Export {
+  const value = node.declaration;
+  const name = value.type === "Identifier" ? value.name : "the default export";
+  return { node, value, name };
+}
 
 export default {
   meta: { name: "contracts" },
@@ -28,9 +58,9 @@ export default {
         }
       },
       create(context) {
-        // Top-level names bound to a function or class, and the names exported, in any order.
+        // Names bound to a function or class, and the names exported, in any order.
         const behaviour = new Set<string>();
-        const exported: { node: Node; value: Node | null; name: string }[] = [];
+        const exported: Export[] = [];
 
         return {
           FunctionDeclaration(node) {
@@ -45,31 +75,10 @@ export default {
             }
           },
           ExportNamedDeclaration(node) {
-            const declaration = node.declaration;
-            if (declaration?.type === "VariableDeclaration") {
-              for (const d of declaration.declarations) {
-                if (d.id.type === "Identifier")
-                  exported.push({ node, value: d.init, name: d.id.name });
-              }
-            } else if (
-              (declaration?.type === "FunctionDeclaration" ||
-                declaration?.type === "ClassDeclaration") &&
-              declaration.id
-            ) {
-              exported.push({ node, value: declaration, name: declaration.id.name });
-            }
-            // A re-export from another module is that module's to check.
-            if (node.source) return;
-            for (const specifier of node.specifiers) {
-              if (specifier.local.type === "Identifier") {
-                exported.push({ node, value: null, name: specifier.local.name });
-              }
-            }
+            exported.push(...declaredExports(node), ...specifiedExports(node));
           },
           ExportDefaultDeclaration(node) {
-            const value = node.declaration;
-            const name = value.type === "Identifier" ? value.name : "the default export";
-            exported.push({ node, value, name });
+            exported.push(defaultExport(node));
           },
           "Program:exit"() {
             for (const { node, value, name } of exported) {

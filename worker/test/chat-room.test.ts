@@ -2,7 +2,7 @@ import { env, runInDurableObject } from "cloudflare:test";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { assert, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { globalLimiter } from "#worker/api/ratelimit.ts";
@@ -21,6 +21,8 @@ import {
   type TestEnvOptions,
   visitorMeta
 } from "./fixtures";
+
+afterEach(() => vi.restoreAllMocks());
 
 const LIMIT_TEXT =
   "I've hit my chat budget for now. Please reach Murugappan directly " +
@@ -101,11 +103,11 @@ async function storedMessages(room: string) {
   return (await readJson(res, StoredMessages)).map(m => ({ role: m.role, parts: m.parts }));
 }
 
-function modelStream(parts: LanguageModelV4StreamPart[], delayMs = 0) {
+function modelStream(parts: LanguageModelV4StreamPart[], held: Promise<void> = Promise.resolve()) {
   return {
     stream: new ReadableStream<LanguageModelV4StreamPart>({
       async start(controller) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await held;
         for (const part of parts) controller.enqueue(part);
         controller.close();
       }
@@ -120,7 +122,7 @@ const USAGE = {
 
 // A factory, so the stream is built inside the room: workerd forbids one Durable
 // Object reading a stream created in another context.
-const textStep = (text: string, delayMs?: number) => () =>
+const textStep = (text: string, held?: Promise<void>) => () =>
   modelStream(
     [
       { type: "text-start", id: "t1" },
@@ -128,7 +130,7 @@ const textStep = (text: string, delayMs?: number) => () =>
       { type: "text-end", id: "t1" },
       { type: "finish", usage: USAGE, finishReason: { unified: "stop", raw: "stop" } }
     ],
-    delayMs
+    held
   );
 
 /** A model that plays one scripted step per call. */
@@ -156,16 +158,16 @@ async function fundChat(): Promise<void> {
   );
 }
 
-/** Gives a room a key, a scripted model, site assets and an EMAIL binding that records instead of sending. */
+/** Gives a room a key, a scripted model, site assets and an EMAIL binding that records instead of sending (unless `options.email` says otherwise). */
 async function scriptRoom(
   stub: DurableObjectStub<ChatRoom>,
   model: MockLanguageModelV4,
-  assets?: TestEnvOptions["assets"]
+  options: TestEnvOptions = {}
 ) {
   const { email, sent } = recordingEmail();
   await runInDurableObject(stub, (instance: ChatRoom) => {
     Object.assign(instance, {
-      env: { ...testEnv({ email, assets }), DEEPSEEK_API_KEY: "sk-test" },
+      env: { ...testEnv({ email, ...options }), DEEPSEEK_API_KEY: "sk-test" },
       languageModel: () => model
     });
   });
@@ -297,14 +299,17 @@ describe("a chat turn", () => {
     await fundChat();
     const a = await openRoom("room-overlap");
     const b = await openRoom("room-overlap");
-    // Slow enough that tab B's message lands mid-turn.
-    await scriptRoom(a.stub, scriptedModel(textStep("First.", 300)));
+    // Tab A's turn stays open until tab B has been refused.
+    let release = () => {};
+    const held = new Promise<void>(resolve => (release = resolve));
+    await scriptRoom(a.stub, scriptedModel(textStep("First.", held)));
 
     a.socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "first" })] }));
     await vi.waitFor(() => assert(b.frames.length > 2, "tab B hasn't seen the turn start"));
     b.socket.send(chatRequest({ id: "r2", messages: [userMessage({ id: "u2", text: "second" })] }));
     expect(replyText(await streamedChunks(b.frames, "r2"))).toBe("");
 
+    release();
     expect(replyText(await streamedChunks(a.frames, "r1"))).toBe("First.");
     expect(await storedMessages("room-overlap")).toEqual([
       { role: "user", parts: [{ type: "text", text: "first" }] },
@@ -316,11 +321,11 @@ describe("a chat turn", () => {
     await fundChat();
     const { socket, frames, stub } = await openRoom("room-redeploy");
     const model = scriptedModel(textStep("One."), textStep("Two."));
-    await scriptRoom(stub, model, { "/llms.txt": "DEPLOY-ONE" });
+    await scriptRoom(stub, model, { assets: { "/llms.txt": "DEPLOY-ONE" } });
     socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "one" })] }));
     expect(replyText(await streamedChunks(frames, "r1"))).toBe("One.");
 
-    await scriptRoom(stub, model, { "/llms.txt": "DEPLOY-TWO" });
+    await scriptRoom(stub, model, { assets: { "/llms.txt": "DEPLOY-TWO" } });
     socket.send(chatRequest({ id: "r2", messages: [userMessage({ id: "u2", text: "two" })] }));
     expect(replyText(await streamedChunks(frames, "r2"))).toBe("Two.");
 
@@ -399,6 +404,76 @@ describe("a chat turn", () => {
     expect(noticesIn(await streamedChunks(other.frames, "r1"))).toEqual([
       { kind: "limit", text: LIMIT_TEXT }
     ]);
+  });
+
+  it("reads a site page for the model and shows the visitor only its path", async () => {
+    await fundChat();
+    const { socket, frames, stub } = await openRoom("room-fetch");
+    const model = scriptedModel(
+      () =>
+        modelStream([
+          {
+            type: "tool-call",
+            toolCallId: "call-1",
+            toolName: "fetch_page",
+            input: JSON.stringify({ url: "https://murugappan.dev/resume/?secret=1" })
+          },
+          {
+            type: "finish",
+            usage: USAGE,
+            finishReason: { unified: "tool-calls", raw: "tool_calls" }
+          }
+        ]),
+      textStep("He built the outbox pipeline.")
+    );
+    await scriptRoom(stub, model, {
+      assets: { "/resume/": "<html><body><main>Built the OUTBOX-PIPELINE</main></body></html>" }
+    });
+
+    socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "What has he built?" })] })
+    );
+
+    const chunks = await streamedChunks(frames, "r1");
+    expect(replyText(chunks)).toBe("He built the outbox pipeline.");
+    expect(chunks.filter(c => c.type === "data-activity").map(c => c.data)).toEqual([
+      { name: "fetch_page", detail: "/resume/" }
+    ]);
+    expect(JSON.stringify(model.doStreamCalls[1].prompt)).toContain("Built the OUTBOX-PIPELINE");
+    expect(JSON.stringify(frames)).not.toContain("OUTBOX-PIPELINE");
+  });
+
+  it("answers with the error notice when the room can't reach its rate limiter", async () => {
+    const { socket, frames, stub } = await openRoom("room-no-limiter");
+    await runInDurableObject(stub, (instance: ChatRoom) => {
+      Object.assign(instance, {
+        env: { ...testEnv(), DEEPSEEK_API_KEY: "sk-test", RateLimiter: undefined }
+      });
+    });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "hi" })] }));
+
+    expect(noticesIn(await streamedChunks(frames, "r1"))).toEqual([
+      { kind: "error", text: "Something went wrong on my end. Please try again." }
+    ]);
+  });
+
+  it("still answers when D1 rejects the mirror writes", async () => {
+    await fundChat();
+    const { socket, frames, stub } = await openRoom("room-d1-down");
+    await scriptRoom(stub, scriptedModel(textStep("Still here.")));
+    const errors: unknown[][] = [];
+    vi.spyOn(console, "error").mockImplementation((...args) => void errors.push(args));
+    await env.CHAT_DB.exec("ALTER TABLE messages RENAME TO messages_away");
+    try {
+      socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "hi" })] }));
+
+      expect(replyText(await streamedChunks(frames, "r1"))).toBe("Still here.");
+      await vi.waitFor(() => expect(errors.map(e => e[0])).toContain("d1 mirror failed"));
+    } finally {
+      await env.CHAT_DB.exec("ALTER TABLE messages_away RENAME TO messages");
+    }
   });
 });
 
@@ -496,6 +571,108 @@ describe("ChatRoom leads", () => {
     expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("Noted.");
     expect(sent.map(m => m.to)).toEqual(["inbox@example.com"]);
   });
+
+  it("keeps the lead and the chat going when the email can't be sent, and retries on the next capture", async () => {
+    await fundChat();
+    const room = await openRoom("room-lead-retry");
+    const capture = (toolCallId: string): LanguageModelV4StreamPart => ({
+      type: "tool-call",
+      toolCallId,
+      toolName: "capture_opportunity",
+      input: JSON.stringify({ contact: "a@b.c", summary: "Staff role" })
+    });
+    const captureStep = (toolCallId: string) => () =>
+      modelStream([
+        capture(toolCallId),
+        {
+          type: "finish",
+          usage: USAGE,
+          finishReason: { unified: "tool-calls", raw: "tool_calls" }
+        }
+      ]);
+    const errors: unknown[][] = [];
+    vi.spyOn(console, "error").mockImplementation((...args) => void errors.push(args));
+    const model = scriptedModel(
+      captureStep("call-1"),
+      textStep("First."),
+      captureStep("call-2"),
+      textStep("Second.")
+    );
+    await scriptRoom(room.stub, model, {
+      email: {
+        send: async () => {
+          throw new Error("relay down");
+        }
+      }
+    });
+
+    room.socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "Hire me: a@b.c" })] })
+    );
+    expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("First.");
+    expect(errors.map(e => e[0])).toEqual(["opportunity email failed"]);
+
+    const sent = await scriptRoom(room.stub, model);
+    room.socket.send(
+      chatRequest({ id: "r2", messages: [userMessage({ id: "u2", text: "Still me" })] })
+    );
+    expect(replyText(await streamedChunks(room.frames, "r2"))).toBe("Second.");
+    expect(sent.map(m => m.to)).toEqual(["inbox@example.com"]);
+    const leads = await runInDurableObject(room.stub, (instance: ChatRoom) =>
+      instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
+    );
+    expect(leads).toEqual([{ contact: "a@b.c" }, { contact: "a@b.c" }]);
+  });
+
+  it("stores the lead but sends no email when no inbox is configured", async () => {
+    await fundChat();
+    const room = await openRoom("room-lead-no-inbox");
+    const errors: unknown[][] = [];
+    vi.spyOn(console, "error").mockImplementation((...args) => void errors.push(args));
+    const sent = await scriptRoom(
+      room.stub,
+      scriptedModel(
+        () =>
+          modelStream([
+            {
+              type: "tool-call",
+              toolCallId: "call-1",
+              toolName: "capture_opportunity",
+              input: JSON.stringify({ contact: "a@b.c", summary: "Staff role" })
+            },
+            {
+              type: "finish",
+              usage: USAGE,
+              finishReason: { unified: "tool-calls", raw: "tool_calls" }
+            }
+          ]),
+        textStep("Noted.")
+      ),
+      { inbox: "" }
+    );
+
+    room.socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "Hire me: a@b.c" })] })
+    );
+
+    expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("Noted.");
+    expect(sent).toEqual([]);
+    expect(errors.map(e => e[0])).toEqual(["opportunity email skipped: no EMAIL binding or inbox"]);
+    const leads = await runInDurableObject(room.stub, (instance: ChatRoom) =>
+      instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
+    );
+    expect(leads).toEqual([{ contact: "a@b.c" }]);
+  });
+});
+
+describe("ChatRoom recovery", () => {
+  it("drops an interrupted turn instead of retrying it, since a retry bills the model again", async () => {
+    const { stub } = await connectRoom("room-recovery");
+    const decision = await runInDurableObject(stub, (instance: ChatRoom) =>
+      instance.onChatRecovery()
+    );
+    expect(decision).toEqual({ continue: false });
+  });
 });
 
 describe("parseVisitorContext", () => {
@@ -527,13 +704,6 @@ describe("parseVisitorContext", () => {
 });
 
 describe("fetchActivity", () => {
-  it("reports a page fetch as the site path, not the full url", () => {
-    expect(fetchActivity("https://murugappan.dev/blog/react/")).toEqual({
-      name: "fetch_page",
-      detail: "/blog/react/"
-    });
-  });
-
   it("omits the detail when the url is unparseable", () => {
     expect(fetchActivity("not a url")).toEqual({ name: "fetch_page" });
   });

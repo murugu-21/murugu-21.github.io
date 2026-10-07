@@ -1,10 +1,12 @@
 import { AIChatAgent, type ChatResponseResult } from "@cloudflare/ai-chat";
-import type { Connection, ConnectionContext, WSMessage } from "agents";
+import type { Connection, ConnectionContext } from "agents";
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
   streamText,
+  type TextStreamPart,
   type LanguageModel,
+  type InferUIMessageChunk,
   type LanguageModelUsage,
   type UIMessageStreamWriter
 } from "ai";
@@ -13,15 +15,15 @@ import { z } from "zod";
 import { deepseek, isInsufficientBalance, jarvisCall } from "./ai";
 import { globalLimiter } from "./api/ratelimit";
 import { readAsset } from "./api/store";
+import { admitFrame } from "./chat-frames";
 import { contactMailer, sendOpportunityEmail } from "./email";
 import { fetchSitePage } from "./fetch-page";
-import { jsonString, lenient } from "#utils/json.ts";
+import { lenient } from "#utils/json.ts";
 import { messageText } from "#utils/ui-message.ts";
 import { buildMessages, jarvisTools, ROOM_DAILY_LIMIT, type Lead } from "./prompt";
 import {
   ERROR_NOTICE,
   LIMIT_NOTICE,
-  MAX_MESSAGE_LENGTH,
   type Activity,
   type ChatHistoryEntry,
   type JarvisMessage,
@@ -34,42 +36,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 type CountRow = { n: number };
 
 const UNREADABLE = "Sorry, I couldn't read that message.";
-
-// Frames that can't start a model call or touch stored messages, passed through as sent.
-const PASSTHROUGH_FRAMES = new Set([
-  "cf_agent_stream_resume_request",
-  "cf_agent_stream_resume_ack",
-  "cf_agent_chat_request_cancel"
-]);
-
-const FrameType = jsonString(z.looseObject({ type: z.string(), id: lenient(z.string()) }));
-
-const ChatRequest = jsonString(
-  z.object({
-    type: z.literal("cf_agent_use_chat_request"),
-    id: z.string().min(1).max(100),
-    init: z.object({
-      method: z.literal("POST"),
-      body: jsonString(
-        z.object({
-          // Only the newest message is read; the room's stored history replaces the rest.
-          messages: z.array(z.unknown()).min(1),
-          trigger: z.literal("submit-message"),
-          // The visitor's current site path; never persisted. A malformed one is dropped.
-          page: lenient(z.string().regex(/^\/[^\s]{0,199}$/))
-        })
-      )
-    })
-  })
-);
-
-const UserMessage = z.object({
-  id: z.string().min(1).max(100),
-  role: z.literal("user"),
-  parts: z.tuple([
-    z.object({ type: z.literal("text"), text: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH) })
-  ])
-});
 
 const RequestBody = z.object({ page: lenient(z.string()) });
 
@@ -89,6 +55,31 @@ function noticeResponse(notice: Notice): Response {
   });
 }
 
+type TurnCall = {
+  writer: UIMessageStreamWriter<JarvisMessage>;
+  key: string;
+  page?: string;
+  abortSignal?: AbortSignal;
+};
+
+// A tool call is sent as it is parsed, before the tool runs: a page fetch is a turn's longest
+// silence.
+function streamChunk(
+  part: TextStreamPart<ReturnType<typeof jarvisTools>>
+): InferUIMessageChunk<JarvisMessage> | null {
+  if (part.type === "text-start") return { type: "text-start", id: part.id };
+  if (part.type === "text-delta") return { type: "text-delta", id: part.id, delta: part.text };
+  if (part.type === "text-end") return { type: "text-end", id: part.id };
+  if (part.type !== "tool-call" || part.dynamic) return null;
+  return {
+    type: "data-activity",
+    data:
+      part.toolName === "fetch_page"
+        ? fetchActivity(part.input.url)
+        : { name: "capture_opportunity" }
+  };
+}
+
 export class ChatRoom extends AIChatAgent<Env> {
   maxPersistedMessages = 200;
   // A message sent while a turn runs (another tab, say) is refused, so turns never interleave.
@@ -99,44 +90,13 @@ export class ChatRoom extends AIChatAgent<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    // AIChatAgent trusts the client's whole transcript: it persists whatever
-    // history a frame carries and runs turns for tool results. Its handler is an
-    // instance property, so wrapping it here sees every frame first.
+    // The handler is an instance property, so wrapping it here sees every frame first.
     const handle = this.onMessage.bind(this);
     this.onMessage = (connection, message) => {
-      const frame = this.admit(connection, message);
-      return frame === null ? undefined : handle(connection, frame);
+      const admission = admitFrame({ message, stored: this.messages });
+      if (admission.kind === "reject") this.rejectRequest(connection, admission.id);
+      return admission.kind === "forward" ? handle(connection, admission.frame) : undefined;
     };
-  }
-
-  // Lets through a new visitor message, rebased on the stored history, and the
-  // resume and cancel frames. Everything else is dropped.
-  private admit(connection: Connection, message: WSMessage): string | null {
-    if (typeof message !== "string") return null;
-    const frame = FrameType.safeParse(message).data;
-    if (!frame) return null;
-    if (PASSTHROUGH_FRAMES.has(frame.type)) return message;
-    if (frame.type !== "cf_agent_use_chat_request") return null;
-
-    const request = ChatRequest.safeParse(message).data;
-    const { messages, page } = request?.init.body ?? {};
-    const latest = UserMessage.safeParse(messages?.at(-1)).data;
-    if (!request || !latest || this.messages.some(m => m.id === latest.id)) {
-      if (frame.id) this.rejectRequest(connection, frame.id);
-      return null;
-    }
-    return JSON.stringify({
-      type: request.type,
-      id: request.id,
-      init: {
-        method: "POST",
-        body: JSON.stringify({
-          messages: [...this.messages, latest],
-          trigger: "submit-message",
-          page
-        })
-      }
-    });
   }
 
   private rejectRequest(connection: Connection, id: string): void {
@@ -211,72 +171,61 @@ export class ChatRoom extends AIChatAgent<Env> {
     if (content) this.mirrorMessage("assistant", content);
   }
 
-  // One reply through the AI SDK tool loop. Only prose and the running tool's
-  // name reach the client: tool inputs hold contact details, and outputs hold whole pages.
-  private async reply({
-    writer,
-    key,
-    page,
-    abortSignal
-  }: {
-    writer: UIMessageStreamWriter<JarvisMessage>;
-    key: string;
-    page?: string;
-    abortSignal?: AbortSignal;
-  }): Promise<void> {
+  // One reply: the model's stream, then the notice (if any) that closes the turn.
+  private async reply({ writer, ...call }: TurnCall): Promise<void> {
     writer.write({ type: "start" });
     let wroteText = false;
     let failure: Notice | null = null;
     try {
-      // Root llms.txt (~900 tokens) lists every post with its title, summary and link.
-      // blog/llms-full.txt costs ~20x the tokens and grows per post.
-      const grounding = (await readAsset(this.env.ASSETS, "/llms.txt")) ?? "";
-      const result = streamText({
-        ...jarvisCall({
-          model: this.languageModel(key),
-          messages: buildMessages(grounding, this.history(), page),
-          tools: jarvisTools({
-            fetchPage: url => fetchSitePage(this.env.ASSETS, url),
-            captureLead: lead => this.captureLead(lead)
-          })
-        }),
-        abortSignal
-      });
-      for await (const part of result.stream) {
-        if (part.type === "text-start") {
-          writer.write({ type: "text-start", id: part.id });
-        } else if (part.type === "text-delta") {
-          wroteText ||= part.text.trim() !== "";
-          writer.write({ type: "text-delta", id: part.id, delta: part.text });
-        } else if (part.type === "text-end") {
-          writer.write({ type: "text-end", id: part.id });
-        } else if (part.type === "tool-call" && !part.dynamic) {
-          // Sent as the call is parsed, before its tool runs: a page fetch is a turn's longest silence.
-          writer.write({
-            type: "data-activity",
-            data:
-              part.toolName === "fetch_page"
-                ? fetchActivity(part.input.url)
-                : { name: "capture_opportunity" }
-          });
-        } else if (part.type === "finish-step") {
-          logUsage(part.usage);
-        } else if (part.type === "error") {
-          throw part.error;
-        }
-      }
+      wroteText = await this.relayModel({ writer, ...call });
     } catch (err) {
-      console.error("chat generation failed", err);
-      // A 402 beats the cached balance, so gate every room until the next check.
-      const exhausted = isInsufficientBalance(err);
-      if (exhausted) await globalLimiter(this.env).markChatExhausted();
-      failure = exhausted ? LIMIT_NOTICE : ERROR_NOTICE;
+      failure = await this.failureNotice(err);
     }
     // Every turn ends in prose or a notice; the widget waits for one or the other.
     // A cancelled turn ends quietly.
-    const notice = abortSignal?.aborted ? null : (failure ?? (wroteText ? null : ERROR_NOTICE));
+    const notice = call.abortSignal?.aborted
+      ? null
+      : (failure ?? (wroteText ? null : ERROR_NOTICE));
     if (notice) writer.write({ type: "data-notice", data: notice });
     writer.write({ type: "finish" });
+  }
+
+  // The AI SDK tool loop. Only prose and the running tool's name reach the client: tool
+  // inputs hold contact details, and outputs hold whole pages. Resolves to whether any
+  // prose was written.
+  private async relayModel({ writer, key, page, abortSignal }: TurnCall): Promise<boolean> {
+    // Root llms.txt (~900 tokens) lists every post with its title, summary and link.
+    // blog/llms-full.txt costs ~20x the tokens and grows per post.
+    const grounding = (await readAsset(this.env.ASSETS, "/llms.txt")) ?? "";
+    const result = streamText({
+      ...jarvisCall({
+        model: this.languageModel(key),
+        messages: buildMessages(grounding, this.history(), page),
+        tools: jarvisTools({
+          fetchPage: url => fetchSitePage(this.env.ASSETS, url),
+          captureLead: lead => this.captureLead(lead)
+        })
+      }),
+      abortSignal
+    });
+    let wroteText = false;
+    for await (const part of result.stream) {
+      if (part.type === "error") throw part.error;
+      if (part.type === "finish-step") logUsage(part.usage);
+      const chunk = streamChunk(part);
+      if (!chunk) continue;
+      wroteText ||= chunk.type === "text-delta" && chunk.delta.trim() !== "";
+      writer.write(chunk);
+    }
+    return wroteText;
+  }
+
+  private async failureNotice(err: unknown): Promise<Notice> {
+    console.error("chat generation failed", err);
+    // A 402 beats the cached balance, so gate every room until the next check.
+    if (!isInsufficientBalance(err)) return ERROR_NOTICE;
+    await globalLimiter(this.env).markChatExhausted();
+    return LIMIT_NOTICE;
   }
 
   // Tests swap in a scripted model here.

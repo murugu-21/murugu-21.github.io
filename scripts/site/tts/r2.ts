@@ -6,12 +6,15 @@ import { spawnSync } from "node:child_process";
 
 import { z } from "zod";
 
+import { AUDIO_PREFIX } from "#contracts/audio.ts";
 import { jsonString } from "#utils/json.ts";
 import { run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";
 // The voice reference the clones are made from; never served.
 export const VOICE_PREFIX = "voice/breeze";
+
+export const audioKey = (slug: string, ext: "mp3" | "json") => `${AUDIO_PREFIX}/${slug}.${ext}`;
 
 // `cf r2 objects get` writes the body to stdout; spawnSync's 1 MB default
 // would truncate a post's audio.
@@ -20,38 +23,57 @@ const MAX_OBJECT_BYTES = 1024 * 1024 * 1024;
 // `authenticated` only means a token exists; `tokenValid` is the API check.
 const WhoAmI = jsonString(z.object({ tokenValid: z.boolean().optional() }));
 
-export function r2Store(local: boolean) {
-  const args = ({ verb, key, extra = [] }: { verb: string; key: string; extra?: string[] }) => [
-    "cf",
-    "r2",
-    "objects",
-    verb,
-    key,
-    "--bucket-name",
-    BUCKET,
-    ...extra,
-    ...(local ? ["--local", "--persist-to", ".cloudflare/state"] : [])
-  ];
+export const tokenValid = (whoami: string) => WhoAmI.safeParse(whoami).data?.tokenValid ?? false;
 
+const r2Args = ({
+  verb,
+  key,
+  local,
+  extra = []
+}: {
+  verb: string;
+  key: string;
+  local: boolean;
+  extra?: string[];
+}) => [
+  "cf",
+  "r2",
+  "objects",
+  verb,
+  key,
+  "--bucket-name",
+  BUCKET,
+  ...extra,
+  ...(local ? ["--local", "--persist-to", ".cloudflare/state"] : [])
+];
+
+// How `cf r2 objects get` reports an absent object.
+export const isMissingObject = (output: string) =>
+  /10007|does not exist|NoSuchKey|404 Not Found/i.test(output);
+
+export function r2Store(local: boolean) {
   // Null only when the object is absent; other failures (expired login,
   // network) throw so they aren't mistaken for "nothing there yet".
   function get(key: string): Buffer | null {
-    const r = spawnSync("bunx", args({ verb: "get", key }), { maxBuffer: MAX_OBJECT_BYTES });
+    const r = spawnSync("bunx", r2Args({ verb: "get", key, local }), {
+      maxBuffer: MAX_OBJECT_BYTES
+    });
     if (r.status === 0) return r.stdout;
     const err = `${r.stderr.toString()}\n${r.stdout.toString()}`;
-    if (/10007|does not exist|NoSuchKey|404 Not Found/i.test(err)) return null;
+    if (isMissingObject(err)) return null;
     throw new Error(`cf r2 objects get ${key} failed:\n${err.trim()}`);
   }
 
-  function put(key: string, file: string, contentType: string) {
-    run("bunx", args({ verb: "put", key, extra: ["--file", file, "--content-type", contentType] }));
+  function put({ key, file, contentType }: { key: string; file: string; contentType: string }) {
+    const extra = ["--file", file, "--content-type", contentType];
+    run("bunx", r2Args({ verb: "put", key, local, extra }));
   }
 
   // Fail fast rather than after hours of local synthesis.
   function checkLogin() {
     if (local) return;
     const r = spawnSync("bunx", ["cf", "auth", "whoami"], { encoding: "utf8" });
-    if (r.status !== 0 || !WhoAmI.safeParse(r.stdout).data?.tokenValid) {
+    if (r.status !== 0 || !tokenValid(r.stdout)) {
       throw new Error(
         "cf is not logged in (or the OAuth token expired); run `bunx cf auth login` in an interactive terminal, then retry"
       );

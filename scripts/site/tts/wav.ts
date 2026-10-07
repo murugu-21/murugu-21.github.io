@@ -58,6 +58,17 @@ export function writeWav(sampleRate: number, pcm: Buffer): Buffer {
   return Buffer.concat([header, pcm]);
 }
 
+export const pcmSeconds = (pcm: Buffer, sampleRate: number) => pcm.length / 2 / sampleRate;
+
+// The one sample rate every rendered chunk shares.
+export function sharedSampleRate(chunks: { id: string; sampleRate: number }[]): number {
+  const [first, ...others] = chunks;
+  if (!first) throw new Error("no chunks rendered");
+  const mismatch = others.find(chunk => chunk.sampleRate !== first.sampleRate);
+  if (mismatch) throw new Error(`sample rate mismatch in ${mismatch.id}`);
+  return first.sampleRate;
+}
+
 function silence(sampleRate: number, seconds: number): Buffer {
   return Buffer.alloc(Math.round(sampleRate * seconds) * 2);
 }

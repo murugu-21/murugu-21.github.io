@@ -102,6 +102,15 @@ describe("takeReadSlot", () => {
     expect(next.allowed).toBe(true);
     expect(next.remaining).toBe(599);
   });
+
+  it("forgets the longest-tracked clients first under a flood of distinct addresses", () => {
+    const flood = Array.from({ length: 20_002 }, (_, i) => `flood-${i}`);
+    for (const client of flood) takeReadSlot(client, now);
+
+    // flood-0 was dropped, so it starts over; flood-20001 is still counting.
+    expect(takeReadSlot("flood-0", now).remaining).toBe(599);
+    expect(takeReadSlot("flood-20001", now).remaining).toBe(598);
+  });
 });
 
 describe("contactRateLimitHeaders", () => {

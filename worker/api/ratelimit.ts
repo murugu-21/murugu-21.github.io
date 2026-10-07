@@ -30,7 +30,7 @@ function rateLimitHeaders(policy: string, reported: Reported): Record<string, st
   };
 }
 
-type ReadSlot = {
+export type ReadSlot = {
   allowed: boolean;
   remaining: number;
   resetSeconds: number;

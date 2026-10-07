@@ -69,7 +69,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 - `build`, `dev` and `preview` call `astro` on Node.
 - `scripts/site/generate-resume.ts` runs on Node too, because it prints the resume from `astro preview`.
-- `test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`. Use `bun run test`, not `bun test`, which is Bun's own runner.
+- `test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`, with two exceptions. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. The `scripts/` tests run on Node (the scripts themselves run on Bun), because workerd lacks `node:util`'s `parseArgs`, `node:readline` and the native bindings oxlint's RuleTester loads. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -100,7 +100,7 @@ bun run types          # regenerate .cloudflare/types from cloudflare.config.ts 
 bun run check:astro    # type-check .astro files
 bun run check:src      # type-check src/, scripts/ and the config files
 bun run check:worker   # type-check worker/
-bun run test           # vitest in the workers pool
+bun run test           # vitest in the workers pool, on Node and in headless Chromium
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 

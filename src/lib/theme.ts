@@ -23,15 +23,19 @@ export function bootstrapTheme(win: ThemeHost): void {
   const os = win.matchMedia("(prefers-color-scheme: dark)");
   const osTheme = (): Theme => (os.matches ? "dark" : "light");
 
+  // Any other stored value, or blocked storage, falls through to the OS preference.
+  const storedThemes = new Map<string | null, Theme>([
+    ["true", "dark"],
+    ["false", "light"]
+  ]);
   const resolve = (): Theme => {
     try {
-      const stored = win.localStorage.getItem(key);
-      if (stored === "true" || stored === "false") return stored === "true" ? "dark" : "light";
+      return storedThemes.get(win.localStorage.getItem(key)) ?? osTheme();
     } catch {
-      // storage blocked; fall through to the OS preference
+      return osTheme();
     }
-    return osTheme();
   };
+  const shown = (): Theme => (root.classList.contains("dark-mode") ? "dark" : "light");
   const apply = (theme: Theme) => root.classList.toggle("dark-mode", theme === "dark");
   apply(resolve());
 
@@ -57,7 +61,7 @@ export function bootstrapTheme(win: ThemeHost): void {
   win.addEventListener("pageshow", e => {
     if (!e.persisted) return;
     const next = resolve();
-    if (next !== (root.classList.contains("dark-mode") ? "dark" : "light")) announce(next);
+    if (next !== shown()) announce(next);
   });
 }
 
