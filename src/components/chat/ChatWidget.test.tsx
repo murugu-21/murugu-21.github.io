@@ -1,0 +1,453 @@
+import type { UIMessageChunk } from "ai";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { page, userEvent } from "vitest/browser";
+import { render } from "vitest-browser-react";
+import { z } from "zod";
+
+import { ChatWidget } from "./ChatWidget.tsx";
+
+const Frame = z.object({
+  type: z.string(),
+  id: z.string().optional(),
+  probeId: z.string().optional(),
+  init: z.object({ body: z.string() }).optional()
+});
+
+// The Worker's ChatRoom as the widget's socket sees it: resume probes find no
+// stream, and each chat request is recorded so the test can stream the reply.
+class FakeRoom extends EventTarget {
+  readonly agent = "chat-room";
+  readonly requests: unknown[] = [];
+  private turn = "";
+
+  constructor(
+    readonly name: string,
+    readonly host: string
+  ) {
+    super();
+  }
+
+  getHttpUrl() {
+    return `http://${this.host}/agents/chat-room/${this.name}`;
+  }
+
+  send(raw: string) {
+    const frame = Frame.parse(JSON.parse(raw));
+    if (frame.type === "cf_agent_stream_resume_request")
+      this.push({ type: "cf_agent_stream_resume_none", probeId: frame.probeId, reason: "idle" });
+    if (frame.type === "cf_agent_use_chat_request" && frame.id && frame.init) {
+      this.turn = frame.id;
+      this.requests.push(JSON.parse(frame.init.body));
+    }
+    return true;
+  }
+
+  stream(chunks: UIMessageChunk[], turn = this.turn) {
+    for (const chunk of chunks)
+      this.push({ type: "cf_agent_use_chat_response", id: turn, body: JSON.stringify(chunk) });
+  }
+
+  finish(turn = this.turn) {
+    this.push({ type: "cf_agent_use_chat_response", id: turn, body: "", done: true });
+  }
+
+  fail() {
+    this.push({ type: "cf_agent_use_chat_response", id: this.turn, body: "boom", error: true });
+  }
+
+  // A turn another tab started, which this socket only observes.
+  resumeElsewhere(turn: string) {
+    this.push({ type: "cf_agent_stream_resuming", id: turn });
+  }
+
+  private push(data: object) {
+    this.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(data) }));
+  }
+}
+
+const { rooms } = vi.hoisted(() => ({ rooms: new Map<string, FakeRoom>() }));
+
+vi.mock("agents/react", () => ({
+  useAgent: ({ name, host }: { name: string; host: string }) => {
+    const room = rooms.get(name) ?? new FakeRoom(name, host);
+    rooms.set(name, room);
+    return room;
+  }
+}));
+
+const LAUNCHER = "Chat with Jarvis, Murugappan's AI assistant";
+const histories = new Map<string, () => Promise<Response>>();
+const historyRequests: string[] = [];
+const events: string[] = [];
+
+const reply = (text: string): UIMessageChunk[] => [
+  { type: "start", messageId: `reply-${text.length}` },
+  { type: "text-start", id: "t" },
+  { type: "text-delta", id: "t", delta: text },
+  { type: "text-end", id: "t" }
+];
+
+const lastRoom = () => {
+  const room = [...rooms.values()].at(-1);
+  if (!room) throw new Error("the widget never connected");
+  return room;
+};
+
+const input = () => page.getByRole("textbox", { name: "Your message" });
+const sendButton = () => page.getByRole("button", { name: "Send" });
+
+async function openChat() {
+  await page.getByRole("button", { name: LAUNCHER }).click();
+  await expect.element(sendButton()).toBeEnabled();
+}
+
+beforeEach(() => {
+  localStorage.clear();
+  rooms.clear();
+  histories.clear();
+  historyRequests.length = 0;
+  events.length = 0;
+  globalThis.posthog = {
+    capture: (event: string) => events.push(event),
+    captureException: () => events.push("exception"),
+    register: () => {}
+  };
+  vi.spyOn(window, "fetch").mockImplementation(async request => {
+    const url = request instanceof Request ? request.url : String(request);
+    historyRequests.push(url);
+    const room = /\/agents\/chat-room\/([^/]+)\/get-messages$/.exec(url)?.[1] ?? "";
+    return (await histories.get(room)?.()) ?? Response.json([]);
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+  globalThis.posthog = undefined;
+});
+
+test("sends a question with Enter and streams the reply after the tool step", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+
+  await userEvent.type(input(), "  Where does he work?  {Enter}");
+
+  const room = lastRoom();
+  expect(room.host).toBe(location.host);
+  await expect.poll(() => room.requests).toHaveLength(1);
+  expect(room.requests[0]).toMatchObject({
+    trigger: "submit-message",
+    page: "/",
+    messages: [{ role: "user", parts: [{ type: "text", text: "Where does he work?" }] }]
+  });
+  await expect.element(input()).toHaveValue("");
+  await expect.element(sendButton()).toBeDisabled();
+  await expect.element(page.getByText("Jarvis is typing")).toBeInTheDocument();
+
+  // A second message is refused while the turn runs, and stays in the composer.
+  await userEvent.type(input(), "And before that?{Enter}");
+  await expect.element(input()).toHaveValue("And before that?");
+
+  room.stream([
+    { type: "start", messageId: "a1" },
+    { type: "data-activity", data: { name: "fetch_page", detail: "/experience/" } }
+  ]);
+  await expect.element(page.getByText("Reading experience…")).toBeVisible();
+
+  room.stream(reply("At MedMe Health.").slice(1));
+  await expect.element(page.getByText("At MedMe Health.")).toBeVisible();
+  await expect.element(page.getByText("Reading experience…")).not.toBeInTheDocument();
+  room.finish();
+
+  await expect.element(sendButton()).toBeEnabled();
+  expect(room.requests).toHaveLength(1);
+  expect(events).toEqual(["chat_open", "chat_message_sent"]);
+});
+
+test("sends a multi-line message with the button, growing the composer to five lines", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+
+  await userEvent.type(
+    input(),
+    `one{Shift>}{Enter}{/Shift}two{Shift>}${"{Enter}".repeat(8)}{/Shift}`
+  );
+  await expect.element(input()).toHaveStyle({ height: "120px" });
+
+  await sendButton().click();
+
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+  expect(lastRoom().requests[0]).toMatchObject({
+    messages: [{ parts: [{ type: "text", text: "one\ntwo" }] }]
+  });
+  await expect.element(input()).not.toHaveStyle({ height: "120px" });
+});
+
+test("a starter question sends itself and the starters give way to the conversation", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+
+  await page.getByRole("button", { name: "How has he used LLMs in production?" }).click();
+
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+  expect(lastRoom().requests[0]).toMatchObject({
+    messages: [{ parts: [{ type: "text", text: "How has he used LLMs in production?" }] }]
+  });
+  lastRoom().stream(reply("He built Jarvis."));
+  lastRoom().finish();
+  await expect.element(page.getByText("He built Jarvis.")).toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "What's the most impactful thing he's shipped?" }))
+    .not.toBeInTheDocument();
+  expect(events).toEqual(["chat_open", "chat_starter_click", "chat_message_sent"]);
+});
+
+test("resumes a returning visitor's room with its links and notices", async () => {
+  localStorage.setItem("chatRoomId", "returning");
+  histories.set("returning", async () =>
+    Response.json([
+      { id: "u1", role: "user", parts: [{ type: "text", text: "Any links?" }] },
+      {
+        id: "a1",
+        role: "assistant",
+        parts: [
+          {
+            type: "text",
+            text: "See [his blog](https://murugappan.dev/blog/) or https://github.com/murugu-21."
+          }
+        ]
+      },
+      {
+        id: "a2",
+        role: "assistant",
+        parts: [{ type: "data-notice", data: { kind: "limit", text: "Out of budget for now." } }]
+      }
+    ])
+  );
+
+  await render(<ChatWidget host="chat.example.com" />);
+  await openChat();
+
+  expect(historyRequests).toEqual([
+    "http://chat.example.com/agents/chat-room/returning/get-messages"
+  ]);
+  await expect.element(page.getByText("Any links?")).toBeVisible();
+  await expect.element(page.getByText("Out of budget for now.")).toBeVisible();
+  await expect
+    .element(page.getByRole("link", { name: "https://murugappan.dev/blog/" }))
+    .toHaveAttribute("href", "https://murugappan.dev/blog/");
+  await expect
+    .element(page.getByRole("link", { name: "https://github.com/murugu-21" }))
+    .toHaveAttribute("href", "https://github.com/murugu-21");
+  await expect
+    .element(
+      page.getByText("See his blog: https://murugappan.dev/blog/ or https://github.com/murugu-21.")
+    )
+    .toBeVisible();
+  await expect
+    .element(page.getByRole("button", { name: "How has he used LLMs in production?" }))
+    .not.toBeInTheDocument();
+});
+
+test.each([
+  ["a server error", async () => new Response("", { status: 500 })],
+  [
+    "a malformed part",
+    async () =>
+      Response.json([{ id: "a", role: "assistant", parts: [{ type: "data-notice", data: {} }] }])
+  ],
+  ["a network failure", async () => Promise.reject(new TypeError("offline"))]
+])("starts a fresh conversation when the history load hits %s", async (_label, load) => {
+  localStorage.setItem("chatRoomId", "broken");
+  histories.set("broken", load);
+
+  await render(<ChatWidget />);
+  await openChat();
+
+  await expect
+    .element(page.getByRole("button", { name: "How has he used LLMs in production?" }))
+    .toBeVisible();
+});
+
+test("shows the room's notice when the chat budget runs out", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+  await userEvent.type(input(), "Hi{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+
+  lastRoom().stream([
+    { type: "start", messageId: "a1" },
+    { type: "data-notice", data: { kind: "limit", text: "I've hit my chat budget for now." } }
+  ]);
+  lastRoom().finish();
+
+  await expect.element(page.getByText("I've hit my chat budget for now.")).toBeVisible();
+  await expect.element(sendButton()).toBeEnabled();
+  expect(events).toEqual(["chat_open", "chat_message_sent", "chat_limit"]);
+});
+
+test("says something went wrong when the turn fails, and lets the visitor retry", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+  await userEvent.type(input(), "Hi{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+
+  lastRoom().fail();
+
+  await expect
+    .element(page.getByText("Something went wrong on my end. Please try again."))
+    .toBeVisible();
+  await expect.element(sendButton()).toBeEnabled();
+  expect(events).toEqual(["chat_open", "chat_message_sent", "chat_error", "exception"]);
+});
+
+test("waits while another tab's turn streams into the same room", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+
+  lastRoom().resumeElsewhere("other-tab");
+  await expect.element(sendButton()).toBeDisabled();
+
+  lastRoom().stream(reply("Answer for the other tab."), "other-tab");
+  lastRoom().finish("other-tab");
+  await expect.element(page.getByText("Answer for the other tab.")).toBeVisible();
+  await expect.element(sendButton()).toBeEnabled();
+});
+
+test("closing keeps the conversation, and the launcher reopens it", async () => {
+  await render(<ChatWidget />);
+  const launcher = page.getByRole("button", { name: LAUNCHER });
+  await openChat();
+  await expect.element(launcher).toHaveAttribute("aria-expanded", "true");
+  await userEvent.type(input(), "Remember me{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+
+  await page.getByRole("button", { name: "Close chat" }).click();
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+  await expect.element(launcher).toHaveAttribute("aria-expanded", "false");
+
+  await launcher.click();
+  await expect.element(page.getByText("Remember me")).toBeVisible();
+  await launcher.click();
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+  expect(rooms.size).toBe(1);
+});
+
+test("starting over moves to a new room once confirmed", async () => {
+  localStorage.setItem("chatRoomId", "old");
+  histories.set("old", async () =>
+    Response.json([{ id: "u1", role: "user", parts: [{ type: "text", text: "Old question" }] }])
+  );
+  await render(<ChatWidget />);
+  await openChat();
+  await expect.element(page.getByText("Old question")).toBeVisible();
+
+  const restart = async () => {
+    await page.getByRole("button", { name: "Conversation options" }).click();
+    await page.getByRole("menuitem", { name: "Start over" }).click();
+  };
+  await restart();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect.element(page.getByText("Start a new conversation?")).not.toBeInTheDocument();
+  await expect.element(page.getByText("Old question")).toBeVisible();
+
+  await restart();
+  await page.getByRole("button", { name: "Start over" }).click();
+
+  await expect.element(page.getByText("Old question")).not.toBeInTheDocument();
+  await expect.element(sendButton()).toBeEnabled();
+  const fresh = lastRoom().name;
+  expect(fresh).not.toBe("old");
+  expect(localStorage.getItem("chatRoomId")).toBe(fresh);
+});
+
+test("downloads the transcript without the room's notices", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-07T12:00:00Z"));
+  localStorage.setItem("chatRoomId", "saved");
+  histories.set("saved", async () =>
+    Response.json([
+      { id: "u1", role: "user", parts: [{ type: "text", text: "Where?" }] },
+      { id: "a1", role: "assistant", parts: [{ type: "text", text: "Toronto." }] },
+      {
+        id: "a2",
+        role: "assistant",
+        parts: [{ type: "data-notice", data: { kind: "error", text: "A notice." } }]
+      }
+    ])
+  );
+  const blobs: Blob[] = [];
+  vi.spyOn(URL, "createObjectURL").mockImplementation(blob => {
+    if (blob instanceof Blob) blobs.push(blob);
+    return "blob:transcript";
+  });
+  const saved: string[] = [];
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+    this: HTMLAnchorElement
+  ) {
+    saved.push(this.download);
+  });
+
+  await render(<ChatWidget />);
+  await openChat();
+  await page.getByRole("button", { name: "Conversation options" }).click();
+  await page.getByRole("menuitem", { name: "Download transcript" }).click();
+
+  expect(saved).toEqual(["jarvis-chat-2026-10-07.txt"]);
+  const body = await blobs[0]?.text();
+  expect(body).toMatch(
+    /^Chat with Jarvis on murugappan\.dev\n2026-10-07\n\nJarvis: Hi, I'm Jarvis/
+  );
+  expect(body).toMatch(/\n\nYou: Where\?\n\nJarvis: Toronto\.\n$/);
+});
+
+test("on a phone the open panel locks page scroll and leaves the keyboard down", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+
+  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(true);
+  await expect.element(input()).not.toHaveFocus();
+
+  await page.getByRole("button", { name: "Close chat" }).click();
+  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(false);
+});
+
+test("on a desktop the open panel focuses the composer and leaves the page scrollable", async () => {
+  await page.viewport(1024, 768);
+  await render(<ChatWidget />);
+  await openChat();
+
+  await expect.element(input()).toHaveFocus();
+  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(false);
+  await page.viewport(414, 896);
+});
+
+test("opens on hydration when the visitor tapped the launcher while the bundle loaded", async () => {
+  const island = document.createElement("astro-island");
+  island.dataset.openOnHydrate = "true";
+  document.body.append(island);
+
+  await render(<ChatWidget />, { container: island });
+
+  await expect.element(page.getByRole("dialog")).toBeVisible();
+  expect(island.dataset.openOnHydrate).toBeUndefined();
+  island.remove();
+});
+
+test("introduces the launcher once, then fades the hint away", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  const hint = page.getByText("Ask Jarvis anything about Murugappan");
+  const first = await render(<ChatWidget />);
+  await expect.element(hint).toBeVisible();
+  await expect.element(hint).not.toHaveClass("opacity-0");
+
+  await vi.advanceTimersByTimeAsync(5000);
+  await expect.element(hint).toHaveClass("opacity-0");
+  await vi.advanceTimersByTimeAsync(700);
+  await expect.element(hint).not.toBeInTheDocument();
+
+  await first.unmount();
+  await render(<ChatWidget />);
+  await expect.element(page.getByRole("button", { name: LAUNCHER })).toBeVisible();
+  await expect.element(hint).not.toBeInTheDocument();
+});
