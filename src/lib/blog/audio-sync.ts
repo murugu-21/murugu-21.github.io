@@ -4,12 +4,15 @@
 
 import { z } from "zod";
 
-const TimedBlock = z.object({
+export const TimedWord = z.object({ w: z.string(), s: z.number(), e: z.number() });
+export type TimedWord = z.infer<typeof TimedWord>;
+
+export const TimedBlock = z.object({
   text: z.string(),
   start: z.number(),
   end: z.number(),
   // Version 2 only, and only for blocks the alignment pass matched well.
-  words: z.array(z.object({ w: z.string(), s: z.number(), e: z.number() })).optional()
+  words: z.array(TimedWord).optional()
 });
 type TimedBlock = z.infer<typeof TimedBlock>;
 

@@ -12,9 +12,10 @@ import {
   blockAt,
   matchBlocks,
   scrollTarget,
-  type ScrollBand
+  type ScrollBand,
+  type TimedWord
 } from "./audio-sync.ts";
-import { matchWordSpans, tokenize, wordAt, wrapWords, type TimedWord } from "./audio-words.ts";
+import { matchWordSpans, tokenize, wordAt, wrapWords } from "./audio-words.ts";
 import { speechBlocks } from "./speech.ts";
 
 export interface Block {

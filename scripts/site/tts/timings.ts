@@ -3,6 +3,7 @@
 // version 2, and a patch keeps whichever version it found.
 import { z } from "zod";
 
+import { AudioTimings, TimedBlock } from "#src/lib/blog/audio-sync.ts";
 import { jsonString } from "#utils/json.ts";
 
 export const round3 = (n: number) => Math.round(n * 1000) / 1000;
@@ -12,20 +13,12 @@ interface Span {
   end: number;
 }
 
-// Loose, so every field this code doesn't touch round-trips untouched.
+// The page's schema made loose, so every field this code doesn't touch round-trips untouched.
 export const StoredTimings = jsonString(
   z.looseObject({
-    version: z.number(),
+    ...AudioTimings.shape,
     sampleRate: z.number(),
-    duration: z.number(),
-    blocks: z.array(
-      z.looseObject({
-        text: z.string(),
-        start: z.number(),
-        end: z.number(),
-        words: z.array(z.object({ w: z.string(), s: z.number(), e: z.number() })).optional()
-      })
-    )
+    blocks: z.array(z.looseObject(TimedBlock.shape))
   })
 );
 export type StoredTimings = z.infer<typeof StoredTimings>;
@@ -67,7 +60,7 @@ export function renderedTimings({
       start: round3(spans[i].start),
       end: round3(spans[i].end)
     }))
-  };
+  } satisfies StoredTimings;
 }
 
 // The blocks whose text changed, which a patch re-synthesizes. A patch needs

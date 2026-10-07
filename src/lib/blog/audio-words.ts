@@ -2,12 +2,7 @@
 // alignment script, the rest maps DOM spans to those times in the client.
 
 import { normalizeSpeechText } from "./audio-prep.ts";
-
-export interface TimedWord {
-  w: string;
-  s: number;
-  e: number;
-}
+import type { TimedWord } from "./audio-sync.ts";
 
 export interface WhisperWord {
   word: string;
