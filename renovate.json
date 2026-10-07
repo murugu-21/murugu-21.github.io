@@ -1,4 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", "schedule:weekly"]
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", "schedule:weekly"],
+  "packageRules": [
+    {
+      "matchPackageNames": ["typescript", "@astrojs/ts-content-mapper"],
+      "groupName": "typescript content mapper"
+    }
+  ]
 }

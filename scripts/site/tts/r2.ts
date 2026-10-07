@@ -1,13 +1,9 @@
-// R2 helpers for the audio scripts, built on the cf CLI: get, put and a login
-// check. With --local they use the local state that `astro dev` serves
-// (.cloudflare/state, not cf's default --persist-to).
+// R2 helpers for the audio scripts, built on wrangler: get, put and a login
+// check. With --local they use the local state that `bun run preview` serves.
 import type { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 
-import { z } from "zod";
-
 import { AUDIO_PREFIX } from "#contracts/audio.ts";
-import { jsonString } from "#utils/json.ts";
 import { run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";
@@ -16,14 +12,9 @@ export const VOICE_PREFIX = "voice/breeze";
 
 export const audioKey = (slug: string, ext: "mp3" | "json") => `${AUDIO_PREFIX}/${slug}.${ext}`;
 
-// `cf r2 objects get` writes the body to stdout; spawnSync's 1 MB default
-// would truncate a post's audio.
+// `--pipe` writes the body to stdout; spawnSync's 1 MB default would truncate a
+// post's audio.
 const MAX_OBJECT_BYTES = 1024 * 1024 * 1024;
-
-// `authenticated` only means a token exists; `tokenValid` is the API check.
-const WhoAmI = jsonString(z.object({ tokenValid: z.boolean().optional() }));
-
-export const tokenValid = (whoami: string) => WhoAmI.safeParse(whoami).data?.tokenValid ?? false;
 
 const r2Args = ({
   verb,
@@ -36,32 +27,29 @@ const r2Args = ({
   local: boolean;
   extra?: string[];
 }) => [
-  "cf",
+  "wrangler",
   "r2",
-  "objects",
+  "object",
   verb,
-  key,
-  "--bucket-name",
-  BUCKET,
+  `${BUCKET}/${key}`,
   ...extra,
-  ...(local ? ["--local", "--persist-to", ".cloudflare/state"] : [])
+  local ? "--local" : "--remote"
 ];
 
-// How `cf r2 objects get` reports an absent object.
-export const isMissingObject = (output: string) =>
-  /10007|does not exist|NoSuchKey|404 Not Found/i.test(output);
+// How `wrangler r2 object get` reports an absent object.
+export const isMissingObject = (output: string) => /does not exist/i.test(output);
 
 export function r2Store(local: boolean) {
   // Null only when the object is absent; other failures (expired login,
   // network) throw so they aren't mistaken for "nothing there yet".
   function get(key: string): Buffer | null {
-    const r = spawnSync("bunx", r2Args({ verb: "get", key, local }), {
+    const r = spawnSync("bunx", r2Args({ verb: "get", key, local, extra: ["--pipe"] }), {
       maxBuffer: MAX_OBJECT_BYTES
     });
     if (r.status === 0) return r.stdout;
     const err = `${r.stderr.toString()}\n${r.stdout.toString()}`;
     if (isMissingObject(err)) return null;
-    throw new Error(`cf r2 objects get ${key} failed:\n${err.trim()}`);
+    throw new Error(`wrangler r2 object get ${key} failed:\n${err.trim()}`);
   }
 
   function put({ key, file, contentType }: { key: string; file: string; contentType: string }) {
@@ -72,10 +60,11 @@ export function r2Store(local: boolean) {
   // Fail fast rather than after hours of local synthesis.
   function checkLogin() {
     if (local) return;
-    const r = spawnSync("bunx", ["cf", "auth", "whoami"], { encoding: "utf8" });
-    if (r.status !== 0 || !tokenValid(r.stdout)) {
+    // `--json` exits non-zero when wrangler is not authenticated.
+    const r = spawnSync("bunx", ["wrangler", "whoami", "--json"], { encoding: "utf8" });
+    if (r.status !== 0) {
       throw new Error(
-        "cf is not logged in (or the OAuth token expired); run `bunx cf auth login` in an interactive terminal, then retry"
+        "wrangler is not logged in; run `bunx wrangler login` in an interactive terminal, then retry"
       );
     }
   }

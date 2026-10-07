@@ -10,12 +10,12 @@
     "commitlint.config.ts",
     "oxlint.config.ts",
     "eslint.config.ts",
-    "cloudflare.config.ts",
     "vitest.config.ts"
   ],
   "exclude": ["dist"],
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react"
-  }
+  },
+  "contentMappers": [{ "package": "@astrojs/ts-content-mapper", "extensions": [".astro"] }]
 }

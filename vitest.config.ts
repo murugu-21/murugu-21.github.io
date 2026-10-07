@@ -33,20 +33,7 @@ export default defineConfig({
           __GLOBAL_CSS__: JSON.stringify(globalCss),
           __D1_MIGRATIONS__: JSON.stringify(d1Migrations)
         },
-        plugins: [
-          cloudflareTest({
-            experimental: { newConfig: { configPath: "./worker/test/cloudflare.config.ts" } },
-            // The pool renames the Worker under test but not Durable Object
-            // self-references, so a `bindings.durableObject({ worker })` in the test
-            // config fails to start. A bare class name binds to the Worker itself.
-            miniflare: {
-              durableObjects: {
-                ChatRoom: { className: "ChatRoom", useSQLite: true },
-                RateLimiter: { className: "RateLimiter", useSQLite: true }
-              }
-            }
-          })
-        ],
+        plugins: [cloudflareTest({ wrangler: { configPath: "./worker/test/wrangler.jsonc" } })],
         test: {
           name: "workers",
           setupFiles: ["./worker/test/apply-migrations.ts"],

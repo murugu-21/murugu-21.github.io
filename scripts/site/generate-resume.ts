@@ -10,13 +10,10 @@ import { ROOT, SITE_DIR } from "./site-dir.ts";
 // Prints /resume to resume.pdf in the built site. Runs last from astro.config.ts,
 // so preview serves the final build. Arg: the dir to write resume.pdf into
 // (default SITE_DIR).
-// Runs on Node, because astro preview hangs under Bun (README).
 
 const DIST_DIR = resolve(process.argv[2] ?? SITE_DIR);
 const OUT_PATH = join(DIST_DIR, "resume.pdf");
-// Fixed, because the Cloudflare adapter's preview ignores strictPort and reports
-// the requested port even after falling back to another. Avoids dev and preview
-// on 4321/4322.
+// Fixed, clear of dev (4399) and preview (8787).
 const PREVIEW_PORT = 4398;
 
 // A separate function, so the server and browser close before the gate reads the PDF.

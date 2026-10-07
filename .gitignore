@@ -13,9 +13,8 @@ dist/
 .env.test.local
 .env.production.local
 
-# cloudflare worker: Build Output and generated types, local secrets, and the
-# miniflare state the test pool writes
-.cloudflare/
+# cloudflare worker: generated types, local secrets and wrangler's local state
+worker-configuration.d.ts
 .wrangler/
 .dev.vars
 
