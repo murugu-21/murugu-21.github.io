@@ -1,0 +1,26 @@
+name: Lighthouse
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1"
+permissions:
+  contents: read
+jobs:
+  lighthouse:
+    # Lighthouse needs the Chrome that ships on the full runner image.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Audits the deployed site, not a local build, so it measures what visitors get.
+      - uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # 12.6.2
+        with:
+          urls: |
+            https://murugappan.dev/
+            https://murugappan.dev/blog/
+            https://murugappan.dev/blog/toolbox/
+          runs: 3
+          configPath: lighthouserc.json
+          uploadArtifacts: true
