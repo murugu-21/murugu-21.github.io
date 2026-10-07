@@ -10,11 +10,9 @@ import { join } from "node:path";
 
 import { generateText, type ModelMessage } from "ai";
 
-// oxlint-disable-next-line no-restricted-imports -- the Worker's model config is what this tests
 import { deepseek, DEEPSEEK_MODEL, jarvisCall } from "#worker/ai.ts";
-// oxlint-disable-next-line no-restricted-imports -- the Worker's prompt and tools are what this tests
 import { buildMessages, jarvisTools, type Lead } from "#worker/prompt.ts";
-import { SITE_DIR } from "./site-dir.ts";
+import { SITE_DIR } from "#scripts/site/site-dir.ts";
 
 const model = process.argv[2] ?? DEEPSEEK_MODEL;
 const apiKey = readFileSync(".dev.vars", "utf8")

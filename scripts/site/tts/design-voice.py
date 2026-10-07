@@ -1,6 +1,6 @@
 """Design the read-aloud voice once from a persona prompt (Breeze TTS 2 voice design).
 
-  .venv-tts/bin/python scripts/tts/design-voice.py [count]
+  .venv-tts/bin/python scripts/site/tts/design-voice.py [count]
 
 Writes <count> candidates (default 3) to .voice/candidates/<k>.wav plus the
 sentence they speak in .voice/candidates/reference.txt. Listen, then promote
@@ -44,7 +44,7 @@ def main() -> int:
     from mlx_audio.tts import load
 
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 3
-    out = Path(__file__).resolve().parents[2] / ".voice" / "candidates"
+    out = Path(__file__).resolve().parents[3] / ".voice" / "candidates"
     out.mkdir(parents=True, exist_ok=True)
     (out / "reference.txt").write_text(SENTENCE + "\n")
     with contextlib.redirect_stdout(sys.stderr):

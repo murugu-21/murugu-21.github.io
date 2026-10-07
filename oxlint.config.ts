@@ -124,7 +124,7 @@ export default defineConfig({
       }
     },
     {
-      files: ["scripts/**"],
+      files: ["scripts/site/**", "scripts/lint/**"],
       rules: {
         "no-restricted-imports": [
           "error",
@@ -133,7 +133,7 @@ export default defineConfig({
               {
                 regex: "^(#worker/|\\.\\./)",
                 message:
-                  "Scripts don't import Worker code (move app-agnostic helpers to utils/), and cross-folder imports use the #src, #utils and #scripts subpath imports."
+                  "Site and lint scripts don't import Worker code (move app-agnostic helpers to utils/), and cross-folder imports use the #src, #utils and #scripts subpath imports."
               }
             ]
           }
@@ -141,7 +141,7 @@ export default defineConfig({
       }
     },
     {
-      files: ["scripts/ts-alias.cjs"],
+      files: ["scripts/site/ts-alias.cjs"],
       rules: {
         "typescript/no-unsafe-assignment": "off",
         "typescript/no-unsafe-argument": "off",

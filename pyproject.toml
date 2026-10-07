@@ -1,4 +1,4 @@
-# basedpyright settings for scripts/tts. Not a package: the scripts run under
+# basedpyright settings for scripts/site/tts. Not a package: the scripts run under
 # .venv-tts (README "Read-aloud audio"), which is where the mlx imports resolve.
 [tool.basedpyright]
 venvPath = "."

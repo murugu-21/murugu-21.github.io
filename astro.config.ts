@@ -17,7 +17,7 @@ import remarkMermaid from "./src/lib/blog/remark-mermaid";
 import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
 import { NIGHT_OWL } from "./src/lib/blog/code-themes";
 import { SITE_ORIGIN } from "./src/lib/site";
-import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
+import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/site/fira-code-subset";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
 
@@ -148,10 +148,10 @@ function buildArtifacts(): AstroIntegration {
     hooks: {
       // Diagrams are gitignored. remark-mermaid renders them during content
       // sync, but posts cached in node_modules/.astro skip it.
-      "astro:build:start": () => run("bun", ["scripts/render-mermaid.ts"]),
+      "astro:build:start": () => run("bun", ["scripts/site/render-mermaid.ts"]),
       // Registered last, so the site it prints from is final.
       "astro:build:done": ({ dir }) =>
-        run("node", ["scripts/generate-resume.ts", fileURLToPath(dir)])
+        run("node", ["scripts/site/generate-resume.ts", fileURLToPath(dir)])
     }
   };
 }

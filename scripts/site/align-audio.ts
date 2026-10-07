@@ -19,7 +19,6 @@ import { jsonString } from "#utils/json.ts";
 import { alignWords, type TimedWord } from "#src/lib/blog/audio-words.ts";
 import {
   PYTHON,
-  ROOT,
   ffmpeg,
   publishedSlugs,
   requireFfmpeg,
@@ -29,7 +28,7 @@ import {
 import { startJsonLines } from "./tts/json-lines.ts";
 import { AUDIO_PREFIX, r2Store } from "./tts/r2.ts";
 
-const WORKER = join(ROOT, "scripts", "tts", "whisper.py");
+const WORKER = join(import.meta.dirname, "tts", "whisper.py");
 
 const { values: options, positionals: slugs } = parseArgs({
   allowPositionals: true,

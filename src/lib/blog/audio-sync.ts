@@ -1,5 +1,5 @@
 // Keeps the paragraph highlight in step with pre-rendered audio. Types mirror
-// the timing JSON written by scripts/generate-audio.ts.
+// the timing JSON written by scripts/site/generate-audio.ts.
 
 import type { TimedWord } from "./audio-words";
 

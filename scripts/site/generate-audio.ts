@@ -1,7 +1,7 @@
 // Renders each published post to MP3 with per-paragraph timings and uploads
 // both to R2. Runs locally:
 //
-//   bun run build                # the built site (scripts/site-dir.ts) must be current
+//   bun run build                # the built site (scripts/site/site-dir.ts) must be current
 //   bun run audio                # every post whose spoken text changed
 //   bun run audio first-post     # one post
 //   bun run audio --force        # regenerate even if unchanged
@@ -35,7 +35,6 @@ import { normalizeSpeechText, packSentences, spokenHash } from "#src/lib/blog/au
 import {
   BLOG_DIST,
   PYTHON,
-  ROOT,
   ffmpeg,
   publishedSlugs,
   requireFfmpeg,
@@ -45,6 +44,7 @@ import {
 import { startJsonLines } from "./tts/json-lines.ts";
 import { AUDIO_PREFIX, VOICE_PREFIX, r2Store } from "./tts/r2.ts";
 import { assemble, readWav, writeWav } from "./tts/wav.ts";
+import { ROOT } from "./site-dir.ts";
 
 // Env overrides are for A/B renders, not production.
 //   AUDIO_VOICE_DIR   directory holding reference.wav + reference.txt
@@ -55,7 +55,7 @@ const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   : join(ROOT, ".voice");
 const VOICE_WAV = join(VOICE_DIR, "reference.wav");
 const VOICE_TXT = join(VOICE_DIR, "reference.txt");
-const WORKER = join(ROOT, "scripts", "tts", "synth.py");
+const WORKER = join(import.meta.dirname, "tts", "synth.py");
 const VOICE_ID = "breeze-tts-2-8bit/chennai-2026-09-09";
 const CHUNK_MAX = 300;
 const GAPS = { intra: 0.15, inter: 0.45 };

@@ -49,8 +49,8 @@ Astro prerenders every page. The config still sets `output: "server"`, because w
 
 - Markdown renditions (`index.md` next to each `index.html`, served for `Accept: text/markdown`) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `src/lib/llms.ts` with `/llms.txt`.
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
-- The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `scripts/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
-- Scripts that read the build find it through `scripts/site-dir.ts`.
+- The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `scripts/site/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
+- Scripts that read the build find it through `scripts/site/site-dir.ts`.
 - Helpers with no app logic (`utils/`, such as the zod JSON helpers) are shared by the Worker and `scripts/`. Lint stops scripts from importing `worker/` directly.
 - Imports across top-level folders go through the `#src/*`, `#worker/*`, `#utils/*` and `#scripts/*` subpath imports in `package.json`, with the file extension, because TypeScript resolves them only as exact paths. Node, Bun, Vite and TypeScript read them natively. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
 
@@ -61,7 +61,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Vitest, `cf` and `tsc`, because `cloudflare.config.ts` refuses to load under Bun ("cloudflare.config.ts loading is not supported on Bun"). Under Bun, miniflare also cannot reach workerd ("Unable to connect. Is the computer able to access the url?" from `fetchWorkerExportTypes`) and `astro preview` hangs.
 
 - `build`, `dev` and `preview` call `astro` on Node.
-- `scripts/generate-resume.ts` runs on Node too, because it prints the resume from `astro preview`.
+- `scripts/site/generate-resume.ts` runs on Node too, because it prints the resume from `astro preview`.
 - `test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`. Use `bun run test`, not `bun test`, which is Bun's own runner.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
@@ -94,7 +94,7 @@ bun run check:worker   # type-check worker/
 bun run test           # vitest in the workers pool
 ```
 
-The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` preloads `scripts/ts-alias.cjs` to point Volar's `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` supports TypeScript 7.
+The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` preloads `scripts/site/ts-alias.cjs` to point Volar's `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/site/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` supports TypeScript 7.
 
 Having both compilers installed has two side effects:
 
@@ -163,7 +163,7 @@ Super properties: `theme` (`dark` / `light`, set on load and on every toggle) an
 
 `/resume` (`src/pages/resume.astro`) is a print-styled page built entirely from `src/data/portfolio.ts` and `src/data/resume.ts`, so it can't drift from the site.
 
-At the end of `bun run build`, `scripts/generate-resume.ts` starts `astro preview` on a fixed port, opens `/resume/` in headless Chromium through Puppeteer and prints `resume.pdf`. It then parses the PDF with `pdf-parse` and fails the build if any ATS-critical string (name, email, section headings, current title, headline stats) isn't extractable text. On Workers Builds, which has no system Chrome, it falls back to `@sparticuz/chromium`.
+At the end of `bun run build`, `scripts/site/generate-resume.ts` starts `astro preview` on a fixed port, opens `/resume/` in headless Chromium through Puppeteer and prints `resume.pdf`. It then parses the PDF with `pdf-parse` and fails the build if any ATS-critical string (name, email, section headings, current title, headline stats) isn't extractable text. On Workers Builds, which has no system Chrome, it falls back to `@sparticuz/chromium`.
 
 No phone number is in source. Set `RESUME_PHONE` (Workers Builds env in production, `.env` locally) to add one; leaving it unset omits the line. The contact section in `GithubCard.astro` reads it only in its no-GitHub fallback, which production never renders.
 
@@ -206,7 +206,7 @@ description: One-line description shown in lists, search and feeds.
 
 ### Mermaid diagrams
 
-`scripts/render-mermaid.ts` renders each ` ```mermaid ` fence to a light and a dark SVG (with a Fira Code subset embedded, so labels measure the same inside `<img>`) and a light PNG, under `content/blog/<slug>/diagrams/`, named by a hash of the fence. It prunes renderings no fence uses.
+`scripts/site/render-mermaid.ts` renders each ` ```mermaid ` fence to a light and a dark SVG (with a Fira Code subset embedded, so labels measure the same inside `<img>`) and a light PNG, under `content/blog/<slug>/diagrams/`, named by a hash of the fence. It prunes renderings no fence uses.
 
 The renderings are gitignored; only the fence source is committed. `bun run build` renders them first, the markdown plugin renders any fence that has no rendering yet (useful under `astro dev`), and `bun run diagrams` renders on demand. Each file records the mermaid version that rendered it, so an upgrade re-renders automatically; `--force` re-renders everything. If you change the renderer's own output (theme, font), bump `RENDERER_VERSION` in `src/lib/blog/mermaid-diagrams.ts` so the hashes change.
 
@@ -238,24 +238,24 @@ Every post has a **Listen** control. When `/blog/audio/<slug>.json` exists, the 
 
 Audio generation runs **on a laptop, never in CI**, because the model is 3.9 GB and needs Apple Silicon.
 
-**Pipeline** (`scripts/generate-audio.ts`):
+**Pipeline** (`scripts/site/generate-audio.ts`):
 
 1. Extract text from the built HTML with the same `speechBlocks()` the page uses, then normalize emoji, punctuation and long digit runs. Breeze loops on runs like `0.30000000000000004`, so `normalizeSpeechText` describes them instead of reading them out.
-2. Synthesize sentence groups of at most 300 characters with Breeze TTS 2 ([mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit) via [mlx-audio](https://github.com/Blaizzy/mlx-audio), `scripts/tts/synth.py`), cloning `.voice/reference.wav` with no instruction prompt. Use the 8-bit build; bf16 swaps on a 24 GB machine.
+2. Synthesize sentence groups of at most 300 characters with Breeze TTS 2 ([mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit) via [mlx-audio](https://github.com/Blaizzy/mlx-audio), `scripts/site/tts/synth.py`), cloning `.voice/reference.wav` with no instruction prompt. Use the 8-bit build; bf16 swaps on a 24 GB machine.
 3. Speed up each chunk (`atempo=1.08`), join with 0.15 s gaps inside a paragraph and 0.45 s between paragraphs, and normalize loudness (`loudnorm I=-16`).
 4. Upload a 64 kbps MP3 and a `{blocks:[{text,start,end}]}` JSON to the R2 bucket `murugappan-dev-audio` (`infra/main.tf`, bound as `AUDIO`) under `blog/breeze/`. `worker/audio.ts` serves them with Range and ETag support.
 
 The script skips posts whose spoken text hasn't changed. The `blog/<slug>.*` objects in R2 are unused and safe to delete.
 
-The voice reference is a synthetic clip designed once from the persona prompt in `scripts/tts/design-voice.py`, so every paragraph clones the same clean source. Breeze TTS 2 weights are under the BreezeBlue Research and Non-Commercial License, which this personal blog satisfies.
+The voice reference is a synthetic clip designed once from the persona prompt in `scripts/site/tts/design-voice.py`, so every paragraph clones the same clean source. Breeze TTS 2 weights are under the BreezeBlue Research and Non-Commercial License, which this personal blog satisfies.
 
 **One-time setup**
 
 ```bash
 terraform -chdir=infra apply   # creates the R2 bucket
 brew install ffmpeg
-python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/tts/requirements.txt
-.venv-tts/bin/python scripts/tts/design-voice.py 3   # writes .voice/candidates/{0,1,2}.wav from the persona prompt
+python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/site/tts/requirements.txt
+.venv-tts/bin/python scripts/site/tts/design-voice.py 3   # writes .voice/candidates/{0,1,2}.wav from the persona prompt
 cp .voice/candidates/<k>.wav .voice/reference.wav && cp .voice/candidates/reference.txt .voice/reference.txt
 bun run audio --upload-voice     # durable copy in R2
 ```
@@ -278,7 +278,7 @@ bunx cf r2 objects put blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio
 bunx cf r2 objects put blog/breeze/<slug>.json --bucket-name murugappan-dev-audio --file <dir>/<slug>.json --content-type application/json
 ```
 
-`bun run audio:align` (`scripts/align-audio.ts`) runs after synthesis, never at the same time. It slices each paragraph out of the MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (`whisper-large-v3-turbo`, 1.6 GB, downloaded automatically), maps them onto the known text (`src/lib/blog/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per paragraph.
+`bun run audio:align` (`scripts/site/align-audio.ts`) runs after synthesis, never at the same time. It slices each paragraph out of the MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (`whisper-large-v3-turbo`, 1.6 GB, downloaded automatically), maps them onto the known text (`src/lib/blog/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per paragraph.
 
 ## Public API (`/api/*`)
 

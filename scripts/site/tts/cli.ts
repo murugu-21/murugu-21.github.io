@@ -3,16 +3,17 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { SITE_DIR } from "#scripts/site-dir.ts";
+import { ROOT, SITE_DIR } from "#scripts/site/site-dir.ts";
 
-export const ROOT = join(import.meta.dirname, "../..");
 export const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 export const BLOG_DIST = join(SITE_DIR, "blog");
 
 export function requirePython(module: string): void {
   if (!existsSync(PYTHON)) throw new Error('no .venv-tts; see README "Read-aloud audio"');
   if (spawnSync(PYTHON, ["-c", `import ${module}`]).status !== 0) {
-    throw new Error(`.venv-tts cannot import ${module}; reinstall scripts/tts/requirements.txt`);
+    throw new Error(
+      `.venv-tts cannot import ${module}; reinstall scripts/site/tts/requirements.txt`
+    );
   }
 }
 

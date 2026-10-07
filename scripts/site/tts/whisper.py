@@ -1,4 +1,4 @@
-"""Long-lived word-timestamp worker for scripts/align-audio.ts.
+"""Long-lived word-timestamp worker for scripts/site/align-audio.ts.
 
 Reads JSON lines from stdin: {"id", "wav", "text"} where wav is a 16 kHz mono
 slice of one block and text is what it says. Replies with one JSON line per
