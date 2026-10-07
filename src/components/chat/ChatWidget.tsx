@@ -14,6 +14,15 @@ import { Composer } from "./Composer";
 import { Button } from "#src/components/ui/button.tsx";
 import { Card, CardFooter, CardHeader } from "#src/components/ui/card.tsx";
 import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogTitle,
+  DialogTrigger
+} from "#src/components/ui/dialog.tsx";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -107,15 +116,30 @@ function downloadTranscript(bubbles: Bubble[]) {
   URL.revokeObjectURL(url);
 }
 
+// Below Tailwind's sm breakpoint the panel fills the screen.
+const isPhone = () => window.matchMedia("(max-width: 639px)").matches;
+
+// Focus is in the chat, or nowhere in particular (Escape also closes it from anywhere on the page).
+function focusInChat(launcher: HTMLElement | null): boolean {
+  const active = document.activeElement;
+  return (
+    !active ||
+    active === document.body ||
+    active === launcher ||
+    active.closest('[data-slot="dialog-content"]') !== null
+  );
+}
+
 type PanelProps = {
   bubbles: Bubble[];
   phase: Phase;
   onSend: (text: string) => void;
-  onClose: () => void;
   onRestart: () => void;
 };
 
-function ChatPanel({ bubbles, phase, onSend, onClose, onRestart }: PanelProps) {
+function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
+  // Read once: a resize must not change how this panel took focus.
+  const [phone] = useState(isPhone);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
@@ -133,18 +157,6 @@ function ChatPanel({ bubbles, phase, onSend, onClose, onRestart }: PanelProps) {
     v.scrollTop = fresh ? 0 : v.scrollHeight;
   }, [bubbles, phase]);
 
-  // Body scroll lock while the panel is full-screen (mobile).
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 639px)");
-    const apply = () => document.documentElement.classList.toggle("chat-panel-locked", mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => {
-      mq.removeEventListener("change", apply);
-      document.documentElement.classList.remove("chat-panel-locked");
-    };
-  }, []);
-
   // Until the visitor says anything; the greeting doesn't count.
   const showStarters = phase.kind === "idle" && bubbles.every(b => b.kind !== "user");
 
@@ -152,107 +164,119 @@ function ChatPanel({ bubbles, phase, onSend, onClose, onRestart }: PanelProps) {
     "size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-4.5";
 
   return (
-    <Card
-      role="dialog"
-      aria-label="Chat with Jarvis, Murugappan's AI assistant"
-      className="fixed right-7.5 bottom-22.5 z-1001 h-130 max-h-[calc(100vh-120px)] w-92.5 max-w-[calc(100vw-24px)] overflow-hidden rounded-[14px] shadow-2xl max-sm:top-0 max-sm:right-0 max-sm:bottom-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-auto max-sm:max-w-none max-sm:rounded-none max-sm:border-0"
-    >
-      <CardHeader className="flex-row items-center gap-1 bg-primary py-3 text-primary-foreground">
-        <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold">Chat with Jarvis</h2>
-          <p className="text-xs opacity-90">Murugappan's AI assistant, answering from this site</p>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={headerBtn}
-              aria-label="Conversation options"
-            >
-              <EllipsisVertical />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => setConfirmRestart(true)}>
-              <RotateCcw /> Start over
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => downloadTranscript(bubbles)}>
-              <Download /> Download transcript
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={headerBtn}
-          aria-label="Close chat"
-          onClick={onClose}
-        >
-          <X />
-        </Button>
-      </CardHeader>
-
-      {confirmRestart && (
-        <div className="flex items-center justify-between gap-2 border-b bg-muted/50 px-3 py-2">
-          <span className="text-xs text-muted-foreground">Start a new conversation?</span>
-          <div className="flex gap-1.5">
-            <Button size="sm" className="h-7 px-2.5 text-xs" onClick={onRestart}>
-              Start over
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2.5 text-xs"
-              onClick={() => setConfirmRestart(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
-        {/* PII: replay masks inputs but not bubbles, so mask the transcript
-            (data-ph-mask is the maskTextSelector in lib/analytics.ts). */}
-        <div className="flex flex-col gap-2 p-3" aria-live="polite" data-ph-mask="true">
-          <BubbleView kind="assistant" text={GREETING} />
-          {bubbles.map((b, i) => (
-            <BubbleView key={i} kind={b.kind} text={b.text} />
-          ))}
-          {phase.kind === "loading" && (
-            <div className="flex items-center gap-1 self-start rounded-xl rounded-bl-sm bg-muted p-3">
-              <span className="chat-dot" />
-              <span className="chat-dot" />
-              <span className="chat-dot" />
+    <>
+      {/* Radix locks page scroll from the overlay, which renders only while modal (phones). */}
+      <DialogOverlay />
+      <DialogContent
+        asChild
+        // The page stays usable beside the desktop panel, so clicking it doesn't close the chat.
+        onInteractOutside={e => e.preventDefault()}
+        // Desktop: the composer takes focus. Phone: Radix moves focus into the modal.
+        onOpenAutoFocus={e => {
+          if (!phone) e.preventDefault();
+        }}
+        // The loading panel's content unmounts while the chat stays open, and Radix would
+        // move focus to the launcher then; closePanel returns focus itself.
+        onCloseAutoFocus={e => e.preventDefault()}
+      >
+        <Card className="fixed right-7.5 bottom-22.5 z-1001 h-130 max-h-[calc(100vh-120px)] w-92.5 max-w-[calc(100vw-24px)] overflow-hidden rounded-[14px] shadow-2xl max-sm:top-0 max-sm:right-0 max-sm:bottom-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-auto max-sm:max-w-none max-sm:rounded-none max-sm:border-0">
+          <CardHeader className="flex-row items-center gap-1 bg-primary py-3 text-primary-foreground">
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-base font-semibold">Chat with Jarvis</DialogTitle>
+              <DialogDescription className="text-xs opacity-90">
+                Murugappan's AI assistant, answering from this site
+              </DialogDescription>
             </div>
-          )}
-          {phase.kind === "working" && <ActivityRow activity={phase.activity} />}
-          {showStarters && (
-            <div className="mt-1 flex flex-col items-start gap-2">
-              {STARTERS.map(q => (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
-                  key={q}
-                  variant="outline"
-                  size="sm"
-                  className="h-auto rounded-full border-primary/40 px-3 py-1.5 text-left text-[13px] font-normal whitespace-normal text-foreground hover:border-primary"
-                  onClick={() => {
-                    track("chat_starter_click");
-                    send(q);
-                  }}
+                  variant="ghost"
+                  size="icon"
+                  className={headerBtn}
+                  aria-label="Conversation options"
                 >
-                  {q}
+                  <EllipsisVertical />
                 </Button>
-              ))}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setConfirmRestart(true)}>
+                  <RotateCcw /> Start over
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => downloadTranscript(bubbles)}>
+                  <Download /> Download transcript
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" className={headerBtn} aria-label="Close chat">
+                <X />
+              </Button>
+            </DialogClose>
+          </CardHeader>
+
+          {confirmRestart && (
+            <div className="flex items-center justify-between gap-2 border-b bg-muted/50 px-3 py-2">
+              <span className="text-xs text-muted-foreground">Start a new conversation?</span>
+              <div className="flex gap-1.5">
+                <Button size="sm" className="h-7 px-2.5 text-xs" onClick={onRestart}>
+                  Start over
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2.5 text-xs"
+                  onClick={() => setConfirmRestart(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           )}
-        </div>
-      </ScrollArea>
 
-      <CardFooter className="border-t p-2.5">
-        <Composer disabled={phase.kind !== "idle"} onSend={send} />
-      </CardFooter>
-    </Card>
+          <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
+            {/* PII: replay masks inputs but not bubbles, so mask the transcript
+                (data-ph-mask is the maskTextSelector in lib/analytics.ts). */}
+            <div className="flex flex-col gap-2 p-3" aria-live="polite" data-ph-mask="true">
+              <BubbleView kind="assistant" text={GREETING} />
+              {bubbles.map((b, i) => (
+                <BubbleView key={i} kind={b.kind} text={b.text} />
+              ))}
+              {phase.kind === "loading" && (
+                <div className="flex items-center gap-1 self-start rounded-xl rounded-bl-sm bg-muted p-3">
+                  <span className="chat-dot" />
+                  <span className="chat-dot" />
+                  <span className="chat-dot" />
+                </div>
+              )}
+              {phase.kind === "working" && <ActivityRow activity={phase.activity} />}
+              {showStarters && (
+                <div className="mt-1 flex flex-col items-start gap-2">
+                  {STARTERS.map(q => (
+                    <Button
+                      key={q}
+                      variant="outline"
+                      size="sm"
+                      className="h-auto rounded-full border-primary/40 px-3 py-1.5 text-left text-[13px] font-normal whitespace-normal text-foreground hover:border-primary"
+                      onClick={() => {
+                        track("chat_starter_click");
+                        send(q);
+                      }}
+                    >
+                      {q}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <CardFooter className="border-t p-2.5">
+            {/* Not on phones: focusing pops the keyboard over the greeting. */}
+            <Composer disabled={phase.kind !== "idle"} autoFocus={!phone} onSend={send} />
+          </CardFooter>
+        </Card>
+      </DialogContent>
+    </>
   );
 }
 
@@ -260,12 +284,11 @@ type SessionProps = {
   room: string;
   host: string;
   open: boolean;
-  onClose: () => void;
   onRestart: () => void;
 };
 
 // Owns the room's socket, so it stays mounted while the panel is closed.
-function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
+function ChatSession({ room, host, open, onRestart }: SessionProps) {
   const [awaitingReply, setAwaitingReply] = useState(false);
   const agent = useAgent({ agent: "chat-room", name: room, host });
   const { messages, sendMessage, status, isServerStreaming } = useAgentChat<unknown, JarvisMessage>(
@@ -315,7 +338,6 @@ function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
       bubbles={bubbles}
       phase={busy ? turnPhase(last) : { kind: "idle" }}
       onSend={onSend}
-      onClose={onClose}
       onRestart={onRestart}
     />
   );
@@ -324,22 +346,27 @@ function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
 // `host` is PUBLIC_CHAT_HOST; unset means the page's own origin.
 export function ChatWidget({ host }: { host?: string }) {
   const [open, setOpen] = useState(false);
+  // Fixed while open: Radix remounts the panel when `modal` flips, which would drop the draft.
+  const [modal, setModal] = useState(false);
   // Read from localStorage on first open, so the server render never needs it.
   const [room, setRoom] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">("hidden");
   const launcherRef = useRef<HTMLButtonElement | null>(null);
 
   const openPanel = () => {
+    setModal(isPhone());
     setOpen(true);
     setRoom(current => current ?? roomId());
     setTooltip("hidden");
     track("chat_open");
   };
 
-  const toggleOpen = () => {
-    if (!open) return openPanel();
+  const closePanel = () => {
+    const refocus = focusInChat(launcherRef.current);
     setOpen(false);
     setTooltip("hidden");
+    // After the panel unmounts, since a phone modal's focus trap would pull focus back in.
+    if (refocus) requestAnimationFrame(() => launcherRef.current?.focus());
   };
 
   // A fresh room rather than clearing this one, so the old conversation stays intact for the owner.
@@ -375,26 +402,21 @@ export function ChatWidget({ host }: { host?: string }) {
   }, []);
 
   const loadingPanel = (
-    <ChatPanel
-      bubbles={[]}
-      phase={{ kind: "loading" }}
-      onSend={() => {}}
-      onClose={toggleOpen}
-      onRestart={restart}
-    />
+    <ChatPanel bubbles={[]} phase={{ kind: "loading" }} onSend={() => {}} onRestart={restart} />
   );
 
   return (
-    <>
-      <Button
-        className="fixed right-7.5 bottom-5 z-1000 size-14 rounded-full shadow-lg [&_svg:not([class*='size-'])]:size-6"
-        aria-label="Chat with Jarvis, Murugappan's AI assistant"
-        aria-expanded={open}
-        onClick={toggleOpen}
-        ref={launcherRef}
-      >
-        {open ? <X /> : <MessageCircle />}
-      </Button>
+    // Modal only while the panel fills a phone screen.
+    <Dialog open={open} onOpenChange={next => (next ? openPanel() : closePanel())} modal={modal}>
+      <DialogTrigger asChild>
+        <Button
+          className="fixed right-7.5 bottom-5 z-1000 size-14 rounded-full shadow-lg [&_svg:not([class*='size-'])]:size-6"
+          aria-label="Chat with Jarvis, Murugappan's AI assistant"
+          ref={launcherRef}
+        >
+          {open ? <X /> : <MessageCircle />}
+        </Button>
+      </DialogTrigger>
 
       {tooltip !== "hidden" && (
         <div
@@ -415,11 +437,10 @@ export function ChatWidget({ host }: { host?: string }) {
             room={room}
             host={host || window.location.host}
             open={open}
-            onClose={toggleOpen}
             onRestart={restart}
           />
         </Suspense>
       )}
-    </>
+    </Dialog>
   );
 }

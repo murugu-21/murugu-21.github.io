@@ -114,9 +114,3 @@
     -webkit-text-fill-color: currentColor;
   }
 }
-
-/* Body scroll lock while the panel is full-screen on mobile. */
-html.chat-panel-locked,
-html.chat-panel-locked body {
-  overflow: hidden;
-}

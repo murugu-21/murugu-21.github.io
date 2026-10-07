@@ -400,7 +400,9 @@ test("waits while another tab's turn streams into the same room", async () => {
   await expect.element(sendButton()).toBeEnabled();
 });
 
-test("closing keeps the conversation, and the launcher reopens it", async () => {
+// Desktop: on a phone the modal panel covers the launcher and hides it from assistive tech.
+test("closing by button, launcher or Escape keeps the conversation, and focus returns to the launcher", async () => {
+  await page.viewport(1024, 768);
   await render(<ChatWidget />);
   const launcher = page.getByRole("button", { name: LAUNCHER });
   await openChat();
@@ -416,6 +418,13 @@ test("closing keeps the conversation, and the launcher reopens it", async () => 
   await expect.element(page.getByText("Remember me")).toBeVisible();
   await launcher.click();
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+
+  // Escape closes it too, and hands focus back to the launcher.
+  await launcher.click();
+  await expect.element(page.getByText("Remember me")).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+  await expect.element(launcher).toHaveFocus();
   expect(fetched).toHaveLength(1);
 });
 
@@ -495,15 +504,29 @@ test("downloads the transcript without the room's notices", async () => {
   expect(body).toMatch(/\n\nYou: Where\?\n\nJarvis: Toronto\.\n$/);
 });
 
+const pageOverflow = () => getComputedStyle(document.body).overflow;
+
 test("on a phone the open panel locks page scroll and leaves the keyboard down", async () => {
   await render(<ChatWidget />);
   await openChat();
 
-  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(true);
+  expect(pageOverflow()).toBe("hidden");
   await expect.element(input()).not.toHaveFocus();
 
   await page.getByRole("button", { name: "Close chat" }).click();
-  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(false);
+  await expect.poll(pageOverflow).toBe("visible");
+  await expect.element(page.getByRole("button", { name: LAUNCHER })).toHaveFocus();
+});
+
+test("keeps an unsent draft when the screen crosses the phone breakpoint while open", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+  await userEvent.type(input(), "half a thought");
+
+  await page.viewport(1024, 768);
+  await expect.element(input()).toHaveValue("half a thought");
+  await page.viewport(414, 896);
+  await expect.element(input()).toHaveValue("half a thought");
 });
 
 test("on a desktop the open panel focuses the composer and leaves the page scrollable", async () => {
@@ -512,7 +535,7 @@ test("on a desktop the open panel focuses the composer and leaves the page scrol
   await openChat();
 
   await expect.element(input()).toHaveFocus();
-  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(false);
+  expect(pageOverflow()).toBe("visible");
 });
 
 test("opens on hydration when the visitor tapped the launcher while the bundle loaded", async () => {

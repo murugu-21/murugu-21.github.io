@@ -5,10 +5,10 @@ import { MAX_MESSAGE_LENGTH } from "#contracts/chat.ts";
 import { Button } from "#src/components/ui/button.tsx";
 import { Textarea } from "#src/components/ui/textarea.tsx";
 
-type ComposerProps = { disabled: boolean; onSend: (text: string) => void };
+type ComposerProps = { disabled: boolean; autoFocus: boolean; onSend: (text: string) => void };
 
 /** The message box. A draft it can't send yet, while a turn runs, stays put. */
-export function Composer({ disabled, onSend }: ComposerProps) {
+export function Composer({ disabled, autoFocus, onSend }: ComposerProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const submit = () => {
@@ -19,10 +19,9 @@ export function Composer({ disabled, onSend }: ComposerProps) {
     el.value = "";
   };
 
-  // Desktop only: on phones autofocus pops the keyboard and hides the greeting.
   useEffect(() => {
-    if (window.matchMedia("(min-width: 640px)").matches) inputRef.current?.focus();
-  }, []);
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus]);
 
   return (
     <form
