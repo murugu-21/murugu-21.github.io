@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { TOC_LINE_SLACK, activeIndex, tocEntries } from "./toc";
 
-const heading = (depth: number, text: string, slug = text.toLowerCase().replace(/\s+/g, "-")) => ({
+const heading = (
+  depth: number,
+  text: string,
+  slug = text.toLowerCase().replaceAll(/\s+/g, "-")
+) => ({
   depth,
   text,
   slug

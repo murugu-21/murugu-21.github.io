@@ -388,7 +388,7 @@ export class ChatRoom extends AIChatAgent<Env> {
   // Counts the visitor's newest message toward the room's daily limit and mirrors it to D1.
   private recordUserMessage(): void {
     this.ctx.storage.sql.exec(`INSERT INTO user_messages (created_at) VALUES (?)`, Date.now());
-    const latest = this.messages.filter(m => m.role === "user").at(-1);
+    const latest = this.messages.findLast(m => m.role === "user");
     if (latest) this.mirrorMessage("user", messageText(latest));
   }
 

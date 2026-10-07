@@ -16,7 +16,7 @@ export function contactMailer(env: Env): { email: EmailLike; inbox: string } | n
   return env.EMAIL && inbox ? { email: env.EMAIL, inbox } : null;
 }
 
-const subjectName = (who: string): string => who.replace(/\s+/g, " ").slice(0, 80);
+const subjectName = (who: string): string => who.replaceAll(/\s+/g, " ").slice(0, 80);
 
 export function formatOpportunityEmail(
   lead: Lead,

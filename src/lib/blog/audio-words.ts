@@ -23,7 +23,7 @@ export function tokenize(text: string): string[] {
 
 // Matching key: lowercase letters and digits only, so "Don't" ≈ "don't" ≈
 // "dont" and "fine." ≈ "fine".
-const key = (token: string) => token.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+const key = (token: string) => token.toLowerCase().replaceAll(/[^\p{L}\p{N}]/gu, "");
 
 // Longest common subsequence over match keys, as pairs of [textIndex, whisperIndex].
 function lcsPairs(a: string[], b: string[]): Array<[number, number]> {

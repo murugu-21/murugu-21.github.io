@@ -142,9 +142,9 @@ const rel = (path: string) => relative(process.cwd(), path);
 // the subset). A small superset of the labels is fine.
 function usedText(svg: string): string {
   const text = svg
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&[a-z#0-9]+;/gi, " ");
+    .replaceAll(/<style\b[^>]*>[\s\S]*?<\/style>/g, " ")
+    .replaceAll(/<[^>]+>/g, " ")
+    .replaceAll(/&[a-z#0-9]+;/gi, " ");
   return [...new Set(text)].join("");
 }
 

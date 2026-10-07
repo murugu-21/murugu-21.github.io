@@ -49,10 +49,7 @@ function parseReply(res: Response, text: string): JsonRpcReply {
   if (!res.headers.get("Content-Type")?.startsWith("text/event-stream")) {
     return JsonRpcReply.parse(JSON.parse(text));
   }
-  const data = text
-    .split("\n")
-    .filter(line => line.startsWith("data: "))
-    .at(-1);
+  const data = text.split("\n").findLast(line => line.startsWith("data: "));
   assert(data, `no data line in the event stream: ${text}`);
   return JsonRpcReply.parse(JSON.parse(data.slice("data: ".length)));
 }
@@ -916,8 +913,8 @@ describe("readResource", () => {
   });
 
   it("generates the OpenAPI document rather than reading a file", async () => {
-    const contents = await readResource(`${RESOURCE_ORIGIN}/openapi.json`, resourceCtx());
-    const [content] = contents ?? [];
+    const result = await readResource(`${RESOURCE_ORIGIN}/openapi.json`, resourceCtx());
+    const [content] = result ?? [];
     assert(content, "openapi.json returned no contents");
     expect(content.mimeType).toBe("application/json");
     const doc = z

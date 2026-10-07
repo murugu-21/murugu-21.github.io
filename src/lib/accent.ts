@@ -2,7 +2,7 @@
 // skipping trailing emoji like "🛠️".
 
 const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 
 export function accentTitle(title: string): string {
   const words = title.trim().split(/\s+/);

@@ -96,7 +96,7 @@ describe("buildOpenApiDocument", () => {
     // HEAD rides along with GET and is not a separate operation; ALL is middleware or the 404.
     const served = api.routes
       .filter(r => r.method !== "ALL" && r.method !== "HEAD")
-      .map(r => `${r.method} ${VERSIONED_API_BASE}${r.path.replace(/:(\w+)/g, "{$1}")}`);
+      .map(r => `${r.method} ${VERSIONED_API_BASE}${r.path.replaceAll(/:(\w+)/g, "{$1}")}`);
     const documented = Object.entries(doc.paths).flatMap(([path, item]) =>
       Object.keys(item).map(method => `${method.toUpperCase()} ${path}`)
     );
@@ -124,7 +124,7 @@ describe("buildOpenApiDocument", () => {
     for (const [where, op] of operations()) {
       const params = op.parameters ?? [];
       for (const param of params) {
-        const at = `${where} ${String(param.name)}`;
+        const at = `${where} ${param.name}`;
         expect(param.name, at).toMatch(/^[a-z][a-zA-Z]*$/);
         expect(param.in, at).toMatch(/^(path|query)$/);
         expect(param.description, at).toMatch(/\S/);
