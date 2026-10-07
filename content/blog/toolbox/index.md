@@ -12,7 +12,7 @@ description: A guide to becoming a developer from my experience becoming one.
 
 ## A Language
 
-The next tool is learning any mainstream language. This is covered well by most uni's. I beleive learning python/js at first will really hurt the Developer experience(Dx) for most people because eventually you will run into concepts like types, pointers, classes and compilation. Then, you will hate these because you know small projects can be done without them and start hating them when you accidentally chose java or c++ for your project. But ultimately, all real world projects are huge scale and relay on these concepts to be sure their system works and can be compartmentalized and reused. All though there is a lot of debate in the community around dynamic vs static typing, I prefer static for all projects and dynamic for any small(like really small) works. even then, It could become a liability quicker than you think. This ismple graph kind of nails it all.
+The next tool is learning any mainstream language. This is covered well by most uni's. I believe learning python/js at first will really hurt the Developer experience(Dx) for most people because eventually you will run into concepts like types, pointers, classes and compilation. Then, you will hate these because you know small projects can be done without them and start hating them when you accidentally chose java or c++ for your project. But ultimately, all real world projects are huge scale and relay on these concepts to be sure their system works and can be compartmentalized and reused. All though there is a lot of debate in the community around dynamic vs static typing, I prefer static for all projects and dynamic for any small(like really small) works. even then, It could become a liability quicker than you think. This ismple graph kind of nails it all.
 
 ![static vs dynamic typing productivity vs codebase](graph.png)
 
@@ -92,7 +92,7 @@ Also, If you are interested, this is the most paid field in the industry because
 
 ## Conclusion
 
-Overall, its a great time to become a developer and I beleive this guide helped you understand the path to become one. Its a wild world out there, with patience and years of hard work and a bit of money, you will be able to put together any task assigned to you/any tech startup you want to make.
+Overall, its a great time to become a developer and I believe this guide helped you understand the path to become one. Its a wild world out there, with patience and years of hard work and a bit of money, you will be able to put together any task assigned to you/any tech startup you want to make.
 
 Remember, non-technical people thinks its all possible in a day and will ask you do magic with your app. stay away!!!
 

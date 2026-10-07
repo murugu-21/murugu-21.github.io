@@ -58,7 +58,7 @@ class App extends Component {
         );    }}export default App;
 ```
 
-This syntax of combining js and html is called JSX, Babel compiles this template to pure js and react ships a runtime to handle setState during runtime. JSX and React allows us to render our UI as a set of reusable components each with their own conatined state and events. This makes our code declarative - this means much more maintainable and readable code as far as UI is concerned.
+This syntax of combining js and html is called JSX, Babel compiles this template to pure js and react ships a runtime to handle setState during runtime. JSX and React allows us to render our UI as a set of reusable components each with their own contained state and events. This makes our code declarative - this means much more maintainable and readable code as far as UI is concerned.
 
 ## Hooks
 
@@ -113,7 +113,7 @@ export default function CustomButton() {
 
 ### useEffect
 
-The next problem comes when you have to fetch data from a database and load to UI. fetch is asynchoronous, which basically means that it might take a long time to execute and your UI will be frozen if done synchronously. Hence, you use useEffect with empty array as dependency (since fetch only occurs once after loading) to update UI. What fetch does is that it makes a request to a external api and lets the event loop run. When response is received, code inside then() is added and executed as a microtask (when event loop reaches end).
+The next problem comes when you have to fetch data from a database and load to UI. fetch is asynchronous, which basically means that it might take a long time to execute and your UI will be frozen if done synchronously. Hence, you use useEffect with empty array as dependency (since fetch only occurs once after loading) to update UI. What fetch does is that it makes a request to a external api and lets the event loop run. When response is received, code inside then() is added and executed as a microtask (when event loop reaches end).
 
 ```jsx
 import { useState } from "react"
@@ -194,6 +194,6 @@ export default function CustomButton() {
 
 Based on the complexity of your application and features you want to implement. redux pattern can either seem like needless boilerplate (for small apps without a lot of shared state between components) or the best design decision you ever made (for large apps with a lot of shared state between components that needs to be debugged every week or so and has to meet a lot of performance metrics). Basically if you are making a blog with react, you will never need redux. But if you are building the next facebook or twitter with huge teams involved in development, redux will save you a lot of effort and time. check out [this article](https://medium.com/@dan_abramov/you-might-not-need-redux-be46360cf367) by the creator of Redux.
 
-If you are just begining to learn react, I suggest you try out your idea using the methods mentioned here [thinking in React](https://reactjs.org/docs/thinking-in-react.html).
+If you are just beginning to learn react, I suggest you try out your idea using the methods mentioned here [thinking in React](https://reactjs.org/docs/thinking-in-react.html).
 
 If you want to delve deeper into the hooks api, checkout [react-hooks](https://reactjs.org/docs/hooks-reference.html).
