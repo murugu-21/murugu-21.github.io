@@ -51,7 +51,7 @@ const entries = tocEntries(headings);
     overflow-y: auto;
     border-radius: 0.75rem;
     /* The frosted band the pinned read-aloud bar paints. */
-    background: var(--color-nav-scrolled);
+    background: light-dark(var(--color-nav-scrolled), var(--color-nav-scrolled-dark));
     -webkit-backdrop-filter: blur(15px);
     backdrop-filter: blur(15px);
     box-shadow: var(--shadow-glow);
@@ -59,8 +59,10 @@ const entries = tocEntries(headings);
       background-color 0.15s ease,
       box-shadow 0.15s ease;
   }
-  :global(html.dark-mode) .toc ol {
-    background: var(--color-nav-scrolled-dark);
+  /* The shadow tokens differ in spread, not only colour, so they stay a pair.
+     `:where` keeps this level with `.toc ol` (so it must follow it) and below
+     the collapsed-rail rule, which clears the shadow. */
+  :global(:where(html.dark-mode)) .toc ol {
     box-shadow: var(--shadow-glow-dark);
   }
 
@@ -70,7 +72,7 @@ const entries = tocEntries(headings);
     padding: 0.3rem 0;
     font-size: 0.875rem;
     line-height: 1.35;
-    color: var(--color-text-light);
+    color: light-dark(var(--color-text-light), var(--color-text-dark));
     text-decoration: none;
   }
   /* h3s indent under their h2, as in Notion's open list. */
@@ -80,24 +82,16 @@ const entries = tocEntries(headings);
   }
   .toc a:hover,
   .toc a:focus-visible {
-    color: var(--color-title);
+    color: light-dark(var(--color-title), var(--color-heading-dark));
   }
   .toc a[aria-current] {
-    color: var(--color-title);
+    color: light-dark(var(--color-title), var(--color-heading-dark));
     font-weight: 700;
   }
   .toc a:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
     border-radius: 0.25rem;
-  }
-  :global(html.dark-mode) .toc a {
-    color: var(--color-text-dark);
-  }
-  :global(html.dark-mode) .toc a:hover,
-  :global(html.dark-mode) .toc a:focus-visible,
-  :global(html.dark-mode) .toc a[aria-current] {
-    color: var(--color-heading-dark);
   }
 
   /* Long headings wrap inside the 20rem panel rather than widening it. */
@@ -110,16 +104,10 @@ const entries = tocEntries(headings);
     display: none;
     height: 2px;
     border-radius: 1px;
-    background: var(--color-toc-bar);
-  }
-  :global(html.dark-mode) .toc .bar {
-    background: var(--color-accent-grey-dark);
+    background: light-dark(var(--color-toc-bar), var(--color-accent-grey-dark));
   }
   .toc a[aria-current] .bar {
-    background: var(--color-title);
-  }
-  :global(html.dark-mode) .toc a[aria-current] .bar {
-    background: var(--color-heading-dark);
+    background: light-dark(var(--color-title), var(--color-heading-dark));
   }
 
   /* ---- Placement --------------------------------------------------------- */

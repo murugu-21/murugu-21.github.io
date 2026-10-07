@@ -2,7 +2,7 @@ import type { Element } from "hast";
 import type { Options } from "rehype-autolink-headings";
 
 // An <a class="anchor"> with a link icon prepended inside each heading;
-// post.css styles `a.anchor svg[aria-hidden="true"]`.
+// post.css places and colours `a.anchor`.
 const linkIcon: Element = {
   type: "element",
   tagName: "svg",

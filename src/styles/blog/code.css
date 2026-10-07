@@ -13,37 +13,28 @@
     padding: 1em;
     margin: 0.5em 0;
     line-height: 1.5;
-    border: 1px solid var(--color-border-soft);
+    /* Night: 12% read as a tint, not a panel edge, on the night canvas. */
+    border: 1px solid light-dark(var(--color-border-soft), var(--color-fence-edge-dark));
     border-radius: 0.5rem;
-    background-color: var(--shiki-light-bg);
+    background-color: light-dark(var(--shiki-light-bg), var(--shiki-dark-bg));
   }
 
   .blog-post .astro-code,
   .blog-post .astro-code span {
-    color: var(--shiki-light);
+    color: light-dark(var(--shiki-light), var(--shiki-dark));
     font-weight: var(--shiki-light-font-weight);
     text-decoration: var(--shiki-light-text-decoration);
   }
 
-  .blog-post .astro-code ::selection {
-    background: #b3d4fc;
-  }
-
-  html.dark-mode .blog-post .astro-code {
-    /* 12% read as a tint, not a panel edge, on the night canvas. */
-    border-color: var(--color-fence-edge-dark);
-    background-color: var(--shiki-dark-bg);
-  }
-
+  /* Weight and decoration aren't colours, so they still follow the class. */
   html.dark-mode .blog-post .astro-code,
   html.dark-mode .blog-post .astro-code span {
-    color: var(--shiki-dark);
     font-weight: var(--shiki-dark-font-weight);
     text-decoration: var(--shiki-dark-text-decoration);
   }
 
   /* Night Owl's own selection: the light-mode blue would drown its pale tokens. */
-  html.dark-mode .blog-post .astro-code ::selection {
-    background: #1d3b53;
+  .blog-post .astro-code ::selection {
+    background: light-dark(#b3d4fc, #1d3b53);
   }
 }

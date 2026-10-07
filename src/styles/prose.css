@@ -23,16 +23,11 @@
     --tw-prose-bullets: currentColor;
     --tw-prose-code: currentColor;
     --tw-prose-pre-code: currentColor;
-    --tw-prose-links: var(--color-navy);
-    --tw-prose-pre-bg: white;
-    --rule: var(--color-border-soft);
+    --tw-prose-links: light-dark(var(--color-navy), var(--color-blue));
+    --tw-prose-pre-bg: light-dark(white, rgba(255, 255, 255, 0.04));
+    --rule: light-dark(var(--color-border-soft), rgba(255, 255, 255, 0.12));
     --tw-prose-th-borders: var(--rule);
     --tw-prose-td-borders: var(--rule);
-    :where(html.dark-mode) & {
-      --tw-prose-links: var(--color-blue);
-      --tw-prose-pre-bg: rgba(255, 255, 255, 0.04);
-      --rule: rgba(255, 255, 255, 0.12);
-    }
 
     & h1 {
       font-size: clamp(1.7rem, 6vw, 2.2rem);
@@ -62,12 +57,9 @@
     & :not(pre) > code {
       border-radius: 0.25rem;
       font-size: 0.9em;
-      background-color: rgba(6, 3, 141, 0.08);
+      background-color: light-dark(rgba(6, 3, 141, 0.08), rgba(76, 125, 255, 0.12));
       padding: 0.1em 0.35em;
       overflow-wrap: anywhere;
-      :where(html.dark-mode) & {
-        background-color: rgba(76, 125, 255, 0.12);
-      }
     }
     & pre {
       border: 1px solid var(--rule);
@@ -80,10 +72,7 @@
     /* The same pair as .subTitle in global.css. */
     & th {
       white-space: nowrap;
-      color: var(--color-subtitle);
-      :where(html.dark-mode) & {
-        color: rgba(255, 255, 255, 0.65);
-      }
+      color: light-dark(var(--color-subtitle), rgba(255, 255, 255, 0.65));
     }
     /* Chips never break mid-identifier; the table scrolls instead. */
     & td code {

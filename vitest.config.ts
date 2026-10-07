@@ -5,7 +5,7 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
 // The Workers pool has no filesystem and Vite swallows `?raw` for CSS, so read
-// the stylesheets on the host and inline them for src/styles/*.test.ts.
+// the stylesheets on the host and inline them for src/styles/*.test.{ts,tsx}.
 const islandsCss = readFileSync("./src/styles/islands.css", "utf8");
 const globalCss = readFileSync("./src/styles/global.css", "utf8");
 
@@ -14,6 +14,10 @@ const globalCss = readFileSync("./src/styles/global.css", "utf8");
 const d1Migrations = await readD1Migrations("./migrations");
 
 export default defineConfig({
+  define: {
+    __ISLANDS_CSS__: JSON.stringify(islandsCss),
+    __GLOBAL_CSS__: JSON.stringify(globalCss)
+  },
   test: {
     // 0 stops truncating `$field` values in it.each titles (and in failure messages).
     chaiConfig: { truncateThreshold: 0 },
@@ -28,11 +32,7 @@ export default defineConfig({
     projects: [
       {
         extends: true,
-        define: {
-          __ISLANDS_CSS__: JSON.stringify(islandsCss),
-          __GLOBAL_CSS__: JSON.stringify(globalCss),
-          __D1_MIGRATIONS__: JSON.stringify(d1Migrations)
-        },
+        define: { __D1_MIGRATIONS__: JSON.stringify(d1Migrations) },
         plugins: [cloudflareTest({ wrangler: { configPath: "./worker/test/wrangler.jsonc" } })],
         test: {
           name: "workers",
@@ -46,7 +46,8 @@ export default defineConfig({
         extends: true,
         test: { name: "node", environment: "node", include: ["scripts/**/*.test.ts"] }
       },
-      // React islands need a real DOM, media elements and layout, which workerd lacks.
+      // React islands and the stylesheet test need a real DOM, media elements and
+      // layout, which workerd lacks.
       {
         extends: true,
         test: {
