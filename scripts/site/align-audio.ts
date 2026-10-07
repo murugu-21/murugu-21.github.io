@@ -22,9 +22,8 @@ import {
   runEach
 } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
-import { AUDIO_PREFIX } from "#contracts/audio.ts";
-import { r2Store } from "./tts/r2.ts";
-import { alignBlock, whisperClient } from "./tts/align.ts";
+import { audioKey, r2Store } from "./tts/r2.ts";
+import { type WhisperClient, alignBlock, whisperClient } from "./tts/align.ts";
 import { StoredTimings, type StoredBlock } from "./tts/timings.ts";
 
 const WORKER = join(import.meta.dirname, "tts", "whisper.py");
@@ -32,10 +31,8 @@ const WORKER = join(import.meta.dirname, "tts", "whisper.py");
 const options = alignArgs(process.argv.slice(2));
 const r2 = r2Store(options.local);
 
-type Worker = ReturnType<typeof whisperClient>;
-
-async function alignPost(slug: string, worker: Worker) {
-  const stored = r2.get(`${AUDIO_PREFIX}/${slug}.json`);
+async function alignPost(slug: string, worker: WhisperClient) {
+  const stored = r2.get(audioKey(slug, "json"));
   if (!stored) {
     console.log(`${slug}: no audio in R2, skipping`);
     return;
@@ -45,7 +42,7 @@ async function alignPost(slug: string, worker: Worker) {
     console.log(`${slug}: already aligned, skipping`);
     return;
   }
-  const mp3Body = r2.get(`${AUDIO_PREFIX}/${slug}.mp3`);
+  const mp3Body = r2.get(audioKey(slug, "mp3"));
   if (!mp3Body) throw new Error("mp3 missing in R2");
 
   using tmp = mkdtempDisposableSync(join(tmpdir(), `align-${slug}-`));
@@ -66,7 +63,7 @@ async function alignPost(slug: string, worker: Worker) {
 
   const jsonPath = join(tmp.path, "timings.json");
   writeFileSync(jsonPath, JSON.stringify({ ...timings, version: 2, blocks }));
-  r2.put({ key: `${AUDIO_PREFIX}/${slug}.json`, file: jsonPath, contentType: "application/json" });
+  r2.put({ key: audioKey(slug, "json"), file: jsonPath, contentType: "application/json" });
   const aligned = blocks.filter(block => block.words).length;
   console.log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
 }

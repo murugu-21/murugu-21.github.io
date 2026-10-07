@@ -14,18 +14,9 @@ const ATS_REQUIRED_TOKENS = [
   "$300k"
 ];
 
-// `pageCount` is null when the PDF's info can't be read; returns the log line.
-export function checkResume({
-  path,
-  bytes,
-  text,
-  pageCount
-}: {
-  path: string;
-  bytes: number;
-  text: string;
-  pageCount: number | null;
-}): string {
+// `pageCount` is null when the PDF's info can't be read. Returns how many
+// tokens it found.
+export function checkResume({ text, pageCount }: { text: string; pageCount: number | null }) {
   const missing = ATS_REQUIRED_TOKENS.filter(token => !text.includes(token));
   if (missing.length > 0) {
     throw new Error(
@@ -36,8 +27,5 @@ export function checkResume({
   if (pageCount !== null && pageCount > MAX_PAGES) {
     throw new Error(`page gate FAILED: ${pageCount} pages (max ${MAX_PAGES})`);
   }
-  return (
-    `[generate-resume] wrote ${path} (${(bytes / 1024).toFixed(1)} KB, ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"}); ` +
-    `ATS gate passed, all ${ATS_REQUIRED_TOKENS.length} required tokens found`
-  );
+  return ATS_REQUIRED_TOKENS.length;
 }

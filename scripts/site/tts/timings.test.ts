@@ -12,9 +12,8 @@ import {
 import { pcmSeconds, splice } from "./wav.ts";
 
 describe("storedHash", () => {
-  it("reads the hash a stored render recorded, and none from a missing or malformed object", () => {
+  it("reads the hash a stored render recorded, and none from a malformed object", () => {
     expect(storedHash('{"version":1,"hash":"9f2c"}')).toBe("9f2c");
-    expect(storedHash(null)).toBe(null);
     expect(storedHash("<html>Not Found</html>")).toBe(null);
   });
 });
@@ -72,13 +71,21 @@ describe("patching stored timings", () => {
             { w: "middle.", s: 0.006, e: 0.007 }
           ]
         },
-        { text: "Outro.", start: 0.008, end: 0.01, words: [{ w: "Outro.", s: 0.008, e: 0.01 }] }
+        {
+          text: "Out ro.",
+          start: 0.008,
+          end: 0.01,
+          words: [
+            { w: "Out", s: 0.008, e: 0.009 },
+            { w: "ro.", s: 0.009, e: 0.01 }
+          ]
+        }
       ]
     })
   );
 
   it("re-times a longer block, drops its words and shifts the words after it", () => {
-    const texts = ["Intro.", "New, longer middle.", "Outro."];
+    const texts = ["Intro.", "New, longer middle.", "Out ro."];
     const changed = changedBlocks({ slug: "react", stored, texts });
     expect(changed).toEqual([1]);
 
@@ -107,13 +114,21 @@ describe("patching stored timings", () => {
       blocks: [
         { text: "Intro.", start: 0, end: 0.003, words: [{ w: "Intro.", s: 0, e: 0.003 }] },
         { text: "New, longer middle.", start: 0.005, end: 0.009 },
-        { text: "Outro.", start: 0.01, end: 0.012, words: [{ w: "Outro.", s: 0.01, e: 0.012 }] }
+        {
+          text: "Out ro.",
+          start: 0.01,
+          end: 0.012,
+          words: [
+            { w: "Out", s: 0.01, e: 0.011 },
+            { w: "ro.", s: 0.011, e: 0.012 }
+          ]
+        }
       ]
     });
   });
 
   it("refuses a post whose paragraph count changed", () => {
-    expect(() => changedBlocks({ slug: "react", stored, texts: ["Intro.", "Outro."] })).toThrow(
+    expect(() => changedBlocks({ slug: "react", stored, texts: ["Intro.", "Out ro."] })).toThrow(
       "block count changed (3 → 2); run `bun run audio react --force`"
     );
   });

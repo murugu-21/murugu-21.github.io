@@ -12,7 +12,7 @@ lines.on("line", line => {
 });
 `;
 
-it("talks JSON lines to a real child process and waits for it to exit on close", async () => {
+it("talks JSON lines to a real child process and closes it with quit", async () => {
   const worker = startJsonLines(process.execPath, ["-e", ECHO_WORKER]);
   worker.send("/tmp/job-1.json");
   worker.send("/tmp/job-2.json");

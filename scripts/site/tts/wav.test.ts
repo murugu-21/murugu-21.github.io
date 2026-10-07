@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Buffer } from "node:buffer";
 
-import { assemble, pcmSeconds, readWav, splice, writeWav } from "./wav.ts";
+import { assemble, pcmSeconds, readWav, sharedSampleRate, splice, writeWav } from "./wav.ts";
 
 const SR = 8000;
 const tone = (seconds: number) => {
@@ -76,5 +76,23 @@ describe("splice", () => {
       { start: 0.005, end: 0.009 },
       { start: 0.01, end: 0.011 }
     ]);
+  });
+});
+
+describe("sharedSampleRate", () => {
+  it("returns the rate every chunk shares, and names the first chunk that differs", () => {
+    expect(
+      sharedSampleRate([
+        { id: "b000-c00", sampleRate: 24000 },
+        { id: "b001-c00", sampleRate: 24000 }
+      ])
+    ).toBe(24000);
+    expect(() =>
+      sharedSampleRate([
+        { id: "b000-c00", sampleRate: 24000 },
+        { id: "b001-c00", sampleRate: 22050 }
+      ])
+    ).toThrow("sample rate mismatch in b001-c00");
+    expect(() => sharedSampleRate([])).toThrow("no chunks rendered");
   });
 });

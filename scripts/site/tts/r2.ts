@@ -6,12 +6,15 @@ import { spawnSync } from "node:child_process";
 
 import { z } from "zod";
 
+import { AUDIO_PREFIX } from "#contracts/audio.ts";
 import { jsonString } from "#utils/json.ts";
 import { run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";
 // The voice reference the clones are made from; never served.
 export const VOICE_PREFIX = "voice/breeze";
+
+export const audioKey = (slug: string, ext: "mp3" | "json") => `${AUDIO_PREFIX}/${slug}.${ext}`;
 
 // `cf r2 objects get` writes the body to stdout; spawnSync's 1 MB default
 // would truncate a post's audio.

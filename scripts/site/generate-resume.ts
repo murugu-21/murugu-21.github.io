@@ -51,6 +51,9 @@ const { text } = await parser.getText();
 const info = await parser.getInfo().catch(() => null);
 await parser.destroy();
 
+const pageCount = info?.total ?? null;
+const tokens = checkResume({ text, pageCount });
 console.log(
-  checkResume({ path: OUT_PATH, bytes: buffer.length, text, pageCount: info?.total ?? null })
+  `[generate-resume] wrote ${OUT_PATH} (${(buffer.length / 1024).toFixed(1)} KB, ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"}); ` +
+    `ATS gate passed, all ${tokens} required tokens found`
 );

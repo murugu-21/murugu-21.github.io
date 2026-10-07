@@ -2,7 +2,7 @@ import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { jsonLines } from "./json-lines.ts";
-import { chunkBlock, postBlocks, sharedSampleRate, synthClient } from "./synth.ts";
+import { chunkBlock, postBlocks, synthClient } from "./synth.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -40,24 +40,6 @@ describe("chunkBlock", () => {
       { id: "b007-c00", text: long("One") },
       { id: "b007-c01", text: `${long("Two")} Done.` }
     ]);
-  });
-});
-
-describe("sharedSampleRate", () => {
-  it("returns the rate every chunk shares, and names the first chunk that differs", () => {
-    expect(
-      sharedSampleRate([
-        { id: "b000-c00", sampleRate: 24000 },
-        { id: "b001-c00", sampleRate: 24000 }
-      ])
-    ).toBe(24000);
-    expect(() =>
-      sharedSampleRate([
-        { id: "b000-c00", sampleRate: 24000 },
-        { id: "b001-c00", sampleRate: 22050 }
-      ])
-    ).toThrow("sample rate mismatch in b001-c00");
-    expect(() => sharedSampleRate([])).toThrow("no chunks rendered");
   });
 });
 

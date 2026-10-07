@@ -44,16 +44,8 @@ import {
   runEach
 } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
-import { AUDIO_PREFIX } from "#contracts/audio.ts";
-import { VOICE_PREFIX, r2Store } from "./tts/r2.ts";
-import {
-  type Chunk,
-  type SynthClient,
-  chunkBlock,
-  postBlocks,
-  sharedSampleRate,
-  synthClient
-} from "./tts/synth.ts";
+import { VOICE_PREFIX, audioKey, r2Store } from "./tts/r2.ts";
+import { type Chunk, type SynthClient, chunkBlock, postBlocks, synthClient } from "./tts/synth.ts";
 import {
   StoredTimings,
   changedBlocks,
@@ -62,7 +54,7 @@ import {
   round3,
   storedHash
 } from "./tts/timings.ts";
-import { assemble, pcmSeconds, readWav, splice, writeWav } from "./tts/wav.ts";
+import { assemble, pcmSeconds, readWav, sharedSampleRate, splice, writeWav } from "./tts/wav.ts";
 import { ROOT } from "./site-dir.ts";
 
 // Env overrides are for A/B renders, not production.
@@ -83,10 +75,9 @@ const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1
 
 const options = audioArgs(process.argv.slice(2));
 const r2 = r2Store(options.local);
-const stored = (slug: string, ext: "mp3" | "json") => r2.get(`${AUDIO_PREFIX}/${slug}.${ext}`);
 function upload({ slug, mp3, json }: { slug: string; mp3: string; json: string }) {
-  r2.put({ key: `${AUDIO_PREFIX}/${slug}.mp3`, file: mp3, contentType: "audio/mpeg" });
-  r2.put({ key: `${AUDIO_PREFIX}/${slug}.json`, file: json, contentType: "application/json" });
+  r2.put({ key: audioKey(slug, "mp3"), file: mp3, contentType: "audio/mpeg" });
+  r2.put({ key: audioKey(slug, "json"), file: json, contentType: "application/json" });
 }
 
 type Reference = { audio: string; text: string };
@@ -149,7 +140,8 @@ async function synthesize({
 async function renderPost(slug: string, worker: SynthClient | null, reference: Reference) {
   const blocks = extractBlocks(slug);
   const hash = await spokenHash(blocks);
-  if (!options.force && storedHash(stored(slug, "json")?.toString() ?? null) === hash) {
+  const storedJson = options.force ? null : r2.get(audioKey(slug, "json"));
+  if (storedJson && storedHash(storedJson.toString()) === hash) {
     console.log(`${slug}: unchanged, skipping`);
     return;
   }
@@ -232,7 +224,7 @@ function levelBlock({
 
 async function patchPost(slug: string, worker: SynthClient | null, reference: Reference) {
   const blocks = extractBlocks(slug);
-  const storedJson = stored(slug, "json");
+  const storedJson = r2.get(audioKey(slug, "json"));
   if (!storedJson) {
     console.log(`${slug}: no audio in R2 to patch, skipping; run \`bun run audio ${slug}\``);
     return;
@@ -249,7 +241,7 @@ async function patchPost(slug: string, worker: SynthClient | null, reference: Re
   }
   if (!worker) return;
 
-  const storedMp3 = stored(slug, "mp3");
+  const storedMp3 = r2.get(audioKey(slug, "mp3"));
   if (!storedMp3) throw new Error("timings in R2 but no MP3");
   const tmp = mkdtempSync(join(tmpdir(), `audio-${slug}-patch-`));
   const backup = join(tmp, "backup");

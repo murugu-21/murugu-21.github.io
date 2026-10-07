@@ -21,6 +21,8 @@ export function whisperClient({ next, send, close }: JsonLines) {
   };
 }
 
+export type WhisperClient = ReturnType<typeof whisperClient>;
+
 // A block whisper failed on, or matched poorly, keeps no `words` (paragraph
 // highlight only), and `problem` says why.
 export function alignBlock(
