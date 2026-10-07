@@ -1,6 +1,5 @@
 // Jarvis chat island, shared by the portfolio and blog via ChatWidget.astro.
 import React, { Suspense, useEffect, useRef, useState } from "react";
-import { PUBLIC_CHAT_HOST } from "astro:env/client";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { useAgent } from "agents/react";
 import { safeValidateUIMessages } from "ai";
@@ -385,15 +384,21 @@ function ChatPanel({
   );
 }
 
-type SessionProps = { room: string; open: boolean; onClose: () => void; onRestart: () => void };
+type SessionProps = {
+  room: string;
+  host: string;
+  open: boolean;
+  onClose: () => void;
+  onRestart: () => void;
+};
 
 // Owns the room's socket, so it stays mounted while the panel is closed.
-function ChatSession({ room, open, onClose, onRestart }: SessionProps) {
+function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
   const [awaitingReply, setAwaitingReply] = useState(false);
   const agent = useAgent({
     agent: "chat-room",
     name: room,
-    host: PUBLIC_CHAT_HOST || window.location.host
+    host
   });
   const { messages, sendMessage, status, isServerStreaming } = useAgentChat<unknown, JarvisMessage>(
     {
@@ -452,7 +457,8 @@ function ChatSession({ room, open, onClose, onRestart }: SessionProps) {
   );
 }
 
-export function ChatWidget() {
+// `host` is PUBLIC_CHAT_HOST; unset means the page's own origin.
+export function ChatWidget({ host }: { host?: string }) {
   const [open, setOpen] = useState(false);
   // Read from localStorage on first open, so the server render never needs it.
   const [room, setRoom] = useState<string | null>(null);
@@ -546,6 +552,7 @@ export function ChatWidget() {
           <ChatSession
             key={room}
             room={room}
+            host={host || window.location.host}
             open={open}
             onClose={toggleOpen}
             onRestart={restart}
