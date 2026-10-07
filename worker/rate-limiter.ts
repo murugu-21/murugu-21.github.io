@@ -4,7 +4,7 @@ import { z } from "zod";
 import { fetchDeepseekBalance, type DeepseekBalance } from "./ai";
 // Limits live in api/contact.ts so the Astro bundle can quote them without
 // importing `cloudflare:workers`.
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./api/contact";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
 
 // Chat is gated on the real DeepSeek balance. The reserve keeps the last
 // exchange from running out mid-reply.

@@ -1,7 +1,7 @@
 // Renders the X profile banners from brand/x-cover.html: both themes, 1x
 // (1500x500) and 2x. Not part of the site build.
 //
-//   bun scripts/render-x-cover.ts
+//   bun scripts/site/render-x-cover.ts
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 

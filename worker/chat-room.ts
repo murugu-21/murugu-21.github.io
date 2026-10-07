@@ -16,18 +16,18 @@ import { readAsset } from "./api/store";
 import { contactMailer, sendOpportunityEmail } from "./email";
 import { fetchSitePage } from "./fetch-page";
 import { jsonString, lenient } from "#utils/json.ts";
+import { messageText } from "#utils/ui-message.ts";
 import { buildMessages, jarvisTools, ROOM_DAILY_LIMIT, type Lead } from "./prompt";
 import {
   ERROR_NOTICE,
-  fetchActivity,
   LIMIT_NOTICE,
   MAX_MESSAGE_LENGTH,
-  messageText,
-  parseVisitorContext,
+  type Activity,
   type ChatHistoryEntry,
   type JarvisMessage,
   type Notice
-} from "./protocol";
+} from "#contracts/chat.ts";
+import { parseVisitorContext } from "./visitor";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -407,5 +407,14 @@ export class ChatRoom extends AIChatAgent<Env> {
     this.ctx.waitUntil(
       statement.run().catch((err: unknown) => console.error("d1 mirror failed", err))
     );
+  }
+}
+
+// Only a page fetch has a detail. A capture's input is the visitor's name and contact details.
+export function fetchActivity(url: string): Activity {
+  try {
+    return { name: "fetch_page", detail: new URL(url).pathname };
+  } catch {
+    return { name: "fetch_page" };
   }
 }

@@ -33,8 +33,8 @@ function svgSize(svg: string): { width: number; height: number } | undefined {
 
 // Renders every missing diagram, not just this post's; a no-op when none are.
 function renderMissing(): void {
-  const result = spawnSync("bun", ["scripts/render-mermaid.ts"], { stdio: "inherit" });
-  if (result.status !== 0) throw new Error("remark-mermaid: scripts/render-mermaid.ts failed");
+  const result = spawnSync("bun", ["scripts/site/render-mermaid.ts"], { stdio: "inherit" });
+  if (result.status !== 0) throw new Error("remark-mermaid: scripts/site/render-mermaid.ts failed");
 }
 
 export default function remarkMermaid() {

@@ -1,5 +1,5 @@
 // Read-aloud controls for a blog post. Prefers pre-rendered audio from
-// /blog/audio/<slug>.{json,mp3} (scripts/generate-audio.ts); falls back to
+// /blog/audio/<slug>.{json,mp3} (scripts/site/generate-audio.ts); falls back to
 // browser speech synthesis when that is missing (new post, astro dev has no
 // Worker) or fails.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";

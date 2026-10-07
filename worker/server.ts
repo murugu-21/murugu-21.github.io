@@ -6,7 +6,7 @@ import { audio } from "./audio";
 import { ChatRoom } from "./chat-room";
 import { mcp } from "./mcp";
 import { serveAsset } from "./not-found";
-import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "./protocol";
+import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "./visitor";
 import { RateLimiter } from "./rate-limiter";
 import { mcpManifest, wellKnown } from "./well-known";
 

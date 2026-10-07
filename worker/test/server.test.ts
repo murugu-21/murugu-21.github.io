@@ -6,7 +6,7 @@ import { assert, beforeEach, describe, expect, it } from "vitest";
 import { parseRange } from "#worker/audio.ts";
 import { ChatRoom } from "#worker/chat-room.ts";
 import { markdownNotFound, prefersMarkdown, serveAsset } from "#worker/not-found.ts";
-import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/protocol.ts";
+import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/visitor.ts";
 import worker from "#worker/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,

@@ -13,7 +13,7 @@ blue-hour sky, in the site's own tokens.
 Regenerate after editing the source:
 
 ```sh
-bun scripts/render-x-cover.ts
+bun scripts/site/render-x-cover.ts
 ```
 
 `x-cover.html` is one self-contained page. It renders the night sky by default

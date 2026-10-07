@@ -1,13 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { MCP_TOOLS } from "#worker/mcp/tools.ts";
-import {
-  buildApiCatalog,
-  buildMcpManifest,
-  LINKSET_MEDIA_TYPE,
-  MCP_SERVER_NAME
-} from "#worker/well-known.ts";
+import { MCP_TOOLS } from "#contracts/mcp.ts";
+import { buildApiCatalog, buildMcpManifest } from "#worker/well-known.ts";
 import { fetchWorker, readJson } from "./fixtures";
 
 describe("buildApiCatalog", () => {
@@ -76,7 +71,7 @@ describe("/.well-known/api-catalog", () => {
   it("is served cross-origin with the RFC 9727 media type", async () => {
     const res = await fetchWorker("/.well-known/api-catalog");
     expect(res.status).toBe(200);
-    expect(res.headers.get("Content-Type")).toBe(`${LINKSET_MEDIA_TYPE}; charset=utf-8`);
+    expect(res.headers.get("Content-Type")).toBe("application/linkset+json; charset=utf-8");
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
   });
 
@@ -99,7 +94,9 @@ describe("the MCP manifest endpoint", () => {
     const res = await fetchWorker(path);
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    expect((await readJson(res, z.object({ name: z.string() }))).name).toBe(MCP_SERVER_NAME);
+    expect((await readJson(res, z.object({ name: z.string() }))).name).toBe(
+      "dev.murugappan/murugappan-dev"
+    );
   });
 
   it("names the host that answered", async () => {

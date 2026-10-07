@@ -357,7 +357,7 @@
   }
 
   /* Backdrop for labels outside node boxes; matches the background
-     scripts/render-mermaid.ts bakes into the SVG. */
+     scripts/site/render-mermaid.ts bakes into the SVG. */
   .blog-post .mermaid-diagram img {
     display: inline;
     vertical-align: baseline;

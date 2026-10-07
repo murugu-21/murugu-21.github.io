@@ -5,8 +5,10 @@
     "src/**/*",
     "scripts/**/*",
     "utils/**/*",
+    "contracts/**/*",
     "astro.config.ts",
     "commitlint.config.ts",
+    "oxlint.config.ts",
     "cloudflare.config.ts",
     "vitest.config.ts"
   ],

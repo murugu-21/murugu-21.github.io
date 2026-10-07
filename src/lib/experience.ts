@@ -16,7 +16,6 @@ interface RoleLike {
   location: string;
 }
 
-// Mirrors worker/api/dataset.ts parsePeriod: en dash, em dash or hyphen.
 const RANGE_SEPARATOR = /\s+[–—-]\s+/;
 
 function spanOf(roles: RoleLike[]): string {
@@ -82,14 +81,49 @@ function parseMonth(label: string): YearMonth | null {
   return { year: Number(m[2]), month };
 }
 
-export function periodBounds(period: string): { start: YearMonth; end: YearMonth | null } | null {
+/**
+ * null unless the period has two parts and its start parses. `end` is null when the period is
+ * open-ended or its end doesn't parse.
+ */
+function splitPeriod(
+  period: string
+): { start: YearMonth; end: YearMonth | null; openEnded: boolean } | null {
   const parts = period.split(RANGE_SEPARATOR);
   if (parts.length !== 2) return null;
   const start = parseMonth(parts[0]);
   if (!start) return null;
-  if (OPEN_ENDED.test(parts[1].trim())) return { start, end: null };
-  const end = parseMonth(parts[1]);
-  return end ? { start, end } : null;
+  if (OPEN_ENDED.test(parts[1].trim())) return { start, end: null, openEnded: true };
+  return { start, end: parseMonth(parts[1]), openEnded: false };
+}
+
+/** null when either end fails to parse; `end` is null only for an open-ended period. */
+export function periodBounds(period: string): { start: YearMonth; end: YearMonth | null } | null {
+  const split = splitPeriod(period);
+  if (!split) return null;
+  if (split.openEnded) return { start: split.start, end: null };
+  return split.end ? { start: split.start, end: split.end } : null;
+}
+
+const isoMonth = ({ year, month }: YearMonth) =>
+  `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
+
+/**
+ * ISO 8601 year-months for the API. A start that doesn't parse yields nulls throughout, because
+ * a wrong date is worse for an agent than an absent one. Unlike periodBounds, a parsed start
+ * survives an end that doesn't parse ("June 2019 – sometime" keeps 2019-06).
+ */
+export function parsePeriod(period: string): {
+  startDate: string | null;
+  endDate: string | null;
+  current: boolean;
+} {
+  const split = splitPeriod(period);
+  if (!split) return { startDate: null, endDate: null, current: false };
+  return {
+    startDate: isoMonth(split.start),
+    endDate: split.end ? isoMonth(split.end) : null,
+    current: split.openEnded
+  };
 }
 
 export function currentMonth(now = new Date()): YearMonth {

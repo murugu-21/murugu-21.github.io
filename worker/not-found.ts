@@ -2,7 +2,7 @@
 // entry points for everything else. Relies on `notFoundHandling: "none"`
 // (cloudflare.config.ts) so misses reach the Worker, which fetches the 404 page itself.
 
-import { API_PATHS, VERSIONED_API_BASE } from "./api/routes";
+import { API_PATHS, VERSIONED_API_BASE } from "#contracts/api/routes.ts";
 
 const SITE_ORIGIN = "https://murugappan.dev";
 

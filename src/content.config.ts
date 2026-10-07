@@ -3,8 +3,9 @@ import { z } from "astro/zod";
 import { glob } from "astro/loaders";
 
 // Controlled tag vocabulary (the index's filter chips): broad, recurring
-// reader intents only; precise terms go in `keywords`. Keep in sync with the
-// README's "Tag vocabulary". Lowercase, kebab-case, singular, 1-3 per post.
+// reader intents only; precise terms go in `keywords`. Keep in sync with
+// "Tag vocabulary" in content/blog/README.md. Lowercase, kebab-case,
+// singular, 1-3 per post.
 const BLOG_TAGS = [
   "ai",
   "algorithms",
