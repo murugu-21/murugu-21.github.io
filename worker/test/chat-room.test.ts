@@ -103,11 +103,11 @@ async function storedMessages(room: string) {
   return (await readJson(res, StoredMessages)).map(m => ({ role: m.role, parts: m.parts }));
 }
 
-function modelStream(parts: LanguageModelV4StreamPart[], delayMs = 0) {
+function modelStream(parts: LanguageModelV4StreamPart[], held: Promise<void> = Promise.resolve()) {
   return {
     stream: new ReadableStream<LanguageModelV4StreamPart>({
       async start(controller) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await held;
         for (const part of parts) controller.enqueue(part);
         controller.close();
       }
@@ -122,7 +122,7 @@ const USAGE = {
 
 // A factory, so the stream is built inside the room: workerd forbids one Durable
 // Object reading a stream created in another context.
-const textStep = (text: string, delayMs?: number) => () =>
+const textStep = (text: string, held?: Promise<void>) => () =>
   modelStream(
     [
       { type: "text-start", id: "t1" },
@@ -130,7 +130,7 @@ const textStep = (text: string, delayMs?: number) => () =>
       { type: "text-end", id: "t1" },
       { type: "finish", usage: USAGE, finishReason: { unified: "stop", raw: "stop" } }
     ],
-    delayMs
+    held
   );
 
 /** A model that plays one scripted step per call. */
@@ -299,14 +299,17 @@ describe("a chat turn", () => {
     await fundChat();
     const a = await openRoom("room-overlap");
     const b = await openRoom("room-overlap");
-    // Slow enough that tab B's message lands mid-turn.
-    await scriptRoom(a.stub, scriptedModel(textStep("First.", 300)));
+    // Tab A's turn stays open until tab B has been refused.
+    let release = () => {};
+    const held = new Promise<void>(resolve => (release = resolve));
+    await scriptRoom(a.stub, scriptedModel(textStep("First.", held)));
 
     a.socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "first" })] }));
     await vi.waitFor(() => assert(b.frames.length > 2, "tab B hasn't seen the turn start"));
     b.socket.send(chatRequest({ id: "r2", messages: [userMessage({ id: "u2", text: "second" })] }));
     expect(replyText(await streamedChunks(b.frames, "r2"))).toBe("");
 
+    release();
     expect(replyText(await streamedChunks(a.frames, "r1"))).toBe("First.");
     expect(await storedMessages("room-overlap")).toEqual([
       { role: "user", parts: [{ type: "text", text: "first" }] },
