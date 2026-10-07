@@ -4,6 +4,7 @@ import { preview } from "astro";
 import { PDFParse } from "pdf-parse";
 
 import { launchBrowser } from "./launch-browser.ts";
+import { checkResume } from "./resume-gate.ts";
 import { ROOT, SITE_DIR } from "./site-dir.ts";
 
 // Prints /resume to resume.pdf in the built site. Runs last from astro.config.ts,
@@ -17,21 +18,6 @@ const OUT_PATH = join(DIST_DIR, "resume.pdf");
 // the requested port even after falling back to another. Avoids dev and preview
 // on 4321/4322.
 const PREVIEW_PORT = 4398;
-
-// ATS gate. The build fails unless each token is in the PDF's extracted text.
-const MAX_PAGES = 2;
-
-const ATS_REQUIRED_TOKENS = [
-  "Murugappan M",
-  "murugu2001@gmail.com",
-  "PROFESSIONAL SUMMARY",
-  "SKILLS",
-  "EXPERIENCE",
-  "EDUCATION",
-  "Software Engineer II",
-  "95%+",
-  "$300k"
-];
 
 // A separate function, so the server and browser close before the gate reads the PDF.
 async function printResume(): Promise<void> {
@@ -65,18 +51,6 @@ const { text } = await parser.getText();
 const info = await parser.getInfo().catch(() => null);
 await parser.destroy();
 
-const missing = ATS_REQUIRED_TOKENS.filter(token => !text.includes(token));
-if (missing.length > 0) {
-  throw new Error(
-    `ATS gate FAILED: missing tokens ${missing.map(t => JSON.stringify(t)).join(", ")}`
-  );
-}
-const pageCount = info?.total ?? null;
-// @sparticuz's fallback fonts are wider than local Chrome's, so overflow can be CI-only.
-if (pageCount !== null && pageCount > MAX_PAGES) {
-  throw new Error(`page gate FAILED: ${pageCount} pages (max ${MAX_PAGES})`);
-}
 console.log(
-  `[generate-resume] wrote ${OUT_PATH} (${(buffer.length / 1024).toFixed(1)} KB, ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"}); ` +
-    `ATS gate passed, all ${ATS_REQUIRED_TOKENS.length} required tokens found`
+  checkResume({ path: OUT_PATH, bytes: buffer.length, text, pageCount: info?.total ?? null })
 );
