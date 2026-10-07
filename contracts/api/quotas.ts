@@ -1,9 +1,6 @@
-// draft-ietf-httpapi-ratelimit-headers fields (RFC 9651 syntax), plus the de-facto X-RateLimit-*
-// trio that most tooling reads (`-Reset` is delta-seconds):
+// The published quotas, advertised as a draft-ietf-httpapi-ratelimit-headers field (RFC 9651):
 //   RateLimit-Policy: "name";q=<quota>;w=<window seconds>   (a list)
-//   RateLimit:        "name";r=<remaining>;t=<seconds to reset>  (the policy closest to exhaustion)
-// The published quotas. worker/api/ratelimit.ts counts against them: reads per edge,
-// contact in the RateLimiter DO.
+// worker/api/ratelimit.ts counts against them: reads per edge, contact in the RateLimiter DO.
 
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./contact";
 

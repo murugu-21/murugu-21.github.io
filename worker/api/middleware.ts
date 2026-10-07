@@ -6,8 +6,8 @@ import { basePath } from "hono/route";
 
 import { apiError } from "#contracts/api/errors.ts";
 import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "#contracts/api/quotas.ts";
-import { readRateLimitHeaders, takeReadSlot } from "./ratelimit";
 import { versionHeaders, versionLinkHeader } from "#contracts/api/versioning.ts";
+import { readRateLimitHeaders, takeReadSlot } from "./ratelimit";
 
 type ApiHeaderOptions = {
   /** False for the OpenAPI document, because a throttled client must still be able to learn why. */

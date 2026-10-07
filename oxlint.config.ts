@@ -1,9 +1,9 @@
 import { defineConfig, type OxlintOverride } from "oxlint";
 
-type Pattern = { regex: string; message: string };
+type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 
 // The top-level folders are the packages a monorepo would split this repo into (README ›
-// Layers). A layer imports itself and the layers in `uses`, through their subpath imports;
+// Layers). A layer imports itself and the layers in `uses`, through their `#<dir>` subpath imports;
 // import/no-relative-parent-imports stops `../` from going around them.
 const LAYER_NAMES = [
   "site",
@@ -15,47 +15,43 @@ const LAYER_NAMES = [
   "utils"
 ] as const;
 type LayerName = (typeof LAYER_NAMES)[number];
-type Layer = { dir: string; alias: string; uses: LayerName[]; also?: Pattern[] };
+type Layer = { dir: string; uses: LayerName[]; also?: Pattern[] };
 
 const LAYERS: Record<LayerName, Layer> = {
-  site: { dir: "src/", alias: "#src/", uses: ["contracts", "utils"] },
-  worker: { dir: "worker/", alias: "#worker/", uses: ["contracts", "utils"] },
-  siteScripts: {
-    dir: "scripts/site/",
-    alias: "#scripts/site/",
-    uses: ["site", "contracts", "utils"]
-  },
-  workerScripts: {
-    dir: "scripts/worker/",
-    alias: "#scripts/worker/",
-    uses: ["worker", "contracts", "utils"]
-  },
-  lintScripts: { dir: "scripts/lint/", alias: "#scripts/lint/", uses: [] },
+  site: { dir: "src/", uses: ["contracts", "utils"] },
+  worker: { dir: "worker/", uses: ["contracts", "utils"] },
+  siteScripts: { dir: "scripts/site/", uses: ["site", "contracts", "utils"] },
+  workerScripts: { dir: "scripts/worker/", uses: ["worker", "contracts", "utils"] },
+  lintScripts: { dir: "scripts/lint/", uses: [] },
   contracts: {
     dir: "contracts/",
-    alias: "#contracts/",
     uses: ["utils"],
     // Contracts reach both the browser bundle and the Worker, so they take no framework.
     also: [
       {
         regex:
-          "^(astro|@astrojs/|hono|agents|@cloudflare/|cloudflare:|react|@modelcontextprotocol/)",
+          "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)",
+        allowTypeImports: true,
         message:
-          "Contracts are runtime-free: zod schemas, types, constants and pure functions. Keep framework and Worker code in src/ or worker/ (README › Layers)."
+          "Contracts are framework-free: zod schemas, types, constants and pure functions (type imports are fine). Keep framework and Worker code in src/ or worker/ (README › Layers)."
       }
     ]
   },
-  utils: { dir: "utils/", alias: "#utils/", uses: [] }
+  utils: { dir: "utils/", uses: [] }
 };
 
-function layerPattern(name: LayerName): Pattern {
+const alias = (name: LayerName) => `#${LAYERS[name].dir}`;
+
+function layerPatterns(name: LayerName): Pattern[] {
   const allowed = new Set<LayerName>([name, ...LAYERS[name].uses]);
-  const banned = LAYER_NAMES.filter(other => !allowed.has(other)).map(n => LAYERS[n].alias);
-  const reachable = [...allowed].map(n => LAYERS[n].alias).join(", ");
-  return {
-    regex: `^(${banned.join("|")})`,
-    message: `${LAYERS[name].dir} imports only ${reachable} (README › Layers). Move code both sides need to contracts/ or utils/.`
-  };
+  const banned = LAYER_NAMES.filter(other => !allowed.has(other)).map(alias);
+  if (banned.length === 0) return [];
+  return [
+    {
+      regex: `^(${banned.join("|")})`,
+      message: `${LAYERS[name].dir} imports only ${[...allowed].map(alias).join(", ")} (README › Layers). Move code both sides need to contracts/ or utils/.`
+    }
+  ];
 }
 
 // A file gets the options of the last override that matches it, so each one carries every
@@ -65,7 +61,7 @@ const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
   rules: { "no-restricted-imports": ["error", { patterns }] }
 });
 
-const SITE = layerPattern("site");
+const SITE = layerPatterns("site");
 
 export default defineConfig({
   plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
@@ -105,7 +101,7 @@ export default defineConfig({
   },
   overrides: [
     ...LAYER_NAMES.map(name =>
-      restrict([`${LAYERS[name].dir}**`], [layerPattern(name), ...(LAYERS[name].also ?? [])])
+      restrict([`${LAYERS[name].dir}**`], [...layerPatterns(name), ...(LAYERS[name].also ?? [])])
     ),
     // Shared code serves every page, so it can't reach into a page area's folder.
     restrict(
@@ -119,7 +115,7 @@ export default defineConfig({
         "src/directives/**"
       ],
       [
-        SITE,
+        ...SITE,
         {
           regex:
             "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\./(blog|home)/|^\\./BlogLayout",
@@ -130,7 +126,7 @@ export default defineConfig({
     ),
     // Exempt from the shared-code boundary: /llms.txt lists every post, so this imports the
     // blog's post helpers.
-    restrict(["src/lib/llms.ts"], [SITE]),
+    restrict(["src/lib/llms.ts"], SITE),
     // The homepage may show the blog's posts; the blog never reaches into the homepage.
     restrict(
       [
@@ -140,7 +136,7 @@ export default defineConfig({
         "src/layouts/BlogLayout.astro"
       ],
       [
-        SITE,
+        ...SITE,
         {
           regex: "^#src/components/home/",
           message:

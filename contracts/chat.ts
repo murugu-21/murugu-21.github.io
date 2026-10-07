@@ -1,5 +1,5 @@
-// The wire contract shared with the chat widget, so it stays free of runtime dependencies
-// that would ship in the client bundle.
+// The chat wire protocol between the widget and the Worker's ChatRoom. The widget bundles it,
+// so it stays free of runtime dependencies.
 import type { UIMessage } from "ai";
 
 export const MAX_MESSAGE_LENGTH = 1000;

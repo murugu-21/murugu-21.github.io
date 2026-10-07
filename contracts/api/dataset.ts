@@ -1,6 +1,6 @@
 // `src/pages/api/dataset.json.ts` prerenders `buildDataset()` over the site's own data to
 // `dist/api/dataset.json`, which the Worker reads via ASSETS, so the API cannot drift from the site.
-// Input is typed structurally to keep `astro` imports (ImageMetadata) out of the Worker.
+// Input is typed structurally to keep `astro` imports (ImageMetadata) out of contracts.
 
 import { z } from "zod";
 

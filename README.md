@@ -18,7 +18,7 @@ bun run preview   # the production build in workerd, API and chat included
 
 ### Layers
 
-The top-level folders are the packages a monorepo would split this into. Each imports only itself and the layers below it.
+The top-level folders are the packages a monorepo would split this into. Each imports only itself and the layers `LAYERS` in `oxlint.config.ts` lets it use.
 
 ```text
 src/              # the Astro site                     → apps/site
@@ -30,9 +30,9 @@ contracts/        # what the site, the Worker and scripts agree on → packages/
 utils/            # helpers with no app logic (zod JSON parsing)  → packages/utils
 ```
 
-`contracts/` holds the HTTP API's definition (`api/`: paths, zod schemas, versions, quotas and the OpenAPI document), the MCP server's identity and tool catalogue (`mcp.ts`), the chat widget's wire protocol (`chat.ts`) and the R2 key for blog audio (`audio.ts`). The Worker serves these, `/developers/` and the chat widget render from them, and the audio scripts write to them. Contracts carry no runtime: `check:src` type-checks them against the browser's types and `check:worker` against workerd's, so a contract that reaches for `Env`, a DOM API or a Worker binding fails one of the two.
+`contracts/` holds the HTTP API's definition (`api/`: paths, zod schemas, versions, quotas and the OpenAPI document), the MCP server's identity and tool catalogue (`mcp.ts`), the chat widget's wire protocol (`chat.ts`) and the R2 key for blog audio (`audio.ts`). The Worker serves these, `/developers/` and the chat widget render from them, and the audio scripts write to them. Contracts are framework-free (zod schemas, types, constants and pure functions). Both `check:src` and `check:worker` type-check them, so a contract that reaches for `Env` or a Worker binding fails the site's check, and lint rejects value imports from framework, AI SDK and `node:` packages. Type imports are fine.
 
-Lint enforces the graph. `LAYERS` in `oxlint.config.ts` lists each layer's folder, subpath import and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, and contracts may not import a framework or Worker package. The one exception is `scripts/worker/live-test-capture.ts`, which reads the built site's `llms.txt` through `scripts/site/site-dir.ts`, the same file Jarvis grounds on in production. To add a layer or let one use another, edit `LAYERS`.
+Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, and contracts may not import a framework or Worker package. The one exception is `scripts/worker/live-test-capture.ts`, which reads the built site's `llms.txt` through `scripts/site/site-dir.ts`, the same file Jarvis grounds on in production. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `cloudflare.config.ts`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
 
 ### Source layout
 

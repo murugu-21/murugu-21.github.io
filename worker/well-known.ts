@@ -16,7 +16,7 @@ import {
 } from "#contracts/mcp.ts";
 
 /** RFC 9727 media type for a link set serialised as JSON (RFC 9264). */
-export const LINKSET_MEDIA_TYPE = "application/linkset+json";
+const LINKSET_MEDIA_TYPE = "application/linkset+json";
 
 const MCP_REPOSITORY = "https://github.com/murugu-21/murugu-21.github.io";
 

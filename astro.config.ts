@@ -156,8 +156,8 @@ function buildArtifacts(): AstroIntegration {
   };
 }
 
-// `output: "server"` is what makes the adapter emit the Worker in cloudflare.config.ts,
-// but every page stays static. Server mode marks routes `prerender: false`, so this
+// `output: "server"` is what makes the adapter emit the Worker in cloudflare.config.ts
+// (withastro/astro#18208), but every page stays static. Server mode marks routes `prerender: false`, so this
 // overrides it rather than filling a gap.
 function prerenderEveryRoute(): AstroIntegration {
   return {
@@ -258,8 +258,7 @@ const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
 export default defineConfig({
   site: SITE_ORIGIN,
-  // With "static" the adapter emits an assets-only Worker and silently drops the
-  // custom entrypoint (withastro/astro#18208). prerenderEveryRoute keeps the pages static.
+  // The adapter emits the custom Worker only for a server build (see prerenderEveryRoute).
   output: "server",
   // Builds the Worker in cloudflare.config.ts alongside the prerendered site.
   adapter: cloudflare({

@@ -28,7 +28,7 @@ Resources expose the same content as documents you can attach directly: the site
  * DNS-rebinding guard. The server is public with no ambient credentials, so any
  * web origin is allowed; an opaque "null", `file:`, app schemes and garbage are not.
  */
-export function isAllowedOrigin(origin: string | null): boolean {
+function isAllowedOrigin(origin: string | null): boolean {
   if (origin === null) return true; // a non-browser client sends no Origin header
   try {
     const { protocol } = new URL(origin);
