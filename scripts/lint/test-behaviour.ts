@@ -7,9 +7,12 @@ import type { RuleTester } from "oxlint/plugins-dev";
 
 // oxlint doesn't export its plugin or AST types; derive them from RuleTester.
 type Rule = Parameters<RuleTester["run"]>[1];
+type Context = Parameters<NonNullable<Rule["create"]>>[0];
 type Visitor = ReturnType<NonNullable<Rule["create"]>>;
-type CallExpression = Parameters<NonNullable<Visitor["CallExpression"]>>[0];
+type NodeOf<K extends keyof Visitor> = Parameters<NonNullable<Visitor[K]>>[0];
+type CallExpression = NodeOf<"CallExpression">;
 type Node = CallExpression["parent"];
+type Identifier = Extract<Node, { type: "Identifier" }>;
 
 const TEST_FNS = new Set(["it", "test"]);
 const TEST_MODIFIERS = new Set(["only", "concurrent", "sequential", "fails"]);
@@ -42,14 +45,21 @@ const VALUE_MATCHERS = new Set([
   ...COMPARISONS
 ]);
 
-type ImportKind = "subject" | "helper";
+// `harness` is `cloudflare:test`, whose SELF and env are how tests reach the Worker.
+type ImportKind = "subject" | "helper" | "harness";
 
-// `cloudflare:test` exports SELF and env, which are how tests reach the Worker.
 const isLocalSource = (source: string) =>
   source.startsWith(".") || source.startsWith("#") || source.startsWith("cloudflare:");
 
+function importKind(source: string): ImportKind {
+  if (source.startsWith("cloudflare:")) return "harness";
+  return HELPER_SOURCE.test(source) ? "helper" : "subject";
+}
+
 const isNode = (value: unknown): value is Node =>
   typeof value === "object" && value !== null && "type" in value && typeof value.type === "string";
+
+const isCall = (node: Node) => node.type === "CallExpression" || node.type === "NewExpression";
 
 function children(node: Node): { child: Node; key: string }[] {
   const out: { child: Node; key: string }[] = [];
@@ -87,11 +97,18 @@ function enclosingFunctionBody(node: Node): Node | undefined {
   return undefined;
 }
 
-// An identifier in a value position (not `x.name` or `{ name: … }`).
-const isReference = (node: Node, key: string): node is Extract<Node, { type: "Identifier" }> =>
-  node.type === "Identifier" &&
-  !(key === "property" && node.parent.type === "MemberExpression" && !node.parent.computed) &&
-  !(key === "key" && node.parent.type === "Property" && !node.parent.computed);
+// The slots where an identifier names a member (`x.name`, `{ name: … }`) unless computed.
+const MEMBER_NAME_SLOTS = new Map([
+  ["property", "MemberExpression"],
+  ["key", "Property"]
+]);
+
+// An identifier in a value position, which reads a variable.
+function isReference(node: Node, key: string): node is Identifier {
+  if (node.type !== "Identifier") return false;
+  const { parent } = node;
+  return MEMBER_NAME_SLOTS.get(key) !== parent.type || ("computed" in parent && parent.computed);
+}
 
 // The names a declaration or assignment target binds: `x`, `{ a, b: c }`, `[d, ...e]`.
 function boundNames(target: Node, key = ""): string[] {
@@ -121,17 +138,19 @@ const isModified = (node: Node, names: Set<string>) =>
   node.property.type === "Identifier" &&
   names.has(node.property.name);
 
-// The test's callback from `it(…)`, `it.only(…)` or `it.each(table)(…)`.
-function testCallback(call: CallExpression): Node | undefined {
+// `table` is the rows of `it.each(table)(…)`, which may hold the calls.
+type Test = { node: CallExpression; callback: Node; table?: Node };
+
+// A test from `it(…)`, `it.only(…)` or `it.each(table)(…)`.
+function testAt(call: CallExpression): Test | undefined {
   const { callee } = call;
-  const isTest =
-    isTestFn(callee) ||
-    isModified(callee, TEST_MODIFIERS) ||
-    (callee.type === "CallExpression" && isModified(callee.callee, TABLE_MODIFIERS));
-  if (!isTest) return undefined;
-  return call.arguments.find(
+  const isTable = callee.type === "CallExpression" && isModified(callee.callee, TABLE_MODIFIERS);
+  if (!isTable && !isTestFn(callee) && !isModified(callee, TEST_MODIFIERS)) return undefined;
+  const callback = call.arguments.find(
     arg => arg.type === "ArrowFunctionExpression" || arg.type === "FunctionExpression"
   );
+  if (!callback) return undefined;
+  return { node: call, callback, table: isTable ? callee.arguments[0] : undefined };
 }
 
 type Assertion = { subject: Node; matcher: string; negated: boolean; args: Node[] };
@@ -196,7 +215,7 @@ const DATA_METHODS = new Set([
 function isCalled(n: Node, key: string): boolean {
   const parent: Node | null = n.parent;
   if (!parent) return false;
-  if (parent.type === "CallExpression" || parent.type === "NewExpression") return key === "callee";
+  if (isCall(parent)) return key === "callee";
   if (parent.type !== "MemberExpression" || key !== "object") return false;
   const call: Node | null = parent.parent;
   if (call?.type !== "CallExpression" || call.callee !== parent) return false;
@@ -205,6 +224,214 @@ function isCalled(n: Node, key: string): boolean {
     callee.type === "MemberExpression" &&
     !(callee.property.type === "Identifier" && DATA_METHODS.has(callee.property.name))
   );
+}
+
+// What the visitors collect from one file. `locals` maps each local name to
+// what it holds: a function's body, a declaration's initialiser, or the setup
+// that assigned it.
+type Facts = { imports: Map<string, ImportKind>; locals: Map<string, Node>; tests: Test[] };
+// `subjects` is every import plus every local that leads back to one. Helper
+// imports count too: `fetchWorker` from ./fixtures is how a test drives the Worker.
+type FileModel = Facts & { subjects: Set<string> };
+
+const isLocalImport = (node: Node) =>
+  node.type === "ImportExpression" &&
+  node.source.type === "Literal" &&
+  typeof node.source.value === "string" &&
+  isLocalSource(node.source.value);
+
+const reachesSubject = (node: Node, names: Set<string>) =>
+  containsNode(node, (n, key) => isLocalImport(n) || (isReference(n, key) && names.has(n.name)));
+
+function modelOf(facts: Facts): FileModel {
+  const subjects = new Set(facts.imports.keys());
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const [name, value] of facts.locals) {
+      if (subjects.has(name) || !reachesSubject(value, subjects)) continue;
+      subjects.add(name);
+      grew = true;
+    }
+  }
+  return { ...facts, subjects };
+}
+
+const callsInto = (node: Node, file: FileModel) =>
+  isCall(node) && file.subjects.has(rootName(node.callee) ?? "");
+
+// `toBe(f(a))`, `toBe(buildUrl(…))`, or `toBe(want)` after `const want = f(a)`
+// in the same test. In each, the code under test computes the expected value.
+function callsSubject({ node, test, file }: { node: Node; test: Node; file: FileModel }): boolean {
+  return containsNode(node, (n, key) => {
+    if (!isReference(n, key)) return callsInto(n, file);
+    const value = declaredIn(test, n.name);
+    return value !== undefined && value !== node && callsSubject({ node: value, test, file });
+  });
+}
+
+// `expect(LIMITS.maxTools)` or `expect(env.INBOX)` reads a value without running anything.
+function isConstantPin(node: Node, file: FileModel) {
+  const kind = file.imports.get(rootName(node) ?? "");
+  return (
+    (kind === "subject" || kind === "harness") &&
+    !containsNode(node, n => n.type === "CallExpression")
+  );
+}
+
+// The identifiers `node` reads as data. Calls into the subject are
+// observations, so their arguments are input, not data.
+function dataReferences(node: Node, file: FileModel, key = ""): Identifier[] {
+  if (isReference(node, key)) return isCalled(node, key) ? [] : [node];
+  const observes = callsInto(node, file);
+  return children(node)
+    .filter(({ key: childKey }) => !(observes && childKey === "arguments"))
+    .flatMap(({ child, key: childKey }) => dataReferences(child, file, childKey));
+}
+
+// The subject import an expected value reads as data, directly or through a const.
+function subjectSource({ expected, test, file }: { expected: Node; test: Node; file: FileModel }) {
+  const seen = new Set<string>();
+  const visit = (node: Node): string | undefined => {
+    for (const { name } of dataReferences(node, file)) {
+      if (seen.has(name)) continue;
+      seen.add(name);
+      if (file.imports.get(name) === "subject") return name;
+      const value = declaredIn(test, name) ?? file.locals.get(name);
+      const found = value && value !== expected ? visit(value) : undefined;
+      if (found) return found;
+    }
+    return undefined;
+  };
+  return visit(expected);
+}
+
+type Found = { node: CallExpression; assertion: Assertion; scope: Node };
+
+// Every assertion in a test, following calls into local helpers, so
+// `check(1, 2)` counts when `check` holds the `expect`.
+function assertionsIn(body: Node, file: FileModel, seen = new Set<string>()): Found[] {
+  const out: Found[] = [];
+  containsNode(body, node => {
+    if (node.type !== "CallExpression") return false;
+    const assertion = assertionAt(node);
+    if (assertion) {
+      out.push({ node, assertion, scope: body });
+      return false;
+    }
+    if (node.callee.type !== "Identifier" || seen.has(node.callee.name)) return false;
+    seen.add(node.callee.name);
+    const helper = file.locals.get(node.callee.name);
+    if (helper) out.push(...assertionsIn(helper, file, seen));
+    return false;
+  });
+  return out;
+}
+
+type Shape = { assertion: Assertion; expected: Node; scope: Node; file: FileModel };
+
+// The AGENTS.md shapes of an assertion that still passes when the code under
+// test returns undefined.
+const WEAK_SHAPES: ((shape: Shape) => boolean)[] = [
+  ({ assertion }) => assertion.negated || !VALUE_MATCHERS.has(assertion.matcher),
+  ({ expected }) => isEmptyValue(expected),
+  ({ assertion, expected }) =>
+    (assertion.matcher === "toHaveLength" || COMPARISONS.has(assertion.matcher)) &&
+    isZero(expected),
+  ({ assertion, file }) => isConstantPin(assertion.subject, file),
+  ({ expected, scope, file }) => callsSubject({ node: expected, test: scope, file })
+];
+
+function isStrong({ assertion, scope }: Found, file: FileModel) {
+  const expected = expectedOf(assertion);
+  return (
+    expected !== undefined && !WEAK_SHAPES.some(weak => weak({ assertion, expected, scope, file }))
+  );
+}
+
+// The subject import an assertion's expected value restates, if any.
+function expectedFromSubject({ assertion, scope }: Found, file: FileModel) {
+  // `toThrow(SubjectError)` names the error class; it computes nothing.
+  if (assertion.matcher.startsWith("toThrow") || !VALUE_MATCHERS.has(assertion.matcher)) {
+    return undefined;
+  }
+  const expected = expectedOf(assertion);
+  return expected && subjectSource({ expected, test: scope, file });
+}
+
+type TestCheck = {
+  messageId: "noSubjectCall" | "noStrongAssertion";
+  fails: (test: Test, found: Found[], file: FileModel) => boolean;
+};
+
+// Checked in order; a test reports only the first it fails.
+const TEST_CHECKS: TestCheck[] = [
+  {
+    messageId: "noSubjectCall",
+    fails: ({ callback, table }, _found, file) =>
+      ![callback, table].some(scope => scope && reachesSubject(scope, file.subjects))
+  },
+  {
+    messageId: "noStrongAssertion",
+    fails: (_test, found, file) => !found.some(each => isStrong(each, file))
+  }
+];
+
+function reportTests(context: Context, facts: Facts) {
+  const file = modelOf(facts);
+  const reported = new Set<Node>();
+  for (const test of facts.tests) {
+    const found = assertionsIn(test.callback, file);
+    for (const each of found) {
+      const name = reported.has(each.node) ? undefined : expectedFromSubject(each, file);
+      if (!name) continue;
+      reported.add(each.node);
+      context.report({ node: each.node, messageId: "expectedFromSubject", data: { name } });
+    }
+    const failed = TEST_CHECKS.find(check => check.fails(test, found, file));
+    if (failed) context.report({ node: test.node, messageId: failed.messageId });
+  }
+}
+
+function importsOf(node: NodeOf<"ImportDeclaration">): [string, ImportKind][] {
+  const source = node.source.value;
+  if (node.importKind === "type" || !isLocalSource(source)) return [];
+  const kind = importKind(source);
+  return node.specifiers
+    .filter(specifier => specifier.type !== "ImportSpecifier" || specifier.importKind !== "type")
+    .map(specifier => [specifier.local.name, kind]);
+}
+
+// `declare const __GLOBAL_CSS__` is build-time input that vitest.config.ts injects.
+const declaredImports = (node: NodeOf<"VariableDeclaration">): [string, ImportKind][] =>
+  node.declare
+    ? node.declarations.flatMap(({ id }) => boundNames(id)).map(name => [name, "subject"])
+    : [];
+
+const functionBindings = ({ id, body }: NodeOf<"FunctionDeclaration">): [string, Node][] =>
+  id && body ? [[id.name, body]] : [];
+
+const declaratorBindings = ({ id, init }: NodeOf<"VariableDeclarator">): [string, Node][] =>
+  init ? boundNames(id).map(name => [name, init]) : [];
+
+// In `let x; beforeAll(() => { …subject…; x = … })`, x carries whatever the
+// enclosing setup ran, not only its right-hand side.
+function assignmentBindings(node: NodeOf<"AssignmentExpression">): [string, Node][] {
+  const scope = enclosingFunctionBody(node) ?? node.right;
+  return boundNames(node.left).map(name => [name, scope]);
+}
+
+function setAll<V>(map: Map<string, V>, entries: [string, V][]) {
+  for (const [key, value] of entries) map.set(key, value);
+}
+
+// `x["emailOnce"]`, a member read by a string key that has a dot form.
+function stringKeyOf({ computed, property }: NodeOf<"MemberExpression">) {
+  if (!computed || property.type !== "Literal" || typeof property.value !== "string") {
+    return undefined;
+  }
+  // `x["content-type"]` has no dot form, so it isn't dodging `private`.
+  return /^[A-Za-z_$][\w$]*$/.test(property.value) ? property.value : undefined;
 }
 
 export default {
@@ -226,196 +453,24 @@ export default {
         }
       },
       create(context) {
-        const imports = new Map<string, ImportKind>();
-        // What each local name holds: a function's body, a declaration's
-        // initialiser, or the setup that assigned it.
-        const locals = new Map<string, Node>();
-        const harness = new Set<string>();
-        // `table` is the rows of `it.each(table)(…)`, which may hold the calls.
-        const tests: { node: CallExpression; callback: Node; table?: Node }[] = [];
-        let cachedSubjectNames: Set<string> | undefined;
-
-        const isLocalImport = (node: Node) =>
-          node.type === "ImportExpression" &&
-          node.source.type === "Literal" &&
-          typeof node.source.value === "string" &&
-          isLocalSource(node.source.value);
-        const reachesSubject = (node: Node, names: Set<string>) =>
-          containsNode(
-            node,
-            (n, key) => isLocalImport(n) || (isReference(n, key) && names.has(n.name))
-          );
-
-        // Imports, plus every local that leads back to one. Helper imports count
-        // too: `fetchWorker` from ./fixtures is how a test drives the Worker.
-        const subjectNames = (): Set<string> => {
-          if (cachedSubjectNames) return cachedSubjectNames;
-          const names = new Set(imports.keys());
-          let grew = true;
-          while (grew) {
-            grew = false;
-            for (const [name, value] of locals) {
-              if (names.has(name) || !reachesSubject(value, names)) continue;
-              names.add(name);
-              grew = true;
-            }
-          }
-          cachedSubjectNames = names;
-          return names;
-        };
-
-        // `toBe(f(a))`, `toBe(buildUrl(…))`, or `toBe(want)` after `const want = f(a)`
-        // in the same test. In each, the code under test computes the expected
-        // value.
-        const callsSubject = (node: Node, test: Node): boolean =>
-          containsNode(node, (n, key) => {
-            if (isReference(n, key)) {
-              const value = declaredIn(test, n.name);
-              return value !== undefined && value !== node && callsSubject(value, test);
-            }
-            if (n.type !== "CallExpression" && n.type !== "NewExpression") return false;
-            const name = rootName(n.callee);
-            return name !== undefined && subjectNames().has(name);
-          });
-        // `expect(LIMITS.maxTools)` reads a constant without running anything.
-        const isConstantPin = (node: Node) => {
-          const name = rootName(node);
-          return (
-            name !== undefined &&
-            imports.get(name) === "subject" &&
-            !containsNode(node, n => n.type === "CallExpression")
-          );
-        };
-
-        // The subject import an expected value reads as data, directly or through a
-        // const. Calls into the subject are observations, and their arguments are input.
-        const subjectSource = ({ expected, test }: { expected: Node; test: Node }) => {
-          const seen = new Set<string>();
-          const visit = (n: Node, key: string): string | undefined => {
-            if (isReference(n, key)) {
-              if (isCalled(n, key) || seen.has(n.name)) return undefined;
-              seen.add(n.name);
-              if (imports.get(n.name) === "subject" && !harness.has(n.name)) return n.name;
-              const value = declaredIn(test, n.name) ?? locals.get(n.name);
-              return value && value !== expected ? visit(value, "") : undefined;
-            }
-            const observes =
-              (n.type === "CallExpression" || n.type === "NewExpression") &&
-              subjectNames().has(rootName(n.callee) ?? "");
-            for (const { child, key: childKey } of children(n)) {
-              if (observes && childKey === "arguments") continue;
-              const found = visit(child, childKey);
-              if (found) return found;
-            }
-            return undefined;
-          };
-          return visit(expected, "");
-        };
-
-        const isStrong = (assertion: Assertion, test: Node) => {
-          const { subject, matcher, negated } = assertion;
-          if (negated || !VALUE_MATCHERS.has(matcher) || isConstantPin(subject)) return false;
-          const expected = expectedOf(assertion);
-          if (expected === undefined || isEmptyValue(expected)) return false;
-          if ((matcher === "toHaveLength" || COMPARISONS.has(matcher)) && isZero(expected)) {
-            return false;
-          }
-          return !callsSubject(expected, test);
-        };
-
-        type Found = { node: Node; assertion: Assertion; scope: Node };
-        // Every assertion in a test, following calls into local helpers, so
-        // `check(1, 2)` counts when `check` holds the `expect`.
-        const assertionsIn = (body: Node, seen = new Set<string>()): Found[] => {
-          const out: Found[] = [];
-          containsNode(body, node => {
-            if (node.type !== "CallExpression") return false;
-            const assertion = assertionAt(node);
-            if (assertion) {
-              out.push({ node, assertion, scope: body });
-              return false;
-            }
-            if (node.callee.type !== "Identifier" || seen.has(node.callee.name)) return false;
-            seen.add(node.callee.name);
-            const helper = locals.get(node.callee.name);
-            if (helper) out.push(...assertionsIn(helper, seen));
-            return false;
-          });
-          return out;
-        };
-
+        const facts: Facts = { imports: new Map(), locals: new Map(), tests: [] };
         return {
-          ImportDeclaration(node) {
-            if (node.importKind === "type") return;
-            const source = node.source.value;
-            if (!isLocalSource(source)) return;
-            const kind: ImportKind = HELPER_SOURCE.test(source) ? "helper" : "subject";
-            for (const specifier of node.specifiers) {
-              if (specifier.type === "ImportSpecifier" && specifier.importKind === "type") continue;
-              imports.set(specifier.local.name, kind);
-              if (source.startsWith("cloudflare:")) harness.add(specifier.local.name);
-            }
-          },
-          FunctionDeclaration(node) {
-            if (node.id && node.body) locals.set(node.id.name, node.body);
-          },
-          VariableDeclaration(node) {
-            // `declare const __GLOBAL_CSS__` is build-time input that vitest.config.ts injects.
-            if (!node.declare) return;
-            for (const { id } of node.declarations) {
-              for (const name of boundNames(id)) imports.set(name, "subject");
-            }
-          },
-          VariableDeclarator(node) {
-            if (!node.init) return;
-            for (const name of boundNames(node.id)) locals.set(name, node.init);
-          },
+          ImportDeclaration: node => setAll(facts.imports, importsOf(node)),
+          VariableDeclaration: node => setAll(facts.imports, declaredImports(node)),
+          FunctionDeclaration: node => setAll(facts.locals, functionBindings(node)),
+          VariableDeclarator: node => setAll(facts.locals, declaratorBindings(node)),
+          AssignmentExpression: node => setAll(facts.locals, assignmentBindings(node)),
           MemberExpression(node) {
-            const { property } = node;
-            if (!node.computed || property.type !== "Literal" || typeof property.value !== "string")
-              return;
-            // `x["content-type"]` has no dot form, so it isn't dodging `private`.
-            if (!/^[A-Za-z_$][\w$]*$/.test(property.value)) return;
-            context.report({ node, messageId: "stringKeyAccess", data: { name: property.value } });
-          },
-          // In `let x; beforeAll(() => { …subject…; x = … })`, x carries whatever
-          // the enclosing setup ran, not only its right-hand side.
-          AssignmentExpression(node) {
-            const scope = enclosingFunctionBody(node) ?? node.right;
-            for (const name of boundNames(node.left)) locals.set(name, scope);
+            const name = stringKeyOf(node);
+            if (name) context.report({ node, messageId: "stringKeyAccess", data: { name } });
           },
           CallExpression(node) {
-            const callback = testCallback(node);
-            if (!callback) return;
-            const table =
-              node.callee.type === "CallExpression" ? node.callee.arguments[0] : undefined;
-            tests.push({ node, callback, table });
+            const test = testAt(node);
+            if (test) facts.tests.push(test);
           },
           // Checked once the whole file is collected, so helpers declared below
           // a test still count.
-          "Program:exit"() {
-            const reported = new Set<Node>();
-            for (const { node, callback, table } of tests) {
-              const found = assertionsIn(callback);
-              for (const { node: at, assertion, scope } of found) {
-                // `toThrow(SubjectError)` names the error class; it computes nothing.
-                if (reported.has(at) || assertion.matcher.startsWith("toThrow")) continue;
-                if (!VALUE_MATCHERS.has(assertion.matcher)) continue;
-                const expected = expectedOf(assertion);
-                const name = expected && subjectSource({ expected, test: scope });
-                if (!name) continue;
-                reported.add(at);
-                context.report({ node: at, messageId: "expectedFromSubject", data: { name } });
-              }
-              if (
-                ![callback, table].some(scope => scope && reachesSubject(scope, subjectNames()))
-              ) {
-                context.report({ node, messageId: "noSubjectCall" });
-              } else if (!found.some(({ assertion, scope }) => isStrong(assertion, scope))) {
-                context.report({ node, messageId: "noStrongAssertion" });
-              }
-            }
-          }
+          "Program:exit": () => reportTests(context, facts)
         };
       }
     }

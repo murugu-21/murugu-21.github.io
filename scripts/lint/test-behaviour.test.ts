@@ -81,6 +81,14 @@ it("slugs", () => { expect(page).toHaveProperty("length", 1); });`
 });`
     },
     {
+      name: "an expected value assigned in a cycle",
+      code: `${SUBJECT_IMPORT}let a: string;
+let b: string;
+a = b;
+b = a;
+it("slugs", () => { expect(slugify("x")).toBe(a); });`
+    },
+    {
       name: "type-only imports beside a subject import",
       code: `import type { Options } from "./subject";
 import { type Mode, slugify } from "./subject";
