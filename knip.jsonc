@@ -22,9 +22,7 @@
     // Required by name inside scripts/site/ts-alias.cjs.
     "@typescript/typescript6",
     // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.
-    "cloudflare",
-    // Type-only import served by @types/hast, which Astro's markdown packages install.
-    "hast"
+    "cloudflare"
   ],
   // A system tool that scripts/site/tts/cli.ts spawns.
   "ignoreBinaries": ["ffmpeg"],
