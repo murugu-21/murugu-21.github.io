@@ -1,25 +1,24 @@
-// Keeps the paragraph highlight in step with pre-rendered audio. Types mirror
-// the timing JSON written by scripts/site/generate-audio.ts.
+// Keeps the paragraph highlight in step with pre-rendered audio. The schema
+// covers the fields the page reads from the timing JSON written by
+// scripts/site/generate-audio.ts.
 
-import type { TimedWord } from "./audio-words";
+import { z } from "zod";
 
-interface TimedBlock {
-  text: string;
-  start: number;
-  end: number;
+const TimedBlock = z.object({
+  text: z.string(),
+  start: z.number(),
+  end: z.number(),
   // Version 2 only, and only for blocks the alignment pass matched well.
-  words?: TimedWord[];
-}
+  words: z.array(z.object({ w: z.string(), s: z.number(), e: z.number() })).optional()
+});
+type TimedBlock = z.infer<typeof TimedBlock>;
 
-export interface AudioTimings {
-  version: 1 | 2;
-  slug: string;
-  hash: string;
-  voice: string;
-  sampleRate: number;
-  duration: number;
-  blocks: TimedBlock[];
-}
+export const AudioTimings = z.object({
+  version: z.union([z.literal(1), z.literal(2)]),
+  duration: z.number(),
+  blocks: z.array(TimedBlock)
+});
+export type AudioTimings = z.infer<typeof AudioTimings>;
 
 // Pair page blocks with timings by position, but only when the normalised
 // text still matches: an edited paragraph plays fine, it just isn't lit up.
@@ -47,7 +46,7 @@ export function blockAt(timed: ReadonlyArray<{ start: number; end: number }>, t:
 // Leave the block alone while its top sits in the reading band (fractions of
 // the viewport), centre it when it drifts out, and show the start of a block
 // taller than the screen.
-interface ScrollBand {
+export interface ScrollBand {
   top: number;
   bottom: number;
 }
