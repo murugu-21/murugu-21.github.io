@@ -55,8 +55,8 @@ Agents tend to hand-roll what a library or platform feature already does. Before
 
 ## Ask first
 
-- Anything that costs money or is hard to undo: new paid services or plans, deploys, `cf` commands against remote resources, D1 migrations, R2 writes.
-- Major decisions: adding or replacing a dependency, changing the architecture, CI, or `cloudflare.config.ts`.
+- Anything that costs money or is hard to undo: new paid services or plans, deploys, `wrangler` commands against remote resources (`--remote`, deploy, secrets), D1 migrations, R2 writes.
+- Major decisions: adding or replacing a dependency, changing the architecture, CI, or `wrangler.jsonc`.
 
 ## Never
 

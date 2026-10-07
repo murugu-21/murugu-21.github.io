@@ -4,7 +4,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
 import { defineConfig, envField, fontProviders } from "astro/config";
-import cloudflare from "@astrojs/cloudflare";
 import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
@@ -142,7 +141,7 @@ function blogPostChecks(): AstroIntegration {
 }
 
 // Hooked into `astro build` itself so deploy tools that run it directly don't
-// skip these steps; `dir` follows the adapter's output location.
+// skip these steps.
 function buildArtifacts(): AstroIntegration {
   const run = (command: string, args: string[]) => {
     const result = spawnSync(command, args, { stdio: "inherit" });
@@ -159,20 +158,6 @@ function buildArtifacts(): AstroIntegration {
       // Registered last, so the site it prints from is final.
       "astro:build:done": ({ dir }) =>
         run("node", ["scripts/site/generate-resume.ts", fileURLToPath(dir)])
-    }
-  };
-}
-
-// `output: "server"` is what makes the adapter emit the Worker in cloudflare.config.ts
-// (withastro/astro#18208), but every page stays static. Server mode marks routes `prerender: false`, so this
-// overrides it rather than filling a gap.
-function prerenderEveryRoute(): AstroIntegration {
-  return {
-    name: "prerender-every-route",
-    hooks: {
-      "astro:route:setup": ({ route }) => {
-        route.prerender = true;
-      }
     }
   };
 }
@@ -235,17 +220,6 @@ const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
 export default defineConfig({
   site: SITE_ORIGIN,
-  // The adapter emits the custom Worker only for a server build (see prerenderEveryRoute).
-  output: "server",
-  // Builds the Worker in cloudflare.config.ts alongside the prerendered site.
-  adapter: cloudflare({
-    // build-time sharp only, so no Images binding
-    imageService: "compile",
-    // Node, not workerd, because build hooks and several pages read the filesystem.
-    prerenderEnvironment: "node"
-  }),
-  // otherwise the adapter provisions an unused SESSION KV namespace
-  session: false,
   // Validated at build, so a malformed value fails the build instead of shipping.
   env: {
     schema: {
@@ -303,7 +277,6 @@ export default defineConfig({
     inlineStylesheets: "always"
   },
   integrations: [
-    prerenderEveryRoute(),
     firaCodeSubset(),
     react(),
     clientInteractionDirective(),
@@ -330,15 +303,6 @@ export default defineConfig({
     buildArtifacts()
   ],
   vite: {
-    // Dev only. Started on a warm node_modules/.vite/deps_ssr cache, every page
-    // renders as a 51-byte /@vite/client stub ("Unable to resolve
-    // Layout.astro?astro&type=script…"). Re-optimizing each start avoids it.
-    environments: { ssr: { optimizeDeps: { force: true } } },
-    server: {
-      // In dev the Worker reads ASSETS via https://assets.local
-      // (worker/api/store.ts); Vite's host check would 403 it.
-      allowedHosts: ["assets.local"]
-    },
     // 8 KB for CSS only. A plain number would also inline font subsets into
     // the stylesheets (tripled the island sheet). `undefined` keeps the default.
     build: {

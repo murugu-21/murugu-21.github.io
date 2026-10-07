@@ -1,13 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  // Files loaded by name or by path strings that no plugin parses: cloudflare.config.ts
-  // (found by cf and the Astro adapter) and the Worker entrypoint it names, the test
-  // Worker config in vitest.config.ts, the client directive and resume script in
-  // astro.config.ts, and a script run by hand.
+  // Files loaded by path strings that no plugin parses: the client directive and
+  // resume script in astro.config.ts, and a script run by hand.
   "entry": [
-    "cloudflare.config.ts",
-    "worker/server.ts",
-    "worker/test/cloudflare.config.ts",
     "src/directives/interaction.ts",
     "scripts/site/generate-resume.ts",
     "scripts/site/render-x-cover.ts"

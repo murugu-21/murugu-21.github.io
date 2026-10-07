@@ -195,7 +195,7 @@ export function fakeAssets(overrides: Record<string, string | null> = {}): Fetch
     const path = assetPath(input);
     const body = files[path];
     // A miss is an empty 404, which is what the real binding returns under
-    // assets.notFoundHandling: "none" (see cloudflare.config.ts).
+    // assets.not_found_handling: "none" (see wrangler.jsonc).
     return Promise.resolve(
       body == null
         ? new Response(null, { status: 404 })
@@ -241,7 +241,7 @@ export function visitorMeta(instance: ChatRoom): Record<string, unknown> {
   );
 }
 
-/** The pool's env plus the bindings the test cf config leaves out. */
+/** The pool's env plus the bindings worker/test/wrangler.jsonc leaves out. */
 export function testEnv(options: TestEnvOptions = {}): Env {
   return {
     ...env,

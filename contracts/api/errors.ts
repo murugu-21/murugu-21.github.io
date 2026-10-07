@@ -1,5 +1,5 @@
-// The JSON error envelope for every /api/* failure. The Worker owns /api/* (runWorkerFirst in
-// cloudflare.config.ts) so agents never get the HTML 404 page.
+// The JSON error envelope for every /api/* failure. The Worker owns /api/* (run_worker_first in
+// wrangler.jsonc) so agents never get the HTML 404 page.
 
 import { z } from "zod";
 

@@ -1,0 +1,19 @@
+// The production Worker minus what the pool can't reach (ASSETS, EMAIL, vars
+// and secrets come from testEnv in fixtures.ts), with its own D1 and R2.
+{
+  "name": "murugappan-dev-test",
+  "main": "../server.ts",
+  "compatibility_date": "2026-10-01",
+  // Keep these Durable Object bindings and migrations in sync with ../../wrangler.jsonc.
+  "durable_objects": {
+    "bindings": [
+      { "name": "ChatRoom", "class_name": "ChatRoom" },
+      { "name": "RateLimiter", "class_name": "RateLimiter" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }],
+  "d1_databases": [
+    { "binding": "CHAT_DB", "database_name": "jarvis-chats-test", "database_id": "test" }
+  ],
+  "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "murugappan-dev-audio-test" }]
+}

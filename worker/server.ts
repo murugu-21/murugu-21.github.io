@@ -47,7 +47,7 @@ app.get("/agents/chat-room/:room", c =>
 );
 app.get("/agents/chat-room/:room/get-messages", chatRoom);
 
-// Keep cloudflare.config.ts's runWorkerFirst list in sync with these routes.
+// Keep wrangler.jsonc's run_worker_first list in sync with these routes.
 // /api/v1 must mount before /api, the permanent unversioned alias for v1.
 app.route("/api/v1", api);
 app.route("/api", api);

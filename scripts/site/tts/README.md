@@ -35,15 +35,15 @@ bun run build && bun run audio <slug>   # ~2.8 s of compute per second of audio 
 bun run audio:align <slug>             # word timings, ~5 s per post
 ```
 
-Then push as usual. With no slug, `bun run audio` renders every changed post. `--force` re-renders, `--dry-run` only extracts and hashes, and `--local` writes to the local R2 state that `bun run dev` serves (`.cloudflare/state`).
+Then push as usual. With no slug, `bun run audio` renders every changed post. `--force` re-renders, `--dry-run` only extracts and hashes, and `--local` writes to the local R2 state that `bun run preview` serves (`.wrangler/state`).
 
 For a small text fix, `bun run audio --patch <slug>` re-synthesizes only the paragraphs whose text changed and splices them into the MP3 already in R2, which takes minutes instead of a full render. It levels each new paragraph with the same loudnorm pass on its own, shifts the later timings, and keeps a copy of the old R2 objects in the logged `backup/` directory. It needs the same paragraph count as the stored timings, so a post that gained or lost a paragraph needs a full render (`bun run audio <slug> --force`). Run `bun run audio:align <slug> --force` afterwards: the patched paragraphs come back without word timings.
 
 Every render stays in the `$TMPDIR/audio-<slug>-*` directory the script logs, about 370 MB for a 45-minute post, and nothing deletes it. If an upload fails, push the files from there instead of rendering again, MP3 first because the JSON's hash marks the post as done:
 
 ```bash
-bunx cf r2 objects put blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio --file <dir>/<slug>.mp3 --content-type audio/mpeg
-bunx cf r2 objects put blog/breeze/<slug>.json --bucket-name murugappan-dev-audio --file <dir>/<slug>.json --content-type application/json
+bunx wrangler r2 object put murugappan-dev-audio/blog/breeze/<slug>.mp3 --remote --file <dir>/<slug>.mp3 --content-type audio/mpeg
+bunx wrangler r2 object put murugappan-dev-audio/blog/breeze/<slug>.json --remote --file <dir>/<slug>.json --content-type application/json
 ```
 
 `bun run audio:align` (`scripts/site/align-audio.ts`) runs after synthesis, never at the same time. It slices each paragraph out of the MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (`whisper-large-v3-turbo`, 1.6 GB, downloaded automatically), maps them onto the known text (`src/lib/blog/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per paragraph.

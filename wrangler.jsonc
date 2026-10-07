@@ -1,0 +1,65 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "murugappan-dev",
+  "main": "worker/server.ts",
+  // Dates from 2026-08-04 turn nodejs_compat on, which `agents` needs (node:crypto,
+  // node:async_hooks). An earlier date needs the flag set here.
+  "compatibility_date": "2026-10-01",
+  "routes": [{ "pattern": "murugappan.dev", "custom_domain": true }],
+  // Turns off the *.workers.dev URL so crawlers don't index a second copy of the
+  // site, while keeping version preview URLs.
+  "workers_dev": false,
+  "preview_urls": true,
+  "observability": {
+    "enabled": true,
+    // Spans count toward the Workers Logs event quota, so trace a sample.
+    "traces": { "enabled": true, "head_sampling_rate": 0.2 }
+  },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Misses go to the Worker so worker/not-found.ts can content-negotiate the
+    // 404; "404-page" would answer every miss with 404.html.
+    "not_found_handling": "none",
+    // Routes the Worker must answer even where an asset would win (JSON errors
+    // for /api/*, host-aware generated docs). Keep in sync with worker/server.ts.
+    "run_worker_first": [
+      "/api/*",
+      "/openapi.json",
+      "/mcp",
+      "/mcp/*",
+      "/mcp.json",
+      "/.well-known/*",
+      "/agents/*",
+      "/blog/audio/*"
+    ]
+  },
+  // Keep these Durable Object bindings and migrations in sync with worker/test/wrangler.jsonc.
+  "durable_objects": {
+    "bindings": [
+      { "name": "ChatRoom", "class_name": "ChatRoom" },
+      { "name": "RateLimiter", "class_name": "RateLimiter" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }],
+  // The EMAIL lock and this var must name the same address.
+  "vars": { "OPPORTUNITY_INBOX": "murugu2001@gmail.com" },
+  "send_email": [{ "name": "EMAIL", "destination_address": "murugu2001@gmail.com" }],
+  // Deploy fails while it is unset.
+  "secrets": { "required": ["DEEPSEEK_API_KEY"] },
+  // A copy of each chat room (messages, country, IP) for browsing chats in the
+  // Cloudflare dashboard. ChatRoom's own SQLite stays the source of truth, and
+  // replies never wait on these writes. The Worker creates no tables, so run
+  // `bun run db:migrate` first, or every write fails with only a
+  // "d1 mirror failed" log line.
+  "d1_databases": [
+    {
+      "binding": "CHAT_DB",
+      "database_name": "jarvis-chats",
+      "database_id": "a1111792-fb35-470f-85c9-13c3aab0662c"
+    }
+  ],
+  // Blog audio. `bun run audio` uploads it from a local machine, and
+  // worker/audio.ts serves it.
+  "r2_buckets": [{ "binding": "AUDIO", "bucket_name": "murugappan-dev-audio" }]
+}
