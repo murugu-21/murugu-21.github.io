@@ -60,6 +60,27 @@ function singleFileSitemap(): AstroIntegration {
   };
 }
 
+type Post = { slug: string; html: string; source: string };
+
+function emptyBodyProblem({ slug, html }: Post) {
+  if (html.match(/<section data-post-body>([\s\S]*?)<\/section>/)?.[1].trim()) return;
+  return (
+    `blog/${slug}/index.html has an empty article body. ` +
+    "Its markdown failed to render (see the [glob-loader] error above). " +
+    "Fix it and clear node_modules/.astro, which caches the empty render."
+  );
+}
+
+function mermaidProblem({ slug, html, source }: Post) {
+  const fences = findMermaidFences(source).length;
+  const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
+  if (fences === figures) return;
+  return (
+    `${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +
+    "Clear node_modules/.astro, which caches the stale render."
+  );
+}
+
 // What search engines read from each post's head, checked against literals
 // rather than the constants that produced it: one canonical URL, and a
 // BlogPosting whose author resolves to the Person in the same @graph.
@@ -67,7 +88,12 @@ const jsonLdGraph = z.object({
   "@graph": z.array(z.record(z.string(), z.unknown()))
 });
 
-type Post = { slug: string; html: string; source: string };
+function canonicalProblem({ slug, html }: Post) {
+  const canonicals = [...html.matchAll(/<link rel="canonical" href="([^"]*)"/g)].map(m => m[1]);
+  const expected = `https://murugappan.dev/blog/${slug}/`;
+  if (canonicals.length === 1 && canonicals[0] === expected) return;
+  return `${slug} has canonical(s) [${canonicals.join(", ")}], expected exactly ${expected}`;
+}
 
 function authorProblem({ slug, html }: Post) {
   const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
@@ -87,32 +113,7 @@ function authorProblem({ slug, html }: Post) {
 // So check every post has a body and one figure per ```mermaid fence
 // (which also catches a stale cached render), then check its head. Each
 // returns what's wrong, and the first that fails stops the build.
-const POST_CHECKS: ((post: Post) => string | undefined)[] = [
-  ({ slug, html }) => {
-    if (html.match(/<section data-post-body>([\s\S]*?)<\/section>/)?.[1].trim()) return;
-    return (
-      `blog/${slug}/index.html has an empty article body. ` +
-      "Its markdown failed to render (see the [glob-loader] error above). " +
-      "Fix it and clear node_modules/.astro, which caches the empty render."
-    );
-  },
-  ({ slug, html, source }) => {
-    const fences = findMermaidFences(source).length;
-    const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
-    if (fences === figures) return;
-    return (
-      `${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +
-      "Clear node_modules/.astro, which caches the stale render."
-    );
-  },
-  ({ slug, html }) => {
-    const canonicals = [...html.matchAll(/<link rel="canonical" href="([^"]*)"/g)].map(m => m[1]);
-    const expected = `https://murugappan.dev/blog/${slug}/`;
-    if (canonicals.length === 1 && canonicals[0] === expected) return;
-    return `${slug} has canonical(s) [${canonicals.join(", ")}], expected exactly ${expected}`;
-  },
-  authorProblem
-];
+const POST_CHECKS = [emptyBodyProblem, mermaidProblem, canonicalProblem, authorProblem];
 
 function checkPost(post: Post) {
   for (const check of POST_CHECKS) {
@@ -212,9 +213,9 @@ function modulePreloadHints(): AstroIntegration {
           return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : undefined;
         });
         const pages = fs
-          .readdirSync(root, { recursive: true, encoding: "utf8" })
-          .filter(name => name.endsWith(".html"))
-          .map(name => path.join(root, name));
+          .readdirSync(root, { recursive: true, withFileTypes: true })
+          .filter(entry => entry.isFile() && entry.name.endsWith(".html"))
+          .map(entry => path.join(entry.parentPath, entry.name));
         let hinted = 0;
         for (const page of pages) {
           const html = addHints(fs.readFileSync(page, "utf8"));

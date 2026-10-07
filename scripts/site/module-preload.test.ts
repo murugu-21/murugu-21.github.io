@@ -6,7 +6,7 @@ import { modulePreloader } from "./module-preload.ts";
 const MODULES: Record<string, string> = {
   "/static/page.js": 'import { a } from "./chunks/a.js";import("./lazy.js");',
   "/static/chunks/a.js": 'import "./b.js";export { b } from "./b.js";import "./missing.js";',
-  "/static/chunks/b.js": 'import { page } from "../page.js";export const b = 1;',
+  "/static/chunks/b.js": 'import { a } from "./a.js";export const b = 1;',
   "/static/other.js": 'import"./page.js";import{a}from"./chunks/a.js";',
   "/static/leaf.js": "export const leaf = 1;"
 };
