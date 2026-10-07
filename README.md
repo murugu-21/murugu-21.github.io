@@ -102,7 +102,7 @@ bun run test           # vitest in the workers pool
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 
-[typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs the same version through `crate-ci/typos`.
+[typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
 
 The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it, and typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` and `lint:astro` preload `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/site/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` and typescript-eslint support TypeScript 7.
 
@@ -115,9 +115,9 @@ Having both compilers installed has two side effects:
 
 ## Deployment
 
-Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume. It uploads the test coverage (`coverage/lcov.info`) to [Qlty](https://qlty.sh) over OIDC, so no token is stored; with no Qlty project set up, the upload step logs an error and the job still passes.
+Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume. It uploads the test coverage (`coverage/lcov.info`) to [Qlty](https://qlty.sh) over OIDC, so no token is stored. A failed upload, such as on a fork's pull request, doesn't fail the job.
 
-Two jobs run on a schedule instead of on push. `.github/workflows/links.yml` checks every link in the repo's markdown with [lychee](https://lychee.cli.rs) each Monday and fails on a broken one; its settings and the hosts it skips are in `lychee.toml`, and `lychee .` runs the same check locally (`brew install lychee`). [Renovate](https://docs.renovatebot.com) (`renovate.json`, read by the Renovate GitHub app) opens dependency updates once a week and keeps actions pinned to a commit SHA with the version as a comment.
+`.github/workflows/links.yml` checks every link in the repo's markdown with [lychee](https://lychee.cli.rs) each Monday and fails on a broken one; its settings and the hosts it skips are in `lychee.toml`, and `lychee .` runs the same check locally (`brew install lychee`). [Renovate](https://docs.renovatebot.com) (`renovate.json`, read by the Renovate GitHub app) opens dependency updates once a week and keeps actions pinned to a commit SHA with the version as a comment.
 
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 

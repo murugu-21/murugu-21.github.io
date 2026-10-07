@@ -1,8 +1,9 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  // Files loaded by path strings that no plugin parses: the Worker entrypoint in
-  // cloudflare.config.ts, the test Worker config in vitest.config.ts, the client
-  // directive and resume script in astro.config.ts, and a script run by hand.
+  // Files loaded by name or by path strings that no plugin parses: cloudflare.config.ts
+  // (found by cf and the Astro adapter) and the Worker entrypoint it names, the test
+  // Worker config in vitest.config.ts, the client directive and resume script in
+  // astro.config.ts, and a script run by hand.
   "entry": [
     "cloudflare.config.ts",
     "worker/server.ts",
@@ -11,6 +12,7 @@
     "scripts/site/generate-resume.ts",
     "scripts/site/render-x-cover.ts"
   ],
+  // Served by URL, never imported.
   "ignore": ["public/**"],
   // The husky plugin parses any hook script; ours live in .githooks (core.hooksPath).
   "husky": { "config": [".githooks/*"] },
