@@ -5,12 +5,11 @@ import { z } from "zod";
 import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
 import { JsonObject } from "#utils/json.ts";
 import { LATEST_PROTOCOL_VERSION } from "#contracts/mcp.ts";
-import { readResource, RESOURCE_ORIGIN } from "#worker/mcp/resources.ts";
+import { RESOURCE_ORIGIN } from "#worker/mcp/resources.ts";
 import { MCP_TOOLS } from "#contracts/mcp.ts";
 import {
   AGENTS_MD,
   DATASET,
-  fakeAssets,
   fetchWorker,
   LLMS_FULL_TXT,
   LLMS_TXT,
@@ -155,10 +154,6 @@ async function call(
   const reply = await callModern("tools/call", { name, arguments: args }, { ip, env: options });
   return resultOf(reply, ToolCallResult);
 }
-
-const resourceCtx = (overrides: Record<string, string | null> = {}) => ({
-  assets: fakeAssets(overrides)
-});
 
 const ResourceList = z.object({
   resources: z.array(
@@ -825,17 +820,23 @@ describe("resources/list", () => {
   });
 });
 
-describe("readResource", () => {
+describe("resources/read", () => {
   const contents = ({ path, mimeType, text }: { path: string; mimeType: string; text: string }) => [
     { uri: `${RESOURCE_ORIGIN}${path}`, mimeType, text }
   ];
 
-  // null becomes a -32602 on the wire, never an empty contents array.
+  const NOT_FOUND = -32602;
+  const read = async (uri: string, assets?: Record<string, string | null>) => {
+    const { json } = await callModern("resources/read", { uri }, { env: { assets } });
+    if (json.error) return json.error.code;
+    return z.object({ contents: z.array(JsonObject) }).parse(json.result).contents;
+  };
+
   it.each<{
     label: string;
     uri: string;
     overrides?: Record<string, string | null>;
-    expected: ReturnType<typeof contents> | null;
+    expected: ReturnType<typeof contents> | typeof NOT_FOUND;
   }>([
     {
       label: "reads a static document",
@@ -861,60 +862,55 @@ describe("readResource", () => {
       })
     },
     {
-      label: "returns null for an unpublished post, even one whose markdown is deployed",
+      label: "is not found for an unpublished post, even one whose markdown is deployed",
       uri: `${RESOURCE_ORIGIN}/blog/ghost/index.md`,
       overrides: { "/blog/ghost/index.md": "# Ghost" },
-      expected: null
+      expected: NOT_FOUND
     },
     {
-      label: "returns null for a listed post whose markdown is missing",
+      label: "is not found for a listed post whose markdown is missing",
       uri: `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`,
-      expected: null
+      expected: NOT_FOUND
     },
+    { label: "is not found for a string that is not a uri", uri: "not a uri", expected: NOT_FOUND },
     {
-      label: "returns null for an unknown path",
-      uri: `${RESOURCE_ORIGIN}/secrets`,
-      expected: null
-    },
-    { label: "returns null for a string that is not a uri", uri: "not a uri", expected: null },
-    {
-      label: "returns null for a traversal in the slug",
+      label: "is not found for a traversal in the slug",
       uri: `${RESOURCE_ORIGIN}/blog/../../llms.txt/index.md`,
-      expected: null
+      expected: NOT_FOUND
     },
     {
-      label: "returns null for an encoded traversal in the slug",
+      label: "is not found for an encoded traversal in the slug",
       uri: `${RESOURCE_ORIGIN}/blog/..%2F..%2Fllms.txt/index.md`,
-      expected: null
+      expected: NOT_FOUND
     },
     {
-      label: "returns null for a slug outside the slug charset",
+      label: "is not found for a slug outside the slug charset",
       uri: `${RESOURCE_ORIGIN}/blog/Mixed_Case/index.md`,
-      expected: null
+      expected: NOT_FOUND
     },
     {
-      label: "returns null for a document on another origin",
+      label: "is not found for a document on another origin",
       uri: "https://evil.example/llms.txt",
-      expected: null
+      expected: NOT_FOUND
     },
     {
-      label: "returns null for a post on another origin",
+      label: "is not found for a post on another origin",
       uri: "https://evil.example/blog/coin-change-problem/index.md",
-      expected: null
+      expected: NOT_FOUND
     },
     {
-      label: "returns null for a static document that is not deployed",
+      label: "is not found for a static document that is not deployed",
       uri: `${RESOURCE_ORIGIN}/llms.txt`,
       overrides: { "/llms.txt": null },
-      expected: null
+      expected: NOT_FOUND
     }
   ])("$label", async ({ uri, overrides, expected }) => {
-    expect(await readResource(uri, resourceCtx(overrides))).toEqual(expected);
+    expect(await read(uri, overrides)).toEqual(expected);
   });
 
   it("generates the OpenAPI document rather than reading a file", async () => {
-    const result = await readResource(`${RESOURCE_ORIGIN}/openapi.json`, resourceCtx());
-    const [content] = result ?? [];
+    const result = await read(`${RESOURCE_ORIGIN}/openapi.json`, { "/openapi.json": null });
+    const [content] = z.array(z.object({ mimeType: z.string(), text: z.string() })).parse(result);
     assert(content, "openapi.json returned no contents");
     expect(content.mimeType).toBe("application/json");
     const doc = z
