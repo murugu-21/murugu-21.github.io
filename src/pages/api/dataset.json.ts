@@ -1,9 +1,11 @@
-// Prerendered dataset the Worker reads via ASSETS (worker/api/store.ts), so the
-// API and pages share one source. The Worker can't import portfolio.ts itself
-// (it imports .png files as ImageMetadata). Not public: /api/* hits the Worker first.
+// Prerendered dataset (built by src/lib/dataset.ts) that the Worker reads via ASSETS
+// (worker/api/store.ts), so the API and pages share one source. The Worker can't import
+// portfolio.ts itself (it imports .png files as ImageMetadata). Not public: /api/* hits the
+// Worker first.
 import type { APIRoute } from "astro";
 
-import { buildDataset, Dataset } from "#contracts/api/dataset.ts";
+import { Dataset } from "#contracts/api/dataset.ts";
+import { buildDataset } from "#src/lib/dataset.ts";
 import {
   educationInfo,
   greeting,

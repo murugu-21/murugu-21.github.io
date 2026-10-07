@@ -1,6 +1,7 @@
 // The schema.org nodes every page shares.
 import type { Graph, Person, Thing, WebPage, WebSite } from "schema-dts";
 import { sameAs, skillsCategories, socialMediaLinks } from "#src/data/portfolio.ts";
+import { splitSkillItems } from "#src/lib/dataset.ts";
 import { AUTHOR, PERSON_ID, SITE_DESCRIPTION, SITE_ORIGIN, WEBSITE_ID } from "#src/lib/site.ts";
 
 const HAND_WRITTEN_KNOWS_ABOUT = [
@@ -15,16 +16,14 @@ const HAND_WRITTEN_KNOWS_ABOUT = [
   "HIPAA"
 ];
 
-// The hand-written list plus the resume skills, split on ";", "—" and commas
-// outside parentheses (keeps "(AWS SQS, EventBridge)" intact), deduped
-// case-insensitively.
+// The hand-written list plus the resume skills, split the way the API splits them,
+// deduped case-insensitively.
 function knowsAbout(): string[] {
   const seen = new Set(HAND_WRITTEN_KNOWS_ABOUT.map(s => s.toLowerCase()));
   const extra: string[] = [];
   for (const { items } of skillsCategories) {
-    for (const raw of items.split(/;|—|,(?![^()]*\))/)) {
-      const term = raw.trim();
-      if (!term || seen.has(term.toLowerCase())) continue;
+    for (const term of splitSkillItems(items)) {
+      if (seen.has(term.toLowerCase())) continue;
       seen.add(term.toLowerCase());
       extra.push(term);
     }

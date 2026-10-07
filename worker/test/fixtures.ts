@@ -5,62 +5,132 @@ import { env } from "cloudflare:test";
 import { assert, expect, vi } from "vitest";
 import { z } from "zod";
 
-import { buildDataset, type DatasetInput } from "#contracts/api/dataset.ts";
+import type { Dataset } from "#contracts/api/dataset.ts";
 import type { ChatRoom } from "#worker/chat-room.ts";
 import worker from "#worker/server.ts";
 
-export const DATASET_INPUT: DatasetInput = {
-  greeting: {
-    username: "Murugappan M",
-    subTitle: "I build B2B SaaS that ships in regulated industries.",
-    resumePath: "/resume.pdf"
-  },
-  resumeContact: {
+// What the site build prerenders to /api/dataset.json (src/lib/dataset.ts builds it).
+export const DATASET: Dataset = {
+  person: {
     name: "Murugappan M",
-    title: "Full Stack Engineer",
+    headline: "Full Stack Engineer",
+    pitch: "I build B2B SaaS that ships in regulated industries.",
     location: "Bangalore, India",
     email: "murugu2001@example.com",
-    site: "https://murugappan.dev",
-    linkedin: "https://linkedin.example/m",
-    github: "https://github.example/m"
+    site: "https://murugappan.dev/",
+    availableForWork: true,
+    currentRole: {
+      role: "Software Engineer II",
+      company: "MedMe Health",
+      since: "2025-12"
+    },
+    focus: ["Build TypeScript"]
   },
-  socialMediaLinks: {
-    github: "https://github.example/m",
-    linkedin: "https://linkedin.example/m",
-    gmail: "murugu2001@example.com",
-    twitter: "https://x.example/m",
-    rss: "https://murugappan.dev/blog/rss.xml"
-  },
-  workExperiences: [
+  links: [
+    {
+      label: "Website",
+      url: "https://murugappan.dev/"
+    },
+    {
+      label: "About (canonical entity page)",
+      url: "https://murugappan.dev/about/"
+    },
+    {
+      label: "Blog",
+      url: "https://murugappan.dev/blog/"
+    },
+    {
+      label: "Blog RSS",
+      url: "https://murugappan.dev/blog/rss.xml"
+    },
+    {
+      label: "Resume (PDF)",
+      url: "https://murugappan.dev/resume.pdf"
+    },
+    {
+      label: "GitHub",
+      url: "https://github.example/m"
+    },
+    {
+      label: "LinkedIn",
+      url: "https://linkedin.example/m"
+    },
+    {
+      label: "X / Twitter",
+      url: "https://x.example/m"
+    },
+    {
+      label: "Email",
+      url: "mailto:murugu2001@example.com"
+    },
+    {
+      label: "Developer portal",
+      url: "https://murugappan.dev/developers/"
+    },
+    {
+      label: "OpenAPI spec",
+      url: "https://murugappan.dev/openapi.json"
+    },
+    {
+      label: "llms.txt",
+      url: "https://murugappan.dev/llms.txt"
+    },
+    {
+      label: "Agent instructions",
+      url: "https://murugappan.dev/AGENTS.md"
+    }
+  ],
+  experience: [
     {
       role: "Software Engineer II",
       company: "MedMe Health",
       location: "Canada (remote)",
-      date: "December 2025 – Present",
-      desc: "Event-driven RPA platform.",
-      descBullets: ["Lifted extraction accuracy to 95%+."]
+      period: "December 2025 – Present",
+      startDate: "2025-12",
+      endDate: null,
+      current: true,
+      summary: "Event-driven RPA platform.",
+      highlights: ["Lifted extraction accuracy to 95%+."]
     }
   ],
-  skillsSection: { subTitle: "FULL-STACK", skills: ["⚡ Build TypeScript"] },
-  skillsCategories: [{ category: "Languages", items: "TypeScript, Python" }],
-  techStack: {
-    experience: [{ stack: "Backend", tools: ["Node.js"], progressPercentage: "90%" }]
-  },
-  educationInfo: [
+  skills: [
     {
-      schoolName: "Kumaraguru College of Technology",
-      subHeader: "B.E. Computer Science",
-      duration: "June 2019 - April 2023",
-      desc: "Coimbatore, India.",
-      descBullets: ["Distributed systems."]
+      category: "Languages",
+      skills: ["TypeScript", "Python"]
     }
   ],
-  openSourceCard: {
-    title: "AnkiDroid — Open Source Contributor",
-    subtitle: "3 merged pull requests.",
-    footerLink: [{ name: "Image paste", url: "https://gh.example/1" }]
-  },
-  isHireable: true
+  proficiencies: [
+    {
+      area: "Backend",
+      tools: ["Node.js"],
+      level: 90
+    }
+  ],
+  education: [
+    {
+      institution: "Kumaraguru College of Technology",
+      credential: "B.E. Computer Science",
+      location: "Coimbatore, India",
+      period: "June 2019 - April 2023",
+      startDate: "2019-06",
+      endDate: "2023-04",
+      grade: null,
+      highlights: ["Distributed systems."]
+    }
+  ],
+  openSource: [
+    {
+      project: "AnkiDroid",
+      role: "Open Source Contributor",
+      description: "3 merged pull requests.",
+      links: [
+        {
+          label: "Image paste",
+          url: "https://gh.example/1"
+        }
+      ]
+    }
+  ]
 };
 
 export const LLMS_TXT = `# Murugappan M
@@ -93,7 +163,7 @@ export function siteFiles(
   overrides: Record<string, string | null> = {}
 ): Record<string, string | null> {
   return {
-    "/api/dataset.json": JSON.stringify(buildDataset(DATASET_INPUT)),
+    "/api/dataset.json": JSON.stringify(DATASET),
     "/llms.txt": LLMS_TXT,
     "/blog/coin-change-problem/index.md": POST_MARKDOWN,
     "/blog/llms-full.txt": LLMS_FULL_TXT,

@@ -4,6 +4,8 @@ import {
   countCompanies,
   formatDuration,
   groupByCompany,
+  parsePeriod,
+  periodBounds,
   totalExperienceMonths
 } from "./experience";
 
@@ -121,5 +123,37 @@ describe("totalExperienceMonths", () => {
 describe("countCompanies", () => {
   it("counts a return to a former employer once", () => {
     expect(countCompanies(groupByCompany(returning))).toBe(2);
+  });
+});
+
+describe("parsePeriod", () => {
+  it.each([
+    {
+      period: "April 2025 – December 2025",
+      startDate: "2025-04",
+      endDate: "2025-12",
+      current: false
+    },
+    { period: "June 2019 - April 2023", startDate: "2019-06", endDate: "2023-04", current: false },
+    { period: "December 2025 – Present", startDate: "2025-12", endDate: null, current: true },
+    { period: "some time ago", startDate: null, endDate: null, current: false },
+    // Unlike periodBounds, which has no use for half a range, the API keeps a parsed start.
+    { period: "June 2019 – sometime", startDate: "2019-06", endDate: null, current: false }
+  ])("reads $period", ({ period, startDate, endDate, current }) => {
+    expect(parsePeriod(period)).toEqual({ startDate, endDate, current });
+  });
+});
+
+describe("periodBounds", () => {
+  it("returns numeric bounds, null for an open end, and null when either end is unreadable", () => {
+    expect(periodBounds("June 2019 - April 2023")).toEqual({
+      start: { year: 2019, month: 6 },
+      end: { year: 2023, month: 4 }
+    });
+    expect(periodBounds("December 2025 – Present")).toEqual({
+      start: { year: 2025, month: 12 },
+      end: null
+    });
+    expect(periodBounds("June 2019 – sometime")).toBeNull();
   });
 });

@@ -3,7 +3,6 @@ import { assert, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
 import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
-import { buildDataset } from "#contracts/api/dataset.ts";
 import { API_VERSION } from "#contracts/api/versioning.ts";
 import { JsonObject } from "#utils/json.ts";
 import { LATEST_PROTOCOL_VERSION } from "#contracts/mcp.ts";
@@ -11,7 +10,7 @@ import { readResource, RESOURCE_ORIGIN } from "#worker/mcp/resources.ts";
 import { MCP_TOOLS } from "#contracts/mcp.ts";
 import {
   AGENTS_MD,
-  DATASET_INPUT,
+  DATASET,
   fakeAssets,
   fetchWorker,
   LLMS_FULL_TXT,
@@ -648,9 +647,7 @@ describe("MCP_TOOLS definitions", () => {
 });
 
 describe("dataset tools", () => {
-  const dataset = buildDataset(DATASET_INPUT);
-
-  it.each<[string, Array<keyof typeof dataset>]>([
+  it.each<[string, Array<keyof typeof DATASET>]>([
     ["get_profile", ["person", "links"]],
     ["list_experience", ["experience"]],
     ["list_skills", ["skills", "proficiencies"]],
@@ -659,7 +656,7 @@ describe("dataset tools", () => {
   ])("%s returns its slice of the dataset", async (name, keys) => {
     const result = await call(name);
     expect(result.isError).toBeUndefined();
-    expect(result.structuredContent).toEqual(Object.fromEntries(keys.map(k => [k, dataset[k]])));
+    expect(result.structuredContent).toEqual(Object.fromEntries(keys.map(k => [k, DATASET[k]])));
     // The spec asks for the serialized JSON in a text block too.
     expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
   });
