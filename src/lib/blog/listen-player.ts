@@ -47,6 +47,9 @@ export interface PlayerHost {
   handOver(player: Player | null): void;
 }
 
+export const canSpeak = () => !!window.speechSynthesis && "SpeechSynthesisUtterance" in window;
+export const canPlayAudio = () => "Audio" in window;
+
 const follow = (el: Element, band?: ScrollBand) => {
   const block = scrollTarget(el.getBoundingClientRect(), window.innerHeight, band);
   if (block) el.scrollIntoView({ block, behavior: "smooth" });
@@ -266,9 +269,7 @@ function audioPlayer(options: AudioPlayerOptions): Player {
     console.warn("Read-aloud audio failed, falling back to speech synthesis");
     track("listen_audio_fallback");
     fellBack = true;
-    const speech = window.speechSynthesis
-      ? speechPlayer({ ...options, rate: audio.playbackRate })
-      : null;
+    const speech = canSpeak() ? speechPlayer({ ...options, rate: audio.playbackRate }) : null;
     host.handOver(speech);
     if (speech) speech.play();
     else host.setStatus("idle");
@@ -307,7 +308,7 @@ export async function loadPlayer({
   host: PlayerHost;
   rate: () => number;
 }): Promise<Player | null> {
-  const timings = "Audio" in window ? await fetchTimings(slug) : null;
+  const timings = canPlayAudio() ? await fetchTimings(slug) : null;
   const highlight = new Highlighter();
   const options: PlayerOptions = {
     blocks,
@@ -322,10 +323,15 @@ export async function loadPlayer({
     }
   };
   if (timings) {
-    tag("listen_backend", "audio");
-    return audioPlayer({ ...options, slug, timings });
+    try {
+      const player = audioPlayer({ ...options, slug, timings });
+      tag("listen_backend", "audio");
+      return player;
+    } catch (err) {
+      console.warn("Read-aloud audio unavailable, using speech synthesis", err);
+    }
   }
-  if (!window.speechSynthesis) return null;
+  if (!canSpeak()) return null;
   tag("listen_backend", "speech");
   return speechPlayer(options);
 }

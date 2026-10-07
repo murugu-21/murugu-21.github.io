@@ -106,6 +106,10 @@ const lastAudio = () => {
   return audio;
 };
 
+// The speed outlives a mount, so a test that fails mid-way must not leave the
+// next one at its speed. Set by each mount, run after each test.
+let resetRate: (() => Promise<void>) | null = null;
+
 const mount = async (html = POST) => {
   document.body.insertAdjacentHTML("beforeend", `<div id="page">${html}</div>`);
   const island = document.createElement("div");
@@ -113,6 +117,15 @@ const mount = async (html = POST) => {
   document.body.append(island);
   const screen = await render(<ListenControls slug="hello" />, { container: island });
   const read = (selector: string) => document.querySelector(selector)?.textContent ?? null;
+  const pill = screen.getByRole("button", { name: /playback speed$/ });
+  const pickRate = async (label: string) => {
+    await userEvent.click(pill);
+    await userEvent.click(screen.getByRole("menuitemradio", { name: label }));
+  };
+  resetRate = async () => {
+    const shown = pill.query()?.textContent;
+    if (shown && shown !== "1×") await pickRate("1×");
+  };
   return {
     screen,
     island,
@@ -124,10 +137,7 @@ const mount = async (html = POST) => {
     listening: () => island.classList.contains("listening"),
     block: () => read(".is-speaking"),
     word: () => read(".is-word"),
-    pickRate: async (label: string) => {
-      await userEvent.click(screen.getByRole("button", { name: /playback speed$/ }));
-      await userEvent.click(screen.getByRole("menuitemradio", { name: label }));
-    }
+    pickRate
   };
 };
 
@@ -136,8 +146,11 @@ beforeAll(() => {
   vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await resetRate?.();
+  resetRate = null;
   document.getElementById("page")?.remove();
+  document.querySelectorAll(".listen-island").forEach(island => island.remove());
   audios.length = 0;
   vi.unstubAllGlobals();
 });
@@ -184,6 +197,23 @@ test("reads the post block by block with speech synthesis when it has no audio",
   expect(ui.readout()).toBe("0/3¶1×");
   expect(ui.block()).toBeNull();
   await expect.poll(ui.listening).toBe(false);
+});
+
+test("lights the word a speech boundary points at, late in a long paragraph", async () => {
+  serveAudio();
+  const speech = fakeSpeech();
+  const ui = await mount(`<article class="blog-post">
+    <header><h1>Read me</h1></header>
+    <section data-post-body><p>It is a long way to go.</p></section>
+  </article>`);
+
+  await userEvent.click(ui.listen);
+  speech.start();
+  speech.end();
+  speech.start();
+  speech.word(13);
+  await expect.poll(ui.word).toBe("way");
+  expect(ui.block()).toBe("It is a long way to go.");
 });
 
 test("stops on a speech synthesis error and when the reader leaves the page", async () => {
@@ -235,7 +265,6 @@ test("plays the pre-rendered audio, lighting the block and word under the playhe
 
   await ui.pickRate("1.25×");
   expect(audio.playbackRate).toBe(1.25);
-  await ui.pickRate("1×");
 
   await userEvent.click(ui.pause);
   await expect.element(ui.listen).toHaveAttribute("aria-pressed", "false");
@@ -275,6 +304,26 @@ test("falls back to speech synthesis when the audio fails to load", async () => 
   // The rejected play() settles after the fallback took over.
   await Promise.all(rejections);
   await expect.element(ui.pause).toBeVisible();
+  speech.start();
+  await expect.poll(ui.readout).toBe("1/3¶1×");
+  expect(speech.texts()).toEqual(["Read me"]);
+});
+
+test("falls back to speech synthesis when the audio player can't be built", async () => {
+  serveAudio(TIMINGS);
+  const speech = fakeSpeech();
+  vi.stubGlobal(
+    "Audio",
+    class {
+      constructor() {
+        throw new DOMException("media blocked", "NotSupportedError");
+      }
+    }
+  );
+  const ui = await mount();
+
+  await userEvent.click(ui.listen);
+  await expect.element(ui.pause).toHaveAttribute("aria-pressed", "true");
   speech.start();
   await expect.poll(ui.readout).toBe("1/3¶1×");
   expect(speech.texts()).toEqual(["Read me"]);
@@ -357,7 +406,6 @@ test("a speed picked while the audio loads applies once playback starts", async 
   respond(new Response("", { status: 404 }));
   await expect.element(ui.pause).toBeVisible();
   expect(speech.rate()).toBe(1.25);
-  await ui.pickRate("1×");
 });
 
 test("restarts the current block at the chosen speed and remembers it", async () => {

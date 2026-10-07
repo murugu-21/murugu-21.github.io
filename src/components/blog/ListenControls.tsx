@@ -14,6 +14,8 @@ import {
 import { Slider } from "#src/components/ui/slider.tsx";
 import { track } from "#src/lib/analytics.ts";
 import {
+  canPlayAudio,
+  canSpeak,
   collectBlocks,
   loadPlayer,
   type Block,
@@ -119,9 +121,8 @@ export function ListenControls({ slug }: { slug: string }) {
   const playerRef = useRef<Player | null>(null);
 
   useEffect(() => {
-    const canSpeak = !!window.speechSynthesis && "SpeechSynthesisUtterance" in window;
     blocksRef.current = collectBlocks();
-    setSupported((canSpeak || "Audio" in window) && blocksRef.current.length > 0);
+    setSupported((canSpeak() || canPlayAudio()) && blocksRef.current.length > 0);
     // Chrome keeps talking after the tab navigates away otherwise.
     const onPageHide = () => playerRef.current?.pause();
     window.addEventListener("pagehide", onPageHide);
@@ -176,8 +177,6 @@ export function ListenControls({ slug }: { slug: string }) {
     playerRef.current?.setRate(next);
   };
 
-  // Rendered full-size but disabled until mount confirms a backend, so
-  // hydration causes no layout shift.
   const toggle = TOGGLE[status];
   const [elapsed, total] = READOUT[progress.unit](progress);
   const seekable = progress.unit === "seconds";
@@ -191,6 +190,8 @@ export function ListenControls({ slug }: { slug: string }) {
     >
       <Button
         onClick={() => void onToggle()}
+        // Rendered full-size but disabled until mount confirms a backend, so
+        // hydration causes no layout shift.
         disabled={status === "loading" || !supported}
         aria-label={toggle.label}
         aria-pressed={status === "speaking"}
