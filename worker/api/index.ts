@@ -17,11 +17,11 @@ import {
   Profile,
   SkillsResponse
 } from "#contracts/api/dataset.ts";
-import { apiError } from "./errors";
+import { apiError, fieldIssues } from "./errors";
 import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "./openapi";
-import { POSTS_LIMIT_MAX } from "#contracts/api/posts.ts";
-import { isPostsLimit, searchPosts } from "./posts";
+import { PostsQuery } from "#contracts/api/posts.ts";
+import { searchPosts } from "./posts";
 import {
   contactRateLimitHeaders,
   globalLimiter,
@@ -133,27 +133,21 @@ api.on(READ_METHODS, "/education", datasetRoute(EducationList));
 api.on(READ_METHODS, "/open-source", datasetRoute(OpenSourceList));
 
 api.on(READ_METHODS, "/posts", async c => {
-  const rawLimit = c.req.query("limit");
-  const limit = rawLimit === undefined ? undefined : Number(rawLimit);
-  if (limit !== undefined && !isPostsLimit(limit)) {
+  const parsed = PostsQuery.safeParse(c.req.query());
+  if (!parsed.success) {
     return apiError({
       status: 400,
       code: "invalid_request",
-      message: "The limit query parameter is out of range.",
-      hint: `Pass an integer between 1 and ${POSTS_LIMIT_MAX}, or omit limit to get every post.`,
-      details: [
-        {
-          field: "limit",
-          issue: `must be an integer between 1 and ${POSTS_LIMIT_MAX}`
-        }
-      ]
+      message: "One or more query parameters are invalid.",
+      hint: "Correct the parameters listed in details, or omit them to get every post.",
+      details: fieldIssues(parsed.error)
     });
   }
 
   const posts = searchPosts({
     posts: await loadPosts(c.env.ASSETS),
-    query: c.req.query("q"),
-    limit
+    query: parsed.data.q,
+    limit: parsed.data.limit
   });
   return json({ posts, count: posts.length });
 });

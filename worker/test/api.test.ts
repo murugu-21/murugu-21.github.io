@@ -188,6 +188,14 @@ describe("GET /api/posts", () => {
     expect((await get("/api/posts?limit=101")).status).toBe(400);
   });
 
+  it("rejects a q longer than the 200 characters the spec allows", async () => {
+    expect((await get(`/api/posts?q=${"a".repeat(200)}`)).status).toBe(200);
+    const res = await get(`/api/posts?q=${"a".repeat(201)}`);
+    expect(res.status).toBe(400);
+    const error = await errorBody(res);
+    expect(error.details).toEqual([{ field: "q", issue: "must be at most 200 characters" }]);
+  });
+
   it("returns an empty list rather than an error when llms.txt is missing", async () => {
     const res = await get("/api/posts", { assets: { "/llms.txt": null } });
     expect(res.status).toBe(200);

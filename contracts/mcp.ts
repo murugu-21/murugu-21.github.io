@@ -11,7 +11,7 @@ import {
   Profile,
   SkillsResponse
 } from "./api/dataset";
-import { Post, PostList, POSTS_LIMIT_MAX, SLUG } from "./api/posts";
+import { Post, PostList, POSTS_LIMIT_MAX, PostsLimit, PostsSearchText, SLUG } from "./api/posts";
 
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
 // Newest first. `initialize` falls back to the first entry.
@@ -80,18 +80,13 @@ function datasetTool<const Name extends string>({
 
 // The Worker re-parses each call with these, after the SDK has checked them, to type `args`.
 export const SearchArgs = z.strictObject({
-  query: z.string().max(200).optional().meta({
+  query: PostsSearchText.optional().meta({
     description:
       "Case-insensitive substring matched against post titles and summaries. Omit to list every post."
   }),
-  limit: z
-    .int()
-    .min(1)
-    .max(POSTS_LIMIT_MAX)
-    .optional()
-    .meta({
-      description: `Maximum number of posts to return, newest first (1-${POSTS_LIMIT_MAX}). Omit for all of them.`
-    })
+  limit: PostsLimit.optional().meta({
+    description: `Maximum number of posts to return, newest first (1-${POSTS_LIMIT_MAX}). Omit for all of them.`
+  })
 });
 
 export const PostArgs = z.strictObject({

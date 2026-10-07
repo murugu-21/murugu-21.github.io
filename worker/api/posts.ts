@@ -1,14 +1,11 @@
 // Posts are parsed from llms.txt ("- [title](url): description", built by src/pages/llms.txt.ts),
 // the same file Jarvis is grounded on, so the API cannot fall behind the blog.
 
-import { POSTS_LIMIT_MAX, SLUG, type PostSummary } from "#contracts/api/posts.ts";
+import { SLUG, type PostSummary } from "#contracts/api/posts.ts";
 
 const POST_LINE = /^- \[(.+?)\]\((https?:\/\/[^\s)]+)\)(?::\s*(.*))?$/;
 // Post pages only: drops feed links and the blog index that share the list shape.
 const POST_PATH = /^\/blog\/([a-z0-9-]+)\/?$/;
-
-export const isPostsLimit = (n: number): boolean =>
-  Number.isInteger(n) && n >= 1 && n <= POSTS_LIMIT_MAX;
 
 const SECTION_HEADING = "## Blog posts";
 

@@ -26,7 +26,7 @@ import {
   SkillsResponse
 } from "./dataset";
 import { ErrorBody, FieldIssue } from "./errors";
-import { Post, PostList, POSTS_LIMIT_MAX, PostSummary, SLUG_PATTERN } from "./posts";
+import { Post, PostList, PostsQuery, PostSummary, SLUG_PATTERN } from "./posts";
 import { CONTACT_POLICY, READ_POLICY, READ_QUOTA } from "./quotas";
 import {
   API_VERSION,
@@ -56,7 +56,7 @@ type Operation = {
     in: string;
     description: string;
     required?: boolean;
-    schema: SchemaObject;
+    schema: z.core.JSONSchema.BaseSchema;
   }>;
   requestBody?: unknown;
   responses: Record<
@@ -170,6 +170,17 @@ function components(schemas: Record<string, z.ZodType>, io: "input" | "output") 
     delete schema.$id;
   }
   return generated.schemas;
+}
+
+// From the schema the handler parses with, so the documented limits are the enforced ones. Output
+// types, since a parameter documents the parsed value (`limit` an integer, not its query text).
+function queryParameters(query: z.ZodObject) {
+  const { properties = {}, required = [] } = z.toJSONSchema(query, { io: "output" });
+  return Object.entries(properties).map(([name, property]) => {
+    if (typeof property === "boolean") throw new Error(`query parameter ${name}: boolean schema`);
+    const { description = "", ...schema } = property;
+    return { name, in: "query", required: required.includes(name), description, schema };
+  });
 }
 
 // Requests are described as clients send them, before ContactRequest's trimming and defaults.
@@ -300,26 +311,10 @@ export const OPENAPI_DOCUMENT: Omit<OpenApiDocument, "servers"> = {
         description:
           "Returns every post on the SDE Journey blog, newest first, with its slug, title, canonical URL and summary. Pass the returned `slug` to `getBlogPost` to read a post's full markdown. Optionally narrow the list with a case-insensitive substring query.",
         tags: ["content"],
-        parameters: [
-          {
-            name: "q",
-            in: "query",
-            required: false,
-            description: "Case-insensitive substring matched against post titles and summaries.",
-            schema: { type: "string", maxLength: 200 }
-          },
-          {
-            name: "limit",
-            in: "query",
-            required: false,
-            description:
-              "Maximum number of posts to return, newest first. Defaults to all of them.",
-            schema: { type: "integer", minimum: 1, maximum: POSTS_LIMIT_MAX }
-          }
-        ],
+        parameters: queryParameters(PostsQuery),
         responses: {
           "200": jsonResponse("Matching posts, newest first.", "#/components/schemas/PostList"),
-          "400": errorResponse("A query parameter was not of the documented type or range."),
+          "400": errorResponse("A query parameter broke its documented type, range or length."),
           ...readFailures
         }
       }
