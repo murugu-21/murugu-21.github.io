@@ -19,6 +19,10 @@ keywords:
   ]
 
 description: I built EventForm, a multi-tenant form builder with a transactional outbox, Debezium CDC and idempotent webhook delivery, pair-programming with Claude.
+
+featured: true
+
+shortTitle: "Forms in, webhooks out: an event-driven pipeline"
 ---
 
 I wanted a portfolio project that wasn't another todo app, something anyone could click around in, built on the event-driven patterns I keep getting asked about in system design interviews. So I built [EventForm](https://eventform.murugappan.dev) ([source](https://github.com/murugu-21/eventform)), a mini-Typeform where every form submission fans out to webhook endpoints through a transactional outbox, Debezium CDC, Kafka and an idempotent consumer. The whole thing runs as a docker-compose stack on a single small AWS box, with Postgres on managed Neon and Cognito handling auth. Claude Code did most of the typing, and working that way taught me a few things of its own.

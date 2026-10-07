@@ -3,10 +3,9 @@ import type { ImageMetadata } from "astro";
 import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
 
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL } from "#src/blog/consts.ts";
-import { getPublishedPosts, postDescription, postUrl } from "#src/blog/utils/posts.ts";
-import { replaceMermaidFences } from "#src/blog/utils/mermaid-diagrams.ts";
-import { SITE_ORIGIN } from "#src/lib/site.ts";
+import { getPublishedPosts, postDescription, postUrl } from "#src/lib/blog/posts.ts";
+import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
+import { BLOG_DESCRIPTION, BLOG_TITLE, BLOG_URL, SITE_ORIGIN } from "#src/lib/site.ts";
 
 const parser = new MarkdownIt();
 
@@ -42,7 +41,7 @@ function absolutizeAssets(html: string, postId: string): string {
 // swapped for their light-theme PNGs here: feed readers have no theme toggle and
 // their image proxies can't rasterize SVG (see diagramRaster).
 export async function GET() {
-  const posts = (await getPublishedPosts()).reverse();
+  const posts = await getPublishedPosts();
 
   const items = await Promise.all(
     posts.map(async post => ({
@@ -60,9 +59,9 @@ export async function GET() {
   );
 
   return rss({
-    title: `${SITE_TITLE} RSS Feed`,
-    description: SITE_DESCRIPTION,
-    site: SITE_URL,
+    title: `${BLOG_TITLE} RSS Feed`,
+    description: BLOG_DESCRIPTION,
+    site: BLOG_URL,
     items
   });
 }

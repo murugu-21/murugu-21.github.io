@@ -18,7 +18,7 @@ import {
   diagramRaster,
   findMermaidFences,
   type DiagramTheme
-} from "#src/blog/utils/mermaid-diagrams.ts";
+} from "#src/lib/blog/mermaid-diagrams.ts";
 
 // Renders every ```mermaid fence under content/blog to
 // <slug>/diagrams/<hash>.<theme>.svg plus a light <hash>.png for RSS (feed

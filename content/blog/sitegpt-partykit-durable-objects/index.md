@@ -9,6 +9,8 @@ keywords:
   ["websockets", "realtime", "durable-objects", "partykit", "cloudflare", "socket-io", "redis"]
 
 description: How one process per room replaces socket.io + Redis for realtime chat, with production code, cost math and actor-model tradeoffs from the chatbot on this site.
+
+featured: true
 ---
 
 [SiteGPT](https://sitegpt.ai)'s founder [Bhanu Teja](https://x.com/pbteja1998) spent months trying to solve a realtime sync problem. His product is a chatbot trained on your website, and it needed one feature that turned out to be hard. When the bot gets stuck, a human agent should be able to join the same conversation live, with the visitor, the bot and the agent all seeing the same messages at the same time. That's a classic multiplayer problem.

@@ -4,7 +4,7 @@ Personal portfolio and blog of Murugappan, built with [Astro 7](https://astro.bu
 
 **Live site:** https://murugappan.dev
 
-One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. The blog's other code (layout, islands, styles, post helpers) lives under `src/blog/`, and posts are markdown in `content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
+One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. Every page except the print-only résumé renders through `src/layouts/Layout.astro`, whose `section` prop picks the portfolio or blog head defaults and page classes. The rest of `src/` is grouped by type, with blog-only code in a `blog/` folder inside each type folder (see [Source layout](#source-layout)), and posts are markdown in `content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
 
 ## Development
 
@@ -15,6 +15,29 @@ bun run dev       # Astro dev server with the Worker in workerd, on :4399
 bun run build     # site and Worker to .cloudflare/output, plus markdown renditions and the resume PDF
 bun run preview   # the production build in workerd, API and chat included
 ```
+
+### Source layout
+
+`src/` is grouped by type first. Astro reserves only `src/pages/`, and the other folders follow its documented defaults.
+
+```text
+src/pages/        # routes
+src/layouts/      # Layout.astro (every page) and BlogLayout.astro
+src/components/   # site chrome shared by every page (Header, Icon, ThemeToggle, …)
+  home/           # homepage sections and the pieces only they use
+  blog/           # blog-only components
+  chat/           # the Jarvis widget, on every page
+  ui/             # shadcn primitives
+src/lib/          # shared logic (site constants, theme, analytics, llms.txt)
+  blog/           # blog-only logic
+src/styles/       # global.css and the stylesheets it pulls in, plus prose.css
+  blog/           # blog-only styles
+src/data/         # hand-written portfolio and resume data
+```
+
+A file lives in the narrowest folder that holds every importer: a component only the homepage uses goes in `home/`, and one both halves use stays at the root of `components/`.
+
+Lint enforces the direction (`no-restricted-imports` in `.oxlintrc.json`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely, and so does `lib/llms.ts`, which renders the whole site for agents.
 
 ### Build
 
@@ -111,7 +134,7 @@ The build and deploy commands are dashboard settings on the Worker's page, not r
 
 Each one no-ops without the SDK, buffers while it loads and swallows failures, so they're safe to call anywhere. Pageviews, autocapture and heatmaps come from PostHog itself.
 
-Links opt in with `data-ph-event` and optional `data-ph-prop` / `data-ph-value`. A single delegated `click` listener per document handles them, React-rendered markup included. `src/components/SiteScripts.astro`, which both the portfolio and blog layouts include, calls `initClickTracking()`.
+Links opt in with `data-ph-event` and optional `data-ph-prop` / `data-ph-value`. A single delegated `click` listener per document handles them, React-rendered markup included. `src/components/SiteScripts.astro`, which `src/layouts/Layout.astro` includes on every page, calls `initClickTracking()`.
 
 | Event                                            | Fired on                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------- |
@@ -150,8 +173,10 @@ No phone number is in source. Set `RESUME_PHONE` (Workers Builds env in producti
 content/blog/          # one directory per post: <slug>/index.md (+ images)
   draft/               # drafts: visible in dev, excluded from production builds
 src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
-src/blog/              # layout, head, components (search, tags, table of contents,
-                       # Listen control), styles, post helpers, consts.ts site metadata
+src/layouts/BlogLayout.astro  # the blog header around Layout
+src/components/blog/   # search, tags, table of contents, Listen control, bio
+src/lib/blog/          # post helpers, the markdown plugins, read-aloud text prep
+src/styles/blog/       # post and code-block styles
 src/content.config.ts  # content collection schema
 public/blog/           # static files served verbatim (og-image, sw.js)
 ```
@@ -168,23 +193,26 @@ title: My post title
 date: "2026-06-10T10:00:00.000Z"
 tags: ["system-design"]
 keywords: ["kafka", "outbox"] # optional: SEO and search terms, never shown as chips
+featured: true # optional: a card in the homepage's Blogs section, newest first
+shortTitle: Short title # optional: the card's title when the full one runs past two lines
 description: One-line description shown in lists, search and feeds.
 ---
 ```
 
 - **Images** next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build time.
 - **Headings.** On wide screens, `##` and `###` headings feed the table-of-contents rail (`TableOfContents.astro`). Posts with fewer than two get no rail. Use `---` as a separator, never an empty `##`.
+- **Code** fences are highlighted at build time by Shiki in Night Owl, adjusted for AA contrast and without italics (`src/lib/blog/code-themes.ts`). Name the language (` ```ts `), or the fence renders as plain text.
 - **Mermaid** fences render at build time, not in the browser.
 
 ### Mermaid diagrams
 
 `scripts/render-mermaid.ts` renders each ` ```mermaid ` fence to a light and a dark SVG (with a Fira Code subset embedded, so labels measure the same inside `<img>`) and a light PNG, under `content/blog/<slug>/diagrams/`, named by a hash of the fence. It prunes renderings no fence uses.
 
-The renderings are gitignored; only the fence source is committed. `bun run build` renders them first, the markdown plugin renders any fence that has no rendering yet (useful under `astro dev`), and `bun run diagrams` renders on demand. Each file records the mermaid version that rendered it, so an upgrade re-renders automatically; `--force` re-renders everything. If you change the renderer's own output (theme, font), bump `RENDERER_VERSION` in `src/blog/utils/mermaid-diagrams.ts` so the hashes change.
+The renderings are gitignored; only the fence source is committed. `bun run build` renders them first, the markdown plugin renders any fence that has no rendering yet (useful under `astro dev`), and `bun run diagrams` renders on demand. Each file records the mermaid version that rendered it, so an upgrade re-renders automatically; `--force` re-renders everything. If you change the renderer's own output (theme, font), bump `RENDERER_VERSION` in `src/lib/blog/mermaid-diagrams.ts` so the hashes change.
 
 The RSS feed uses the PNG. Feed readers and mirrors like dev.to rasterize images without an HTML engine or web fonts, so mermaid's `foreignObject` labels come out blank in the SVG.
 
-The `blogPostBodies` integration in `astro.config.ts` checks after the build that every post rendered one figure per fence. Without it, a markdown failure would ship a blank article, because the content layer only logs the error and caches the empty result in `node_modules/.astro`.
+The `blogPostChecks` integration in `astro.config.ts` checks after the build that every post rendered one figure per fence. Without it, a markdown failure would ship a blank article, because the content layer only logs the error and caches the empty result in `node_modules/.astro`. It also checks each post's head: exactly one canonical URL, the post's own, and a `BlogPosting` whose author resolves to the `Person` in the same JSON-LD `@graph`.
 
 ### Tag vocabulary
 
@@ -250,7 +278,7 @@ bunx cf r2 objects put blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio
 bunx cf r2 objects put blog/breeze/<slug>.json --bucket-name murugappan-dev-audio --file <dir>/<slug>.json --content-type application/json
 ```
 
-`bun run audio:align` (`scripts/align-audio.ts`) runs after synthesis, never at the same time. It slices each paragraph out of the MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (`whisper-large-v3-turbo`, 1.6 GB, downloaded automatically), maps them onto the known text (`src/blog/utils/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per paragraph.
+`bun run audio:align` (`scripts/align-audio.ts`) runs after synthesis, never at the same time. It slices each paragraph out of the MP3 in R2, gets word timestamps from [mlx-whisper](https://github.com/ml-explore/mlx-examples/tree/main/whisper) (`whisper-large-v3-turbo`, 1.6 GB, downloaded automatically), maps them onto the known text (`src/lib/blog/audio-words.ts`) and rewrites the JSON as version 2 with a `words` array per paragraph.
 
 ## Public API (`/api/*`)
 

@@ -11,9 +11,12 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import posthog from "@posthog/rollup-plugin";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import { autolinkConfig } from "./src/blog/utils/rehype-autolink-config";
-import remarkMermaid from "./src/blog/utils/remark-mermaid";
-import { findMermaidFences } from "./src/blog/utils/mermaid-diagrams";
+import { z } from "zod";
+import { autolinkConfig } from "./src/lib/blog/rehype-autolink-config";
+import remarkMermaid from "./src/lib/blog/remark-mermaid";
+import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
+import { NIGHT_OWL } from "./src/lib/blog/code-themes";
+import { SITE_ORIGIN } from "./src/lib/site";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
@@ -55,13 +58,45 @@ function singleFileSitemap(): AstroIntegration {
   };
 }
 
+// What search engines read from each post's head, checked against literals
+// rather than the constants that produced it: one canonical URL, and a
+// BlogPosting whose author resolves to the Person in the same @graph.
+const jsonLdGraph = z.object({
+  "@graph": z.array(z.record(z.string(), z.unknown()))
+});
+
+function checkPostHead({ slug, html }: { slug: string; html: string }) {
+  const canonicals = [...html.matchAll(/<link rel="canonical" href="([^"]*)"/g)].map(m => m[1]);
+  const expected = `https://murugappan.dev/blog/${slug}/`;
+  if (canonicals.length !== 1 || canonicals[0] !== expected) {
+    throw new Error(
+      `blog-post-checks: ${slug} has canonical(s) [${canonicals.join(", ")}], expected exactly ${expected}`
+    );
+  }
+  const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  if (scripts.length !== 1) {
+    throw new Error(
+      `blog-post-checks: ${slug} has ${scripts.length} JSON-LD blocks, expected one @graph`
+    );
+  }
+  const graph = jsonLdGraph.parse(JSON.parse(scripts[0][1]))["@graph"];
+  const posting = graph.find(node => node["@type"] === "BlogPosting");
+  const authorId = z.object({ "@id": z.string() }).safeParse(posting?.author).data?.["@id"];
+  const author = graph.find(node => node["@id"] === authorId);
+  if (!authorId || author?.["@type"] !== "Person" || author.name !== "Murugappan M") {
+    throw new Error(
+      `blog-post-checks: ${slug}'s BlogPosting author doesn't resolve to the Person "Murugappan M" in its @graph`
+    );
+  }
+}
+
 // A markdown render error doesn't fail the build. The glob loader logs it,
 // caches the empty result in node_modules/.astro and ships a blank article.
 // So check every post has a body and one figure per ```mermaid fence
-// (which also catches a stale cached render).
-function blogPostBodies(): AstroIntegration {
+// (which also catches a stale cached render), then check its head.
+function blogPostChecks(): AstroIntegration {
   return {
-    name: "blog-post-bodies",
+    name: "blog-post-checks",
     hooks: {
       "astro:build:done": ({ dir, logger }) => {
         let checked = 0;
@@ -70,13 +105,13 @@ function blogPostBodies(): AstroIntegration {
           if (!fs.existsSync(source)) continue; // draft/ holds nested posts, unpublished
           const page = new URL(`blog/${slug}/index.html`, dir);
           if (!fs.existsSync(page)) {
-            throw new Error(`blog-post-bodies: blog/${slug}/index.html was not built`);
+            throw new Error(`blog-post-checks: blog/${slug}/index.html was not built`);
           }
           const html = fs.readFileSync(page, "utf8");
-          const body = html.match(/<section itemprop="articleBody">([\s\S]*?)<\/section>/);
+          const body = html.match(/<section data-post-body>([\s\S]*?)<\/section>/);
           if (!body || body[1].trim() === "") {
             throw new Error(
-              `blog-post-bodies: blog/${slug}/index.html has an empty article body. ` +
+              `blog-post-checks: blog/${slug}/index.html has an empty article body. ` +
                 "Its markdown failed to render (see the [glob-loader] error above). " +
                 "Fix it and clear node_modules/.astro, which caches the empty render."
             );
@@ -85,14 +120,15 @@ function blogPostBodies(): AstroIntegration {
           const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
           if (fences !== figures) {
             throw new Error(
-              `blog-post-bodies: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +
+              `blog-post-checks: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +
                 "Clear node_modules/.astro, which caches the stale render."
             );
           }
+          checkPostHead({ slug, html });
           checked++;
         }
-        if (checked === 0) throw new Error("blog-post-bodies: no blog posts checked");
-        logger.info(`${checked} post bodies checked`);
+        if (checked === 0) throw new Error("blog-post-checks: no blog posts checked");
+        logger.info(`${checked} posts checked`);
       }
     }
   };
@@ -207,7 +243,7 @@ const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
 export default defineConfig({
-  site: "https://murugappan.dev",
+  site: SITE_ORIGIN,
   output: "static",
   // Builds the Worker in cloudflare.config.ts alongside the prerendered site.
   // 15.0.0-beta.1 drops a custom-entrypoint Worker from a static site without an
@@ -301,7 +337,7 @@ export default defineConfig({
       }
     }),
     singleFileSitemap(),
-    blogPostBodies(),
+    blogPostChecks(),
     buildArtifacts()
   ],
   vite: {
@@ -342,7 +378,9 @@ export default defineConfig({
       remarkPlugins: [remarkMermaid],
       rehypePlugins: [rehypeHeadingIds, [rehypeAutolinkHeadings, autolinkConfig]]
     }),
-    // token palettes live in src/blog/styles/code.css
-    syntaxHighlight: "prism"
+    // Both themes ride on each span as --shiki-light / --shiki-dark;
+    // src/styles/blog/code.css picks one per site theme.
+    syntaxHighlight: "shiki",
+    shikiConfig: { themes: NIGHT_OWL, defaultColor: false }
   }
 });

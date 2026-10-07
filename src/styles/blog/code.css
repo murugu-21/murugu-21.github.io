@@ -1,0 +1,49 @@
+/* Shiki's fences (`pre.astro-code`). With `defaultColor: false` every colour
+   arrives as --shiki-light* / --shiki-dark* variables (themes in
+   src/lib/blog/code-themes.ts), which this file maps to the site theme.
+   In @layer components so a utility class on a fence still wins. */
+
+/* Astro may emit this sheet before global.css, so it declares Tailwind's layer
+   order too, or `components` would rank below preflight's `base` and
+   `properties` above everything. */
+@layer properties, theme, base, components, utilities;
+
+@layer components {
+  .blog-post .astro-code {
+    padding: 1em;
+    margin: 0.5em 0;
+    line-height: 1.5;
+    border: 1px solid var(--color-border-soft);
+    border-radius: 0.5rem;
+    background-color: var(--shiki-light-bg);
+  }
+
+  .blog-post .astro-code,
+  .blog-post .astro-code span {
+    color: var(--shiki-light);
+    font-weight: var(--shiki-light-font-weight);
+    text-decoration: var(--shiki-light-text-decoration);
+  }
+
+  .blog-post .astro-code ::selection {
+    background: #b3d4fc;
+  }
+
+  html.dark-mode .blog-post .astro-code {
+    /* 12% read as a tint, not a panel edge, on the night canvas. */
+    border-color: var(--color-fence-edge-dark);
+    background-color: var(--shiki-dark-bg);
+  }
+
+  html.dark-mode .blog-post .astro-code,
+  html.dark-mode .blog-post .astro-code span {
+    color: var(--shiki-dark);
+    font-weight: var(--shiki-dark-font-weight);
+    text-decoration: var(--shiki-dark-text-decoration);
+  }
+
+  /* Night Owl's own selection: the light-mode blue would drown its pale tokens. */
+  html.dark-mode .blog-post .astro-code ::selection {
+    background: #1d3b53;
+  }
+}

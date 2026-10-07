@@ -16,7 +16,7 @@ import { z } from "zod";
 
 import { jsonString } from "#utils/json.ts";
 
-import { alignWords, type TimedWord } from "#src/blog/utils/audio-words.ts";
+import { alignWords, type TimedWord } from "#src/lib/blog/audio-words.ts";
 import {
   PYTHON,
   ROOT,
@@ -57,7 +57,7 @@ function startWorker() {
 type Worker = ReturnType<typeof startWorker>;
 
 // Version 1 from generate-audio.ts, version 2 adds words; mirrors
-// src/blog/utils/audio-sync.ts.
+// src/lib/blog/audio-sync.ts.
 interface TimingBlock {
   text: string;
   start: number;

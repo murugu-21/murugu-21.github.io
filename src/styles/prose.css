@@ -3,9 +3,10 @@
    `.prose`, so no other page ships the plugin's CSS and global.css's utilities
    aren't repeated. In @layer components so utility classes still win; the
    overrides follow the plugin's output, so they win ties on order.
-   Pages load this before global.css, so it declares Tailwind's layer order too,
-   or `components` would rank below preflight's `base`. */
-@layer theme, base, components, utilities;
+   Astro may emit this sheet before global.css, so it declares Tailwind's layer
+   order too, or `components` would rank below preflight's `base` and
+   `properties` above everything. */
+@layer properties, theme, base, components, utilities;
 @reference "tailwindcss";
 @plugin "@tailwindcss/typography";
 @source inline("prose");

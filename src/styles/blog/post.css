@@ -2,6 +2,11 @@
    nothing leaks into the portfolio. `preflight:` marks UA defaults Tailwind's
    preflight zeroes. In @layer components so utility classes still win. */
 
+/* Astro may emit this sheet before global.css, so it declares Tailwind's layer
+   order too, or `components` would rank below preflight's `base` and
+   `properties` above everything. */
+@layer properties, theme, base, components, utilities;
+
 /* The table scroll hint (`.blog-post table` below): the mask is drawn 3rem
    wider than the table so its transparent tail sits off the right edge (no
    fade); the animation pulls it back to the table's width (fade showing) at
@@ -18,7 +23,7 @@
 @layer components {
   /* --- Article root ------------------------------------------------------- */
   .blog-post {
-    /* Restates BaseLayout's body type so the article doesn't depend on it. */
+    /* Restates the blog section's body type so the article doesn't depend on it. */
     font-size: 1rem;
     line-height: 1.5;
     color: var(--color-text);
@@ -300,7 +305,7 @@
   }
 
   /* --- Post-body images ---------------------------------------------------
-     Scoped to the articleBody <section> so the footer Bio stays plain.
+     Scoped to the post-body <section> so the footer Bio stays plain.
      preflight: inline, or centred diagrams would left-align. */
   .blog-post section img {
     display: inline;

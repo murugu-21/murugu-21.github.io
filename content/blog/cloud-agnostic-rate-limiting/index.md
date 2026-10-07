@@ -8,6 +8,8 @@ tags: ["system-design", "backend", "ai"]
 keywords: ["rate-limiting", "cloud-agnostic", "llm-agents", "startups", "infrastructure"]
 
 description: Why LLM agents make per-user rate limiting essential, and a two-tier IP and per-user pattern that protects your compute budget across clouds
+
+featured: true
 ---
 
 A while back I wrote about getting rate limited _by_ an external API. This post is the other side. It covers how we, a scaling startup, rate limit the traffic that hits our own API, and how we built it so that switching cloud providers later would mean changing the _implementation_, not redesigning the system.

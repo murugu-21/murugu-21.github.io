@@ -1,9 +1,8 @@
 ---
-import BaseLayout from "#src/blog/layouts/BaseLayout.astro";
-import PostList from "#src/blog/components/PostList.astro";
-import Bio from "#src/blog/components/Bio.astro";
-import { SITE_TITLE, SITE_DESCRIPTION, SITE_URL, PERSON } from "#src/blog/consts.ts";
-import { SITE_ORIGIN } from "#src/lib/site.ts";
+import BlogLayout from "#src/layouts/BlogLayout.astro";
+import PostList from "#src/components/blog/PostList.astro";
+import Bio from "#src/components/blog/Bio.astro";
+import { blog } from "#src/lib/blog/schema.ts";
 import {
   getPublishedPosts,
   postPath,
@@ -11,9 +10,9 @@ import {
   timeToRead,
   excerpt,
   type SerializedPost
-} from "#src/blog/utils/posts.ts";
+} from "#src/lib/blog/posts.ts";
 
-const posts = (await getPublishedPosts()).reverse();
+const posts = await getPublishedPosts();
 
 const serialized: SerializedPost[] = posts.map(post => ({
   href: postPath(post.id),
@@ -25,22 +24,9 @@ const serialized: SerializedPost[] = posts.map(post => ({
   description: post.data.description,
   excerpt: excerpt(post.body)
 }));
-
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Blog",
-  "@id": `${SITE_URL}/#blog`,
-  name: SITE_TITLE,
-  description: SITE_DESCRIPTION,
-  url: `${SITE_URL}/`,
-  isPartOf: { "@id": `${SITE_ORIGIN}/#website` },
-  author: PERSON,
-  publisher: PERSON
-};
 ---
 
-{/* No title prop: BaseHead supplies the homepage title. */}
-<BaseLayout jsonLd={jsonLd}>
+<BlogLayout graph={[blog]}>
   <PostList posts={serialized} />
   <Bio />
-</BaseLayout>
+</BlogLayout>

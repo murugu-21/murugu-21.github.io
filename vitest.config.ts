@@ -7,7 +7,6 @@ import { defineConfig } from "vitest/config";
 // the stylesheets on the host and inline them for src/styles/*.test.ts.
 const islandsCss = readFileSync("./src/styles/islands.css", "utf8");
 const globalCss = readFileSync("./src/styles/global.css", "utf8");
-const codeCss = readFileSync("./src/blog/styles/code.css", "utf8");
 
 // The pool's D1 starts empty; worker/test/apply-migrations.ts applies these
 // per test file.
@@ -17,7 +16,6 @@ export default defineConfig({
   define: {
     __ISLANDS_CSS__: JSON.stringify(islandsCss),
     __GLOBAL_CSS__: JSON.stringify(globalCss),
-    __CODE_CSS__: JSON.stringify(codeCss),
     __D1_MIGRATIONS__: JSON.stringify(d1Migrations)
   },
   plugins: [

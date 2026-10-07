@@ -18,13 +18,13 @@ export interface SerializedPost {
   excerpt: string;
 }
 
-// Date ascending. Drafts (content/blog/draft/**) are excluded in production.
+// Newest first. Drafts (content/blog/draft/**) are excluded in production.
 export async function getPublishedPosts(): Promise<Post[]> {
   const posts = await getCollection(
     "blog",
     post => !(import.meta.env.PROD && post.id.startsWith("draft/"))
   );
-  return posts.sort((a, b) => a.data.date.getTime() - b.data.date.getTime());
+  return posts.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 }
 
 // Literal /blog: the prefix comes from src/pages/blog/, not an Astro `base`.
@@ -51,6 +51,14 @@ export const postKeywords = (post: Post): string[] => [...post.data.tags, ...pos
 // Whole minutes, at least 1.
 export const timeToRead = (body: string | undefined) =>
   Math.max(1, Math.ceil(getReadingTime(body || "").minutes));
+
+export function formatReadingTime(minutes: number): string {
+  const cups = Math.round(minutes / 5);
+  if (cups > 5) {
+    return `${Array.from({ length: Math.round(cups / Math.E) }, () => "🍱").join("")} ${minutes} min read`;
+  }
+  return `${Array.from({ length: cups || 1 }, () => "☕️").join("")} ${minutes} min read`;
+}
 
 // Plain-text excerpt of the raw markdown, for posts without a description.
 export function excerpt(body: string | undefined, length = 160): string {

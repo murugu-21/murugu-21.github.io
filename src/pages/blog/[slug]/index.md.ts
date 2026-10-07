@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import type { APIRoute, GetStaticPaths, InferGetStaticPropsType } from "astro";
 
-import { getPublishedPosts } from "#src/blog/utils/posts.ts";
+import { getPublishedPosts } from "#src/lib/blog/posts.ts";
 import { markdownResponse } from "#src/lib/llms.ts";
 
 export const getStaticPaths = (async () => {
