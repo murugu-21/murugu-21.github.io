@@ -119,6 +119,12 @@ const isElement = (node: Node): node is Element => node.nodeType === 1;
 const WORD_CLASS = "rw";
 const WORD_ATTR = "data-w";
 
+const textNodes = (node: Node): Text[] =>
+  Array.from(node.childNodes).flatMap(child => {
+    if (isText(child)) return [child];
+    return isElement(child) ? textNodes(child) : [];
+  });
+
 // Wraps each word of `el` in <span class="rw">, grouped per word in document
 // order. Words span text nodes, so "<a>SiteGPT</a>'s" is one word of two
 // spans. Idempotent: existing spans are regrouped by word index.
@@ -126,65 +132,32 @@ export function wrapWords(el: Element): HTMLElement[][] {
   const existing = Array.from(el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`));
   if (existing.length > 0) {
     const grouped: HTMLElement[][] = [];
-    for (const span of existing) {
-      const idx = Number(span.getAttribute(WORD_ATTR));
-      (grouped[idx] ??= []).push(span);
-    }
+    for (const span of existing) (grouped[Number(span.getAttribute(WORD_ATTR))] ??= []).push(span);
     return grouped.filter(Boolean);
   }
 
   const doc = el.ownerDocument;
-  const textNodes: Text[] = [];
-  const walk = (node: Node) => {
-    for (const child of Array.from(node.childNodes)) {
-      if (isText(child)) textNodes.push(child);
-      else if (isElement(child)) walk(child);
-    }
-  };
-  walk(el);
-
-  // Word ranges over the concatenated text; text node offsets into it.
-  const full = textNodes.map(n => n.data).join("");
-  const ranges: Array<[number, number]> = [];
-  const re = /\S+/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(full))) ranges.push([m.index, m.index + m[0].length]);
-  if (ranges.length === 0) return [];
-
-  const words: HTMLElement[][] = ranges.map(() => []);
-  let offset = 0;
-  let r = 0;
-  for (const node of textNodes) {
-    const nodeStart = offset;
-    const nodeEnd = offset + node.data.length;
-    offset = nodeEnd;
-    // Skip ranges that ended before this node.
-    while (r < ranges.length && ranges[r][1] <= nodeStart) r++;
-    if (r >= ranges.length || ranges[r][0] >= nodeEnd) continue;
-
+  const words: HTMLElement[][] = [];
+  // The word being built; it continues into the next text node unless
+  // whitespace ended it.
+  let word: HTMLElement[] | null = null;
+  for (const node of textNodes(el)) {
     const frag = doc.createDocumentFragment();
-    let cursor = nodeStart;
-    let k = r;
-    while (k < ranges.length && ranges[k][0] < nodeEnd) {
-      const from = Math.max(ranges[k][0], nodeStart);
-      const to = Math.min(ranges[k][1], nodeEnd);
-      if (from > cursor) {
-        frag.appendChild(doc.createTextNode(full.slice(cursor, from)));
+    for (const run of node.data.match(/\s+|\S+/g) ?? []) {
+      if (/^\s/.test(run)) {
+        frag.append(doc.createTextNode(run));
+        word = null;
+        continue;
       }
+      if (!word) words.push((word = []));
       const span = doc.createElement("span");
       span.className = WORD_CLASS;
-      span.setAttribute(WORD_ATTR, String(k));
-      span.textContent = full.slice(from, to);
-      frag.appendChild(span);
-      words[k].push(span);
-      cursor = to;
-      if (ranges[k][1] > nodeEnd) break; // word continues in the next node
-      k++;
+      span.setAttribute(WORD_ATTR, String(words.length - 1));
+      span.textContent = run;
+      word.push(span);
+      frag.append(span);
     }
-    if (cursor < nodeEnd) {
-      frag.appendChild(doc.createTextNode(full.slice(cursor, nodeEnd)));
-    }
-    node.parentNode?.replaceChild(frag, node);
+    node.replaceWith(frag);
   }
   return words;
 }
