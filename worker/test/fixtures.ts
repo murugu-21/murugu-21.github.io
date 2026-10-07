@@ -6,6 +6,7 @@ import { assert, expect, vi } from "vitest";
 import { z } from "zod";
 
 import type { Dataset } from "#contracts/api/dataset.ts";
+import type { PostSummary } from "#contracts/api/posts.ts";
 import type { ChatRoom } from "#worker/chat-room.ts";
 import worker from "#worker/server.ts";
 
@@ -142,6 +143,22 @@ export const LLMS_TXT = `# Murugappan M
 - [Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/): Find minimum number of coins.
 `;
 
+// What the site build prerenders to /api/posts.json, the same posts LLMS_TXT lists.
+const POSTS: PostSummary[] = [
+  {
+    slug: "cloud-agnostic-rate-limiting",
+    title: "Modern distributed rate limiting in the cloud",
+    url: "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/",
+    description: "Why LLM agents make per-user rate limiting essential."
+  },
+  {
+    slug: "coin-change-problem",
+    title: "Coin Change Problem",
+    url: "https://murugappan.dev/blog/coin-change-problem/",
+    description: "Find minimum number of coins."
+  }
+];
+
 export const POST_MARKDOWN = "---\ntitle: Coin Change Problem\n---\n\nBody text.\n";
 
 export const LLMS_FULL_TXT = "# SDE Journey\n\nEvery post, in full.\n";
@@ -162,6 +179,7 @@ const HTML_PATHS = new Set(["/404", "/blog/404/"]);
 function siteFiles(overrides: Record<string, string | null> = {}): Record<string, string | null> {
   return {
     "/api/dataset.json": JSON.stringify(DATASET),
+    "/api/posts.json": JSON.stringify(POSTS),
     "/llms.txt": LLMS_TXT,
     "/blog/coin-change-problem/index.md": POST_MARKDOWN,
     "/blog/llms-full.txt": LLMS_FULL_TXT,

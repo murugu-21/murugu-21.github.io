@@ -815,7 +815,7 @@ describe("resources/list", () => {
   });
 
   it("still lists the static documents when the post list is unavailable", async () => {
-    const uris = (await list({ assets: { "/llms.txt": null } })).map(r => r.uri);
+    const uris = (await list({ assets: { "/api/posts.json": null } })).map(r => r.uri);
     expect(uris).toEqual([
       "https://murugappan.dev/llms.txt",
       "https://murugappan.dev/AGENTS.md",

@@ -1,11 +1,11 @@
 // The parsers behind the read and write endpoints: the prerendered dataset,
-// the post list read from llms.txt and the contact form body.
+// the prerendered post list and the contact form body.
 import { describe, expect, it } from "vitest";
 
 import { CONTACT_LIMITS } from "#contracts/api/contact.ts";
 import { parseContactRequest } from "#worker/api/contact.ts";
-import { loadDataset, parseDataset } from "#worker/api/store.ts";
-import { parsePostList, postMarkdownPath } from "#worker/api/posts.ts";
+import { loadDataset, loadPosts, parseDataset } from "#worker/api/store.ts";
+import { postMarkdownPath } from "#worker/api/posts.ts";
 import { DATASET, fakeAssets, fakeFetcher } from "./fixtures";
 
 describe("parseDataset", () => {
@@ -26,65 +26,17 @@ describe("loadDataset", () => {
   });
 });
 
-describe("parsePostList", () => {
-  const LLMS = `# Murugappan M — Full Stack Engineer
-
-> Full-stack engineer.
-
-## Machine-readable feeds
-- [Blog RSS](https://murugappan.dev/blog/rss.xml)
-- [Full blog content for LLMs](https://murugappan.dev/blog/llms-full.txt)
-
-## Blog posts
-- [Why SiteGPT's chat runs on PartyKit](https://murugappan.dev/blog/sitegpt-partykit-durable-objects/): How one-process-per-room replaces socket.io + Redis.
-- [Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/): Find minimum number of coins.
-`;
-  const slugs = ["sitegpt-partykit-durable-objects", "coin-change-problem"];
-
-  it("reads only the blog posts section, skipping the feed links", () => {
-    expect(parsePostList(LLMS)).toEqual([
-      {
-        slug: "sitegpt-partykit-durable-objects",
-        title: "Why SiteGPT's chat runs on PartyKit",
-        url: "https://murugappan.dev/blog/sitegpt-partykit-durable-objects/",
-        description: "How one-process-per-room replaces socket.io + Redis."
-      },
-      {
-        slug: "coin-change-problem",
-        title: "Coin Change Problem",
-        url: "https://murugappan.dev/blog/coin-change-problem/",
-        description: "Find minimum number of coins."
-      }
+describe("loadPosts", () => {
+  it("reads the prerendered post list, and is empty for a broken artifact or a failing binding", async () => {
+    expect((await loadPosts(fakeAssets())).map(p => p.slug)).toEqual([
+      "cloud-agnostic-rate-limiting",
+      "coin-change-problem"
     ]);
-    expect(parsePostList("# Nothing here\n")).toEqual([]);
-  });
-
-  it("falls back to scanning the whole document when the section heading is missing", () => {
-    const withoutHeading = LLMS.replace("## Blog posts\n", "");
-    expect(parsePostList(withoutHeading).map(p => p.slug)).toEqual(slugs);
-  });
-
-  it("stops at the next section heading", () => {
-    const withTrailer = `${LLMS}\n## Something else\n- [Nope](https://murugappan.dev/blog/nope/): no.\n`;
-    expect(parsePostList(withTrailer).map(p => p.slug)).toEqual(slugs);
-  });
-
-  it("skips a line whose URL cannot be parsed and keeps the rest", () => {
-    const lines =
-      "## Blog posts\n- [Broken](http://[bad/blog/broken/): no.\n- [Fine](https://murugappan.dev/blog/fine/): yes.\n";
-    expect(parsePostList(lines).map(p => p.slug)).toEqual(["fine"]);
-  });
-
-  it("tolerates a post line with no description", () => {
-    const line = "## Blog posts\n- [Bare](https://murugappan.dev/blog/bare/)\n";
-    expect(parsePostList(line)).toEqual([
-      {
-        slug: "bare",
-        title: "Bare",
-        url: "https://murugappan.dev/blog/bare/",
-        description: ""
-      }
-    ]);
+    expect(await loadPosts(fakeAssets({ "/api/posts.json": "[{truncated" }))).toEqual([]);
+    expect(await loadPosts(fakeAssets({ "/api/posts.json": '[{"slug":"Bad Slug"}]' }))).toEqual([]);
+    expect(await loadPosts(fakeAssets({ "/api/posts.json": null }))).toEqual([]);
+    const failing = fakeFetcher(() => Promise.reject(new Error("binding down")));
+    expect(await loadPosts(failing)).toEqual([]);
   });
 });
 

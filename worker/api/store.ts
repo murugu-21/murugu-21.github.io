@@ -2,8 +2,9 @@
 // No in-memory cache: the binding is isolate-local and the edge caches, so redeploys show at once.
 
 import { Dataset } from "#contracts/api/dataset.ts";
-import type { PostSummary } from "#contracts/api/posts.ts";
-import { parsePostList, postMarkdownPath } from "./posts";
+import { PostSummaries, type PostSummary } from "#contracts/api/posts.ts";
+import { jsonString } from "#utils/json.ts";
+import { postMarkdownPath } from "./posts";
 
 export type AssetsLike = { fetch(input: string): Promise<Response> };
 
@@ -36,9 +37,10 @@ export async function loadDataset(assets: AssetsLike): Promise<Dataset | null> {
   }
 }
 
+/** Empty when the build artifact is absent or does not match the schema. */
 export async function loadPosts(assets: AssetsLike): Promise<PostSummary[]> {
-  const body = await readAsset(assets, "/llms.txt");
-  return body === null ? [] : parsePostList(body);
+  const body = await readAsset(assets, "/api/posts.json");
+  return jsonString(PostSummaries).safeParse(body).data ?? [];
 }
 
 /** A published post with its markdown, so an unlisted markdown file can't be guessed. */

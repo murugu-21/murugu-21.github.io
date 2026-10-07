@@ -6,6 +6,7 @@ import { z } from "zod";
 import { blogPost, setPosts } from "#src/lib/blog/fixtures.ts";
 import { GET as aboutMarkdown } from "./about/index.md.ts";
 import { GET as dataset } from "./api/dataset.json.ts";
+import { GET as posts } from "./api/posts.json.ts";
 import { GET as blogLlmsFull } from "./blog/llms-full.txt.ts";
 import { GET as blogLlms } from "./blog/llms.txt.ts";
 import { GET as blogIndexMarkdown } from "./blog/index.md.ts";
@@ -116,5 +117,28 @@ describe("/api/dataset.json", () => {
       name: "Murugappan M",
       headline: "Full Stack Engineer"
     });
+  });
+});
+
+describe("/api/posts.json", () => {
+  it("lists the top-level posts newest first, with their one-line descriptions", async () => {
+    setPosts(POSTS);
+    const res = await posts();
+
+    expect(res.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
+    expect(JSON.parse(await res.text())).toEqual([
+      {
+        slug: "first",
+        title: "First post",
+        url: "https://murugappan.dev/blog/first/",
+        description: "The first one"
+      },
+      {
+        slug: "second",
+        title: "Second post",
+        url: "https://murugappan.dev/blog/second/",
+        description: ""
+      }
+    ]);
   });
 });

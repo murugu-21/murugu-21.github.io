@@ -196,8 +196,8 @@ describe("GET /api/posts", () => {
     expect(error.details).toEqual([{ field: "q", issue: "must be at most 200 characters" }]);
   });
 
-  it("returns an empty list rather than an error when llms.txt is missing", async () => {
-    const res = await get("/api/posts", { assets: { "/llms.txt": null } });
+  it("returns an empty list rather than an error when the post list is missing", async () => {
+    const res = await get("/api/posts", { assets: { "/api/posts.json": null } });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ posts: [], count: 0 });
   });
