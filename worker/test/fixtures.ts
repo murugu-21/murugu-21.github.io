@@ -159,9 +159,7 @@ export const BLOG_NOT_FOUND_HTML = "<!doctype html><h1>SDE Journey: 404</h1>";
 const HTML_PATHS = new Set(["/404", "/blog/404/"]);
 
 /** Overriding a path with null makes the assets binding 404 it. */
-export function siteFiles(
-  overrides: Record<string, string | null> = {}
-): Record<string, string | null> {
+function siteFiles(overrides: Record<string, string | null> = {}): Record<string, string | null> {
   return {
     "/api/dataset.json": JSON.stringify(DATASET),
     "/llms.txt": LLMS_TXT,

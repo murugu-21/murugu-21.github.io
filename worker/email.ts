@@ -2,7 +2,7 @@ import type { ContactMessage } from "#contracts/api/contact.ts";
 import type { Lead } from "./prompt";
 import type { ChatHistoryEntry } from "#contracts/chat.ts";
 
-export const SENDER_ADDRESS = "chatbot@murugappan.dev";
+const SENDER_ADDRESS = "chatbot@murugappan.dev";
 
 export type EmailLike = {
   send(msg: { to: string; from: string; subject: string; text: string }): Promise<unknown>;
