@@ -23,8 +23,8 @@ describe("finishSvg", () => {
 
 describe("usedText", () => {
   it("keeps each label character once, without the stylesheet's or entities' characters", () => {
-    expect(usedText("<svg><style>.node{fill:#fff}</style><text>Ab &amp; ba</text></svg>")).toBe(
-      " Aba"
+    expect(usedText("<svg><style>.node{fill:#fff}</style><text>Ab &amp; bad</text></svg>")).toBe(
+      " Abad"
     );
   });
 });
