@@ -1,6 +1,6 @@
 // The worker entry: which requests it claims, which fall through to static
 // assets, and how a miss is answered.
-import { env, runInDurableObject } from "cloudflare:test";
+import { createExecutionContext, env, runInDurableObject } from "cloudflare:test";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
 import { parseRange } from "#worker/audio.ts";
@@ -37,7 +37,8 @@ describe("routing", () => {
     const seen: Request[] = [];
     const response = await worker.fetch(
       new Request("https://example.com/blog/some-post"),
-      envWithAssets(r => seen.push(r))
+      envWithAssets(r => seen.push(r)),
+      createExecutionContext()
     );
     expect(await response.text()).toBe("asset");
     expect(seen.map(r => new URL(r.url).pathname)).toEqual(["/blog/some-post"]);
@@ -56,7 +57,8 @@ describe("routing", () => {
     let assetHits = 0;
     const response = await worker.fetch(
       new Request(`https://example.com${path}`),
-      envWithAssets(() => assetHits++)
+      envWithAssets(() => assetHits++),
+      createExecutionContext()
     );
     expect(assetHits).toBe(0);
     expect(response.status).toBe(status);

@@ -24,4 +24,6 @@ declare module "cloudflare:test" {
     stub: DurableObjectStub<T>,
     fn: (instance: T, state: DurableObjectState) => R | Promise<R>
   ): Promise<R>;
+
+  export function createExecutionContext(): ExecutionContext;
 }

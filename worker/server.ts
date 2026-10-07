@@ -63,4 +63,15 @@ app.route("/blog/audio", audio);
 // Asset and route misses: a content-negotiated 404 (pages bypass the Worker).
 app.all("*", c => serveAsset(c.req.raw, c.env.ASSETS));
 
-export default app;
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    // `astro dev` renders images on request at /_image. A build pre-optimizes them
+    // (imageService "compile"), so production never asks, and a static import
+    // would bundle Astro's server runtime into the Worker.
+    if (import.meta.env.DEV && new URL(request.url).pathname === "/_image") {
+      const { handle } = await import("@astrojs/cloudflare/handler");
+      return handle(request, env, ctx);
+    }
+    return app.fetch(request, env, ctx);
+  }
+};

@@ -1,7 +1,7 @@
 // Shared site fixture for the API and MCP tests: one description of what the
 // deployed build looks like, so the two surfaces are exercised against the
 // same content instead of drifting fixtures.
-import { env } from "cloudflare:test";
+import { createExecutionContext, env } from "cloudflare:test";
 import { assert, expect, vi } from "vitest";
 import { z } from "zod";
 
@@ -269,7 +269,8 @@ export async function fetchWorker(
   if (ip) headers.set("CF-Connecting-IP", ip);
   return worker.fetch(
     new Request(new URL(path, "https://murugappan.dev"), { ...init, headers }),
-    testEnv(envOptions)
+    testEnv(envOptions),
+    createExecutionContext()
   );
 }
 
