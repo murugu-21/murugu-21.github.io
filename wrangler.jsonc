@@ -34,14 +34,20 @@
       "/blog/audio/*"
     ]
   },
-  // Keep these Durable Object bindings and migrations in sync with worker/test/wrangler.jsonc.
+  // Keep these Durable Object bindings and exports in sync with worker/test/wrangler.jsonc.
   "durable_objects": {
     "bindings": [
       { "name": "ChatRoom", "class_name": "ChatRoom" },
       { "name": "RateLimiter", "class_name": "RateLimiter" }
     ]
   },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ChatRoom", "RateLimiter"] }],
+  // Cloudflare tracks these classes as declared exports, so every deploy must list
+  // them; a `migrations` block in their place fails with
+  // provisioned_class_missing_from_config.
+  "exports": {
+    "ChatRoom": { "type": "durable-object", "storage": "sqlite" },
+    "RateLimiter": { "type": "durable-object", "storage": "sqlite" }
+  },
   // The EMAIL lock and this var must name the same address.
   "vars": { "OPPORTUNITY_INBOX": "murugu2001@gmail.com" },
   "send_email": [{ "name": "EMAIL", "destination_address": "murugu2001@gmail.com" }],
