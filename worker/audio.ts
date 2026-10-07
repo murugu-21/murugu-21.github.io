@@ -33,6 +33,14 @@ export function parseRange(
   return { offset: start, length: end - start + 1 };
 }
 
+// RFC 9110 §13.1.2: "*" or a list of tags, compared weakly (a W/ prefix is ignored).
+function etagMatches(header: string | undefined, etag: string): boolean {
+  if (!header) return false;
+  if (header.trim() === "*") return true;
+  const opaque = (tag: string) => tag.trim().replace(/^W\//, "");
+  return header.split(",").some(tag => opaque(tag) === opaque(etag));
+}
+
 export const audio = new Hono<{ Bindings: Env }>();
 
 audio.get("/:file", async c => {
@@ -53,7 +61,7 @@ audio.get("/:file", async c => {
     ETag: etag
   };
 
-  if (c.req.header("If-None-Match") === etag) {
+  if (etagMatches(c.req.header("If-None-Match"), etag)) {
     return new Response(null, { status: 304, headers: baseHeaders });
   }
 

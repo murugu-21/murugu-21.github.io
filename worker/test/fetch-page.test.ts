@@ -4,23 +4,9 @@ import { fetchSitePage } from "#worker/fetch-page.ts";
 import { fakeAssets } from "./fixtures";
 
 describe("fetchSitePage", () => {
-  const LLMS_FULL = `# SDE Journey — full content
-
-> Intro.
-
----
-
-# React Hooks
-URL: https://murugappan.dev/blog/react/
-Date: 2021-01-01
-
-All about useEffect and friends.
-
-# Another Post
-URL: https://murugappan.dev/blog/other/
-Date: 2021-02-01
-
-Other content here.`;
+  const REACT = "---\ntitle: React Hooks\n---\n\nAll about useEffect and friends.\n";
+  const BLOG_INDEX =
+    "# SDE Journey\n\n## Posts\n- [React Hooks](https://murugappan.dev/blog/react/)\n";
 
   it("explains a URL that cannot be parsed", async () => {
     expect(await fetchSitePage(fakeAssets(), "http://[")).toBe("That is not a valid URL.");
@@ -31,11 +17,17 @@ Other content here.`;
     expect(out).toContain("Only pages on murugappan.dev");
   });
 
-  it("extracts a blog post section from llms-full by URL", async () => {
-    const assets = fakeAssets({ "/blog/llms-full.txt": LLMS_FULL });
-    const out = await fetchSitePage(assets, "https://murugappan.dev/blog/react/");
-    expect(out).toContain("All about useEffect");
-    expect(out).not.toContain("Other content here");
+  it("reads a post's index.md rendition, with or without the trailing slash", async () => {
+    const assets = fakeAssets({ "/blog/react/index.md": REACT });
+    expect(await fetchSitePage(assets, "https://murugappan.dev/blog/react/")).toBe(REACT);
+    expect(await fetchSitePage(assets, "/blog/react")).toBe(REACT);
+  });
+
+  it("reads /blog/ and /blog as the blog index rendition", async () => {
+    const assets = fakeAssets({ "/blog/index.md": BLOG_INDEX, "/blog/react/index.md": REACT });
+    expect(await fetchSitePage(assets, "https://murugappan.dev/blog/")).toBe(BLOG_INDEX);
+    // llms.txt links the blog without the slash, and Jarvis passes URLs on as written.
+    expect(await fetchSitePage(assets, "https://murugappan.dev/blog")).toBe(BLOG_INDEX);
   });
 
   it("falls back to stripping page HTML", async () => {

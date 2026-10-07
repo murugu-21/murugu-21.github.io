@@ -17,9 +17,6 @@ const CLAIMS_RECORDED =
 
 export const claimsRecorded = (reply: string) => CLAIMS_RECORDED.test(reply);
 
-export const devVarsKey = (devVars: string) =>
-  devVars.match(/^DEEPSEEK_API_KEY=(.*)$/m)?.[1].trim();
-
 // Passes only when the last capture carries the visitor's contact, since a
 // capture without it is unreplyable.
 export function captureVerdict({

@@ -38,15 +38,10 @@ export async function fetchSitePage(assets: AssetsLike, rawUrl: string): Promise
     return `Only pages on ${SITE_HOST} can be fetched.`;
   }
 
-  // Blog posts come pre-extracted from llms-full.txt, keyed by their URL marker.
-  if (url.pathname.startsWith("/blog/")) {
-    const full = await readAsset(assets, "/blog/llms-full.txt");
-    if (full) {
-      // Without its trailing slash, the marker matches the URL in either form.
-      const marker = `URL: https://${SITE_HOST}${url.pathname.replace(/\/$/, "")}`;
-      const section = full.split(/\n(?=# )/).find(s => s.includes(marker));
-      if (section) return section.slice(0, MAX_CHARS);
-    }
+  // A blog page's index.md is its own markdown. Elsewhere it is the site summary, not the page.
+  if (/^\/blog(\/|$)/.test(url.pathname)) {
+    const markdown = await readAsset(assets, `${url.pathname.replace(/\/$/, "")}/index.md`);
+    if (markdown) return markdown.slice(0, MAX_CHARS);
   }
 
   const body = await readAsset(assets, url.pathname);

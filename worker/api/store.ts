@@ -2,8 +2,9 @@
 // No in-memory cache: the binding is isolate-local and the edge caches, so redeploys show at once.
 
 import { Dataset } from "#contracts/api/dataset.ts";
-import type { PostSummary } from "#contracts/api/posts.ts";
-import { parsePostList, postMarkdownPath } from "./posts";
+import { PostSummaries, type PostSummary } from "#contracts/api/posts.ts";
+import { jsonString } from "#utils/json.ts";
+import { postMarkdownPath } from "./posts";
 
 export type AssetsLike = { fetch(input: string): Promise<Response> };
 
@@ -20,25 +21,16 @@ export async function readAsset(assets: AssetsLike, path: string): Promise<strin
   }
 }
 
-// A stale or truncated build artifact must surface as a 503, not as `undefined` in a 200 body.
-export function parseDataset(raw: unknown): Dataset | null {
-  return Dataset.safeParse(raw).data ?? null;
-}
-
-/** null when the build artifact is absent or does not match the schema. */
+/** null when the build artifact is absent, not JSON or does not match the schema. */
 export async function loadDataset(assets: AssetsLike): Promise<Dataset | null> {
   const body = await readAsset(assets, "/api/dataset.json");
-  if (body === null) return null;
-  try {
-    return parseDataset(JSON.parse(body));
-  } catch {
-    return null;
-  }
+  return jsonString(Dataset).safeParse(body).data ?? null;
 }
 
+/** Empty when the build artifact is absent or does not match the schema. */
 export async function loadPosts(assets: AssetsLike): Promise<PostSummary[]> {
-  const body = await readAsset(assets, "/llms.txt");
-  return body === null ? [] : parsePostList(body);
+  const body = await readAsset(assets, "/api/posts.json");
+  return jsonString(PostSummaries).safeParse(body).data ?? [];
 }
 
 /** A published post with its markdown, so an unlisted markdown file can't be guessed. */

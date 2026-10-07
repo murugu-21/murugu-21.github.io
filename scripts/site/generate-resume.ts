@@ -44,14 +44,12 @@ await printResume();
 
 const buffer = await readFile(OUT_PATH);
 const parser = new PDFParse({ data: buffer });
-const { text } = await parser.getText();
-const info = await parser.getInfo().catch(() => null);
+const { text, total: pageCount } = await parser.getText();
 await parser.destroy();
 
-const pageCount = info?.total ?? null;
 const problems = resumeProblems({ text, pageCount });
 if (problems.length > 0) throw new Error(problems.join("\n"));
 console.log(
-  `[generate-resume] wrote ${OUT_PATH} (${(buffer.length / 1024).toFixed(1)} KB, ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"}); ` +
+  `[generate-resume] wrote ${OUT_PATH} (${(buffer.length / 1024).toFixed(1)} KB, ${pageCount} page${pageCount === 1 ? "" : "s"}); ` +
     `ATS gate passed, all ${ATS_REQUIRED_TOKENS.length} required tokens found`
 );

@@ -19,7 +19,7 @@ import {
   recordingEmail,
   testEnv,
   type TestEnvOptions,
-  visitorMeta
+  visitorStorage
 } from "./fixtures";
 
 afterEach(() => vi.restoreAllMocks());
@@ -479,24 +479,25 @@ describe("a chat turn", () => {
 
 describe("ChatRoom storage", () => {
   it("records the visitor's country and IP, keeping first-seen across reconnects", async () => {
-    const meta = async (headers: Record<string, string>) => {
+    const stored = async (headers: Record<string, string>) => {
       const { stub } = await connectRoom("room-visitor", headers);
-      return runInDurableObject(stub, visitorMeta);
+      return runInDurableObject(stub, visitorStorage);
     };
 
-    const first = await meta({ "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.7" });
+    const first = await stored({ "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.7" });
     expect(first).toMatchObject({
       visitor_country: "IN",
       visitor_ip: "203.0.113.7"
     });
 
-    const second = await meta({ "CF-IPCountry": "DE" });
+    const second = await stored({ "CF-IPCountry": "DE" });
     expect(second.visitor_country).toBe("DE"); // the latest country wins
     expect(second.visitor_ip).toBe("203.0.113.7"); // but a missing value never erases one
     expect(second.visitor_first_seen).toBe(first.visitor_first_seen);
-    expect(Number(second.visitor_last_seen)).toBeGreaterThanOrEqual(
-      Number(first.visitor_last_seen)
-    );
+    // Stored as epoch milliseconds.
+    const lastSeen = (values: Record<string, unknown>) =>
+      z.number().parse(values.visitor_last_seen);
+    expect(lastSeen(second)).toBeGreaterThanOrEqual(lastSeen(first));
   });
 
   it("mirrors one rooms row per room to D1, refreshed on reconnect", async () => {

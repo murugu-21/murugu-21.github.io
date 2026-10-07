@@ -17,7 +17,7 @@ import {
   LLMS_TXT,
   NOT_FOUND_HTML,
   testEnv,
-  visitorMeta
+  visitorStorage
 } from "./fixtures";
 
 // Every response from this ASSETS stub is marked, proving whether a request
@@ -79,12 +79,12 @@ describe("the chat-room WebSocket", () => {
       [VISITOR_COUNTRY_HEADER]: "XX",
       [VISITOR_IP_HEADER]: "203.0.113.66"
     });
-    const meta = await runInDurableObject(stub, async (instance: ChatRoom) =>
-      visitorMeta(instance)
+    const stored = await runInDurableObject(stub, async (instance: ChatRoom) =>
+      visitorStorage(instance)
     );
-    expect(meta.visitor_country).toBe("IN");
+    expect(stored.visitor_country).toBe("IN");
     // Cloudflare sent no IP, so the forged one must not survive either.
-    expect(meta.visitor_ip).toBeUndefined();
+    expect(stored.visitor_ip).toBeUndefined();
   });
 });
 
@@ -231,14 +231,21 @@ describe("GET /blog/audio/:file", () => {
     expect(res.headers.get("Content-Range")).toBe("bytes */1000");
   });
 
-  it("answers 304 to a matching If-None-Match", async () => {
+  it("answers 304 to an exact, weak, listed or wildcard If-None-Match, and 200 to another tag", async () => {
     const first = await fetchWorker("/blog/audio/first-post.mp3");
     const etag = first.headers.get("ETag");
     assert(etag, "first response has no ETag");
-    const res = await fetchWorker("/blog/audio/first-post.mp3", {
-      headers: { "If-None-Match": etag }
-    });
-    expect(res.status).toBe(304);
+    const status = async (ifNoneMatch: string) =>
+      (
+        await fetchWorker("/blog/audio/first-post.mp3", {
+          headers: { "If-None-Match": ifNoneMatch }
+        })
+      ).status;
+    expect(await status(etag)).toBe(304);
+    expect(await status(`W/${etag}`)).toBe(304);
+    expect(await status(`"other", ${etag}`)).toBe(304);
+    expect(await status("*")).toBe(304);
+    expect(await status('"other"')).toBe(200);
   });
 
   it.each(["/blog/audio/nope.mp3", "/blog/audio/..%2Fsecret.mp3", "/blog/audio/first-post.wav"])(

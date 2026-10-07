@@ -107,44 +107,28 @@ async function listPostResources(ctx: ResourceContext): Promise<ResourceDescript
   }));
 }
 
-const BLOG_URI = new RegExp(`^${RESOURCE_ORIGIN}/blog/([^/]+)/index\\.md$`);
+const contents = (content: ResourceContents) => ({ contents: [content] });
 
-/** null means "no such resource". The spec forbids answering that with an empty contents array. */
-export async function readResource(
-  uri: string,
-  ctx: ResourceContext
-): Promise<ResourceContents[] | null> {
-  const known = STATIC_RESOURCES.find(r => r.uri === uri);
-  if (known) {
-    if (known.assetPath === null) {
-      return [
-        {
-          uri,
-          mimeType: known.mimeType,
-          text: JSON.stringify(buildOpenApiDocument(RESOURCE_ORIGIN), null, 2)
-        }
-      ];
-    }
-    const text = await readAsset(ctx.assets, known.assetPath);
-    return text === null ? null : [{ uri, mimeType: known.mimeType, text }];
-  }
-
-  const slug = uri.match(BLOG_URI)?.[1];
-  if (!slug) return null;
-  const post = await loadPost(ctx.assets, slug);
-  return post ? [{ uri, mimeType: "text/markdown", text: post.markdown }] : null;
-}
-
+// Each read throws ResourceNotFoundError, which the SDK answers with -32602; the spec forbids an
+// empty contents array.
 export function registerResources(server: McpServer, ctx: ResourceContext): void {
-  const read = async (uri: URL) => {
-    const contents = await readResource(uri.href, ctx);
-    if (!contents) throw new ResourceNotFoundError(uri.href);
-    return { contents };
-  };
-  for (const { assetPath: _assetPath, uri, name, ...metadata } of STATIC_RESOURCES) {
-    server.registerResource(name, uri, metadata, read);
+  for (const { assetPath, uri, name, ...metadata } of STATIC_RESOURCES) {
+    server.registerResource(name, uri, metadata, async () => {
+      const text =
+        assetPath === null
+          ? JSON.stringify(buildOpenApiDocument(RESOURCE_ORIGIN), null, 2)
+          : await readAsset(ctx.assets, assetPath);
+      if (text === null) throw new ResourceNotFoundError(uri);
+      return contents({ uri, mimeType: metadata.mimeType, text });
+    });
   }
+
   const { uriTemplate, name, ...metadata } = BLOG_POST_TEMPLATE;
   const list = async () => ({ resources: await listPostResources(ctx) });
-  server.registerResource(name, new ResourceTemplate(uriTemplate, { list }), metadata, read);
+  const template = new ResourceTemplate(uriTemplate, { list });
+  server.registerResource(name, template, metadata, async (uri, { slug }) => {
+    const post = typeof slug === "string" ? await loadPost(ctx.assets, slug) : null;
+    if (!post) throw new ResourceNotFoundError(uri.href);
+    return contents({ uri: uri.href, mimeType: metadata.mimeType, text: post.markdown });
+  });
 }
