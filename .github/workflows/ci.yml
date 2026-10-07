@@ -30,6 +30,7 @@ jobs:
       - run: bun run types
       - run: bun run check-format
       - run: bun run lint
+      - run: bun run knip
       - run: bun run check:astro
       - run: bun run check:src
       - run: bun run check:worker

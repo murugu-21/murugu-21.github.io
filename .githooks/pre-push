@@ -2,22 +2,25 @@
 # Mirrors the CI "checks" job (everything except the site build).
 set -e
 
-echo "pre-push 1/6: format"
+echo "pre-push 1/7: format"
 bun run --silent check-format
 
-echo "pre-push 2/6: lint"
+echo "pre-push 2/7: lint"
 bun run --silent lint
 
-echo "pre-push 3/6: astro check"
+echo "pre-push 3/7: unused files, exports and dependencies"
+bun run --silent knip
+
+echo "pre-push 4/7: astro check"
 bun run --silent check:astro
 
-echo "pre-push 4/6: src typecheck"
+echo "pre-push 5/7: src typecheck"
 bun run --silent check:src
 
-echo "pre-push 5/6: worker typecheck"
+echo "pre-push 6/7: worker typecheck"
 bun run --silent check:worker
 
-echo "pre-push 6/6: unit tests"
+echo "pre-push 7/7: unit tests"
 bun run --silent test
 
 echo "pre-push: all gates green"

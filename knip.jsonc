@@ -1,0 +1,31 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  // Files loaded by path strings that no plugin parses: the Worker entrypoint in
+  // cloudflare.config.ts, the test Worker config in vitest.config.ts, the client
+  // directive and resume script in astro.config.ts, and a script run by hand.
+  "entry": [
+    "cloudflare.config.ts",
+    "worker/server.ts",
+    "worker/test/cloudflare.config.ts",
+    "src/directives/interaction.ts",
+    "scripts/site/generate-resume.ts",
+    "scripts/site/render-x-cover.ts"
+  ],
+  "ignore": ["public/**"],
+  // The husky plugin parses any hook script; ours live in .githooks (core.hooksPath).
+  "husky": { "config": [".githooks/*"] },
+  "ignoreDependencies": [
+    // Loaded by `astro check` at runtime.
+    "@astrojs/check",
+    // Required by name inside scripts/site/ts-alias.cjs.
+    "@typescript/typescript6",
+    // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.
+    "cloudflare",
+    // Type-only import served by @types/hast, which Astro's markdown packages install.
+    "hast"
+  ],
+  // A system tool that scripts/site/tts/cli.ts spawns.
+  "ignoreBinaries": ["ffmpeg"],
+  // remark-mermaid.ts spawns this path relative to the repo root, not to its own folder.
+  "ignoreUnresolved": ["scripts/site/render-mermaid.ts"]
+}

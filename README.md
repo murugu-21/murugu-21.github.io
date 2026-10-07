@@ -92,6 +92,7 @@ GITHUB_TOKEN=ghp_xxx bun run build
 ```bash
 bun run check-format   # oxfmt, plus prettier for .astro
 bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates
+bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate .cloudflare/types from cloudflare.config.ts (Env plus the runtime types)
 bun run check:astro    # type-check .astro files
 bun run check:src      # type-check src/, scripts/ and the config files
@@ -110,7 +111,7 @@ Having both compilers installed has two side effects:
 
 ## Deployment
 
-Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, lint, type-checks, tests and a full build including the resume.
+Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, lint, unused code, type-checks, tests and a full build including the resume.
 
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 
