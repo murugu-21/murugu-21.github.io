@@ -62,9 +62,8 @@ export function admitFrame({
 }): Admission {
   if (typeof message !== "string") return DROP;
   const frame = FrameType.safeParse(message).data;
-  if (!frame) return DROP;
-  if (PASSTHROUGH_FRAMES.has(frame.type)) return { kind: "forward", frame: message };
-  if (frame.type !== "cf_agent_use_chat_request") return DROP;
+  if (frame && PASSTHROUGH_FRAMES.has(frame.type)) return { kind: "forward", frame: message };
+  if (frame?.type !== "cf_agent_use_chat_request") return DROP;
 
   const request = ChatRequest.safeParse(message).data;
   const { messages, page } = request?.init.body ?? {};
