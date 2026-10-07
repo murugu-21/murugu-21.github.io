@@ -1,5 +1,3 @@
-/// <reference types="vite/types/import-meta.d.ts" />
-
 // Narrows the Durable Object bindings that .cloudflare/types (from
 // cloudflare.config.ts) declares as untyped namespaces, so stubs carry the
 // classes' RPC methods.
