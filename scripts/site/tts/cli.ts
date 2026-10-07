@@ -2,11 +2,41 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { parseArgs } from "node:util";
 
 import { ROOT, SITE_DIR } from "#scripts/site/site-dir.ts";
 
 export const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
 export const BLOG_DIST = join(SITE_DIR, "blog");
+
+// `bun run audio [slug…] [flags]`; scripts/site/generate-audio.ts lists the flags.
+export function audioArgs(args: string[]) {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      force: { type: "boolean", default: false },
+      local: { type: "boolean", default: false },
+      "dry-run": { type: "boolean", default: false },
+      patch: { type: "boolean", default: false },
+      "upload-voice": { type: "boolean", default: false }
+    }
+  });
+  return { ...values, slugs: positionals };
+}
+
+// `bun run audio:align [slug…] [--force] [--local]`
+export function alignArgs(args: string[]) {
+  const { values, positionals } = parseArgs({
+    args,
+    allowPositionals: true,
+    options: {
+      force: { type: "boolean", default: false },
+      local: { type: "boolean", default: false }
+    }
+  });
+  return { ...values, slugs: positionals };
+}
 
 export function requirePython(module: string): void {
   if (!existsSync(PYTHON)) throw new Error("no .venv-tts; see scripts/site/tts/README.md");

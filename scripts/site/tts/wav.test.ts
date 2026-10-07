@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Buffer } from "node:buffer";
 
-import { assemble, readWav, splice, writeWav } from "./wav.ts";
+import { assemble, pcmSeconds, readWav, splice, writeWav } from "./wav.ts";
 
 const SR = 8000;
 const tone = (seconds: number) => {
@@ -18,12 +18,14 @@ describe("wav round trip", () => {
     expect(parsed.sampleRate).toBe(SR);
     expect(parsed.channels).toBe(1);
     expect(parsed.pcm.equals(pcm)).toBe(true);
+    expect(pcmSeconds(parsed.pcm, parsed.sampleRate)).toBe(0.5);
   });
 
-  it("rejects non-16-bit audio", () => {
+  it("rejects non-16-bit audio and files that aren't WAV", () => {
     const wav = writeWav(SR, tone(0.1));
     wav.writeUInt16LE(24, 34); // bits per sample
     expect(() => readWav(wav)).toThrow(/16-bit/);
+    expect(() => readWav(Buffer.from("ID3\u0004 an MP3 header"))).toThrow("not a RIFF/WAVE file");
   });
 });
 
