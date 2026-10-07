@@ -18,17 +18,19 @@ import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
 import { NIGHT_OWL } from "./src/lib/blog/code-themes";
 import { SITE_ORIGIN } from "./src/lib/site";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/site/fira-code-subset";
+import { modulePreloader } from "./scripts/site/module-preload";
 
 const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
+const postSource = (slug: string) => path.join(BLOG_CONTENT, slug, "index.md");
+// draft/ holds nested posts, unpublished
+const POST_SLUGS = fs.readdirSync(BLOG_CONTENT).filter(slug => fs.existsSync(postSource(slug)));
 
 // Maps each slug to its ISO publish date, for the sitemap's <lastmod>.
 function postDates(): Record<string, string> {
   const dates: Record<string, string> = {};
-  for (const dir of fs.readdirSync(BLOG_CONTENT)) {
-    const file = path.join(BLOG_CONTENT, dir, "index.md");
-    if (!fs.existsSync(file)) continue;
-    const match = fs.readFileSync(file, "utf8").match(/^date:\s*"?([^"\n]+)"?\s*$/m);
-    if (match) dates[dir] = new Date(match[1]).toISOString();
+  for (const slug of POST_SLUGS) {
+    const match = fs.readFileSync(postSource(slug), "utf8").match(/^date:\s*"?([^"\n]+)"?\s*$/m);
+    if (match) dates[slug] = new Date(match[1]).toISOString();
   }
   return dates;
 }
@@ -65,70 +67,75 @@ const jsonLdGraph = z.object({
   "@graph": z.array(z.record(z.string(), z.unknown()))
 });
 
-function checkPostHead({ slug, html }: { slug: string; html: string }) {
-  const canonicals = [...html.matchAll(/<link rel="canonical" href="([^"]*)"/g)].map(m => m[1]);
-  const expected = `https://murugappan.dev/blog/${slug}/`;
-  if (canonicals.length !== 1 || canonicals[0] !== expected) {
-    throw new Error(
-      `blog-post-checks: ${slug} has canonical(s) [${canonicals.join(", ")}], expected exactly ${expected}`
-    );
-  }
+type Post = { slug: string; html: string; source: string };
+
+function authorProblem({ slug, html }: Post) {
   const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
   if (scripts.length !== 1) {
-    throw new Error(
-      `blog-post-checks: ${slug} has ${scripts.length} JSON-LD blocks, expected one @graph`
-    );
+    return `${slug} has ${scripts.length} JSON-LD blocks, expected one @graph`;
   }
   const graph = jsonLdGraph.parse(JSON.parse(scripts[0][1]))["@graph"];
   const posting = graph.find(node => node["@type"] === "BlogPosting");
   const authorId = z.object({ "@id": z.string() }).safeParse(posting?.author).data?.["@id"];
   const author = graph.find(node => node["@id"] === authorId);
-  if (!authorId || author?.["@type"] !== "Person" || author.name !== "Murugappan M") {
-    throw new Error(
-      `blog-post-checks: ${slug}'s BlogPosting author doesn't resolve to the Person "Murugappan M" in its @graph`
-    );
-  }
+  if (authorId && author?.["@type"] === "Person" && author.name === "Murugappan M") return;
+  return `${slug}'s BlogPosting author doesn't resolve to the Person "Murugappan M" in its @graph`;
 }
 
 // A markdown render error doesn't fail the build. The glob loader logs it,
 // caches the empty result in node_modules/.astro and ships a blank article.
 // So check every post has a body and one figure per ```mermaid fence
-// (which also catches a stale cached render), then check its head.
+// (which also catches a stale cached render), then check its head. Each
+// returns what's wrong, and the first that fails stops the build.
+const POST_CHECKS: ((post: Post) => string | undefined)[] = [
+  ({ slug, html }) => {
+    if (html.match(/<section data-post-body>([\s\S]*?)<\/section>/)?.[1].trim()) return;
+    return (
+      `blog/${slug}/index.html has an empty article body. ` +
+      "Its markdown failed to render (see the [glob-loader] error above). " +
+      "Fix it and clear node_modules/.astro, which caches the empty render."
+    );
+  },
+  ({ slug, html, source }) => {
+    const fences = findMermaidFences(source).length;
+    const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
+    if (fences === figures) return;
+    return (
+      `${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +
+      "Clear node_modules/.astro, which caches the stale render."
+    );
+  },
+  ({ slug, html }) => {
+    const canonicals = [...html.matchAll(/<link rel="canonical" href="([^"]*)"/g)].map(m => m[1]);
+    const expected = `https://murugappan.dev/blog/${slug}/`;
+    if (canonicals.length === 1 && canonicals[0] === expected) return;
+    return `${slug} has canonical(s) [${canonicals.join(", ")}], expected exactly ${expected}`;
+  },
+  authorProblem
+];
+
+function checkPost(post: Post) {
+  for (const check of POST_CHECKS) {
+    const problem = check(post);
+    if (problem) throw new Error(`blog-post-checks: ${problem}`);
+  }
+}
+
 function blogPostChecks(): AstroIntegration {
   return {
     name: "blog-post-checks",
     hooks: {
       "astro:build:done": ({ dir, logger }) => {
-        let checked = 0;
-        for (const slug of fs.readdirSync(BLOG_CONTENT)) {
-          const source = path.join(BLOG_CONTENT, slug, "index.md");
-          if (!fs.existsSync(source)) continue; // draft/ holds nested posts, unpublished
+        if (POST_SLUGS.length === 0) throw new Error("blog-post-checks: no blog posts checked");
+        for (const slug of POST_SLUGS) {
           const page = new URL(`blog/${slug}/index.html`, dir);
           if (!fs.existsSync(page)) {
             throw new Error(`blog-post-checks: blog/${slug}/index.html was not built`);
           }
           const html = fs.readFileSync(page, "utf8");
-          const body = html.match(/<section data-post-body>([\s\S]*?)<\/section>/);
-          if (!body || body[1].trim() === "") {
-            throw new Error(
-              `blog-post-checks: blog/${slug}/index.html has an empty article body. ` +
-                "Its markdown failed to render (see the [glob-loader] error above). " +
-                "Fix it and clear node_modules/.astro, which caches the empty render."
-            );
-          }
-          const fences = findMermaidFences(fs.readFileSync(source, "utf8")).length;
-          const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
-          if (fences !== figures) {
-            throw new Error(
-              `blog-post-checks: ${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +
-                "Clear node_modules/.astro, which caches the stale render."
-            );
-          }
-          checkPostHead({ slug, html });
-          checked++;
+          checkPost({ slug, html, source: fs.readFileSync(postSource(slug), "utf8") });
         }
-        if (checked === 0) throw new Error("blog-post-checks: no blog posts checked");
-        logger.info(`${checked} posts checked`);
+        logger.info(`${POST_SLUGS.length} posts checked`);
       }
     }
   };
@@ -194,55 +201,25 @@ function clientInteractionDirective(): AstroIntegration {
   };
 }
 
-// Astro emits no modulepreload hints for the small chunks module scripts
-// import, costing a dependent round trip. Hint static imports transitively;
-// dynamic import() targets are interaction-gated and deliberately left out.
 function modulePreloadHints(): AstroIntegration {
-  const STATIC_IMPORT = /\b(?:from|import)\s*"(\.\/[^"]+\.js)"/g;
-  const MODULE_SCRIPT = /<script type="module" src="(\/[^"]+\.js)"/g;
-  const htmlFiles = (dir: string): string[] =>
-    fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) return htmlFiles(full);
-      return entry.name.endsWith(".html") ? [full] : [];
-    });
   return {
     name: "module-preload-hints",
     hooks: {
       "astro:build:done": ({ dir, logger }) => {
         const root = new URL(dir).pathname;
-        const imports = new Map<string, string[]>();
-        const staticImportsOf = (href: string): string[] => {
-          let found = imports.get(href);
-          if (found) return found;
+        const addHints = modulePreloader(href => {
           const file = path.join(root, href);
-          found = fs.existsSync(file)
-            ? Array.from(fs.readFileSync(file, "utf8").matchAll(STATIC_IMPORT), m =>
-                path.posix.join(path.posix.dirname(href), m[1])
-              )
-            : [];
-          imports.set(href, found);
-          return found;
-        };
+          return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : undefined;
+        });
+        const pages = fs
+          .readdirSync(root, { recursive: true, encoding: "utf8" })
+          .filter(name => name.endsWith(".html"))
+          .map(name => path.join(root, name));
         let hinted = 0;
-        for (const file of htmlFiles(root)) {
-          const html = fs.readFileSync(file, "utf8");
-          const entries = Array.from(html.matchAll(MODULE_SCRIPT), m => m[1]);
-          if (!entries.length) continue;
-          const deps = new Set<string>();
-          const walk = (href: string) => {
-            for (const dep of staticImportsOf(href)) {
-              if (deps.has(dep) || entries.includes(dep)) continue;
-              deps.add(dep);
-              walk(dep);
-            }
-          };
-          entries.forEach(walk);
-          if (!deps.size) continue;
-          const links = Array.from(deps, d => `<link rel="modulepreload" href="${d}">`).join("");
-          // before the first module script, so the preload scanner sees them together
-          const at = html.indexOf('<script type="module" src="');
-          fs.writeFileSync(file, html.slice(0, at) + links + html.slice(at));
+        for (const page of pages) {
+          const html = addHints(fs.readFileSync(page, "utf8"));
+          if (html === undefined) continue;
+          fs.writeFileSync(page, html);
           hinted++;
         }
         logger.info(`modulepreload hints added to ${hinted} page(s)`);
