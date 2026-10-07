@@ -7,12 +7,39 @@ import { basePath } from "hono/route";
 import { apiError } from "./errors";
 import { CONTACT_POLICY, READ_POLICY, READ_QUOTA } from "#contracts/api/quotas.ts";
 import { versionHeaders, versionLinkHeader } from "./versioning";
-import { readRateLimitHeaders, takeReadSlot } from "./ratelimit";
+import { readRateLimitHeaders, takeReadSlot, type ReadSlot } from "./ratelimit";
 
 type ApiHeaderOptions = {
   /** False for the OpenAPI document, because a throttled client must still be able to learn why. */
   enforceReads: boolean;
 };
+
+function throttled(slot: ReadSlot): Response {
+  return apiError({
+    status: 429,
+    code: "rate_limited",
+    message: `More than ${READ_QUOTA.quota} read requests in ${READ_QUOTA.windowSeconds} seconds from this client.`,
+    hint: `Wait ${slot.resetSeconds} seconds. Read responses are cacheable for 5 minutes, so reuse the ones you already have, and read the RateLimit header to see what is left.`,
+    headers: {
+      "Retry-After": String(slot.resetSeconds),
+      ...readRateLimitHeaders(slot),
+      ...versionHeaders(),
+      Link: versionLinkHeader()
+    }
+  });
+}
+
+/** The allowance a response reports: the contact policy, the read slot just spent, or the read policy. */
+function rateLimitHeaders({
+  isContact,
+  slot
+}: {
+  isContact: boolean;
+  slot: ReadSlot | null;
+}): Record<string, string> {
+  if (isContact) return { "RateLimit-Policy": CONTACT_POLICY };
+  return slot ? readRateLimitHeaders(slot) : { "RateLimit-Policy": READ_POLICY };
+}
 
 export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings: Env }> {
   return async (c, next) => {
@@ -24,20 +51,7 @@ export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings
     const client = c.req.header("CF-Connecting-IP");
 
     const slot = isRead && !isContact && client ? takeReadSlot(client) : null;
-    if (slot && opts.enforceReads && !slot.allowed) {
-      return apiError({
-        status: 429,
-        code: "rate_limited",
-        message: `More than ${READ_QUOTA.quota} read requests in ${READ_QUOTA.windowSeconds} seconds from this client.`,
-        hint: `Wait ${slot.resetSeconds} seconds. Read responses are cacheable for 5 minutes, so reuse the ones you already have, and read the RateLimit header to see what is left.`,
-        headers: {
-          "Retry-After": String(slot.resetSeconds),
-          ...readRateLimitHeaders(slot),
-          ...versionHeaders(),
-          Link: versionLinkHeader()
-        }
-      });
-    }
+    if (slot && opts.enforceReads && !slot.allowed) return throttled(slot);
 
     await next();
 
@@ -47,16 +61,7 @@ export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings
 
     // POST /api/contact reports the allowance it just spent; don't overwrite it.
     if (headers.has("RateLimit-Policy")) return;
-
-    if (isContact) {
-      headers.set("RateLimit-Policy", CONTACT_POLICY);
-      return;
-    }
-    if (!slot) {
-      headers.set("RateLimit-Policy", READ_POLICY);
-      return;
-    }
-    for (const [name, value] of Object.entries(readRateLimitHeaders(slot)))
+    for (const [name, value] of Object.entries(rateLimitHeaders({ isContact, slot })))
       headers.set(name, value);
   };
 }

@@ -22,17 +22,13 @@ export function parseRange(
   header: string | null,
   size: number
 ): ByteRange | "unsatisfiable" | null {
-  if (!header) return null;
-  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  const m = header ? /^bytes=(\d*)-(\d*)$/.exec(header.trim()) : null;
   if (!m || (m[1] === "" && m[2] === "")) return null;
-  if (m[1] === "") {
-    const suffix = Math.min(Number(m[2]), size);
-    return suffix === 0 ? "unsatisfiable" : { offset: size - suffix, length: suffix };
-  }
-  const start = Number(m[1]);
-  if (start >= size) return "unsatisfiable";
-  const end = m[2] === "" ? size - 1 : Math.min(Number(m[2]), size - 1);
-  if (end < start) return "unsatisfiable";
+  const [, first, last] = m;
+  // "-n" asks for the final n bytes.
+  const start = first === "" ? size - Math.min(Number(last), size) : Number(first);
+  const end = first === "" || last === "" ? size - 1 : Math.min(Number(last), size - 1);
+  if (start >= size || end < start) return "unsatisfiable";
   return { offset: start, length: end - start + 1 };
 }
 
