@@ -37,7 +37,7 @@ src/data/         # hand-written portfolio and resume data
 
 A file lives in the narrowest folder that holds every importer: a component only the homepage uses goes in `home/`, and one both halves use stays at the root of `components/`.
 
-Lint enforces the direction (`no-restricted-imports` in `.oxlintrc.json`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely, and so does `lib/llms.ts`, which renders the whole site for agents.
+Lint enforces the direction (`no-restricted-imports` in `oxlint.config.ts`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely, and so does `lib/llms.ts`, which renders the whole site for agents.
 
 ### Build
 
