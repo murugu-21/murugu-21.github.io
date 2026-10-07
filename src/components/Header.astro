@@ -23,9 +23,9 @@ const links = [
 // the theme puts md at 769px (global.css), which would leave 768px in neither band.
 
 // Transparent at rest, blurred once `.scrolled` (script below). Always solid
-// below 768px: the CSS-only dropdown needs an opaque surface.
+// below 768px, where the menu sheet continues its surface.
 const headerClass = [
-  "fixed top-0 right-0 left-0 z-[999] mx-auto max-w-full bg-transparent px-5 py-2.5",
+  "group fixed top-0 right-0 left-0 z-[999] mx-auto max-w-full bg-transparent px-5 py-2.5",
   "transition-all duration-300 ease-out motion-reduce:transition-none",
   "[&.scrolled]:backdrop-blur-[15px]",
   "max-[768px]:bg-surface max-[768px]:shadow-[0_4px_10px_0_rgba(3,5,40,0.12)]",
@@ -60,8 +60,17 @@ const navLink = [
   "min-[961px]:max-[1321px]:focus-visible:after:w-[calc(100%-24px)]"
 ];
 
-// Middle bar is the element, outer bars its ::before/::after; checked, they
-// cross into an X. Variants are written out in full: Tailwind scans this file as text.
+// Without the Popover API (Safari < 17, Firefox < 125) the phone nav is
+// unavailable, so the button hides rather than sit dead.
+const menuButton = [
+  "float-right cursor-pointer px-5 py-7 min-[768px]:hidden",
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy",
+  "not-supports-[selector(:popover-open)]:hidden"
+];
+
+// Middle bar is the element, outer bars its ::before/::after; while the menu is
+// open, they cross into an X. Variants are written out in full: Tailwind scans
+// this file as text.
 const navicon = [
   "relative block h-[3px] w-[22px] rounded-[3px] bg-navy dark:bg-blue",
   "transition-[background] duration-200 ease-out",
@@ -71,20 +80,31 @@ const navicon = [
   "after:absolute after:top-[-7px] after:block after:h-full after:w-full after:rounded-[3px]",
   "after:bg-navy after:transition-all after:duration-200 after:ease-out after:content-['']",
   "dark:after:bg-blue",
-  "[.menu-btn:checked~.menu-icon_&]:bg-transparent",
-  "[.menu-btn:checked~.menu-icon_&]:before:top-0",
-  "[.menu-btn:checked~.menu-icon_&]:before:-rotate-45",
-  "[.menu-btn:checked~.menu-icon_&]:after:top-0",
-  "[.menu-btn:checked~.menu-icon_&]:after:rotate-45"
+  "group-has-open:bg-transparent",
+  "group-has-open:before:top-0 group-has-open:before:-rotate-45",
+  "group-has-open:after:top-0 group-has-open:after:rotate-45"
 ];
 
-// visibility hidden (with max-height 0) keeps collapsed links out of the tab order.
-const menu = [
-  "clear-both m-0 list-none p-0",
-  "max-[768px]:invisible max-[768px]:max-h-0 max-[768px]:overflow-hidden",
-  "max-[768px]:transition-[max-height,visibility] max-[768px]:duration-200 max-[768px]:ease-out",
-  "max-[768px]:[.menu-btn:checked~nav_&]:visible",
-  "max-[768px]:[.menu-btn:checked~nav_&]:max-h-[486px]"
+// The list is a popover: Escape and a tap outside close it, and the button gets
+// aria-expanded for free. The UA styles a popover as a hidden, centred, bordered
+// box, so both bands undo that.
+const menuClass = [
+  "m-0 h-auto w-auto list-none border-0 p-0",
+  // Inline on desktop: the UA hides a closed popover, and the script keeps it closed there.
+  "min-[768px]:static min-[768px]:block min-[768px]:overflow-visible min-[768px]:bg-transparent",
+  // A sheet in the top layer, from the bar's content edge (10px padding + the 59px
+  // button) down, on the bar's surface. 486px clears the seven links.
+  "max-[768px]:fixed max-[768px]:inset-x-0 max-[768px]:top-[69px] max-[768px]:bottom-auto",
+  "max-[768px]:px-5 max-[768px]:pb-2.5 max-[768px]:bg-surface dark:max-[768px]:bg-dark-base",
+  // The bar's shadow, offset and shrunk so none of it spills up onto the bar.
+  "max-[768px]:shadow-[0_8px_10px_-4px_rgba(3,5,40,0.12)]",
+  "max-[768px]:max-h-0 max-[768px]:overflow-hidden max-[768px]:open:max-h-[486px]",
+  // The slide: max-height from 0 on open, back to 0 on close. display and overlay
+  // are discrete, so the sheet leaves the top layer only once the slide ends.
+  "max-[768px]:starting:open:max-h-0",
+  "max-[768px]:transition-[max-height,display,overlay] max-[768px]:transition-discrete",
+  // The breakpoint variant must wrap motion-reduce, or the transition rule above outranks it.
+  "max-[768px]:duration-200 max-[768px]:ease-out max-[768px]:motion-reduce:transition-none"
 ];
 ---
 
@@ -94,21 +114,12 @@ const menu = [
     <span class="px-2.5 font-bold text-navy dark:text-white">Murugappan M</span>
     <span class="text-subtitle dark:text-white/65">/&gt;</span>
   </a>
-  {/* Kept over the icon (48px, opacity 0, not sr-only) for hit area and focus order. */}
-  <input
-    class="menu-btn peer absolute top-2 right-2 z-[1] m-0 h-12 w-12 cursor-pointer opacity-0 min-[768px]:hidden"
-    type="checkbox"
-    id="menu-btn"
-  />
-  <label
-    class="menu-icon relative float-right inline-block cursor-pointer px-5 py-7 select-none peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-navy min-[768px]:hidden"
-    for="menu-btn"
-  >
-    <span class="sr-only">Open menu</span>
+  <button type="button" class:list={menuButton} popovertarget="site-menu">
+    <span class="sr-only">Menu</span>
     <span class:list={navicon}></span>
-  </label>
+  </button>
   <nav aria-label="Main" class="min-[768px]:ml-auto">
-    <ul class:list={menu}>
+    <ul id="site-menu" popover class:list={menuClass}>
       {links.map(l => (
         <li class="min-[768px]:float-left">
           <a href={l.href} download={l.download} data-ph-event={l.event} class:list={navLink}>
@@ -118,9 +129,8 @@ const menu = [
       ))}
     </ul>
   </nav>
-  {/* Outside the collapsible menu so it stays in the bar. top-[41px] (10px
-       padding + half the 62px hamburger), not top-1/2: the header grows when
-       the menu opens. */}
+  {/* Outside the menu so it stays in the bar. 41px, not top-1/2: the 79px bar
+       centres on a half pixel, and this sits level with the hamburger. */}
   <div class="absolute top-[41px] right-[86px] -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0">
     <ThemeToggle />
   </div>
@@ -128,7 +138,26 @@ const menu = [
 
 <script>
   const header = document.getElementById("site-header");
-  const onScroll = () => header?.classList.toggle("scrolled", window.scrollY >= 20);
+  if (!header) throw new Error("Header: #site-header is missing");
+  const onScroll = () => header.classList.toggle("scrolled", window.scrollY >= 20);
   onScroll();
   window.addEventListener("scroll", onScroll, { passive: true });
+
+  const menu = document.getElementById("site-menu");
+  if (!menu) throw new Error("Header: #site-menu is missing");
+
+  // Without the Popover API the button is hidden (menuButton) and there is nothing to close.
+  if ("hidePopover" in menu) {
+    // Light dismiss ignores taps inside the popover, and a same-page hash link
+    // never navigates away, so a chosen link closes the menu itself.
+    menu.addEventListener("click", e => {
+      if (e.target instanceof Element && e.target.closest("a")) menu.hidePopover();
+    });
+
+    // An open popover stays in the top layer, where the desktop's inline layout
+    // can't reach it, so a menu left open across the breakpoint closes.
+    window.matchMedia("(min-width: 768px)").addEventListener("change", e => {
+      if (e.matches) menu.hidePopover();
+    });
+  }
 </script>
