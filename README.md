@@ -1,5 +1,7 @@
 # murugappan.dev
 
+[![Code Coverage](https://qlty.sh/gh/murugu-21/projects/murugu-21.github.io/coverage.svg)](https://qlty.sh/gh/murugu-21/projects/murugu-21.github.io)
+
 Personal portfolio and blog of Murugappan, built with [Astro 7](https://astro.build) and deployed as one Cloudflare Worker.
 
 **Live site:** https://murugappan.dev
@@ -67,7 +69,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 - `build`, `dev` and `preview` call `astro` on Node.
 - `scripts/site/generate-resume.ts` runs on Node too, because it prints the resume from `astro preview`.
-- `test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`. Use `bun run test`, not `bun test`, which is Bun's own runner.
+- `test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`, with two exceptions. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. The `scripts/` tests run on Node (the scripts themselves run on Bun), because workerd lacks `node:util`'s `parseArgs`, `node:readline` and the native bindings oxlint's RuleTester loads. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -91,15 +93,22 @@ GITHUB_TOKEN=ghp_xxx bun run build
 
 ```bash
 bun run check-format   # oxfmt, plus prettier for .astro
-bun run lint           # astro sync, then oxlint (type-aware via oxlint-tsgolint)
+typos                  # spelling, configured in _typos.toml
+bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates
+bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate .cloudflare/types from cloudflare.config.ts (Env plus the runtime types)
 bun run check:astro    # type-check .astro files
 bun run check:src      # type-check src/, scripts/ and the config files
 bun run check:worker   # type-check worker/
-bun run test           # vitest in the workers pool
+bun run test           # vitest in the workers pool, on Node and in headless Chromium
+bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 
-The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` preloads `scripts/site/ts-alias.cjs` to point Volar's `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/site/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` supports TypeScript 7.
+[typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
+
+The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it, and typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` and `lint:astro` preload `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/site/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` and typescript-eslint support TypeScript 7.
+
+Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, over the `.astro` files in `src/` to cover the templates. It lints nothing else, so its rules don't overlap oxlint's. Delete it, along with ESLint and its plugins, once oxlint can parse Astro templates.
 
 Having both compilers installed has two side effects:
 
@@ -108,7 +117,9 @@ Having both compilers installed has two side effects:
 
 ## Deployment
 
-Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, lint, type-checks, tests and a full build including the resume.
+Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume. It uploads the test coverage (`coverage/lcov.info`) to [Qlty](https://qlty.sh) over OIDC, so no token is stored. A failed upload, such as on a fork's pull request, doesn't fail the job.
+
+`.github/workflows/links.yml` checks every link in the repo's markdown with [lychee](https://lychee.cli.rs) each Monday and fails on a broken one; its settings and the hosts it skips are in `lychee.toml`, and `lychee .` runs the same check locally (`brew install lychee`). `.github/workflows/lighthouse.yml` runs Lighthouse CI against the live site each Monday (the homepage, `/blog/` and one long post, three runs each) and fails when a category score on the median run (picked by performance) drops below its floor in `lighthouserc.yml`. It audits the deployed site rather than a local build, so the scores include Cloudflare's caching and compression. [Renovate](https://docs.renovatebot.com) (`renovate.json`, read by the Renovate GitHub app) opens dependency updates once a week and keeps actions pinned to a commit SHA with the version as a comment.
 
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 

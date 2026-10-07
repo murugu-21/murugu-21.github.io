@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { bootstrapTheme, type Theme } from "./theme";
+import { bootstrapTheme, currentTheme, type Theme } from "./theme";
 
 class FakeQuery extends EventTarget {
   constructor(public matches: boolean) {
@@ -129,5 +129,18 @@ describe("bootstrapTheme", () => {
     page.show(true);
     expect(page.dark).toBe(true);
     expect(page.stored.has("isDark")).toBe(false);
+  });
+});
+
+describe("currentTheme", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads the theme the page is showing from its root class", () => {
+    const { document } = parseHTML("<html><body></body></html>");
+    vi.stubGlobal("document", document);
+
+    expect(currentTheme()).toBe("light");
+    document.documentElement.classList.add("dark-mode");
+    expect(currentTheme()).toBe("dark");
   });
 });

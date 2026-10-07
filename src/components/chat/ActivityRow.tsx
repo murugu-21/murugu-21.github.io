@@ -27,7 +27,7 @@ const ELAPSED_AFTER_MS = 3000;
 // The worker sends the semantic event; the wording lives here with the UI copy.
 function toolLabel(name: ToolName, detail?: string): string {
   if (name === "capture_opportunity") return "Noting your details";
-  return detail ? `Reading ${detail.replace(/^\/|\/$/g, "")}` : "Reading a page";
+  return detail ? `Reading ${detail.replaceAll(/^\/|\/$/g, "")}` : "Reading a page";
 }
 
 function pickWord(current: string): string {

@@ -5,6 +5,6 @@ export function messageText(message: Pick<UIMessage, "parts">): string {
   return message.parts
     .flatMap(part => (part.type === "text" ? [part.text] : []))
     .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
+    .replaceAll(/\n{3,}/g, "\n\n")
     .trim();
 }

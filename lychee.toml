@@ -1,0 +1,8 @@
+# Weekly link check (.github/workflows/links.yml) over the repo's markdown.
+extensions = ["md"]
+
+# READMEs point at the dev server.
+exclude_loopback = true
+
+# Bot protection on these hosts answers 403 to any client that isn't a browser.
+exclude = ['^https://stackoverflow\.com/', '^https://medium\.com/']

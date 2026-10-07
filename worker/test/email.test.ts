@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   formatContactEmail,
   formatOpportunityEmail,
-  SENDER_ADDRESS,
   sendContactEmail,
   sendOpportunityEmail,
   type EmailLike
@@ -95,7 +94,7 @@ describe("sending", () => {
     const sent: unknown[] = [];
     await sendWith({ send: async msg => void sent.push(msg) });
     expect(sent).toEqual([
-      expect.objectContaining({ to: "inbox@example.com", from: SENDER_ADDRESS })
+      expect.objectContaining({ to: "inbox@example.com", from: "chatbot@murugappan.dev" })
     ]);
   });
 });

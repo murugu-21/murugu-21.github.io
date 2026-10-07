@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { DOCS_URL } from "#contracts/api/errors.ts";
 import { API_PATHS, CURRENT_API_VERSION } from "#contracts/api/routes.ts";
-import { API_VERSION } from "#contracts/api/versioning.ts";
 import {
   fetchWorker,
   POST_MARKDOWN,
@@ -72,7 +70,7 @@ describe("GET /api/profile", () => {
     const error = await errorBody(res);
     expect(error.code).toBe("service_unavailable");
     expect(error.hint).toContain("retry");
-    expect(error.documentation_url).toBe(DOCS_URL);
+    expect(error.documentation_url).toBe("https://murugappan.dev/developers/");
   });
 
   it("answers 503 when the dataset is present but malformed", async () => {
@@ -109,7 +107,7 @@ describe("path versioning", () => {
       const res = await get(path);
       expect(res.status, path).toBe(200);
       const body = await readJson(res, z.object({ current: z.string() }));
-      expect(body.current, path).toBe(CURRENT_API_VERSION);
+      expect(body.current, path).toBe("v1");
     }
   });
 
@@ -122,8 +120,8 @@ describe("path versioning", () => {
       "/openapi.json"
     ]) {
       const res = await get(path);
-      expect(res.headers.get("API-Version"), path).toBe(API_VERSION);
-      expect(res.headers.get("API-Supported-Versions"), path).toBe(CURRENT_API_VERSION);
+      expect(res.headers.get("API-Version"), path).toBe("1.0.0");
+      expect(res.headers.get("API-Supported-Versions"), path).toBe("v1");
       expect(res.headers.get("Link"), path).toContain('rel="version-history"');
     }
   });
@@ -263,7 +261,7 @@ describe("error handling under /api", () => {
       expect(error.code).toBe("not_found");
       expect(error.message).toContain(path);
       expect(error.hint).toContain("/openapi.json");
-      expect(error.documentation_url).toBe(DOCS_URL);
+      expect(error.documentation_url).toBe("https://murugappan.dev/developers/");
     }
   );
 

@@ -22,6 +22,10 @@ Date: 2021-02-01
 
 Other content here.`;
 
+  it("explains a URL that cannot be parsed", async () => {
+    expect(await fetchSitePage(fakeAssets(), "http://[")).toBe("That is not a valid URL.");
+  });
+
   it("rejects non-site hosts", async () => {
     const out = await fetchSitePage(fakeAssets(), "https://evil.example/x");
     expect(out).toContain("Only pages on murugappan.dev");

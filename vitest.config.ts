@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
 // The Workers pool has no filesystem and Vite swallows `?raw` for CSS, so read
@@ -13,29 +14,65 @@ const globalCss = readFileSync("./src/styles/global.css", "utf8");
 const d1Migrations = await readD1Migrations("./migrations");
 
 export default defineConfig({
-  define: {
-    __ISLANDS_CSS__: JSON.stringify(islandsCss),
-    __GLOBAL_CSS__: JSON.stringify(globalCss),
-    __D1_MIGRATIONS__: JSON.stringify(d1Migrations)
-  },
-  plugins: [
-    cloudflareTest({
-      experimental: { newConfig: { configPath: "./worker/test/cloudflare.config.ts" } },
-      // The pool renames the Worker under test but not Durable Object
-      // self-references, so a `bindings.durableObject({ worker })` in the test
-      // config fails to start. A bare class name binds to the Worker itself.
-      miniflare: {
-        durableObjects: {
-          ChatRoom: { className: "ChatRoom", useSQLite: true },
-          RateLimiter: { className: "RateLimiter", useSQLite: true }
-        }
-      }
-    })
-  ],
   test: {
-    setupFiles: ["./worker/test/apply-migrations.ts"],
     // 0 stops truncating `$field` values in it.each titles (and in failure messages).
     chaiConfig: { truncateThreshold: 0 },
-    include: ["worker/test/**/*.test.ts", "src/**/*.test.ts", "scripts/**/*.test.ts"]
+    // V8 coverage doesn't work in the Workers pool. The globs name extensions so READMEs
+    // and .astro files, which Istanbul can't parse, stay out.
+    coverage: {
+      provider: "istanbul",
+      include: ["{src,worker,utils,contracts,scripts}/**/*.{ts,tsx}"],
+      exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "worker/test/**"],
+      reporter: ["text-summary", "lcov"]
+    },
+    projects: [
+      {
+        extends: true,
+        define: {
+          __ISLANDS_CSS__: JSON.stringify(islandsCss),
+          __GLOBAL_CSS__: JSON.stringify(globalCss),
+          __D1_MIGRATIONS__: JSON.stringify(d1Migrations)
+        },
+        plugins: [
+          cloudflareTest({
+            experimental: { newConfig: { configPath: "./worker/test/cloudflare.config.ts" } },
+            // The pool renames the Worker under test but not Durable Object
+            // self-references, so a `bindings.durableObject({ worker })` in the test
+            // config fails to start. A bare class name binds to the Worker itself.
+            miniflare: {
+              durableObjects: {
+                ChatRoom: { className: "ChatRoom", useSQLite: true },
+                RateLimiter: { className: "RateLimiter", useSQLite: true }
+              }
+            }
+          })
+        ],
+        test: {
+          name: "workers",
+          setupFiles: ["./worker/test/apply-migrations.ts"],
+          include: ["worker/test/**/*.test.ts", "src/**/*.test.ts"]
+        }
+      },
+      // The scripts run on Node or Bun, and use what workerd lacks: node:util's parseArgs,
+      // node:readline, and the native bindings oxlint's RuleTester loads.
+      {
+        extends: true,
+        test: { name: "node", environment: "node", include: ["scripts/**/*.test.ts"] }
+      },
+      // React islands need a real DOM, media elements and layout, which workerd lacks.
+      {
+        extends: true,
+        test: {
+          name: "browser",
+          include: ["src/**/*.test.tsx"],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: "chromium" }]
+          }
+        }
+      }
+    ]
   }
 });

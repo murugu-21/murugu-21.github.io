@@ -1,0 +1,11 @@
+[files]
+# Generated: the lockfile's hashes and the vector path data in the SVGs and the Lottie animation.
+extend-exclude = ["bun.lock", "*.svg", "public/lottie-coding.json"]
+
+[default.extend-identifiers]
+# Read as the word "PN" plus "Gs".
+PNGs = "PNGs"
+
+[default.extend-words]
+# A valid spelling of "unparsable".
+unparseable = "unparseable"

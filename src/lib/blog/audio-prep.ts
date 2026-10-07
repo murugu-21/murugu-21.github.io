@@ -32,8 +32,8 @@ export function normalizeSpeechText(text: string): string {
   return text
     .replace(SYMBOLS, "")
     .replace(LONG_DIGIT_RUN, describeDigitRun)
-    .replace(/([?!.])[?!.]+/g, "$1")
-    .replace(/\s+/g, " ")
+    .replaceAll(/([?!.])[?!.]+/g, "$1")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 

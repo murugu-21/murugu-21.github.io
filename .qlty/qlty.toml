@@ -1,0 +1,37 @@
+# Qlty CLI and Qlty Cloud read this file. Reference: https://qlty.sh/d/qlty-toml
+#
+# Formatting, linting and unused-code checks run in CI (oxfmt, oxlint, ESLint for .astro,
+# Prettier for .astro, knip), so Qlty runs none of them: its Prettier ignores .astro and
+# disagrees with oxfmt everywhere else, and its ESLint and knip can't load this repo's config.
+config_version = "0"
+
+exclude_patterns = ["**/node_modules/**", "**/dist/**", "**/*.d.ts", "**/*.min.*"]
+
+test_patterns = ["**/test/**", "**/*.test.*"]
+
+[smells]
+mode = "comment"
+
+[[source]]
+name = "default"
+default = true
+
+[[plugin]]
+name = "actionlint"
+
+[[plugin]]
+name = "zizmor"
+
+[[plugin]]
+name = "trufflehog"
+
+[[plugin]]
+name = "osv-scanner"
+
+# The Python TTS helpers under scripts/site/tts.
+[[plugin]]
+name = "ruff"
+drivers = ["lint"]
+
+[[plugin]]
+name = "bandit"

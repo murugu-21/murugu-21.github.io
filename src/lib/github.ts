@@ -8,6 +8,27 @@ const GraphqlReply = z.object({
   errors: z.array(z.object({ message: z.string() })).optional()
 });
 
+class QueryFailure extends Error {
+  constructor(
+    message: string,
+    readonly detail: unknown[] = []
+  ) {
+    super(message);
+  }
+}
+
+async function postQuery(query: string): Promise<unknown> {
+  const res = await fetch("https://api.github.com/graphql", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${GITHUB_TOKEN}`, "User-Agent": "astro-build" },
+    body: JSON.stringify({ query })
+  });
+  if (!res.ok) throw new QueryFailure(`GraphQL HTTP ${res.status}`);
+  const reply = GraphqlReply.parse(await res.json());
+  if (reply.errors) throw new QueryFailure("GraphQL errors", [reply.errors.map(e => e.message)]);
+  return reply.data;
+}
+
 /** Build-time GraphQL query; logs and returns null on any failure so the build never breaks. */
 async function queryGithub<T extends z.ZodType>({
   query,
@@ -24,37 +45,20 @@ async function queryGithub<T extends z.ZodType>({
     console.warn(`[github] no GITHUB_TOKEN; ${fallback}`);
     return null;
   }
+  let data: unknown;
   try {
-    const res = await fetch("https://api.github.com/graphql", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
-        "User-Agent": "astro-build"
-      },
-      body: JSON.stringify({ query })
-    });
-    if (!res.ok) {
-      console.warn(`[github] GraphQL HTTP ${res.status}; ${fallback}`);
-      return null;
-    }
-    const reply = GraphqlReply.parse(await res.json());
-    if (reply.errors) {
-      console.warn(
-        `[github] GraphQL errors; ${fallback}`,
-        reply.errors.map(e => e.message)
-      );
-      return null;
-    }
-    const parsed = schema.safeParse(reply.data);
-    if (!parsed.success) {
-      console.warn(`[github] unexpected GraphQL data; ${fallback}`, parsed.error.issues);
-      return null;
-    }
-    return parsed.data;
+    data = await postQuery(query);
   } catch (e) {
-    console.warn(`[github] fetch failed; ${fallback}`, e);
+    const failure = e instanceof QueryFailure ? e : new QueryFailure("fetch failed", [e]);
+    console.warn(`[github] ${failure.message}; ${fallback}`, ...failure.detail);
     return null;
   }
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) {
+    console.warn(`[github] unexpected GraphQL data; ${fallback}`, parsed.error.issues);
+    return null;
+  }
+  return parsed.data;
 }
 
 const GithubProfile = z.object({ bio: z.string().nullable() });

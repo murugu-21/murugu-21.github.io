@@ -69,15 +69,15 @@ describe("contact slots", () => {
       for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
         expect(instance.takeContactSlot("2.2.2.2")).toEqual({
           allowed: true,
-          clientRemaining: CONTACT_DAILY_PER_CLIENT - i - 1,
-          globalRemaining: CONTACT_DAILY_GLOBAL - i - 1
+          clientRemaining: 2 - i,
+          globalRemaining: 19 - i
         });
       }
       expect(instance.takeContactSlot("2.2.2.2")).toEqual({
         allowed: false,
         scope: "client",
         clientRemaining: 0,
-        globalRemaining: CONTACT_DAILY_GLOBAL - CONTACT_DAILY_PER_CLIENT
+        globalRemaining: 17
       });
     });
   });
@@ -91,11 +91,11 @@ describe("contact slots", () => {
           sent++;
         }
       }
-      expect(sent).toBe(CONTACT_DAILY_GLOBAL);
+      expect(sent).toBe(20);
       expect(instance.takeContactSlot("10.0.9.9")).toEqual({
         allowed: false,
         scope: "global",
-        clientRemaining: CONTACT_DAILY_PER_CLIENT,
+        clientRemaining: 3,
         globalRemaining: 0
       });
     });
@@ -104,27 +104,25 @@ describe("contact slots", () => {
   it("does not charge the global counter for a client-blocked request", async () => {
     await inLimiter("contact-no-charge", instance => {
       for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 2; i++) instance.takeContactSlot("5.5.5.5");
-      expect(instance.contactUsage("5.5.5.5").globalRemaining).toBe(
-        CONTACT_DAILY_GLOBAL - CONTACT_DAILY_PER_CLIENT
-      );
+      expect(instance.contactUsage("5.5.5.5").globalRemaining).toBe(17);
     });
   });
 
   it("reports the remaining allowance without spending any of it", async () => {
     await inLimiter("contact-usage", instance => {
       expect(instance.contactUsage("6.6.6.6")).toEqual({
-        clientRemaining: CONTACT_DAILY_PER_CLIENT,
-        globalRemaining: CONTACT_DAILY_GLOBAL
+        clientRemaining: 3,
+        globalRemaining: 20
       });
       instance.takeContactSlot("6.6.6.6");
       expect(instance.contactUsage("6.6.6.6")).toEqual({
-        clientRemaining: CONTACT_DAILY_PER_CLIENT - 1,
-        globalRemaining: CONTACT_DAILY_GLOBAL - 1
+        clientRemaining: 2,
+        globalRemaining: 19
       });
       // Another client shares the site-wide tier but has its own.
       expect(instance.contactUsage("7.7.7.7")).toEqual({
-        clientRemaining: CONTACT_DAILY_PER_CLIENT,
-        globalRemaining: CONTACT_DAILY_GLOBAL - 1
+        clientRemaining: 3,
+        globalRemaining: 19
       });
     });
   });

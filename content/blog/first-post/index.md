@@ -28,9 +28,9 @@ In this case, binary64 0.1 is a little greater than 1/10 and 0.2 is a little gre
 
 In financial computing, fixed point is used to overcome this problem. But, this is only because of rounding to given precision(generally 2 points after decimal), Binary can never represent 0.1 or 0.2 or any fraction with denominator other than 2 accurately, the same way decimal cannot represent any fraction with denominator other than 2 and 5 accurately.
 
-processor designers preffered to implement FPUs(Floating Point Units) because this format offers more range for the same amount of space (16, 32, 64 bits) and figured most(99.9%) of the computations will not be affected by these subtle idiosyncrasies. But most computing will be affected by a lack of range and quick arithmetic operations.
+processor designers preferred to implement FPUs(Floating Point Units) because this format offers more range for the same amount of space (16, 32, 64 bits) and figured most(99.9%) of the computations will not be affected by these subtle idiosyncrasies. But most computing will be affected by a lack of range and quick arithmetic operations.
 
-Play around by changing pricision numbers using below snippet😁✌️.
+Play around by changing precision numbers using below snippet😁✌️.
 
 ```js
 Number.parseFloat(0.1).toFixed(20)

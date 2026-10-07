@@ -2,9 +2,11 @@
 // client:interaction (../../directives/interaction.ts) defers hydration to the
 // visitor's first input. .ui-island scopes the shadcn tokens; the id is the
 // dropdown menu's portal target.
+import { PUBLIC_CHAT_HOST } from "astro:env/client";
+
 import { ChatWidget } from "./ChatWidget";
 ---
 
 <div id="chat-widget-root" class="ui-island">
-  <ChatWidget client:interaction />
+  <ChatWidget client:interaction host={PUBLIC_CHAT_HOST} />
 </div>

@@ -63,11 +63,11 @@ export function formatReadingTime(minutes: number): string {
 // Plain-text excerpt of the raw markdown, for posts without a description.
 export function excerpt(body: string | undefined, length = 160): string {
   const text = (body || "")
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replace(/[#>*_`~]/g, "")
-    .replace(/\s+/g, " ")
+    .replaceAll(/```[\s\S]*?```/g, " ")
+    .replaceAll(/!\[[^\]]*\]\([^)]*\)/g, " ")
+    .replaceAll(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replaceAll(/[#>*_`~]/g, "")
+    .replaceAll(/\s+/g, " ")
     .trim();
   if (text.length <= length) return text;
   return text.slice(0, length).replace(/\s+\S*$/, "") + "…";

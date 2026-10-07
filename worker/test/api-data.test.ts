@@ -4,15 +4,25 @@ import { describe, expect, it } from "vitest";
 
 import { CONTACT_LIMITS } from "#contracts/api/contact.ts";
 import { parseContactRequest } from "#worker/api/contact.ts";
-import { parseDataset } from "#worker/api/store.ts";
+import { loadDataset, parseDataset } from "#worker/api/store.ts";
 import { parsePostList, postMarkdownPath } from "#worker/api/posts.ts";
-import { DATASET } from "./fixtures";
+import { DATASET, fakeAssets, fakeFetcher } from "./fixtures";
 
 describe("parseDataset", () => {
   it("accepts the built dataset and rejects one missing a collection", () => {
     expect(parseDataset(JSON.parse(JSON.stringify(DATASET)))).toEqual(DATASET);
     const { experience: _dropped, ...rest } = DATASET;
     expect(parseDataset(rest)).toBeNull();
+  });
+});
+
+describe("loadDataset", () => {
+  it("reads the prerendered dataset, and is null for a broken artifact or a failing binding", async () => {
+    expect(await loadDataset(fakeAssets())).toEqual(DATASET);
+    expect(await loadDataset(fakeAssets({ "/api/dataset.json": "{truncated" }))).toBeNull();
+    expect(await loadDataset(fakeAssets({ "/api/dataset.json": null }))).toBeNull();
+    const failing = fakeFetcher(() => Promise.reject(new Error("binding down")));
+    expect(await loadDataset(failing)).toBeNull();
   });
 });
 
@@ -57,6 +67,12 @@ describe("parsePostList", () => {
   it("stops at the next section heading", () => {
     const withTrailer = `${LLMS}\n## Something else\n- [Nope](https://murugappan.dev/blog/nope/): no.\n`;
     expect(parsePostList(withTrailer).map(p => p.slug)).toEqual(slugs);
+  });
+
+  it("skips a line whose URL cannot be parsed and keeps the rest", () => {
+    const lines =
+      "## Blog posts\n- [Broken](http://[bad/blog/broken/): no.\n- [Fine](https://murugappan.dev/blog/fine/): yes.\n";
+    expect(parsePostList(lines).map(p => p.slug)).toEqual(["fine"]);
   });
 
   it("tolerates a post line with no description", () => {

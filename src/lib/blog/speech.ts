@@ -17,7 +17,7 @@ const SKIPPED_TAGS = new Set(["PRE", "FIGURE", "TABLE", "HR", "SCRIPT", "STYLE"]
 // Read lists item by item so the highlight and resume point stay fine-grained.
 const SPLIT_TAGS = new Set(["UL", "OL"]);
 
-const clean = (text: string | null) => (text ?? "").replace(/\s+/g, " ").trim();
+const clean = (text: string | null) => (text ?? "").replaceAll(/\s+/g, " ").trim();
 
 export function speechBlocks<T extends BlockLike<T>>(root: BlockLike<T>): SpeechBlock<T>[] {
   const out: SpeechBlock<T>[] = [];

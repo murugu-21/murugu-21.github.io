@@ -23,8 +23,10 @@ export const FIRA_CODE_FEATURES = ["calt", "ccmp", "dnom", "frac", "numr", "mark
 // check run rewrites it (about 260 ms).
 export const FIRA_CODE_SUBSET = join(ROOT, "node_modules/.cache/fira-code/fira-code.woff2");
 
-export async function writeFiraCodeSubset(): Promise<void> {
-  const text = UNICODE_RANGE.split(",")
+// Every character a CSS unicode-range list ("U+0020-007E,U+00A9") covers.
+export const unicodeRangeText = (ranges: string) =>
+  ranges
+    .split(",")
     .flatMap(range => {
       const [from, to = from] = range
         .slice(2)
@@ -33,6 +35,9 @@ export async function writeFiraCodeSubset(): Promise<void> {
       return Array.from({ length: to - from + 1 }, (_, i) => String.fromCodePoint(from + i));
     })
     .join("");
+
+export async function writeFiraCodeSubset(): Promise<void> {
+  const text = unicodeRangeText(UNICODE_RANGE);
   const woff2 = await subsetFont(readFileSync(FIRA_CODE_VF), text, {
     targetFormat: "woff2",
     keepFeatures: FIRA_CODE_FEATURES

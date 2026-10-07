@@ -186,9 +186,9 @@ describe("blue-hour light palette", () => {
 const night = (() => {
   const m = /--background-image-page-dark:\s*linear-gradient\(([^\n]+)\)/.exec(css);
   if (!m) throw new Error("no --background-image-page-dark gradient in global.css");
-  const stops = [...m[1].matchAll(/rgb\(\d+,\s*\d+,\s*\d+\)/g)].map(s => s[0]);
-  if (stops.length < 2) throw new Error("expected two night stops");
-  return stops;
+  const found = [...m[1].matchAll(/rgb\(\d+,\s*\d+,\s*\d+\)/g)].map(s => s[0]);
+  if (found.length < 2) throw new Error("expected two night stops");
+  return found;
 })();
 
 describe("night palette", () => {

@@ -324,9 +324,9 @@ describe("wrapWords", () => {
 describe("matchWordSpans", () => {
   const { document } = parseHTML("");
   const span = (text: string) => {
-    const el = document.createElement("span");
-    el.textContent = text;
-    return el;
+    const node = document.createElement("span");
+    node.textContent = text;
+    return node;
   };
 
   it("pairs words with timings by position when the normalised tokens agree", () => {

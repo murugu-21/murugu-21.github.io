@@ -2,7 +2,7 @@ import type { ContactMessage } from "#contracts/api/contact.ts";
 import type { Lead } from "./prompt";
 import type { ChatHistoryEntry } from "#contracts/chat.ts";
 
-export const SENDER_ADDRESS = "chatbot@murugappan.dev";
+const SENDER_ADDRESS = "chatbot@murugappan.dev";
 
 export type EmailLike = {
   send(msg: { to: string; from: string; subject: string; text: string }): Promise<unknown>;
@@ -16,7 +16,7 @@ export function contactMailer(env: Env): { email: EmailLike; inbox: string } | n
   return env.EMAIL && inbox ? { email: env.EMAIL, inbox } : null;
 }
 
-const subjectName = (who: string): string => who.replace(/\s+/g, " ").slice(0, 80);
+const subjectName = (who: string): string => who.replaceAll(/\s+/g, " ").slice(0, 80);
 
 export function formatOpportunityEmail(
   lead: Lead,

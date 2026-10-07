@@ -58,6 +58,17 @@ export function writeWav(sampleRate: number, pcm: Buffer): Buffer {
   return Buffer.concat([header, pcm]);
 }
 
+export const pcmSeconds = (pcm: Buffer, sampleRate: number) => pcm.length / 2 / sampleRate;
+
+// The one sample rate every rendered chunk shares.
+export function sharedSampleRate(chunks: { id: string; sampleRate: number }[]): number {
+  const [first, ...others] = chunks;
+  if (!first) throw new Error("no chunks rendered");
+  const mismatch = others.find(chunk => chunk.sampleRate !== first.sampleRate);
+  if (mismatch) throw new Error(`sample rate mismatch in ${mismatch.id}`);
+  return first.sampleRate;
+}
+
 function silence(sampleRate: number, seconds: number): Buffer {
   return Buffer.alloc(Math.round(sampleRate * seconds) * 2);
 }
@@ -95,5 +106,43 @@ export function assemble(
     });
     timings.push({ start, end: samples / sampleRate });
   });
+  return { pcm: Buffer.concat(parts), timings };
+}
+
+// `replace` is keyed by block index. The gaps between blocks are kept.
+export function splice({
+  pcm,
+  sampleRate,
+  blocks,
+  replace
+}: {
+  pcm: Buffer;
+  sampleRate: number;
+  blocks: BlockTiming[];
+  replace: ReadonlyMap<number, Buffer>;
+}): { pcm: Buffer; timings: BlockTiming[] } {
+  const byteAt = (seconds: number) => Math.round(seconds * sampleRate) * 2;
+  const seconds = (bytes: number) => bytes / 2 / sampleRate;
+  const parts: Buffer[] = [];
+  const timings: BlockTiming[] = [];
+  let cursor = 0;
+  let shift = 0;
+  blocks.forEach((block, i) => {
+    const start = byteAt(block.start);
+    const end = byteAt(block.end);
+    const replacement = replace.get(i);
+    if (!replacement) {
+      timings.push({ start: seconds(start + shift), end: seconds(end + shift) });
+      return;
+    }
+    parts.push(pcm.subarray(cursor, start), replacement);
+    cursor = end;
+    timings.push({
+      start: seconds(start + shift),
+      end: seconds(start + shift + replacement.length)
+    });
+    shift += replacement.length - (end - start);
+  });
+  parts.push(pcm.subarray(cursor));
   return { pcm: Buffer.concat(parts), timings };
 }

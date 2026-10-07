@@ -13,17 +13,17 @@ function htmlToText(html: string): string {
     /<body[\s\S]*?<\/body>/i.exec(html)?.[0] ??
     html;
   return scoped
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\s*\n\s*/g, "\n")
+    .replaceAll(/<script[\s\S]*?<\/script>/gi, " ")
+    .replaceAll(/<style[\s\S]*?<\/style>/gi, " ")
+    .replaceAll(/<[^>]+>/g, " ")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll(/&#39;|&apos;/g, "'")
+    .replaceAll("&nbsp;", " ")
+    .replaceAll(/[ \t]+/g, " ")
+    .replaceAll(/\s*\n\s*/g, "\n")
     .trim();
 }
 

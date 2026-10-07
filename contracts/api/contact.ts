@@ -24,7 +24,7 @@ export type ContactMessage = {
 };
 
 // Deliberately loose: stricter patterns reject deliverable addresses.
-export const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
+const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 // Blank after trimming counts as absent.
 const optionalText = ({ max, description }: { max: number; description: string }) =>

@@ -260,6 +260,10 @@ describe("parseRange", () => {
     ["bytes=95-500", { offset: 95, length: 5 }],
     ["bytes=100-", "unsatisfiable"],
     ["bytes=-0", "unsatisfiable"],
+    ["bytes=50-20", "unsatisfiable"],
+    // A suffix longer than the object is the whole object.
+    ["bytes=-500", { offset: 0, length: 100 }],
+    ["bytes=-", null],
     ["items=0-1", null],
     [null, null]
   ])("parses %s against a 100-byte object", (header, expected) => {

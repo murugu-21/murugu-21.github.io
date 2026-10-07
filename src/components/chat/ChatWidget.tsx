@@ -1,22 +1,16 @@
 // Jarvis chat island, shared by the portfolio and blog via ChatWidget.astro.
-import React, { Suspense, useEffect, useRef, useState } from "react";
-import { PUBLIC_CHAT_HOST } from "astro:env/client";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { useAgent } from "agents/react";
 import { safeValidateUIMessages } from "ai";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { Download, EllipsisVertical, MessageCircle, RotateCcw, Send, X } from "lucide-react";
+import { Download, EllipsisVertical, MessageCircle, RotateCcw, X } from "lucide-react";
 
-import {
-  ERROR_NOTICE,
-  GREETING,
-  MAX_MESSAGE_LENGTH,
-  type Activity,
-  type JarvisMessage
-} from "#contracts/chat.ts";
-import { messageText } from "#utils/ui-message.ts";
+import { ERROR_NOTICE, GREETING, type Activity, type JarvisMessage } from "#contracts/chat.ts";
 import { ActivityRow } from "./ActivityRow";
+import { BubbleView, toBubbles, type Bubble } from "./Bubble";
+import { Composer } from "./Composer";
 import { Button } from "#src/components/ui/button.tsx";
 import { Card, CardFooter, CardHeader } from "#src/components/ui/card.tsx";
 import {
@@ -26,14 +20,11 @@ import {
   DropdownMenuTrigger
 } from "#src/components/ui/dropdown-menu.tsx";
 import { ScrollArea } from "#src/components/ui/scroll-area.tsx";
-import { Textarea } from "#src/components/ui/textarea.tsx";
 import { cn } from "#src/lib/utils.ts";
 import { track, reportError } from "#src/lib/analytics.ts";
 
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
-// ~5 lines; the composer scrolls beyond this.
-const MAX_INPUT_HEIGHT = 120;
 
 // Each steers Jarvis toward a strong grounded answer without selling.
 const STARTERS = [
@@ -42,22 +33,13 @@ const STARTERS = [
   "Summarize his experience in 30 seconds"
 ];
 
-type Bubble = { kind: "user" | "assistant" | "system"; text: string };
-
-// The room's `notice` parts (the spend limit, a failure) render as system lines.
-function toBubbles(messages: JarvisMessage[]): Bubble[] {
-  return messages.flatMap(message => {
-    const text = messageText(message);
-    const bubbles: Bubble[] =
-      text && message.role !== "system"
-        ? [{ kind: message.role === "user" ? "user" : "assistant", text }]
-        : [];
-    for (const part of message.parts) {
-      if (part.type === "data-notice") bubbles.push({ kind: "system", text: part.data.text });
-    }
-    return bubbles;
-  });
-}
+/** What the panel waits on. Only an idle room takes a message. */
+type Phase =
+  | { kind: "loading" }
+  | { kind: "idle" }
+  // Before the reply's prose, or on a tool step after it; null until a tool starts.
+  | { kind: "working"; activity: Activity | null }
+  | { kind: "replying" };
 
 // The room's data parts arrive over the network, so they're parsed, not trusted.
 const DATA_SCHEMAS = {
@@ -68,12 +50,14 @@ const DATA_SCHEMAS = {
   notice: z.object({ kind: z.enum(["limit", "error"]), text: z.string() })
 };
 
-// The reply's latest tool step or prose, whichever came last.
-function replyTail(last: JarvisMessage | undefined) {
-  if (last?.role !== "assistant") return undefined;
-  return last.parts.findLast(
+// A running turn shows its latest tool step or prose, whichever came last.
+function turnPhase(last: JarvisMessage | undefined): Phase {
+  if (last?.role !== "assistant") return { kind: "working", activity: null };
+  const tail = last.parts.findLast(
     part => part.type === "data-activity" || (part.type === "text" && part.text.trim() !== "")
   );
+  if (tail?.type === "text") return { kind: "replying" };
+  return { kind: "working", activity: tail?.type === "data-activity" ? tail.data : null };
 }
 
 // The hook's default loader rejects when offline, which would crash the island.
@@ -104,130 +88,40 @@ function roomId(): string {
   return id;
 }
 
-// Split keeps captured URLs at odd indexes; trailing punctuation stays outside the link.
-const URL_SPLIT = /(https?:\/\/[^\s]+)/;
-
-// The prompt forbids markdown but [label](url) still slips through; flatten to "label: url".
-const MD_LINK = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
-
-function renderWithLinks(raw: string) {
-  const text = raw.replace(MD_LINK, (_m, label: string, url: string) =>
-    label ? `${label}: ${url}` : url
-  );
-  return text.split(URL_SPLIT).map((part, i) => {
-    if (i % 2 === 0) return part;
-    const trailing = /[.,!?;:)]+$/.exec(part)?.[0] ?? "";
-    const url = trailing ? part.slice(0, -trailing.length) : part;
-    return (
-      <React.Fragment key={i}>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="break-all text-current underline underline-offset-2 hover:opacity-80"
-        >
-          {url}
-        </a>
-        {trailing}
-      </React.Fragment>
-    );
-  });
-}
-
-function BubbleView({ kind, text }: Bubble) {
-  return (
-    <div
-      className={cn(
-        "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] whitespace-pre-wrap wrap-break-word",
-        kind === "user" && "self-end rounded-br-sm bg-primary text-primary-foreground",
-        kind === "assistant" && "self-start rounded-bl-sm bg-muted text-foreground",
-        kind === "system" && "self-center bg-transparent text-center text-xs text-muted-foreground"
-      )}
-    >
-      {renderWithLinks(text)}
-    </div>
-  );
+function downloadTranscript(bubbles: Bubble[]) {
+  track("chat_transcript_download");
+  const lines = [
+    `Jarvis: ${GREETING}`,
+    // The room's notices aren't part of the conversation.
+    ...bubbles
+      .filter(b => b.kind !== "system")
+      .map(b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`)
+  ];
+  const date = new Date().toISOString().slice(0, 10);
+  const body = `Chat with Jarvis on murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;
+  const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `jarvis-chat-${date}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 type PanelProps = {
   bubbles: Bubble[];
-  // History is still loading; the composer waits for it.
-  loading: boolean;
-  busy: boolean;
-  // The activity row shows until reply text follows; null means no tool is running.
-  waiting: boolean;
-  activity: Activity | null;
+  phase: Phase;
   onSend: (text: string) => void;
   onClose: () => void;
   onRestart: () => void;
 };
 
-function ChatPanel({
-  bubbles,
-  loading,
-  busy,
-  waiting,
-  activity,
-  onSend,
-  onClose,
-  onRestart
-}: PanelProps) {
+function ChatPanel({ bubbles, phase, onSend, onClose, onRestart }: PanelProps) {
   const [confirmRestart, setConfirmRestart] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Reset before measuring, or scrollHeight only ever grows.
-  const autoGrow = (el: HTMLTextAreaElement) => {
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_HEIGHT)}px`;
-  };
-
-  const send = (raw: string) => {
-    const text = raw.trim();
-    if (!text || loading || busy) return false;
+  const send = (text: string) => {
     setConfirmRestart(false);
     onSend(text);
-    return true;
-  };
-
-  const submit = () => {
-    const el = inputRef.current;
-    if (!el) return;
-    // Clear only on an accepted send; it's refused while a turn is in flight.
-    if (!send(el.value)) return;
-    el.value = "";
-    autoGrow(el);
-  };
-
-  const onSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    submit();
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // isComposing: the Enter that commits an IME candidate must not send.
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      submit();
-    }
-  };
-
-  const transcript = bubbles.filter(b => b.kind !== "system");
-
-  const download = () => {
-    track("chat_transcript_download");
-    const lines = [
-      `Jarvis: ${GREETING}`,
-      ...transcript.map(b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`)
-    ];
-    const date = new Date().toISOString().slice(0, 10);
-    const body = `Chat with Jarvis on murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;
-    const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `jarvis-chat-${date}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   // Stick to the bottom, except on a fresh conversation where the greeting must
@@ -237,7 +131,7 @@ function ChatPanel({
     if (!v) return;
     const fresh = bubbles.every(b => b.kind === "system");
     v.scrollTop = fresh ? 0 : v.scrollHeight;
-  }, [bubbles, loading, waiting, activity]);
+  }, [bubbles, phase]);
 
   // Body scroll lock while the panel is full-screen (mobile).
   useEffect(() => {
@@ -251,13 +145,8 @@ function ChatPanel({
     };
   }, []);
 
-  // Desktop only: on phones autofocus pops the keyboard and hides the greeting.
-  useEffect(() => {
-    if (window.matchMedia("(min-width: 640px)").matches) inputRef.current?.focus();
-  }, []);
-
   // Until the visitor says anything; the greeting doesn't count.
-  const showStarters = !loading && !busy && bubbles.every(b => b.kind !== "user");
+  const showStarters = phase.kind === "idle" && bubbles.every(b => b.kind !== "user");
 
   const headerBtn =
     "size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-4.5";
@@ -288,7 +177,7 @@ function ChatPanel({
             <DropdownMenuItem onSelect={() => setConfirmRestart(true)}>
               <RotateCcw /> Start over
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={download}>
+            <DropdownMenuItem onSelect={() => downloadTranscript(bubbles)}>
               <Download /> Download transcript
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -331,14 +220,14 @@ function ChatPanel({
           {bubbles.map((b, i) => (
             <BubbleView key={i} kind={b.kind} text={b.text} />
           ))}
-          {loading && (
+          {phase.kind === "loading" && (
             <div className="flex items-center gap-1 self-start rounded-xl rounded-bl-sm bg-muted p-3">
               <span className="chat-dot" />
               <span className="chat-dot" />
               <span className="chat-dot" />
             </div>
           )}
-          {waiting && <ActivityRow activity={activity} />}
+          {phase.kind === "working" && <ActivityRow activity={phase.activity} />}
           {showStarters && (
             <div className="mt-1 flex flex-col items-start gap-2">
               {STARTERS.map(q => (
@@ -361,40 +250,24 @@ function ChatPanel({
       </ScrollArea>
 
       <CardFooter className="border-t p-2.5">
-        <form className="flex w-full items-end gap-2" onSubmit={onSubmit}>
-          <Textarea
-            ref={inputRef}
-            id="chat-input"
-            name="message"
-            rows={1}
-            maxLength={MAX_MESSAGE_LENGTH}
-            placeholder="Ask a question…"
-            aria-label="Your message"
-            autoComplete="off"
-            onInput={e => autoGrow(e.currentTarget)}
-            onKeyDown={onKeyDown}
-            style={{ maxHeight: MAX_INPUT_HEIGHT }}
-            className="field-sizing-fixed min-h-0 resize-none overflow-x-hidden bg-secondary"
-          />
-          <Button type="submit" size="icon" aria-label="Send" disabled={loading || busy}>
-            <Send />
-          </Button>
-        </form>
+        <Composer disabled={phase.kind !== "idle"} onSend={send} />
       </CardFooter>
     </Card>
   );
 }
 
-type SessionProps = { room: string; open: boolean; onClose: () => void; onRestart: () => void };
+type SessionProps = {
+  room: string;
+  host: string;
+  open: boolean;
+  onClose: () => void;
+  onRestart: () => void;
+};
 
 // Owns the room's socket, so it stays mounted while the panel is closed.
-function ChatSession({ room, open, onClose, onRestart }: SessionProps) {
+function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
   const [awaitingReply, setAwaitingReply] = useState(false);
-  const agent = useAgent({
-    agent: "chat-room",
-    name: room,
-    host: PUBLIC_CHAT_HOST || window.location.host
-  });
+  const agent = useAgent({ agent: "chat-room", name: room, host });
   const { messages, sendMessage, status, isServerStreaming } = useAgentChat<unknown, JarvisMessage>(
     {
       agent,
@@ -426,7 +299,6 @@ function ChatSession({ room, open, onClose, onRestart }: SessionProps) {
     status === "streaming" ||
     isServerStreaming ||
     (awaitingReply && status !== "error" && !replyStarted);
-  const tail = busy ? replyTail(last) : undefined;
 
   const bubbles = toBubbles(messages);
   if (status === "error") bubbles.push({ kind: "system", text: ERROR_NOTICE.text });
@@ -441,10 +313,7 @@ function ChatSession({ room, open, onClose, onRestart }: SessionProps) {
   return (
     <ChatPanel
       bubbles={bubbles}
-      loading={false}
-      busy={busy}
-      waiting={busy && tail?.type !== "text"}
-      activity={tail?.type === "data-activity" ? tail.data : null}
+      phase={busy ? turnPhase(last) : { kind: "idle" }}
       onSend={onSend}
       onClose={onClose}
       onRestart={onRestart}
@@ -452,7 +321,8 @@ function ChatSession({ room, open, onClose, onRestart }: SessionProps) {
   );
 }
 
-export function ChatWidget() {
+// `host` is PUBLIC_CHAT_HOST; unset means the page's own origin.
+export function ChatWidget({ host }: { host?: string }) {
   const [open, setOpen] = useState(false);
   // Read from localStorage on first open, so the server render never needs it.
   const [room, setRoom] = useState<string | null>(null);
@@ -507,10 +377,7 @@ export function ChatWidget() {
   const loadingPanel = (
     <ChatPanel
       bubbles={[]}
-      loading
-      busy={false}
-      waiting={false}
-      activity={null}
+      phase={{ kind: "loading" }}
       onSend={() => {}}
       onClose={toggleOpen}
       onRestart={restart}
@@ -546,6 +413,7 @@ export function ChatWidget() {
           <ChatSession
             key={room}
             room={room}
+            host={host || window.location.host}
             open={open}
             onClose={toggleOpen}
             onRestart={restart}

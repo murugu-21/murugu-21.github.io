@@ -37,6 +37,8 @@ bun run audio:align <slug>             # word timings, ~5 s per post
 
 Then push as usual. With no slug, `bun run audio` renders every changed post. `--force` re-renders, `--dry-run` only extracts and hashes, and `--local` writes to the local R2 state that `bun run dev` serves (`.cloudflare/state`).
 
+For a small text fix, `bun run audio --patch <slug>` re-synthesizes only the paragraphs whose text changed and splices them into the MP3 already in R2, which takes minutes instead of a full render. It levels each new paragraph with the same loudnorm pass on its own, shifts the later timings, and keeps a copy of the old R2 objects in the logged `backup/` directory. It needs the same paragraph count as the stored timings, so a post that gained or lost a paragraph needs a full render (`bun run audio <slug> --force`). Run `bun run audio:align <slug> --force` afterwards: the patched paragraphs come back without word timings.
+
 Every render stays in the `$TMPDIR/audio-<slug>-*` directory the script logs, about 370 MB for a 45-minute post, and nothing deletes it. If an upload fails, push the files from there instead of rendering again, MP3 first because the JSON's hash marks the post as done:
 
 ```bash

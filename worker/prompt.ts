@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { lenient } from "#utils/json.ts";
 
-export const MAX_HISTORY_MESSAGES = 20;
+const MAX_HISTORY_MESSAGES = 20;
 // Per-room cap over a rolling 24h; the only pacing on spend.
 export const ROOM_DAILY_LIMIT = 40;
 

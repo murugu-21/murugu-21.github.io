@@ -1,5 +1,5 @@
 #!/bin/sh
-# Formats staged files only; heavy gates run in pre-push.
+# Formats and lints staged files; heavy gates run in pre-push.
 set -e
 
 bunx lint-staged

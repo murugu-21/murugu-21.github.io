@@ -6,7 +6,8 @@ import { BLOG_DESCRIPTION, BLOG_TITLE } from "#src/lib/site.ts";
 import { getPublishedPosts, postDescription, postUrl, type Post } from "#src/lib/blog/posts.ts";
 
 // llms.txt entries are line-based; a multi-line frontmatter description would break them.
-export const oneLineDescription = (post: Post) => postDescription(post).replace(/\s+/g, " ").trim();
+export const oneLineDescription = (post: Post) =>
+  postDescription(post).replaceAll(/\s+/g, " ").trim();
 
 // Newest-first "- [title](url): description" lines, shared by /llms.txt and
 // /blog/llms.txt so the two can't drift.

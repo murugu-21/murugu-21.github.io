@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   countCompanies,
+  currentMonth,
   formatDuration,
   groupByCompany,
+  monthsBetween,
   parsePeriod,
   periodBounds,
   totalExperienceMonths
@@ -156,5 +158,28 @@ describe("periodBounds", () => {
       end: null
     });
     expect(periodBounds("June 2019 – sometime")).toBeNull();
+  });
+});
+
+describe("currentMonth", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("reads the calendar month, one-based, of the given date or of today", () => {
+    expect(currentMonth(new Date(2024, 0, 15))).toEqual({ year: 2024, month: 1 });
+
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 9, 7));
+    expect(currentMonth()).toEqual({ year: 2026, month: 10 });
+  });
+});
+
+describe("monthsBetween", () => {
+  it("counts both end months, and is zero for a reversed range", () => {
+    expect(monthsBetween({ start: { year: 2024, month: 11 }, end: { year: 2025, month: 2 } })).toBe(
+      4
+    );
+    expect(monthsBetween({ start: { year: 2025, month: 2 }, end: { year: 2024, month: 11 } })).toBe(
+      0
+    );
   });
 });
