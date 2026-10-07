@@ -50,14 +50,14 @@ export default defineConfig({
         test: {
           name: "workers",
           setupFiles: ["./worker/test/apply-migrations.ts"],
-          include: ["worker/test/**/*.test.ts", "src/**/*.test.ts", "scripts/**/*.test.ts"],
-          exclude: ["scripts/lint/**"]
+          include: ["worker/test/**/*.test.ts", "src/**/*.test.ts"]
         }
       },
-      // oxlint's RuleTester loads native bindings, which workerd can't.
+      // The scripts run on Node or Bun, and use what workerd lacks: node:util's parseArgs,
+      // node:readline, and the native bindings oxlint's RuleTester loads.
       {
         extends: true,
-        test: { name: "lint", environment: "node", include: ["scripts/lint/**/*.test.ts"] }
+        test: { name: "node", environment: "node", include: ["scripts/**/*.test.ts"] }
       },
       // React islands need a real DOM, media elements and layout, which workerd lacks.
       {
