@@ -3,7 +3,6 @@ import { assert, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
 import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
-import { API_VERSION } from "#contracts/api/versioning.ts";
 import { JsonObject } from "#utils/json.ts";
 import { LATEST_PROTOCOL_VERSION } from "#contracts/mcp.ts";
 import { readResource, RESOURCE_ORIGIN } from "#worker/mcp/resources.ts";
@@ -404,7 +403,7 @@ describe("server/discover", () => {
     expect(result.cacheScope).toBe("public");
     expect(result).toHaveProperty(["_meta", SERVER_INFO], {
       name: "murugappan.dev",
-      version: API_VERSION
+      version: "1.0.0"
     });
     expect(result.instructions).toMatch(/\S/);
   });
@@ -418,7 +417,16 @@ describe("tools over HTTP", () => {
     );
     expect(result.resultType).toBe("complete");
     expect(result.cacheScope).toBe("public");
-    expect(result.tools.map(t => t.name)).toEqual(MCP_TOOLS.map(t => t.name));
+    expect(result.tools.map(t => t.name)).toEqual([
+      "get_profile",
+      "list_experience",
+      "list_skills",
+      "list_education",
+      "list_open_source",
+      "search_blog_posts",
+      "get_blog_post",
+      "send_message"
+    ]);
     const byName = new Map(result.tools.map(t => [t.name, t]));
     expect(byName.get("get_profile")?.inputSchema).toEqual({
       $schema: "https://json-schema.org/draft/2020-12/schema",
@@ -492,7 +500,9 @@ describe("resources over HTTP", () => {
       await callModern("resources/templates/list"),
       z.object({ resourceTemplates: z.array(z.object({ uriTemplate: z.string() })) })
     );
-    expect(result.resourceTemplates[0].uriTemplate).toBe(`${RESOURCE_ORIGIN}/blog/{slug}/index.md`);
+    expect(result.resourceTemplates[0].uriTemplate).toBe(
+      "https://murugappan.dev/blog/{slug}/index.md"
+    );
   });
 
   it("reads a resource", async () => {
@@ -504,7 +514,9 @@ describe("resources over HTTP", () => {
       z.object({ resultType: z.string(), contents: z.array(JsonObject) })
     );
     expect(result.resultType).toBe("complete");
-    expect(result.contents).toEqual([{ uri, mimeType: "text/plain", text: LLMS_TXT }]);
+    expect(result.contents).toEqual([
+      { uri: "https://murugappan.dev/llms.txt", mimeType: "text/plain", text: LLMS_TXT }
+    ]);
   });
 
   it("returns -32602 with the uri for a resource that does not exist", async () => {
@@ -513,7 +525,7 @@ describe("resources over HTTP", () => {
     expect(res.status).toBe(200);
     expect(json.result).toBeUndefined();
     expect(json.error?.code).toBe(-32602);
-    expect(json.error?.data).toEqual({ uri });
+    expect(json.error?.data).toEqual({ uri: "https://murugappan.dev/nope" });
   });
 });
 
@@ -564,9 +576,7 @@ describe("legacy (initialize-based) clients", () => {
   it("lists and calls tools without the modern headers", async () => {
     const list = await legacy("tools/list");
     expect(list.res.status).toBe(200);
-    expect(resultOf(list, z.object({ tools: z.array(z.unknown()) })).tools).toHaveLength(
-      MCP_TOOLS.length
-    );
+    expect(resultOf(list, z.object({ tools: z.array(z.unknown()) })).tools).toHaveLength(8);
     expect(list.json.result).not.toHaveProperty("resultType");
 
     const called = await legacy("tools/call", {
@@ -589,7 +599,7 @@ describe("legacy (initialize-based) clients", () => {
   it("lists and reads resources without the modern headers", async () => {
     const list = await legacy("resources/list");
     expect(resultOf(list, z.object({ resources: z.array(z.unknown()) })).resources).toContainEqual(
-      expect.objectContaining({ uri: POST_URI })
+      expect.objectContaining({ uri: "https://murugappan.dev/blog/coin-change-problem/index.md" })
     );
     expect(list.json.result).not.toHaveProperty("resultType");
 
@@ -774,12 +784,6 @@ describe("send_message", () => {
 });
 
 describe("resources/list", () => {
-  const STATIC_URIS = [
-    `${RESOURCE_ORIGIN}/llms.txt`,
-    `${RESOURCE_ORIGIN}/AGENTS.md`,
-    `${RESOURCE_ORIGIN}/openapi.json`,
-    `${RESOURCE_ORIGIN}/blog/llms-full.txt`
-  ];
   const list = async (envOptions?: TestEnvOptions) =>
     resultOf(await callModern("resources/list", {}, { env: envOptions }), ResourceList).resources;
 
@@ -787,9 +791,12 @@ describe("resources/list", () => {
     const reply = await callModern("resources/list");
     expect(reply.json.result).toMatchObject({ resultType: "complete", cacheScope: "public" });
     expect(resultOf(reply, ResourceList).resources.map(r => r.uri)).toEqual([
-      ...STATIC_URIS,
-      `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`,
-      POST_URI
+      "https://murugappan.dev/llms.txt",
+      "https://murugappan.dev/AGENTS.md",
+      "https://murugappan.dev/openapi.json",
+      "https://murugappan.dev/blog/llms-full.txt",
+      "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/index.md",
+      "https://murugappan.dev/blog/coin-change-problem/index.md"
     ]);
   });
 
@@ -812,7 +819,12 @@ describe("resources/list", () => {
 
   it("still lists the static documents when the post list is unavailable", async () => {
     const uris = (await list({ assets: { "/llms.txt": null } })).map(r => r.uri);
-    expect(uris).toEqual(STATIC_URIS);
+    expect(uris).toEqual([
+      "https://murugappan.dev/llms.txt",
+      "https://murugappan.dev/AGENTS.md",
+      "https://murugappan.dev/openapi.json",
+      "https://murugappan.dev/blog/llms-full.txt"
+    ]);
   });
 });
 
@@ -912,6 +924,6 @@ describe("readResource", () => {
       .object({ openapi: z.string(), servers: z.array(z.object({ url: z.string() })) })
       .parse(JSON.parse(content.text));
     expect(doc.openapi).toBe("3.1.0");
-    expect(doc.servers[0].url).toBe(RESOURCE_ORIGIN);
+    expect(doc.servers[0].url).toBe("https://murugappan.dev");
   });
 });

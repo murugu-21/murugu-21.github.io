@@ -4,7 +4,7 @@ import { assert, describe, expect, it } from "vitest";
 
 import { api } from "#worker/api/index.ts";
 import { buildOpenApiDocument } from "#worker/api/openapi.ts";
-import { API_BASE, API_PATHS, VERSIONED_API_BASE } from "#contracts/api/routes.ts";
+import { API_PATHS, VERSIONED_API_BASE } from "#contracts/api/routes.ts";
 import { CURRENT_VERSION_RECORD, type VersionRecord } from "#contracts/api/versioning.ts";
 import {
   buildVersionsDocument,
@@ -23,8 +23,8 @@ describe("version headers", () => {
 
   it("names only the release and the supported versions while nothing is deprecated", () => {
     expect(versionHeaders()).toEqual({
-      "API-Version": CURRENT_VERSION_RECORD.release,
-      "API-Supported-Versions": CURRENT_VERSION_RECORD.version
+      "API-Version": "1.0.0",
+      "API-Supported-Versions": "v1"
     });
   });
 
@@ -38,9 +38,9 @@ describe("version headers", () => {
 
   it("links the spec, the docs and the version history", () => {
     const link = versionLinkHeader();
-    expect(link).toContain(`<${API_PATHS.openapiRoot}>; rel="service-desc"`);
+    expect(link).toContain('</openapi.json>; rel="service-desc"');
     expect(link).toContain('rel="service-doc"');
-    expect(link).toContain(`<${API_PATHS.versions}>; rel="version-history"`);
+    expect(link).toContain('</api/v1/versions>; rel="version-history"');
     expect(link).toContain('rel="latest-version"');
     expect(link).toContain('rel="api-catalog"');
   });
@@ -51,7 +51,7 @@ describe("version headers", () => {
     expect(link).not.toContain('rel="successor-version"');
     const deprecatedLink = versionLinkHeader(deprecated);
     expect(deprecatedLink).toContain('rel="deprecation"');
-    expect(deprecatedLink).toContain(`<${API_BASE}/v2>; rel="successor-version"`);
+    expect(deprecatedLink).toContain('</api/v2>; rel="successor-version"');
   });
 });
 
@@ -59,7 +59,7 @@ describe("buildVersionsDocument", () => {
   const doc = buildVersionsDocument("https://murugappan.dev");
 
   it("makes every URL absolute against the host that was asked", () => {
-    expect(doc.versions[0].url).toBe(`https://murugappan.dev${VERSIONED_API_BASE}`);
+    expect(doc.versions[0].url).toBe("https://murugappan.dev/api/v1");
     expect(doc.versions[0].specUrl).toBe("https://murugappan.dev/openapi.json");
     expect(doc.policy.documentationUrl).toBe("https://murugappan.dev/developers/#versioning");
   });
@@ -91,7 +91,7 @@ describe("buildOpenApiDocument", () => {
     return found;
   }
 
-  // oxlint-disable-next-line tests/observe-behaviour -- relation: spec paths against the router's own table
+  /* oxlint-disable tests/observe-behaviour -- relation: spec paths against the router's own table */
   it("documents exactly the paths and methods the router serves", () => {
     // HEAD rides along with GET and is not a separate operation; ALL is middleware or the 404.
     const served = api.routes
@@ -102,6 +102,7 @@ describe("buildOpenApiDocument", () => {
     );
     expect(documented.sort()).toEqual([...new Set(served)].sort());
   });
+  /* oxlint-enable tests/observe-behaviour */
 
   it("gives every operation a unique operationId", () => {
     const ids = operations().map(([, op]) => op.operationId);

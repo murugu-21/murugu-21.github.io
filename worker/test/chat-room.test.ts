@@ -463,18 +463,38 @@ describe("ChatRoom storage", () => {
 });
 
 describe("ChatRoom leads", () => {
-  it("emails the owner about a lead once per room", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName("room-lead"));
-    await connectRoom("room-lead");
-    await runInDurableObject(stub, async (instance: ChatRoom) => {
-      const { email, sent } = recordingEmail();
-      Object.assign(instance, { env: testEnv({ email }) });
-      const lead = { contact: "a@b.c", summary: "Staff role" };
-      await instance["emailLeadOnce"](lead);
-      await instance["emailLeadOnce"](lead);
-      expect(sent).toHaveLength(1);
-      expect(sent[0].to).toBe("inbox@example.com");
+  it("emails the owner once when the model captures the same lead twice in one step", async () => {
+    await fundChat();
+    const room = await openRoom("room-lead");
+    const capture = (toolCallId: string): LanguageModelV4StreamPart => ({
+      type: "tool-call",
+      toolCallId,
+      toolName: "capture_opportunity",
+      input: JSON.stringify({ contact: "a@b.c", summary: "Staff role" })
     });
+    const sent = await scriptRoom(
+      room.stub,
+      scriptedModel(
+        () =>
+          modelStream([
+            capture("call-1"),
+            capture("call-2"),
+            {
+              type: "finish",
+              usage: USAGE,
+              finishReason: { unified: "tool-calls", raw: "tool_calls" }
+            }
+          ]),
+        textStep("Noted.")
+      )
+    );
+
+    room.socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "Hire me: a@b.c" })] })
+    );
+
+    expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("Noted.");
+    expect(sent.map(m => m.to)).toEqual(["inbox@example.com"]);
   });
 });
 

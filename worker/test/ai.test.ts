@@ -2,7 +2,7 @@ import type { ModelMessage } from "ai";
 import { describe, expect, it } from "vitest";
 
 import { fetchDeepseekBalance } from "#worker/ai.ts";
-import { buildMessages, MAX_HISTORY_MESSAGES } from "#worker/prompt.ts";
+import { buildMessages } from "#worker/prompt.ts";
 
 describe("fetchDeepseekBalance", () => {
   function json(body: unknown, status = 200): typeof fetch {
@@ -63,7 +63,7 @@ describe("buildMessages", () => {
       content: `m${i}`
     }));
     const messages = buildMessages("g", history);
-    expect(messages).toHaveLength(1 + MAX_HISTORY_MESSAGES);
+    expect(messages).toHaveLength(21);
     expect(messages.at(-1)?.content).toBe("m49");
   });
 });

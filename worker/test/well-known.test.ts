@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { MCP_TOOLS } from "#contracts/mcp.ts";
 import { buildApiCatalog, buildMcpManifest } from "#worker/well-known.ts";
 import { fetchWorker, readJson } from "./fixtures";
 
@@ -50,7 +49,16 @@ describe("buildMcpManifest", () => {
     const own = manifest._meta["dev.murugappan/server"];
     expect(own.transport).toBe("streamable-http");
     expect(own.authentication).toBe("none");
-    expect(own.tools).toEqual(MCP_TOOLS.map(t => t.name));
+    expect(own.tools).toEqual([
+      "get_profile",
+      "list_experience",
+      "list_skills",
+      "list_education",
+      "list_open_source",
+      "search_blog_posts",
+      "get_blog_post",
+      "send_message"
+    ]);
   });
 
   it("uses only the fields the schema defines at the top level", () => {

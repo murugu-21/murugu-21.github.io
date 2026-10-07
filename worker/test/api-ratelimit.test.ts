@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
-import { CONTACT_CLIENT_QUOTA, CONTACT_GLOBAL_QUOTA, READ_QUOTA } from "#contracts/api/quotas.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
+import { READ_QUOTA } from "#contracts/api/quotas.ts";
 import {
   contactRateLimitHeaders,
   readRateLimitHeaders,
@@ -39,7 +39,7 @@ describe("field serialisation", () => {
       resetSeconds: 3600
     });
     expect(headers["RateLimit-Policy"]).toBe(
-      `"contact-client";q=${CONTACT_DAILY_PER_CLIENT};w=86400, "contact-site";q=${CONTACT_DAILY_GLOBAL};w=86400`
+      '"contact-client";q=3;w=86400, "contact-site";q=20;w=86400'
     );
   });
 
@@ -54,7 +54,7 @@ describe("field serialisation", () => {
       remaining: 7,
       resetSeconds: 30
     });
-    expect(headers["X-RateLimit-Limit"]).toBe(String(READ_QUOTA.quota));
+    expect(headers["X-RateLimit-Limit"]).toBe("600");
     expect(headers["X-RateLimit-Remaining"]).toBe("7");
     expect(headers["X-RateLimit-Reset"]).toBe("30");
   });
@@ -66,18 +66,18 @@ describe("takeReadSlot", () => {
   it("spends one slot per call and counts down", () => {
     expect(takeReadSlot("1.1.1.1", now)).toMatchObject({
       allowed: true,
-      remaining: READ_QUOTA.quota - 1
+      remaining: 599
     });
     expect(takeReadSlot("1.1.1.1", now)).toMatchObject({
       allowed: true,
-      remaining: READ_QUOTA.quota - 2
+      remaining: 598
     });
   });
 
   it("counts each client separately", () => {
     takeReadSlot("1.1.1.1", now);
     expect(takeReadSlot("2.2.2.2", now)).toMatchObject({
-      remaining: READ_QUOTA.quota - 1
+      remaining: 599
     });
   });
 
@@ -86,13 +86,13 @@ describe("takeReadSlot", () => {
     const blocked = takeReadSlot("3.3.3.3", now);
     expect(blocked.allowed).toBe(false);
     expect(blocked.remaining).toBe(0);
-    expect(blocked.resetSeconds).toBe(READ_QUOTA.windowSeconds);
+    expect(blocked.resetSeconds).toBe(60);
   });
 
   it("counts down the reset as the window elapses", () => {
     takeReadSlot("4.4.4.4", now);
     const later = takeReadSlot("4.4.4.4", now + 30_000);
-    expect(later.resetSeconds).toBe(READ_QUOTA.windowSeconds - 30);
+    expect(later.resetSeconds).toBe(30);
   });
 
   it("starts a fresh window once the old one has passed", () => {
@@ -100,7 +100,7 @@ describe("takeReadSlot", () => {
     expect(takeReadSlot("5.5.5.5", now).allowed).toBe(false);
     const next = takeReadSlot("5.5.5.5", now + READ_QUOTA.windowSeconds * 1000 + 1);
     expect(next.allowed).toBe(true);
-    expect(next.remaining).toBe(READ_QUOTA.quota - 1);
+    expect(next.remaining).toBe(599);
   });
 });
 
@@ -111,14 +111,14 @@ describe("contactRateLimitHeaders", () => {
       globalRemaining: 15,
       resetSeconds: 3600
     });
-    expect(clientTight.RateLimit).toBe(`"${CONTACT_CLIENT_QUOTA.name}";r=1;t=3600`);
+    expect(clientTight.RateLimit).toBe('"contact-client";r=1;t=3600');
 
     const globalTight = contactRateLimitHeaders({
       clientRemaining: 3,
       globalRemaining: 0,
       resetSeconds: 3600
     });
-    expect(globalTight.RateLimit).toBe(`"${CONTACT_GLOBAL_QUOTA.name}";r=0;t=3600`);
+    expect(globalTight.RateLimit).toBe('"contact-site";r=0;t=3600');
   });
 });
 
@@ -133,13 +133,9 @@ describe("secondsUntilUtcMidnight", () => {
 describe("read limiting through the worker", () => {
   it("reports the live read allowance on a read", async () => {
     const res = await get("/api/v1/profile", "198.51.100.1");
-    expect(res.headers.get("RateLimit-Policy")).toBe(
-      `"reads";q=${READ_QUOTA.quota};w=${READ_QUOTA.windowSeconds}`
-    );
-    expect(res.headers.get("RateLimit")).toMatch(
-      new RegExp(`^"reads";r=${READ_QUOTA.quota - 1};t=\\d+$`)
-    );
-    expect(res.headers.get("X-RateLimit-Remaining")).toBe(String(READ_QUOTA.quota - 1));
+    expect(res.headers.get("RateLimit-Policy")).toBe('"reads";q=600;w=60');
+    expect(res.headers.get("RateLimit")).toMatch(/^"reads";r=599;t=\d+$/);
+    expect(res.headers.get("X-RateLimit-Remaining")).toBe("599");
   });
 
   it("advertises the policy even when there is no client address to count", async () => {
@@ -186,7 +182,7 @@ describe("contact limiting through the worker", () => {
     const res = await postContact(validMessage, "198.51.100.30");
     expect(res.status).toBe(202);
     expect(res.headers.get("RateLimit")).toBe(
-      `"contact-client";r=${CONTACT_DAILY_PER_CLIENT - 1};t=${res.headers.get("X-RateLimit-Reset")}`
+      `"contact-client";r=2;t=${res.headers.get("X-RateLimit-Reset")}`
     );
   });
 
@@ -213,7 +209,7 @@ describe("contact limiting through the worker", () => {
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 2; i++) {
       const res = await postContact({ ...validMessage, dryRun: true }, "198.51.100.21");
       expect(res.status).toBe(200);
-      expect(res.headers.get("X-RateLimit-Remaining")).toBe(String(CONTACT_DAILY_PER_CLIENT));
+      expect(res.headers.get("X-RateLimit-Remaining")).toBe("3");
     }
     expect((await postContact(validMessage, "198.51.100.21")).status).toBe(202);
   });

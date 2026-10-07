@@ -169,6 +169,44 @@ function isEmptyValue(node: Node): boolean {
 
 const isZero = (node: Node) => node.type === "Literal" && node.value === 0;
 
+const expectedOf = ({ matcher, args }: Assertion): Node | undefined =>
+  matcher === "toHaveProperty" ? args[1] : args[0];
+
+// `TOOLS.map(…)` reads TOOLS as data. `api.request(…)` calls into the code under test.
+const DATA_METHODS = new Set([
+  "at",
+  "concat",
+  "entries",
+  "every",
+  "filter",
+  "find",
+  "flatMap",
+  "includes",
+  "join",
+  "keys",
+  "map",
+  "reduce",
+  "slice",
+  "some",
+  "toSorted",
+  "values"
+]);
+
+// `f(…)` or `x.method(…)`, where `n` is `f` or `x` and the method isn't a DATA_METHOD.
+function isCalled(n: Node, key: string): boolean {
+  const parent: Node | null = n.parent;
+  if (!parent) return false;
+  if (parent.type === "CallExpression" || parent.type === "NewExpression") return key === "callee";
+  if (parent.type !== "MemberExpression" || key !== "object") return false;
+  const call: Node | null = parent.parent;
+  if (call?.type !== "CallExpression" || call.callee !== parent) return false;
+  const { callee } = call;
+  return (
+    callee.type === "MemberExpression" &&
+    !(callee.property.type === "Identifier" && DATA_METHODS.has(callee.property.name))
+  );
+}
+
 export default {
   meta: { name: "tests" },
   rules: {
@@ -180,7 +218,11 @@ export default {
           noSubjectCall:
             "This test never calls the code under test in its body, so it cannot fail for a defect. Call the subject with a concrete input here (see the Tests section of AGENTS.md).",
           noStrongAssertion:
-            "No assertion here would fail if the code under test returned undefined. Compare the observed output against a literal expected value (see the Tests section of AGENTS.md)."
+            "No assertion here would fail if the code under test returned undefined. Compare the observed output against a literal expected value (see the Tests section of AGENTS.md).",
+          expectedFromSubject:
+            "The expected value comes from `{{name}}` in the code under test, so it changes with the code and can't catch a defect. Write the literal value (see the Tests section of AGENTS.md).",
+          stringKeyAccess:
+            '`["{{name}}"]` reads a member by string key, which skips TypeScript\'s `private` check. Drive the code through its public API (see the Tests section of AGENTS.md).'
         }
       },
       create(context) {
@@ -188,7 +230,9 @@ export default {
         // What each local name holds: a function's body, a declaration's
         // initialiser, or the setup that assigned it.
         const locals = new Map<string, Node>();
-        const tests: { node: CallExpression; callback: Node }[] = [];
+        const harness = new Set<string>();
+        // `table` is the rows of `it.each(table)(…)`, which may hold the calls.
+        const tests: { node: CallExpression; callback: Node; table?: Node }[] = [];
         let cachedSubjectNames: Set<string> | undefined;
 
         const isLocalImport = (node: Node) =>
@@ -222,7 +266,7 @@ export default {
 
         // `toBe(f(a))`, `toBe(buildUrl(…))`, or `toBe(want)` after `const want = f(a)`
         // in the same test. In each, the code under test computes the expected
-        // value. Reading one of its constants is fine.
+        // value.
         const callsSubject = (node: Node, test: Node): boolean =>
           containsNode(node, (n, key) => {
             if (isReference(n, key)) {
@@ -243,9 +287,35 @@ export default {
           );
         };
 
-        const isStrong = ({ subject, matcher, negated, args }: Assertion, test: Node) => {
+        // The subject import an expected value reads as data, directly or through a
+        // const. Calls into the subject are observations, and their arguments are input.
+        const subjectSource = ({ expected, test }: { expected: Node; test: Node }) => {
+          const seen = new Set<string>();
+          const visit = (n: Node, key: string): string | undefined => {
+            if (isReference(n, key)) {
+              if (isCalled(n, key) || seen.has(n.name)) return undefined;
+              seen.add(n.name);
+              if (imports.get(n.name) === "subject" && !harness.has(n.name)) return n.name;
+              const value = declaredIn(test, n.name) ?? locals.get(n.name);
+              return value && value !== expected ? visit(value, "") : undefined;
+            }
+            const observes =
+              (n.type === "CallExpression" || n.type === "NewExpression") &&
+              subjectNames().has(rootName(n.callee) ?? "");
+            for (const { child, key: childKey } of children(n)) {
+              if (observes && childKey === "arguments") continue;
+              const found = visit(child, childKey);
+              if (found) return found;
+            }
+            return undefined;
+          };
+          return visit(expected, "");
+        };
+
+        const isStrong = (assertion: Assertion, test: Node) => {
+          const { subject, matcher, negated } = assertion;
           if (negated || !VALUE_MATCHERS.has(matcher) || isConstantPin(subject)) return false;
-          const expected = matcher === "toHaveProperty" ? args[1] : args[0];
+          const expected = expectedOf(assertion);
           if (expected === undefined || isEmptyValue(expected)) return false;
           if ((matcher === "toHaveLength" || COMPARISONS.has(matcher)) && isZero(expected)) {
             return false;
@@ -253,18 +323,26 @@ export default {
           return !callsSubject(expected, test);
         };
 
-        // Follows calls into local helpers, so `check(1, 2)` counts when
-        // `check` holds the `expect`.
-        const hasStrongAssertion = (body: Node, seen = new Set<string>()): boolean =>
+        type Found = { node: Node; assertion: Assertion; scope: Node };
+        // Every assertion in a test, following calls into local helpers, so
+        // `check(1, 2)` counts when `check` holds the `expect`.
+        const assertionsIn = (body: Node, seen = new Set<string>()): Found[] => {
+          const out: Found[] = [];
           containsNode(body, node => {
             if (node.type !== "CallExpression") return false;
             const assertion = assertionAt(node);
-            if (assertion) return isStrong(assertion, body);
+            if (assertion) {
+              out.push({ node, assertion, scope: body });
+              return false;
+            }
             if (node.callee.type !== "Identifier" || seen.has(node.callee.name)) return false;
-            const helper = locals.get(node.callee.name);
             seen.add(node.callee.name);
-            return helper !== undefined && hasStrongAssertion(helper, seen);
+            const helper = locals.get(node.callee.name);
+            if (helper) out.push(...assertionsIn(helper, seen));
+            return false;
           });
+          return out;
+        };
 
         return {
           ImportDeclaration(node) {
@@ -275,6 +353,7 @@ export default {
             for (const specifier of node.specifiers) {
               if (specifier.type === "ImportSpecifier" && specifier.importKind === "type") continue;
               imports.set(specifier.local.name, kind);
+              if (source.startsWith("cloudflare:")) harness.add(specifier.local.name);
             }
           },
           FunctionDeclaration(node) {
@@ -291,6 +370,14 @@ export default {
             if (!node.init) return;
             for (const name of boundNames(node.id)) locals.set(name, node.init);
           },
+          MemberExpression(node) {
+            const { property } = node;
+            if (!node.computed || property.type !== "Literal" || typeof property.value !== "string")
+              return;
+            // `x["content-type"]` has no dot form, so it isn't dodging `private`.
+            if (!/^[A-Za-z_$][\w$]*$/.test(property.value)) return;
+            context.report({ node, messageId: "stringKeyAccess", data: { name: property.value } });
+          },
           // In `let x; beforeAll(() => { …subject…; x = … })`, x carries whatever
           // the enclosing setup ran, not only its right-hand side.
           AssignmentExpression(node) {
@@ -299,17 +386,32 @@ export default {
           },
           CallExpression(node) {
             const callback = testCallback(node);
-            if (callback) tests.push({ node, callback });
+            if (!callback) return;
+            const table =
+              node.callee.type === "CallExpression" ? node.callee.arguments[0] : undefined;
+            tests.push({ node, callback, table });
           },
           // Checked once the whole file is collected, so helpers declared below
           // a test still count.
           "Program:exit"() {
-            for (const { node, callback } of tests) {
-              if (!reachesSubject(callback, subjectNames())) {
-                context.report({ node, messageId: "noSubjectCall" });
-                continue;
+            const reported = new Set<Node>();
+            for (const { node, callback, table } of tests) {
+              const found = assertionsIn(callback);
+              for (const { node: at, assertion, scope } of found) {
+                // `toThrow(SubjectError)` names the error class; it computes nothing.
+                if (reported.has(at) || assertion.matcher.startsWith("toThrow")) continue;
+                if (!VALUE_MATCHERS.has(assertion.matcher)) continue;
+                const expected = expectedOf(assertion);
+                const name = expected && subjectSource({ expected, test: scope });
+                if (!name) continue;
+                reported.add(at);
+                context.report({ node: at, messageId: "expectedFromSubject", data: { name } });
               }
-              if (!hasStrongAssertion(callback)) {
+              if (
+                ![callback, table].some(scope => scope && reachesSubject(scope, subjectNames()))
+              ) {
+                context.report({ node, messageId: "noSubjectCall" });
+              } else if (!found.some(({ assertion, scope }) => isStrong(assertion, scope))) {
                 context.report({ node, messageId: "noStrongAssertion" });
               }
             }

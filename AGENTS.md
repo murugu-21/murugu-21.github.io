@@ -36,7 +36,7 @@ Five shapes that still pass when every imported function returns `undefined`:
 
 Keep a test of a relation across a table's rows (a key present in two tables, a parent that exists), and a compile-time check in a `*.test-d.ts` file.
 
-`tests/observe-behaviour` (`scripts/lint/test-behaviour.ts`) flags the direct forms of each shape, per test: shapes 1 to 3, a constant read straight into `expect`, and a test that never touches the code under test. Because a helper import counts as touching it, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule on that test with a reason (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`). The reviewers check what it can't see.
+`tests/observe-behaviour` (`scripts/lint/test-behaviour.ts`) flags the direct forms of each shape. Per test, it flags shapes 1 to 3, a constant read straight into `expect` and a test that never touches the code under test. Per assertion, it flags an expected value built from data the code under test exports, such as `toBe(LIMIT)` or `toEqual(TOOLS.map(…))`. It also flags a member read by string key (`instance["privateMethod"]`), which skips `private`; drive the code through its public API instead. Because a helper import counts as touching the code, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule with a reason, on the reported line (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`) or around the whole test (`/* oxlint-disable tests/observe-behaviour -- <why> */` … `/* oxlint-enable tests/observe-behaviour */`). The reviewers check what it can't see.
 
 ## Code style
 
