@@ -25,7 +25,7 @@ Ok. This is a fairly standard design decision by Google, and the solution must b
 
 Alas!, Node is single-threaded and relies on asynchronous programming for network requests. Node has no native API to control the number of unresolved promises or pause execution for a given time. First, we looked at some npm packages and [p-limit](https://www.npmjs.com/package/p-limit) was the only one with enough weekly downloads to be worthy of consideration, but it had no support for debouncing in terms of time, only concurrent promises.
 
-So, we ended up implementing the ideas in a blog post. I have given my understanding of his implementation and how we wrapped axios.get function in it. If you are interested, you can read more [here](https://blog.thoughtspile.tech/2018/07/07/rate-limit-promises/).
+So, we ended up implementing the ideas in a blog post. I have given my understanding of his implementation and how we wrapped axios.get function in it. If you are interested, you can read more [here](https://thoughtspile.github.io/2018/07/07/rate-limit-promises/).
 
 Since this is a complex problem with two paradigms (concurrency and time), let's try to implement debounce for a single function first. setTimeout is an old API and relies on callbacks rather than promises. Not ideal!. (you can await or use then with promises only) So, let's wrap it in a promise like below,
 
