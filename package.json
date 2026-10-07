@@ -16,10 +16,11 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "format": "oxfmt src worker contracts scripts utils content vitest.config.ts cloudflare.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts && prettier --write \"src/**/*.astro\"",
-    "check-format": "oxfmt src worker contracts scripts utils content vitest.config.ts cloudflare.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts --check && prettier --check \"src/**/*.astro\"",
-    "lint": "astro sync && oxlint src worker contracts scripts utils vitest.config.ts cloudflare.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts",
-    "lint:fix": "astro sync && oxlint src worker contracts scripts utils vitest.config.ts cloudflare.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts --fix",
+    "format": "oxfmt src worker contracts scripts utils content vitest.config.ts cloudflare.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && prettier --write \"src/**/*.astro\"",
+    "check-format": "oxfmt src worker contracts scripts utils content vitest.config.ts cloudflare.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --check && prettier --check \"src/**/*.astro\"",
+    "lint": "astro sync && oxlint src worker contracts scripts utils vitest.config.ts cloudflare.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && bun run lint:astro src",
+    "lint:astro": "node --require ./scripts/site/ts-alias.cjs node_modules/.bin/eslint",
+    "lint:fix": "astro sync && oxlint src worker contracts scripts utils vitest.config.ts cloudflare.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --fix && bun run lint:astro src --fix",
     "db:migrate": "cf d1 migrations apply a1111792-fb35-470f-85c9-13c3aab0662c",
     "db:migrate:local": "cf d1 migrations apply a1111792-fb35-470f-85c9-13c3aab0662c --local --persist-to .cloudflare/state",
     "deploy": "bun run db:migrate && cf deploy --prebuilt",
@@ -85,9 +86,14 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/sanitize-html": "^2.16.2",
+    "@typescript-eslint/parser": "^8.71.1",
     "@typescript/typescript6": "^6.0.2",
     "cf": "1.0.0-beta.12",
+    "eslint": "^10.12.0",
+    "eslint-plugin-astro": "^3.2.1",
+    "eslint-plugin-jsx-a11y-x": "^0.2.0",
     "firacode": "6.2.0",
+    "jiti": "^2.7.0",
     "linkedom": "^0.18.13",
     "lint-staged": "^17.6.0",
     "oxfmt": "^0.72.0",
@@ -116,6 +122,9 @@
       "oxfmt"
     ],
     "*.{json,jsonc,css,md}": "oxfmt",
-    "*.astro": "prettier --write"
+    "*.astro": [
+      "bun run lint:astro --fix",
+      "prettier --write"
+    ]
   }
 }

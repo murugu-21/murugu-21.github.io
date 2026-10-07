@@ -9,6 +9,7 @@
     "astro.config.ts",
     "commitlint.config.ts",
     "oxlint.config.ts",
+    "eslint.config.ts",
     "cloudflare.config.ts",
     "vitest.config.ts"
   ],

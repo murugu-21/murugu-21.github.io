@@ -40,7 +40,7 @@ Keep a test of a relation across a table's rows (a key present in two tables, a 
 
 ## Code style
 
-Think about readability and elegance before writing, not after. Every rule a linter can check lives in `oxlint.config.ts` and `bun run lint` enforces it; read that file rather than relying on memory. On top of those:
+Think about readability and elegance before writing, not after. Every rule a linter can check lives in `oxlint.config.ts` (or, for `.astro` templates, `eslint.config.ts`) and `bun run lint` enforces it; read those files rather than relying on memory. On top of those:
 
 - Write new code in TypeScript.
 - **Guard clauses.** Return or throw early on edge cases so the main path isn't nested inside `if`/`else`.
@@ -70,6 +70,6 @@ Never call a task complete until both of the following have happened.
 1. `.githooks/pre-push` passes (format, lint, typechecks, tests). For UI changes, also run `bun run build` and `bun run preview`, then check the page in the browser in both light and dark themes.
 2. Two independent reviewers (separate subagents, each starting fresh with only the diff and these rules) have reviewed the change:
    - **Behaviour/QA reviewer.** Checks that it does what was asked, that edge cases and regressions are covered, and that it works when run. For every test the diff adds or changes, applies the check in "Test behaviour, not implementation".
-   - **Code-style reviewer.** Checks the diff against every rule in this file and `oxlint.config.ts`.
+   - **Code-style reviewer.** Checks the diff against every rule in this file, `oxlint.config.ts` and `eslint.config.ts`.
 
    Fix what they find, or explain why a finding doesn't apply, before reporting the task as done.

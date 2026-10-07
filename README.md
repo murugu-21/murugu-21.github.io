@@ -91,7 +91,7 @@ GITHUB_TOKEN=ghp_xxx bun run build
 
 ```bash
 bun run check-format   # oxfmt, plus prettier for .astro
-bun run lint           # astro sync, then oxlint (type-aware via oxlint-tsgolint)
+bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates
 bun run types          # regenerate .cloudflare/types from cloudflare.config.ts (Env plus the runtime types)
 bun run check:astro    # type-check .astro files
 bun run check:src      # type-check src/, scripts/ and the config files
@@ -99,7 +99,9 @@ bun run check:worker   # type-check worker/
 bun run test           # vitest in the workers pool
 ```
 
-The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` preloads `scripts/site/ts-alias.cjs` to point Volar's `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/site/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` supports TypeScript 7.
+The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it, and typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` and `lint:astro` preload `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/site/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` and typescript-eslint support TypeScript 7.
+
+Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, over the `.astro` files in `src/` to cover the templates. It lints nothing else, so its rules don't overlap oxlint's. Delete it, along with ESLint and its plugins, once oxlint can parse Astro templates.
 
 Having both compilers installed has two side effects:
 
