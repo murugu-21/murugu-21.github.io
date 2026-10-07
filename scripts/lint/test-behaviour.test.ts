@@ -9,6 +9,9 @@ RuleTester.it = it;
 const tester = new RuleTester({ languageOptions: { parserOptions: { lang: "ts" } } });
 
 const SUBJECT_IMPORT = 'import { LIMIT, slugify, TOOLS } from "./subject";\n';
+const WIDGET_IMPORT =
+  'import { render } from "vitest-browser-react";\nimport { Widget } from "./Widget";\n';
+const TSX = { parserOptions: { lang: "tsx" } } as const;
 
 tester.run("observe-behaviour", plugin.rules["observe-behaviour"], {
   valid: [
@@ -87,9 +90,39 @@ let b: string;
 a = b;
 b = a;
 it("slugs", () => { expect(slugify("x")).toBe(a); });`
+    },
+    {
+      name: "rendering a component and asserting what it shows",
+      languageOptions: TSX,
+      code: `${WIDGET_IMPORT}it("greets", async () => {
+  const screen = await render(<Widget name="Ada" />);
+  await expect.element(screen.getByRole("heading", { name: "Hi Ada" })).toBeVisible();
+});`
+    },
+    {
+      name: "a polled value against a literal",
+      code: `${SUBJECT_IMPORT}it("settles", async () => { await expect.poll(() => slugify("A")).toBe("a"); });`
     }
   ],
   invalid: [
+    {
+      name: "a component test that only asserts an absence",
+      languageOptions: TSX,
+      code: `${WIDGET_IMPORT}it("hides", async () => {
+  const screen = await render(<Widget name="Ada" />);
+  await expect.element(screen.getByText("Error")).not.toBeInTheDocument();
+});`,
+      errors: [{ messageId: "noStrongAssertion", line: 3 }]
+    },
+    {
+      name: "a component test that renders something other than the subject",
+      languageOptions: TSX,
+      code: `${WIDGET_IMPORT}it("greets", async () => {
+  const screen = await render(<div>Hi</div>);
+  await expect.element(screen.getByText("Hi")).toBeVisible();
+});`,
+      errors: [{ messageId: "noSubjectCall", line: 3 }]
+    },
     {
       name: "a test that never calls the subject",
       code: `${SUBJECT_IMPORT}it("adds", () => { expect(1 + 1).toBe(2); });`,

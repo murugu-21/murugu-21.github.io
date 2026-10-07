@@ -161,7 +161,7 @@ export default defineConfig({
       }
     },
     {
-      files: ["**/*.test.ts"],
+      files: ["**/*.test.{ts,tsx}"],
       plugins: ["vitest"],
       rules: {
         "tests/observe-behaviour": "error",

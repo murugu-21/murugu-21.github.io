@@ -42,7 +42,20 @@ const VALUE_MATCHERS = new Set([
   "toHaveBeenLastCalledWith",
   "toHaveBeenNthCalledWith",
   "toMatchInlineSnapshot",
+  "toHaveTextContent",
+  "toHaveAttribute",
+  "toHaveClass",
+  "toHaveValue",
+  "toHaveAccessibleName",
   ...COMPARISONS
+]);
+// On `expect.element(locator)` these fail when the component renders nothing.
+const RENDERED_STATE_MATCHERS = new Set([
+  "toBeVisible",
+  "toBeInTheDocument",
+  "toBeEnabled",
+  "toBeDisabled",
+  "toBeChecked"
 ]);
 
 // `harness` is `cloudflare:test`, whose SELF and env are how tests reach the Worker.
@@ -153,7 +166,22 @@ function testAt(call: CallExpression): Test | undefined {
   return { node: call, callback, table: isTable ? callee.arguments[0] : undefined };
 }
 
-type Assertion = { subject: Node; matcher: string; negated: boolean; args: Node[] };
+type Assertion = {
+  subject: Node;
+  matcher: string;
+  negated: boolean;
+  args: Node[];
+  onElement: boolean;
+};
+
+// `expect`, `expect.poll` or `expect.element`, the last two returning the variant's name.
+function expectVariant(callee: Node): "expect" | "poll" | "element" | undefined {
+  if (callee.type === "Identifier") return callee.name === "expect" ? "expect" : undefined;
+  if (callee.type !== "MemberExpression" || callee.object.type !== "Identifier") return undefined;
+  if (callee.object.name !== "expect" || callee.property.type !== "Identifier") return undefined;
+  const { name } = callee.property;
+  return name === "poll" || name === "element" ? name : undefined;
+}
 
 // Parses `expect(x).not.resolves.toBe(y)` into { subject: x, matcher: "toBe", negated, args: [y] }.
 function assertionAt(call: CallExpression): Assertion | undefined {
@@ -165,15 +193,17 @@ function assertionAt(call: CallExpression): Assertion | undefined {
     modifiers.push(object.property.name);
     object = object.object;
   }
-  if (object.type !== "CallExpression" || object.callee.type !== "Identifier") return undefined;
-  if (object.callee.name !== "expect") return undefined;
+  if (object.type !== "CallExpression") return undefined;
+  const variant = expectVariant(object.callee);
+  if (!variant) return undefined;
   const subject = object.arguments[0];
   if (subject === undefined) return undefined;
   return {
     subject,
     matcher: callee.property.name,
     negated: modifiers.includes("not"),
-    args: call.arguments
+    args: call.arguments,
+    onElement: variant === "element"
   };
 }
 
@@ -240,8 +270,18 @@ const isLocalImport = (node: Node) =>
   typeof node.source.value === "string" &&
   isLocalSource(node.source.value);
 
+// `<Widget />` renders, and so calls, the component it names.
+const rendersSubject = (node: Node, names: Set<string>) =>
+  node.type === "JSXOpeningElement" &&
+  node.name.type === "JSXIdentifier" &&
+  names.has(node.name.name);
+
 const reachesSubject = (node: Node, names: Set<string>) =>
-  containsNode(node, (n, key) => isLocalImport(n) || (isReference(n, key) && names.has(n.name)));
+  containsNode(
+    node,
+    (n, key) =>
+      isLocalImport(n) || rendersSubject(n, names) || (isReference(n, key) && names.has(n.name))
+  );
 
 function modelOf(facts: Facts): FileModel {
   const subjects = new Set(facts.imports.keys());
@@ -362,6 +402,9 @@ const WEAK_SHAPES: Record<string, (candidate: Candidate) => boolean> = {
 };
 
 function isStrong({ assertion, scope }: Found, file: FileModel) {
+  if (assertion.onElement && !assertion.negated && RENDERED_STATE_MATCHERS.has(assertion.matcher)) {
+    return true;
+  }
   const expected = expectedOf(assertion);
   if (expected === undefined) return false;
   return !Object.values(WEAK_SHAPES).some(weak => weak({ assertion, expected, scope, file }));
