@@ -65,9 +65,8 @@ app.all("*", c => serveAsset(c.req.raw, c.env.ASSETS));
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    // `astro dev` renders images on request at /_image. A build pre-optimizes them
-    // (imageService "compile"), so production never asks, and a static import
-    // would bundle Astro's server runtime into the Worker.
+    // Only `astro dev` requests /_image (builds pre-optimize with imageService "compile");
+    // a static import would bundle Astro's server runtime into the Worker.
     if (import.meta.env.DEV && new URL(request.url).pathname === "/_image") {
       const { handle } = await import("@astrojs/cloudflare/handler");
       return handle(request, env, ctx);

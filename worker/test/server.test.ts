@@ -1,7 +1,7 @@
 // The worker entry: which requests it claims, which fall through to static
 // assets, and how a miss is answered.
 import { createExecutionContext, env, runInDurableObject } from "cloudflare:test";
-import { assert, beforeEach, describe, expect, it } from "vitest";
+import { assert, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { parseRange } from "#worker/audio.ts";
 import { ChatRoom } from "#worker/chat-room.ts";
@@ -42,6 +42,21 @@ describe("routing", () => {
     );
     expect(await response.text()).toBe("asset");
     expect(seen.map(r => new URL(r.url).pathname)).toEqual(["/blog/some-post"]);
+  });
+
+  it("leaves /_image to static assets outside astro dev", async () => {
+    vi.stubEnv("DEV", false);
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    const seen: Request[] = [];
+    const response = await worker.fetch(
+      new Request("https://example.com/_image?href=%2Flogo.png&w=72"),
+      envWithAssets(r => seen.push(r)),
+      createExecutionContext()
+    );
+    expect(await response.text()).toBe("asset");
+    expect(seen.map(r => new URL(r.url).pathname)).toEqual(["/_image"]);
   });
 
   // /mcp is 405 because this revision of Streamable HTTP defines POST only.
