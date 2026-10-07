@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  globSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { parseArgs } from "node:util";
 import { renderMermaid } from "@mermaid-js/mermaid-cli";
@@ -64,16 +72,6 @@ const PNG_PADDING = 24;
 const { values: options } = parseArgs({ options: { force: { type: "boolean" } } });
 const force = options.force ?? false;
 
-function findPosts(dir: string): string[] {
-  const posts: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) posts.push(...findPosts(path));
-    else if (entry.name === "index.md") posts.push(path);
-  }
-  return posts.sort();
-}
-
 const rel = (path: string) => relative(process.cwd(), path);
 
 async function renderSvg({
@@ -118,10 +116,12 @@ async function renderPng({ browser, job }: { browser: Browser; job: Job }): Prom
 }
 
 async function main(): Promise<void> {
-  const posts = findPosts(CONTENT_DIR).map(path => ({
-    path,
-    markdown: readFileSync(path, "utf8")
-  }));
+  const posts = globSync("**/index.md", { cwd: CONTENT_DIR })
+    .sort()
+    .map(file => {
+      const path = join(CONTENT_DIR, file);
+      return { path, markdown: readFileSync(path, "utf8") };
+    });
   const { jobs, expected } = await diagramJobs(posts);
   const stale = orphans({ expected, listDir: dir => (existsSync(dir) ? readdirSync(dir) : []) });
   const missing = pendingRenders({ jobs, force, isCurrent, exists: existsSync });

@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { captureVerdict, claimsRecorded, devVarsKey } from "./capture-scenario.ts";
-
-describe("devVarsKey", () => {
-  it("reads DEEPSEEK_API_KEY out of .dev.vars", () => {
-    expect(devVarsKey("POSTHOG_KEY=ph\nDEEPSEEK_API_KEY= sk-123 \n")).toBe("sk-123");
-    expect(devVarsKey("POSTHOG_KEY=ph\n")).toBe(undefined);
-  });
-});
+import { captureVerdict, claimsRecorded } from "./capture-scenario.ts";
 
 describe("claimsRecorded", () => {
   it("spots a reply that says the lead was handed on", () => {
