@@ -61,6 +61,30 @@ it("echoes the inbox", async () => {
     {
       name: "a string key that isn't an identifier",
       code: `${SUBJECT_IMPORT}it("reads a header", () => { expect(slugify("a")["content-type"]).toBe("text/plain"); });`
+    },
+    {
+      name: "an assertion in a helper function declared below the test",
+      code: `${SUBJECT_IMPORT}it("slugs", () => { check("A", "a"); });
+function check(input: string, want: string) { expect(slugify(input)).toBe(want); }`
+    },
+    {
+      name: "a value a beforeAll setup assigns from the subject",
+      code: `${SUBJECT_IMPORT}let page: string;
+beforeAll(() => { page = slugify("A"); });
+it("slugs", () => { expect(page).toHaveProperty("length", 1); });`
+    },
+    {
+      name: "a value destructured from a dynamic import of the subject",
+      code: `it("slugs", async () => {
+  const { slugify: run, LIMIT: [first, ...rest] } = await import("./subject");
+  expect({ [first]: run("A"), rest }).toEqual({ a: "a", rest: [] });
+});`
+    },
+    {
+      name: "type-only imports beside a subject import",
+      code: `import type { Options } from "./subject";
+import { type Mode, slugify } from "./subject";
+it("slugs", () => { expect(slugify("A") satisfies Mode).toBe("a"); });`
     }
   ],
   invalid: [
@@ -104,6 +128,47 @@ it("reports the policy", () => { expect(slugify("p")).toBe(WANT); });`,
   expect(slugify("a")).toBe("a");
 });`,
       errors: [{ messageId: "stringKeyAccess", data: { name: "emailOnce" }, line: 4 }]
+    },
+    {
+      name: "an expected value computed by the subject",
+      code: `${SUBJECT_IMPORT}it("slugs", () => {
+  const want = slugify("a");
+  expect(slugify("A")).toBe(want);
+  expect(slugify("B")).toBe(slugify("b"));
+});`,
+      errors: [{ messageId: "noStrongAssertion", line: 2 }]
+    },
+    {
+      name: "only absences and empty values",
+      code: `${SUBJECT_IMPORT}it("is empty", () => {
+  expect(slugify("")).toHaveLength(0);
+  expect(slugify(" ")).toEqual([]);
+  expect(slugify("  ")).toEqual({});
+  expect(slugify("   ")).toBeNull();
+  expect(slugify("    ")).toBeGreaterThan(0);
+});`,
+      errors: [{ messageId: "noStrongAssertion", line: 2 }]
+    },
+    {
+      name: "a subject constant read through optional chaining and a non-null assertion",
+      code: `${SUBJECT_IMPORT}it("caps", () => {
+  expect(TOOLS?.max).toBe(8);
+  expect(TOOLS!.min).toBe(1);
+});`,
+      errors: [{ messageId: "noStrongAssertion", line: 2 }]
+    },
+    {
+      name: "a build-time global declared in the test file",
+      code: `declare const __GLOBAL_CSS__: string;
+it("inlines the sheet", () => { expect(__GLOBAL_CSS__).toContain("body"); });`,
+      errors: [{ messageId: "noStrongAssertion", line: 2 }]
+    },
+    {
+      name: "a subject constant assigned at the top level",
+      code: `${SUBJECT_IMPORT}let want: string;
+want = TOOLS.name;
+it("names", () => { expect(slugify("tools")).toBe(want); });`,
+      errors: [{ messageId: "expectedFromSubject", data: { name: "TOOLS" }, line: 4 }]
     }
   ]
 });
