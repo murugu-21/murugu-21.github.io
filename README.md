@@ -117,6 +117,8 @@ Having both compilers installed has two side effects:
 
 Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume. It uploads the test coverage (`coverage/lcov.info`) to [Qlty](https://qlty.sh) over OIDC, so no token is stored; with no Qlty project set up, the upload step logs an error and the job still passes.
 
+`.github/workflows/links.yml` checks every link in the repo's markdown with [lychee](https://lychee.cli.rs) each Monday and fails on a broken one; its settings and the hosts it skips are in `lychee.toml`, and `lychee .` runs the same check locally (`brew install lychee`).
+
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 
 - **Build command.** `bun run build`. Workers Builds installs dependencies from `bun.lock` before running it.
