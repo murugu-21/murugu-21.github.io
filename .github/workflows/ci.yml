@@ -10,6 +10,10 @@ permissions:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    # id-token lets the Qlty step authenticate by OIDC instead of a stored token.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -36,7 +40,11 @@ jobs:
       - run: bun run check:src
       - run: bun run check:worker
       # Not `bun test`, which is Bun's own runner rather than Vitest's Workers pool.
-      - run: bun run test
+      - run: bun run test --coverage
+      - uses: qltysh/qlty-action/coverage@c9b09987143d1e4ac955f4803c7bea742102feb5 # v2.4.0
+        with:
+          oidc: true
+          files: coverage/lcov.info
       # The whole site, resume PDF included (astro.config.ts build-artifacts).
       - run: bun run build
         env:

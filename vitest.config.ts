@@ -16,6 +16,15 @@ export default defineConfig({
   test: {
     // 0 stops truncating `$field` values in it.each titles (and in failure messages).
     chaiConfig: { truncateThreshold: 0 },
+    // Off unless `--coverage` is passed. Istanbul because V8 coverage doesn't work in
+    // the Workers pool. The globs list extensions so READMEs and .astro files, which
+    // Istanbul can't parse, stay out.
+    coverage: {
+      provider: "istanbul",
+      include: ["{src,worker,utils,contracts,scripts}/**/*.{ts,tsx}"],
+      exclude: ["**/*.test.ts", "**/*.d.ts", "worker/test/**"],
+      reporter: ["text-summary", "lcov"]
+    },
     projects: [
       {
         extends: true,

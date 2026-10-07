@@ -28,3 +28,6 @@ content/blog/**/diagrams/
 
 # python bytecode
 __pycache__/
+
+# vitest --coverage output
+coverage/

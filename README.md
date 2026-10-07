@@ -99,6 +99,7 @@ bun run check:astro    # type-check .astro files
 bun run check:src      # type-check src/, scripts/ and the config files
 bun run check:worker   # type-check worker/
 bun run test           # vitest in the workers pool
+bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 
 [typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs the same version through `crate-ci/typos`.
@@ -114,7 +115,7 @@ Having both compilers installed has two side effects:
 
 ## Deployment
 
-Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume.
+Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume. It uploads the test coverage (`coverage/lcov.info`) to [Qlty](https://qlty.sh) over OIDC, so no token is stored; with no Qlty project set up, the upload step logs an error and the job still passes.
 
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 
