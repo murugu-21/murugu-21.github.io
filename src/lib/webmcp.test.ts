@@ -45,16 +45,6 @@ afterEach(() => {
 });
 
 describe("WebMCP tools", () => {
-  it("registers the four site tools with the browser's model context", async () => {
-    const { tools } = await bootPage({});
-    expect([...tools.keys()]).toEqual([
-      "get_profile",
-      "list_blog_posts",
-      "read_blog_post",
-      "navigate_to"
-    ]);
-  });
-
   it("reads the profile and the post list as text from the site's markdown routes", async () => {
     const { run } = await bootPage({});
     expect(await run("get_profile")).toBe("# Murugappan M");

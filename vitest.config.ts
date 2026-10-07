@@ -22,7 +22,7 @@ export default defineConfig({
     coverage: {
       provider: "istanbul",
       include: ["{src,worker,utils,contracts,scripts}/**/*.{ts,tsx}"],
-      exclude: ["**/*.test.ts", "**/*.d.ts", "worker/test/**"],
+      exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "worker/test/**"],
       reporter: ["text-summary", "lcov"]
     },
     projects: [

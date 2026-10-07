@@ -3,7 +3,7 @@ import { writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { blogPost, setPosts } from "#src/lib/blog/test-posts.ts";
+import { blogPost, setPosts } from "#src/lib/blog/fixtures.ts";
 import { GET as aboutMarkdown } from "./about/index.md.ts";
 import { GET as dataset } from "./api/dataset.json.ts";
 import { GET as blogLlmsFull } from "./blog/llms-full.txt.ts";
@@ -16,10 +16,7 @@ import {
 import { GET as homeMarkdown } from "./index.md.ts";
 import { GET as siteLlms } from "./llms.txt.ts";
 
-vi.mock(
-  "astro:content",
-  async () => (await import("#src/lib/blog/test-posts.ts")).astroContentMock
-);
+vi.mock("astro:content", async () => (await import("#src/lib/blog/fixtures.ts")).astroContentMock);
 vi.mock("astro:env/server", () => ({ RESUME_PHONE: undefined }));
 
 const POSTS = [

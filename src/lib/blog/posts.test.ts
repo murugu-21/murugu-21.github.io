@@ -12,9 +12,9 @@ import {
   tagPath,
   timeToRead
 } from "./posts";
-import { blogPost, setPosts } from "./test-posts";
+import { blogPost, setPosts } from "./fixtures";
 
-vi.mock("astro:content", async () => (await import("./test-posts")).astroContentMock);
+vi.mock("astro:content", async () => (await import("./fixtures")).astroContentMock);
 
 afterEach(() => vi.unstubAllEnvs());
 
