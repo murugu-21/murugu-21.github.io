@@ -91,6 +91,7 @@ GITHUB_TOKEN=ghp_xxx bun run build
 
 ```bash
 bun run check-format   # oxfmt, plus prettier for .astro
+typos                  # spelling, configured in _typos.toml
 bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates
 bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate .cloudflare/types from cloudflare.config.ts (Env plus the runtime types)
@@ -99,6 +100,8 @@ bun run check:src      # type-check src/, scripts/ and the config files
 bun run check:worker   # type-check worker/
 bun run test           # vitest in the workers pool
 ```
+
+[typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs the same version through `crate-ci/typos`.
 
 The project compiler is TypeScript 7. Its native build no longer ships the JS API that Astro's Volar-based tooling calls, so `astro check` crashes on it, and typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses it. Microsoft publishes that API as `@typescript/typescript6`, and `check:astro` and `lint:astro` preload `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. `@astrojs/check` also declares a `typescript@^5 || ^6` peer, hence the `overrides` entry in `package.json`. Remove `@typescript/typescript6`, `scripts/site/ts-alias.cjs` and the `overrides` entry once `@astrojs/check` and typescript-eslint support TypeScript 7.
 
@@ -111,7 +114,7 @@ Having both compilers installed has two side effects:
 
 ## Deployment
 
-Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, lint, unused code, type-checks, tests and a full build including the resume.
+Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume.
 
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 
