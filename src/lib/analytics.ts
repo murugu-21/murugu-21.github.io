@@ -3,6 +3,8 @@
 // loads, failures swallowed. Event names are snake_case `<surface>_<action>`.
 // PII: never pass anything a visitor typed (chat messages, search queries).
 
+import type { CaptureResult } from "posthog-js";
+
 import { onFirstInteraction } from "./first-interaction";
 
 interface PostHog {
@@ -118,21 +120,23 @@ export function initClickTracking(root?: Document): void {
   );
 }
 
-/** PII: strips the blog's `q` (visitor search text) and `tag` params from /blog URLs. */
-export const redactBlogFilters = (url: string): string => {
-  if (!url.includes("?")) return url;
-  try {
-    const parsed = new URL(url);
-    if (!parsed.pathname.startsWith("/blog")) return url;
-    if (!parsed.searchParams.has("q") && !parsed.searchParams.has("tag")) return url;
-    parsed.searchParams.delete("q");
-    parsed.searchParams.delete("tag");
-    return parsed.toString();
-  } catch {
-    // not an absolute URL
-    return url;
+// PII: the blog's search text and tag filter. PostHog masks them in page URLs but not in
+// referrers, which carry them after a same-site click from a filtered /blog/ list.
+const MASKED_PARAMS = ["q", "tag"];
+const REFERRERS = ["$referrer", "$session_entry_referrer", "$initial_referrer"];
+const MASKED_IN_QUERY = new RegExp(`([?&](?:${MASKED_PARAMS.join("|")})=)[^&#]*`, "g");
+
+/** Masks the blog filter params in an event's referrers, as PostHog does in its URLs. */
+export function maskReferrers(event: CaptureResult | null): CaptureResult | null {
+  for (const props of [event?.properties, event?.$set_once]) {
+    if (!props) continue;
+    for (const key of REFERRERS) {
+      const value: unknown = props[key];
+      if (typeof value === "string") props[key] = value.replace(MASKED_IN_QUERY, "$1<masked>");
+    }
   }
-};
+  return event;
+}
 
 /** No-ops without token/host; replays anything buffered during the load. */
 export async function initAnalytics(
@@ -162,16 +166,10 @@ export async function initAnalytics(
       // bootAnalytics' listeners cover the window before this; they are
       // detached below so nothing is captured twice.
       capture_exceptions: true,
-      persistence: "localStorage+cookie",
-      capture_pageview: true,
-      // PII: scrub blog search text from every URL-valued property
-      sanitize_properties: (properties: Record<string, unknown>) => {
-        for (const key of Object.keys(properties)) {
-          const value = properties[key];
-          if (typeof value === "string") properties[key] = redactBlogFilters(value);
-        }
-        return properties;
-      }
+      // PII: masks MASKED_PARAMS and ad click ids in every captured page URL.
+      mask_personal_data_properties: true,
+      custom_personal_data_properties: MASKED_PARAMS,
+      before_send: maskReferrers
     });
     sdk = ph;
     stopEarlyErrorCapture();

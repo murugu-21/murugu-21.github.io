@@ -34,7 +34,7 @@ Lint enforces the direction too (the site-area overrides in `oxlint.config.ts`).
 - **Session replay** starts on the first pointer, touch, key or wheel event (`onFirstInteraction` in `src/lib/first-interaction.ts`), not on `scroll`, which Chrome fires during load. The recorder is the SDK's heaviest extension, and loading it right after paint counted against Lighthouse's blocking time. Surveys and dead-click capture are off, so the SDK doesn't fetch their scripts.
 - **Error tracking.** `capture_exceptions: true` turns uncaught errors and rejections into `$exception` events. Since the SDK waits for the first interaction, `bootAnalytics` listens for `error` and `unhandledrejection` from page load, buffers them, replays them once the SDK arrives, then detaches. Errors the code catches on purpose go through `reportError`.
 - **Source maps.** In production builds `@posthog/rollup-plugin` emits hidden source maps, uploads them and deletes the `.map` files, so nothing extra is served. A failed upload fails the build rather than deploying unmapped code.
-- **Privacy.** Nothing a visitor types is sent. Replay masks every `<input>` and `<textarea>`, and the chat transcript carries `data-ph-mask="true"` because sent messages render as `<div>`s. Blog filter params (`?q=`, `?tag=`) are stripped from captured URLs (`redactBlogFilters` / `sanitize_properties`).
+- **Privacy.** Nothing a visitor types is sent. Replay masks every `<input>` and `<textarea>`, and the chat transcript carries `data-ph-mask="true"` because sent messages render as `<div>`s. Every captured URL has its `q` and `tag` params (the blog's search text and filter) and ad click ids masked, by PostHog's `mask_personal_data_properties` plus `custom_personal_data_properties`.
 
 ### Custom events
 
