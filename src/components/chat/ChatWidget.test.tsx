@@ -156,7 +156,8 @@ test("sends a question with Enter and streams the reply after the tool step", as
 
   room.stream(reply("At MedMe Health.").slice(1));
   await expect.element(page.getByText("At MedMe Health.")).toBeVisible();
-  await expect.element(page.getByText("Reading experience…")).not.toBeInTheDocument();
+  await expect.element(page.getByText("Jarvis is typing")).not.toBeInTheDocument();
+  await expect.element(sendButton()).toBeDisabled();
   room.finish();
 
   await expect.element(sendButton()).toBeEnabled();
@@ -304,9 +305,12 @@ test("says something went wrong when the turn fails, and lets the visitor retry"
 test("waits while another tab's turn streams into the same room", async () => {
   await render(<ChatWidget />);
   await openChat();
+  const starter = page.getByRole("button", { name: "How has he used LLMs in production?" });
+  await expect.element(starter).toBeVisible();
 
   lastRoom().resumeElsewhere("other-tab");
   await expect.element(sendButton()).toBeDisabled();
+  await expect.element(starter).not.toBeInTheDocument();
 
   lastRoom().stream(reply("Answer for the other tab."), "other-tab");
   lastRoom().finish("other-tab");
@@ -448,6 +452,10 @@ test("introduces the launcher once, then fades the hint away", async () => {
 
   await first.unmount();
   await render(<ChatWidget />);
-  await expect.element(page.getByRole("button", { name: LAUNCHER })).toBeVisible();
-  await expect.element(hint).not.toBeInTheDocument();
+  // Checked synchronously after two frames, by which the hint's effect would
+  // have committed: a polling matcher would wait out the hint's own fade.
+  await new Promise(requestAnimationFrame);
+  await new Promise(requestAnimationFrame);
+  expect(page.getByRole("button", { name: LAUNCHER }).query()).not.toBeNull();
+  expect(hint.query()).toBeNull();
 });
