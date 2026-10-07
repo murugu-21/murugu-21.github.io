@@ -17,7 +17,7 @@ import {
   LLMS_TXT,
   NOT_FOUND_HTML,
   testEnv,
-  visitorMeta
+  visitorStorage
 } from "./fixtures";
 
 // Every response from this ASSETS stub is marked, proving whether a request
@@ -79,12 +79,12 @@ describe("the chat-room WebSocket", () => {
       [VISITOR_COUNTRY_HEADER]: "XX",
       [VISITOR_IP_HEADER]: "203.0.113.66"
     });
-    const meta = await runInDurableObject(stub, async (instance: ChatRoom) =>
-      visitorMeta(instance)
+    const stored = await runInDurableObject(stub, async (instance: ChatRoom) =>
+      visitorStorage(instance)
     );
-    expect(meta.visitor_country).toBe("IN");
+    expect(stored.visitor_country).toBe("IN");
     // Cloudflare sent no IP, so the forged one must not survive either.
-    expect(meta.visitor_ip).toBeUndefined();
+    expect(stored.visitor_ip).toBeUndefined();
   });
 });
 

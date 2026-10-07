@@ -247,16 +247,9 @@ export function recordingEmail(): { email: SendEmail; sent: EmailMessageBuilder[
   return { email: { send }, sent };
 }
 
-/** The visitor_* rows a ChatRoom keeps in its meta table. */
-export function visitorMeta(instance: ChatRoom): Record<string, unknown> {
-  return Object.fromEntries(
-    instance.ctx.storage.sql
-      .exec<{ key: string; value: SqlStorageValue }>(
-        `SELECT key, value FROM meta WHERE key LIKE 'visitor_%'`
-      )
-      .toArray()
-      .map(r => [r.key, r.value])
-  );
+/** The visitor_* values a ChatRoom keeps in its storage. */
+export function visitorStorage(instance: ChatRoom): Record<string, unknown> {
+  return Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" }));
 }
 
 /** The pool's env plus the bindings worker/test/wrangler.jsonc leaves out. */

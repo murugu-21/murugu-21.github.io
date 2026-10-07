@@ -120,10 +120,6 @@ export class ChatRoom extends AIChatAgent<Env> {
          contact TEXT NOT NULL,
          summary TEXT NOT NULL,
          created_at INTEGER NOT NULL
-       );
-       CREATE TABLE IF NOT EXISTS meta (
-         key TEXT PRIMARY KEY,
-         value TEXT NOT NULL
        );`
     );
   }
@@ -244,14 +240,15 @@ export class ChatRoom extends AIChatAgent<Env> {
   }
 
   private async emailLeadOnce(lead: Lead): Promise<void> {
-    if (this.metaValue("lead_captured") !== null) return;
+    const kv = this.ctx.storage.kv;
+    if (kv.get("lead_captured") !== undefined) return;
     const mailer = contactMailer(this.env);
     if (!mailer) {
       console.error("opportunity email skipped: no EMAIL binding or inbox");
       return;
     }
     // Claimed before the send: two captures in one step run in parallel.
-    this.upsertMeta("lead_captured", new Date().toISOString());
+    kv.put("lead_captured", new Date().toISOString());
     try {
       await sendOpportunityEmail({
         ...mailer,
@@ -261,24 +258,25 @@ export class ChatRoom extends AIChatAgent<Env> {
     } catch (err) {
       // Lead is already in SQLite; losing the email must not kill the chat.
       console.error("opportunity email failed", err);
-      this.ctx.storage.sql.exec(`DELETE FROM meta WHERE key = 'lead_captured'`);
+      kv.delete("lead_captured");
     }
   }
 
-  // Stored under `visitor_*` meta keys and mirrored to one D1 `rooms` row.
+  // Stored under `visitor_*` storage keys and mirrored to one D1 `rooms` row.
   // A missing value never erases a known one.
   private recordVisitor(request: Request): void {
     const visitor = parseVisitorContext(request.headers);
     if (!visitor) return;
 
+    const kv = this.ctx.storage.kv;
     const now = Date.now();
-    const knownFirstSeen = this.metaValue("visitor_first_seen");
-    const firstSeen = knownFirstSeen === null ? now : Number(knownFirstSeen);
+    const knownFirstSeen = kv.get("visitor_first_seen");
+    const firstSeen = typeof knownFirstSeen === "number" ? knownFirstSeen : now;
 
-    this.upsertMeta("visitor_country", visitor.country);
-    this.upsertMeta("visitor_ip", visitor.ip);
-    this.upsertMeta("visitor_last_seen", String(now));
-    if (knownFirstSeen === null) this.upsertMeta("visitor_first_seen", String(now));
+    if (visitor.country !== null) kv.put("visitor_country", visitor.country);
+    if (visitor.ip !== null) kv.put("visitor_ip", visitor.ip);
+    kv.put("visitor_last_seen", now);
+    if (typeof knownFirstSeen !== "number") kv.put("visitor_first_seen", now);
 
     this.mirrorToD1(
       this.env.CHAT_DB?.prepare(
@@ -289,23 +287,6 @@ export class ChatRoom extends AIChatAgent<Env> {
            ip = COALESCE(excluded.ip, rooms.ip),
            last_seen = excluded.last_seen`
       ).bind(this.name, visitor.country, visitor.ip, firstSeen, now)
-    );
-  }
-
-  private metaValue(key: string): string | null {
-    const rows = this.ctx.storage.sql
-      .exec<{ value: string }>(`SELECT value FROM meta WHERE key = ?`, key)
-      .toArray();
-    return rows.length ? rows[0].value : null;
-  }
-
-  private upsertMeta(key: string, value: string | null): void {
-    if (value === null) return;
-    this.ctx.storage.sql.exec(
-      `INSERT INTO meta (key, value) VALUES (?, ?)
-       ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
-      key,
-      value
     );
   }
 
