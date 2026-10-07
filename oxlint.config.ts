@@ -66,7 +66,7 @@ const SITE = layerPatterns("site");
 export default defineConfig({
   plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
-  jsPlugins: ["./scripts/lint/test-behaviour.ts"],
+  jsPlugins: ["./scripts/lint/test-behaviour.ts", "./scripts/lint/contracts.ts"],
   categories: { correctness: "error" },
   rules: {
     "no-irregular-whitespace": ["error", { skipComments: true }],
@@ -144,6 +144,7 @@ export default defineConfig({
         }
       ]
     ),
+    { files: ["contracts/**"], rules: { "contracts/shapes-only": "error" } },
     {
       files: ["scripts/site/ts-alias.cjs"],
       rules: {
