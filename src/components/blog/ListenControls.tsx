@@ -1,7 +1,7 @@
-// Read-aloud controls for a blog post. The backends (pre-rendered audio and
-// speech synthesis) live in #src/lib/blog/listen-player.ts.
+// Read-aloud controls for a blog post: the visible player state and the
+// remembered speed. The backends live in #src/lib/blog/listen-player.ts.
 import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
-import { Loader2, Pause, Play } from "lucide-react";
+import { Loader2, Pause, Play, type LucideIcon } from "lucide-react";
 
 import { Button } from "#src/components/ui/button.tsx";
 import {
@@ -14,13 +14,11 @@ import {
 import { Slider } from "#src/components/ui/slider.tsx";
 import { track } from "#src/lib/analytics.ts";
 import {
-  Highlighter,
   collectBlocks,
   loadPlayer,
   type Block,
   type Player,
   type Progress,
-  type Session,
   type Status
 } from "#src/lib/blog/listen-player.ts";
 import { parseRate, SPEECH_RATES, type SpeechRate } from "#src/lib/blog/speech.ts";
@@ -86,12 +84,21 @@ const reduce = (view: View, action: Action): View => {
   return { ...view, status: action.status };
 };
 
-const TOGGLE = {
-  idle: { label: "Listen", Icon: Play, iconClass: "ml-0.5", filled: true },
-  paused: { label: "Listen", Icon: Play, iconClass: "ml-0.5", filled: true },
+interface ToggleLook {
+  label: string;
+  Icon: LucideIcon;
+  iconClass: string;
+  filled: boolean;
+}
+
+const LISTEN: ToggleLook = { label: "Listen", Icon: Play, iconClass: "ml-0.5", filled: true };
+
+const TOGGLE: Record<Status, ToggleLook> = {
+  idle: LISTEN,
+  paused: LISTEN,
   loading: { label: "Loading", Icon: Loader2, iconClass: "animate-spin", filled: false },
   speaking: { label: "Pause", Icon: Pause, iconClass: "", filled: false }
-} satisfies Record<Status, unknown>;
+};
 
 // Elapsed and total, either side of the seek bar.
 const READOUT: Record<Progress["unit"], (p: Progress) => [string, string]> = {
@@ -110,20 +117,6 @@ export function ListenControls({ slug }: { slug: string }) {
   const [{ status, progress }, dispatch] = useReducer(reduce, INITIAL);
   const rate = useSyncExternalStore(subscribeRate, getRate, getServerRate);
   const playerRef = useRef<Player | null>(null);
-  const [session] = useState((): Session => {
-    const highlight = new Highlighter();
-    return {
-      highlight,
-      set: next => {
-        if (next === "idle") highlight.clear();
-        dispatch({ status: next });
-      },
-      report: next => dispatch({ progress: next }),
-      replace: player => {
-        playerRef.current = player;
-      }
-    };
-  });
 
   useEffect(() => {
     const canSpeak = !!window.speechSynthesis && "SpeechSynthesisUtterance" in window;
@@ -156,17 +149,24 @@ export function ListenControls({ slug }: { slug: string }) {
     }
     track("listen_play", { post: slug });
     dispatch({ status: "loading" });
-    playerRef.current = await loadPlayer({
+    const loaded = await loadPlayer({
       slug,
       blocks: blocksRef.current,
-      session,
-      rate: getRate()
+      rate: getRate,
+      host: {
+        setStatus: next => dispatch({ status: next }),
+        setProgress: next => dispatch({ progress: next }),
+        handOver: next => {
+          playerRef.current = next;
+        }
+      }
     });
-    if (playerRef.current) {
-      playerRef.current.play();
+    playerRef.current = loaded;
+    if (loaded) {
+      loaded.play();
     } else {
       track("listen_unavailable");
-      session.set("idle");
+      dispatch({ status: "idle" });
     }
   };
 

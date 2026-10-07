@@ -132,7 +132,10 @@ export function wrapWords(el: Element): HTMLElement[][] {
   const existing = Array.from(el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`));
   if (existing.length > 0) {
     const grouped: HTMLElement[][] = [];
-    for (const span of existing) (grouped[Number(span.getAttribute(WORD_ATTR))] ??= []).push(span);
+    for (const span of existing) {
+      const idx = Number(span.getAttribute(WORD_ATTR));
+      (grouped[idx] ??= []).push(span);
+    }
     return grouped.filter(Boolean);
   }
 
@@ -149,7 +152,10 @@ export function wrapWords(el: Element): HTMLElement[][] {
         word = null;
         continue;
       }
-      if (!word) words.push((word = []));
+      if (!word) {
+        word = [];
+        words.push(word);
+      }
       const span = doc.createElement("span");
       span.className = WORD_CLASS;
       span.setAttribute(WORD_ATTR, String(words.length - 1));

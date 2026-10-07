@@ -45,11 +45,17 @@ const serveAudio = (timings?: unknown) => {
 };
 
 // A speechSynthesis that records utterances; the test fires their events.
+// Like Chrome, cancel() errors the utterance it cuts off, synchronously.
 const fakeSpeech = () => {
   const spoken: SpeechSynthesisUtterance[] = [];
   vi.stubGlobal("speechSynthesis", {
     speak: (u: SpeechSynthesisUtterance) => spoken.push(u),
-    cancel: () => {}
+    cancel: () => {
+      const u = spoken.at(-1);
+      u?.dispatchEvent(
+        new SpeechSynthesisErrorEvent("error", { utterance: u, error: "interrupted" })
+      );
+    }
   });
   const last = () => {
     const u = spoken.at(-1);
@@ -158,6 +164,9 @@ test("reads the post block by block with speech synthesis when it has no audio",
   // Resuming restarts the paragraph that was cut off.
   await userEvent.click(ui.pause);
   await expect.element(ui.listen).toHaveAttribute("aria-pressed", "false");
+  // Paused, not stopped: the place and the docked bar stay.
+  expect(ui.readout()).toBe("2/3¶1×");
+  expect(ui.listening()).toBe(true);
   await userEvent.click(ui.listen);
   await expect.element(ui.pause).toBeVisible();
 
@@ -247,12 +256,15 @@ test("plays the pre-rendered audio, lighting the block and word under the playhe
 test("falls back to speech synthesis when the audio fails to load", async () => {
   serveAudio(TIMINGS);
   const speech = fakeSpeech();
+  const rejections: Promise<void>[] = [];
   vi.stubGlobal(
     "Audio",
     class extends FakeAudio {
       override play() {
         this.dispatchEvent(new Event("error"));
-        return Promise.reject(new DOMException("no source", "NotSupportedError"));
+        const rejected = Promise.reject(new DOMException("no source", "NotSupportedError"));
+        rejections.push(rejected.catch(() => {}));
+        return rejected;
       }
     }
   );
@@ -261,7 +273,7 @@ test("falls back to speech synthesis when the audio fails to load", async () => 
   await userEvent.click(ui.listen);
   await expect.element(ui.pause).toBeVisible();
   // The rejected play() settles after the fallback took over.
-  await new Promise(resolve => setTimeout(resolve, 50));
+  await Promise.all(rejections);
   await expect.element(ui.pause).toBeVisible();
   speech.start();
   await expect.poll(ui.readout).toBe("1/3¶1×");
@@ -318,9 +330,34 @@ test("with neither audio nor speech synthesis, retries on the next press", async
 });
 
 test("stays disabled on a page with nothing to read", async () => {
-  const ui = await mount("<article class='blog-post'><p>No post body here.</p></article>");
-  await expect.element(ui.listen).toBeDisabled();
-  await expect.element(ui.screen.getByRole("button", { name: "1× playback speed" })).toBeDisabled();
+  const bare = await mount("<article class='blog-post'><p>No post body here.</p></article>");
+  await expect.element(bare.listen).toBeDisabled();
+  await expect
+    .element(bare.screen.getByRole("button", { name: "1× playback speed" }))
+    .toBeDisabled();
+
+  await bare.screen.unmount();
+  document.getElementById("page")?.remove();
+  const post = await mount();
+  await expect.element(post.listen).toBeEnabled();
+  await expect
+    .element(post.screen.getByRole("button", { name: "1× playback speed" }))
+    .toBeEnabled();
+});
+
+test("a speed picked while the audio loads applies once playback starts", async () => {
+  let respond: (res: Response) => void = () => {};
+  vi.stubGlobal("fetch", () => new Promise<Response>(resolve => (respond = resolve)));
+  const speech = fakeSpeech();
+  const ui = await mount();
+
+  await userEvent.click(ui.listen);
+  await expect.element(ui.screen.getByRole("button", { name: "Loading" })).toBeDisabled();
+  await ui.pickRate("1.25×");
+  respond(new Response("", { status: 404 }));
+  await expect.element(ui.pause).toBeVisible();
+  expect(speech.rate()).toBe(1.25);
+  await ui.pickRate("1×");
 });
 
 test("restarts the current block at the chosen speed and remembers it", async () => {
@@ -343,6 +380,13 @@ test("restarts the current block at the chosen speed and remembers it", async ()
     .element(ui.screen.getByRole("menuitemradio", { name: "1.5×" }))
     .toHaveAttribute("aria-checked", "true");
   await userEvent.keyboard("{Escape}");
+
+  // While paused nothing restarts; the next block plays at the new speed.
+  await userEvent.click(ui.pause);
   await ui.pickRate("1×");
   expect(localStorage.getItem("listenRate")).toBe("1");
+  expect(speech.texts()).toEqual(["Read me", "Read me"]);
+  await userEvent.click(ui.listen);
+  expect(speech.texts()).toEqual(["Read me", "Read me", "Read me"]);
+  expect(speech.rate()).toBe(1);
 });

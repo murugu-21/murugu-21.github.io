@@ -38,13 +38,12 @@ export interface Player {
   seek?(seconds: number): void;
 }
 
-// What a player reports back to the controls that own the visible state.
-export interface Session {
-  highlight: Highlighter;
-  set(status: Exclude<Status, "loading">): void;
-  report(progress: Progress): void;
+// The controls a player reports to; they own the visible state.
+export interface PlayerHost {
+  setStatus(status: Exclude<Status, "loading">): void;
+  setProgress(progress: Progress): void;
   // The audio player hands over to speech synthesis when the MP3 fails.
-  replace(player: Player | null): void;
+  handOver(player: Player | null): void;
 }
 
 const follow = (el: Element, band?: ScrollBand) => {
@@ -54,7 +53,7 @@ const follow = (el: Element, band?: ScrollBand) => {
 
 // Marks the block being read (.is-speaking) and its current word (.is-word).
 // A word is one or more spans, since it may straddle an inline element.
-export class Highlighter {
+class Highlighter {
   #block: Element | null = null;
   #word: HTMLElement[] | null = null;
 
@@ -104,10 +103,9 @@ const wordsByOffset = (text: string): TimedWord[] => {
 // Same extraction and normalisation as the generator, so texts line up with
 // the timing JSON. The title is read first.
 export const collectBlocks = (): Block[] => {
-  const article = document.querySelector("article.blog-post");
-  const body = article?.querySelector("section[data-post-body]");
+  const body = document.querySelector("article.blog-post section[data-post-body]");
   if (!body) return [];
-  const title = article?.querySelector("header h1");
+  const title = document.querySelector("article.blog-post header h1");
   const titled = title ? [{ el: title, text: title.textContent ?? "" }] : [];
   return [...titled, ...speechBlocks(body)]
     .map(b => ({ el: b.el, text: normalizeSpeechText(b.text) }))
@@ -129,22 +127,26 @@ const fetchTimings = async (slug: string): Promise<AudioTimings | null> => {
   return null;
 };
 
-interface Backend {
+interface PlayerOptions {
   blocks: Block[];
-  session: Session;
+  host: PlayerHost;
+  highlight: Highlighter;
   rate: number;
 }
 
 // One block per utterance: Chrome silently stops long utterances after ~15 s,
 // and per-block utterances give the highlight and a resume point.
-function speechPlayer({ blocks, session, rate }: Backend): Player {
+function speechPlayer({ blocks, host, highlight, rate: initialRate }: PlayerOptions): Player {
   const synth = window.speechSynthesis;
   let index = 0;
-  let speed = rate;
-  // Nulled before cancel() so the cancelled utterance's onend/onerror (sync
+  let rate = initialRate;
+  // Detached before cancel() so the cut-off utterance's onend/onerror (sync
   // in some engines) is ignored.
   let current: SpeechSynthesisUtterance | null = null;
   const cancel = () => {
+    if (current) {
+      Object.assign(current, { onstart: null, onboundary: null, onend: null, onerror: null });
+    }
     current = null;
     synth.cancel();
   };
@@ -155,36 +157,31 @@ function speechPlayer({ blocks, session, rate }: Backend): Player {
     if (i >= blocks.length) {
       index = 0;
       track("listen_complete");
-      session.set("idle");
+      host.setStatus("idle");
       return;
     }
     const block = blocks[i];
     const findWord = wordFinder(block.el, wordsByOffset(block.text));
     const u = new SpeechSynthesisUtterance(block.text);
-    u.rate = speed;
+    u.rate = rate;
     u.lang = document.documentElement.lang || "en";
-    const own =
-      <E>(handle: (event: E) => void) =>
-      (event: E) => {
-        if (current === u) handle(event);
-      };
-    u.onstart = own(() => {
-      session.highlight.word(null);
-      session.highlight.block(block.el);
-      session.report({ unit: "blocks", position: i + 1, length: blocks.length });
-    });
-    u.onboundary = own(event => {
-      if (event.name === "word") session.highlight.word(findWord(event.charIndex));
-    });
-    u.onend = own(() => speakFrom(i + 1));
-    u.onerror = own(event => {
+    u.onstart = () => {
+      highlight.word(null);
+      highlight.block(block.el);
+      host.setProgress({ unit: "blocks", position: i + 1, length: blocks.length });
+    };
+    u.onboundary = event => {
+      if (event.name === "word") highlight.word(findWord(event.charIndex));
+    };
+    u.onend = () => speakFrom(i + 1);
+    u.onerror = event => {
       console.error("Speech synthesis failed:", event.error);
       cancel();
-      session.set("idle");
-    });
+      host.setStatus("idle");
+    };
     current = u;
     synth.speak(u);
-    session.set("speaking");
+    host.setStatus("speaking");
   };
 
   return {
@@ -193,22 +190,23 @@ function speechPlayer({ blocks, session, rate }: Backend): Player {
     // Chrome for Android and can wedge desktop Chrome.
     pause: () => {
       cancel();
-      session.set("paused");
+      host.setStatus("paused");
     },
     // Rate is fixed per utterance, so restart the block being spoken.
     setRate: next => {
-      speed = next;
+      rate = next;
       if (current) speakFrom(index);
     }
   };
 }
 
-interface AudioBackend extends Backend {
+interface AudioPlayerOptions extends PlayerOptions {
   slug: string;
   timings: AudioTimings;
 }
 
-function audioPlayer({ slug, timings, blocks, session, rate }: AudioBackend): Player {
+function audioPlayer(options: AudioPlayerOptions): Player {
+  const { slug, timings, blocks, host, highlight, rate } = options;
   const audio = new Audio(`/blog/audio/${slug}.mp3`);
   audio.preload = "auto";
   audio.playbackRate = rate;
@@ -222,11 +220,11 @@ function audioPlayer({ slug, timings, blocks, session, rate }: AudioBackend): Pl
   const syncHighlight = (t: number) => {
     const i = blockAt(timings.blocks, t);
     if (i < 0) return;
-    session.highlight.block(matched[i] ?? null);
-    session.highlight.word(findWord[i](t));
+    highlight.block(matched[i] ?? null);
+    highlight.word(findWord[i](t));
   };
   const report = () =>
-    session.report({
+    host.setProgress({
       unit: "seconds",
       position: audio.currentTime,
       length: timings.duration || audio.duration || 0
@@ -249,17 +247,17 @@ function audioPlayer({ slug, timings, blocks, session, rate }: AudioBackend): Pl
   audio.addEventListener("play", () => {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tick);
-    session.set("speaking");
+    host.setStatus("speaking");
   });
   audio.addEventListener("pause", () => {
     cancelAnimationFrame(raf);
-    session.set("paused");
+    host.setStatus("paused");
   });
   audio.addEventListener("ended", () => {
     cancelAnimationFrame(raf);
     audio.currentTime = 0;
     track("listen_complete");
-    session.set("idle");
+    host.setStatus("idle");
   });
   let fellBack = false;
   audio.addEventListener("error", () => {
@@ -268,11 +266,11 @@ function audioPlayer({ slug, timings, blocks, session, rate }: AudioBackend): Pl
     track("listen_audio_fallback");
     fellBack = true;
     const speech = window.speechSynthesis
-      ? speechPlayer({ blocks, session, rate: audio.playbackRate })
+      ? speechPlayer({ ...options, rate: audio.playbackRate })
       : null;
-    session.replace(speech);
+    host.handOver(speech);
     if (speech) speech.play();
-    else session.set("idle");
+    else host.setStatus("idle");
   });
 
   return {
@@ -280,7 +278,7 @@ function audioPlayer({ slug, timings, blocks, session, rate }: AudioBackend): Pl
     // fallback owns the state the stale rejection must not reset it.
     play: () =>
       void audio.play().catch(() => {
-        if (!fellBack) session.set("idle");
+        if (!fellBack) host.setStatus("idle");
       }),
     pause: () => audio.pause(),
     setRate: next => {
@@ -295,14 +293,38 @@ function audioPlayer({ slug, timings, blocks, session, rate }: AudioBackend): Pl
 }
 
 // Picks the backend on first use: audio when the post has timings, else
-// speech synthesis, else null.
-export async function loadPlayer({ slug, ...backend }: Backend & { slug: string }) {
+// speech synthesis, else null. The rate is read after the timings arrive, so a
+// speed picked while loading applies.
+export async function loadPlayer({
+  slug,
+  blocks,
+  host,
+  rate
+}: {
+  slug: string;
+  blocks: Block[];
+  host: PlayerHost;
+  rate: () => number;
+}): Promise<Player | null> {
   const timings = "Audio" in window ? await fetchTimings(slug) : null;
+  const highlight = new Highlighter();
+  const options: PlayerOptions = {
+    blocks,
+    highlight,
+    rate: rate(),
+    host: {
+      ...host,
+      setStatus: status => {
+        if (status === "idle") highlight.clear();
+        host.setStatus(status);
+      }
+    }
+  };
   if (timings) {
     tag("listen_backend", "audio");
-    return audioPlayer({ slug, timings, ...backend });
+    return audioPlayer({ ...options, slug, timings });
   }
   if (!window.speechSynthesis) return null;
   tag("listen_backend", "speech");
-  return speechPlayer(backend);
+  return speechPlayer(options);
 }
