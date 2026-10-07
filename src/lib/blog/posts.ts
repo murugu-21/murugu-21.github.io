@@ -66,7 +66,9 @@ export function excerpt(body: string | undefined, length = 160): string {
     .replaceAll(/```[\s\S]*?```/g, " ")
     .replaceAll(/!\[[^\]]*\]\([^)]*\)/g, " ")
     .replaceAll(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-    .replaceAll(/[#>*_`~]/g, "")
+    .replaceAll(/[#>*`~]/g, "")
+    // Emphasis underscores only: one inside a word (event_type) is text.
+    .replaceAll(/(?<![\p{L}\p{N}_])_+|_+(?![\p{L}\p{N}_])/gu, "")
     .replaceAll(/\s+/g, " ")
     .trim();
   if (text.length <= length) return text;
