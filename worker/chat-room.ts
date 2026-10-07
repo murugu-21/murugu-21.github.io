@@ -6,6 +6,7 @@ import {
   streamText,
   type TextStreamPart,
   type LanguageModel,
+  type InferUIMessageChunk,
   type LanguageModelUsage,
   type UIMessageStreamWriter
 } from "ai";
@@ -54,11 +55,18 @@ function noticeResponse(notice: Notice): Response {
   });
 }
 
-type JarvisChunk = Parameters<UIMessageStreamWriter<JarvisMessage>["write"]>[0];
+type TurnCall = {
+  writer: UIMessageStreamWriter<JarvisMessage>;
+  key: string;
+  page?: string;
+  abortSignal?: AbortSignal;
+};
 
-// The client sees only prose and the running tool's name. A tool call is sent as it is parsed,
-// before the tool runs: a page fetch is a turn's longest silence.
-function streamChunk(part: TextStreamPart<ReturnType<typeof jarvisTools>>): JarvisChunk | null {
+// A tool call is sent as it is parsed, before the tool runs: a page fetch is a turn's longest
+// silence.
+function streamChunk(
+  part: TextStreamPart<ReturnType<typeof jarvisTools>>
+): InferUIMessageChunk<JarvisMessage> | null {
   if (part.type === "text-start") return { type: "text-start", id: part.id };
   if (part.type === "text-delta") return { type: "text-delta", id: part.id, delta: part.text };
   if (part.type === "text-end") return { type: "text-end", id: part.id };
@@ -164,15 +172,7 @@ export class ChatRoom extends AIChatAgent<Env> {
   }
 
   // One reply: the model's stream, then the notice (if any) that closes the turn.
-  private async reply({
-    writer,
-    ...call
-  }: {
-    writer: UIMessageStreamWriter<JarvisMessage>;
-    key: string;
-    page?: string;
-    abortSignal?: AbortSignal;
-  }): Promise<void> {
+  private async reply({ writer, ...call }: TurnCall): Promise<void> {
     writer.write({ type: "start" });
     let wroteText = false;
     let failure: Notice | null = null;
@@ -193,17 +193,7 @@ export class ChatRoom extends AIChatAgent<Env> {
   // The AI SDK tool loop. Only prose and the running tool's name reach the client: tool
   // inputs hold contact details, and outputs hold whole pages. Resolves to whether any
   // prose was written.
-  private async relayModel({
-    writer,
-    key,
-    page,
-    abortSignal
-  }: {
-    writer: UIMessageStreamWriter<JarvisMessage>;
-    key: string;
-    page?: string;
-    abortSignal?: AbortSignal;
-  }): Promise<boolean> {
+  private async relayModel({ writer, key, page, abortSignal }: TurnCall): Promise<boolean> {
     // Root llms.txt (~900 tokens) lists every post with its title, summary and link.
     // blog/llms-full.txt costs ~20x the tokens and grows per post.
     const grounding = (await readAsset(this.env.ASSETS, "/llms.txt")) ?? "";

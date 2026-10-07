@@ -22,7 +22,8 @@ export function parseRange(
   header: string | null,
   size: number
 ): ByteRange | "unsatisfiable" | null {
-  const m = header ? /^bytes=(\d*)-(\d*)$/.exec(header.trim()) : null;
+  if (!header) return null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
   if (!m || (m[1] === "" && m[2] === "")) return null;
   const [, first, last] = m;
   // "-n" asks for the final n bytes.

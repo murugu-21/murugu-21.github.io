@@ -30,7 +30,7 @@ function throttled(slot: ReadSlot): Response {
 }
 
 /** The allowance a response reports: the contact policy, the read slot just spent, or the read policy. */
-function rateLimitHeaders({
+function allowanceHeaders({
   isContact,
   slot
 }: {
@@ -61,7 +61,7 @@ export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings
 
     // POST /api/contact reports the allowance it just spent; don't overwrite it.
     if (headers.has("RateLimit-Policy")) return;
-    for (const [name, value] of Object.entries(rateLimitHeaders({ isContact, slot })))
+    for (const [name, value] of Object.entries(allowanceHeaders({ isContact, slot })))
       headers.set(name, value);
   };
 }
