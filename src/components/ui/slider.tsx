@@ -1,5 +1,5 @@
 // shadcn/ui slider (new-york, Tailwind v4), vendored; uses the scoped
-// @radix-ui package, vertical orientation trimmed.
+// @radix-ui package, vertical orientation trimmed, aria-label forwarded to the thumb.
 import * as React from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 
@@ -11,6 +11,7 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  "aria-label": ariaLabel,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root>) {
   const values = React.useMemo(
@@ -38,9 +39,11 @@ function Slider({
         <SliderPrimitive.Range data-slot="slider-range" className="absolute h-full bg-primary" />
       </SliderPrimitive.Track>
       {Array.from({ length: values.length }, (_, index) => (
+        // The thumb has role="slider"; on the root span the label is invalid ARIA.
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
+          aria-label={ariaLabel}
           className="block size-4 shrink-0 rounded-full border border-primary bg-white shadow-sm ring-ring/50 transition-[color,box-shadow,opacity] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
         />
       ))}

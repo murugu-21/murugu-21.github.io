@@ -22,5 +22,5 @@ jobs:
             https://murugappan.dev/blog/
             https://murugappan.dev/blog/toolbox/
           runs: 3
-          configPath: lighthouserc.json
+          configPath: lighthouserc.yml
           uploadArtifacts: true
