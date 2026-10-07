@@ -14,12 +14,9 @@ import Icon from "./Icon.astro";
 <script>
   const btn = document.getElementById("topButton");
   if (!btn) throw new Error("ScrollTop: #topButton is missing");
-  window.addEventListener(
-    "scroll",
-    () => {
-      btn.classList.toggle("visible", window.scrollY > 20);
-    },
-    { passive: true }
-  );
+  const onScroll = () => btn.classList.toggle("visible", window.scrollY >= 20);
+  // Firefox and Safari restore a reload's scroll position without a scroll event.
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
   btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 </script>
