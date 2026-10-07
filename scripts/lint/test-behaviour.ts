@@ -262,11 +262,19 @@ const callsInto = (node: Node, file: FileModel) =>
 
 // `toBe(f(a))`, `toBe(buildUrl(…))`, or `toBe(want)` after `const want = f(a)`
 // in the same test. In each, the code under test computes the expected value.
-function callsSubject({ node, test, file }: { node: Node; test: Node; file: FileModel }): boolean {
+function callsSubject({
+  node,
+  scope,
+  file
+}: {
+  node: Node;
+  scope: Node;
+  file: FileModel;
+}): boolean {
   return containsNode(node, (n, key) => {
     if (!isReference(n, key)) return callsInto(n, file);
-    const value = declaredIn(test, n.name);
-    return value !== undefined && value !== node && callsSubject({ node: value, test, file });
+    const value = declaredIn(scope, n.name);
+    return value !== undefined && value !== node && callsSubject({ node: value, scope, file });
   });
 }
 
@@ -290,14 +298,22 @@ function dataReferences(node: Node, file: FileModel, key = ""): Identifier[] {
 }
 
 // The subject import an expected value reads as data, directly or through a const.
-function subjectSource({ expected, test, file }: { expected: Node; test: Node; file: FileModel }) {
+function subjectSource({
+  expected,
+  scope,
+  file
+}: {
+  expected: Node;
+  scope: Node;
+  file: FileModel;
+}) {
   const seen = new Set<string>();
   const visit = (node: Node): string | undefined => {
     for (const { name } of dataReferences(node, file)) {
       if (seen.has(name)) continue;
       seen.add(name);
       if (file.imports.get(name) === "subject") return name;
-      const value = declaredIn(test, name) ?? file.locals.get(name);
+      const value = declaredIn(scope, name) ?? file.locals.get(name);
       const found = value && value !== expected ? visit(value) : undefined;
       if (found) return found;
     }
@@ -328,25 +344,27 @@ function assertionsIn(body: Node, file: FileModel, seen = new Set<string>()): Fo
   return out;
 }
 
-type Shape = { assertion: Assertion; expected: Node; scope: Node; file: FileModel };
+type Candidate = { assertion: Assertion; expected: Node; scope: Node; file: FileModel };
 
 // The AGENTS.md shapes of an assertion that still passes when the code under
 // test returns undefined.
-const WEAK_SHAPES: ((shape: Shape) => boolean)[] = [
-  ({ assertion }) => assertion.negated || !VALUE_MATCHERS.has(assertion.matcher),
-  ({ expected }) => isEmptyValue(expected),
-  ({ assertion, expected }) =>
+const WEAK_SHAPES: Record<string, (candidate: Candidate) => boolean> = {
+  // `toBeDefined()`, `not.toBe(wrong)`
+  weakMatcher: ({ assertion }) => assertion.negated || !VALUE_MATCHERS.has(assertion.matcher),
+  // `toEqual([])`, `toBe(undefined)`
+  emptyExpected: ({ expected }) => isEmptyValue(expected),
+  // `toHaveLength(0)`, `toBeGreaterThan(0)`
+  zeroBound: ({ assertion, expected }) =>
     (assertion.matcher === "toHaveLength" || COMPARISONS.has(assertion.matcher)) &&
     isZero(expected),
-  ({ assertion, file }) => isConstantPin(assertion.subject, file),
-  ({ expected, scope, file }) => callsSubject({ node: expected, test: scope, file })
-];
+  constantPin: ({ assertion, file }) => isConstantPin(assertion.subject, file),
+  selfReferential: ({ expected, scope, file }) => callsSubject({ node: expected, scope, file })
+};
 
 function isStrong({ assertion, scope }: Found, file: FileModel) {
   const expected = expectedOf(assertion);
-  return (
-    expected !== undefined && !WEAK_SHAPES.some(weak => weak({ assertion, expected, scope, file }))
-  );
+  if (expected === undefined) return false;
+  return !Object.values(WEAK_SHAPES).some(weak => weak({ assertion, expected, scope, file }));
 }
 
 // The subject import an assertion's expected value restates, if any.
@@ -356,40 +374,26 @@ function expectedFromSubject({ assertion, scope }: Found, file: FileModel) {
     return undefined;
   }
   const expected = expectedOf(assertion);
-  return expected && subjectSource({ expected, test: scope, file });
+  return expected && subjectSource({ expected, scope, file });
 }
-
-type TestCheck = {
-  messageId: "noSubjectCall" | "noStrongAssertion";
-  fails: (test: Test, found: Found[], file: FileModel) => boolean;
-};
-
-// Checked in order; a test reports only the first it fails.
-const TEST_CHECKS: TestCheck[] = [
-  {
-    messageId: "noSubjectCall",
-    fails: ({ callback, table }, _found, file) =>
-      ![callback, table].some(scope => scope && reachesSubject(scope, file.subjects))
-  },
-  {
-    messageId: "noStrongAssertion",
-    fails: (_test, found, file) => !found.some(each => isStrong(each, file))
-  }
-];
 
 function reportTests(context: Context, facts: Facts) {
   const file = modelOf(facts);
   const reported = new Set<Node>();
-  for (const test of facts.tests) {
-    const found = assertionsIn(test.callback, file);
+  for (const { node, callback, table } of facts.tests) {
+    const found = assertionsIn(callback, file);
     for (const each of found) {
-      const name = reported.has(each.node) ? undefined : expectedFromSubject(each, file);
+      if (reported.has(each.node)) continue;
+      const name = expectedFromSubject(each, file);
       if (!name) continue;
       reported.add(each.node);
       context.report({ node: each.node, messageId: "expectedFromSubject", data: { name } });
     }
-    const failed = TEST_CHECKS.find(check => check.fails(test, found, file));
-    if (failed) context.report({ node: test.node, messageId: failed.messageId });
+    if (![callback, table].some(scope => scope && reachesSubject(scope, file.subjects))) {
+      context.report({ node, messageId: "noSubjectCall" });
+    } else if (!found.some(each => isStrong(each, file))) {
+      context.report({ node, messageId: "noStrongAssertion" });
+    }
   }
 }
 
@@ -403,7 +407,7 @@ function importsOf(node: NodeOf<"ImportDeclaration">): [string, ImportKind][] {
 }
 
 // `declare const __GLOBAL_CSS__` is build-time input that vitest.config.ts injects.
-const declaredImports = (node: NodeOf<"VariableDeclaration">): [string, ImportKind][] =>
+const declaredGlobals = (node: NodeOf<"VariableDeclaration">): [string, ImportKind][] =>
   node.declare
     ? node.declarations.flatMap(({ id }) => boundNames(id)).map(name => [name, "subject"])
     : [];
@@ -456,7 +460,7 @@ export default {
         const facts: Facts = { imports: new Map(), locals: new Map(), tests: [] };
         return {
           ImportDeclaration: node => setAll(facts.imports, importsOf(node)),
-          VariableDeclaration: node => setAll(facts.imports, declaredImports(node)),
+          VariableDeclaration: node => setAll(facts.imports, declaredGlobals(node)),
           FunctionDeclaration: node => setAll(facts.locals, functionBindings(node)),
           VariableDeclarator: node => setAll(facts.locals, declaratorBindings(node)),
           AssignmentExpression: node => setAll(facts.locals, assignmentBindings(node)),

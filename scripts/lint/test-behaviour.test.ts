@@ -68,13 +68,13 @@ it("echoes the inbox", async () => {
 function check(input: string, want: string) { expect(slugify(input)).toBe(want); }`
     },
     {
-      name: "a value a beforeAll setup assigns from the subject",
+      name: "a value assigned in a beforeAll setup that runs the subject",
       code: `${SUBJECT_IMPORT}let page: string;
-beforeAll(() => { page = slugify("A"); });
+beforeAll(() => { slugify("warm up"); page = "a"; });
 it("slugs", () => { expect(page).toHaveProperty("length", 1); });`
     },
     {
-      name: "a value destructured from a dynamic import of the subject",
+      name: "the subject reached through a dynamic import in the test",
       code: `it("slugs", async () => {
   const { slugify: run, LIMIT: [first, ...rest] } = await import("./subject");
   expect({ [first]: run("A"), rest }).toEqual({ a: "a", rest: [] });
@@ -87,12 +87,6 @@ let b: string;
 a = b;
 b = a;
 it("slugs", () => { expect(slugify("x")).toBe(a); });`
-    },
-    {
-      name: "type-only imports beside a subject import",
-      code: `import type { Options } from "./subject";
-import { type Mode, slugify } from "./subject";
-it("slugs", () => { expect(slugify("A") satisfies Mode).toBe("a"); });`
     }
   ],
   invalid: [
@@ -177,6 +171,25 @@ it("inlines the sheet", () => { expect(__GLOBAL_CSS__).toContain("body"); });`,
 want = TOOLS.name;
 it("names", () => { expect(slugify("tools")).toBe(want); });`,
       errors: [{ messageId: "expectedFromSubject", data: { name: "TOOLS" }, line: 4 }]
+    },
+    {
+      name: "a test that reads only type-only imports",
+      code: `import type { Options } from "./subject";
+import { type Mode } from "./subject";
+it("types", () => { expect((1 satisfies Mode) satisfies Options).toBe(1); });`,
+      errors: [{ messageId: "noSubjectCall", line: 3 }]
+    },
+    {
+      name: "a subject constant destructured at the top level",
+      code: `${SUBJECT_IMPORT}const { max: [first] } = TOOLS;
+it("caps", () => { expect(slugify("a")).toBe(first); });`,
+      errors: [{ messageId: "expectedFromSubject", data: { name: "TOOLS" }, line: 3 }]
+    },
+    {
+      name: "a subject constant as a computed key",
+      code: `${SUBJECT_IMPORT}const WANTS = { a: "a" };
+it("slugs", () => { expect(slugify("A")).toBe(WANTS[LIMIT]); });`,
+      errors: [{ messageId: "expectedFromSubject", data: { name: "LIMIT" }, line: 3 }]
     }
   ]
 });

@@ -17,12 +17,6 @@ const BEHAVIOUR = new Set([
   "ClassExpression"
 ]);
 
-const declaredName = ({ id }: NodeOf<"FunctionDeclaration"> | NodeOf<"ClassDeclaration">) =>
-  id ? [id.name] : [];
-
-const boundToBehaviour = ({ id, init }: NodeOf<"VariableDeclarator">) =>
-  id.type === "Identifier" && init && BEHAVIOUR.has(init.type) ? [id.name] : [];
-
 // `export const a = …`, `export function f() {}` and `export class C {}`.
 function declaredExports(node: NodeOf<"ExportNamedDeclaration">): Export[] {
   const { declaration } = node;
@@ -65,18 +59,20 @@ export default {
       },
       create(context) {
         // Names bound to a function or class, and the names exported, in any order.
-        const behaviour: string[] = [];
+        const behaviour = new Set<string>();
         const exported: Export[] = [];
 
         return {
           FunctionDeclaration(node) {
-            behaviour.push(...declaredName(node));
+            if (node.id) behaviour.add(node.id.name);
           },
           ClassDeclaration(node) {
-            behaviour.push(...declaredName(node));
+            if (node.id) behaviour.add(node.id.name);
           },
           VariableDeclarator(node) {
-            behaviour.push(...boundToBehaviour(node));
+            if (node.id.type === "Identifier" && node.init && BEHAVIOUR.has(node.init.type)) {
+              behaviour.add(node.id.name);
+            }
           },
           ExportNamedDeclaration(node) {
             exported.push(...declaredExports(node), ...specifiedExports(node));
@@ -86,7 +82,7 @@ export default {
           },
           "Program:exit"() {
             for (const { node, value, name } of exported) {
-              if (!(value && BEHAVIOUR.has(value.type)) && !behaviour.includes(name)) continue;
+              if (!(value && BEHAVIOUR.has(value.type)) && !behaviour.has(name)) continue;
               context.report({ node, messageId: "exportedBehaviour", data: { name } });
             }
           }

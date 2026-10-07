@@ -8,9 +8,7 @@ RuleTester.it = it;
 
 const tester = new RuleTester({ languageOptions: { parserOptions: { lang: "ts" } } });
 
-const exported = (name: string) => ({
-  message: `contracts/ exports schemas, types and constants, not functions or classes. Move ${name} to the layer that calls it, or to utils/ if the site and the Worker both do (README.md › Layers).`
-});
+const exported = (name: string) => ({ messageId: "exportedBehaviour", data: { name } });
 
 tester.run("shapes-only", plugin.rules["shapes-only"], {
   valid: [
@@ -26,9 +24,10 @@ export { ROUTES, ROUTES as PATHS };
 export default LIMITS;`
     },
     {
-      name: "a function kept private, and a re-export from another module",
+      name: "a function kept private, and a re-export of a name also declared locally",
       code: `const helper = () => 1;
 export const ONE = helper();
+function build() {}
 export { build } from "./build";
 export * from "./other";`
     }
