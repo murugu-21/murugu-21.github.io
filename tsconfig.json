@@ -5,6 +5,7 @@
     "src/**/*",
     "scripts/**/*",
     "utils/**/*",
+    "contracts/**/*",
     "astro.config.ts",
     "commitlint.config.ts",
     "oxlint.config.ts",

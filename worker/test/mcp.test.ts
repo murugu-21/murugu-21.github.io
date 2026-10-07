@@ -2,13 +2,13 @@ import { env } from "cloudflare:test";
 import { assert, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_PER_CLIENT } from "#worker/api/contact.ts";
-import { buildDataset } from "#worker/api/dataset.ts";
-import { API_VERSION } from "#worker/api/versioning.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
+import { buildDataset } from "#contracts/api/dataset.ts";
+import { API_VERSION } from "#contracts/api/versioning.ts";
 import { JsonObject } from "#utils/json.ts";
-import { LATEST_PROTOCOL_VERSION } from "#worker/mcp/protocol.ts";
+import { LATEST_PROTOCOL_VERSION } from "#contracts/mcp.ts";
 import { readResource, RESOURCE_ORIGIN } from "#worker/mcp/resources.ts";
-import { MCP_TOOLS } from "#worker/mcp/tools.ts";
+import { MCP_TOOLS } from "#contracts/mcp.ts";
 import {
   AGENTS_MD,
   DATASET_INPUT,

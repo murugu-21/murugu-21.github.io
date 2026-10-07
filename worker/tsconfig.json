@@ -10,5 +10,10 @@
     "skipLibCheck": true,
     "verbatimModuleSyntax": true
   },
-  "include": ["./**/*.ts", "../utils/**/*.ts", "../.cloudflare/types/index.d.ts"]
+  "include": [
+    "./**/*.ts",
+    "../utils/**/*.ts",
+    "../contracts/**/*.ts",
+    "../.cloudflare/types/index.d.ts"
+  ]
 }

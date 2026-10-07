@@ -11,8 +11,8 @@ import {
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
-import { API_VERSION } from "#worker/api/versioning.ts";
-import { isAllowedOrigin, SERVER_NAME, SUPPORTED_PROTOCOL_VERSIONS } from "./protocol";
+import { API_VERSION } from "#contracts/api/versioning.ts";
+import { SERVER_NAME, SUPPORTED_PROTOCOL_VERSIONS } from "#contracts/mcp.ts";
 import { registerResources } from "./resources";
 import { registerTools, type ToolContext } from "./tools";
 
@@ -23,6 +23,20 @@ Use it when you need grounded, first-party facts about him rather than search re
 Do not use it as a general search engine, a resume parser or a job-matching service, and do not expect data about anyone else. send_message emails him and is limited per day. Use it for one specific opportunity or question on a human's behalf, never for bulk outreach, and set dryRun to check a payload first.
 
 Resources expose the same content as documents you can attach directly: the site summary (llms.txt), the agent instructions (AGENTS.md), the OpenAPI specification, and every blog post's markdown. Everything here is also plain HTTP. See https://murugappan.dev/openapi.json. This server's own manifest (server.json) is at https://murugappan.dev/.well-known/mcp.json.`;
+
+/**
+ * DNS-rebinding guard. The server is public with no ambient credentials, so any
+ * web origin is allowed; an opaque "null", `file:`, app schemes and garbage are not.
+ */
+export function isAllowedOrigin(origin: string | null): boolean {
+  if (origin === null) return true; // a non-browser client sends no Origin header
+  try {
+    const { protocol } = new URL(origin);
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 // Results only change on deploy; both fields are advisory.
 const LIST_CACHE: CacheHint = { ttlMs: 3_600_000, cacheScope: "public" };

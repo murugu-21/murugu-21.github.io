@@ -4,15 +4,10 @@
 import type { MiddlewareHandler } from "hono";
 import { basePath } from "hono/route";
 
-import { apiError } from "./errors";
-import {
-  CONTACT_QUOTAS,
-  policyField,
-  READ_QUOTA,
-  readRateLimitHeaders,
-  takeReadSlot
-} from "./ratelimit";
-import { versionHeaders, versionLinkHeader } from "./versioning";
+import { apiError } from "#contracts/api/errors.ts";
+import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "#contracts/api/quotas.ts";
+import { readRateLimitHeaders, takeReadSlot } from "./ratelimit";
+import { versionHeaders, versionLinkHeader } from "#contracts/api/versioning.ts";
 
 type ApiHeaderOptions = {
   /** False for the OpenAPI document, because a throttled client must still be able to learn why. */

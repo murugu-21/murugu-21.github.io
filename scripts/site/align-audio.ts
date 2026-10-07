@@ -26,7 +26,8 @@ import {
   runEach
 } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
-import { AUDIO_PREFIX, r2Store } from "./tts/r2.ts";
+import { AUDIO_PREFIX } from "#contracts/audio.ts";
+import { r2Store } from "./tts/r2.ts";
 
 const WORKER = join(import.meta.dirname, "tts", "whisper.py");
 

@@ -1,8 +1,8 @@
 // Reads build artifacts through the ASSETS binding for the REST API, MCP and chat grounding.
 // No in-memory cache: the binding is isolate-local and the edge caches, so redeploys show at once.
 
-import { parseDataset, type Dataset } from "./dataset";
-import { parsePostList, postMarkdownPath, type PostSummary } from "./posts";
+import { parseDataset, type Dataset } from "#contracts/api/dataset.ts";
+import { parsePostList, postMarkdownPath, type PostSummary } from "#contracts/api/posts.ts";
 
 export type AssetsLike = { fetch(input: string): Promise<Response> };
 

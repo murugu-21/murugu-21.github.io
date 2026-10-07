@@ -10,9 +10,7 @@ import { jsonString } from "#utils/json.ts";
 import { run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";
-// Namespaced per voice so a new one never overwrites the last; worker/audio.ts
-// serves the same prefix.
-export const AUDIO_PREFIX = "blog/breeze";
+// The voice reference the clones are made from; never served.
 export const VOICE_PREFIX = "voice/breeze";
 
 // `cf r2 objects get` writes the body to stdout; spawnSync's 1 MB default

@@ -1,7 +1,7 @@
-// Read-only blog audio from R2; the prefix must match AUDIO_PREFIX in
-// scripts/site/tts/r2.ts. Supports Range because <audio> seeks with it.
+// Read-only blog audio from R2 (contracts/audio.ts). Supports Range because <audio> seeks with it.
 import { Hono } from "hono";
 
+import { AUDIO_PREFIX } from "#contracts/audio.ts";
 import { serveAsset } from "./not-found";
 
 const FILE = /^[a-z0-9-]+\.(mp3|json)$/;
@@ -43,7 +43,7 @@ audio.get("/:file", async c => {
   const extension = FILE.exec(file)?.[1];
   if (!extension) return serveAsset(c.req.raw, c.env.ASSETS);
 
-  const key = `blog/breeze/${file}`;
+  const key = `${AUDIO_PREFIX}/${file}`;
   const head = await c.env.AUDIO.head(key);
   if (!head) return serveAsset(c.req.raw, c.env.ASSETS);
 

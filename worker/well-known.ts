@@ -5,18 +5,19 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { publicOrigin } from "./api";
-import { API_PATHS, READ_METHODS, VERSIONED_API_BASE } from "./api/routes";
-import { API_VERSION } from "./api/versioning";
-import { LATEST_PROTOCOL_VERSION, SERVER_NAME } from "./mcp/protocol";
-import { MCP_TOOLS } from "./mcp/tools";
+import { API_PATHS, READ_METHODS, VERSIONED_API_BASE } from "#contracts/api/routes.ts";
+import { API_VERSION } from "#contracts/api/versioning.ts";
+import {
+  LATEST_PROTOCOL_VERSION,
+  MCP_SERVER_NAME,
+  MCP_SERVER_SCHEMA,
+  MCP_TOOLS,
+  SERVER_NAME
+} from "#contracts/mcp.ts";
 
 /** RFC 9727 media type for a link set serialised as JSON (RFC 9264). */
 export const LINKSET_MEDIA_TYPE = "application/linkset+json";
 
-// The MCP registry requires a reverse-DNS namespace the publisher controls.
-export const MCP_SERVER_NAME = "dev.murugappan/murugappan-dev";
-export const MCP_SERVER_SCHEMA =
-  "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json";
 const MCP_REPOSITORY = "https://github.com/murugu-21/murugu-21.github.io";
 
 const CACHE = "public, max-age=3600";

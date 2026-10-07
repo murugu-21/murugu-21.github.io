@@ -3,15 +3,15 @@
 // and the contact form body.
 import { describe, expect, it } from "vitest";
 
-import { CONTACT_LIMITS, parseContactRequest } from "#worker/api/contact.ts";
+import { CONTACT_LIMITS, parseContactRequest } from "#contracts/api/contact.ts";
 import {
   buildDataset,
   parseDataset,
   parsePeriod,
   splitSkillItems,
   type DatasetInput
-} from "#worker/api/dataset.ts";
-import { parsePostList, postMarkdownPath } from "#worker/api/posts.ts";
+} from "#contracts/api/dataset.ts";
+import { parsePostList, postMarkdownPath } from "#contracts/api/posts.ts";
 import { DATASET_INPUT } from "./fixtures";
 
 // The shared site fixture plus a finished role, a grade and a skill category

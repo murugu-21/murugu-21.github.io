@@ -5,7 +5,7 @@ import { env } from "cloudflare:test";
 import { assert, expect, vi } from "vitest";
 import { z } from "zod";
 
-import { buildDataset, type DatasetInput } from "#worker/api/dataset.ts";
+import { buildDataset, type DatasetInput } from "#contracts/api/dataset.ts";
 import type { ChatRoom } from "#worker/chat-room.ts";
 import worker from "#worker/server.ts";
 

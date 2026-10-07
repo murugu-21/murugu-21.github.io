@@ -1,42 +1,14 @@
-// draft-ietf-httpapi-ratelimit-headers fields (RFC 9651 syntax), plus the de-facto X-RateLimit-*
-// trio that most tooling reads (`-Reset` is delta-seconds):
-//   RateLimit-Policy: "name";q=<quota>;w=<window seconds>   (a list)
-//   RateLimit:        "name";r=<remaining>;t=<seconds to reset>  (the policy closest to exhaustion)
-// Reads have a per-edge fair-use ceiling; contact quotas are counted in the RateLimiter DO.
+// Counts requests against the quotas in contracts/api/quotas.ts and writes the rate-limit
+// headers they publish.
 
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./contact";
-
-type Quota = {
-  /** Policy name, quoted verbatim in both header fields. */
-  name: string;
-  quota: number;
-  windowSeconds: number;
-};
-
-export const READ_QUOTA: Quota = {
-  name: "reads",
-  quota: 600,
-  windowSeconds: 60
-};
-
-export const CONTACT_CLIENT_QUOTA: Quota = {
-  name: "contact-client",
-  quota: CONTACT_DAILY_PER_CLIENT,
-  windowSeconds: 86_400
-};
-
-export const CONTACT_GLOBAL_QUOTA: Quota = {
-  name: "contact-site",
-  quota: CONTACT_DAILY_GLOBAL,
-  windowSeconds: 86_400
-};
-
-export const CONTACT_QUOTAS: readonly Quota[] = [CONTACT_CLIENT_QUOTA, CONTACT_GLOBAL_QUOTA];
-
-/** `RateLimit-Policy`, in declaration order. */
-export function policyField(quotas: readonly Quota[]): string {
-  return quotas.map(q => `"${q.name}";q=${q.quota};w=${q.windowSeconds}`).join(", ");
-}
+import {
+  CONTACT_CLIENT_QUOTA,
+  CONTACT_GLOBAL_QUOTA,
+  CONTACT_QUOTAS,
+  policyField,
+  READ_QUOTA,
+  type Quota
+} from "#contracts/api/quotas.ts";
 
 const clamp = (n: number) => Math.max(0, Math.floor(n));
 

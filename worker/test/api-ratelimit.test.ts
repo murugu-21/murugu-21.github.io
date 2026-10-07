@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#worker/api/contact.ts";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
 import {
   CONTACT_CLIENT_QUOTA,
   CONTACT_GLOBAL_QUOTA,
   CONTACT_QUOTAS,
-  contactRateLimitHeaders,
   policyField,
-  READ_QUOTA,
+  READ_QUOTA
+} from "#contracts/api/quotas.ts";
+import {
+  contactRateLimitHeaders,
   readRateLimitHeaders,
   resetReadWindows,
   secondsUntilUtcMidnight,

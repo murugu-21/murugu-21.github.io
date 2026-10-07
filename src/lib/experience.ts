@@ -16,7 +16,7 @@ interface RoleLike {
   location: string;
 }
 
-// Mirrors worker/api/dataset.ts parsePeriod: en dash, em dash or hyphen.
+// Mirrors contracts/api/dataset.ts parsePeriod: en dash, em dash or hyphen.
 const RANGE_SEPARATOR = /\s+[–—-]\s+/;
 
 function spanOf(roles: RoleLike[]): string {

@@ -15,7 +15,7 @@ import {
   messageText,
   type Activity,
   type JarvisMessage
-} from "#worker/protocol.ts";
+} from "#contracts/chat.ts";
 import { ActivityRow } from "./ActivityRow";
 import { Button } from "#src/components/ui/button.tsx";
 import { Card, CardFooter, CardHeader } from "#src/components/ui/card.tsx";

@@ -8,21 +8,27 @@ import { methodNotAllowed } from "hono/method-not-allowed";
 import type { z } from "zod";
 
 import { contactMailer, sendContactEmail } from "#worker/email.ts";
-import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "./contact";
-import { EducationList, ExperienceList, OpenSourceList, Profile, SkillsResponse } from "./dataset";
-import { apiError } from "./errors";
+import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "#contracts/api/contact.ts";
+import {
+  EducationList,
+  ExperienceList,
+  OpenSourceList,
+  Profile,
+  SkillsResponse
+} from "#contracts/api/dataset.ts";
+import { apiError } from "#contracts/api/errors.ts";
 import { apiHeaders } from "./middleware";
-import { buildOpenApiDocument } from "./openapi";
-import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts } from "./posts";
+import { buildOpenApiDocument } from "#contracts/api/openapi.ts";
+import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts } from "#contracts/api/posts.ts";
 import {
   contactRateLimitHeaders,
   globalLimiter,
   RATE_LIMIT_EXPOSED_HEADERS,
   secondsUntilUtcMidnight
 } from "./ratelimit";
-import { API_PATHS, READ_METHODS } from "./routes";
+import { API_PATHS, READ_METHODS } from "#contracts/api/routes.ts";
 import { loadDataset, loadPost, loadPosts } from "./store";
-import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
+import { buildVersionsDocument, META_EXPOSED_HEADERS } from "#contracts/api/versioning.ts";
 
 // Reads depend only on the deployed build; five minutes keeps a redeploy visible quickly.
 const READ_CACHE = "public, max-age=300";

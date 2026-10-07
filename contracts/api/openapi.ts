@@ -28,7 +28,7 @@ import {
 } from "./dataset";
 import { ErrorBody, FieldIssue } from "./errors";
 import { Post, PostList, POSTS_LIMIT_MAX, PostSummary, SLUG_PATTERN } from "./posts";
-import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "./ratelimit";
+import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "./quotas";
 import {
   API_VERSION,
   ApiVersionPolicy,

@@ -42,7 +42,8 @@ import {
   runEach
 } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
-import { AUDIO_PREFIX, VOICE_PREFIX, r2Store } from "./tts/r2.ts";
+import { AUDIO_PREFIX } from "#contracts/audio.ts";
+import { VOICE_PREFIX, r2Store } from "./tts/r2.ts";
 import { assemble, readWav, writeWav } from "./tts/wav.ts";
 import { ROOT } from "./site-dir.ts";
 

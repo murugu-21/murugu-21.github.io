@@ -23,11 +23,11 @@ import {
   LIMIT_NOTICE,
   MAX_MESSAGE_LENGTH,
   messageText,
-  parseVisitorContext,
   type ChatHistoryEntry,
   type JarvisMessage,
   type Notice
-} from "./protocol";
+} from "#contracts/chat.ts";
+import { parseVisitorContext } from "./visitor";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

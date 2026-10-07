@@ -8,13 +8,8 @@ import { z } from "zod";
 import { globalLimiter } from "#worker/api/ratelimit.ts";
 import type { ChatRoom } from "#worker/chat-room.ts";
 import { ROOM_DAILY_LIMIT } from "#worker/prompt.ts";
-import {
-  fetchActivity,
-  MAX_MESSAGE_LENGTH,
-  parseVisitorContext,
-  VISITOR_COUNTRY_HEADER,
-  VISITOR_IP_HEADER
-} from "#worker/protocol.ts";
+import { fetchActivity, MAX_MESSAGE_LENGTH } from "#contracts/chat.ts";
+import { parseVisitorContext, VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/visitor.ts";
 import type { RateLimiter } from "#worker/rate-limiter.ts";
 import {
   connectRoom,

@@ -1,7 +1,7 @@
 ---
 import type { Thing } from "schema-dts";
 // Endpoint table and tool example are generated from the served OpenAPI
-// document (worker/api/openapi.ts), so they can't drift from the API.
+// document (contracts/api/openapi.ts), so they can't drift from the API.
 
 import "#src/styles/prose.css";
 import Layout from "#src/layouts/Layout.astro";
@@ -9,25 +9,29 @@ import Header from "#src/components/Header.astro";
 import ScrollTop from "#src/components/ScrollTop.astro";
 import { PERSON_ID, SITE_ORIGIN } from "#src/lib/site.ts";
 import { socialMediaLinks } from "#src/data/portfolio.ts";
-import { buildOpenApiDocument } from "#worker/api/openapi.ts";
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#worker/api/contact.ts";
-import { LATEST_PROTOCOL_VERSION, LEGACY_PROTOCOL_VERSIONS } from "#worker/mcp/protocol.ts";
-import { MCP_TOOLS } from "#worker/mcp/tools.ts";
+import { buildOpenApiDocument } from "#contracts/api/openapi.ts";
+import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
+import {
+  LATEST_PROTOCOL_VERSION,
+  LEGACY_PROTOCOL_VERSIONS,
+  MCP_SERVER_NAME,
+  MCP_SERVER_SCHEMA,
+  MCP_TOOLS
+} from "#contracts/mcp.ts";
 import {
   API_BASE,
   API_PATHS,
   CURRENT_API_VERSION,
   VERSIONED_API_BASE
-} from "#worker/api/routes.ts";
+} from "#contracts/api/routes.ts";
 import {
   API_VERSION,
   CURRENT_VERSION_RECORD,
   DEPRECATION_NOTICE_DAYS,
   POLICY_RULES,
   VERSIONS
-} from "#worker/api/versioning.ts";
-import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "#worker/api/ratelimit.ts";
-import { MCP_SERVER_NAME, MCP_SERVER_SCHEMA } from "#worker/well-known.ts";
+} from "#contracts/api/versioning.ts";
+import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "#contracts/api/quotas.ts";
 
 const spec = buildOpenApiDocument(SITE_ORIGIN);
 

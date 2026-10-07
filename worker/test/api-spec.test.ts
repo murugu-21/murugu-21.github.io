@@ -3,15 +3,15 @@
 import { assert, describe, expect, it } from "vitest";
 
 import { api } from "#worker/api/index.ts";
-import { buildOpenApiDocument } from "#worker/api/openapi.ts";
-import { API_BASE, API_PATHS, VERSIONED_API_BASE } from "#worker/api/routes.ts";
+import { buildOpenApiDocument } from "#contracts/api/openapi.ts";
+import { API_BASE, API_PATHS, VERSIONED_API_BASE } from "#contracts/api/routes.ts";
 import {
   buildVersionsDocument,
   CURRENT_VERSION_RECORD,
   versionHeaders,
   versionLinkHeader,
   type VersionRecord
-} from "#worker/api/versioning.ts";
+} from "#contracts/api/versioning.ts";
 
 describe("version headers", () => {
   const deprecated: VersionRecord = {

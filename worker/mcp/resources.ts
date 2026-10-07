@@ -7,7 +7,7 @@ import {
   type McpServer
 } from "@modelcontextprotocol/server";
 
-import { buildOpenApiDocument } from "#worker/api/openapi.ts";
+import { buildOpenApiDocument } from "#contracts/api/openapi.ts";
 import { loadPost, loadPosts, readAsset, type AssetsLike } from "#worker/api/store.ts";
 
 export const RESOURCE_ORIGIN = "https://murugappan.dev";
