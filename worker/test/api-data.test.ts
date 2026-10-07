@@ -4,22 +4,18 @@ import { describe, expect, it } from "vitest";
 
 import { CONTACT_LIMITS } from "#contracts/api/contact.ts";
 import { parseContactRequest } from "#worker/api/contact.ts";
-import { loadDataset, loadPosts, parseDataset } from "#worker/api/store.ts";
+import { loadDataset, loadPosts } from "#worker/api/store.ts";
 import { postMarkdownPath } from "#worker/api/posts.ts";
 import { DATASET, fakeAssets, fakeFetcher } from "./fixtures";
 
-describe("parseDataset", () => {
-  it("accepts the built dataset and rejects one missing a collection", () => {
-    expect(parseDataset(JSON.parse(JSON.stringify(DATASET)))).toEqual(DATASET);
-    const { experience: _dropped, ...rest } = DATASET;
-    expect(parseDataset(rest)).toBeNull();
-  });
-});
-
 describe("loadDataset", () => {
-  it("reads the prerendered dataset, and is null for a broken artifact or a failing binding", async () => {
+  it("reads the prerendered dataset, and is null for a broken or stale artifact or a failing binding", async () => {
     expect(await loadDataset(fakeAssets())).toEqual(DATASET);
     expect(await loadDataset(fakeAssets({ "/api/dataset.json": "{truncated" }))).toBeNull();
+    const { experience: _dropped, ...stale } = DATASET;
+    expect(
+      await loadDataset(fakeAssets({ "/api/dataset.json": JSON.stringify(stale) }))
+    ).toBeNull();
     expect(await loadDataset(fakeAssets({ "/api/dataset.json": null }))).toBeNull();
     const failing = fakeFetcher(() => Promise.reject(new Error("binding down")));
     expect(await loadDataset(failing)).toBeNull();

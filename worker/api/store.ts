@@ -21,20 +21,10 @@ export async function readAsset(assets: AssetsLike, path: string): Promise<strin
   }
 }
 
-// A stale or truncated build artifact must surface as a 503, not as `undefined` in a 200 body.
-export function parseDataset(raw: unknown): Dataset | null {
-  return Dataset.safeParse(raw).data ?? null;
-}
-
-/** null when the build artifact is absent or does not match the schema. */
+/** null when the build artifact is absent, not JSON or does not match the schema. */
 export async function loadDataset(assets: AssetsLike): Promise<Dataset | null> {
   const body = await readAsset(assets, "/api/dataset.json");
-  if (body === null) return null;
-  try {
-    return parseDataset(JSON.parse(body));
-  } catch {
-    return null;
-  }
+  return jsonString(Dataset).safeParse(body).data ?? null;
 }
 
 /** Empty when the build artifact is absent or does not match the schema. */
