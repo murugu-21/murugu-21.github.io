@@ -231,14 +231,21 @@ describe("GET /blog/audio/:file", () => {
     expect(res.headers.get("Content-Range")).toBe("bytes */1000");
   });
 
-  it("answers 304 to a matching If-None-Match", async () => {
+  it("answers 304 to an exact, weak, listed or wildcard If-None-Match, and 200 to another tag", async () => {
     const first = await fetchWorker("/blog/audio/first-post.mp3");
     const etag = first.headers.get("ETag");
     assert(etag, "first response has no ETag");
-    const res = await fetchWorker("/blog/audio/first-post.mp3", {
-      headers: { "If-None-Match": etag }
-    });
-    expect(res.status).toBe(304);
+    const status = async (ifNoneMatch: string) =>
+      (
+        await fetchWorker("/blog/audio/first-post.mp3", {
+          headers: { "If-None-Match": ifNoneMatch }
+        })
+      ).status;
+    expect(await status(etag)).toBe(304);
+    expect(await status(`W/${etag}`)).toBe(304);
+    expect(await status(`"other", ${etag}`)).toBe(304);
+    expect(await status("*")).toBe(304);
+    expect(await status('"other"')).toBe(200);
   });
 
   it.each(["/blog/audio/nope.mp3", "/blog/audio/..%2Fsecret.mp3", "/blog/audio/first-post.wav"])(
