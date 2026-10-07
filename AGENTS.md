@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Rules for coding agents working in this repo. (`public/AGENTS.md` is a different file: the public guide served at murugappan.dev/AGENTS.md for agents using the site's API.) `README.md` covers the architecture and tooling; read it before changing the build, the Worker or the dev setup.
+Rules for coding agents working in this repo. (`public/AGENTS.md` is a different file: the public guide served at murugappan.dev/AGENTS.md for agents using the site's API.) `README.md` covers the architecture and tooling; read it before changing the build, the Worker or the dev setup. Each feature folder has its own `README.md`, listed under "Feature docs" there; read the one for the area you touch.
 
 ## Comments
 

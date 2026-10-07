@@ -2,7 +2,7 @@ import { defineConfig, type OxlintOverride } from "oxlint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 
-// The top-level folders are the packages a monorepo would split this repo into (README ›
+// The top-level folders are the packages a monorepo would split this repo into (README.md ›
 // Layers). A layer imports itself and the layers in `uses`, through their `#<dir>` subpath imports;
 // import/no-relative-parent-imports stops `../` from going around them.
 const LAYER_NAMES = [
@@ -33,7 +33,7 @@ const LAYERS: Record<LayerName, Layer> = {
           "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)",
         allowTypeImports: true,
         message:
-          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in src/ or worker/ (README › Layers)."
+          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in src/ or worker/ (README.md › Layers)."
       }
     ]
   },
@@ -49,7 +49,7 @@ function layerPatterns(name: LayerName): Pattern[] {
   return [
     {
       regex: `^(${banned.join("|")})`,
-      message: `${LAYERS[name].dir} imports only ${[...allowed].map(alias).join(", ")} (README › Layers). Move code both sides need to contracts/ or utils/.`
+      message: `${LAYERS[name].dir} imports only ${[...allowed].map(alias).join(", ")} (README.md › Layers). Move code both sides need to contracts/ or utils/.`
     }
   ];
 }
@@ -120,7 +120,7 @@ export default defineConfig({
           regex:
             "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\./(blog|home)/|^\\./BlogLayout",
           message:
-            "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (README › Source layout)."
+            "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (src/README.md › Source layout)."
         }
       ]
     ),
@@ -140,7 +140,7 @@ export default defineConfig({
         {
           regex: "^#src/components/home/",
           message:
-            "Blog code can't import homepage components. Move a component both use to the root of src/components (README › Source layout)."
+            "Blog code can't import homepage components. Move a component both use to the root of src/components (src/README.md › Source layout)."
         }
       ]
     ),
