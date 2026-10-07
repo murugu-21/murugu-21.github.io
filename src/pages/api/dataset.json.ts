@@ -19,7 +19,7 @@ import {
 } from "#src/data/portfolio.ts";
 import { resumeContact } from "#src/data/resume.ts";
 
-export const GET: APIRoute = () => {
+export const GET = (() => {
   const json = JSON.stringify(
     buildDataset({
       greeting,
@@ -46,4 +46,4 @@ export const GET: APIRoute = () => {
   // the Worker would answer 503 for fails the build instead.
   Dataset.parse(JSON.parse(json));
   return new Response(json, { headers: { "Content-Type": "application/json; charset=utf-8" } });
-};
+}) satisfies APIRoute;
