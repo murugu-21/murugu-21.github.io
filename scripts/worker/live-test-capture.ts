@@ -12,6 +12,7 @@ import { generateText, type ModelMessage } from "ai";
 
 import { deepseek, DEEPSEEK_MODEL, jarvisCall } from "#worker/ai.ts";
 import { buildMessages, jarvisTools, type Lead } from "#worker/prompt.ts";
+// oxlint-disable-next-line no-restricted-imports -- Jarvis grounds on the built site's llms.txt, so this reads the site build
 import { SITE_DIR } from "#scripts/site/site-dir.ts";
 
 const model = process.argv[2] ?? DEEPSEEK_MODEL;

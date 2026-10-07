@@ -32,6 +32,8 @@ utils/            # helpers with no app logic (zod JSON parsing)  → packages/u
 
 `contracts/` holds the HTTP API's definition (`api/`: paths, zod schemas, versions, quotas and the OpenAPI document), the MCP server's identity and tool catalogue (`mcp.ts`), the chat widget's wire protocol (`chat.ts`) and the R2 key for blog audio (`audio.ts`). The Worker serves these, `/developers/` and the chat widget render from them, and the audio scripts write to them. Contracts carry no runtime: `check:src` type-checks them against the browser's types and `check:worker` against workerd's, so a contract that reaches for `Env`, a DOM API or a Worker binding fails one of the two.
 
+Lint enforces the graph. `LAYERS` in `oxlint.config.ts` lists each layer's folder, subpath import and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, and contracts may not import a framework or Worker package. The one exception is `scripts/worker/live-test-capture.ts`, which reads the built site's `llms.txt` through `scripts/site/site-dir.ts`, the same file Jarvis grounds on in production. To add a layer or let one use another, edit `LAYERS`.
+
 ### Source layout
 
 `src/` is grouped by type first. Astro reserves only `src/pages/`, and the other folders follow its documented defaults.
@@ -53,7 +55,7 @@ src/data/         # hand-written portfolio and resume data
 
 A file lives in the narrowest folder that holds every importer: a component only the homepage uses goes in `home/`, and one both halves use stays at the root of `components/`.
 
-Lint enforces the direction (`no-restricted-imports` in `oxlint.config.ts`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely, and so does `lib/llms.ts`, which renders the whole site for agents.
+Lint enforces the direction too (the site-area overrides in `oxlint.config.ts`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely, and so does `lib/llms.ts`, which renders the whole site for agents.
 
 ### Build
 

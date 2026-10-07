@@ -1,4 +1,71 @@
-import { defineConfig } from "oxlint";
+import { defineConfig, type OxlintOverride } from "oxlint";
+
+type Pattern = { regex: string; message: string };
+
+// The top-level folders are the packages a monorepo would split this repo into (README ›
+// Layers). A layer imports itself and the layers in `uses`, through their subpath imports;
+// import/no-relative-parent-imports stops `../` from going around them.
+const LAYER_NAMES = [
+  "site",
+  "worker",
+  "siteScripts",
+  "workerScripts",
+  "lintScripts",
+  "contracts",
+  "utils"
+] as const;
+type LayerName = (typeof LAYER_NAMES)[number];
+type Layer = { dir: string; alias: string; uses: LayerName[]; also?: Pattern[] };
+
+const LAYERS: Record<LayerName, Layer> = {
+  site: { dir: "src/", alias: "#src/", uses: ["contracts", "utils"] },
+  worker: { dir: "worker/", alias: "#worker/", uses: ["contracts", "utils"] },
+  siteScripts: {
+    dir: "scripts/site/",
+    alias: "#scripts/site/",
+    uses: ["site", "contracts", "utils"]
+  },
+  workerScripts: {
+    dir: "scripts/worker/",
+    alias: "#scripts/worker/",
+    uses: ["worker", "contracts", "utils"]
+  },
+  lintScripts: { dir: "scripts/lint/", alias: "#scripts/lint/", uses: [] },
+  contracts: {
+    dir: "contracts/",
+    alias: "#contracts/",
+    uses: ["utils"],
+    // Contracts reach both the browser bundle and the Worker, so they take no framework.
+    also: [
+      {
+        regex:
+          "^(astro|@astrojs/|hono|agents|@cloudflare/|cloudflare:|react|@modelcontextprotocol/)",
+        message:
+          "Contracts are runtime-free: zod schemas, types, constants and pure functions. Keep framework and Worker code in src/ or worker/ (README › Layers)."
+      }
+    ]
+  },
+  utils: { dir: "utils/", alias: "#utils/", uses: [] }
+};
+
+function layerPattern(name: LayerName): Pattern {
+  const allowed = new Set<LayerName>([name, ...LAYERS[name].uses]);
+  const banned = LAYER_NAMES.filter(other => !allowed.has(other)).map(n => LAYERS[n].alias);
+  const reachable = [...allowed].map(n => LAYERS[n].alias).join(", ");
+  return {
+    regex: `^(${banned.join("|")})`,
+    message: `${LAYERS[name].dir} imports only ${reachable} (README › Layers). Move code both sides need to contracts/ or utils/.`
+  };
+}
+
+// A file gets the options of the last override that matches it, so each one carries every
+// pattern that applies to its files.
+const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
+  files,
+  rules: { "no-restricted-imports": ["error", { patterns }] }
+});
+
+const SITE = layerPattern("site");
 
 export default defineConfig({
   plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
@@ -33,30 +100,16 @@ export default defineConfig({
     "typescript/no-misused-promises": "error",
     "typescript/return-await": "error",
     // `||` on strings is deliberate: a blank value counts as missing.
-    "typescript/prefer-nullish-coalescing": ["error", { ignorePrimitives: { string: true } }]
+    "typescript/prefer-nullish-coalescing": ["error", { ignorePrimitives: { string: true } }],
+    "import/no-relative-parent-imports": "error"
   },
   overrides: [
-    {
-      files: ["**"],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            patterns: [
-              {
-                regex: "^\\.\\./",
-                message:
-                  "Import across folders through the #src, #worker, #utils and #scripts subpath imports (package.json)."
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      // Shared code serves every page, so it can't reach into a page area's folder.
-      // Later overrides replace this rule's options, so each restates the "../" ban.
-      files: [
+    ...LAYER_NAMES.map(name =>
+      restrict([`${LAYERS[name].dir}**`], [layerPattern(name), ...(LAYERS[name].also ?? [])])
+    ),
+    // Shared code serves every page, so it can't reach into a page area's folder.
+    restrict(
+      [
         "src/components/*",
         "src/components/chat/**",
         "src/components/ui/**",
@@ -65,81 +118,36 @@ export default defineConfig({
         "src/data/**",
         "src/directives/**"
       ],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            patterns: [
-              {
-                regex:
-                  "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\./(blog|home)/|^\\./BlogLayout|^\\.\\./",
-                message:
-                  "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (README › Source layout). Cross-folder imports use the #src subpath import."
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      // Exempt from the shared-code boundary: /llms.txt lists every post, so this
-      // imports the blog's post helpers. Only the "../" ban stays.
-      files: ["src/lib/llms.ts"],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            patterns: [
-              {
-                regex: "^\\.\\./",
-                message:
-                  "Import across folders through the #src, #worker, #utils and #scripts subpath imports (package.json)."
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      // The homepage may show the blog's posts; the blog never reaches into the homepage.
-      files: [
+      [
+        SITE,
+        {
+          regex:
+            "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\./(blog|home)/|^\\./BlogLayout",
+          message:
+            "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (README › Source layout)."
+        }
+      ]
+    ),
+    // Exempt from the shared-code boundary: /llms.txt lists every post, so this imports the
+    // blog's post helpers.
+    restrict(["src/lib/llms.ts"], [SITE]),
+    // The homepage may show the blog's posts; the blog never reaches into the homepage.
+    restrict(
+      [
         "src/components/blog/**",
         "src/lib/blog/**",
         "src/styles/blog/**",
         "src/layouts/BlogLayout.astro"
       ],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            patterns: [
-              {
-                regex: "^#src/components/home/|^\\.\\./",
-                message:
-                  "Blog code can't import homepage components. Move a component both use to the root of src/components (README › Source layout). Cross-folder imports use the #src subpath import."
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      files: ["scripts/site/**", "scripts/lint/**"],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            patterns: [
-              {
-                regex: "^(#worker/|\\.\\./)",
-                message:
-                  "Site and lint scripts don't import Worker code (move app-agnostic helpers to utils/), and cross-folder imports use the #src, #utils and #scripts subpath imports."
-              }
-            ]
-          }
-        ]
-      }
-    },
+      [
+        SITE,
+        {
+          regex: "^#src/components/home/",
+          message:
+            "Blog code can't import homepage components. Move a component both use to the root of src/components (README › Source layout)."
+        }
+      ]
+    ),
     {
       files: ["scripts/site/ts-alias.cjs"],
       rules: {
