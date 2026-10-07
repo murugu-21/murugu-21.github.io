@@ -19,7 +19,7 @@ import {
 } from "#contracts/api/dataset.ts";
 import { apiError } from "./errors";
 import { apiHeaders } from "./middleware";
-import { buildOpenApiDocument } from "#contracts/api/openapi.ts";
+import { buildOpenApiDocument } from "./openapi";
 import { POSTS_LIMIT_MAX } from "#contracts/api/posts.ts";
 import { isPostsLimit, searchPosts } from "./posts";
 import {

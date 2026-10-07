@@ -16,12 +16,12 @@ import { readAsset } from "./api/store";
 import { contactMailer, sendOpportunityEmail } from "./email";
 import { fetchSitePage } from "./fetch-page";
 import { jsonString, lenient } from "#utils/json.ts";
+import { messageText } from "#utils/ui-message.ts";
 import { buildMessages, jarvisTools, ROOM_DAILY_LIMIT, type Lead } from "./prompt";
 import {
   ERROR_NOTICE,
   LIMIT_NOTICE,
   MAX_MESSAGE_LENGTH,
-  messageText,
   type Activity,
   type ChatHistoryEntry,
   type JarvisMessage,

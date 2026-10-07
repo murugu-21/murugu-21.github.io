@@ -5,8 +5,8 @@
 import {
   CONTACT_CLIENT_QUOTA,
   CONTACT_GLOBAL_QUOTA,
-  CONTACT_QUOTAS,
-  policyField,
+  CONTACT_POLICY,
+  READ_POLICY,
   READ_QUOTA,
   type Quota
 } from "#contracts/api/quotas.ts";
@@ -19,10 +19,10 @@ function rateLimitField({ quota, remaining, resetSeconds }: Reported): string {
   return `"${quota.name}";r=${clamp(remaining)};t=${clamp(resetSeconds)}`;
 }
 
-/** The draft fields plus the de-facto `X-RateLimit-*` trio for one policy. */
-function rateLimitHeaders(policies: readonly Quota[], reported: Reported): Record<string, string> {
+/** The draft fields plus the de-facto `X-RateLimit-*` trio, reporting one quota. */
+function rateLimitHeaders(policy: string, reported: Reported): Record<string, string> {
   return {
-    "RateLimit-Policy": policyField(policies),
+    "RateLimit-Policy": policy,
     RateLimit: rateLimitField(reported),
     "X-RateLimit-Limit": String(reported.quota.quota),
     "X-RateLimit-Remaining": String(clamp(reported.remaining)),
@@ -83,7 +83,7 @@ export function resetReadWindows(): void {
 }
 
 export const readRateLimitHeaders = (slot: ReadSlot): Record<string, string> =>
-  rateLimitHeaders([READ_QUOTA], {
+  rateLimitHeaders(READ_POLICY, {
     quota: READ_QUOTA,
     remaining: slot.remaining,
     resetSeconds: slot.resetSeconds
@@ -96,7 +96,7 @@ export function contactRateLimitHeaders(usage: {
   resetSeconds: number;
 }): Record<string, string> {
   const clientTighter = usage.clientRemaining <= usage.globalRemaining;
-  return rateLimitHeaders(CONTACT_QUOTAS, {
+  return rateLimitHeaders(CONTACT_POLICY, {
     quota: clientTighter ? CONTACT_CLIENT_QUOTA : CONTACT_GLOBAL_QUOTA,
     remaining: clientTighter ? usage.clientRemaining : usage.globalRemaining,
     resetSeconds: usage.resetSeconds

@@ -5,7 +5,7 @@ import type { MiddlewareHandler } from "hono";
 import { basePath } from "hono/route";
 
 import { apiError } from "./errors";
-import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "#contracts/api/quotas.ts";
+import { CONTACT_POLICY, READ_POLICY, READ_QUOTA } from "#contracts/api/quotas.ts";
 import { versionHeaders, versionLinkHeader } from "./versioning";
 import { readRateLimitHeaders, takeReadSlot } from "./ratelimit";
 
@@ -49,11 +49,11 @@ export function apiHeaders(opts: ApiHeaderOptions): MiddlewareHandler<{ Bindings
     if (headers.has("RateLimit-Policy")) return;
 
     if (isContact) {
-      headers.set("RateLimit-Policy", policyField(CONTACT_QUOTAS));
+      headers.set("RateLimit-Policy", CONTACT_POLICY);
       return;
     }
     if (!slot) {
-      headers.set("RateLimit-Policy", policyField([READ_QUOTA]));
+      headers.set("RateLimit-Policy", READ_POLICY);
       return;
     }
     for (const [name, value] of Object.entries(readRateLimitHeaders(slot)))

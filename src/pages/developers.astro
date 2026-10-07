@@ -9,7 +9,7 @@ import Header from "#src/components/Header.astro";
 import ScrollTop from "#src/components/ScrollTop.astro";
 import { PERSON_ID, SITE_ORIGIN } from "#src/lib/site.ts";
 import { socialMediaLinks } from "#src/data/portfolio.ts";
-import { buildOpenApiDocument } from "#contracts/api/openapi.ts";
+import { OPENAPI_DOCUMENT } from "#contracts/api/openapi.ts";
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
 import {
   LATEST_PROTOCOL_VERSION,
@@ -31,11 +31,14 @@ import {
   POLICY_RULES,
   VERSIONS
 } from "#contracts/api/versioning.ts";
-import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "#contracts/api/quotas.ts";
+import {
+  CONTACT_CLIENT_QUOTA,
+  CONTACT_POLICY,
+  READ_POLICY,
+  READ_QUOTA
+} from "#contracts/api/quotas.ts";
 
-const spec = buildOpenApiDocument(SITE_ORIGIN);
-
-const operations = Object.entries(spec.paths).flatMap(([path, item]) =>
+const operations = Object.entries(OPENAPI_DOCUMENT.paths).flatMap(([path, item]) =>
   Object.entries(item).map(([method, { operationId, summary, description }]) => ({
     path,
     method: method.toUpperCase(),
@@ -45,7 +48,7 @@ const operations = Object.entries(spec.paths).flatMap(([path, item]) =>
   }))
 );
 
-const postSlugSchema = spec.components.schemas.PostSummary.properties?.slug;
+const postSlugSchema = OPENAPI_DOCUMENT.components.schemas.PostSummary.properties?.slug;
 if (!postSlugSchema) throw new Error("PostSummary has no slug property in the OpenAPI document");
 const exampleOp = operations.find(o => o.operationId === "getBlogPost");
 if (!exampleOp) throw new Error("getBlogPost is missing from the OpenAPI document");
@@ -165,11 +168,11 @@ const apiGraph: Thing[] = [
       "Murugappan M profile API",
       "murugappan.dev MCP server"
     ],
-    description: spec.info.summary,
+    description: OPENAPI_DOCUMENT.info.summary,
     documentation: `${SITE_ORIGIN}/developers/`,
     termsOfService: "https://creativecommons.org/licenses/by/4.0/",
     provider: { "@id": PERSON_ID },
-    potentialAction: spec.tags.map(tag => ({
+    potentialAction: OPENAPI_DOCUMENT.tags.map(tag => ({
       "@type": "ConsumeAction",
       name: tag.name,
       description: tag.description
@@ -378,7 +381,7 @@ Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;;
         numbers for tooling that only looks for those, and a <code>429</code> adds{" "}
         <code>Retry-After</code>.
       </p>
-      <pre><code>RateLimit-Policy: {policyField([READ_QUOTA])}
+      <pre><code>RateLimit-Policy: {READ_POLICY}
 RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
           READ_QUOTA.windowSeconds
         }</code></pre>
@@ -399,8 +402,8 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
         site-wide. Past either it answers <code>429</code> with code <code>rate_limited</code>, a{" "}
         <code>Retry-After</code> counting down to 00:00 UTC, and the tier that ran out:
       </p>
-      <pre><code>RateLimit-Policy: {policyField(CONTACT_QUOTAS)}
-RateLimit: "{CONTACT_QUOTAS[0].name}";r=0;t=39122
+      <pre><code>RateLimit-Policy: {CONTACT_POLICY}
+RateLimit: "{CONTACT_CLIENT_QUOTA.name}";r=0;t=39122
 Retry-After: 39122</code></pre>
       <p>
         A rejected request never spends a slot, and neither does a dry run. A dry run still reports
@@ -615,7 +618,7 @@ Retry-After: 39122</code></pre>
     <section>
       <h2 id="stability">Stability &amp; contact</h2>
       <p>
-        Spec version <code>{spec.info.version}</code>, serving API version{" "}
+        Spec version <code>{OPENAPI_DOCUMENT.info.version}</code>, serving API version{" "}
         <code>{CURRENT_API_VERSION}</code>. The full{" "}
         <a href="#versioning">versioning and deprecation policy</a> says what may change inside a
         version and how a deprecation is announced. Data is licensed{" "}

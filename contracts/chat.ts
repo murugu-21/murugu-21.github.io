@@ -37,12 +37,3 @@ export const ERROR_NOTICE: Notice = {
  * and a `notice` part. Tool inputs and results never reach the client.
  */
 export type JarvisMessage = UIMessage<unknown, { activity: Activity; notice: Notice }>;
-
-/** A message's prose. Each step of a reply is its own text part. */
-export function messageText(message: Pick<UIMessage, "parts">): string {
-  return message.parts
-    .flatMap(part => (part.type === "text" ? [part.text] : []))
-    .join("\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}

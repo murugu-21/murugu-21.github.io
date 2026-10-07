@@ -29,9 +29,10 @@ export const CONTACT_GLOBAL_QUOTA: Quota = {
   windowSeconds: 86_400
 };
 
-export const CONTACT_QUOTAS: readonly Quota[] = [CONTACT_CLIENT_QUOTA, CONTACT_GLOBAL_QUOTA];
+const policyField = (quotas: readonly Quota[]): string =>
+  quotas.map(q => `"${q.name}";q=${q.quota};w=${q.windowSeconds}`).join(", ");
 
-/** `RateLimit-Policy`, in declaration order. */
-export function policyField(quotas: readonly Quota[]): string {
-  return quotas.map(q => `"${q.name}";q=${q.quota};w=${q.windowSeconds}`).join(", ");
-}
+/** The `RateLimit-Policy` value on read responses. */
+export const READ_POLICY = policyField([READ_QUOTA]);
+/** The `RateLimit-Policy` value on contact responses, client tier first. */
+export const CONTACT_POLICY = policyField([CONTACT_CLIENT_QUOTA, CONTACT_GLOBAL_QUOTA]);

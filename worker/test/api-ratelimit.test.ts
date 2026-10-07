@@ -2,13 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
-import {
-  CONTACT_CLIENT_QUOTA,
-  CONTACT_GLOBAL_QUOTA,
-  CONTACT_QUOTAS,
-  policyField,
-  READ_QUOTA
-} from "#contracts/api/quotas.ts";
+import { CONTACT_CLIENT_QUOTA, CONTACT_GLOBAL_QUOTA, READ_QUOTA } from "#contracts/api/quotas.ts";
 import {
   contactRateLimitHeaders,
   readRateLimitHeaders,
@@ -39,7 +33,12 @@ describe("field serialisation", () => {
   // draft-ietf-httpapi-ratelimit-headers: a list of quota policies, each a
   // Structured Fields String with the q (quota) and w (window) parameters.
   it("writes RateLimit-Policy as one member per policy", () => {
-    expect(policyField(CONTACT_QUOTAS)).toBe(
+    const headers = contactRateLimitHeaders({
+      clientRemaining: 1,
+      globalRemaining: 5,
+      resetSeconds: 3600
+    });
+    expect(headers["RateLimit-Policy"]).toBe(
       `"contact-client";q=${CONTACT_DAILY_PER_CLIENT};w=86400, "contact-site";q=${CONTACT_DAILY_GLOBAL};w=86400`
     );
   });
