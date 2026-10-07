@@ -77,14 +77,18 @@ vi.mock("agents/react", () => ({
 
 const LAUNCHER = "Chat with Jarvis, Murugappan's AI assistant";
 const histories = new Map<string, () => Promise<Response>>();
-const historyRequests: string[] = [];
+const fetched: string[] = [];
 const events: string[] = [];
 
-const reply = (text: string): UIMessageChunk[] => [
-  { type: "start", messageId: `reply-${text.length}` },
+const prose = (text: string): UIMessageChunk[] => [
   { type: "text-start", id: "t" },
   { type: "text-delta", id: "t", delta: text },
   { type: "text-end", id: "t" }
+];
+
+const reply = (text: string): UIMessageChunk[] => [
+  { type: "start", messageId: "reply" },
+  ...prose(text)
 ];
 
 const lastRoom = () => {
@@ -105,7 +109,7 @@ beforeEach(() => {
   localStorage.clear();
   rooms.clear();
   histories.clear();
-  historyRequests.length = 0;
+  fetched.length = 0;
   events.length = 0;
   globalThis.posthog = {
     capture: (event: string) => events.push(event),
@@ -114,14 +118,15 @@ beforeEach(() => {
   };
   vi.spyOn(window, "fetch").mockImplementation(async request => {
     const url = request instanceof Request ? request.url : String(request);
-    historyRequests.push(url);
+    fetched.push(url);
     const room = /\/agents\/chat-room\/([^/]+)\/get-messages$/.exec(url)?.[1] ?? "";
     return (await histories.get(room)?.()) ?? Response.json([]);
   });
 });
 
-afterEach(() => {
+afterEach(async () => {
   vi.restoreAllMocks();
+  await page.viewport(414, 896);
   vi.useRealTimers();
   globalThis.posthog = undefined;
 });
@@ -133,7 +138,6 @@ test("sends a question with Enter and streams the reply after the tool step", as
   await userEvent.type(input(), "  Where does he work?  {Enter}");
 
   const room = lastRoom();
-  expect(room.host).toBe(location.host);
   await expect.poll(() => room.requests).toHaveLength(1);
   expect(room.requests[0]).toMatchObject({
     trigger: "submit-message",
@@ -154,7 +158,7 @@ test("sends a question with Enter and streams the reply after the tool step", as
   ]);
   await expect.element(page.getByText("Reading experience…")).toBeVisible();
 
-  room.stream(reply("At MedMe Health.").slice(1));
+  room.stream(prose("At MedMe Health."));
   await expect.element(page.getByText("At MedMe Health.")).toBeVisible();
   await expect.element(page.getByText("Jarvis is typing")).not.toBeInTheDocument();
   await expect.element(sendButton()).toBeDisabled();
@@ -229,9 +233,7 @@ test("resumes a returning visitor's room with its links and notices", async () =
   await render(<ChatWidget host="chat.example.com" />);
   await openChat();
 
-  expect(historyRequests).toEqual([
-    "http://chat.example.com/agents/chat-room/returning/get-messages"
-  ]);
+  expect(fetched).toEqual(["http://chat.example.com/agents/chat-room/returning/get-messages"]);
   await expect.element(page.getByText("Any links?")).toBeVisible();
   await expect.element(page.getByText("Out of budget for now.")).toBeVisible();
   await expect
@@ -250,12 +252,17 @@ test("resumes a returning visitor's room with its links and notices", async () =
     .not.toBeInTheDocument();
 });
 
+const stale = { id: "u1", role: "user", parts: [{ type: "text", text: "Stale question" }] };
+
 test.each([
-  ["a server error", async () => new Response("", { status: 500 })],
+  ["a server error", async () => Response.json([stale], { status: 500 })],
   [
     "a malformed part",
     async () =>
-      Response.json([{ id: "a", role: "assistant", parts: [{ type: "data-notice", data: {} }] }])
+      Response.json([
+        stale,
+        { id: "a", role: "assistant", parts: [{ type: "data-notice", data: {} }] }
+      ])
   ],
   ["a network failure", async () => Promise.reject(new TypeError("offline"))]
 ])("starts a fresh conversation when the history load hits %s", async (_label, load) => {
@@ -268,6 +275,56 @@ test.each([
   await expect
     .element(page.getByRole("button", { name: "How has he used LLMs in production?" }))
     .toBeVisible();
+  await expect.element(page.getByText("Stale question")).not.toBeInTheDocument();
+});
+
+test("holds the composer and the starters until the room's history arrives", async () => {
+  localStorage.setItem("chatRoomId", "slow");
+  let release = () => {};
+  histories.set("slow", () => new Promise(resolve => (release = () => resolve(Response.json([])))));
+  const starter = page.getByRole("button", { name: "How has he used LLMs in production?" });
+
+  await render(<ChatWidget />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+  await expect.element(page.getByRole("dialog")).toBeVisible();
+  await expect.element(sendButton()).toBeDisabled();
+  expect(starter.query()).toBeNull();
+
+  release();
+  await expect.element(starter).toBeVisible();
+  await expect.element(sendButton()).toBeEnabled();
+});
+
+test.each([
+  ["unset", undefined],
+  ["empty", ""]
+])("connects to the page's own origin when PUBLIC_CHAT_HOST is %s", async (_label, host) => {
+  localStorage.setItem("chatRoomId", "here");
+
+  await render(<ChatWidget host={host} />);
+  await openChat();
+
+  expect(fetched).toEqual([`http://${location.host}/agents/chat-room/here/get-messages`]);
+});
+
+test("ignores a blank message and the Enter that commits an IME candidate", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+
+  await userEvent.type(input(), "   {Enter}");
+  await userEvent.fill(input(), "こんにちは");
+  input()
+    .element()
+    .dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", isComposing: true, bubbles: true })
+    );
+  await expect.element(input()).toHaveValue("こんにちは");
+
+  await userEvent.keyboard("{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+  expect(lastRoom().requests[0]).toMatchObject({
+    messages: [{ parts: [{ type: "text", text: "こんにちは" }] }]
+  });
 });
 
 test("shows the room's notice when the chat budget runs out", async () => {
@@ -300,6 +357,9 @@ test("says something went wrong when the turn fails, and lets the visitor retry"
     .toBeVisible();
   await expect.element(sendButton()).toBeEnabled();
   expect(events).toEqual(["chat_open", "chat_message_sent", "chat_error", "exception"]);
+
+  await userEvent.type(input(), "Hi again{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(2);
 });
 
 test("waits while another tab's turn streams into the same room", async () => {
@@ -334,7 +394,7 @@ test("closing keeps the conversation, and the launcher reopens it", async () => 
   await expect.element(page.getByText("Remember me")).toBeVisible();
   await launcher.click();
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
-  expect(rooms.size).toBe(1);
+  expect(fetched).toHaveLength(1);
 });
 
 test("starting over moves to a new room once confirmed", async () => {
@@ -355,14 +415,20 @@ test("starting over moves to a new room once confirmed", async () => {
   await expect.element(page.getByText("Start a new conversation?")).not.toBeInTheDocument();
   await expect.element(page.getByText("Old question")).toBeVisible();
 
+  // Sending instead of answering dismisses the question.
+  await restart();
+  await userEvent.type(input(), "One more thing{Enter}");
+  await expect.element(page.getByText("Start a new conversation?")).not.toBeInTheDocument();
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+
   await restart();
   await page.getByRole("button", { name: "Start over" }).click();
 
   await expect.element(page.getByText("Old question")).not.toBeInTheDocument();
   await expect.element(sendButton()).toBeEnabled();
-  const fresh = lastRoom().name;
-  expect(fresh).not.toBe("old");
-  expect(localStorage.getItem("chatRoomId")).toBe(fresh);
+  expect(rooms.size).toBe(2);
+  expect(localStorage.getItem("chatRoomId")).toBe(lastRoom().name);
+  expect(events).toEqual(["chat_open", "chat_message_sent", "chat_restart"]);
 });
 
 test("downloads the transcript without the room's notices", async () => {
@@ -394,10 +460,12 @@ test("downloads the transcript without the room's notices", async () => {
 
   await render(<ChatWidget />);
   await openChat();
+  await expect.element(page.getByText("Toronto.")).toBeVisible();
   await page.getByRole("button", { name: "Conversation options" }).click();
   await page.getByRole("menuitem", { name: "Download transcript" }).click();
 
   expect(saved).toEqual(["jarvis-chat-2026-10-07.txt"]);
+  expect(events).toEqual(["chat_open", "chat_transcript_download"]);
   const body = await blobs[0]?.text();
   expect(body).toMatch(
     /^Chat with Jarvis on murugappan\.dev\n2026-10-07\n\nJarvis: Hi, I'm Jarvis/
@@ -423,7 +491,6 @@ test("on a desktop the open panel focuses the composer and leaves the page scrol
 
   await expect.element(input()).toHaveFocus();
   expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(false);
-  await page.viewport(414, 896);
 });
 
 test("opens on hydration when the visitor tapped the launcher while the bundle loaded", async () => {
@@ -431,11 +498,15 @@ test("opens on hydration when the visitor tapped the launcher while the bundle l
   island.dataset.openOnHydrate = "true";
   document.body.append(island);
 
-  await render(<ChatWidget />, { container: island });
+  try {
+    await render(<ChatWidget />, { container: island });
 
-  await expect.element(page.getByRole("dialog")).toBeVisible();
-  expect(island.dataset.openOnHydrate).toBeUndefined();
-  island.remove();
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    expect(island.dataset.openOnHydrate).toBeUndefined();
+    expect(events).toEqual(["chat_open"]);
+  } finally {
+    island.remove();
+  }
 });
 
 test("introduces the launcher once, then fades the hint away", async () => {
