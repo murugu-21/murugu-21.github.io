@@ -5,17 +5,12 @@ import { useAgent } from "agents/react";
 import { safeValidateUIMessages } from "ai";
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { Download, EllipsisVertical, MessageCircle, RotateCcw, Send, X } from "lucide-react";
+import { Download, EllipsisVertical, MessageCircle, RotateCcw, X } from "lucide-react";
 
-import {
-  ERROR_NOTICE,
-  GREETING,
-  MAX_MESSAGE_LENGTH,
-  type Activity,
-  type JarvisMessage
-} from "#contracts/chat.ts";
+import { ERROR_NOTICE, GREETING, type Activity, type JarvisMessage } from "#contracts/chat.ts";
 import { messageText } from "#utils/ui-message.ts";
 import { ActivityRow } from "./ActivityRow";
+import { Composer } from "./Composer";
 import { Button } from "#src/components/ui/button.tsx";
 import { Card, CardFooter, CardHeader } from "#src/components/ui/card.tsx";
 import {
@@ -25,14 +20,11 @@ import {
   DropdownMenuTrigger
 } from "#src/components/ui/dropdown-menu.tsx";
 import { ScrollArea } from "#src/components/ui/scroll-area.tsx";
-import { Textarea } from "#src/components/ui/textarea.tsx";
 import { cn } from "#src/lib/utils.ts";
 import { track, reportError } from "#src/lib/analytics.ts";
 
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
-// ~5 lines; the composer scrolls beyond this.
-const MAX_INPUT_HEIGHT = 120;
 
 // Each steers Jarvis toward a strong grounded answer without selling.
 const STARTERS = [
@@ -42,6 +34,17 @@ const STARTERS = [
 ];
 
 type Bubble = { kind: "user" | "assistant" | "system"; text: string };
+
+/** What the panel waits on. Only an idle room takes a message. */
+type Phase =
+  | { kind: "loading" }
+  | { kind: "idle" }
+  // Before the reply's prose, or on a tool step after it; null until a tool starts.
+  | { kind: "working"; activity: Activity | null }
+  | { kind: "replying" };
+
+const IDLE: Phase = { kind: "idle" };
+const LOADING: Phase = { kind: "loading" };
 
 // The room's `notice` parts (the spend limit, a failure) render as system lines.
 function toBubbles(messages: JarvisMessage[]): Bubble[] {
@@ -67,12 +70,16 @@ const DATA_SCHEMAS = {
   notice: z.object({ kind: z.enum(["limit", "error"]), text: z.string() })
 };
 
-// The reply's latest tool step or prose, whichever came last.
-function replyTail(last: JarvisMessage | undefined) {
-  if (last?.role !== "assistant") return undefined;
-  return last.parts.findLast(
-    part => part.type === "data-activity" || (part.type === "text" && part.text.trim() !== "")
-  );
+// A running turn shows its latest tool step or prose, whichever came last.
+function turnPhase(last: JarvisMessage | undefined): Phase {
+  const tail =
+    last?.role === "assistant"
+      ? last.parts.findLast(
+          part => part.type === "data-activity" || (part.type === "text" && part.text.trim() !== "")
+        )
+      : undefined;
+  if (tail?.type === "text") return { kind: "replying" };
+  return { kind: "working", activity: tail?.type === "data-activity" ? tail.data : null };
 }
 
 // The hook's default loader rejects when offline, which would crash the island.
@@ -133,14 +140,18 @@ function renderWithLinks(raw: string) {
   });
 }
 
+const BUBBLE_STYLES: Record<Bubble["kind"], string> = {
+  user: "self-end rounded-br-sm bg-primary text-primary-foreground",
+  assistant: "self-start rounded-bl-sm bg-muted text-foreground",
+  system: "self-center bg-transparent text-center text-xs text-muted-foreground"
+};
+
 function BubbleView({ kind, text }: Bubble) {
   return (
     <div
       className={cn(
         "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] whitespace-pre-wrap wrap-break-word",
-        kind === "user" && "self-end rounded-br-sm bg-primary text-primary-foreground",
-        kind === "assistant" && "self-start rounded-bl-sm bg-muted text-foreground",
-        kind === "system" && "self-center bg-transparent text-center text-xs text-muted-foreground"
+        BUBBLE_STYLES[kind]
       )}
     >
       {renderWithLinks(text)}
@@ -148,85 +159,40 @@ function BubbleView({ kind, text }: Bubble) {
   );
 }
 
+// The room's notices aren't part of the conversation.
+function downloadTranscript(bubbles: Bubble[]) {
+  track("chat_transcript_download");
+  const lines = [
+    `Jarvis: ${GREETING}`,
+    ...bubbles.flatMap(b =>
+      b.kind === "system" ? [] : [`${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`]
+    )
+  ];
+  const date = new Date().toISOString().slice(0, 10);
+  const body = `Chat with Jarvis on murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;
+  const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `jarvis-chat-${date}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 type PanelProps = {
   bubbles: Bubble[];
-  // History is still loading; the composer waits for it.
-  loading: boolean;
-  busy: boolean;
-  // The activity row shows until reply text follows; null means no tool is running.
-  waiting: boolean;
-  activity: Activity | null;
+  phase: Phase;
   onSend: (text: string) => void;
   onClose: () => void;
   onRestart: () => void;
 };
 
-function ChatPanel({
-  bubbles,
-  loading,
-  busy,
-  waiting,
-  activity,
-  onSend,
-  onClose,
-  onRestart
-}: PanelProps) {
+function ChatPanel({ bubbles, phase, onSend, onClose, onRestart }: PanelProps) {
   const [confirmRestart, setConfirmRestart] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Reset before measuring, or scrollHeight only ever grows.
-  const autoGrow = (el: HTMLTextAreaElement) => {
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, MAX_INPUT_HEIGHT)}px`;
-  };
-
-  const send = (raw: string) => {
-    const text = raw.trim();
-    if (!text || loading || busy) return false;
+  const send = (text: string) => {
     setConfirmRestart(false);
     onSend(text);
-    return true;
-  };
-
-  const submit = () => {
-    const el = inputRef.current;
-    if (!el) return;
-    // Clear only on an accepted send; it's refused while a turn is in flight.
-    if (!send(el.value)) return;
-    el.value = "";
-    autoGrow(el);
-  };
-
-  const onSubmit = (e: React.SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    submit();
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // isComposing: the Enter that commits an IME candidate must not send.
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      submit();
-    }
-  };
-
-  const transcript = bubbles.filter(b => b.kind !== "system");
-
-  const download = () => {
-    track("chat_transcript_download");
-    const lines = [
-      `Jarvis: ${GREETING}`,
-      ...transcript.map(b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`)
-    ];
-    const date = new Date().toISOString().slice(0, 10);
-    const body = `Chat with Jarvis on murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;
-    const url = URL.createObjectURL(new Blob([body], { type: "text/plain" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `jarvis-chat-${date}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   // Stick to the bottom, except on a fresh conversation where the greeting must
@@ -236,7 +202,7 @@ function ChatPanel({
     if (!v) return;
     const fresh = bubbles.every(b => b.kind === "system");
     v.scrollTop = fresh ? 0 : v.scrollHeight;
-  }, [bubbles, loading, waiting, activity]);
+  }, [bubbles, phase]);
 
   // Body scroll lock while the panel is full-screen (mobile).
   useEffect(() => {
@@ -250,13 +216,8 @@ function ChatPanel({
     };
   }, []);
 
-  // Desktop only: on phones autofocus pops the keyboard and hides the greeting.
-  useEffect(() => {
-    if (window.matchMedia("(min-width: 640px)").matches) inputRef.current?.focus();
-  }, []);
-
   // Until the visitor says anything; the greeting doesn't count.
-  const showStarters = !loading && !busy && bubbles.every(b => b.kind !== "user");
+  const showStarters = phase.kind === "idle" && bubbles.every(b => b.kind !== "user");
 
   const headerBtn =
     "size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-4.5";
@@ -287,7 +248,7 @@ function ChatPanel({
             <DropdownMenuItem onSelect={() => setConfirmRestart(true)}>
               <RotateCcw /> Start over
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={download}>
+            <DropdownMenuItem onSelect={() => downloadTranscript(bubbles)}>
               <Download /> Download transcript
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -330,14 +291,14 @@ function ChatPanel({
           {bubbles.map((b, i) => (
             <BubbleView key={i} kind={b.kind} text={b.text} />
           ))}
-          {loading && (
+          {phase.kind === "loading" && (
             <div className="flex items-center gap-1 self-start rounded-xl rounded-bl-sm bg-muted p-3">
               <span className="chat-dot" />
               <span className="chat-dot" />
               <span className="chat-dot" />
             </div>
           )}
-          {waiting && <ActivityRow activity={activity} />}
+          {phase.kind === "working" && <ActivityRow activity={phase.activity} />}
           {showStarters && (
             <div className="mt-1 flex flex-col items-start gap-2">
               {STARTERS.map(q => (
@@ -360,25 +321,7 @@ function ChatPanel({
       </ScrollArea>
 
       <CardFooter className="border-t p-2.5">
-        <form className="flex w-full items-end gap-2" onSubmit={onSubmit}>
-          <Textarea
-            ref={inputRef}
-            id="chat-input"
-            name="message"
-            rows={1}
-            maxLength={MAX_MESSAGE_LENGTH}
-            placeholder="Ask a question…"
-            aria-label="Your message"
-            autoComplete="off"
-            onInput={e => autoGrow(e.currentTarget)}
-            onKeyDown={onKeyDown}
-            style={{ maxHeight: MAX_INPUT_HEIGHT }}
-            className="field-sizing-fixed min-h-0 resize-none overflow-x-hidden bg-secondary"
-          />
-          <Button type="submit" size="icon" aria-label="Send" disabled={loading || busy}>
-            <Send />
-          </Button>
-        </form>
+        <Composer disabled={phase.kind !== "idle"} onSend={send} />
       </CardFooter>
     </Card>
   );
@@ -431,7 +374,6 @@ function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
     status === "streaming" ||
     isServerStreaming ||
     (awaitingReply && status !== "error" && !replyStarted);
-  const tail = busy ? replyTail(last) : undefined;
 
   const bubbles = toBubbles(messages);
   if (status === "error") bubbles.push({ kind: "system", text: ERROR_NOTICE.text });
@@ -446,10 +388,7 @@ function ChatSession({ room, host, open, onClose, onRestart }: SessionProps) {
   return (
     <ChatPanel
       bubbles={bubbles}
-      loading={false}
-      busy={busy}
-      waiting={busy && tail?.type !== "text"}
-      activity={tail?.type === "data-activity" ? tail.data : null}
+      phase={busy ? turnPhase(last) : IDLE}
       onSend={onSend}
       onClose={onClose}
       onRestart={onRestart}
@@ -513,10 +452,7 @@ export function ChatWidget({ host }: { host?: string }) {
   const loadingPanel = (
     <ChatPanel
       bubbles={[]}
-      loading
-      busy={false}
-      waiting={false}
-      activity={null}
+      phase={LOADING}
       onSend={() => {}}
       onClose={toggleOpen}
       onRestart={restart}
