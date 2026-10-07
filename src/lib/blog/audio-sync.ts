@@ -32,18 +32,10 @@ export function matchBlocks<T>(
   return page.map((block, i) => (timed[i]?.text === block.text ? block.el : null));
 }
 
-// Binary search for the block whose [start, end) contains t; -1 if none.
+// The block whose [start, end) contains t; -1 if none, including in a gap between blocks.
 export function blockAt(timed: ReadonlyArray<{ start: number; end: number }>, t: number): number {
-  let lo = 0;
-  let hi = timed.length - 1;
-  while (lo <= hi) {
-    const mid = (lo + hi) >> 1;
-    const b = timed[mid];
-    if (t < b.start) hi = mid - 1;
-    else if (t >= b.end) lo = mid + 1;
-    else return mid;
-  }
-  return -1;
+  const i = timed.findLastIndex(b => b.start <= t);
+  return i !== -1 && t < timed[i].end ? i : -1;
 }
 
 // Leave the block alone while its top sits in the reading band (fractions of
