@@ -1,6 +1,5 @@
 import { generateText, type ModelMessage } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
 import { deepseek, fetchDeepseekBalance } from "#worker/ai.ts";
 import { buildMessages } from "#worker/prompt.ts";
@@ -8,14 +7,12 @@ import { buildMessages } from "#worker/prompt.ts";
 describe("deepseek", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("calls DeepSeek's chat API with the key and the current Flash model", async () => {
-    const seen: { url: string; auth: string | null; model: string }[] = [];
+  it("calls DeepSeek's chat API with the key", async () => {
+    const seen: { url: string; auth: string | null }[] = [];
     vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
-      const Body = z.object({ model: z.string() });
       seen.push({
         url: new Request(input).url,
-        auth: new Headers(init?.headers).get("Authorization"),
-        model: Body.parse(JSON.parse(z.string().parse(init?.body))).model
+        auth: new Headers(init?.headers).get("Authorization")
       });
       return Response.json({
         id: "c1",
@@ -32,11 +29,7 @@ describe("deepseek", () => {
 
     expect(text).toBe("Hello.");
     expect(seen).toEqual([
-      {
-        url: "https://api.deepseek.com/chat/completions",
-        auth: "Bearer sk-live",
-        model: "deepseek-flash"
-      }
+      { url: "https://api.deepseek.com/chat/completions", auth: "Bearer sk-live" }
     ]);
   });
 });

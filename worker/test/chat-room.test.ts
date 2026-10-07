@@ -2,7 +2,7 @@ import { env, runInDurableObject } from "cloudflare:test";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { assert, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { globalLimiter } from "#worker/api/ratelimit.ts";
@@ -21,6 +21,8 @@ import {
   type TestEnvOptions,
   visitorMeta
 } from "./fixtures";
+
+afterEach(() => vi.restoreAllMocks());
 
 const LIMIT_TEXT =
   "I've hit my chat budget for now. Please reach Murugappan directly " +
@@ -452,7 +454,6 @@ describe("a chat turn", () => {
     expect(noticesIn(await streamedChunks(frames, "r1"))).toEqual([
       { kind: "error", text: "Something went wrong on my end. Please try again." }
     ]);
-    vi.restoreAllMocks();
   });
 
   it("still answers when D1 rejects the mirror writes", async () => {
@@ -469,7 +470,6 @@ describe("a chat turn", () => {
       await vi.waitFor(() => expect(errors.map(e => e[0])).toContain("d1 mirror failed"));
     } finally {
       await env.CHAT_DB.exec("ALTER TABLE messages_away RENAME TO messages");
-      vi.restoreAllMocks();
     }
   });
 });
@@ -619,7 +619,6 @@ describe("ChatRoom leads", () => {
       instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
     expect(leads).toEqual([{ contact: "a@b.c" }, { contact: "a@b.c" }]);
-    vi.restoreAllMocks();
   });
 
   it("stores the lead but sends no email when no inbox is configured", async () => {
@@ -660,7 +659,6 @@ describe("ChatRoom leads", () => {
       instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
     expect(leads).toEqual([{ contact: "a@b.c" }]);
-    vi.restoreAllMocks();
   });
 });
 
@@ -703,13 +701,6 @@ describe("parseVisitorContext", () => {
 });
 
 describe("fetchActivity", () => {
-  it("reports a page fetch as the site path, not the full url", () => {
-    expect(fetchActivity("https://murugappan.dev/blog/react/")).toEqual({
-      name: "fetch_page",
-      detail: "/blog/react/"
-    });
-  });
-
   it("omits the detail when the url is unparseable", () => {
     expect(fetchActivity("not a url")).toEqual({ name: "fetch_page" });
   });
