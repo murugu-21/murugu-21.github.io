@@ -17,8 +17,6 @@ import {
 } from "#src/data/portfolio.ts";
 import { resumeContact } from "#src/data/resume.ts";
 
-export const prerender = true;
-
 export const GET: APIRoute = () => {
   const json = JSON.stringify(
     buildDataset({

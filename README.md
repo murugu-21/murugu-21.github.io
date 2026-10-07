@@ -43,7 +43,7 @@ Lint enforces the direction (`no-restricted-imports` in `.oxlintrc.json`). Share
 
 `@astrojs/cloudflare` builds the Worker (`worker/server.ts`, the `entrypoint` in `cloudflare.config.ts`) as part of `astro build`. It writes the Build Output to `.cloudflare/output`: the site under `v0/workers/default/assets`, the bundle and a `worker.config.json` with every binding. `cf deploy --prebuilt` uploads exactly that, so deploy only after a build.
 
-Astro prerenders every page. The adapter still builds the Worker because the config names a custom `entrypoint`, which needs [withastro/astro#18209](https://github.com/withastro/astro/pull/18209). Without it, `@astrojs/cloudflare` 15.0.0-beta.1 deploys the static site and drops the Worker ([#18208](https://github.com/withastro/astro/issues/18208)). The adapter is pinned to a `pkg.pr.new` build of that PR, published from the `preview/18209` branch of the `murugu-21/astro` fork because Astro's preview workflow skips fork PRs; move to the first release that ships it. `astro` is pinned to the matching 7.4 beta.
+Astro prerenders every page. The config still sets `output: "server"`, because with `"static"` the adapter emits an assets-only Worker and drops the custom `entrypoint` ([withastro/astro#18208](https://github.com/withastro/astro/issues/18208), closed as intended). The `prerender-every-route` integration in `astro.config.ts` then marks every route prerendered, so no page renders in the Worker. `astro` and `@astrojs/cloudflare` are pinned to the 7.4 and 15.0 betas.
 
 `astro build` produces everything:
 

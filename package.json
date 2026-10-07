@@ -36,7 +36,7 @@
   "dependencies": {
     "@ai-sdk/deepseek": "3.0.59",
     "@ai-sdk/react": "4.0.131",
-    "@astrojs/cloudflare": "https://pkg.pr.new/murugu-21/astro/@astrojs/cloudflare@d311f88",
+    "@astrojs/cloudflare": "15.0.0-beta.1",
     "@astrojs/markdown-remark": "^7.3.1",
     "@astrojs/react": "^7.0.0",
     "@astrojs/rss": "^4.0.19",

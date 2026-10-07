@@ -156,6 +156,20 @@ function buildArtifacts(): AstroIntegration {
   };
 }
 
+// `output: "server"` is what makes the adapter emit the Worker in cloudflare.config.ts,
+// but every page stays static. Server mode marks routes `prerender: false`, so this
+// overrides it rather than filling a gap.
+function prerenderEveryRoute(): AstroIntegration {
+  return {
+    name: "prerender-every-route",
+    hooks: {
+      "astro:route:setup": ({ route }) => {
+        route.prerender = true;
+      }
+    }
+  };
+}
+
 // Writes the font file the `fonts` entry below reads. config:setup runs before
 // the Fonts API resolves its sources, in dev and build alike.
 function firaCodeSubset(): AstroIntegration {
@@ -244,12 +258,10 @@ const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
 export default defineConfig({
   site: SITE_ORIGIN,
-  output: "static",
+  // With "static" the adapter emits an assets-only Worker and silently drops the
+  // custom entrypoint (withastro/astro#18208). prerenderEveryRoute keeps the pages static.
+  output: "server",
   // Builds the Worker in cloudflare.config.ts alongside the prerendered site.
-  // 15.0.0-beta.1 drops a custom-entrypoint Worker from a static site without an
-  // error (withastro/astro#18208). The package is a pkg.pr.new build of the fix,
-  // withastro/astro#18209, published from the murugu-21/astro fork. Move to the
-  // release that ships it.
   adapter: cloudflare({
     // build-time sharp only, so no Images binding
     imageService: "compile",
@@ -315,6 +327,7 @@ export default defineConfig({
     inlineStylesheets: "always"
   },
   integrations: [
+    prerenderEveryRoute(),
     firaCodeSubset(),
     react(),
     clientInteractionDirective(),
