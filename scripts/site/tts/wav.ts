@@ -97,3 +97,41 @@ export function assemble(
   });
   return { pcm: Buffer.concat(parts), timings };
 }
+
+// `replace` is keyed by block index. The gaps between blocks are kept.
+export function splice({
+  pcm,
+  sampleRate,
+  blocks,
+  replace
+}: {
+  pcm: Buffer;
+  sampleRate: number;
+  blocks: BlockTiming[];
+  replace: ReadonlyMap<number, Buffer>;
+}): { pcm: Buffer; timings: BlockTiming[] } {
+  const byteAt = (seconds: number) => Math.round(seconds * sampleRate) * 2;
+  const seconds = (bytes: number) => bytes / 2 / sampleRate;
+  const parts: Buffer[] = [];
+  const timings: BlockTiming[] = [];
+  let cursor = 0;
+  let shift = 0;
+  blocks.forEach((block, i) => {
+    const start = byteAt(block.start);
+    const end = byteAt(block.end);
+    const replacement = replace.get(i);
+    if (!replacement) {
+      timings.push({ start: seconds(start + shift), end: seconds(end + shift) });
+      return;
+    }
+    parts.push(pcm.subarray(cursor, start), replacement);
+    cursor = end;
+    timings.push({
+      start: seconds(start + shift),
+      end: seconds(start + shift + replacement.length)
+    });
+    shift += replacement.length - (end - start);
+  });
+  parts.push(pcm.subarray(cursor));
+  return { pcm: Buffer.concat(parts), timings };
+}
