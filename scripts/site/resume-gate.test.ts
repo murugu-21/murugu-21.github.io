@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkResume } from "./resume-gate.ts";
+import { resumeProblems } from "./resume-gate.ts";
 
 const RESUME = [
   "Murugappan M · murugu2001@gmail.com",
@@ -10,21 +10,24 @@ const RESUME = [
   "EDUCATION B.E."
 ].join("\n");
 
-describe("checkResume", () => {
-  it("passes a resume with every ATS token on at most two pages, or an unknown count", () => {
-    expect(checkResume({ text: RESUME, pageCount: 2 })).toBe(9);
-    expect(checkResume({ text: RESUME, pageCount: null })).toBe(9);
+describe("resumeProblems", () => {
+  it("passes every ATS token on two pages or an unknown count, and flags a third page", () => {
+    expect(resumeProblems({ text: RESUME, pageCount: 2 })).toEqual([]);
+    expect(resumeProblems({ text: RESUME, pageCount: null })).toEqual([]);
+    expect(resumeProblems({ text: RESUME, pageCount: 3 })).toEqual([
+      "page gate FAILED: 3 pages (max 2)"
+    ]);
   });
 
-  it("fails the build on a missing token or a third page", () => {
-    expect(() =>
-      checkResume({
+  it("reports each missing token and a third page", () => {
+    expect(
+      resumeProblems({
         text: RESUME.replace("SKILLS", "Tools").replace("$300k", "a lot"),
-        pageCount: 2
+        pageCount: 3
       })
-    ).toThrow('ATS gate FAILED: missing tokens "SKILLS", "$300k"');
-    expect(() => checkResume({ text: RESUME, pageCount: 3 })).toThrow(
+    ).toEqual([
+      'ATS gate FAILED: missing tokens "SKILLS", "$300k"',
       "page gate FAILED: 3 pages (max 2)"
-    );
+    ]);
   });
 });

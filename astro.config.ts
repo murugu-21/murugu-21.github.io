@@ -111,8 +111,7 @@ function authorProblem({ slug, html }: Post) {
 // A markdown render error doesn't fail the build. The glob loader logs it,
 // caches the empty result in node_modules/.astro and ships a blank article.
 // So check every post has a body and one figure per ```mermaid fence
-// (which also catches a stale cached render), then check its head. Each
-// returns what's wrong, and the first that fails stops the build.
+// (which also catches a stale cached render), then check its head.
 const POST_CHECKS = [emptyBodyProblem, mermaidProblem, canonicalProblem, authorProblem];
 
 function checkPost(post: Post) {

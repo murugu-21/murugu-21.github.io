@@ -4,7 +4,7 @@ import { preview } from "astro";
 import { PDFParse } from "pdf-parse";
 
 import { launchBrowser } from "./launch-browser.ts";
-import { checkResume } from "./resume-gate.ts";
+import { ATS_REQUIRED_TOKENS, resumeProblems } from "./resume-gate.ts";
 import { ROOT, SITE_DIR } from "./site-dir.ts";
 
 // Prints /resume to resume.pdf in the built site. Runs last from astro.config.ts,
@@ -52,8 +52,9 @@ const info = await parser.getInfo().catch(() => null);
 await parser.destroy();
 
 const pageCount = info?.total ?? null;
-const tokens = checkResume({ text, pageCount });
+const problems = resumeProblems({ text, pageCount });
+if (problems.length > 0) throw new Error(problems.join("\n"));
 console.log(
   `[generate-resume] wrote ${OUT_PATH} (${(buffer.length / 1024).toFixed(1)} KB, ${pageCount ?? "?"} page${pageCount === 1 ? "" : "s"}); ` +
-    `ATS gate passed, all ${tokens} required tokens found`
+    `ATS gate passed, all ${ATS_REQUIRED_TOKENS.length} required tokens found`
 );

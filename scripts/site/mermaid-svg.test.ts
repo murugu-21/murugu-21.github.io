@@ -30,13 +30,18 @@ describe("usedText", () => {
 });
 
 describe("renderOptions", () => {
-  it("derives the SVG id from the hash and theme, and loads the page font", () => {
+  it("renders the theme strictly in the page font, under an id from the hash and theme", () => {
     const pageFont = cssUrl("body{margin:0}");
     expect(pageFont.href).toBe("data:text/css,body%7Bmargin%3A0%7D");
-    const dark = renderOptions({ hash: "abc123", theme: "dark", pageFont });
-    const light = renderOptions({ hash: "abc123", theme: "light", pageFont });
-    expect([dark.svgId, light.svgId]).toEqual(["m-abc123-dark", "m-abc123-light"]);
-    expect(dark.customFontCSS).toEqual([{ cssUrl: pageFont }]);
-    expect(dark.backgroundColor === light.backgroundColor).toBe(false);
+    expect(renderOptions({ hash: "abc123", theme: "dark", pageFont })).toEqual({
+      backgroundColor: "#282c35",
+      mermaidConfig: {
+        theme: "dark",
+        securityLevel: "strict",
+        fontFamily: "Fira Code, ui-monospace, monospace"
+      },
+      customFontCSS: [{ cssUrl: new URL("data:text/css,body%7Bmargin%3A0%7D") }],
+      svgId: "m-abc123-dark"
+    });
   });
 });

@@ -25,7 +25,7 @@ const WhoAmI = jsonString(z.object({ tokenValid: z.boolean().optional() }));
 
 export const tokenValid = (whoami: string) => WhoAmI.safeParse(whoami).data?.tokenValid ?? false;
 
-export const r2Args = ({
+const r2Args = ({
   verb,
   key,
   local,
