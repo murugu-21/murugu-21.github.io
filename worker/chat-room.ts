@@ -19,10 +19,10 @@ import { jsonString, lenient } from "#utils/json.ts";
 import { buildMessages, jarvisTools, ROOM_DAILY_LIMIT, type Lead } from "./prompt";
 import {
   ERROR_NOTICE,
-  fetchActivity,
   LIMIT_NOTICE,
   MAX_MESSAGE_LENGTH,
   messageText,
+  type Activity,
   type ChatHistoryEntry,
   type JarvisMessage,
   type Notice
@@ -407,5 +407,14 @@ export class ChatRoom extends AIChatAgent<Env> {
     this.ctx.waitUntil(
       statement.run().catch((err: unknown) => console.error("d1 mirror failed", err))
     );
+  }
+}
+
+// Only a page fetch has a detail. A capture's input is the visitor's name and contact details.
+export function fetchActivity(url: string): Activity {
+  try {
+    return { name: "fetch_page", detail: new URL(url).pathname };
+  } catch {
+    return { name: "fetch_page" };
   }
 }

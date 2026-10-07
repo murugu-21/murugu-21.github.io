@@ -1,8 +1,9 @@
 // Reads build artifacts through the ASSETS binding for the REST API, MCP and chat grounding.
 // No in-memory cache: the binding is isolate-local and the edge caches, so redeploys show at once.
 
-import { parseDataset, type Dataset } from "#contracts/api/dataset.ts";
-import { parsePostList, postMarkdownPath, type PostSummary } from "#contracts/api/posts.ts";
+import { Dataset } from "#contracts/api/dataset.ts";
+import { type PostSummary } from "#contracts/api/posts.ts";
+import { parsePostList, postMarkdownPath } from "./posts";
 
 export type AssetsLike = { fetch(input: string): Promise<Response> };
 
@@ -17,6 +18,11 @@ export async function readAsset(assets: AssetsLike, path: string): Promise<strin
   } catch {
     return null;
   }
+}
+
+// A stale or truncated build artifact must surface as a 503, not as `undefined` in a 200 body.
+export function parseDataset(raw: unknown): Dataset | null {
+  return Dataset.safeParse(raw).data ?? null;
 }
 
 /** null when the build artifact is absent or does not match the schema. */

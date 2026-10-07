@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { text } from "./fields";
 
-const ApiErrorCode = z
+export const ApiErrorCode = z
   .enum([
     "not_found",
     "method_not_allowed",
@@ -48,28 +48,5 @@ export const ErrorBody = z
 
 export const DOCS_URL = "https://murugappan.dev/developers/";
 
-export function apiError(opts: {
-  status: number;
-  code: z.infer<typeof ApiErrorCode>;
-  message: string;
-  hint: string;
-  details?: FieldIssue[];
-  headers?: Record<string, string>;
-}): Response {
-  const body: z.infer<typeof ErrorBody> = {
-    error: {
-      code: opts.code,
-      message: opts.message,
-      hint: opts.hint,
-      documentation_url: DOCS_URL,
-      ...(opts.details ? { details: opts.details } : {})
-    }
-  };
-  return new Response(JSON.stringify(body, null, 2), {
-    status: opts.status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...opts.headers
-    }
-  });
-}
+export type ApiErrorCode = z.infer<typeof ApiErrorCode>;
+export type ErrorBody = z.infer<typeof ErrorBody>;

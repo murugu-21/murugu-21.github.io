@@ -8,7 +8,8 @@ import { methodNotAllowed } from "hono/method-not-allowed";
 import type { z } from "zod";
 
 import { contactMailer, sendContactEmail } from "#worker/email.ts";
-import { CONTACT_DAILY_PER_CLIENT, parseContactRequest } from "#contracts/api/contact.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
+import { parseContactRequest } from "./contact";
 import {
   EducationList,
   ExperienceList,
@@ -16,10 +17,11 @@ import {
   Profile,
   SkillsResponse
 } from "#contracts/api/dataset.ts";
-import { apiError } from "#contracts/api/errors.ts";
+import { apiError } from "./errors";
 import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "#contracts/api/openapi.ts";
-import { isPostsLimit, POSTS_LIMIT_MAX, searchPosts } from "#contracts/api/posts.ts";
+import { POSTS_LIMIT_MAX } from "#contracts/api/posts.ts";
+import { isPostsLimit, searchPosts } from "./posts";
 import {
   contactRateLimitHeaders,
   globalLimiter,
@@ -28,7 +30,7 @@ import {
 } from "./ratelimit";
 import { API_PATHS, READ_METHODS } from "#contracts/api/routes.ts";
 import { loadDataset, loadPost, loadPosts } from "./store";
-import { buildVersionsDocument, META_EXPOSED_HEADERS } from "#contracts/api/versioning.ts";
+import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
 // Reads depend only on the deployed build; five minutes keeps a redeploy visible quickly.
 const READ_CACHE = "public, max-age=300";

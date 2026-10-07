@@ -46,12 +46,3 @@ export function messageText(message: Pick<UIMessage, "parts">): string {
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
-
-// Only a page fetch has a detail. A capture's input is the visitor's name and contact details.
-export function fetchActivity(url: string): Activity {
-  try {
-    return { name: "fetch_page", detail: new URL(url).pathname };
-  } catch {
-    return { name: "fetch_page" };
-  }
-}

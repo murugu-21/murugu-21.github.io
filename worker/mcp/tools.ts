@@ -5,7 +5,7 @@
 import type { McpServer } from "@modelcontextprotocol/server";
 
 import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
-import { searchPosts } from "#contracts/api/posts.ts";
+import { searchPosts } from "#worker/api/posts.ts";
 import {
   MCP_TOOLS,
   PostArgs,

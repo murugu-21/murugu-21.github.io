@@ -3,7 +3,6 @@
 
 import { z } from "zod";
 
-import type { FieldIssue } from "./errors";
 import { text } from "./fields";
 
 // Daily allowances enforced by the RateLimiter DO; small on purpose so this is not a mailer.
@@ -23,10 +22,6 @@ export type ContactMessage = {
   company?: string;
   message: string;
 };
-
-type ContactParseResult =
-  // `dryRun` sits beside the payload so the email formatter never sees it.
-  { ok: true; value: ContactMessage; dryRun: boolean } | { ok: false; issues: FieldIssue[] };
 
 // Deliberately loose: stricter patterns reject deliverable addresses.
 export const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
@@ -96,18 +91,3 @@ export const ContactAccepted = z
     title: "ContactAccepted",
     description: "Response body of a successful sendContactMessage."
   });
-
-export function parseContactRequest(raw: unknown): ContactParseResult {
-  const parsed = ContactRequest.safeParse(raw);
-  if (!parsed.success) {
-    return {
-      ok: false,
-      issues: parsed.error.issues.map(issue => ({
-        field: issue.path.length > 0 ? String(issue.path[0]) : "body",
-        issue: issue.message
-      }))
-    };
-  }
-  const { dryRun, ...value } = parsed.data;
-  return { ok: true, dryRun, value };
-}

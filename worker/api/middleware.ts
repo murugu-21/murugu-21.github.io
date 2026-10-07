@@ -4,9 +4,9 @@
 import type { MiddlewareHandler } from "hono";
 import { basePath } from "hono/route";
 
-import { apiError } from "#contracts/api/errors.ts";
+import { apiError } from "./errors";
 import { CONTACT_QUOTAS, policyField, READ_QUOTA } from "#contracts/api/quotas.ts";
-import { versionHeaders, versionLinkHeader } from "#contracts/api/versioning.ts";
+import { versionHeaders, versionLinkHeader } from "./versioning";
 import { readRateLimitHeaders, takeReadSlot } from "./ratelimit";
 
 type ApiHeaderOptions = {

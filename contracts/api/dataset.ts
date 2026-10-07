@@ -335,8 +335,3 @@ export function buildDataset(input: DatasetInput): Dataset {
     ]
   };
 }
-
-// A stale or truncated build artifact must surface as a 503, not as `undefined` in a 200 body.
-export function parseDataset(raw: unknown): Dataset | null {
-  return Dataset.safeParse(raw).data ?? null;
-}
