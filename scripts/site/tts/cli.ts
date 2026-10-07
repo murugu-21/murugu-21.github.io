@@ -10,7 +10,9 @@ export const BLOG_DIST = join(SITE_DIR, "blog");
 
 export function requirePython(module: string): void {
   if (!existsSync(PYTHON)) throw new Error("no .venv-tts; see scripts/site/tts/README.md");
-  if (spawnSync(PYTHON, ["-c", `import ${module}`]).status !== 0) {
+  // -P keeps the cwd off sys.path, where the coverage/ report dir would
+  // shadow the `coverage` module numba imports.
+  if (spawnSync(PYTHON, ["-P", "-c", `import ${module}`]).status !== 0) {
     throw new Error(
       `.venv-tts cannot import ${module}; reinstall scripts/site/tts/requirements.txt`
     );
