@@ -1,4 +1,5 @@
-// The version catalogue document and the headers that carry the policy in contracts/api/versioning.ts.
+// The version catalogue document and the headers that carry the policy in
+// contracts/api/versioning.ts.
 
 import type { z } from "zod";
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { Dataset } from "#contracts/api/dataset.ts";
 import { buildDataset, splitSkillItems, type DatasetInput } from "#src/lib/dataset.ts";
 
 const DATASET_INPUT: DatasetInput = {
@@ -56,7 +57,7 @@ const DATASET_INPUT: DatasetInput = {
   isHireable: true
 };
 
-// The shared site fixture plus a finished role, a grade and a skill category
+// The site fixture plus a finished role, a grade and a skill category
 // with a parenthesised group, so every branch of the projection runs.
 const input: DatasetInput = {
   ...DATASET_INPUT,
@@ -89,6 +90,11 @@ describe("splitSkillItems", () => {
 
 describe("buildDataset", () => {
   const dataset = buildDataset(input);
+
+  // The Worker answers 503 for a dataset its schema rejects.
+  it("builds a document the contract's schema accepts", () => {
+    expect(Dataset.safeParse(dataset).success).toBe(true);
+  });
 
   it("projects the person block from the portfolio data", () => {
     expect(dataset.person).toMatchObject({

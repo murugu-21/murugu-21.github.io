@@ -2,7 +2,7 @@
 // No in-memory cache: the binding is isolate-local and the edge caches, so redeploys show at once.
 
 import { Dataset } from "#contracts/api/dataset.ts";
-import { type PostSummary } from "#contracts/api/posts.ts";
+import type { PostSummary } from "#contracts/api/posts.ts";
 import { parsePostList, postMarkdownPath } from "./posts";
 
 export type AssetsLike = { fetch(input: string): Promise<Response> };

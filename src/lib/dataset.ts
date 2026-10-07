@@ -55,7 +55,7 @@ export type DatasetInput = {
   isHireable: boolean;
 };
 
-// Same rule as `knowsAbout` in Layout.astro: commas inside parentheses do not split.
+// Commas inside parentheses do not split: "(AWS SQS, EventBridge)" stays one item.
 export function splitSkillItems(items: string): string[] {
   return items
     .split(/;|—|,(?![^()]*\))/)

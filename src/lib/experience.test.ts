@@ -137,6 +137,7 @@ describe("parsePeriod", () => {
     { period: "June 2019 - April 2023", startDate: "2019-06", endDate: "2023-04", current: false },
     { period: "December 2025 – Present", startDate: "2025-12", endDate: null, current: true },
     { period: "some time ago", startDate: null, endDate: null, current: false },
+    { period: "June 0999 – April 1001", startDate: "0999-06", endDate: "1001-04", current: false },
     // Unlike periodBounds, which has no use for half a range, the API keeps a parsed start.
     { period: "June 2019 – sometime", startDate: "2019-06", endDate: null, current: false }
   ])("reads $period", ({ period, startDate, endDate, current }) => {

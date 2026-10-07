@@ -16,7 +16,6 @@ interface RoleLike {
   location: string;
 }
 
-// En dash, em dash or hyphen.
 const RANGE_SEPARATOR = /\s+[–—-]\s+/;
 
 function spanOf(roles: RoleLike[]): string {
@@ -82,7 +81,10 @@ function parseMonth(label: string): YearMonth | null {
   return { year: Number(m[2]), month };
 }
 
-/** null unless the period has two parts and its start parses; `end` is null when it doesn't. */
+/**
+ * null unless the period has two parts and its start parses. `end` is null when the period is
+ * open-ended or its end doesn't parse.
+ */
 function splitPeriod(
   period: string
 ): { start: YearMonth; end: YearMonth | null; openEnded: boolean } | null {
@@ -102,11 +104,13 @@ export function periodBounds(period: string): { start: YearMonth; end: YearMonth
   return split.end ? { start: split.start, end: split.end } : null;
 }
 
-const isoMonth = ({ year, month }: YearMonth) => `${year}-${String(month).padStart(2, "0")}`;
+const isoMonth = ({ year, month }: YearMonth) =>
+  `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
 
 /**
  * ISO 8601 year-months for the API. A start that doesn't parse yields nulls throughout, because
- * a wrong date is worse for an agent than an absent one.
+ * a wrong date is worse for an agent than an absent one. Unlike periodBounds, a parsed start
+ * survives an end that doesn't parse ("June 2019 – sometime" keeps 2019-06).
  */
 export function parsePeriod(period: string): {
   startDate: string | null;
@@ -117,7 +121,7 @@ export function parsePeriod(period: string): {
   if (!split) return { startDate: null, endDate: null, current: false };
   return {
     startDate: isoMonth(split.start),
-    endDate: split.end && isoMonth(split.end),
+    endDate: split.end ? isoMonth(split.end) : null,
     current: split.openEnded
   };
 }

@@ -33,7 +33,7 @@ const LAYERS: Record<LayerName, Layer> = {
           "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)",
         allowTypeImports: true,
         message:
-          "Contracts are framework-free: zod schemas, types, constants and pure functions (type imports are fine). Keep framework and Worker code in src/ or worker/ (README › Layers)."
+          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in src/ or worker/ (README › Layers)."
       }
     ]
   },

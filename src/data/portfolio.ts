@@ -197,7 +197,7 @@ export const workExperiences: WorkExperience[] = [
   }
 ];
 
-// Resume SKILLS taxonomy, also folded into Layout.astro's JSON-LD knowsAbout.
+// Resume SKILLS taxonomy, also folded into the JSON-LD knowsAbout (src/lib/schema.ts).
 export const skillsCategories = [
   { category: "Languages", items: "TypeScript, Python, SQL, Bash, YAML" },
   {
