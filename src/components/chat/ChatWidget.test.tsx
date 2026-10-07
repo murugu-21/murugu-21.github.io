@@ -188,6 +188,33 @@ test("sends a multi-line message with the button, growing the composer to five l
   await expect.element(input()).not.toHaveStyle({ height: "120px" });
 });
 
+test("keeps one room per page load, and can start over, when the browser blocks storage", async () => {
+  // Chrome's "block all cookies" makes the localStorage getter itself throw.
+  vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    throw new DOMException("The operation is insecure.", "SecurityError");
+  });
+  await render(<ChatWidget />);
+  await expect.element(page.getByText("Ask Jarvis anything about Murugappan")).toBeVisible();
+  await openChat();
+
+  await userEvent.type(input(), "Hi{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+  lastRoom().stream(reply("Hello."));
+  lastRoom().finish();
+  await expect.element(page.getByText("Hello.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Close chat" }).click();
+  await openChat();
+  await expect.element(page.getByText("Hello.")).toBeVisible();
+  expect(rooms.size).toBe(1);
+
+  await page.getByRole("button", { name: "Conversation options" }).click();
+  await page.getByRole("menuitem", { name: "Start over" }).click();
+  await page.getByRole("button", { name: "Start over" }).click();
+  await expect.element(page.getByText("Hello.")).not.toBeInTheDocument();
+  expect(rooms.size).toBe(2);
+});
+
 test("a starter question sends itself and the starters give way to the conversation", async () => {
   await render(<ChatWidget />);
   await openChat();

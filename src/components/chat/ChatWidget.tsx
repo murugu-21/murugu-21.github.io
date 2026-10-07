@@ -22,6 +22,7 @@ import {
 import { ScrollArea } from "#src/components/ui/scroll-area.tsx";
 import { cn } from "#src/lib/utils.ts";
 import { track, reportError } from "#src/lib/analytics.ts";
+import { readStored, writeStored } from "#src/lib/storage.ts";
 
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
@@ -80,11 +81,10 @@ async function loadHistory({ url }: { url?: string }): Promise<JarvisMessage[]> 
 }
 
 function roomId(): string {
-  let id = localStorage.getItem(ROOM_KEY);
-  if (!id) {
-    id = nanoid();
-    localStorage.setItem(ROOM_KEY, id);
-  }
+  const saved = readStored(ROOM_KEY);
+  if (saved) return saved;
+  const id = nanoid();
+  writeStored({ key: ROOM_KEY, value: id });
   return id;
 }
 
@@ -346,7 +346,7 @@ export function ChatWidget({ host }: { host?: string }) {
   const restart = () => {
     track("chat_restart");
     const next = nanoid();
-    localStorage.setItem(ROOM_KEY, next);
+    writeStored({ key: ROOM_KEY, value: next });
     setRoom(next);
   };
 
@@ -360,8 +360,8 @@ export function ChatWidget({ host }: { host?: string }) {
 
   // One-time quiet tooltip.
   useEffect(() => {
-    if (localStorage.getItem(TOOLTIP_KEY)) return;
-    localStorage.setItem(TOOLTIP_KEY, "1");
+    if (readStored(TOOLTIP_KEY)) return;
+    writeStored({ key: TOOLTIP_KEY, value: "1" });
     // setState-in-effect on purpose: a lazy initializer reading localStorage
     // would make the server and hydration renders disagree.
     // oxlint-disable-next-line react/set-state-in-effect

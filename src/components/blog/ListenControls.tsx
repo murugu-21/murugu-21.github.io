@@ -13,6 +13,7 @@ import {
 } from "#src/components/ui/dropdown-menu.tsx";
 import { Slider } from "#src/components/ui/slider.tsx";
 import { track } from "#src/lib/analytics.ts";
+import { readStored, writeStored } from "#src/lib/storage.ts";
 import {
   canPlayAudio,
   canSpeak,
@@ -32,22 +33,6 @@ const formatTime = (seconds: number) => {
 
 const RATE_KEY = "listenRate";
 
-const readStoredRate = (): SpeechRate => {
-  try {
-    return parseRate(localStorage.getItem(RATE_KEY));
-  } catch {
-    return 1;
-  }
-};
-
-const storeRate = (rate: SpeechRate) => {
-  try {
-    localStorage.setItem(RATE_KEY, String(rate));
-  } catch {
-    // private mode / storage blocked: the picker still works for this page
-  }
-};
-
 // An external store: reading localStorage during hydration would mismatch the
 // server HTML. Held in memory too so the picker works when storage is blocked.
 let currentRate: SpeechRate | null = null;
@@ -60,12 +45,12 @@ const subscribeRate = (onChange: () => void) => {
   };
 };
 
-const getRate = (): SpeechRate => (currentRate ??= readStoredRate());
+const getRate = (): SpeechRate => (currentRate ??= parseRate(readStored(RATE_KEY)));
 const getServerRate = (): SpeechRate => 1;
 
 const publishRate = (next: SpeechRate) => {
   currentRate = next;
-  storeRate(next);
+  writeStored({ key: RATE_KEY, value: String(next) });
   rateListeners.forEach(fn => fn());
 };
 
