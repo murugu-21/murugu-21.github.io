@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
 // The Workers pool has no filesystem and Vite swallows `?raw` for CSS, so read
@@ -57,6 +58,20 @@ export default defineConfig({
       {
         extends: true,
         test: { name: "lint", environment: "node", include: ["scripts/lint/**/*.test.ts"] }
+      },
+      // React islands need a real DOM, media elements and layout, which workerd lacks.
+      {
+        extends: true,
+        test: {
+          name: "browser",
+          include: ["src/**/*.test.tsx"],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright(),
+            instances: [{ browser: "chromium" }]
+          }
+        }
       }
     ]
   }
