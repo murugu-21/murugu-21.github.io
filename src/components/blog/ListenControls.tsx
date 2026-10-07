@@ -3,13 +3,14 @@
 // browser speech synthesis when that is missing (new post, astro dev has no
 // Worker) or fails.
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { Check, Loader2, Pause, Play } from "lucide-react";
+import { Loader2, Pause, Play } from "lucide-react";
 
 import { Button } from "#src/components/ui/button.tsx";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger
 } from "#src/components/ui/dropdown-menu.tsx";
 import { Slider } from "#src/components/ui/slider.tsx";
@@ -507,12 +508,13 @@ export function ListenControls({ slug }: { slug: string }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent container={root} align="end">
-          {SPEECH_RATES.map(r => (
-            <DropdownMenuItem key={r} onSelect={() => onRate(r)}>
-              {r === rate ? <Check /> : <span className="size-4" />}
-              {r}×
-            </DropdownMenuItem>
-          ))}
+          <DropdownMenuRadioGroup value={String(rate)} onValueChange={v => onRate(parseRate(v))}>
+            {SPEECH_RATES.map(r => (
+              <DropdownMenuRadioItem key={r} value={String(r)}>
+                {r}×
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
