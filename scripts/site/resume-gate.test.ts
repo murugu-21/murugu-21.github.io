@@ -11,9 +11,8 @@ const RESUME = [
 ].join("\n");
 
 describe("resumeProblems", () => {
-  it("passes every ATS token on two pages or an unknown count, and flags a third page", () => {
+  it("passes every ATS token on two pages, and flags a third page", () => {
     expect(resumeProblems({ text: RESUME, pageCount: 2 })).toEqual([]);
-    expect(resumeProblems({ text: RESUME, pageCount: null })).toEqual([]);
     expect(resumeProblems({ text: RESUME, pageCount: 3 })).toEqual([
       "page gate FAILED: 3 pages (max 2)"
     ]);

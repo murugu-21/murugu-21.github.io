@@ -14,9 +14,8 @@ export const ATS_REQUIRED_TOKENS = [
   "$300k"
 ];
 
-// `pageCount` is null when the PDF's info can't be read. Returns what keeps the resume from
-// shipping, empty when it passes.
-export function resumeProblems({ text, pageCount }: { text: string; pageCount: number | null }) {
+// Returns what keeps the resume from shipping, empty when it passes.
+export function resumeProblems({ text, pageCount }: { text: string; pageCount: number }) {
   const problems: string[] = [];
   const missing = ATS_REQUIRED_TOKENS.filter(token => !text.includes(token));
   if (missing.length > 0) {
@@ -25,7 +24,7 @@ export function resumeProblems({ text, pageCount }: { text: string; pageCount: n
     );
   }
   // @sparticuz's fallback fonts are wider than local Chrome's, so overflow can be CI-only.
-  if (pageCount !== null && pageCount > MAX_PAGES) {
+  if (pageCount > MAX_PAGES) {
     problems.push(`page gate FAILED: ${pageCount} pages (max ${MAX_PAGES})`);
   }
   return problems;
