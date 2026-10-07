@@ -42,12 +42,15 @@ const VALUE_MATCHERS = new Set([
   "toHaveBeenLastCalledWith",
   "toHaveBeenNthCalledWith",
   "toMatchInlineSnapshot",
+  ...COMPARISONS
+]);
+// Value matchers that compare what `expect.element(locator)` finds once it renders.
+const ELEMENT_VALUE_MATCHERS = new Set([
   "toHaveTextContent",
   "toHaveAttribute",
   "toHaveClass",
   "toHaveValue",
-  "toHaveAccessibleName",
-  ...COMPARISONS
+  "toHaveAccessibleName"
 ]);
 // On `expect.element(locator)` these fail when the component renders nothing.
 const RENDERED_STATE_MATCHERS = new Set([
@@ -183,6 +186,18 @@ function expectVariant(callee: Node): "expect" | "poll" | "element" | undefined 
   return name === "poll" || name === "element" ? name : undefined;
 }
 
+// What `expect.poll(() => x)` observes: x, when the callback only returns it.
+function polledValue(fn: Node): Node {
+  if (fn.type !== "ArrowFunctionExpression" && fn.type !== "FunctionExpression") return fn;
+  const { body } = fn;
+  if (!body) return fn;
+  if (body.type !== "BlockStatement") return body;
+  const [only, ...rest] = body.body;
+  return only?.type === "ReturnStatement" && only.argument && rest.length === 0
+    ? only.argument
+    : fn;
+}
+
 // Parses `expect(x).not.resolves.toBe(y)` into { subject: x, matcher: "toBe", negated, args: [y] }.
 function assertionAt(call: CallExpression): Assertion | undefined {
   const { callee } = call;
@@ -199,7 +214,7 @@ function assertionAt(call: CallExpression): Assertion | undefined {
   const subject = object.arguments[0];
   if (subject === undefined) return undefined;
   return {
-    subject,
+    subject: variant === "poll" ? polledValue(subject) : subject,
     matcher: callee.property.name,
     negated: modifiers.includes("not"),
     args: call.arguments,
@@ -220,6 +235,9 @@ const isZero = (node: Node) => node.type === "Literal" && node.value === 0;
 
 const expectedOf = ({ matcher, args }: Assertion): Node | undefined =>
   matcher === "toHaveProperty" ? args[1] : args[0];
+
+const isValueMatcher = ({ matcher, onElement }: Assertion) =>
+  VALUE_MATCHERS.has(matcher) || (onElement && ELEMENT_VALUE_MATCHERS.has(matcher));
 
 // `TOOLS.map(…)` reads TOOLS as data. `api.request(…)` calls into the code under test.
 const DATA_METHODS = new Set([
@@ -390,7 +408,7 @@ type Candidate = { assertion: Assertion; expected: Node; scope: Node; file: File
 // test returns undefined.
 const WEAK_SHAPES: Record<string, (candidate: Candidate) => boolean> = {
   // `toBeDefined()`, `not.toBe(wrong)`
-  weakMatcher: ({ assertion }) => assertion.negated || !VALUE_MATCHERS.has(assertion.matcher),
+  weakMatcher: ({ assertion }) => assertion.negated || !isValueMatcher(assertion),
   // `toEqual([])`, `toBe(undefined)`
   emptyExpected: ({ expected }) => isEmptyValue(expected),
   // `toHaveLength(0)`, `toBeGreaterThan(0)`
@@ -413,7 +431,7 @@ function isStrong({ assertion, scope }: Found, file: FileModel) {
 // The subject import an assertion's expected value restates, if any.
 function expectedFromSubject({ assertion, scope }: Found, file: FileModel) {
   // `toThrow(SubjectError)` names the error class; it computes nothing.
-  if (assertion.matcher.startsWith("toThrow") || !VALUE_MATCHERS.has(assertion.matcher)) {
+  if (assertion.matcher.startsWith("toThrow") || !isValueMatcher(assertion)) {
     return undefined;
   }
   const expected = expectedOf(assertion);

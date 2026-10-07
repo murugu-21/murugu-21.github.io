@@ -102,9 +102,49 @@ it("slugs", () => { expect(slugify("x")).toBe(a); });`
     {
       name: "a polled value against a literal",
       code: `${SUBJECT_IMPORT}it("settles", async () => { await expect.poll(() => slugify("A")).toBe("a"); });`
+    },
+    {
+      name: "a rendered attribute against a literal",
+      languageOptions: TSX,
+      code: `${WIDGET_IMPORT}it("links", async () => {
+  const screen = await render(<Widget name="Ada" />);
+  await expect.element(screen.getByRole("link")).toHaveAttribute("href", "/ada");
+});`
     }
   ],
   invalid: [
+    {
+      name: "a polled subject constant",
+      code: `${SUBJECT_IMPORT}it("caps", async () => {
+  await expect.poll(() => LIMIT).toBe(3);
+  await expect.poll(function () { return TOOLS.max; }).toBe(8);
+});`,
+      errors: [{ messageId: "noStrongAssertion", line: 2 }]
+    },
+    {
+      name: "a harness binding read straight into expect",
+      code: `import { env } from "cloudflare:test";
+it("has an inbox", () => { expect(env.INBOX).toBe("x"); });`,
+      errors: [{ messageId: "noStrongAssertion", line: 2 }]
+    },
+    {
+      name: "a rendered-state matcher on a plain expect",
+      languageOptions: TSX,
+      code: `${WIDGET_IMPORT}it("greets", async () => {
+  const screen = await render(<Widget name="Ada" />);
+  expect(screen.getByText("Hi Ada")).toBeVisible();
+});`,
+      errors: [{ messageId: "noStrongAssertion", line: 3 }]
+    },
+    {
+      name: "an element value matcher on a plain expect",
+      languageOptions: TSX,
+      code: `${WIDGET_IMPORT}it("links", async () => {
+  const screen = await render(<Widget name="Ada" />);
+  expect(screen.getByRole("link")).toHaveAttribute("href", "/ada");
+});`,
+      errors: [{ messageId: "noStrongAssertion", line: 3 }]
+    },
     {
       name: "a component test that only asserts an absence",
       languageOptions: TSX,
