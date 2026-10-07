@@ -41,7 +41,7 @@ function absolutizeAssets(html: string, postId: string): string {
 // swapped for their light-theme PNGs here: feed readers have no theme toggle and
 // their image proxies can't rasterize SVG (see diagramRaster).
 export async function GET() {
-  const posts = (await getPublishedPosts()).reverse();
+  const posts = await getPublishedPosts();
 
   const items = await Promise.all(
     posts.map(async post => ({

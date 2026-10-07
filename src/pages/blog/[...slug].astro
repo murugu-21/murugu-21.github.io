@@ -16,15 +16,15 @@ import {
 import { ListenControls } from "#src/components/blog/ListenControls.tsx";
 import TableOfContents from "#src/components/blog/TableOfContents.astro";
 
-// prev/next follow date-ascending order.
+// previous is the older post, next the newer one; the list is newest first.
 export async function getStaticPaths() {
   const posts = await getPublishedPosts();
   return posts.map((post, index) => ({
     params: { slug: post.id },
     props: {
       post,
-      previous: posts[index - 1] ?? null,
-      next: posts[index + 1] ?? null
+      previous: posts[index + 1] ?? null,
+      next: posts[index - 1] ?? null
     }
   }));
 }

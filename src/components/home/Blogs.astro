@@ -3,7 +3,7 @@ import { blogSection } from "#src/data/portfolio.ts";
 import { accentTitle } from "#src/lib/accent.ts";
 import { getPublishedPosts, postDescription, postPath } from "#src/lib/blog/posts.ts";
 
-const featured = (await getPublishedPosts()).filter(post => post.data.featured).reverse();
+const featured = (await getPublishedPosts()).filter(post => post.data.featured);
 const cards = [
   ...featured.map(post => ({
     url: postPath(post.id),

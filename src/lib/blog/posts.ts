@@ -18,13 +18,13 @@ export interface SerializedPost {
   excerpt: string;
 }
 
-// Date ascending. Drafts (content/blog/draft/**) are excluded in production.
+// Newest first. Drafts (content/blog/draft/**) are excluded in production.
 export async function getPublishedPosts(): Promise<Post[]> {
   const posts = await getCollection(
     "blog",
     post => !(import.meta.env.PROD && post.id.startsWith("draft/"))
   );
-  return posts.sort((a, b) => a.data.date.getTime() - b.data.date.getTime());
+  return posts.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 }
 
 // Literal /blog: the prefix comes from src/pages/blog/, not an Astro `base`.

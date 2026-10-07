@@ -4,7 +4,7 @@ import { oneLineDescription, textResponse } from "#src/lib/llms.ts";
 
 // /blog/llms-full.txt (https://llmstxt.org): every post's markdown body in one file.
 export async function GET() {
-  const posts = (await getPublishedPosts()).reverse(); // newest first
+  const posts = await getPublishedPosts();
 
   const lines = [
     `# ${BLOG_TITLE}: full content`,
