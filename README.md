@@ -84,6 +84,16 @@ Bun blocks the install scripts of two packages here, and both are safe to leave 
 GITHUB_TOKEN=ghp_xxx bun run build
 ```
 
+## Browser support
+
+The site supports Chrome and Edge 123+, Firefox 128+ and Safari 17.5+ (iOS included). `BROWSER_TARGETS` in `astro.config.ts` holds the list, and the build compiles CSS for it, adding the prefixes and fallbacks those browsers need, so change both when a feature raises the floor. JavaScript isn't lowered (Astro builds client code as `esnext`), so new syntax and APIs need the same check by hand. What sets each floor:
+
+- `light-dark()`, which holds every light/dark colour pair (Chrome 123, Firefox 120, Safari 17.5). Older browsers drop the whole declaration, so the page loses its colours.
+- Tailwind 4 (Chrome 111, Firefox 128, Safari 16.4).
+- The phone menu's Popover API (Chrome 114, Firefox 125, Safari 17). Without it the menu button hides.
+
+Two features improve where supported and degrade cleanly. The phone menu's slide uses `@starting-style` (Firefox 129) and `overlay` (Chromium only): Safari and newer Firefox snap shut, and Firefox 128 also snaps open. The chat composer grows with `field-sizing` (Chrome 123, Firefox 152, Safari 26.2); elsewhere it stays one line and scrolls.
+
 ## Checks
 
 ```bash

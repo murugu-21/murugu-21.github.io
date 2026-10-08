@@ -218,6 +218,9 @@ function modulePreloadHints(): AstroIntegration {
 const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
+// The oldest browsers the site supports. README.md, "Browser support", says what sets each floor.
+const BROWSER_TARGETS = ["chrome123", "edge123", "firefox128", "safari17.5", "ios17.5"];
+
 export default defineConfig({
   site: SITE_ORIGIN,
   // Validated at build, so a malformed value fails the build instead of shipping.
@@ -303,9 +306,12 @@ export default defineConfig({
     buildArtifacts()
   ],
   vite: {
-    // 8 KB for CSS only. A plain number would also inline font subsets into
-    // the stylesheets (tripled the island sheet). `undefined` keeps the default.
     build: {
+      // CSS gets the vendor prefixes and fallbacks the supported browsers need. JS isn't
+      // lowered: Astro pins the client build to esnext.
+      cssTarget: BROWSER_TARGETS,
+      // 8 KB for CSS only. A plain number would also inline font subsets into
+      // the stylesheets (tripled the island sheet). `undefined` keeps the default.
       assetsInlineLimit: (file, content) =>
         file.endsWith(".css") ? content.byteLength < 8192 : undefined
     },
