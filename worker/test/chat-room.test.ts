@@ -1,4 +1,5 @@
-import { env, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
@@ -165,7 +166,7 @@ async function scriptRoom(
   options: TestEnvOptions = {}
 ) {
   const { email, sent } = recordingEmail();
-  await runInDurableObject(stub, (instance: ChatRoom) => {
+  await runInDurableObject(stub, instance => {
     Object.assign(instance, {
       env: { ...testEnv({ email, ...options }), DEEPSEEK_API_KEY: "sk-test" },
       languageModel: () => model
@@ -340,7 +341,7 @@ describe("a chat turn", () => {
     const { socket, frames, stub } = await openRoom("room-daily");
     const model = scriptedModel(textStep("Sure."));
     await scriptRoom(stub, model);
-    await runInDurableObject(stub, (instance: ChatRoom) => {
+    await runInDurableObject(stub, instance => {
       for (let i = 1; i < ROOM_DAILY_LIMIT; i++) {
         instance.ctx.storage.sql.exec(
           `INSERT INTO user_messages (created_at) VALUES (?)`,
@@ -445,7 +446,7 @@ describe("a chat turn", () => {
 
   it("answers with the error notice when the room can't reach its rate limiter", async () => {
     const { socket, frames, stub } = await openRoom("room-no-limiter");
-    await runInDurableObject(stub, (instance: ChatRoom) => {
+    await runInDurableObject(stub, instance => {
       Object.assign(instance, {
         env: { ...testEnv(), DEEPSEEK_API_KEY: "sk-test", RateLimiter: undefined }
       });
@@ -619,7 +620,7 @@ describe("ChatRoom leads", () => {
     );
     expect(replyText(await streamedChunks(room.frames, "r2"))).toBe("Second.");
     expect(sent.map(m => m.to)).toEqual(["inbox@example.com"]);
-    const leads = await runInDurableObject(room.stub, (instance: ChatRoom) =>
+    const leads = await runInDurableObject(room.stub, instance =>
       instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
     expect(leads).toEqual([{ contact: "a@b.c" }, { contact: "a@b.c" }]);
@@ -659,7 +660,7 @@ describe("ChatRoom leads", () => {
     expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("Noted.");
     expect(sent).toEqual([]);
     expect(errors.map(e => e[0])).toEqual(["opportunity email skipped: no EMAIL binding or inbox"]);
-    const leads = await runInDurableObject(room.stub, (instance: ChatRoom) =>
+    const leads = await runInDurableObject(room.stub, instance =>
       instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
     expect(leads).toEqual([{ contact: "a@b.c" }]);
@@ -669,9 +670,7 @@ describe("ChatRoom leads", () => {
 describe("ChatRoom recovery", () => {
   it("drops an interrupted turn instead of retrying it, since a retry bills the model again", async () => {
     const { stub } = await connectRoom("room-recovery");
-    const decision = await runInDurableObject(stub, (instance: ChatRoom) =>
-      instance.onChatRecovery()
-    );
+    const decision = await runInDurableObject(stub, instance => instance.onChatRecovery());
     expect(decision).toEqual({ continue: false });
   });
 });

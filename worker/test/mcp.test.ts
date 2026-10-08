@@ -1,4 +1,4 @@
-import { env } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { assert, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 

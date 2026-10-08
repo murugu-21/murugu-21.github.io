@@ -1,10 +1,10 @@
 // The worker entry: which requests it claims, which fall through to static
 // assets, and how a miss is answered.
-import { env, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
 import { parseRange } from "#worker/audio.ts";
-import { ChatRoom } from "#worker/chat-room.ts";
 import { markdownNotFound, prefersMarkdown, serveAsset } from "#worker/not-found.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/visitor.ts";
 import worker from "#worker/server.ts";
@@ -79,9 +79,7 @@ describe("the chat-room WebSocket", () => {
       [VISITOR_COUNTRY_HEADER]: "XX",
       [VISITOR_IP_HEADER]: "203.0.113.66"
     });
-    const stored = await runInDurableObject(stub, async (instance: ChatRoom) =>
-      visitorStorage(instance)
-    );
+    const stored = await runInDurableObject(stub, visitorStorage);
     expect(stored.visitor_country).toBe("IN");
     // Cloudflare sent no IP, so the forged one must not survive either.
     expect(stored.visitor_ip).toBeUndefined();
