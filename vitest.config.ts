@@ -8,13 +8,16 @@ const d1Migrations = await readD1Migrations("./migrations");
 
 export default defineConfig({
   test: {
-    // 0 stops truncating `$field` values in it.each titles (and in failure messages).
+    // 0 stops truncating values in failure messages.
     chaiConfig: { truncateThreshold: 0 },
+    // Keeps `$field` values in it.each titles whole. 0 doesn't switch the limit off: it still
+    // clips the last character of a string.
+    taskTitleValueFormatTruncate: Number.MAX_SAFE_INTEGER,
     // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
     // tests in src/styles would read "".
     css: { include: [/global\.css\?raw$/] },
-    // V8 coverage doesn't work in the Workers pool. The globs name extensions so READMEs
-    // and .astro files, which Istanbul can't parse, stay out.
+    // The globs name extensions so READMEs and .astro files, which Istanbul can't parse,
+    // stay out.
     coverage: {
       provider: "istanbul",
       include: ["{src,worker,utils,contracts,scripts}/**/*.{ts,tsx}"],
@@ -23,7 +26,6 @@ export default defineConfig({
     },
     projects: [
       {
-        extends: true,
         define: { __D1_MIGRATIONS__: JSON.stringify(d1Migrations) },
         plugins: [cloudflareTest({ wrangler: { configPath: "./worker/test/wrangler.jsonc" } })],
         test: {
@@ -37,7 +39,6 @@ export default defineConfig({
       // node:readline, and the native bindings oxlint's RuleTester loads. A src test that needs
       // Node too (ESLint's parser) is named *.node.test.ts.
       {
-        extends: true,
         test: {
           name: "node",
           environment: "node",
@@ -47,7 +48,6 @@ export default defineConfig({
       // React islands and the stylesheet test need a real DOM, media elements and
       // layout, which workerd lacks.
       {
-        extends: true,
         test: {
           name: "browser",
           include: ["src/**/*.test.tsx"],

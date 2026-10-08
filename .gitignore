@@ -31,6 +31,6 @@ __pycache__/
 # vitest --coverage output
 coverage/
 
-# Vitest browser mode writes these when a test fails.
+# Vitest browser screenshots, failure attachments and reports.
 __screenshots__/
-.vitest-attachments/
+.vitest/
