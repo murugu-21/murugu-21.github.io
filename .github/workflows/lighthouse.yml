@@ -16,6 +16,7 @@ jobs:
           persist-credentials: false
       # Audits the deployed site, not a local build, so it measures what visitors get.
       - uses: treosh/lighthouse-ci-action@3e7e23fb74242897f95c0ba9cabad3d0227b9b18 # 12.6.2
+        id: lighthouse
         with:
           urls: |
             https://murugappan.dev/
@@ -24,3 +25,16 @@ jobs:
           runs: 3
           configPath: lighthouserc.yml
           uploadArtifacts: true
+          # Hosts each HTML report at a public link for a few days, so it opens in the
+          # browser; the site is public, so the reports hold nothing private.
+          temporaryPublicStorage: true
+      - name: Link the reports on the run page
+        if: always()
+        env:
+          LINKS: ${{ steps.lighthouse.outputs.links }}
+        run: |
+          {
+            echo "### Lighthouse reports"
+            echo
+            jq -r 'to_entries[] | "- [\(.key)](\(.value))"' <<< "${LINKS:-"{}"}"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -10,6 +10,7 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import posthog from "@posthog/rollup-plugin";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import { parseHTML } from "linkedom";
 import { z } from "zod";
 import { autolinkConfig } from "./src/lib/blog/rehype-autolink-config";
 import remarkMermaid from "./src/lib/blog/remark-mermaid";
@@ -60,10 +61,10 @@ function singleFileSitemap(): AstroIntegration {
   };
 }
 
-type Post = { slug: string; html: string; source: string };
+type Post = { slug: string; document: Document; source: string };
 
-function emptyBodyProblem({ slug, html }: Post) {
-  if (html.match(/<section data-post-body>([\s\S]*?)<\/section>/)?.[1].trim()) return;
+function emptyBodyProblem({ slug, document }: Post) {
+  if (document.querySelector("section[data-post-body]")?.innerHTML.trim()) return;
   return (
     `blog/${slug}/index.html has an empty article body. ` +
     "Its markdown failed to render (see the [glob-loader] error above). " +
@@ -71,9 +72,15 @@ function emptyBodyProblem({ slug, html }: Post) {
   );
 }
 
-function mermaidProblem({ slug, html, source }: Post) {
+// The read-aloud player and the audio generator find the title by its data-post-title attribute.
+function titleProblem({ slug, document }: Post) {
+  if (document.querySelector("h1[data-post-title]")) return;
+  return `blog/${slug}/index.html has no <h1 data-post-title>, so read-aloud would skip the title`;
+}
+
+function mermaidProblem({ slug, document, source }: Post) {
   const fences = findMermaidFences(source).length;
-  const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
+  const figures = document.querySelectorAll("figure[data-mermaid]").length;
   if (fences === figures) return;
   return (
     `${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +
@@ -88,19 +95,21 @@ const jsonLdGraph = z.object({
   "@graph": z.array(z.record(z.string(), z.unknown()))
 });
 
-function canonicalProblem({ slug, html }: Post) {
-  const canonicals = [...html.matchAll(/<link rel="canonical" href="([^"]*)"/g)].map(m => m[1]);
+function canonicalProblem({ slug, document }: Post) {
+  const canonicals = [...document.querySelectorAll('link[rel="canonical"]')].map(
+    link => link.getAttribute("href") ?? ""
+  );
   const expected = `https://murugappan.dev/blog/${slug}/`;
   if (canonicals.length === 1 && canonicals[0] === expected) return;
   return `${slug} has canonical(s) [${canonicals.join(", ")}], expected exactly ${expected}`;
 }
 
-function authorProblem({ slug, html }: Post) {
-  const scripts = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+function authorProblem({ slug, document }: Post) {
+  const scripts = document.querySelectorAll('script[type="application/ld+json"]');
   if (scripts.length !== 1) {
     return `${slug} has ${scripts.length} JSON-LD blocks, expected one @graph`;
   }
-  const graph = jsonLdGraph.parse(JSON.parse(scripts[0][1]))["@graph"];
+  const graph = jsonLdGraph.parse(JSON.parse(scripts[0].textContent ?? ""))["@graph"];
   const posting = graph.find(node => node["@type"] === "BlogPosting");
   const authorId = z.object({ "@id": z.string() }).safeParse(posting?.author).data?.["@id"];
   const author = graph.find(node => node["@id"] === authorId);
@@ -110,9 +119,15 @@ function authorProblem({ slug, html }: Post) {
 
 // A markdown render error doesn't fail the build. The glob loader logs it,
 // caches the empty result in node_modules/.astro and ships a blank article.
-// So check every post has a body and one figure per ```mermaid fence
+// So check every post has a body, a title and one figure per ```mermaid fence
 // (which also catches a stale cached render), then check its head.
-const POST_CHECKS = [emptyBodyProblem, mermaidProblem, canonicalProblem, authorProblem];
+const POST_CHECKS = [
+  emptyBodyProblem,
+  titleProblem,
+  mermaidProblem,
+  canonicalProblem,
+  authorProblem
+];
 
 function checkPost(post: Post) {
   for (const check of POST_CHECKS) {
@@ -132,8 +147,8 @@ function blogPostChecks(): AstroIntegration {
           if (!fs.existsSync(page)) {
             throw new Error(`blog-post-checks: blog/${slug}/index.html was not built`);
           }
-          const html = fs.readFileSync(page, "utf8");
-          checkPost({ slug, html, source: fs.readFileSync(postSource(slug), "utf8") });
+          const { document } = parseHTML(fs.readFileSync(page, "utf8"));
+          checkPost({ slug, document, source: fs.readFileSync(postSource(slug), "utf8") });
         }
         logger.info(`${POST_SLUGS.length} posts checked`);
       }

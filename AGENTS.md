@@ -40,7 +40,7 @@ Keep a test of a relation across a table's rows (a key present in two tables, a 
 
 ## Code style
 
-Think about readability and elegance before writing, not after. Every rule a linter can check lives in `oxlint.config.ts` (or, for `.astro` templates, `eslint.config.ts`) and `bun run lint` enforces it; read those files rather than relying on memory. On top of those:
+Think about readability and elegance before writing, not after. Every rule a linter can check lives in `oxlint.config.ts` (or, for `.astro` templates and stylesheets, `eslint.config.ts`) and `bun run lint` enforces it; read those files rather than relying on memory. Styles are Tailwind only, and lint rejects hand-written CSS. On top of those:
 
 - Write new code in TypeScript.
 - **Guard clauses.** Return or throw early on edge cases so the main path isn't nested inside `if`/`else`.

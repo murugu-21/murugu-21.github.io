@@ -18,9 +18,9 @@
     "preview": "wrangler dev --local-upstream localhost:8787",
     "format": "oxfmt src worker contracts scripts utils content vitest.config.ts wrangler.jsonc astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && prettier --write \"src/**/*.astro\"",
     "check-format": "oxfmt src worker contracts scripts utils content vitest.config.ts wrangler.jsonc astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --check && prettier --check \"src/**/*.astro\"",
-    "lint": "astro sync && oxlint src worker contracts scripts utils vitest.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && bun run lint:astro src",
-    "lint:astro": "node --require ./scripts/site/ts-alias.cjs node_modules/.bin/eslint",
-    "lint:fix": "astro sync && oxlint src worker contracts scripts utils vitest.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --fix && bun run lint:astro src --fix",
+    "lint": "astro sync && oxlint src worker contracts scripts utils vitest.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && bun run lint:eslint src",
+    "lint:eslint": "node --require ./scripts/site/ts-alias.cjs node_modules/.bin/eslint",
+    "lint:fix": "astro sync && oxlint src worker contracts scripts utils vitest.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --fix && bun run lint:eslint src --fix",
     "knip": "knip",
     "db:migrate": "wrangler d1 migrations apply jarvis-chats --remote",
     "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",
@@ -75,6 +75,7 @@
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@commitlint/types": "^21.2.3",
+    "@eslint/css": "^2.0.0",
     "@mermaid-js/mermaid-cli": "^12.0.0",
     "@modelcontextprotocol/client": "2.0.0",
     "@posthog/rollup-plugin": "^1.6.1",
@@ -93,6 +94,7 @@
     "@vitest/coverage-istanbul": "4.1.11",
     "eslint": "^10.12.0",
     "eslint-plugin-astro": "^3.2.1",
+    "eslint-plugin-better-tailwindcss": "^4.9.0",
     "eslint-plugin-jsx-a11y-x": "^0.2.0",
     "fast-check": "^4.10.2",
     "firacode": "6.2.0",
@@ -102,6 +104,7 @@
     "lint-staged": "^17.6.0",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
+    "oxlint-tailwindcss": "^1.14.0",
     "oxlint-tsgolint": "^7.0.2003",
     "pdf-parse": "^2.4.5",
     "playwright": "^1.63.0",
@@ -112,6 +115,7 @@
     "sharp": "^0.35.5",
     "shiki": "^4.5.0",
     "subset-font": "^2.9.0",
+    "tailwind-csstree": "^0.4.1",
     "tailwindcss": "^4.3.3",
     "typescript": "7.1.0-dev.20261007.1",
     "vfile": "^6.0.3",
@@ -125,9 +129,13 @@
       "oxlint --fix",
       "oxfmt"
     ],
-    "*.{json,jsonc,css,md}": "oxfmt",
+    "*.{json,jsonc,md}": "oxfmt",
+    "*.css": [
+      "bun run lint:eslint --fix",
+      "oxfmt"
+    ],
     "*.astro": [
-      "bun run lint:astro --fix",
+      "bun run lint:eslint --fix",
       "prettier --write"
     ]
   }

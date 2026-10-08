@@ -4,8 +4,8 @@ import { render } from "vitest-browser-react";
 
 import { ListenControls } from "./ListenControls.tsx";
 
-const POST = `<article class="blog-post">
-  <header><h1>Read me</h1></header>
+const POST = `<article>
+  <header><h1 data-post-title>Read me</h1></header>
   <section data-post-body>
     <p>Hello <a href="#">big</a> world.</p>
     <pre>const skipped = true;</pre>
@@ -133,7 +133,7 @@ let resetRate: (() => Promise<void>) | null = null;
 const mount = async (html = POST) => {
   document.body.insertAdjacentHTML("beforeend", `<div id="page">${html}</div>`);
   const island = document.createElement("div");
-  island.className = "listen-island";
+  island.dataset.listenIsland = "";
   document.body.append(island);
   const screen = await render(<ListenControls slug="hello" />, { container: island });
   const read = (selector: string) => document.querySelector(selector)?.textContent ?? null;
@@ -153,10 +153,10 @@ const mount = async (html = POST) => {
     pause: screen.getByRole("button", { name: "Pause" }),
     // Elapsed, total and the speed pill, as the reader sees them.
     readout: () => island.textContent,
-    // The page docks the bar while this class is set.
-    listening: () => island.classList.contains("listening"),
-    block: () => read(".is-speaking"),
-    word: () => read(".is-word"),
+    // The page docks the bar while this attribute is set.
+    listening: () => island.hasAttribute("data-listening"),
+    block: () => read("[data-speaking]"),
+    word: () => read("[data-current-word]"),
     pickRate
   };
 };
@@ -170,7 +170,7 @@ afterEach(async () => {
   await resetRate?.();
   resetRate = null;
   document.getElementById("page")?.remove();
-  document.querySelectorAll(".listen-island").forEach(island => island.remove());
+  document.querySelectorAll("[data-listen-island]").forEach(island => island.remove());
   audios.length = 0;
   vi.unstubAllGlobals();
 });
@@ -222,8 +222,8 @@ it("reads the post block by block with speech synthesis when it has no audio", a
 it("lights the word a speech boundary points at, late in a long paragraph", async () => {
   serveAudio();
   const speech = fakeSpeech();
-  const ui = await mount(`<article class="blog-post">
-    <header><h1>Read me</h1></header>
+  const ui = await mount(`<article>
+    <header><h1 data-post-title>Read me</h1></header>
     <section data-post-body><p>It is a long way to go.</p></section>
   </article>`);
 
@@ -401,7 +401,7 @@ it("with neither audio nor speech synthesis, retries on the next press", async (
 });
 
 it("stays disabled on a page with nothing to read", async () => {
-  const bare = await mount("<article class='blog-post'><p>No post body here.</p></article>");
+  const bare = await mount("<article><p>No post body here.</p></article>");
   await expect.element(bare.listen).toBeDisabled();
   await expect
     .element(bare.screen.getByRole("button", { name: "1× playback speed" }))

@@ -103,7 +103,7 @@ Two features improve where supported and degrade cleanly. The phone menu's slide
 ```bash
 bun run check-format   # oxfmt, plus prettier for .astro
 typos                  # spelling, configured in _typos.toml
-bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates
+bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates and stylesheets
 bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
 bun run check:src      # type-check src/ (.astro files included), scripts/ and the config files
@@ -116,20 +116,22 @@ bun run test --coverage # the same, plus Istanbul coverage in coverage/
 
 The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
 
-typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:astro` preloads `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
+typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:eslint` preloads `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
 
-Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, over the `.astro` files in `src/` to cover the templates. It lints nothing else, so its rules don't overlap oxlint's. Delete it, along with ESLint and its plugins, once oxlint can parse Astro templates.
+Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts` over the `.astro` files in `src/`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, to cover the templates. It also runs `@eslint/css` over the stylesheets, which oxlint can't parse at all. It lints nothing else, so its rules don't overlap oxlint's. Move the templates to oxlint once it can parse them.
 
 Having both compilers installed has two side effects:
 
 - The TypeScript 6 copy wins `node_modules/.bin/tsc`, so bare `bunx tsc` reports 6.0.3. The `check:*` scripts call `node node_modules/typescript/bin/tsc` by path to get 7.
 - TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace TypeScript version" picks up 6. Point it at the TypeScript 7 language service instead.
 
+Styles are Tailwind only. Every class is a Tailwind utility, either built in or defined in `src/styles/global.css`, and is composed with `cn()` or a `cva()` variant. A script hook is a `data-*` attribute, not a class. Values come from Tailwind's defaults (breakpoints, spacing, type scale) or the theme's tokens. Oxlint checks the classes in `.ts` and `.tsx`, including `no-arbitrary-value`. Where Tailwind has no default for a value, disable that rule on the line and give the reason. ESLint checks the classes in `.astro` and keeps hand-written rules out of the stylesheets; better-tailwindcss has no arbitrary-value rule, so `.astro` relies on review for that. The resume has its own entry, `src/styles/resume.css`, without preflight or the site theme. Two changes wait on upstream releases. When `prettier-plugin-tailwindcss` supports `prettier-plugin-astro` 1 (merged in tailwindlabs/prettier-plugin-tailwindcss#473, unreleased as of 2026-10-08), move `.astro` class order from ESLint to Prettier. When oxlint parses `.astro`, widen its Tailwind override's `files` to `.astro`.
+
 ## Deployment
 
 Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume. It uploads the test coverage (`coverage/lcov.info`) to [Qlty](https://qlty.sh) over OIDC, so no token is stored. A failed upload, such as on a fork's pull request, doesn't fail the job.
 
-`.github/workflows/links.yml` checks every link in the repo's markdown with [lychee](https://lychee.cli.rs) each Monday and fails on a broken one; its settings and the hosts it skips are in `lychee.toml`, and `lychee .` runs the same check locally (`brew install lychee`). `.github/workflows/lighthouse.yml` runs Lighthouse CI against the live site each Monday (the homepage, `/blog/` and one long post, three runs each) and fails when a category score on the median run (picked by performance) drops below its floor in `lighthouserc.yml`. It audits the deployed site rather than a local build, so the scores include Cloudflare's caching and compression. [Renovate](https://docs.renovatebot.com) (`renovate.json`, read by the Renovate GitHub app) opens dependency updates once a week and keeps actions pinned to a commit SHA with the version as a comment.
+`.github/workflows/links.yml` checks every link in the repo's markdown with [lychee](https://lychee.cli.rs) each Monday and fails on a broken one; its settings and the hosts it skips are in `lychee.toml`, and `lychee .` runs the same check locally (`brew install lychee`). `.github/workflows/lighthouse.yml` runs Lighthouse CI against the live site each Monday (the homepage, `/blog/` and one long post, three runs each) and fails when a category score on the median run (picked by performance) drops below its floor in `lighthouserc.yml`. It audits the deployed site rather than a local build, so the scores include Cloudflare's caching and compression. Each run links its HTML reports on the run's summary page; Lighthouse CI's temporary public storage keeps them for a few days. [Renovate](https://docs.renovatebot.com) (`renovate.json`, read by the Renovate GitHub app) opens dependency updates once a week and keeps actions pinned to a commit SHA with the version as a comment.
 
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 

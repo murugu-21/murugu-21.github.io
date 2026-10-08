@@ -15,6 +15,7 @@ import {
 } from "#src/lib/blog/posts.ts";
 import { ListenControls } from "#src/components/blog/ListenControls.tsx";
 import TableOfContents from "#src/components/blog/TableOfContents.astro";
+import Prose from "#src/components/Prose.astro";
 
 // previous is the older post, next the newer one; the list is newest first.
 export async function getStaticPaths() {
@@ -43,21 +44,25 @@ const description = postDescription(post);
   description={description}
   article={{ published: post.data.date, tags: postKeywords(post) }}
 >
-  <article class="blog-post">
+  {/* data-speaking marks the block being read aloud (listen-player.ts); the
+       scroll margin clears the 12+58px pinned read-aloud bar. */}
+  <Prose
+    as="article"
+    class="**:data-speaking:scroll-mt-20 **:data-speaking:rounded-sm **:data-speaking:bg-amber/14 **:data-speaking:ring-6 **:data-speaking:ring-amber/14 **:data-speaking:transition motion-reduce:**:data-speaking:transition-none dark:**:data-speaking:bg-box-dark/14 dark:**:data-speaking:ring-box-dark/14 prose-img:cursor-zoom-in"
+  >
     <header>
-      <h1>{post.data.title}</h1>
+      <h1 data-post-title>{post.data.title}</h1>
       <p>
         {formatDate(post.data.date)}
         {` • ${formatReadingTime(timeToRead(post.body))}`}
       </p>
-      {/* Each tag links to /blog/?tag=…, the URL the index's own chips write.
-           `no-underline` beats `.blog-post a`'s underline. */}
-      <div class="mb-4 flex flex-row flex-wrap gap-[10px]">
+      {/* Each tag links to /blog/?tag=…, the URL the index's own chips write. */}
+      <div class="not-prose mb-4 flex flex-row flex-wrap gap-2.5">
         {post.data.tags.map(tag => (
           <a
             href={tagPath(tag)}
             aria-label={`All posts tagged ${tag}`}
-            class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
+            class="border border-chip-outline px-2 py-0.5 text-sm text-navy dark:border-chip-outline-dark dark:text-blue-light"
           >
             {/* inline-block so the selection hugs the text; otherwise Chrome
                   paints it over the chip padding plus a line-end marker. */}
@@ -66,14 +71,14 @@ const description = postDescription(post);
         ))}
       </div>
     </header>
-    {/* Read-aloud island; ships disabled at full size so hydration doesn't
-         shift layout. `ui-island` scopes the shadcn tokens. Sticky only while
-         `.listening` (set by the island), and a direct child of the article
-         because sticky only travels inside its parent. `pt-3` is always there
-         so the layout never shifts; post.css scroll-margin-top clears the
-         12+58px pinned bar. */}
-    <div class="listen-sentinel h-px -mb-px" aria-hidden="true"></div>
-    <div class="listen-island ui-island mb-4 pt-3 [&.listening]:sticky [&.listening]:top-0 [&.listening]:z-30 [&.listening.pinned]:bg-nav-scrolled [&.listening.pinned]:backdrop-blur-[15px] dark:[&.listening.pinned]:bg-nav-scrolled-dark">
+    {/* The read-aloud island ships disabled at full size, and pt-3 is always there,
+         so hydration never shifts layout. It is a direct child of the article
+         because a sticky element only moves within its parent. */}
+    <div class="-mb-px h-px" aria-hidden="true" data-listen-sentinel></div>
+    <div
+      class="not-prose mb-4 ui-island pt-3 data-listening:sticky data-listening:top-0 data-listening:z-30 data-listening:data-pinned:bg-nav-scrolled data-listening:data-pinned:backdrop-blur-lg dark:data-listening:data-pinned:bg-nav-scrolled-dark print:hidden"
+      data-listen-island
+    >
       {/* client:interaction, not client:idle: idle can fire before first paint
           and charge ~100 KB to FCP/LCP. Trade-off: a first-touch tap on Play
           lands on the disabled button. */}
@@ -83,10 +88,10 @@ const description = postDescription(post);
       <Content />
     </section>
     <hr />
-    <footer class="py-6">
+    <footer class="not-prose py-6">
       <Bio />
     </footer>
-  </article>
+  </Prose>
   {/* After the article, not inside it: see the component header. */}
   <TableOfContents headings={headings} />
   <nav aria-label="Previous and next posts">
@@ -118,20 +123,23 @@ const description = postDescription(post);
 </BlogLayout>
 
 <script>
-  // `.pinned` once the sentinel scrolls out: paints the frosted band behind a
-  // docked bar's gap. Styling only.
-  const sentinel = document.querySelector<HTMLElement>(".listen-sentinel");
-  const island = document.querySelector<HTMLElement>(".listen-island");
+  // Sets `data-pinned` once the sentinel scrolls off the top of the viewport, which
+  // paints the frosted band behind the docked bar's gap. Styling only.
+  const sentinel = document.querySelector<HTMLElement>("[data-listen-sentinel]");
+  const island = document.querySelector<HTMLElement>("[data-listen-island]");
   if (sentinel && island) {
     new IntersectionObserver(([entry]) => {
-      island.classList.toggle("pinned", !entry.isIntersecting && entry.boundingClientRect.top < 0);
+      island.toggleAttribute(
+        "data-pinned",
+        !entry.isIntersecting && entry.boundingClientRect.top < 0
+      );
     }).observe(sentinel);
   }
 </script>
 
 <script>
   // Image zoom, loaded on hover/click. Scoped to the body <section> to skip the Bio avatar.
-  const imgs = document.querySelectorAll<HTMLImageElement>("article.blog-post section img");
+  const imgs = document.querySelectorAll<HTMLImageElement>("[data-post-body] img");
   if (imgs.length > 0) {
     let zoomPromise: Promise<ReturnType<typeof import("medium-zoom").default>> | null = null;
     const loadZoom = () =>

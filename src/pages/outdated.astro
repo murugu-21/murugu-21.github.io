@@ -11,6 +11,8 @@ import { MIN_VERSIONS, continueLinkScript } from "#src/lib/browser-support.ts";
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>Your browser is out of date | Murugappan M</title>
+    {/* eslint-disable no-restricted-syntax, better-tailwindcss/no-unknown-classes -- Plain CSS, not
+        Tailwind, because browsers below the floor can't run Tailwind 4's output, and this page skips global.css. */}
     <style is:inline>
       :root {
         color: #1c1633;
@@ -38,7 +40,7 @@ import { MIN_VERSIONS, continueLinkScript } from "#src/lib/browser-support.ts";
         margin-top: 1rem;
       }
       /* Last, so it overrides the light colours above. */
-      @media (prefers-color-scheme: dark) {
+      @media screen and (prefers-color-scheme: dark) {
         :root {
           color: #e8e6f0;
           background: #282c35;

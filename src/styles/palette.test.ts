@@ -1,10 +1,8 @@
-// WCAG contrast guards for the design tokens: global.css (sky, card, night)
-// and islands.css. The CSS is inlined by vitest.config.ts.
+// WCAG contrast guards for the design tokens in global.css: sky, card, night
+// and the islands.
 import { describe, expect, it } from "vitest";
 
-declare const __GLOBAL_CSS__: string;
-declare const __ISLANDS_CSS__: string;
-const css = __GLOBAL_CSS__;
+import css from "./global.css?raw";
 
 const channels = (c: string): number[] => {
   const hex = /^#([0-9a-f]{6})$/i.exec(c);
@@ -118,15 +116,6 @@ describe("blue-hour light palette", () => {
     expect(contrast(over("rgba(255, 255, 255, 0.8)", fill), fill)).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The blog's link hover/focus ink (post.css `.blog-post a:hover`). It sits
-  // on 16px links that can cross the sky's deep stop, so it needs the
-  // normal-text bar there. The plain amber-ink only clears 3:1 on it.
-  it("keeps --color-amber-ink-deep readable as 16px link hover on every stop", () => {
-    for (const stop of stops) {
-      expect(contrast(ink("amber-ink-deep"), stop)).toBeGreaterThanOrEqual(4.5);
-    }
-  });
-
   // Chip outlines (tag filter chips, per-post tags, the portfolio's skill
   // chips) are the boundary of a UI component: 3:1 against the sky they sit on.
   it("shows the chip outline against every sky stop (>= 3:1)", () => {
@@ -143,10 +132,10 @@ describe("blue-hour light palette", () => {
     }
   });
 
-  // The read-aloud highlight (post.css): the spoken word is --color-amber at
-  // 25% inside its block at 14%, and body ink over both washes must stay AA on
-  // the deep stop. The alphas are restated here rather than parsed from
-  // post.css, so a change there must be mirrored in this test.
+  // The read-aloud highlight: the spoken word (audio-words.ts) is --color-amber
+  // at 25% inside its block (blog/[...slug].astro) at 14%, and body ink over
+  // both washes must stay AA on the deep stop. This test restates the alphas instead
+  // of parsing them from those classes, so mirror any change to them here.
   it("keeps body ink readable through the read-aloud highlight (>= 4.5:1)", () => {
     const amber = channels(ink("amber"));
     const wash = (alpha: number) => `rgba(${amber[0]}, ${amber[1]}, ${amber[2]}, ${alpha})`;
@@ -207,6 +196,31 @@ describe("night palette", () => {
     for (const stop of night) expect(contrast(ink(name), stop)).toBeGreaterThanOrEqual(4.5);
   });
 
+  // --color-blue is under 4.5:1 at night, so it is only for large text (the
+  // .accent heading word, the 404 heading) and icons; smaller text uses blue-light.
+  it("keeps --color-blue legible as night large text and graphics (>= 3:1)", () => {
+    for (const stop of night) expect(contrast(ink("blue"), stop)).toBeGreaterThanOrEqual(3);
+  });
+
+  // Projects.astro's topic chips: blue-light text on blue at 15% over the
+  // canvas. The test restates the alpha from the utility, as the tag badge test below does.
+  it("keeps the project topic chips readable at night (>= 4.5:1)", () => {
+    const [r, g, b] = channels(ink("blue"));
+    for (const stop of night) {
+      const fill = over(`rgba(${r}, ${g}, ${b}, 0.15)`, stop);
+      expect(contrast(ink("blue-light"), fill)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  // Secondary text on the homepage and /about: its day side crosses the sky's
+  // deep stop, its night side is translucent white on the canvas.
+  it("keeps --color-subtitle-muted readable by day and at night (>= 4.5:1)", () => {
+    const { light, dark } = lightDark(ink("subtitle-muted"));
+    const day = /^var\(--([\w-]+)\)$/.exec(light)?.[1];
+    expect(contrast(day ? token(day) : light, sky.deep)).toBeGreaterThanOrEqual(4.5);
+    for (const stop of night) expect(contrast(over(dark, stop), stop)).toBeGreaterThanOrEqual(4.5);
+  });
+
   // The checked tag chip: white text on the box-dark fill (Tag.astro).
   it("keeps white text readable on the checked chip fill (>= 4.5:1)", () => {
     expect(contrast("#ffffff", ink("box-dark"))).toBeGreaterThanOrEqual(4.5);
@@ -220,7 +234,7 @@ describe("night palette", () => {
     }
   });
 
-  // The code fence's and inline code's night edge (code.css, post.css).
+  // The prose code fence's night edge (Prose.astro).
   it("shows the blog's dark panel edges against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
       expect(contrast(over(token("color-fence-edge-dark"), stop), stop)).toBeGreaterThanOrEqual(3);
@@ -252,7 +266,7 @@ describe("night palette", () => {
     expect(contrast(placeholder, ink("dark-bg"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The dark read-aloud highlight (post.css): box-dark at 20% for the word
+  // The dark read-aloud highlight: box-dark at 20% for the word
   // inside its block at 14%. A LINK inside the spoken word (blue-light) is
   // the tight case; body ink has more room. Alphas restated, as for the light
   // guard above.
@@ -286,12 +300,52 @@ describe("night palette", () => {
   });
 });
 
+// The typography plugin's text colours (prose-site), each side on its own
+// canvas: by day the sky's deep stop, at night every night stop.
+describe("prose colours", () => {
+  const body = (() => {
+    const selector = "@utility prose-site {";
+    const at = css.indexOf(selector);
+    if (at === -1) throw new Error(`no ${selector} block in global.css`);
+    return css.slice(at + selector.length, css.indexOf("}", at));
+  })();
+  const pair = (name: string) => {
+    const m = new RegExp(`--tw-prose-${name}:\\s*([^;]+);`).exec(body);
+    if (!m) throw new Error(`no --tw-prose-${name} in prose-site`);
+    const resolve = (side: string) => {
+      const ref = /^var\(--([\w-]+)\)$/.exec(side)?.[1];
+      return ref ? token(ref) : side;
+    };
+    const { light, dark } = lightDark(m[1].trim());
+    return { light: resolve(light), dark: resolve(dark) };
+  };
+
+  it.each(["body", "headings", "bold", "quotes", "code", "links"])(
+    "keeps --tw-prose-%s readable by day and at night (>= 4.5:1)",
+    name => {
+      const { light, dark } = pair(name);
+      expect(contrast(light, sky.deep)).toBeGreaterThanOrEqual(4.5);
+      for (const stop of night) expect(contrast(dark, stop)).toBeGreaterThanOrEqual(4.5);
+    }
+  );
+
+  // A plain fence (not Shiki's, which brings its own colours) on its panel.
+  it("keeps fence text readable on the fence background (>= 4.5:1)", () => {
+    const text = pair("pre-code");
+    const bg = pair("pre-bg");
+    expect(contrast(text.light, bg.light)).toBeGreaterThanOrEqual(4.5);
+    for (const stop of night) {
+      expect(contrast(text.dark, over(bg.dark, stop))).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
+
 describe.each(["light", "dark"] as const)("%s island tokens", mode => {
   const t = (() => {
-    const selector = ".ui-island {";
-    const at = __ISLANDS_CSS__.indexOf(selector);
-    if (at === -1) throw new Error(`no ${selector} block in islands.css`);
-    const body = __ISLANDS_CSS__.slice(at + selector.length, __ISLANDS_CSS__.indexOf("}", at));
+    const selector = "@utility ui-island {";
+    const at = css.indexOf(selector);
+    if (at === -1) throw new Error(`no ${selector} block in global.css`);
+    const body = css.slice(at + selector.length, css.indexOf("}", at));
     return Object.fromEntries(
       [...body.matchAll(/(--[\w-]+)\s*:\s*(light-dark\([^;]+);/g)].map(m => [
         m[1],

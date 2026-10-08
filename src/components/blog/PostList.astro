@@ -43,7 +43,7 @@ const tags: TagCount[] = [...totals]
   const root = document.querySelector<HTMLElement>("[data-post-list]");
   if (root) {
     const search = root.querySelector<HTMLInputElement>("#search");
-    const tagInputs = Array.from(root.querySelectorAll<HTMLInputElement>("input.tag"));
+    const tagInputs = Array.from(root.querySelectorAll<HTMLInputElement>("input[data-tag]"));
     const items = Array.from(root.querySelectorAll<HTMLLIElement>("li[data-tags]")).map(li => ({
       li,
       text: li.dataset.search ?? "",

@@ -55,7 +55,7 @@ const follow = (el: Element, band?: ScrollBand) => {
   if (block) el.scrollIntoView({ block, behavior: "smooth" });
 };
 
-// Marks the block being read (.is-speaking) and its current word (.is-word).
+// Marks the block being read (data-speaking) and its current word (data-current-word).
 // A word is one or more spans, since it may straddle an inline element.
 class Highlighter {
   #block: Element | null = null;
@@ -63,17 +63,17 @@ class Highlighter {
 
   block(el: Element | null) {
     if (el === this.#block) return;
-    this.#block?.classList.remove("is-speaking");
+    this.#block?.removeAttribute("data-speaking");
     this.#block = el;
-    el?.classList.add("is-speaking");
+    el?.setAttribute("data-speaking", "");
     if (el) follow(el);
   }
 
   word(pieces: HTMLElement[] | null) {
     if (pieces === this.#word) return;
-    this.#word?.forEach(p => p.classList.remove("is-word"));
+    this.#word?.forEach(p => p.removeAttribute("data-current-word"));
     this.#word = pieces;
-    pieces?.forEach(p => p.classList.add("is-word"));
+    pieces?.forEach(p => p.setAttribute("data-current-word", ""));
     // Inside a paragraph taller than the reading band, follow the word.
     if (pieces?.length) follow(pieces[0], WORD_BAND);
   }
@@ -107,9 +107,9 @@ const wordsByOffset = (text: string): TimedWord[] => {
 // Same extraction and normalisation as the generator, so texts line up with
 // the timing JSON. The title is read first.
 export const collectBlocks = (): Block[] => {
-  const body = document.querySelector("article.blog-post section[data-post-body]");
+  const body = document.querySelector("[data-post-body]");
   if (!body) return [];
-  const title = document.querySelector("article.blog-post header h1");
+  const title = document.querySelector("[data-post-title]");
   const titled = title ? [{ el: title, text: title.textContent ?? "" }] : [];
   return [...titled, ...speechBlocks(body)]
     .map(b => ({ el: b.el, text: normalizeSpeechText(b.text) }))

@@ -1,10 +1,7 @@
 ---
-// One tag filter chip: a visually hidden checkbox `.tag` plus its label,
-// styled from the checkbox state; PostList.astro's script reads it on `change`.
-//
-// `[.tag:…+&]:` variants, not `peer-*`: peer compiles to `~`, and all chips are
-// siblings, so checking one would paint every later label. Hovering a label
-// forwards `:hover` to its offscreen checkbox, so `.tag:hover + label` works.
+import { cn } from "#src/lib/utils.ts";
+
+// A tag filter chip. PostList.astro's script reads its checkbox `[data-tag]` on `change`.
 export interface TagCount {
   name: string;
   count: number;
@@ -14,36 +11,27 @@ interface Props {
   tag: TagCount;
 }
 const { tag } = Astro.props;
-
-const labelClass = [
-  "mt-[.875em] mr-[.75em] flex cursor-pointer items-center rounded-[.25em]",
-  "[.tag:checked+&]:bg-navy [.tag:checked+&]:text-white dark:[.tag:checked+&]:bg-box-dark",
-  "[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline)] [.tag:hover+&]:outline-none",
-  "dark:[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline-dark)]",
-  // Solid rings: half-alpha ones miss the 3:1 a focus indicator needs.
-  "[.tag:focus-visible+&]:ring-2 [.tag:focus-visible+&]:ring-amber-ink",
-  "dark:[.tag:focus-visible+&]:ring-blue-light"
-].join(" ");
 ---
 
-{/* Visually hidden but focusable: it is the label's styling source. */}
-<input
-  class="tag absolute -left-[99999px] opacity-0"
-  type="checkbox"
-  id={`tag-${tag.name}`}
-  value={tag.name}
-/>
-<label for={`tag-${tag.name}`} class={labelClass}>
+<label
+  class={cn(
+    "group relative mt-3.5 mr-3 flex cursor-pointer items-center rounded-sm hover:shadow-md hover:shadow-chip-outline hover:outline-none has-checked:bg-navy has-checked:text-white dark:hover:shadow-chip-outline-dark dark:has-checked:bg-box-dark",
+    // The rings are solid because a half-alpha ring misses the 3:1 a focus indicator needs.
+    "has-focus-visible:ring-2 has-focus-visible:ring-amber-ink dark:has-focus-visible:ring-blue-light"
+  )}
+>
+  {/* Visually hidden but focusable, and the source of the label's state styles. */}
+  <input class="sr-only" data-tag type="checkbox" value={tag.name} />
   {/* Inline-block text spans: on a padded flex item, Chrome paints a
       line-end selection marker out to the cell's edge. An atomic inline
       keeps the text off that line box. */}
-  <span class="rounded-[.25em_0_0_.25em] border border-chip-outline px-[.5em] dark:border-chip-outline-dark">
+  <span class="rounded-l-sm border border-chip-outline px-2 dark:border-chip-outline-dark">
     <span class="inline-block">{tag.name}</span>
   </span>
   {/* Badge alphas are tuned for AA (palette.test.ts guards night). Not a flex
       box, which would blockify the span and bring the selection marker back;
       `content-center` centres the numeral instead. */}
-  <div class="content-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy [.tag:checked+label_&]:bg-white/10 [.tag:checked+label_&]:text-white dark:bg-blue-light/12 dark:text-blue-light">
+  <div class="content-center self-stretch rounded-r-sm bg-navy/10 px-2 text-xs text-navy group-has-checked:bg-white/10 group-has-checked:text-white dark:bg-blue-light/12 dark:text-blue-light">
     <span class="inline-block">{tag.count}</span>
   </div>
 </label>

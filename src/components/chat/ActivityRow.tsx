@@ -58,10 +58,21 @@ export function ActivityRow({ activity }: { activity: Activity | null }) {
           stable line below is announced instead. */}
       <div
         aria-hidden="true"
-        className="flex max-w-[85%] items-center gap-2 self-start rounded-xl rounded-bl-sm bg-muted px-3 py-2 text-sm text-muted-foreground"
+        className="flex max-w-4/5 items-center gap-2 self-start rounded-xl rounded-bl-sm bg-muted px-3 py-2 text-sm text-muted-foreground"
       >
-        {activity ? <span className="chat-tool-dot" /> : <span className="chat-spark">✦</span>}
-        <span className="chat-shimmer">
+        {/* The spark marks a thinking beat, the dot a real tool call. */}
+        {activity ? (
+          <span className="size-2 flex-none animate-chat-tool-dot rounded-full bg-primary motion-reduce:animate-none" />
+        ) : (
+          <span className="animate-chat-spark text-xs leading-none text-primary motion-reduce:animate-none">
+            ✦
+          </span>
+        )}
+        {/* Reduced motion undoes the gradient too, or the label stays transparent. */}
+        <span
+          // oxlint-disable-next-line tailwindcss/no-arbitrary-value -- the shimmer needs a background wider than the label; no bg-size default is a percentage
+          className="animate-chat-shimmer bg-linear-90 from-muted-foreground from-35% via-foreground via-50% to-muted-foreground to-65% bg-size-[220%_100%] bg-clip-text text-transparent motion-reduce:animate-none motion-reduce:bg-none motion-reduce:text-muted-foreground"
+        >
           {activity ? toolLabel(activity.name, activity.detail) : word}…
         </span>
         {showElapsed && <span className="text-xs tabular-nums opacity-60">{elapsed}s</span>}

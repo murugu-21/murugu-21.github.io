@@ -10,8 +10,8 @@ afterEach(() => {
 
 describe("postBlocks", () => {
   it("reads the title, then the body's paragraphs and list items, normalized for speech", () => {
-    const html = `<html><body><article class="blog-post">
-      <header><h1>Floating point 🧮</h1></header>
+    const html = `<html><body><article>
+      <header><h1 data-post-title>Floating point 🧮</h1></header>
       <section data-post-body>
         <p>Is 0.1 + 0.2
            equal to 0.3?!</p>

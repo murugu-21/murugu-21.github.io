@@ -7,6 +7,6 @@ import { PUBLIC_CHAT_HOST } from "astro:env/client";
 import { ChatWidget } from "./ChatWidget";
 ---
 
-<div id="chat-widget-root" class="ui-island">
+<div id="chat-widget-root" class="ui-island print:hidden">
   <ChatWidget client:interaction host={PUBLIC_CHAT_HOST} />
 </div>
