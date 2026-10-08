@@ -4,8 +4,8 @@ import { render } from "vitest-browser-react";
 
 import { ListenControls } from "./ListenControls.tsx";
 
-const POST = `<article class="blog-post">
-  <header><h1>Read me</h1></header>
+const POST = `<article>
+  <header><h1 data-post-title>Read me</h1></header>
   <section data-post-body>
     <p>Hello <a href="#">big</a> world.</p>
     <pre>const skipped = true;</pre>
@@ -222,8 +222,8 @@ it("reads the post block by block with speech synthesis when it has no audio", a
 it("lights the word a speech boundary points at, late in a long paragraph", async () => {
   serveAudio();
   const speech = fakeSpeech();
-  const ui = await mount(`<article class="blog-post">
-    <header><h1>Read me</h1></header>
+  const ui = await mount(`<article>
+    <header><h1 data-post-title>Read me</h1></header>
     <section data-post-body><p>It is a long way to go.</p></section>
   </article>`);
 
@@ -401,7 +401,7 @@ it("with neither audio nor speech synthesis, retries on the next press", async (
 });
 
 it("stays disabled on a page with nothing to read", async () => {
-  const bare = await mount("<article class='blog-post'><p>No post body here.</p></article>");
+  const bare = await mount("<article><p>No post body here.</p></article>");
   await expect.element(bare.listen).toBeDisabled();
   await expect
     .element(bare.screen.getByRole("button", { name: "1× playback speed" }))

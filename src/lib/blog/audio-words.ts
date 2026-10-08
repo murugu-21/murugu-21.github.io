@@ -112,6 +112,10 @@ const isText = (node: Node): node is Text => node.nodeType === 3;
 const isElement = (node: Node): node is Element => node.nodeType === 1;
 
 const WORD_ATTR = "data-w";
+// The spoken word (data-current-word, set by listen-player.ts) over its block's
+// wash. palette.test.ts holds the ink AA through both washes.
+const WORD_CLASS =
+  "data-current-word:rounded-xs data-current-word:bg-amber/25 data-current-word:ring-2 data-current-word:ring-amber/25 dark:data-current-word:bg-box-dark/20 dark:data-current-word:ring-box-dark/20";
 
 const textNodes = (node: Node): Text[] =>
   Array.from(node.childNodes).flatMap(child => {
@@ -152,6 +156,7 @@ export function wrapWords(el: Element): HTMLElement[][] {
       }
       const span = doc.createElement("span");
       span.setAttribute(WORD_ATTR, String(words.length - 1));
+      span.className = WORD_CLASS;
       span.textContent = run;
       word.push(span);
       frag.append(span);

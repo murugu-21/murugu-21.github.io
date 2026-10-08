@@ -2,16 +2,23 @@
    sets `color-scheme: dark` (below) so every `light-dark()` pair follows it. */
 
 @import "tailwindcss";
-/* `prose` for /about and /developers (src/components/Prose.astro). */
+/* `prose` for blog posts, /about and /developers (src/components/Prose.astro). */
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:where(html.dark-mode *));
 
 /* The blog's table of contents (TableOfContents.astro). Hover pointers get the
-   rail from 64rem. Touch devices only get it, always expanded, from 87rem, where
-   the panel clears the 42rem column: 2 × (19.75rem prose half + 22.25rem panel)
-   = 84rem, plus a 1.5rem gap. */
-@custom-variant toc-shown (@media (min-width: 64rem) and (hover: hover), (min-width: 87rem) and (hover: none));
+   rail from lg (64rem). Touch devices only get it, always expanded, from 2xl
+   (96rem), where the panel clears the 42rem column: 2 × (19.75rem prose half +
+   22.25rem panel) = 84rem, plus a gap. */
+@custom-variant toc-shown {
+  @media (min-width: 64rem) and (hover: hover) {
+    @slot;
+  }
+  @media (min-width: 96rem) and (hover: none) {
+    @slot;
+  }
+}
 /* Collapsed to bars while neither hovered nor keyboard-focused. `:has(:focus-visible)`,
    not `:focus-within`: a mouse click would leave the panel held open over the prose. */
 @custom-variant toc-collapsed {
@@ -53,9 +60,6 @@
   --color-dusk-violet: #443c8f;
   --color-amber: #b45309;
   --color-amber-ink: #8a4406;
-  /* Blog link hover (the blog-post utility): amber-ink only reaches 3:1 on the deep stop;
-     this holds 4.5:1 for body-size links. */
-  --color-amber-ink-deep: #663000;
   --color-title: #1c1633;
   --color-text: #292444;
   --color-subtitle: #413b58;
@@ -90,9 +94,9 @@
   --color-blue-light: #7da2ff;
   /* deep enough for white on the checked chip to clear AA */
   --color-box-dark: #2a56c8;
-  /* Night edge of code fences and inline code: 3:1 so they read as panels. */
+  /* Night edge of prose code fences: 3:1 so they read as panels. */
   --color-fence-edge-dark: rgba(255, 255, 255, 0.35);
-  /* Blog hr and table rules (the blog-post utility); held at 2:1 on every sky stop. */
+  /* Prose bullets, hr and table rules (prose-site); held at 2:1 on every sky stop. */
   --color-accent-grey: rgba(6, 3, 141, 0.4);
   --color-accent-grey-dark: #818cab;
   /* TOC rail bars (TableOfContents.astro): a UI component, so 3:1 on every
@@ -100,7 +104,7 @@
   --color-toc-bar: rgba(6, 3, 141, 0.6);
   --color-heading-dark: #f4f4f4;
   --color-text-dark: #cbcdcf;
-  /* post blockquote ink */
+  /* The TOC's inactive labels. */
   --color-text-light: #322d44;
 
   --shadow-glow: 0 4px 12px 2px rgba(6, 3, 141, 0.14);
@@ -111,14 +115,6 @@
   /* Horizon stop kept below paper-white so white panels keep their edge. */
   --background-image-page: linear-gradient(to left, #a3aae0, #cfd3ef 52%, #eed6b4);
   --background-image-page-dark: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
-
-  /* +1px because Tailwind's max-* variants are exclusive: `max-md:` means
-     (max-width: 768px). So `md:` starts at 769px, not Tailwind's 768px: for
-     (min-width: 768px) use `min-[768px]:`. Islands avoid `md:`/`max-md:`
-     altogether; use `sm`/`lg` or an arbitrary value. */
-  --breakpoint-xs: 321px;
-  --breakpoint-md: 769px;
-  --breakpoint-wide: 1381px;
 
   --animate-rise-fade: rise-fade 1s ease both;
   /* No opacity fade: Chrome skips elements first painted at opacity 0 as LCP
@@ -212,7 +208,7 @@
     }
   }
 
-  /* The blog's table scroll hint (blog-post below): the mask is drawn 3rem
+  /* The table scroll hint (table-scroll-hint below): the mask is drawn 3rem
      wider than the table so its transparent tail sits off the right edge (no
      fade); the animation pulls it back to the table's width (fade showing) at
      scroll start and lets it out again as the table scrolls to its end. */
@@ -240,9 +236,9 @@
     -moz-osx-font-smoothing: grayscale;
     background: var(--background-image-page);
   }
-  @media (max-width: 1380px) {
-    html,
-    body {
+  html,
+  body {
+    @variant max-xl {
       line-height: normal;
     }
   }
@@ -386,352 +382,49 @@
   --color-ring: var(--ring);
 }
 
-/* Rendered markdown in a blog post, scoped under the article so nothing leaks
-   into the portfolio. `:where(&)` keeps every descendant rule below a utility
-   class on the same element. `preflight:` marks UA defaults Tailwind's
-   preflight zeroes. */
-@utility blog-post {
-  /* Restates the blog section's body type so the article doesn't depend on it. */
-  font-size: 1rem;
-  line-height: 1.5;
-  color: light-dark(var(--color-text), var(--color-text-dark));
+/* The typography plugin's colours (src/components/Prose.astro), as a custom
+   colour theme per its README. Each is a light-dark() pair, so no prose-invert.
+   palette.test.ts reads the text pairs out of this block. */
+@utility prose-site {
+  --tw-prose-body: light-dark(var(--color-text), var(--color-text-dark));
+  --tw-prose-lead: light-dark(var(--color-text), var(--color-text-dark));
+  --tw-prose-headings: light-dark(var(--color-title), var(--color-heading-dark));
+  --tw-prose-bold: light-dark(var(--color-title), var(--color-heading-dark));
+  --tw-prose-quotes: light-dark(var(--color-title), var(--color-heading-dark));
+  --tw-prose-code: light-dark(var(--color-title), var(--color-heading-dark));
+  --tw-prose-links: light-dark(var(--color-navy), var(--color-blue-light));
+  --tw-prose-counters: var(--color-subtitle-muted);
+  --tw-prose-captions: var(--color-subtitle-muted);
+  --tw-prose-pre-code: light-dark(var(--color-text), var(--color-text-dark));
+  --tw-prose-pre-bg: light-dark(#ffffff, rgba(255, 255, 255, 0.04));
+  --tw-prose-quote-borders: light-dark(var(--color-navy), var(--color-blue-light));
+  --tw-prose-bullets: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+  --tw-prose-hr: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+  --tw-prose-th-borders: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+  --tw-prose-td-borders: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+}
 
-  /* All code, inline and fenced, is Fira Code with its ligatures on; the
-     body turns `calt` off for prose. */
-  :where(&) :is(code, pre) {
-    font-family: var(--font-mono);
-    font-feature-settings: "calt" 1;
-  }
-
-  /* Inline code needs a surface: the prose is Fira Code too. `break-word`,
-     not `anywhere`, which would let table columns compress below their code
-     cells. */
-  :where(&) :not(pre) > code {
-    background: light-dark(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.06));
-    border: 1px solid light-dark(var(--color-border-soft), var(--color-fence-edge-dark));
-    border-radius: 0.25rem;
-    padding: 0.05em 0.35em;
-    overflow-wrap: break-word;
-  }
-
-  :where(&) hr {
-    background: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
-    height: 1px;
-    border: 0;
-    /* preflight: restores the UA `0.5em auto`. */
-    margin: 0.5em auto;
-  }
-
-  /* Headings */
-
-  :where(&) :is(h1, h2, h3, h4, h5, h6) {
-    margin-top: 3rem;
-    margin-bottom: 1.5rem;
-    /* At least Fira Code's 1.23em content box, or a wrapped heading's
-       selection highlight doubles up between lines. Rounded to whole pixels
-       so the seam lands on a pixel boundary. */
-    line-height: 1.32;
-    line-height: round(up, 1.32em, 1px);
-    letter-spacing: -0.025em;
-    /* Containing block for the anchor icons. */
-    position: relative;
-  }
-
-  :where(&) :is(h2, h3, h4, h5, h6) {
-    font-weight: 700;
-    color: light-dark(var(--color-title), var(--color-heading-dark));
-  }
-
-  /* 700 is Fira Code's heaviest weight. */
-  :where(&) h1 {
-    font-weight: 700;
-    font-size: 2.488rem;
-    color: light-dark(var(--color-black), var(--color-white));
-  }
-
-  :where(&) h2 {
-    font-size: 2.074rem;
-  }
-  :where(&) h3 {
-    font-size: 1.728rem;
-  }
-  :where(&) h4 {
-    font-size: 1.44rem;
-  }
-  :where(&) h5 {
-    font-size: 1.2rem;
-  }
-  :where(&) h6 {
-    font-size: 1rem;
-  }
-
-  :where(&) :is(h1, h2, h3, h4, h5, h6) > a {
-    color: inherit;
-    text-decoration: none;
-  }
-
-  :where(&) header h1 {
-    margin: 0 0 1rem 0;
-  }
-  :where(&) header p {
-    font-size: 1.2rem;
-  }
-
-  /* Prose */
-
-  :where(&) p {
-    line-height: 1.625;
-    margin: 0 0 2rem 0;
-    padding: 0;
-  }
-
-  :where(&) :is(ul, ol) {
-    margin-left: 0;
-    margin-right: 0;
-    /* Hanging indent so wrapped lines align with the first word. */
-    padding: 0 0 0 1.25rem;
-    /* preflight: the UA top margin, visible after a code block. */
-    margin-top: 1em;
-    margin-bottom: 2rem;
-    list-style-position: outside;
-    list-style-image: none;
-  }
-  /* preflight: list markers. */
-  :where(&) ul {
-    list-style-type: disc;
-  }
-  :where(&) ol {
-    list-style-type: decimal;
-  }
-  /* preflight: nested-list markers. */
-  :where(&) ul ul {
-    list-style-type: circle;
-  }
-  :where(&) ul ul ul {
-    list-style-type: square;
-  }
-
-  :where(&) :is(ul, ol) li {
-    padding-left: 0;
-    margin-bottom: 1rem;
-  }
-
-  :where(&) li > p {
-    margin-bottom: 1rem;
-  }
-
-  :where(&) li *:last-child {
-    margin-bottom: 0;
-  }
-
-  :where(&) li > ul {
-    margin-left: 2rem;
-    margin-top: 1rem;
-  }
-
-  :where(&) blockquote {
-    color: light-dark(var(--color-text-light), var(--color-neutral-100));
-    /* preflight: the UA top margin. */
-    margin-top: 1em;
-    margin-left: -1.5rem;
-    margin-right: 2rem;
-    padding: 0 0 0 1.5rem;
-    border-left: 0.25rem solid light-dark(var(--color-navy), var(--color-blue-light));
-    font-size: 1.2rem;
-    font-style: italic;
-    margin-bottom: 2rem;
-  }
-
-  :where(&) blockquote > :last-child {
-    margin-bottom: 0;
-  }
-
-  :where(&) blockquote > :is(ul, ol) {
-    list-style-position: inside;
-  }
-
-  /* Tables. Wide ones scroll horizontally instead of blowing out the column. */
-  :where(&) table {
-    width: 100%;
-    margin-bottom: 2rem;
-    border-collapse: collapse;
-    display: block;
-    overflow-x: auto;
-    /* Scroll hint for overlay scrollbars: the right edge fades while there is
-       more to the right. The resting mask is no-fade, so a non-overflowing
-       table, or an engine without scroll timelines (0s animation landing on
-       `to`), shows no fade. */
-    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
-    mask-repeat: no-repeat;
-    mask-size: calc(100% + 3rem) 100%;
-    animation: var(--animate-table-scroll-hint);
-  }
+/* A table that scrolls sideways, with a scroll hint for overlay scrollbars: the
+   right edge fades while there is more to the right. The resting mask shows no
+   fade, so a table that fits, or an engine without scroll timelines (the 0s
+   animation lands on `to`), shows none. */
+@utility table-scroll-hint {
+  display: block;
+  overflow-x: auto;
+  mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+  mask-repeat: no-repeat;
+  mask-size: calc(100% + 3rem) 100%;
+  animation: var(--animate-table-scroll-hint);
   /* Separate block on purpose: Lightning CSS would fold the timeline into the
      shorthand, which Chrome rejects. Must follow the shorthand, which resets
      animation-timeline. */
   @supports (animation-timeline: scroll()) {
-    :where(&) table {
-      animation-timeline: scroll(self inline);
-      animation-duration: auto;
-    }
+    animation-timeline: scroll(self inline);
+    animation-duration: auto;
   }
   /* Print is at scroll position 0, the faded state. */
   @media print {
-    :where(&) table {
-      mask-image: none;
-      animation: none;
-    }
-  }
-
-  :where(&) :is(th, td) {
-    text-align: left;
-    /* th and td otherwise disagree (UA `middle` vs preflight). */
-    vertical-align: top;
-    padding: 0.5rem 1rem 0.5rem 0;
-    border-bottom: 1px solid light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
-  }
-
-  :where(&) thead th {
-    color: light-dark(var(--color-title), var(--color-heading-dark));
-  }
-
-  /* Links. preflight: the UA underline. */
-  :where(&) a {
-    color: light-dark(var(--color-navy), var(--color-blue-light));
-    text-decoration: underline;
-    /* A bare URL as link text has no break opportunity and would widen the
-       page on a phone. */
-    overflow-wrap: break-word;
-  }
-
-  /* Deep amber, not amber-ink: amber-ink is only large-text AA on the sky's
-     deep stop. Night keeps its link blue or it would paint amber. */
-  :where(&) a:is(:hover, :focus) {
-    color: light-dark(var(--color-amber-ink-deep), var(--color-blue-light));
-    text-decoration: none;
-  }
-
-  /* Post-body images, scoped to the post-body <section> so the footer Bio
-     stays plain. preflight: inline, or centred diagrams would left-align. */
-  :where(&) section img {
-    display: inline;
-    vertical-align: baseline;
-    max-width: 100%;
-    height: auto;
-    cursor: zoom-in;
-  }
-
-  /* Heading anchors (src/lib/blog/rehype-autolink-config.ts): the icon sits
-     left of the heading and shows on hover/focus. */
-  :where(&) a[data-heading-anchor] {
-    position: absolute;
-    top: calc(50% - 8px);
-    left: 0;
-    transform: translateX(-100%);
-    padding-right: 4px;
-    line-height: 0;
-    /* The icon's fill and stroke are currentColor; this outranks the heading
-       links' `color: inherit` above. */
-    color: light-dark(var(--color-navy), var(--color-blue-light));
-  }
-
-  :where(&) a[data-heading-anchor] svg {
-    visibility: hidden;
-  }
-
-  :where(&) :is(h1, h2, h3, h4, h5, h6):hover a[data-heading-anchor] svg,
-  :where(&) a[data-heading-anchor]:focus svg {
-    visibility: visible;
-  }
-
-  /* Mermaid diagrams: one <img> per theme (remark-mermaid.ts). The hidden one
-     is lazy with no box, so it is never fetched. */
-  :where(&) [data-mermaid] {
-    margin: 2rem 0;
-    text-align: center;
-  }
-
-  /* Backdrop for labels outside node boxes; matches the background
-     scripts/site/render-mermaid.ts bakes into the SVG. */
-  :where(&) [data-mermaid] img {
-    display: inline;
-    vertical-align: baseline;
-    background: #fff;
-    border-radius: 8px;
-    padding: 12px;
-    max-width: 100%;
-    height: auto;
-  }
-  :where(&) [data-mermaid] img[data-mermaid-theme="dark"] {
-    display: none;
-    @variant dark {
-      display: inline;
-      background: var(--color-dark-bg);
-    }
-  }
-  :where(&) [data-mermaid] img[data-mermaid-theme="light"] {
-    @variant dark {
-      display: none;
-    }
-  }
-
-  /* Read-aloud highlight (src/lib/blog/listen-player.ts) */
-
-  /* Clears the sticky read-aloud bar (12px gap + 58px) for scrollIntoView
-     and heading anchors. */
-  :where(&) [data-speaking],
-  :where(&) :is(h2, h3, h4) {
-    scroll-margin-top: 5rem;
-  }
-
-  /* Warm in light: a blue tint read as a colour cast on the sky. The spoken
-     word is 25% in light and 20% at night over the 14% block, which keeps the
-     ink AA (palette.test.ts guards both). */
-  :where(&) [data-speaking] {
-    --block-wash: color-mix(
-      in srgb,
-      light-dark(var(--color-amber), var(--color-box-dark)) 14%,
-      transparent
-    );
-    --word-wash: light-dark(
-      color-mix(in srgb, var(--color-amber) 25%, transparent),
-      color-mix(in srgb, var(--color-box-dark) 20%, transparent)
-    );
-    background: var(--block-wash);
-    box-shadow: 0 0 0 6px var(--block-wash);
-    border-radius: 4px;
-    transition:
-      background 0.2s ease,
-      box-shadow 0.2s ease;
-  }
-
-  :where(&) [data-speaking] [data-w][data-current-word] {
-    background: var(--word-wash);
-    border-radius: 3px;
-    box-shadow: 0 0 0 2px var(--word-wash);
-  }
-
-  /* Heading line boxes barely clear the content box, so the 2px shadow would
-     spill into the next line; paint a 1lh band instead. */
-  :where(&) [data-speaking]:is(h1, h2, h3, h4, h5, h6) [data-w][data-current-word] {
-    background: linear-gradient(
-      transparent calc(50% - 0.5lh + 1px),
-      var(--word-wash) calc(50% - 0.5lh + 1px),
-      var(--word-wash) calc(50% + 0.5lh - 1px),
-      transparent calc(50% + 0.5lh - 1px)
-    );
-    box-shadow: none;
-  }
-
-  /* Narrow column */
-  @media (max-width: 42rem) {
-    :where(&) blockquote {
-      padding: 0 0 0 1rem;
-      margin-left: 0;
-    }
-    /* Let the table scroll rather than wrap cells one word per line. */
-    :where(&) :is(th, td) {
-      min-width: 9rem;
-    }
+    mask-image: none;
+    animation: none;
   }
 }

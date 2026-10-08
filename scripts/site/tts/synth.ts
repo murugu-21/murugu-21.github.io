@@ -17,8 +17,8 @@ export interface Chunk {
 // The spoken blocks of a built post page: its title, then the body.
 export function postBlocks({ slug, html }: { slug: string; html: string }): string[] {
   const { document } = parseHTML(html);
-  const title = document.querySelector("article.blog-post header h1");
-  const body = document.querySelector("section[data-post-body]");
+  const title = document.querySelector("[data-post-title]");
+  const body = document.querySelector("[data-post-body]");
   if (!body) throw new Error(`${slug}: no post body section`);
   const raw = speechBlocks(body).map(b => b.text);
   if (title) raw.unshift(title.textContent ?? "");

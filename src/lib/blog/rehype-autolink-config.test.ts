@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { autolinkConfig } from "./rehype-autolink-config";
 
 describe("autolinkConfig", () => {
-  it("prepends a hidden, untabbable anchor with a link icon to each heading", () => {
+  it("prepends an untabbable, aria-hidden anchor holding the link icon", () => {
     const tree: Root = {
       type: "root",
       children: [
@@ -23,11 +23,17 @@ describe("autolinkConfig", () => {
     const [heading] = tree.children;
     expect(heading).toMatchObject({
       tagName: "h2",
+      properties: { id: "why" },
       children: [
         {
           tagName: "a",
-          properties: { href: "#why", dataHeadingAnchor: "", ariaHidden: "true", tabIndex: -1 },
-          children: [{ tagName: "svg", properties: { ariaHidden: "true", width: 16 } }]
+          properties: { href: "#why", ariaHidden: "true", tabIndex: -1 },
+          children: [
+            {
+              tagName: "svg",
+              properties: { ariaHidden: "true", width: 16 }
+            }
+          ]
         },
         { type: "text", value: "Why" }
       ]

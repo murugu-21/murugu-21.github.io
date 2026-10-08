@@ -1,6 +1,6 @@
 ---
 // Canvas starfield behind both apps. Idle-loaded so it can't affect LCP, paused
-// while hidden, off under prefers-reduced-motion. z-[-1] sits above the body
+// while hidden, off under prefers-reduced-motion. -z-10 sits above the body
 // background, which propagates to the root canvas. `class` lets a host tune it.
 import { cn } from "#src/lib/utils.ts";
 
@@ -9,7 +9,7 @@ const { class: className } = Astro.props;
 
 <canvas
   data-particles
-  class={cn("pointer-events-none fixed inset-0 z-[-1] size-full", className)}
+  class={cn("pointer-events-none fixed inset-0 -z-10 size-full", className)}
   aria-hidden="true"
 ></canvas>
 

@@ -15,7 +15,7 @@ import {
 
 // Build-time half of the Mermaid pipeline (see mermaid-diagrams.ts): each
 // ```mermaid fence becomes a <figure data-mermaid> with a light and
-// a dark <img> (the blog-post utility shows one per theme). Post-relative mdast images let
+// a dark <img>, one shown per theme. Post-relative mdast images let
 // Astro's image pipeline and the RSS absolutizer treat them like any post
 // image. A missing rendering (a new or edited fence) runs the renderer; one it
 // can't produce fails the build rather than shipping broken.
@@ -30,6 +30,13 @@ function svgSize(svg: string): { width: number; height: number } | undefined {
     ? { width: Math.round(width), height: Math.round(height) }
     : undefined;
 }
+
+// The hidden theme is display:none, so its lazy image is never fetched. The
+// white or dark card backs labels drawn outside node boxes (render-mermaid.ts).
+const themeClass = {
+  light: "mx-auto rounded-lg bg-white p-3 dark:hidden",
+  dark: "mx-auto hidden rounded-lg bg-dark-bg p-3 dark:block"
+} satisfies Record<DiagramTheme, string>;
 
 // Renders every missing diagram, not just this post's; a no-op when none are.
 function renderMissing(): void {
@@ -66,9 +73,8 @@ export default function remarkMermaid() {
         alt: diagramAlt(i),
         data: {
           hProperties: {
-            // Kebab-case: Astro's image pipeline copies these attributes verbatim.
-            "data-mermaid-theme": theme,
-            // Lazy so the theme that is display:none is never fetched.
+            // Astro's image pipeline copies these attributes verbatim.
+            class: themeClass[theme],
             loading: "lazy",
             decoding: "async",
             ...size

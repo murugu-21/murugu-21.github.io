@@ -19,10 +19,10 @@ const recovery = [
   noindex
 >
   <main class="flex min-h-[60vh] flex-col items-center justify-center text-center">
-    <h1 aria-label="Page not found" class="m-0 text-[72px] font-bold text-navy dark:text-blue">
+    <h1 aria-label="Page not found" class="m-0 text-7xl font-bold text-navy dark:text-blue">
       404
     </h1>
-    <p class="my-[1em] dark:text-white">
+    <p class="my-5 dark:text-white">
       This page doesn't exist. Try the{" "}
       <a href="/" class="text-navy underline dark:text-blue">
         portfolio
@@ -34,7 +34,7 @@ const recovery = [
       .
     </p>
     <nav aria-label="Where to go instead">
-      <ul class="mt-6 flex list-none flex-wrap justify-center gap-x-5 gap-y-[0.4rem] p-0 text-[0.95rem]">
+      <ul class="mt-6 flex list-none flex-wrap justify-center gap-x-5 gap-y-1.5 p-0 text-base">
         {recovery.map(link => (
           <li>
             <a href={link.href} class="text-navy underline dark:text-blue">

@@ -15,7 +15,7 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
 <li class="mb-4 pl-0" data-search={haystack} data-tags={post.tags.join(" ")}>
   <article class="mt-8">
     <header class="mb-4">
-      <h2 class="mt-0 mb-2 text-[1.728rem] leading-[1.1] font-bold tracking-tight text-navy dark:text-blue-light">
+      <h2 class="mt-0 mb-2 text-3xl font-bold tracking-tight text-navy dark:text-blue-light">
         <a href={post.href} class="text-inherit no-underline">
           {post.title}
         </a>
@@ -29,7 +29,7 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
         {post.tags.map(tag => (
           // The inline-block label stops Chrome painting a line-end selection
           // marker into the chip's padding (see Tag.astro).
-          <div class="border border-chip-outline px-[.5em] py-0.75 text-[0.833rem] dark:border-chip-outline-dark">
+          <div class="border border-chip-outline px-2 py-0.5 text-sm dark:border-chip-outline-dark">
             <span class="inline-block">{tag}</span>
           </div>
         ))}

@@ -1,28 +1,30 @@
 ---
+import type { HTMLAttributes } from "astro/types";
+import { cva } from "class-variance-authority";
 import { cn } from "#src/lib/utils.ts";
 
-// Long-form pages (/about, /developers): the typography plugin's rhythm in the
-// site's type and palette.
-interface Props {
-  class?: string;
-}
-const { class: className } = Astro.props;
+// Long-form text (blog posts, /about, /developers): the typography plugin's
+// defaults in the site's colours (prose-site in global.css) and Fira Code.
+type Tag = "main" | "article" | "div";
+type Props = HTMLAttributes<"div"> & { as?: Tag };
+const { as: Element = "div", class: className, ...rest } = Astro.props;
+
+const prose = cva(
+  // Long URLs and identifiers wrap instead of widening the page on a phone.
+  "prose wrap-break-word prose-site prose-headings:scroll-mt-20 max-sm:prose-h1:text-3xl prose-pre:border prose-pre:border-border-soft dark:prose-pre:border-fence-edge-dark prose-table:table-scroll-hint",
+  {
+    variants: {
+      // A <main> is a whole page: its own column, clear of the fixed navbar.
+      as: {
+        main: "mx-auto box-content px-5 pt-28 pb-16 md:prose-lg",
+        article: "",
+        div: ""
+      } satisfies Record<Tag, string>
+    }
+  }
+);
 ---
 
-<main
-  class={cn(
-    // pt-28 clears the fixed navbar.
-    "mx-auto prose box-content px-5 pt-28 pb-16 text-[length:inherit] leading-[1.6] prose-h1:text-[clamp(1.7rem,6vw,2.2rem)] prose-h2:scroll-mt-24 prose-h3:scroll-mt-24",
-    // Plugin colours follow the text; links and rules take the theme's.
-    "[--rule:light-dark(var(--color-border-soft),rgba(255,255,255,0.12))] [--tw-prose-body:currentColor] [--tw-prose-bold:currentColor] [--tw-prose-bullets:currentColor] [--tw-prose-code:currentColor] [--tw-prose-headings:currentColor] [--tw-prose-links:light-dark(var(--color-navy),var(--color-blue))] [--tw-prose-pre-bg:light-dark(white,rgba(255,255,255,0.04))] [--tw-prose-pre-code:currentColor] [--tw-prose-td-borders:var(--rule)] [--tw-prose-th-borders:var(--rule)] prose-a:[font-weight:inherit] prose-a:no-underline prose-a:hover:underline",
-    // Code gets a face apart from the Fira Code body text.
-    "prose-code:font-[ui-monospace,SFMono-Regular,Menlo,Consolas,monospace] prose-code:[font-weight:inherit] prose-code:before:content-none prose-code:after:content-none [&_:not(pre)>code]:rounded-sm [&_:not(pre)>code]:bg-[light-dark(rgba(6,3,141,0.08),rgba(76,125,255,0.12))] [&_:not(pre)>code]:px-[0.35em] [&_:not(pre)>code]:py-[0.1em] [&_:not(pre)>code]:text-[0.9em] [&_:not(pre)>code]:wrap-anywhere",
-    // The table sits in an overflow-x wrapper, so its margins wouldn't collapse into the heading's.
-    "prose-pre:border prose-pre:border-(--rule) prose-table:my-0",
-    // Chips never break mid-identifier; the table scrolls instead.
-    "prose-th:whitespace-nowrap prose-th:text-subtitle-muted [&_td_code]:wrap-normal [&_td_code]:whitespace-nowrap",
-    className
-  )}
->
+<Element class={cn(prose({ as: Element }), className)} {...rest}>
   <slot />
-</main>
+</Element>

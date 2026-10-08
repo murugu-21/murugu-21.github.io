@@ -199,8 +199,7 @@ const apiGraph: Thing[] = [
   description="Developer docs for the murugappan.dev API: REST endpoints, OpenAPI 3.1.0 spec, MCP server, authentication, versioning and deprecation policy, rate-limit headers. No key, no signup."
 >
   <Header />
-  {/* /about's column, widened to 900px for tables. */}
-  <Prose class="max-w-225">
+  <Prose as="main">
     <h1>murugappan.dev API developer portal</h1>
     <p>
       A public, unauthenticated JSON API over everything this site publishes about{" "}
@@ -277,32 +276,30 @@ curl -s {SITE_ORIGIN}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</co
 
     <section>
       <h2 id="endpoints">Endpoints</h2>
-      <div class="overflow-x-auto">
-        <table>
-          <thead>
+      <table>
+        <thead>
+          <tr>
+            <th>Operation</th>
+            <th>Endpoint</th>
+            <th>What it returns</th>
+          </tr>
+        </thead>
+        <tbody>
+          {operations.map(op => (
             <tr>
-              <th>Operation</th>
-              <th>Endpoint</th>
-              <th>What it returns</th>
+              <td>
+                <code>{op.operationId}</code>
+              </td>
+              <td>
+                <code>
+                  {op.method} {op.path}
+                </code>
+              </td>
+              <td>{op.summary}</td>
             </tr>
-          </thead>
-          <tbody>
-            {operations.map(op => (
-              <tr>
-                <td>
-                  <code>{op.operationId}</code>
-                </td>
-                <td>
-                  <code>
-                    {op.method} {op.path}
-                  </code>
-                </td>
-                <td>{op.summary}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
       <p>
         Full parameter and response schemas, including the ones the table summarises, live in the{" "}
         <a href="/openapi.json">OpenAPI document</a>.
@@ -504,26 +501,24 @@ Retry-After: 39122</code></pre>
         one-event SSE stream. There is no <code>GET</code> stream and nothing to <code>DELETE</code>
         ; both answer <code>405</code>.
       </p>
-      <div class="overflow-x-auto">
-        <table>
-          <thead>
+      <table>
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          {MCP_TOOLS.map(tool => (
             <tr>
-              <th>Tool</th>
-              <th>What it does</th>
+              <td>
+                <code>{tool.name}</code>
+              </td>
+              <td>{tool.title}</td>
             </tr>
-          </thead>
-          <tbody>
-            {MCP_TOOLS.map(tool => (
-              <tr>
-                <td>
-                  <code>{tool.name}</code>
-                </td>
-                <td>{tool.title}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
       <p>
         It also serves <strong>resources</strong>, documents a client can attach as context directly
         rather than calling a tool for them: <code>/llms.txt</code>, <code>/AGENTS.md</code>, the
@@ -583,28 +578,26 @@ Retry-After: 39122</code></pre>
 
     <section>
       <h2 id="machine-readable">Machine-readable files</h2>
-      <div class="overflow-x-auto">
-        <table>
-          <thead>
+      <table>
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>What it is</th>
+          </tr>
+        </thead>
+        <tbody>
+          {machineFiles.map(f => (
             <tr>
-              <th>URL</th>
-              <th>What it is</th>
+              <td>
+                <a href={f.path}>
+                  <code>{f.path}</code>
+                </a>
+              </td>
+              <td>{f.what}</td>
             </tr>
-          </thead>
-          <tbody>
-            {machineFiles.map(f => (
-              <tr>
-                <td>
-                  <a href={f.path}>
-                    <code>{f.path}</code>
-                  </a>
-                </td>
-                <td>{f.what}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
       <p>
         Any page URL also serves markdown when requested with <code>Accept: text/markdown</code>.
       </p>

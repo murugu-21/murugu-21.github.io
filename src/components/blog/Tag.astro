@@ -19,17 +19,11 @@ const { tag } = Astro.props;
 ---
 
 {/* Visually hidden but focusable: it is the label's styling source. */}
-<input
-  class="absolute left-[-99999px] opacity-0"
-  data-tag
-  type="checkbox"
-  id={`tag-${tag.name}`}
-  value={tag.name}
-/>
+<input class="sr-only" data-tag type="checkbox" id={`tag-${tag.name}`} value={tag.name} />
 <label
   for={`tag-${tag.name}`}
   class={cn(
-    "mt-[.875em] mr-[.75em] flex cursor-pointer items-center rounded-[.25em] [[data-tag]:checked+&]:bg-navy [[data-tag]:checked+&]:text-white dark:[[data-tag]:checked+&]:bg-box-dark [[data-tag]:hover+&]:shadow-[0_0_10px_var(--color-chip-outline)] [[data-tag]:hover+&]:outline-none dark:[[data-tag]:hover+&]:shadow-[0_0_10px_var(--color-chip-outline-dark)]",
+    "mt-3.5 mr-3 flex cursor-pointer items-center rounded-sm [[data-tag]:checked+&]:bg-navy [[data-tag]:checked+&]:text-white dark:[[data-tag]:checked+&]:bg-box-dark [[data-tag]:hover+&]:shadow-md [[data-tag]:hover+&]:shadow-chip-outline [[data-tag]:hover+&]:outline-none dark:[[data-tag]:hover+&]:shadow-chip-outline-dark",
     // Solid rings: half-alpha ones miss the 3:1 a focus indicator needs.
     "[[data-tag]:focus-visible+&]:ring-2 [[data-tag]:focus-visible+&]:ring-amber-ink dark:[[data-tag]:focus-visible+&]:ring-blue-light"
   )}
@@ -37,13 +31,13 @@ const { tag } = Astro.props;
   {/* Inline-block text spans: on a padded flex item, Chrome paints a
       line-end selection marker out to the cell's edge. An atomic inline
       keeps the text off that line box. */}
-  <span class="rounded-[.25em_0_0_.25em] border border-chip-outline px-[.5em] dark:border-chip-outline-dark">
+  <span class="rounded-l-sm border border-chip-outline px-2 dark:border-chip-outline-dark">
     <span class="inline-block">{tag.name}</span>
   </span>
   {/* Badge alphas are tuned for AA (palette.test.ts guards night). Not a flex
       box, which would blockify the span and bring the selection marker back;
       `content-center` centres the numeral instead. */}
-  <div class="content-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy dark:bg-blue-light/12 dark:text-blue-light [[data-tag]:checked+label_&]:bg-white/10 [[data-tag]:checked+label_&]:text-white">
+  <div class="content-center self-stretch rounded-r-sm bg-navy/10 px-2 text-xs text-navy dark:bg-blue-light/12 dark:text-blue-light [[data-tag]:checked+label_&]:bg-white/10 [[data-tag]:checked+label_&]:text-white">
     <span class="inline-block">{tag.count}</span>
   </div>
 </label>

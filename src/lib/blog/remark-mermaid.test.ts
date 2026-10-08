@@ -29,7 +29,7 @@ describe("remarkMermaid", () => {
     await remarkMermaid()(tree, file);
 
     expect(tree.children).toHaveLength(3);
-    expect(tree.children[1]).toEqual({
+    expect(tree.children[1]).toMatchObject({
       type: "paragraph",
       data: { hName: "figure", hProperties: { dataMermaid: "" } },
       children: ["light", "dark"].map(theme => ({
@@ -38,7 +38,6 @@ describe("remarkMermaid", () => {
         alt: "Diagram 1",
         data: {
           hProperties: {
-            "data-mermaid-theme": theme,
             loading: "lazy",
             decoding: "async",
             width: 400,
@@ -49,6 +48,24 @@ describe("remarkMermaid", () => {
     });
   });
 
+  // Lazy plus display:none is what keeps the other theme's SVG from being fetched.
+  it("shows the light image by day and the dark one at night, hiding the other", async () => {
+    const { file } = await renderedPost({ viewBox: "0 0 400 200" });
+    const tree = fromMarkdown(`\`\`\`mermaid\n${FENCE}\n\`\`\`\n`);
+
+    await remarkMermaid()(tree, file);
+
+    const images = [...JSON.stringify(tree.children[0]).matchAll(/"class":"([^"]*)"/g)].map(m =>
+      m[1].split(" ")
+    );
+    // Whether an image displays under Tailwind's `hidden`, `dark:hidden` and `dark:block`.
+    const shownByDay = (cls: string[]) => !cls.includes("hidden");
+    const shownAtNight = (cls: string[]) =>
+      cls.includes("dark:block") || (shownByDay(cls) && !cls.includes("dark:hidden"));
+    expect(images.map(shownByDay)).toEqual([true, false]);
+    expect(images.map(shownAtNight)).toEqual([false, true]);
+  });
+
   it("omits the size when the SVG has no usable viewBox", async () => {
     const { file } = await renderedPost({ viewBox: "0 0 0 0" });
     const tree = fromMarkdown(`\`\`\`mermaid\n${FENCE}\n\`\`\`\n`);
@@ -56,7 +73,7 @@ describe("remarkMermaid", () => {
     await remarkMermaid()(tree, file);
 
     expect(JSON.stringify(tree.children[0])).not.toContain("width");
-    expect(JSON.stringify(tree.children[0])).toContain('"data-mermaid-theme":"light"');
+    expect(JSON.stringify(tree.children[0])).toContain('"loading":"lazy"');
   });
 
   it("leaves a post without diagrams alone, and refuses a diagram in a file with no path", async () => {

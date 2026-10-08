@@ -1,43 +1,38 @@
 ---
 import { openSourceSection, openSourceCard } from "#src/data/portfolio.ts";
-import { accentTitle } from "#src/lib/accent.ts";
 import Section from "./Section.astro";
+import SectionTitle from "./SectionTitle.astro";
 ---
 
-<Section id="achievements" class="mt-16 max-xs:w-auto">
+<Section id="achievements" class="mt-16">
   <div>
-    <h2
-      class="m-0 text-[56px] leading-[normal] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px] dark:text-white"
-      set:html={accentTitle(openSourceSection.title)}
-    />
-    <p class="m-0 mb-12.5 text-subtitle uppercase max-md:text-center max-md:text-[16px] max-md:leading-[normal] dark:text-white">
+    <SectionTitle title={openSourceSection.title} class="m-0" />
+    <p class="m-0 mb-12 text-subtitle uppercase max-md:text-center max-md:text-base dark:text-white">
       {openSourceSection.subtitle}
     </p>
   </div>
-  <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-4">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
     <div class="glow-card p-6">
-      <div class="relative flex h-62.5 items-center justify-center overflow-hidden">
+      <div class="relative flex h-64 items-center justify-center overflow-hidden">
         <img
           src={openSourceCard.image}
           alt={openSourceCard.imageAlt}
-          class="h-auto w-62.5 max-w-full"
+          class="h-auto w-64 max-w-full"
           width="250"
           height="250"
           loading="lazy"
         />
       </div>
       <div class="text-center">
-        <h3 class="m-0 mt-3.75 text-[1.375rem]/6 font-bold text-title dark:text-white">
+        <h3 class="m-0 mt-4 text-xl font-bold text-title dark:text-white">
           {openSourceCard.title}
         </h3>
-        <p class="my-[1em] text-[1.063rem]/6 text-card-subtitle dark:text-white">
-          {openSourceCard.subtitle}
-        </p>
+        <p class="my-4 text-base text-card-subtitle dark:text-white">{openSourceCard.subtitle}</p>
       </div>
       <div class="flex flex-wrap items-center justify-center">
         {openSourceCard.footerLink.map(f => (
           <a
-            class="mr-2 mb-2 inline-flex h-[2em] items-center justify-center rounded-sm bg-navy px-[0.75em] align-middle text-xs/normal whitespace-nowrap text-surface-alt no-underline transition-colors duration-200 ease-in hover:bg-dusk-violet dark:hover:bg-blue-light dark:hover:text-navy"
+            class="mr-2 mb-2 inline-flex h-6 items-center justify-center rounded-sm bg-navy px-2 align-middle text-xs/normal whitespace-nowrap text-surface-alt no-underline transition-colors duration-200 ease-in hover:bg-dusk-violet dark:hover:bg-blue-light dark:hover:text-navy"
             href={f.url}
             target="_blank"
             rel="noopener noreferrer"

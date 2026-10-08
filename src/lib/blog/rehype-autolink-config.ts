@@ -1,12 +1,15 @@
 import type { Element } from "hast";
 import type { Options } from "rehype-autolink-headings";
 
-// An <a data-heading-anchor> with a link icon prepended inside each heading;
-// the blog-post utility in global.css places and colours it.
+// An <a> with a link icon prepended inside each heading.
+// It sits in the gutter left of the heading, and the icon shows while the
+// heading is hovered (hover-capable pointers only) or the anchor focused, which
+// a tap does. Its colour is the prose link colour.
 const linkIcon: Element = {
   type: "element",
   tagName: "svg",
   properties: {
+    className: ["invisible", "group-hover/heading:visible", "in-focus:visible"],
     ariaHidden: "true",
     focusable: "false",
     height: 16,
@@ -31,6 +34,19 @@ const linkIcon: Element = {
 
 export const autolinkConfig: Options = {
   behavior: "prepend",
-  properties: { dataHeadingAnchor: "", ariaHidden: "true", tabIndex: -1 },
+  headingProperties: { className: ["group/heading", "relative"] },
+  properties: {
+    className: [
+      "absolute",
+      "top-1/2",
+      "left-0",
+      "-translate-x-full",
+      "-translate-y-1/2",
+      "pr-1",
+      "leading-none"
+    ],
+    ariaHidden: "true",
+    tabIndex: -1
+  },
   content: linkIcon
 };

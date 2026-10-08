@@ -71,6 +71,12 @@ function emptyBodyProblem({ slug, html }: Post) {
   );
 }
 
+// The read-aloud player and the audio generator read the title by this hook.
+function titleProblem({ slug, html }: Post) {
+  if (html.includes("<h1 data-post-title>")) return;
+  return `blog/${slug}/index.html has no <h1 data-post-title>, so read-aloud would skip the title`;
+}
+
 function mermaidProblem({ slug, html, source }: Post) {
   const fences = findMermaidFences(source).length;
   const figures = html.match(/<figure data-mermaid="">/g)?.length ?? 0;
@@ -110,9 +116,15 @@ function authorProblem({ slug, html }: Post) {
 
 // A markdown render error doesn't fail the build. The glob loader logs it,
 // caches the empty result in node_modules/.astro and ships a blank article.
-// So check every post has a body and one figure per ```mermaid fence
+// So check every post has a body, a title and one figure per ```mermaid fence
 // (which also catches a stale cached render), then check its head.
-const POST_CHECKS = [emptyBodyProblem, mermaidProblem, canonicalProblem, authorProblem];
+const POST_CHECKS = [
+  emptyBodyProblem,
+  titleProblem,
+  mermaidProblem,
+  canonicalProblem,
+  authorProblem
+];
 
 function checkPost(post: Post) {
   for (const check of POST_CHECKS) {

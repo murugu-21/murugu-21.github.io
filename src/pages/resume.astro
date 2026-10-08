@@ -28,16 +28,14 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
     <Font cssVariable="--font-fira-code" preload />
   </head>
   {/* Fira Code's programming ligatures (-> => ==) are wrong in prose. */}
-  <body class="m-0 bg-backdrop p-0 font-(family-name:--font-fira-code) font-features-['calt'_0] text-[9.5pt] leading-[1.36] text-ink print:bg-white">
+  <body class="m-0 bg-backdrop p-0 font-mono font-features-['calt'_0] text-xs/snug text-ink print:bg-white">
     {/* A screen preview of the sheet; print drops the frame (@page in resume.css sets the page size and margins). */}
-    <main class="mx-auto my-8 max-w-204 bg-white px-[0.55in] py-[0.45in] shadow-[0_0.1in_0.3in_rgba(0,0,0,0.15)] print:m-0 print:max-w-none print:p-0 print:shadow-none">
-      <div class="mx-[-0.55in] mt-[-0.45in] mb-[1em] h-2 bg-blue print:mx-0 print:mt-0 print:mb-[1.1em]"></div>
-      <header class="mb-[0.6em]">
-        <h1 class="mt-0 mb-[0.15em] text-[22pt] font-bold tracking-[-0.5px]">
-          {resumeContact.name}
-        </h1>
-        <p class="mt-0 mb-[0.3em] text-[11pt] font-bold text-navy">{resumeContact.title}</p>
-        <p class="m-0 text-[8pt]">
+    <main class="mx-auto my-8 max-w-204 bg-white px-5 py-11 shadow-xl sm:px-13 print:m-0 print:max-w-none print:p-0 print:shadow-none">
+      <div class="-mx-5 -mt-11 mb-3 h-2 bg-blue sm:-mx-13 print:mx-0 print:mt-0"></div>
+      <header class="mb-2">
+        <h1 class="mt-0 mb-1 text-3xl font-bold tracking-tight">{resumeContact.name}</h1>
+        <p class="mt-0 mb-1 text-sm font-bold text-navy">{resumeContact.title}</p>
+        <p class="m-0 text-xs">
           {/* A no-break space before each pipe, and nowrap links and phone (below), so a wrapped line never starts with a pipe. */}
           {resumeContact.location}
           {"\u00A0| "}
@@ -67,13 +65,13 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
       </header>
 
       <ResumeSection title="Professional Summary">
-        <p class="mt-0 mb-[0.3em]">{greeting.subTitle}</p>
+        <p class="mt-0 mb-1">{greeting.subTitle}</p>
       </ResumeSection>
 
       <ResumeSection title="Skills">
         <ul class="m-0 list-none p-0">
           {skillsCategories.map(({ category, items }) => (
-            <li class="mx-0 mt-0 mb-[0.35em] break-inside-avoid">
+            <li class="mx-0 mt-0 mb-1 break-inside-avoid">
               <span class="font-bold">{category}:</span> {items}.
             </li>
           ))}
@@ -83,38 +81,38 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
       <ResumeSection title="Experience">
         {" "}
         {stints.map(stint => (
-          <div class="mb-[0.6em]">
+          <div class="mb-2">
             {/* company on the left, the stint's full span flush right; never stranded at the foot of a page */}
-            <p class="mt-0 mb-[0.3em] flex break-after-avoid items-baseline justify-between gap-[1em] font-bold">
+            <p class="mt-0 mb-1 flex break-after-avoid items-baseline justify-between gap-3 font-bold">
               <span>
                 {stint.company}
                 {stint.location && `, ${stint.location}`}
               </span>
-              <span class="text-[8pt] font-normal tracking-[0.5px] whitespace-nowrap text-ink-muted uppercase">
+              <span class="text-xs font-normal tracking-wider whitespace-nowrap text-ink-muted uppercase">
                 {stint.span}
               </span>
             </p>
             {stint.roles.map(exp => (
               /* long roles flow across pages instead of leaving a blank tail */
-              <div class="mb-[0.4em] break-inside-auto pl-[0.9em]">
+              <div class="mb-1 break-inside-auto pl-2.5">
                 {/* a lone role's dates already sit on the company line */}
-                <p class="mt-0 mb-[0.3em] flex break-after-avoid items-baseline justify-between gap-[1em] font-normal">
+                <p class="mt-0 mb-1 flex break-after-avoid items-baseline justify-between gap-3 font-normal">
                   <span class="font-normal italic">
                     {exp.role}
                     {exp.partTime && " (Part-time)"}
                     {!stint.location && `, ${exp.location}`}
                   </span>
                   {stint.roles.length > 1 && (
-                    <span class="text-[8pt] font-normal tracking-[0.5px] whitespace-nowrap text-ink-muted uppercase">
+                    <span class="text-xs font-normal tracking-wider whitespace-nowrap text-ink-muted uppercase">
                       {exp.date}
                     </span>
                   )}
                 </p>
-                <p class="mt-0 mb-[0.3em] break-after-avoid">{exp.desc}</p>
+                <p class="mt-0 mb-1 break-after-avoid">{exp.desc}</p>
                 {exp.descBullets && exp.descBullets.length > 0 && (
-                  <ul class="mx-0 mt-[0.2em] mb-0 pl-[1.2em]">
+                  <ul class="mx-0 mt-0.5 mb-0 pl-3.5">
                     {exp.descBullets.map(bullet => (
-                      <li class="mx-0 mt-0 mb-[0.2em] break-inside-avoid">{bullet}</li>
+                      <li class="mx-0 mt-0 mb-0.5 break-inside-avoid">{bullet}</li>
                     ))}
                   </ul>
                 )}
@@ -128,8 +126,8 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
         <ResumeSection title="Projects">
           {" "}
           {repos.map(repo => (
-            <div class="mb-[0.55em] break-inside-avoid">
-              <p class="mt-0 mb-[0.3em] font-bold">
+            <div class="mb-1.5 break-inside-avoid">
+              <p class="mt-0 mb-1 font-bold">
                 {repo.name}
                 {repo.homepageUrl && (
                   <>
@@ -145,7 +143,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
                   </>
                 )}
               </p>
-              <p class="mt-0 mb-[0.3em]">{repo.description}</p>
+              <p class="mt-0 mb-1">{repo.description}</p>
             </div>
           ))}
         </ResumeSection>
@@ -154,12 +152,12 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
       <ResumeSection title="Education">
         {" "}
         {educationInfo.map(edu => (
-          <div class="mb-[0.55em] break-inside-avoid">
-            <p class="mt-0 mb-[0.3em] font-bold">
+          <div class="mb-1.5 break-inside-avoid">
+            <p class="mt-0 mb-1 font-bold">
               {edu.schoolName}, {edu.desc.replace(/\.$/, "")} |{" "}
               <span class="font-normal italic">{edu.subHeader}</span>
             </p>
-            <p class="mt-0 mb-[0.3em] text-[8pt] tracking-[0.5px] text-ink-muted uppercase">
+            <p class="mt-0 mb-1 text-xs tracking-wider text-ink-muted uppercase">
               {edu.duration}
               {edu.grade && <> · {edu.grade}</>}
             </p>

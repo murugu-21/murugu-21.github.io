@@ -14,44 +14,42 @@ const links = [
   { href: greeting.resumePath, label: "Resume", event: "resume_download" },
   { href: "/#contact", label: "Contact Me" }
 ];
-
-// Breakpoints are the literal pair `max-[768px]:` / `min-[768px]:`, not `md:`:
-// the theme puts md at 769px (global.css), which would leave 768px in neither band.
 ---
 
 {/* Transparent at rest, blurred once `data-scrolled` (script below). Always solid
-   below 768px, where the menu sheet continues its surface. */}
+   below lg, where the menu sheet continues its surface. */}
 <header
   class={cn(
-    "group fixed inset-x-0 top-0 z-999 mx-auto max-w-full bg-transparent px-5 py-2.5 transition-all duration-300 ease-out data-scrolled:backdrop-blur-[15px] motion-reduce:transition-none max-[768px]:bg-surface max-[768px]:shadow-[0_4px_10px_0_rgba(3,5,40,0.12)] min-[768px]:flex min-[768px]:items-center min-[768px]:justify-between min-[768px]:data-scrolled:bg-nav-scrolled min-[768px]:data-scrolled:shadow-[0_10px_10px_0_rgba(3,5,40,0.12)] dark:max-[768px]:bg-dark-base dark:min-[768px]:data-scrolled:bg-nav-scrolled-dark",
-    // Nav text + logo don't fit one row below 1320px, so type steps down in three bands.
-    "min-[768px]:max-[961px]:text-[12px] min-[961px]:max-[1121px]:text-[13px] min-[1121px]:max-[1321px]:text-[14px]"
+    "group fixed inset-x-0 top-0 z-30 mx-auto max-w-full bg-transparent px-5 py-2.5 transition-all duration-300 ease-out data-scrolled:backdrop-blur-lg motion-reduce:transition-none max-lg:bg-surface max-lg:shadow-md lg:flex lg:items-center lg:justify-between lg:data-scrolled:bg-nav-scrolled lg:data-scrolled:shadow-lg dark:max-lg:bg-dark-base dark:lg:data-scrolled:bg-nav-scrolled-dark",
+    // Nav text + logo don't fit one row below 2xl, so type steps down in two bands.
+    "lg:max-xl:text-sm xl:max-2xl:text-base"
   )}
   id="site-header"
 >
-  {/* The ~300px logo and the hamburger can't share a narrow row, so it shrinks in two steps. */}
+  {/* The logo, the theme toggle and the hamburger share a phone's row, so the
+     logo is smaller there; mt-4 levels it with the hamburger. */}
   <a
     href="/"
-    class="float-left mt-2.5 block flex-none text-[1.5em] leading-[normal] no-underline max-[360px]:mt-6 max-[360px]:text-[0.85em] min-[360px]:max-[768px]:mt-4.5 min-[360px]:max-[768px]:text-[1.05em] min-[768px]:mt-0"
+    class="float-left mt-4 block flex-none text-base no-underline sm:text-xl lg:mt-0 2xl:text-3xl"
   >
     <span class="text-subtitle-muted">&lt;</span>
-    <span class="px-2.5 font-bold text-navy dark:text-white">Murugappan M</span>
+    <span class="px-1 font-bold text-navy sm:px-2.5 dark:text-white">Murugappan M</span>
     <span class="text-subtitle-muted">/&gt;</span>
   </a>
   {/* Without the Popover API (Safari < 17, Firefox < 125) the phone nav is
      unavailable, so the button hides rather than sit dead. */}
   <button
     type="button"
-    class="float-right cursor-pointer px-5 py-7 not-supports-[selector(:popover-open)]:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy min-[768px]:hidden"
+    class="float-right cursor-pointer px-5 py-7 not-supports-[selector(:popover-open)]:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy lg:hidden"
     popovertarget="site-menu"
   >
     <span class="sr-only">Menu</span>
     {/* Middle bar is the element, outer bars its ::before/::after; while the menu is
        open, they cross into an X. Variants are written out in full: Tailwind scans
        this file as text. */}
-    <span class="relative block h-0.75 w-5.5 rounded-[3px] bg-navy transition-[background] duration-200 ease-out group-has-open:bg-transparent before:absolute before:top-1.75 before:block before:size-full before:rounded-[3px] before:bg-navy before:transition-all before:duration-200 before:ease-out before:content-[''] group-has-open:before:top-0 group-has-open:before:-rotate-45 after:absolute after:-top-1.75 after:block after:size-full after:rounded-[3px] after:bg-navy after:transition-all after:duration-200 after:ease-out after:content-[''] group-has-open:after:top-0 group-has-open:after:rotate-45 dark:bg-blue dark:before:bg-blue dark:after:bg-blue"></span>
+    <span class="relative block h-1 w-6 rounded-full bg-navy transition-colors duration-200 ease-out group-has-open:bg-transparent before:absolute before:top-2 before:block before:size-full before:rounded-full before:bg-navy before:transition-all before:duration-200 before:ease-out before:content-[''] group-has-open:before:top-0 group-has-open:before:-rotate-45 after:absolute after:-top-2 after:block after:size-full after:rounded-full after:bg-navy after:transition-all after:duration-200 after:ease-out after:content-[''] group-has-open:after:top-0 group-has-open:after:rotate-45 dark:bg-blue dark:before:bg-blue dark:after:bg-blue"></span>
   </button>
-  <nav aria-label="Main" class="min-[768px]:ml-auto">
+  <nav aria-label="Main" class="lg:ml-auto">
     {/* The list is a popover: Escape and a tap outside close it, and the button gets
        aria-expanded for free. The UA styles a popover as a hidden, centred, bordered
        box, so both bands undo that. */}
@@ -61,26 +59,25 @@ const links = [
       class={cn(
         "m-0 size-auto list-none border-0 p-0",
         // Inline on desktop: the UA hides a closed popover, and the script keeps it closed there.
-        "min-[768px]:static min-[768px]:block min-[768px]:overflow-visible min-[768px]:bg-transparent",
-        // A sheet in the top layer, from the bar's content edge (10px padding + the 59px
-        // button) down, on the bar's surface. 486px clears the seven links.
-        "max-[768px]:fixed max-[768px]:inset-x-0 max-[768px]:top-17.25 max-[768px]:bottom-auto max-[768px]:bg-surface max-[768px]:px-5 max-[768px]:pb-2.5 dark:max-[768px]:bg-dark-base",
-        // The bar's shadow, offset and shrunk so none of it spills up onto the bar.
-        "max-[768px]:max-h-0 max-[768px]:overflow-hidden max-[768px]:shadow-[0_8px_10px_-4px_rgba(3,5,40,0.12)] max-[768px]:open:max-h-121.5",
+        "lg:static lg:block lg:overflow-visible lg:bg-transparent",
+        // A sheet in the top layer, tucked 2px under the bar's content edge (10px padding
+        // + the 60px button), on the bar's surface. max-h-120 clears the seven links.
+        "max-lg:fixed max-lg:inset-x-0 max-lg:top-17 max-lg:bottom-auto max-lg:bg-surface max-lg:px-5 max-lg:pb-2.5 dark:max-lg:bg-dark-base",
+        "max-lg:max-h-0 max-lg:overflow-hidden max-lg:shadow-md max-lg:open:max-h-120",
         // The slide: max-height from 0 on open, back to 0 on close. display and overlay
         // are discrete, so the sheet leaves the top layer only once the slide ends.
-        "max-[768px]:transition-[max-height,display,overlay] max-[768px]:transition-discrete max-[768px]:starting:open:max-h-0",
+        "max-lg:transition-[max-height,display,overlay] max-lg:transition-discrete max-lg:starting:open:max-h-0",
         // The breakpoint variant must wrap motion-reduce, or the transition rule above outranks it.
-        "max-[768px]:duration-200 max-[768px]:ease-out max-[768px]:motion-reduce:transition-none"
+        "max-lg:duration-200 max-lg:ease-out max-lg:motion-reduce:transition-none"
       )}
     >
       {links.map(l => (
-        <li class="min-[768px]:float-left">
-          {/* The 961 to 1320px band tightens the padding, so the underline's inset follows. */}
+        <li class="lg:float-left">
+          {/* Below 2xl the padding tightens with the type, and the underline's inset follows. */}
           <a
             href={l.href}
             data-ph-event={l.event}
-            class="relative block px-5 py-3.75 text-text no-underline after:absolute after:bottom-2 after:left-5 after:h-0.75 after:w-0 after:rounded-[3px] after:bg-navy after:transition-[width] after:duration-300 after:ease-out after:content-[''] hover:after:w-[calc(100%-40px)] focus-visible:after:w-[calc(100%-40px)] motion-reduce:after:transition-none min-[961px]:max-[1321px]:px-3 min-[961px]:max-[1321px]:after:left-3 min-[961px]:max-[1321px]:hover:after:w-[calc(100%-24px)] min-[961px]:max-[1321px]:focus-visible:after:w-[calc(100%-24px)] dark:text-white dark:after:bg-blue"
+            class="relative block px-5 py-4 text-text no-underline after:absolute after:inset-x-5 after:bottom-2 after:h-1 after:origin-left after:scale-x-0 after:rounded-full after:bg-navy after:transition-transform after:duration-300 after:ease-out after:content-[''] hover:after:scale-x-100 focus-visible:after:scale-x-100 motion-reduce:after:transition-none lg:max-xl:px-2.5 lg:max-xl:after:inset-x-2.5 xl:max-2xl:px-3 xl:max-2xl:after:inset-x-3 dark:text-white dark:after:bg-blue"
           >
             {l.label}
           </a>
@@ -88,9 +85,8 @@ const links = [
       ))}
     </ul>
   </nav>
-  {/* Outside the menu so it stays in the bar. 41px, not top-1/2: the 79px bar
-       centres on a half pixel, and this sits level with the hamburger. */}
-  <div class="absolute top-10.25 right-21.5 -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0">
+  {/* Outside the menu so it stays in the bar, level with the hamburger. */}
+  <div class="absolute top-10 right-22 -translate-y-1/2 lg:static lg:ml-1 lg:translate-y-0">
     <ThemeToggle />
   </div>
 </header>
@@ -115,7 +111,7 @@ const links = [
 
     // An open popover stays in the top layer, where the desktop's inline layout
     // can't reach it, so a menu left open across the breakpoint closes.
-    window.matchMedia("(min-width: 768px)").addEventListener("change", e => {
+    window.matchMedia("(min-width: 64rem)").addEventListener("change", e => {
       if (e.matches) menu.hidePopover();
     });
   }

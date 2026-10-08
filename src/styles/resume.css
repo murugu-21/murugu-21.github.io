@@ -6,6 +6,8 @@
 @source "../components/resume";
 
 @theme {
+  /* <Font> in the head defines --font-fira-code. */
+  --font-mono: var(--font-fira-code);
   --color-navy: #06038d;
   --color-blue: #4c7dff;
   --color-ink: #1a1a1a;

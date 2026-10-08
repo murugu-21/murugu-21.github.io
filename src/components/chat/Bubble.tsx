@@ -53,7 +53,7 @@ function renderWithLinks(raw: string) {
 }
 
 const bubble = cva(
-  "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] wrap-break-word whitespace-pre-wrap",
+  "max-w-4/5 rounded-xl px-3 py-2 text-sm leading-normal wrap-break-word whitespace-pre-wrap",
   {
     variants: {
       kind: {

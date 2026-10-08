@@ -1,7 +1,6 @@
 ---
-// Uncontrolled: PostList.astro's script reads it on `input`. `leading-[1.15]`
-// fixes the field height (preflight would inherit the body's 1.5). Focus rings
-// are solid amber-ink / blue-light: half-alpha rings miss 3:1 on the canvas.
+// Uncontrolled: PostList.astro's script reads it on `input`. Focus rings are
+// solid amber-ink / blue-light: half-alpha rings miss 3:1 on the canvas.
 ---
 
 <input
@@ -9,5 +8,5 @@
   type="search"
   aria-label="search article by tag or title"
   placeholder="Search by title or tag"
-  class="w-full rounded-lg border-[0.1rem] border-navy bg-white px-[.5em] py-[.25em] text-[1.25rem] leading-[1.15] text-text placeholder:text-subtitle focus:shadow-[0_0_5px_var(--color-amber)] focus:ring-2 focus:ring-amber-ink focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:placeholder:text-text-dark/75 dark:focus:shadow-[0_0_5px_var(--color-box-dark)] dark:focus:ring-blue-light"
+  class="w-full rounded-lg border-2 border-navy bg-white px-2.5 py-1 text-xl text-text placeholder:text-subtitle focus:shadow-md focus:ring-2 focus:shadow-amber focus:ring-amber-ink focus:outline-none dark:border-blue-light dark:bg-dark-bg dark:text-text-dark dark:placeholder:text-text-dark/75 dark:focus:shadow-box-dark dark:focus:ring-blue-light"
 />

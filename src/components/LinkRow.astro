@@ -7,7 +7,7 @@ interface Props {
 const { links } = Astro.props;
 ---
 
-<ul class="not-prose my-[1em] flex flex-wrap gap-x-5 gap-y-[0.4rem]">
+<ul class="not-prose my-5 flex flex-wrap gap-x-5 gap-y-1.5">
   {links.map(l => (
     <li>
       <a class="text-(--tw-prose-links) hover:underline" href={l.href}>

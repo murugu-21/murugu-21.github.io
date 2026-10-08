@@ -3,8 +3,8 @@ import { Image } from "astro:assets";
 import Icon from "#src/components/Icon.astro";
 import { socialMediaLinks } from "#src/data/portfolio.ts";
 import { AUTHOR } from "#src/lib/site.ts";
-// The portfolio's portrait, cropped to a 50px circle. It is a full-body square
-// (face around x 21% to 79%, y 8% to 67%), hence the 171% scale and translate below.
+// The portfolio's portrait, cropped to a 48px circle. It is a full-body square
+// (face around x 21% to 79%, y 8% to 67%), hence the 175% scale and translate below.
 import portrait from "#src/assets/images/portrait.webp";
 
 const links = [
@@ -20,9 +20,9 @@ const links = [
 ---
 
 <div class="mb-16 flex" data-bio>
-  <span class="mr-4 size-12.5 flex-none overflow-hidden rounded-full">
+  <span class="mr-4 size-12 flex-none overflow-hidden rounded-full">
     <Image
-      class="size-[171%] max-w-none translate-x-[-20.8%] translate-y-[-8.5%]"
+      class="size-7/4 max-w-none -translate-x-1/5 -translate-y-1/12"
       src={portrait}
       width={86}
       densities={[1, 2]}

@@ -1,9 +1,9 @@
 ---
 // Notion-style rail of bars on the right edge, one per h2/h3, expanding into
 // the heading list on hover or keyboard focus (the toc-shown and toc-collapsed
-// variants in global.css). Mounted after `</article>` so the blog-post
-// utility's rules don't apply, the article's links come first in tab order,
-// and the medium-zoom overlay still paints over it.
+// variants in global.css). Mounted after `</article>` so the prose styles
+// don't apply, the article's links come first in tab order, and the
+// medium-zoom overlay still paints over it.
 import type { MarkdownHeading } from "astro";
 import { cva } from "class-variance-authority";
 import { tocEntries, type TocEntry } from "#src/lib/blog/toc.ts";
@@ -18,15 +18,15 @@ const entries = tocEntries(headings);
 // h3s indent under their h2, as in Notion's open list, and get the shorter bar.
 type PerDepth = Record<TocEntry["depth"], string>;
 const tocLink = cva(
-  "flex items-center py-[0.3rem] leading-[1.35] text-text-light no-underline hover:text-title focus-visible:rounded-sm focus-visible:text-title focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current aria-[current]:font-bold aria-[current]:text-title dark:text-text-dark dark:hover:text-heading-dark dark:focus-visible:text-heading-dark dark:aria-[current]:text-heading-dark toc-collapsed:justify-end toc-collapsed:py-[0.35rem]",
+  "flex items-center py-1 leading-snug text-text-light no-underline hover:text-title focus-visible:rounded-sm focus-visible:text-title focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current aria-[current]:font-bold aria-[current]:text-title dark:text-text-dark dark:hover:text-heading-dark dark:focus-visible:text-heading-dark dark:aria-[current]:text-heading-dark toc-collapsed:justify-end toc-collapsed:py-1.5",
   {
     variants: {
-      depth: { 2: "text-sm", 3: "pl-4 text-[0.8125rem]" } satisfies PerDepth
+      depth: { 2: "text-sm", 3: "pl-4 text-xs" } satisfies PerDepth
     }
   }
 );
 const tocBar = cva(
-  "hidden h-0.5 rounded-[1px] bg-toc-bar in-aria-[current]:bg-title dark:bg-accent-grey-dark dark:in-aria-[current]:bg-heading-dark toc-collapsed:block",
+  "hidden h-0.5 rounded-xs bg-toc-bar in-aria-[current]:bg-title dark:bg-accent-grey-dark dark:in-aria-[current]:bg-heading-dark toc-collapsed:block",
   {
     variants: {
       depth: { 2: "toc-collapsed:w-4", 3: "toc-collapsed:w-2.5" } satisfies PerDepth
@@ -44,7 +44,7 @@ const tocBar = cva(
     {/* The nav's padding is the hover target around the 2px bars and keeps the
         growing panel under the pointer. `right`, not `100vw`: fixed is
         measured inside a classic scrollbar. */}
-    <ol class="m-0 max-h-[calc(100vh-12rem)] max-w-80 list-none overflow-y-auto rounded-xl bg-nav-scrolled px-4 py-3 shadow-glow backdrop-blur-[15px] transition-[background-color,box-shadow] duration-150 ease-[ease] motion-reduce:transition-none dark:bg-nav-scrolled-dark dark:shadow-glow-dark toc-collapsed:overflow-visible toc-collapsed:bg-transparent toc-collapsed:p-0 toc-collapsed:shadow-none toc-collapsed:backdrop-filter-none">
+    <ol class="m-0 max-h-[calc(100vh-12rem)] max-w-80 list-none overflow-y-auto rounded-xl bg-nav-scrolled px-4 py-3 shadow-glow backdrop-blur-lg transition duration-150 motion-reduce:transition-none dark:bg-nav-scrolled-dark dark:shadow-glow-dark toc-collapsed:overflow-visible toc-collapsed:bg-transparent toc-collapsed:p-0 toc-collapsed:shadow-none toc-collapsed:backdrop-filter-none">
       {entries.map(entry => (
         <li>
           <a href={`#${entry.slug}`} class={tocLink({ depth: entry.depth })}>
@@ -74,7 +74,7 @@ const tocBar = cva(
       return heading ? [{ link, heading }] : [];
     });
 
-    // Read the scroll margin from the live heading; the blog-post utility owns the value.
+    // Read the scroll margin from the live heading; Prose.astro owns the value.
     const scrollMargin = pairs.length
       ? parseFloat(getComputedStyle(pairs[0].heading).scrollMarginTop) || 0
       : 0;

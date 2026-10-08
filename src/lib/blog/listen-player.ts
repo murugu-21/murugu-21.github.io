@@ -107,9 +107,9 @@ const wordsByOffset = (text: string): TimedWord[] => {
 // Same extraction and normalisation as the generator, so texts line up with
 // the timing JSON. The title is read first.
 export const collectBlocks = (): Block[] => {
-  const body = document.querySelector("article.blog-post section[data-post-body]");
+  const body = document.querySelector("[data-post-body]");
   if (!body) return [];
-  const title = document.querySelector("article.blog-post header h1");
+  const title = document.querySelector("[data-post-title]");
   const titled = title ? [{ el: title, text: title.textContent ?? "" }] : [];
   return [...titled, ...speechBlocks(body)]
     .map(b => ({ el: b.el, text: normalizeSpeechText(b.text) }))

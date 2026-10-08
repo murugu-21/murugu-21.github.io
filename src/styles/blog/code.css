@@ -3,41 +3,30 @@
 
 /* Shiki's fences (`pre.astro-code`). With `defaultColor: false` every colour
    arrives as --shiki-light* / --shiki-dark* variables (themes in
-   src/lib/blog/code-themes.ts), which this file maps to the site theme.
-   In @layer components so a utility class on a fence still wins. */
+   src/lib/blog/code-themes.ts), which this file maps to the site theme. The
+   typography plugin (Prose.astro) sizes and spaces the fence. Unlayered, so
+   these colours beat the plugin's `pre` colours, which sit in Tailwind's
+   utilities layer. */
 
-/* Astro may emit this sheet before global.css, so it declares Tailwind's layer
-   order too, or `components` would rank below preflight's `base` and
-   `properties` above everything. */
-@layer properties, theme, base, components, utilities;
+.astro-code {
+  background-color: light-dark(var(--shiki-light-bg), var(--shiki-dark-bg));
+}
 
-@layer components {
-  .blog-post .astro-code {
-    padding: 1em;
-    margin: 0.5em 0;
-    line-height: 1.5;
-    /* Night: 12% read as a tint, not a panel edge, on the night canvas. */
-    border: 1px solid light-dark(var(--color-border-soft), var(--color-fence-edge-dark));
-    border-radius: 0.5rem;
-    background-color: light-dark(var(--shiki-light-bg), var(--shiki-dark-bg));
-  }
+.astro-code,
+.astro-code span {
+  color: light-dark(var(--shiki-light), var(--shiki-dark));
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
 
-  .blog-post .astro-code,
-  .blog-post .astro-code span {
-    color: light-dark(var(--shiki-light), var(--shiki-dark));
-    font-weight: var(--shiki-light-font-weight);
-    text-decoration: var(--shiki-light-text-decoration);
-  }
+/* Weight and decoration aren't colours, so they still follow the class. */
+html.dark-mode .astro-code,
+html.dark-mode .astro-code span {
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
 
-  /* Weight and decoration aren't colours, so they still follow the class. */
-  html.dark-mode .blog-post .astro-code,
-  html.dark-mode .blog-post .astro-code span {
-    font-weight: var(--shiki-dark-font-weight);
-    text-decoration: var(--shiki-dark-text-decoration);
-  }
-
-  /* Night Owl's own selection: the light-mode blue would drown its pale tokens. */
-  .blog-post .astro-code ::selection {
-    background: light-dark(#b3d4fc, #1d3b53);
-  }
+/* Night Owl's own selection: the light-mode blue would drown its pale tokens. */
+.astro-code ::selection {
+  background: light-dark(#b3d4fc, #1d3b53);
 }

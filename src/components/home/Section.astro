@@ -1,5 +1,5 @@
 ---
-// A homepage section's frame. box-content: w-[90%] excludes the padding, as
+// A homepage section's frame. box-content: w-9/10 excludes the padding, as
 // before Preflight's border-box. `class` adds to the frame or overrides it.
 import { cn } from "#src/lib/utils.ts";
 
@@ -13,7 +13,7 @@ const { id, class: className } = Astro.props;
 <div
   id={id}
   class={cn(
-    "mx-auto box-content w-[90%] animate-rise-fade px-2.5 py-5 motion-reduce:animate-none",
+    "mx-auto box-content w-9/10 animate-rise-fade px-2.5 py-5 motion-reduce:animate-none",
     className
   )}
 >

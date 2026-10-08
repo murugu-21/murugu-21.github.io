@@ -152,7 +152,9 @@ export default defineConfig({
       ]
     ),
     // oxlint-tailwindcss's recommended set (its README › Setup) plus prefer-scale-token, which
-    // turns px into scale steps, all at error. Class order is oxfmt's (sortTailwindcss).
+    // turns px into scale steps, and no-arbitrary-value, which keeps values on Tailwind's
+    // scale and the theme's tokens, all at error. A value with no default disables
+    // no-arbitrary-value on its line with the reason. Class order is oxfmt's (sortTailwindcss).
     {
       files: ["src/**/*.{ts,tsx}"],
       jsPlugins: ["oxlint-tailwindcss"],
@@ -174,6 +176,7 @@ export default defineConfig({
         "tailwindcss/enforce-shorthand": "error",
         "tailwindcss/no-unnecessary-whitespace": "error",
         "tailwindcss/no-hardcoded-colors": "error",
+        "tailwindcss/no-arbitrary-value": "error",
         // Experimental: a plain element that rebuilds a shadcn primitive from its classes.
         "tailwindcss/no-borrowed-component-styles": [
           "error",

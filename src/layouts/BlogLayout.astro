@@ -32,21 +32,18 @@ const isRootPath = Astro.url.pathname === rootPath;
   {/* Bio sits in the page slot, so its index-page margin is set from the
        wrapper; (0,3,0) beats Bio's own `mb-16`. */}
   <div
-    class="mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:**:data-bio:mb-5 max-md:pb-24"
-    data-is-root-path={isRootPath}
+    class="mx-auto max-w-2xl px-5 py-10 data-root-path:**:data-bio:mb-5 max-md:pb-24"
+    data-root-path={isRootPath || undefined}
   >
     <header class="mb-12 flex flex-row items-center justify-between">
       {isRootPath ? (
-        <h1 class="m-0 text-[2.488rem] leading-[1.1] font-bold tracking-tight text-title dark:text-white">
+        <h1 class="m-0 text-4xl font-bold tracking-tight text-title dark:text-white">
           <a class="text-inherit no-underline" href={rootPath}>
             {BLOG_TITLE}
           </a>
         </h1>
       ) : (
-        <a
-          class="text-[1.2rem] font-bold text-navy no-underline dark:text-blue-light"
-          href={rootPath}
-        >
+        <a class="text-xl font-bold text-navy no-underline dark:text-blue-light" href={rootPath}>
           {BLOG_TITLE}
         </a>
       )}
