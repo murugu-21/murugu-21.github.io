@@ -50,7 +50,7 @@ Links opt in with `data-ph-event` and optional `data-ph-prop` / `data-ph-value`.
 
 | Event                                            | Fired on                                                                          |
 | ------------------------------------------------ | --------------------------------------------------------------------------------- |
-| `resume_download`                                | "Download my resume" (also upgrades the session recording)                        |
+| `resume_download`                                | "Download my resume", and the header's "Resume" link, which opens the PDF inline  |
 | `contact_click`                                  | "Contact me"                                                                      |
 | `social_click`                                   | any outbound profile link, tagged `social=github\|linkedin\|email\|phone\|x\|rss` |
 | `project_click`                                  | a pinned-repo card, tagged `project=<repo>`                                       |

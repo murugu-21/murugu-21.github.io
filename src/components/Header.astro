@@ -10,12 +10,7 @@ const links = [
   { href: "/#projects", label: "Projects" },
   { href: "/#achievements", label: "Achievements" },
   { href: "/#blogs", label: "Blogs" },
-  {
-    href: greeting.resumePath,
-    label: "Resume",
-    download: greeting.resumeFileName,
-    event: "resume_download"
-  },
+  { href: greeting.resumePath, label: "Resume", event: "resume_download" },
   { href: "/#contact", label: "Contact Me" }
 ];
 
@@ -122,7 +117,7 @@ const menuClass = [
     <ul id="site-menu" popover class:list={menuClass}>
       {links.map(l => (
         <li class="min-[768px]:float-left">
-          <a href={l.href} download={l.download} data-ph-event={l.event} class:list={navLink}>
+          <a href={l.href} data-ph-event={l.event} class:list={navLink}>
             {l.label}
           </a>
         </li>
