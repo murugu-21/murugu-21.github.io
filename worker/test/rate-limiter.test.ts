@@ -62,6 +62,18 @@ describe("chatAvailable", () => {
       expect(await instance.chatAvailable("sk-test", funded)).toBe(false);
     });
   });
+
+  it("keeps a 402 that lands while a balance check is still fetching", async () => {
+    let answer: (response: Response) => void = () => {};
+    const reading = new Promise<Response>(resolve => (answer = resolve));
+    await inLimiter("bal-race", async instance => {
+      const checking = instance.chatAvailable("sk-test", () => reading);
+      await instance.markChatExhausted();
+      answer(new Response(JSON.stringify(usd("1.99"))));
+      await checking;
+      expect(await instance.chatAvailable("sk-test", balanceResponse(usd("1.99")))).toBe(false);
+    });
+  });
 });
 
 describe("contact slots", () => {
