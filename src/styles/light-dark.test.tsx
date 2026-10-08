@@ -1,18 +1,18 @@
 // The theme mechanism end to end in a real browser: the toggle sets
 // `html.dark-mode`, global.css turns that into `color-scheme`, and a
-// `light-dark()` colour follows. The stylesheet is inlined by vitest.config.ts,
-// which routes `.tsx` tests (this one has no JSX) to the browser project.
+// `light-dark()` colour follows. vitest.config.ts routes `.tsx` tests (this one
+// has no JSX) to the browser project.
 import { afterEach, expect, it } from "vitest";
 import { cdp } from "vitest/browser";
 
 import { bootstrapTheme } from "#src/lib/theme.ts";
 
-declare const __GLOBAL_CSS__: string;
+import css from "./global.css?raw";
 
 // Unprocessed Tailwind at-rules (@import, @theme, @utility) are ignored by the
 // browser, which leaves the plain rules this test needs: the `color-scheme`
 // pair on html. The imports are cut so the browser doesn't try to fetch them.
-const plain = (css: string) => css.replaceAll(/@import [^;]+;/g, "");
+const plain = (sheet: string) => sheet.replaceAll(/@import [^;]+;/g, "");
 
 const mounted: Element[] = [];
 afterEach(async () => {
@@ -25,7 +25,7 @@ afterEach(async () => {
 
 const mountProbe = () => {
   const style = document.createElement("style");
-  style.textContent = plain(__GLOBAL_CSS__);
+  style.textContent = plain(css);
   const probe = document.createElement("div");
   probe.style.color = "light-dark(rgb(1, 2, 3), rgb(4, 5, 6))";
   document.head.append(style);

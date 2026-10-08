@@ -1,9 +1,8 @@
 // WCAG contrast guards for the design tokens in global.css: sky, card, night
-// and the islands. vitest.config.ts inlines the CSS.
+// and the islands.
 import { describe, expect, it } from "vitest";
 
-declare const __GLOBAL_CSS__: string;
-const css = __GLOBAL_CSS__;
+import css from "./global.css?raw";
 
 const channels = (c: string): number[] => {
   const hex = /^#([0-9a-f]{6})$/i.exec(c);

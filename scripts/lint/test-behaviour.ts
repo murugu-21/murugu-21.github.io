@@ -467,12 +467,6 @@ function importsOf(node: NodeOf<"ImportDeclaration">): [string, ImportKind][] {
     .map(specifier => [specifier.local.name, kind]);
 }
 
-// `declare const __GLOBAL_CSS__` is build-time input that vitest.config.ts injects.
-const declaredGlobals = (node: NodeOf<"VariableDeclaration">): [string, ImportKind][] =>
-  node.declare
-    ? node.declarations.flatMap(({ id }) => boundNames(id)).map(name => [name, "subject"])
-    : [];
-
 const functionBindings = ({ id, body }: NodeOf<"FunctionDeclaration">): [string, Node][] =>
   id && body ? [[id.name, body]] : [];
 
@@ -521,7 +515,6 @@ export default {
         const facts: Facts = { imports: new Map(), locals: new Map(), tests: [] };
         return {
           ImportDeclaration: node => setAll(facts.imports, importsOf(node)),
-          VariableDeclaration: node => setAll(facts.imports, declaredGlobals(node)),
           FunctionDeclaration: node => setAll(facts.locals, functionBindings(node)),
           VariableDeclarator: node => setAll(facts.locals, declaratorBindings(node)),
           AssignmentExpression: node => setAll(facts.locals, assignmentBindings(node)),

@@ -233,12 +233,6 @@ it("reports the policy", () => { expect(slugify("p")).toBe(WANT); });`,
       errors: [{ messageId: "noStrongAssertion", line: 2 }]
     },
     {
-      name: "a build-time global declared in the test file",
-      code: `declare const __GLOBAL_CSS__: string;
-it("inlines the sheet", () => { expect(__GLOBAL_CSS__).toContain("body"); });`,
-      errors: [{ messageId: "noStrongAssertion", line: 2 }]
-    },
-    {
       name: "a subject constant assigned at the top level",
       code: `${SUBJECT_IMPORT}let want: string;
 want = TOOLS.name;

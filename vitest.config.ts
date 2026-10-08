@@ -1,24 +1,18 @@
-import { readFileSync } from "node:fs";
-
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 import { configDefaults, defineConfig } from "vitest/config";
-
-// The Workers pool has no filesystem and Vite swallows `?raw` for CSS, so read
-// the stylesheet on the host and inline it for src/styles/*.test.{ts,tsx}.
-const globalCss = readFileSync("./src/styles/global.css", "utf8");
 
 // The pool's D1 starts empty; worker/test/apply-migrations.ts applies these
 // per test file.
 const d1Migrations = await readD1Migrations("./migrations");
 
 export default defineConfig({
-  define: {
-    __GLOBAL_CSS__: JSON.stringify(globalCss)
-  },
   test: {
     // 0 stops truncating `$field` values in it.each titles (and in failure messages).
     chaiConfig: { truncateThreshold: 0 },
+    // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
+    // tests in src/styles would read "".
+    css: { include: [/global\.css\?raw$/] },
     // V8 coverage doesn't work in the Workers pool. The globs name extensions so READMEs
     // and .astro files, which Istanbul can't parse, stay out.
     coverage: {
