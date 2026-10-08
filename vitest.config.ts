@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // The Workers pool has no filesystem and Vite swallows `?raw` for CSS, so read
 // the stylesheets on the host and inline them for src/styles/*.test.{ts,tsx}.
@@ -37,14 +37,20 @@ export default defineConfig({
         test: {
           name: "workers",
           setupFiles: ["./worker/test/apply-migrations.ts"],
-          include: ["worker/test/**/*.test.ts", "src/**/*.test.ts"]
+          include: ["worker/test/**/*.test.ts", "src/**/*.test.ts"],
+          exclude: [...configDefaults.exclude, "src/**/*.node.test.ts"]
         }
       },
       // The scripts run on Node or Bun, and use what workerd lacks: node:util's parseArgs,
-      // node:readline, and the native bindings oxlint's RuleTester loads.
+      // node:readline, and the native bindings oxlint's RuleTester loads. A src test that needs
+      // Node too (ESLint's parser) is named *.node.test.ts.
       {
         extends: true,
-        test: { name: "node", environment: "node", include: ["scripts/**/*.test.ts"] }
+        test: {
+          name: "node",
+          environment: "node",
+          include: ["scripts/**/*.test.ts", "src/**/*.node.test.ts"]
+        }
       },
       // React islands and the stylesheet test need a real DOM, media elements and
       // layout, which workerd lacks.

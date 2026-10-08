@@ -3,6 +3,7 @@ import { Font } from "astro:assets";
 import type { Thing } from "schema-dts";
 import { jsonLdHtml } from "#src/lib/schema.ts";
 import { BLOG_TITLE, PERSON_ID, SITE_DESCRIPTION, SITE_ORIGIN } from "#src/lib/site.ts";
+import { outdatedRedirectScript } from "#src/lib/browser-support.ts";
 import { themeBootstrapScript } from "#src/lib/theme.ts";
 import "#src/styles/global.css";
 import ChatWidget from "#src/components/chat/ChatWidget.astro";
@@ -79,6 +80,8 @@ const jsonLdScript = jsonLdHtml({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* First, so a browser below the floor leaves before anything renders. */}
+    <script is:inline set:html={outdatedRedirectScript} />
     <title>{title}</title>
     <meta name="description" content={pageMetaDescription} />
     {noindex && <meta name="robots" content="noindex" />}

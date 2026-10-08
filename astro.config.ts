@@ -16,6 +16,7 @@ import remarkMermaid from "./src/lib/blog/remark-mermaid";
 import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
 import { NIGHT_OWL } from "./src/lib/blog/code-themes";
 import { SITE_ORIGIN } from "./src/lib/site";
+import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/site/fira-code-subset";
 import { modulePreloader } from "./scripts/site/module-preload";
 
@@ -218,9 +219,6 @@ function modulePreloadHints(): AstroIntegration {
 const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
-// The oldest browsers the site supports. README.md, "Browser support", says what sets each floor.
-const BROWSER_TARGETS = ["chrome123", "edge123", "firefox128", "safari17.5", "ios17.5"];
-
 export default defineConfig({
   site: SITE_ORIGIN,
   // Validated at build, so a malformed value fails the build instead of shipping.
@@ -285,8 +283,8 @@ export default defineConfig({
     clientInteractionDirective(),
     modulePreloadHints(),
     sitemap({
-      // only a top-level /404 is auto-excluded
-      filter: page => !/\/404\/?$/.test(page),
+      // only a top-level /404 is auto-excluded; /outdated/ is for old browsers, not search
+      filter: page => !/\/(404|outdated)\/?$/.test(page),
       serialize(item) {
         const { pathname } = new URL(item.url);
         // Matched before the strip below, which turns /blog/ into "", not "blog".

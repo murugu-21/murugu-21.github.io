@@ -69,7 +69,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`, with two exceptions. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. The `scripts/` tests run on Node (the scripts themselves run on Bun), because workerd lacks `node:util`'s `parseArgs`, `node:readline` and the native bindings oxlint's RuleTester loads. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner.
+`test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`, with two exceptions. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. The `scripts/` tests run on Node (the scripts themselves run on Bun), because workerd lacks `node:util`'s `parseArgs`, `node:readline` and the native bindings oxlint's RuleTester loads. A `src` test that needs Node too, such as the ES5 parse check that loads ESLint, is named `*.node.test.ts`. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -86,7 +86,11 @@ GITHUB_TOKEN=ghp_xxx bun run build
 
 ## Browser support
 
-The site supports Chrome and Edge 123+, Firefox 128+ and Safari 17.5+ (iOS included). `BROWSER_TARGETS` in `astro.config.ts` holds the list, and the build compiles CSS for it, adding the prefixes and fallbacks those browsers need, so change both when a feature raises the floor. JavaScript isn't lowered (Astro builds client code as `esnext`), so new syntax and APIs need the same check by hand. What sets each floor:
+The site supports Chrome and Edge 123+, Firefox 128+ and Safari 17.5+ (iOS included). `MIN_VERSIONS` in `src/lib/browser-support.ts` holds the versions. The build compiles CSS for them (Vite's `cssTarget`), adding the prefixes and fallbacks those browsers need.
+
+An inline script at the top of every page's `<head>` checks the three features below and sends a browser missing any of them to `/outdated/` before the page renders. Both inline scripts are ES5, so they run in browsers far older than the floor. To see the notice, open `/outdated/?from=/about/`. That page lists the versions, and its "Continue to the site anyway" link skips the check in that tab until it closes or leaves the site (it sets `window.name`, so nothing is stored). When a feature raises the floor, change `MIN_VERSIONS` and the checks in `redirectIfOutdated` together.
+
+JavaScript isn't lowered (Astro builds client code as `esnext`), so new syntax and APIs need a support check by hand. What sets each floor:
 
 - `light-dark()`, which holds every light/dark colour pair (Chrome 123, Firefox 120, Safari 17.5). Older browsers drop the whole declaration, so the page loses its colours.
 - Tailwind 4 (Chrome 111, Firefox 128, Safari 16.4).
