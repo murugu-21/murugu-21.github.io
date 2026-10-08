@@ -69,7 +69,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`, with two exceptions. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. The `scripts/` tests run on Node (the scripts themselves run on Bun), because workerd lacks `node:util`'s `parseArgs`, `node:readline` and the native bindings oxlint's RuleTester loads. A `src` test that needs Node too, such as the ES5 parse check that loads ESLint, is named `*.node.test.ts`. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner.
+`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/` and `scripts/` runs on Node. That code runs in the browser, at build time or on Bun, never in a Worker, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -108,7 +108,7 @@ bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
 bun run check:src      # type-check src/ (.astro files included), scripts/ and the config files
 bun run check:worker   # type-check worker/
-bun run test           # vitest in the workers pool, on Node and in headless Chromium
+bun run test           # vitest in workerd, on Node and in headless Chromium
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 

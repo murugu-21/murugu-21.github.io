@@ -59,7 +59,7 @@ class FakePage extends EventTarget {
     this.os.dispatchEvent(new Event("change"));
   }
 
-  // the Workers pool has no PageTransitionEvent
+  // Node has no PageTransitionEvent
   show(persisted: boolean) {
     this.dispatchEvent(Object.assign(new Event("pageshow"), { persisted }));
   }

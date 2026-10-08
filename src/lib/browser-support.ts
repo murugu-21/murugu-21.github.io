@@ -19,7 +19,7 @@ export const CONTINUE_KEY = "outdatedBrowserContinue";
 
 // Both functions below are inlined into pages via toString() and run in the old browsers they
 // exist for, so their bodies stay ES5: var, function expressions, string concatenation, no URL
-// API. browser-support.node.test.ts parses the inlined scripts as ES5 to keep it that way.
+// API. browser-support.test.ts parses the inlined scripts as ES5 to keep it that way.
 
 interface BrowserHost {
   CSS?: { supports: (property: string, value: string) => boolean; registerProperty?: unknown };

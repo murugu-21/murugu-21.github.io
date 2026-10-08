@@ -40,7 +40,7 @@ jobs:
       - run: bun run check:worker
       # The headless shell is all the "browser" Vitest project needs.
       - run: bunx playwright install --with-deps --only-shell chromium
-      # Not `bun test`, which is Bun's own runner rather than Vitest's Workers pool.
+      # Not `bun test`, which is Bun's own runner, not Vitest.
       - run: bun run test --coverage
       - uses: qltysh/qlty-action/coverage@c9b09987143d1e4ac955f4803c7bea742102feb5 # v2.4.0
         with:

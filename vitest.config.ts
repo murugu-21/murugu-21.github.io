@@ -1,6 +1,6 @@
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
-import { configDefaults, defineConfig } from "vitest/config";
+import { defineConfig } from "vitest/config";
 
 // The pool's D1 starts empty; worker/test/apply-migrations.ts applies these
 // per test file.
@@ -31,18 +31,16 @@ export default defineConfig({
         test: {
           name: "workers",
           setupFiles: ["./worker/test/apply-migrations.ts"],
-          include: ["worker/test/**/*.test.ts", "src/**/*.test.ts"],
-          exclude: [...configDefaults.exclude, "src/**/*.node.test.ts"]
+          include: ["worker/test/**/*.test.ts"]
         }
       },
-      // The scripts run on Node or Bun, and use what workerd lacks: node:util's parseArgs,
-      // node:readline, and the native bindings oxlint's RuleTester loads. A src test that needs
-      // Node too (ESLint's parser) is named *.node.test.ts.
+      // src runs in the browser or at build time, never in a Worker, and starting each file in
+      // workerd costs far more than the tests. The scripts run on Node or Bun.
       {
         test: {
           name: "node",
           environment: "node",
-          include: ["scripts/**/*.test.ts", "src/**/*.node.test.ts"]
+          include: ["scripts/**/*.test.ts", "src/**/*.test.ts"]
         }
       },
       // React islands and the stylesheet test need a real DOM, media elements and

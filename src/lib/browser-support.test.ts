@@ -1,6 +1,13 @@
+import { Linter } from "eslint";
 import { describe, expect, it } from "vitest";
 
-import { CONTINUE_KEY, redirectIfOutdated, wireContinueLink } from "./browser-support";
+import {
+  CONTINUE_KEY,
+  continueLinkScript,
+  outdatedRedirectScript,
+  redirectIfOutdated,
+  wireContinueLink
+} from "./browser-support";
 
 type Features = { lightDark?: boolean; registerProperty?: boolean; popover?: boolean };
 
@@ -103,5 +110,19 @@ describe("wireContinueLink", () => {
     redirectIfOutdated(fresh.win, CONTINUE_KEY);
 
     expect([continued.redirects, fresh.redirects]).toEqual([[], [NOTICE]]);
+  });
+});
+
+// They run in browsers far older than the floor, where newer syntax would stop them silently.
+describe("the inlined scripts", () => {
+  const es5Errors = (code: string) =>
+    new Linter()
+      .verify(code, { languageOptions: { ecmaVersion: 5, sourceType: "script" } })
+      .map(error => error.message);
+
+  it("parse as ES5, which rejects an arrow function", () => {
+    expect(es5Errors(outdatedRedirectScript)).toEqual([]);
+    expect(es5Errors(continueLinkScript)).toEqual([]);
+    expect(es5Errors("var f = () => 1;")).toHaveLength(1);
   });
 });

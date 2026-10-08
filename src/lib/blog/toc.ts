@@ -1,5 +1,4 @@
-// Pure helpers for TableOfContents.astro, DOM-free so the test runs on the
-// Workers pool.
+// Pure helpers for TableOfContents.astro, DOM-free so the test runs on Node.
 
 import type { MarkdownHeading } from "astro";
 
