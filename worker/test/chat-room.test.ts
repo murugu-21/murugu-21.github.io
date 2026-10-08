@@ -407,6 +407,43 @@ describe("a chat turn", () => {
     ]);
   });
 
+  it("closes a turn with no prose in the error notice, unless the visitor cancelled it", async () => {
+    await fundChat();
+    const silent = await openRoom("room-silent");
+    const noProse = () =>
+      modelStream([
+        { type: "finish", usage: USAGE, finishReason: { unified: "stop", raw: "stop" } }
+      ]);
+    await scriptRoom(silent.stub, scriptedModel(noProse));
+    silent.socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "hi" })] })
+    );
+    expect(noticesIn(await streamedChunks(silent.frames, "r1"))).toEqual([
+      { kind: "error", text: "Something went wrong on my end. Please try again." }
+    ]);
+
+    const cancelled = await openRoom("room-cancelled");
+    // Like the real provider's fetch, the stream ends only when the turn is aborted.
+    const untilAborted = new MockLanguageModelV4({
+      doStream: async ({ abortSignal }) => ({
+        stream: new ReadableStream<LanguageModelV4StreamPart>({
+          start(controller) {
+            if (abortSignal?.aborted) controller.error(abortSignal.reason);
+            abortSignal?.addEventListener("abort", () => controller.error(abortSignal.reason));
+          }
+        })
+      })
+    });
+    await scriptRoom(cancelled.stub, untilAborted);
+    cancelled.socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "hi" })] })
+    );
+    await vi.waitFor(() => assert(cancelled.frames.length > 2, "the turn hasn't started"));
+    cancelled.socket.send(JSON.stringify({ type: "cf_agent_chat_request_cancel", id: "r1" }));
+    const chunks = await streamedChunks(cancelled.frames, "r1");
+    expect(chunks.map(c => c.type)).toEqual(["start"]);
+  });
+
   it("reads a site page for the model and shows the visitor only its path", async () => {
     await fundChat();
     const { socket, frames, stub } = await openRoom("room-fetch");

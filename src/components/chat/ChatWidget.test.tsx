@@ -349,7 +349,10 @@ it("ignores a blank message and the Enter that commits an IME candidate", async 
   });
 });
 
-it("shows the room's notice when the chat budget runs out", async () => {
+it.each([
+  { kind: "limit", text: "I've hit my chat budget for now.", event: "chat_limit" },
+  { kind: "error", text: "Something went wrong on my end.", event: "chat_error" }
+])("shows and counts the room's $kind notice", async ({ kind, text, event }) => {
   await render(<ChatWidget />);
   await openChat();
   await userEvent.type(input(), "Hi{Enter}");
@@ -357,13 +360,13 @@ it("shows the room's notice when the chat budget runs out", async () => {
 
   lastRoom().stream([
     { type: "start", messageId: "a1" },
-    { type: "data-notice", data: { kind: "limit", text: "I've hit my chat budget for now." } }
+    { type: "data-notice", data: { kind, text } }
   ]);
   lastRoom().finish();
 
-  await expect.element(page.getByText("I've hit my chat budget for now.")).toBeVisible();
+  await expect.element(page.getByText(text)).toBeVisible();
   await expect.element(sendButton()).toBeEnabled();
-  expect(events).toEqual(["chat_open", "chat_message_sent", "chat_limit"]);
+  expect(events).toEqual(["chat_open", "chat_message_sent", event]);
 });
 
 it("says something went wrong when the turn fails, and lets the visitor retry", async () => {

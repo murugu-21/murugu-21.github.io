@@ -114,6 +114,18 @@ const lastAudio = () => {
   return audio;
 };
 
+// An <audio> whose source fails: the error event fires, then play() rejects.
+// Each rejection, once settled, is pushed to `rejections`.
+const brokenAudio = (rejections: Promise<void>[] = []) =>
+  class extends FakeAudio {
+    override play() {
+      this.dispatchEvent(new Event("error"));
+      const rejected = Promise.reject(new DOMException("no source", "NotSupportedError"));
+      rejections.push(rejected.catch(() => {}));
+      return rejected;
+    }
+  };
+
 // The speed outlives a mount, so a test that fails mid-way must not leave the
 // next one at its speed. Set by each mount, run after each test.
 let resetRate: (() => Promise<void>) | null = null;
@@ -294,17 +306,7 @@ it("falls back to speech synthesis when the audio fails to load", async () => {
   serveAudio(TIMINGS);
   const speech = fakeSpeech();
   const rejections: Promise<void>[] = [];
-  vi.stubGlobal(
-    "Audio",
-    class extends FakeAudio {
-      override play() {
-        this.dispatchEvent(new Event("error"));
-        const rejected = Promise.reject(new DOMException("no source", "NotSupportedError"));
-        rejections.push(rejected.catch(() => {}));
-        return rejected;
-      }
-    }
-  );
+  vi.stubGlobal("Audio", brokenAudio(rejections));
   const ui = await mount();
 
   await userEvent.click(ui.listen);
@@ -315,6 +317,18 @@ it("falls back to speech synthesis when the audio fails to load", async () => {
   speech.start();
   await expect.poll(ui.readout).toBe("1/3¶1×");
   expect(speech.texts()).toEqual(["Read me"]);
+});
+
+it("goes back to Listen when the audio fails and there is no speech synthesis", async () => {
+  serveAudio(TIMINGS);
+  vi.stubGlobal("speechSynthesis", undefined);
+  vi.stubGlobal("Audio", brokenAudio());
+  const ui = await mount();
+
+  await userEvent.click(ui.listen);
+  await expect.poll(() => audios.length).toBe(1);
+  await expect.element(ui.listen).toBeEnabled();
+  await expect.poll(ui.listening).toBe(false);
 });
 
 it("falls back to speech synthesis when the audio player can't be built", async () => {

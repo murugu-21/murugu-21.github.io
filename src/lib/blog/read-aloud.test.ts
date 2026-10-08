@@ -254,6 +254,38 @@ describe("alignWords", () => {
     expect(words?.[2]).toEqual({ w: "three", s: 12, e: 13 });
   });
 
+  it("skips a word whisper heard that the text lacks", () => {
+    const words = alignWords(
+      "one two three",
+      [
+        { word: " one", start: 0, end: 1 },
+        { word: " uh", start: 1, end: 1.5 },
+        { word: " two", start: 1.5, end: 2 },
+        { word: " three", start: 2, end: 3 }
+      ],
+      block
+    );
+    expect(words).toEqual([
+      { w: "one", s: 10, e: 11 },
+      { w: "two", s: 11.5, e: 12 },
+      { w: "three", s: 12, e: 13 }
+    ]);
+  });
+
+  it("spreads unmatched words at either edge to the block's start and end", () => {
+    const words = alignWords(
+      "So one two three far",
+      [
+        { word: " one", start: 1, end: 2 },
+        { word: " two", start: 2, end: 3 },
+        { word: " three", start: 3, end: 3.5 }
+      ],
+      block
+    );
+    expect(words?.[0]).toEqual({ w: "So", s: 10, e: 11 });
+    expect(words?.[4]).toEqual({ w: "far", s: 13.5, e: 14 });
+  });
+
   it("clamps into the block and keeps times monotonic", () => {
     const words = alignWords(
       "alpha beta",

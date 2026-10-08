@@ -48,6 +48,16 @@ describe("fetchSitePage", () => {
     expect(await fetchSitePage(assets, "/about/")).toBe("About MedMe HyperVerge");
   });
 
+  it("serves a text file as written, angle brackets and all", async () => {
+    const assets = fakeAssets({ "/blog/notes.txt": "Wrap it in <Suspense> first." });
+    expect(await fetchSitePage(assets, "/blog/notes.txt")).toBe("Wrap it in <Suspense> first.");
+  });
+
+  it("says so when a page has nothing but markup", async () => {
+    const assets = fakeAssets({ "/empty/": "<body><script>track()</script></body>" });
+    expect(await fetchSitePage(assets, "/empty/")).toBe("That page has no readable text.");
+  });
+
   it("reports unknown pages", async () => {
     const out = await fetchSitePage(fakeAssets(), "https://murugappan.dev/nope/");
     expect(out).toContain("not found");
