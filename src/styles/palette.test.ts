@@ -1,5 +1,5 @@
 // WCAG contrast guards for the design tokens in global.css: sky, card, night
-// and the islands. The CSS is inlined by vitest.config.ts.
+// and the islands. vitest.config.ts inlines the CSS.
 import { describe, expect, it } from "vitest";
 
 declare const __GLOBAL_CSS__: string;
@@ -135,8 +135,8 @@ describe("blue-hour light palette", () => {
 
   // The read-aloud highlight: the spoken word (audio-words.ts) is --color-amber
   // at 25% inside its block (blog/[...slug].astro) at 14%, and body ink over
-  // both washes must stay AA on the deep stop. The alphas are restated here
-  // rather than parsed from those classes, so a change there must be mirrored here.
+  // both washes must stay AA on the deep stop. This test restates the alphas instead
+  // of parsing them from those classes, so mirror any change to them here.
   it("keeps body ink readable through the read-aloud highlight (>= 4.5:1)", () => {
     const amber = channels(ink("amber"));
     const wash = (alpha: number) => `rgba(${amber[0]}, ${amber[1]}, ${amber[2]}, ${alpha})`;
@@ -204,7 +204,7 @@ describe("night palette", () => {
   });
 
   // Projects.astro's topic chips: blue-light text on blue at 15% over the
-  // canvas. Alpha restated from the utility, as for the tag badge below.
+  // canvas. The test restates the alpha from the utility, as the tag badge test below does.
   it("keeps the project topic chips readable at night (>= 4.5:1)", () => {
     const [r, g, b] = channels(ink("blue"));
     for (const stop of night) {

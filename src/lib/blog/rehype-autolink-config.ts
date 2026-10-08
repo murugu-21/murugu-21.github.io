@@ -3,8 +3,8 @@ import type { Options } from "rehype-autolink-headings";
 
 // An <a> with a link icon prepended inside each heading.
 // It sits in the gutter left of the heading, and the icon shows while the
-// heading is hovered (hover-capable pointers only) or the anchor focused, which
-// a tap does. Its colour is the prose link colour.
+// heading is hovered (hover-capable pointers only) or the anchor has focus, which
+// a tap gives it. Its colour is the prose link colour.
 const linkIcon: Element = {
   type: "element",
   tagName: "svg",

@@ -47,8 +47,8 @@ import Section from "./Section.astro";
     </div>
     <div class="mb-8 flex flex-1 items-center justify-center">
       {/* 448px wide (240px on phones), so the srcset lets phones take the 480px
-          file. Eager: above the fold everywhere. box-content puts the 6px ring
-          outside the 448px. */}
+          file. It loads eagerly because it's above the fold on every screen.
+          box-content puts the 6px ring outside the 448px. */}
       <Image
         class="alt-fallback box-content aspect-square w-full max-w-md rounded-full border-6 border-navy object-cover shadow-glow max-md:max-w-60 dark:border-blue dark:shadow-glow-dark"
         src={portrait}

@@ -1,6 +1,6 @@
 /* The one Tailwind v4 entry for both apps. Dark mode is `html.dark-mode`, which
    sets `color-scheme: dark` (below) so every `light-dark()` pair follows it.
-   Screen only: print is on white paper, so it always takes the light theme. */
+   Dark mode is screen only. Print is on white paper, so it always takes the light theme. */
 
 @import "tailwindcss";
 /* `prose` for blog posts, /about and /developers (src/components/Prose.astro). */
@@ -17,8 +17,8 @@
 /* The blog's table of contents (TableOfContents.astro). Hover pointers get the
    rail from lg (64rem). Touch devices only get it, always expanded, from 2xl
    (96rem), where the panel clears the 42rem column: 2 × (19.75rem prose half +
-   22.25rem panel) = 84rem, plus a gap. Screen only: on paper the headings are
-   the contents. */
+   22.25rem panel) = 84rem, plus a gap. It is screen only, because on paper the
+   headings are the contents. */
 @custom-variant toc-shown {
   @media screen and (min-width: 64rem) and (hover: hover) {
     @slot;
@@ -27,8 +27,9 @@
     @slot;
   }
 }
-/* Collapsed to bars while neither hovered nor keyboard-focused. `:has(:focus-visible)`,
-   not `:focus-within`: a mouse click would leave the panel held open over the prose. */
+/* The rail collapses to bars unless it is hovered or keyboard-focused. It tests
+   `:has(:focus-visible)` rather than `:focus-within` because a mouse click would
+   otherwise leave the panel held open over the prose. */
 @custom-variant toc-collapsed {
   @media (hover: hover) {
     :where([data-toc]):not(:hover, :has(:focus-visible)) & {
@@ -84,7 +85,7 @@
   --color-nav-scrolled-dark: rgba(17, 19, 30, 0.72);
   /* Chip boundaries: 60% is the least that clears 3:1 on every sky stop. */
   --color-chip-outline: rgba(6, 3, 141, 0.6);
-  /* blue-light, not blue: blue at 60% stays under 3:1 on the night canvas */
+  /* This is blue-light because blue at 60% stays under 3:1 on the night canvas. */
   --color-chip-outline-dark: rgba(125, 162, 255, 0.6);
   --color-border-soft: rgba(112, 104, 150, 0.32);
   --color-border-soft-dark: rgba(255, 255, 255, 0.25);
@@ -216,10 +217,10 @@
     }
   }
 
-  /* The table scroll hint (table-scroll-hint below): the mask is drawn 3rem
-     wider than the table so its transparent tail sits off the right edge (no
-     fade); the animation pulls it back to the table's width (fade showing) at
-     scroll start and lets it out again as the table scrolls to its end. */
+  /* The table scroll hint (table-scroll-hint below). The mask is 3rem wider than
+     the table, so its transparent tail sits off the right edge and shows no fade.
+     At scroll start the animation pulls the mask back to the table's width, which
+     shows the fade, and lets it out again as the table scrolls to its end. */
   --animate-table-scroll-hint: table-scroll-hint linear both;
   @keyframes table-scroll-hint {
     from {
@@ -334,7 +335,7 @@
 
 /* shadcn tokens for the React islands. Each colour is one `light-dark()` pair,
    resolved by the `color-scheme` set from `html.dark-mode`. palette.test.ts
-   reads both sides of every pair out of this block: keep the tokens first. */
+   reads both sides of every pair out of this block, so keep the tokens first. */
 @utility ui-island {
   --background: light-dark(#faf9ff, #282c35);
   --foreground: light-dark(#2f2a4d, #ffffff);
@@ -358,7 +359,7 @@
   --ring: light-dark(#06038d, #7da2ff);
   --radius: 0.75rem;
   /* Scoped here, not in @theme inline, so rounded-* keeps Tailwind's defaults
-     outside islands (inlining made them 0 where --radius was undefined). */
+     outside islands (inlining would make them 0 wherever --radius is undefined). */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -398,7 +399,8 @@
 }
 
 /* The typography plugin's colours (src/components/Prose.astro), as a custom
-   colour theme per its README. Each is a light-dark() pair, so no prose-invert.
+   colour theme per its README. Each is a light-dark() pair, so dark mode needs no
+   prose-invert.
    palette.test.ts reads the text pairs out of this block. */
 @utility prose-site {
   --tw-prose-body: light-dark(var(--color-text), var(--color-text-dark));
@@ -419,10 +421,10 @@
   --tw-prose-td-borders: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
 }
 
-/* A table that scrolls sideways, with a scroll hint for overlay scrollbars: the
+/* A table that scrolls sideways, with a scroll hint for overlay scrollbars. The
    right edge fades while there is more to the right. The resting mask shows no
-   fade, so a table that fits, or an engine without scroll timelines (the 0s
-   animation lands on `to`), shows none. */
+   fade, so a table that fits shows none. Neither does an engine without scroll
+   timelines, where the 0s animation lands on `to`. */
 @utility table-scroll-hint {
   display: block;
   overflow-x: auto;
@@ -430,9 +432,9 @@
   mask-repeat: no-repeat;
   mask-size: calc(100% + 3rem) 100%;
   animation: var(--animate-table-scroll-hint);
-  /* Separate block on purpose: Lightning CSS would fold the timeline into the
-     shorthand, which Chrome rejects. Must follow the shorthand, which resets
-     animation-timeline. */
+  /* A separate block because Lightning CSS would otherwise fold the timeline into
+     the shorthand, which Chrome rejects. It must come after the shorthand, which
+     resets animation-timeline. */
   @supports (animation-timeline: scroll()) {
     animation-timeline: scroll(self inline);
     animation-duration: auto;

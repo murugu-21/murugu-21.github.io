@@ -7,9 +7,9 @@ import { tailwind4 } from "tailwind-csstree";
 const useTailwind =
   "Style with Tailwind: utilities in the markup, or an @utility or @theme token in src/styles/global.css.";
 
-// Stylesheets hold Tailwind configuration, not hand-written rules: a style rule may
+// Stylesheets hold Tailwind configuration, not hand-written rules. A style rule may
 // only sit inside @utility, @theme (keyframes), @custom-variant or, in global.css,
-// `@layer base`. @font-face and @page are allowed because Tailwind has no way to write them.
+// `@layer base`. @font-face and @page are allowed because Tailwind can't write them.
 const allowedAtRules =
   "Atrule[name=/^(import|plugin|source|theme|utility|custom-variant|font-face|page)$/]";
 const baseLayer = "Atrule[name='layer']:has(Layer[name='base'])";
@@ -53,12 +53,12 @@ export default defineConfig([
         },
         {
           selector: "JSXAttribute > JSXNamespacedName[namespace.name='class'][name.name='list']",
-          message: "Use class={cn(…)} (tailwind-merge), or a cva() variant."
+          message: "Use class={cn(…)}, which merges Tailwind classes, or a cva() variant."
         },
         {
-          // .tsx has no equivalent: oxlint has no no-restricted-syntax.
+          // .tsx has no equivalent check because oxlint has no no-restricted-syntax.
           selector: "CallExpression[callee.name='cn'] > ConditionalExpression",
-          message: "A choice between class sets is a variant: use cva()."
+          message: "Choosing between class sets is a variant, so use cva()."
         }
       ]
     }
@@ -74,13 +74,13 @@ export default defineConfig([
     files: ["**/*.css"],
     plugins: { css },
     language: "css/css",
-    // Tolerant: tailwind-csstree can't parse valid Tailwind 4 such as @keyframes or
-    // var() inside @theme and @supports nested in @utility. Those regions become Raw
-    // nodes the selectors below can't inspect.
+    // Tolerant mode is on because tailwind-csstree can't parse some valid Tailwind 4, such as
+    // @keyframes or var() inside @theme and @supports nested in @utility. Those regions
+    // become Raw nodes the selectors below can't inspect.
     languageOptions: { customSyntax: tailwind4, tolerant: true },
     extends: [css.configs.recommended],
     rules: {
-      // Tailwind's theme variables are defined where the linter can't see them.
+      // Tailwind defines its theme variables in files the linter doesn't read.
       "css/no-invalid-properties": ["error", { allowUnknownVariables: true }],
       // It reads an @utility body as descriptors and rejects ordinary properties; the
       // top-level at-rule list below already limits which at-rules may appear.

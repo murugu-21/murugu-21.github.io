@@ -32,7 +32,8 @@ function svgSize(svg: string): { width: number; height: number } | undefined {
 }
 
 // The hidden theme is display:none, so its lazy image is never fetched. The
-// white or dark card backs labels drawn outside node boxes (render-mermaid.ts).
+// white or dark card sits behind any label that falls outside a node box
+// (render-mermaid.ts).
 const themeClass = {
   light: "mx-auto rounded-lg bg-white p-3 dark:hidden",
   dark: "mx-auto hidden rounded-lg bg-dark-bg p-3 dark:block"

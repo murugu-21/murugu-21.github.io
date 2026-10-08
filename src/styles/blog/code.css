@@ -19,7 +19,7 @@
   text-decoration: var(--shiki-light-text-decoration);
 }
 
-/* Weight and decoration aren't colours, so they still follow the class, on
+/* Weight and decoration aren't colours, so they still follow html.dark-mode, on
    screen only like the rest of the dark theme. */
 @media screen {
   html.dark-mode .astro-code,

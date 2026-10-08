@@ -3,8 +3,8 @@ import type { HTMLAttributes } from "astro/types";
 import { cva } from "class-variance-authority";
 import { cn } from "#src/lib/utils.ts";
 
-// Long-form text (blog posts, /about, /developers): the typography plugin's
-// defaults in the site's colours (prose-site in global.css) and Fira Code.
+// Wraps long-form text (blog posts, /about, /developers) in the typography plugin's
+// defaults, using the site's colours (prose-site in global.css) and Fira Code.
 type Tag = "main" | "article" | "div";
 type Props = HTMLAttributes<"div"> & { as?: Tag };
 const { as: Element = "div", class: className, ...rest } = Astro.props;
@@ -14,7 +14,8 @@ const prose = cva(
   "prose wrap-break-word prose-site prose-headings:scroll-mt-20 max-sm:prose-h1:text-3xl prose-pre:border prose-pre:border-border-soft dark:prose-pre:border-fence-edge-dark prose-table:table-scroll-hint",
   {
     variants: {
-      // A <main> is a whole page: its own column, clear of the fixed navbar.
+      // A <main> is a whole page, so it gets its own centred column and top padding that
+      // clears the fixed navbar.
       as: {
         main: "mx-auto box-content px-5 pt-28 pb-16 md:prose-lg",
         article: "",

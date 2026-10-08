@@ -44,8 +44,9 @@ const tocBar = cva(
     data-toc
   >
     {/* The nav's padding is the hover target around the 2px bars and keeps the
-        growing panel under the pointer. `right`, not `100vw`: fixed is
-        measured inside a classic scrollbar. */}
+        growing panel under the pointer. It anchors with `right`, not `100vw`,
+        because a fixed element's containing block stops short of a classic
+        scrollbar. */}
     <ol class="m-0 max-h-[calc(100vh-12rem)] max-w-80 list-none overflow-y-auto rounded-xl bg-nav-scrolled px-4 py-3 shadow-glow backdrop-blur-lg transition duration-150 motion-reduce:transition-none dark:bg-nav-scrolled-dark dark:shadow-glow-dark toc-collapsed:overflow-visible toc-collapsed:bg-transparent toc-collapsed:p-0 toc-collapsed:shadow-none toc-collapsed:backdrop-filter-none">
       {entries.map(entry => (
         <li class="toc-collapsed:flex toc-collapsed:justify-end toc-collapsed:py-1.5">

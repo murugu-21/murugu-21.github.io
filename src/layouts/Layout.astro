@@ -70,8 +70,8 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 
 // Page chrome per section. The portfolio's 80px scroll padding clears its fixed
 // header; the blog has none, and its headings carry their own scroll-margin. The
-// blog overrides the base layer's 19px/23px body type, and dims the stars for
-// reading: between words they read as stray bullets.
+// blog overrides the base layer's 19px/23px body type and dims the stars, which look
+// like stray bullets between words.
 type PerKind = Record<Section["kind"], string>;
 const chrome = {
   html: cva("scroll-smooth", {

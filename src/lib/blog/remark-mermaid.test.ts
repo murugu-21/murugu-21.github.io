@@ -48,7 +48,7 @@ describe("remarkMermaid", () => {
     });
   });
 
-  // Lazy plus display:none is what keeps the other theme's SVG from being fetched.
+  // Lazy loading plus display:none stops the browser fetching the other theme's SVG.
   it("shows the light image by day and the dark one at night, hiding the other", async () => {
     const { file } = await renderedPost({ viewBox: "0 0 400 200" });
     const tree = fromMarkdown(`\`\`\`mermaid\n${FENCE}\n\`\`\`\n`);

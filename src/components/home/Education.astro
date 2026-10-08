@@ -12,7 +12,8 @@ import SectionTitle from "./SectionTitle.astro";
       <div>
         <div class="peer flex flex-col pb-2.5 max-md:text-center xl:flex-row xl:pb-0">
           <div>
-            {/* Rendered at 6rem from xl (4rem below), so 96px + 2x instead of the 256px source. */}
+            {/* It renders at 6rem from xl (4rem below), so it ships a 96px file and its
+                2x version instead of the 256px source. */}
             <Image
               class="alt-fallback mt-2.5 mb-4 inline-block size-16 rounded-full object-cover align-baseline shadow-lg shadow-shadow-darker md:mt-0 md:mb-2 xl:mr-8 xl:mb-0 xl:size-24"
               src={school.logo}

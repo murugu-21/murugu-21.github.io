@@ -71,7 +71,7 @@ function emptyBodyProblem({ slug, html }: Post) {
   );
 }
 
-// The read-aloud player and the audio generator read the title by this hook.
+// The read-aloud player and the audio generator find the title by its data-post-title attribute.
 function titleProblem({ slug, html }: Post) {
   if (html.includes("<h1 data-post-title>")) return;
   return `blog/${slug}/index.html has no <h1 data-post-title>, so read-aloud would skip the title`;

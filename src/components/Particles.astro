@@ -1,7 +1,7 @@
 ---
-// Canvas starfield behind both apps. Idle-loaded so it can't affect LCP, paused
-// while hidden, off under prefers-reduced-motion. -z-10 sits above the body
-// background, which propagates to the root canvas. `class` lets a host tune it.
+// Canvas starfield behind both apps. It starts on idle so it can't affect LCP, pauses
+// while the tab is hidden, and stays off under prefers-reduced-motion. -z-10 sits above
+// the body background, which propagates to the root canvas.
 import { cn } from "#src/lib/utils.ts";
 
 const { class: className } = Astro.props;

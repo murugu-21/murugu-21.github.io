@@ -71,11 +71,9 @@ const description = postDescription(post);
         ))}
       </div>
     </header>
-    {/* Read-aloud island; ships disabled at full size so hydration doesn't
-         shift layout. `ui-island` scopes the shadcn tokens. Sticky only while
-         `data-listening` (set by the island), and a direct child of the article
-         because sticky only travels inside its parent. `pt-3` is always there
-         so the layout never shifts. */}
+    {/* The read-aloud island ships disabled at full size, and pt-3 is always there,
+         so hydration never shifts layout. It is a direct child of the article
+         because a sticky element only moves within its parent. */}
     <div class="-mb-px h-px" aria-hidden="true" data-listen-sentinel></div>
     <div
       class="not-prose mb-4 ui-island pt-3 data-listening:sticky data-listening:top-0 data-listening:z-30 data-listening:data-pinned:bg-nav-scrolled data-listening:data-pinned:backdrop-blur-lg dark:data-listening:data-pinned:bg-nav-scrolled-dark print:hidden"
@@ -125,8 +123,8 @@ const description = postDescription(post);
 </BlogLayout>
 
 <script>
-  // `data-pinned` once the sentinel scrolls out: paints the frosted band behind a
-  // docked bar's gap. Styling only.
+  // Sets `data-pinned` once the sentinel scrolls off the top of the viewport, which
+  // paints the frosted band behind the docked bar's gap. Styling only.
   const sentinel = document.querySelector<HTMLElement>("[data-listen-sentinel]");
   const island = document.querySelector<HTMLElement>("[data-listen-island]");
   if (sentinel && island) {

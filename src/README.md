@@ -15,7 +15,7 @@ src/components/   # site chrome shared by every page (Header, Icon, ThemeToggle,
   ui/             # shadcn primitives
 src/lib/          # shared logic (site constants, theme, analytics, llms.txt)
   blog/           # blog-only logic
-src/styles/       # global.css (the Tailwind entry) and resume.css (the resume's)
+src/styles/       # global.css (the Tailwind entry) and resume.css (the resume's own Tailwind entry)
   blog/           # blog-only styles (code.css, for Shiki)
 src/data/         # hand-written portfolio and resume data
 ```

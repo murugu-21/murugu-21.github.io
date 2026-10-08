@@ -4,9 +4,10 @@ import { cn } from "#src/lib/utils.ts";
 // One tag filter chip: a visually hidden checkbox `[data-tag]` plus its label,
 // styled from the checkbox state; PostList.astro's script reads it on `change`.
 //
-// `[[data-tag]:…+&]:` variants, not `peer-*`: peer compiles to `~`, and all chips are
-// siblings, so checking one would paint every later label. Hovering a label
-// forwards `:hover` to its offscreen checkbox, so `[data-tag]:hover + label` works.
+// The label uses `[[data-tag]:…+&]:` variants instead of `peer-*`, because peer compiles
+// to `~` and all chips are siblings, so checking one would paint every later label.
+// Hovering a label forwards `:hover` to its offscreen checkbox, so
+// `[data-tag]:hover + label` works.
 export interface TagCount {
   name: string;
   count: number;
@@ -24,7 +25,7 @@ const { tag } = Astro.props;
   for={`tag-${tag.name}`}
   class={cn(
     "mt-3.5 mr-3 flex cursor-pointer items-center rounded-sm [[data-tag]:checked+&]:bg-navy [[data-tag]:checked+&]:text-white dark:[[data-tag]:checked+&]:bg-box-dark [[data-tag]:hover+&]:shadow-md [[data-tag]:hover+&]:shadow-chip-outline [[data-tag]:hover+&]:outline-none dark:[[data-tag]:hover+&]:shadow-chip-outline-dark",
-    // Solid rings: half-alpha ones miss the 3:1 a focus indicator needs.
+    // The rings are solid because a half-alpha ring misses the 3:1 a focus indicator needs.
     "[[data-tag]:focus-visible+&]:ring-2 [[data-tag]:focus-visible+&]:ring-amber-ink dark:[[data-tag]:focus-visible+&]:ring-blue-light"
   )}
 >

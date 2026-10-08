@@ -130,8 +130,8 @@ function focusInChat(launcher: HTMLElement | null): boolean {
   );
 }
 
-// The panel header's icon buttons, on the primary fill. Radix triggers wrap
-// them with asChild, so every prop (ref included) passes through.
+// An icon button for the panel header, styled for the primary fill. Radix triggers
+// wrap it with asChild, so every prop (ref included) passes through.
 function HeaderButton(props: ComponentProps<typeof Button>) {
   return (
     <Button

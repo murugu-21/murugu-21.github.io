@@ -83,7 +83,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
         {" "}
         {stints.map(stint => (
           <div class="mb-2">
-            {/* company on the left, the stint's full span flush right; never stranded at the foot of a page */}
+            {/* Keeps the company row off the foot of a page, away from its bullets. */}
             <p class="mt-0 mb-1 flex break-after-avoid flex-wrap items-baseline justify-between gap-x-3 font-bold">
               <span>
                 {stint.company}

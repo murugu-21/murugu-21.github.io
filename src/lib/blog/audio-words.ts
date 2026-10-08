@@ -112,8 +112,8 @@ const isText = (node: Node): node is Text => node.nodeType === 3;
 const isElement = (node: Node): node is Element => node.nodeType === 1;
 
 const WORD_ATTR = "data-w";
-// The spoken word (data-current-word, set by listen-player.ts) over its block's
-// wash. palette.test.ts holds the ink AA through both washes.
+// Highlights the spoken word (data-current-word, set by listen-player.ts) over its
+// block's wash. palette.test.ts checks that body ink stays AA through both washes.
 const WORD_CLASS =
   "data-current-word:rounded-xs data-current-word:bg-amber/25 data-current-word:ring-2 data-current-word:ring-amber/25 dark:data-current-word:bg-box-dark/20 dark:data-current-word:ring-box-dark/20";
 
