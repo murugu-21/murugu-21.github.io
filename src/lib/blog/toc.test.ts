@@ -44,7 +44,7 @@ describe("tocEntries", () => {
 });
 
 describe("activeIndex", () => {
-  // post.css parks a jumped-to heading at 80px; the line sits the slack below.
+  // the blog-post utility parks a jumped-to heading at 80px; the line sits the slack below.
   const LINE = 80 + TOC_LINE_SLACK;
 
   it("is nothing before the first heading reaches the line", () => {

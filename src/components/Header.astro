@@ -1,6 +1,7 @@
 ---
 import { greeting } from "#src/data/portfolio.ts";
 import ThemeToggle from "./ThemeToggle.astro";
+import { cn } from "#src/lib/utils.ts";
 
 // Root-relative so the links work from other pages. /about is deliberately left out
 // (machine entity page, linked via sitemap/llms.txt/rel=author).
@@ -16,108 +17,71 @@ const links = [
 
 // Breakpoints are the literal pair `max-[768px]:` / `min-[768px]:`, not `md:`:
 // the theme puts md at 769px (global.css), which would leave 768px in neither band.
-
-// Transparent at rest, blurred once `.scrolled` (script below). Always solid
-// below 768px, where the menu sheet continues its surface.
-const headerClass = [
-  "group fixed top-0 right-0 left-0 z-[999] mx-auto max-w-full bg-transparent px-5 py-2.5",
-  "transition-all duration-300 ease-out motion-reduce:transition-none",
-  "[&.scrolled]:backdrop-blur-[15px]",
-  "max-[768px]:bg-surface max-[768px]:shadow-[0_4px_10px_0_rgba(3,5,40,0.12)]",
-  "dark:max-[768px]:bg-dark-base",
-  "min-[768px]:flex min-[768px]:items-center min-[768px]:justify-between",
-  "min-[768px]:[&.scrolled]:bg-nav-scrolled",
-  "min-[768px]:[&.scrolled]:shadow-[0_10px_10px_0_rgba(3,5,40,0.12)]",
-  "dark:min-[768px]:[&.scrolled]:bg-nav-scrolled-dark",
-  // Nav text + logo don't fit one row below 1320px, so type steps down in three bands.
-  "min-[768px]:max-[961px]:text-[12px]",
-  "min-[961px]:max-[1121px]:text-[13px]",
-  "min-[1121px]:max-[1321px]:text-[14px]"
-];
-
-// The ~300px logo and the hamburger can't share a narrow row, so it shrinks in two steps.
-const logo = [
-  "float-left block flex-none leading-[normal] no-underline",
-  "mt-2.5 text-[1.5em] min-[768px]:mt-0",
-  "min-[360px]:max-[768px]:mt-[18px] min-[360px]:max-[768px]:text-[1.05em]",
-  "max-[360px]:mt-6 max-[360px]:text-[0.85em]"
-];
-
-// The 961 to 1320px band tightens the padding, so the underline's inset follows.
-const navLink = [
-  "relative block px-5 py-[15px] text-text no-underline dark:text-white",
-  "after:absolute after:bottom-2 after:left-5 after:h-[3px] after:w-0 after:rounded-[3px]",
-  "after:bg-navy after:transition-[width] after:duration-300 after:ease-out after:content-['']",
-  "dark:after:bg-blue motion-reduce:after:transition-none",
-  "hover:after:w-[calc(100%-40px)] focus-visible:after:w-[calc(100%-40px)]",
-  "min-[961px]:max-[1321px]:px-3 min-[961px]:max-[1321px]:after:left-3",
-  "min-[961px]:max-[1321px]:hover:after:w-[calc(100%-24px)]",
-  "min-[961px]:max-[1321px]:focus-visible:after:w-[calc(100%-24px)]"
-];
-
-// Without the Popover API (Safari < 17, Firefox < 125) the phone nav is
-// unavailable, so the button hides rather than sit dead.
-const menuButton = [
-  "float-right cursor-pointer px-5 py-7 min-[768px]:hidden",
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy",
-  "not-supports-[selector(:popover-open)]:hidden"
-];
-
-// Middle bar is the element, outer bars its ::before/::after; while the menu is
-// open, they cross into an X. Variants are written out in full: Tailwind scans
-// this file as text.
-const navicon = [
-  "relative block h-[3px] w-[22px] rounded-[3px] bg-navy dark:bg-blue",
-  "transition-[background] duration-200 ease-out",
-  "before:absolute before:top-[7px] before:block before:h-full before:w-full before:rounded-[3px]",
-  "before:bg-navy before:transition-all before:duration-200 before:ease-out before:content-['']",
-  "dark:before:bg-blue",
-  "after:absolute after:top-[-7px] after:block after:h-full after:w-full after:rounded-[3px]",
-  "after:bg-navy after:transition-all after:duration-200 after:ease-out after:content-['']",
-  "dark:after:bg-blue",
-  "group-has-open:bg-transparent",
-  "group-has-open:before:top-0 group-has-open:before:-rotate-45",
-  "group-has-open:after:top-0 group-has-open:after:rotate-45"
-];
-
-// The list is a popover: Escape and a tap outside close it, and the button gets
-// aria-expanded for free. The UA styles a popover as a hidden, centred, bordered
-// box, so both bands undo that.
-const menuClass = [
-  "m-0 h-auto w-auto list-none border-0 p-0",
-  // Inline on desktop: the UA hides a closed popover, and the script keeps it closed there.
-  "min-[768px]:static min-[768px]:block min-[768px]:overflow-visible min-[768px]:bg-transparent",
-  // A sheet in the top layer, from the bar's content edge (10px padding + the 59px
-  // button) down, on the bar's surface. 486px clears the seven links.
-  "max-[768px]:fixed max-[768px]:inset-x-0 max-[768px]:top-[69px] max-[768px]:bottom-auto",
-  "max-[768px]:px-5 max-[768px]:pb-2.5 max-[768px]:bg-surface dark:max-[768px]:bg-dark-base",
-  // The bar's shadow, offset and shrunk so none of it spills up onto the bar.
-  "max-[768px]:shadow-[0_8px_10px_-4px_rgba(3,5,40,0.12)]",
-  "max-[768px]:max-h-0 max-[768px]:overflow-hidden max-[768px]:open:max-h-[486px]",
-  // The slide: max-height from 0 on open, back to 0 on close. display and overlay
-  // are discrete, so the sheet leaves the top layer only once the slide ends.
-  "max-[768px]:starting:open:max-h-0",
-  "max-[768px]:transition-[max-height,display,overlay] max-[768px]:transition-discrete",
-  // The breakpoint variant must wrap motion-reduce, or the transition rule above outranks it.
-  "max-[768px]:duration-200 max-[768px]:ease-out max-[768px]:motion-reduce:transition-none"
-];
 ---
 
-<header class:list={headerClass} id="site-header">
-  <a href="/" class:list={logo}>
-    <span class="text-subtitle dark:text-white/65">&lt;</span>
+{/* Transparent at rest, blurred once `data-scrolled` (script below). Always solid
+   below 768px, where the menu sheet continues its surface. */}
+<header
+  class={cn(
+    "group fixed inset-x-0 top-0 z-999 mx-auto max-w-full bg-transparent px-5 py-2.5 transition-all duration-300 ease-out data-scrolled:backdrop-blur-[15px] motion-reduce:transition-none max-[768px]:bg-surface max-[768px]:shadow-[0_4px_10px_0_rgba(3,5,40,0.12)] min-[768px]:flex min-[768px]:items-center min-[768px]:justify-between min-[768px]:data-scrolled:bg-nav-scrolled min-[768px]:data-scrolled:shadow-[0_10px_10px_0_rgba(3,5,40,0.12)] dark:max-[768px]:bg-dark-base dark:min-[768px]:data-scrolled:bg-nav-scrolled-dark",
+    // Nav text + logo don't fit one row below 1320px, so type steps down in three bands.
+    "min-[768px]:max-[961px]:text-[12px] min-[961px]:max-[1121px]:text-[13px] min-[1121px]:max-[1321px]:text-[14px]"
+  )}
+  id="site-header"
+>
+  {/* The ~300px logo and the hamburger can't share a narrow row, so it shrinks in two steps. */}
+  <a
+    href="/"
+    class="float-left mt-2.5 block flex-none text-[1.5em] leading-[normal] no-underline max-[360px]:mt-6 max-[360px]:text-[0.85em] min-[360px]:max-[768px]:mt-4.5 min-[360px]:max-[768px]:text-[1.05em] min-[768px]:mt-0"
+  >
+    <span class="text-subtitle-muted">&lt;</span>
     <span class="px-2.5 font-bold text-navy dark:text-white">Murugappan M</span>
-    <span class="text-subtitle dark:text-white/65">/&gt;</span>
+    <span class="text-subtitle-muted">/&gt;</span>
   </a>
-  <button type="button" class:list={menuButton} popovertarget="site-menu">
+  {/* Without the Popover API (Safari < 17, Firefox < 125) the phone nav is
+     unavailable, so the button hides rather than sit dead. */}
+  <button
+    type="button"
+    class="float-right cursor-pointer px-5 py-7 not-supports-[selector(:popover-open)]:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy min-[768px]:hidden"
+    popovertarget="site-menu"
+  >
     <span class="sr-only">Menu</span>
-    <span class:list={navicon}></span>
+    {/* Middle bar is the element, outer bars its ::before/::after; while the menu is
+       open, they cross into an X. Variants are written out in full: Tailwind scans
+       this file as text. */}
+    <span class="relative block h-0.75 w-5.5 rounded-[3px] bg-navy transition-[background] duration-200 ease-out group-has-open:bg-transparent before:absolute before:top-1.75 before:block before:size-full before:rounded-[3px] before:bg-navy before:transition-all before:duration-200 before:ease-out before:content-[''] group-has-open:before:top-0 group-has-open:before:-rotate-45 after:absolute after:-top-1.75 after:block after:size-full after:rounded-[3px] after:bg-navy after:transition-all after:duration-200 after:ease-out after:content-[''] group-has-open:after:top-0 group-has-open:after:rotate-45 dark:bg-blue dark:before:bg-blue dark:after:bg-blue"></span>
   </button>
   <nav aria-label="Main" class="min-[768px]:ml-auto">
-    <ul id="site-menu" popover class:list={menuClass}>
+    {/* The list is a popover: Escape and a tap outside close it, and the button gets
+       aria-expanded for free. The UA styles a popover as a hidden, centred, bordered
+       box, so both bands undo that. */}
+    <ul
+      id="site-menu"
+      popover
+      class={cn(
+        "m-0 size-auto list-none border-0 p-0",
+        // Inline on desktop: the UA hides a closed popover, and the script keeps it closed there.
+        "min-[768px]:static min-[768px]:block min-[768px]:overflow-visible min-[768px]:bg-transparent",
+        // A sheet in the top layer, from the bar's content edge (10px padding + the 59px
+        // button) down, on the bar's surface. 486px clears the seven links.
+        "max-[768px]:fixed max-[768px]:inset-x-0 max-[768px]:top-17.25 max-[768px]:bottom-auto max-[768px]:bg-surface max-[768px]:px-5 max-[768px]:pb-2.5 dark:max-[768px]:bg-dark-base",
+        // The bar's shadow, offset and shrunk so none of it spills up onto the bar.
+        "max-[768px]:max-h-0 max-[768px]:overflow-hidden max-[768px]:shadow-[0_8px_10px_-4px_rgba(3,5,40,0.12)] max-[768px]:open:max-h-121.5",
+        // The slide: max-height from 0 on open, back to 0 on close. display and overlay
+        // are discrete, so the sheet leaves the top layer only once the slide ends.
+        "max-[768px]:transition-[max-height,display,overlay] max-[768px]:transition-discrete max-[768px]:starting:open:max-h-0",
+        // The breakpoint variant must wrap motion-reduce, or the transition rule above outranks it.
+        "max-[768px]:duration-200 max-[768px]:ease-out max-[768px]:motion-reduce:transition-none"
+      )}
+    >
       {links.map(l => (
         <li class="min-[768px]:float-left">
-          <a href={l.href} data-ph-event={l.event} class:list={navLink}>
+          {/* The 961 to 1320px band tightens the padding, so the underline's inset follows. */}
+          <a
+            href={l.href}
+            data-ph-event={l.event}
+            class="relative block px-5 py-3.75 text-text no-underline after:absolute after:bottom-2 after:left-5 after:h-0.75 after:w-0 after:rounded-[3px] after:bg-navy after:transition-[width] after:duration-300 after:ease-out after:content-[''] hover:after:w-[calc(100%-40px)] focus-visible:after:w-[calc(100%-40px)] motion-reduce:after:transition-none min-[961px]:max-[1321px]:px-3 min-[961px]:max-[1321px]:after:left-3 min-[961px]:max-[1321px]:hover:after:w-[calc(100%-24px)] min-[961px]:max-[1321px]:focus-visible:after:w-[calc(100%-24px)] dark:text-white dark:after:bg-blue"
+          >
             {l.label}
           </a>
         </li>
@@ -126,7 +90,7 @@ const menuClass = [
   </nav>
   {/* Outside the menu so it stays in the bar. 41px, not top-1/2: the 79px bar
        centres on a half pixel, and this sits level with the hamburger. */}
-  <div class="absolute top-[41px] right-[86px] -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0">
+  <div class="absolute top-10.25 right-21.5 -translate-y-1/2 min-[768px]:static min-[768px]:ml-1 min-[768px]:translate-y-0">
     <ThemeToggle />
   </div>
 </header>
@@ -134,7 +98,7 @@ const menuClass = [
 <script>
   const header = document.getElementById("site-header");
   if (!header) throw new Error("Header: #site-header is missing");
-  const onScroll = () => header.classList.toggle("scrolled", window.scrollY >= 20);
+  const onScroll = () => header.toggleAttribute("data-scrolled", window.scrollY >= 20);
   onScroll();
   window.addEventListener("scroll", onScroll, { passive: true });
 

@@ -5,8 +5,7 @@ import { playwright } from "@vitest/browser-playwright";
 import { configDefaults, defineConfig } from "vitest/config";
 
 // The Workers pool has no filesystem and Vite swallows `?raw` for CSS, so read
-// the stylesheets on the host and inline them for src/styles/*.test.{ts,tsx}.
-const islandsCss = readFileSync("./src/styles/islands.css", "utf8");
+// the stylesheet on the host and inline it for src/styles/*.test.{ts,tsx}.
 const globalCss = readFileSync("./src/styles/global.css", "utf8");
 
 // The pool's D1 starts empty; worker/test/apply-migrations.ts applies these
@@ -15,7 +14,6 @@ const d1Migrations = await readD1Migrations("./migrations");
 
 export default defineConfig({
   define: {
-    __ISLANDS_CSS__: JSON.stringify(islandsCss),
     __GLOBAL_CSS__: JSON.stringify(globalCss)
   },
   test: {

@@ -111,7 +111,6 @@ export function alignWords(
 const isText = (node: Node): node is Text => node.nodeType === 3;
 const isElement = (node: Node): node is Element => node.nodeType === 1;
 
-const WORD_CLASS = "rw";
 const WORD_ATTR = "data-w";
 
 const textNodes = (node: Node): Text[] =>
@@ -120,11 +119,11 @@ const textNodes = (node: Node): Text[] =>
     return isElement(child) ? textNodes(child) : [];
   });
 
-// Wraps each word of `el` in <span class="rw">, grouped per word in document
+// Wraps each word of `el` in <span data-w="<word index>">, grouped per word in document
 // order. Words span text nodes, so "<a>SiteGPT</a>'s" is one word of two
 // spans. Idempotent: existing spans are regrouped by word index.
 export function wrapWords(el: Element): HTMLElement[][] {
-  const existing = Array.from(el.querySelectorAll<HTMLElement>(`span.${WORD_CLASS}`));
+  const existing = Array.from(el.querySelectorAll<HTMLElement>(`span[${WORD_ATTR}]`));
   if (existing.length > 0) {
     const grouped: HTMLElement[][] = [];
     for (const span of existing) {
@@ -152,7 +151,6 @@ export function wrapWords(el: Element): HTMLElement[][] {
         words.push(word);
       }
       const span = doc.createElement("span");
-      span.className = WORD_CLASS;
       span.setAttribute(WORD_ATTR, String(words.length - 1));
       span.textContent = run;
       word.push(span);

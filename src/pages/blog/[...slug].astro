@@ -52,12 +52,12 @@ const description = postDescription(post);
       </p>
       {/* Each tag links to /blog/?tag=…, the URL the index's own chips write.
            `no-underline` beats `.blog-post a`'s underline. */}
-      <div class="mb-4 flex flex-row flex-wrap gap-[10px]">
+      <div class="mb-4 flex flex-row flex-wrap gap-2.5">
         {post.data.tags.map(tag => (
           <a
             href={tagPath(tag)}
             aria-label={`All posts tagged ${tag}`}
-            class="border border-chip-outline px-[.5em] py-[3px] text-[0.833rem] no-underline dark:border-chip-outline-dark"
+            class="border border-chip-outline px-[.5em] py-0.75 text-[0.833rem] no-underline dark:border-chip-outline-dark"
           >
             {/* inline-block so the selection hugs the text; otherwise Chrome
                   paints it over the chip padding plus a line-end marker. */}
@@ -68,12 +68,15 @@ const description = postDescription(post);
     </header>
     {/* Read-aloud island; ships disabled at full size so hydration doesn't
          shift layout. `ui-island` scopes the shadcn tokens. Sticky only while
-         `.listening` (set by the island), and a direct child of the article
+         `data-listening` (set by the island), and a direct child of the article
          because sticky only travels inside its parent. `pt-3` is always there
-         so the layout never shifts; post.css scroll-margin-top clears the
+         so the layout never shifts; the blog-post utility scroll-margin-top clears the
          12+58px pinned bar. */}
-    <div class="listen-sentinel h-px -mb-px" aria-hidden="true"></div>
-    <div class="listen-island ui-island mb-4 pt-3 [&.listening]:sticky [&.listening]:top-0 [&.listening]:z-30 [&.listening.pinned]:bg-nav-scrolled [&.listening.pinned]:backdrop-blur-[15px] dark:[&.listening.pinned]:bg-nav-scrolled-dark">
+    <div class="-mb-px h-px" aria-hidden="true" data-listen-sentinel></div>
+    <div
+      class="mb-4 ui-island pt-3 data-listening:sticky data-listening:top-0 data-listening:z-30 data-listening:data-pinned:bg-nav-scrolled data-listening:data-pinned:backdrop-blur-[15px] dark:data-listening:data-pinned:bg-nav-scrolled-dark"
+      data-listen-island
+    >
       {/* client:interaction, not client:idle: idle can fire before first paint
           and charge ~100 KB to FCP/LCP. Trade-off: a first-touch tap on Play
           lands on the disabled button. */}
@@ -118,13 +121,16 @@ const description = postDescription(post);
 </BlogLayout>
 
 <script>
-  // `.pinned` once the sentinel scrolls out: paints the frosted band behind a
+  // `data-pinned` once the sentinel scrolls out: paints the frosted band behind a
   // docked bar's gap. Styling only.
-  const sentinel = document.querySelector<HTMLElement>(".listen-sentinel");
-  const island = document.querySelector<HTMLElement>(".listen-island");
+  const sentinel = document.querySelector<HTMLElement>("[data-listen-sentinel]");
+  const island = document.querySelector<HTMLElement>("[data-listen-island]");
   if (sentinel && island) {
     new IntersectionObserver(([entry]) => {
-      island.classList.toggle("pinned", !entry.isIntersecting && entry.boundingClientRect.top < 0);
+      island.toggleAttribute(
+        "data-pinned",
+        !entry.isIntersecting && entry.boundingClientRect.top < 0
+      );
     }).observe(sentinel);
   }
 </script>

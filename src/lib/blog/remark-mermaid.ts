@@ -14,8 +14,8 @@ import {
 } from "./mermaid-diagrams";
 
 // Build-time half of the Mermaid pipeline (see mermaid-diagrams.ts): each
-// ```mermaid fence becomes a <figure class="mermaid-diagram"> with a light and
-// a dark <img> (post.css shows one per theme). Post-relative mdast images let
+// ```mermaid fence becomes a <figure data-mermaid> with a light and
+// a dark <img> (the blog-post utility shows one per theme). Post-relative mdast images let
 // Astro's image pipeline and the RSS absolutizer treat them like any post
 // image. A missing rendering (a new or edited fence) runs the renderer; one it
 // can't produce fails the build rather than shipping broken.
@@ -66,7 +66,8 @@ export default function remarkMermaid() {
         alt: diagramAlt(i),
         data: {
           hProperties: {
-            className: [`mermaid-${theme}`],
+            // Kebab-case: Astro's image pipeline copies these attributes verbatim.
+            "data-mermaid-theme": theme,
             // Lazy so the theme that is display:none is never fetched.
             loading: "lazy",
             decoding: "async",
@@ -76,7 +77,7 @@ export default function remarkMermaid() {
       }));
       const figure: Paragraph = {
         type: "paragraph",
-        data: { hName: "figure", hProperties: { className: ["mermaid-diagram"] } },
+        data: { hName: "figure", hProperties: { dataMermaid: "" } },
         children: images
       };
       parent.children.splice(index, 1, figure);

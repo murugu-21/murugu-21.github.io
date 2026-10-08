@@ -2,6 +2,7 @@
 import { blogSection } from "#src/data/portfolio.ts";
 import { accentTitle } from "#src/lib/accent.ts";
 import { getPublishedPosts, postDescription, postPath } from "#src/lib/blog/posts.ts";
+import Section from "./Section.astro";
 
 const featured = (await getPublishedPosts()).filter(post => post.data.featured);
 const cards = [
@@ -14,39 +15,39 @@ const cards = [
 ];
 ---
 
-<div class="section-animate mx-auto mt-16 box-content w-[90%] px-2.5 py-5 max-xs:w-auto" id="blogs">
+<Section id="blogs" class="mt-16 max-xs:w-auto">
   <div>
     {/* my-[0.67em]: h1 UA margin, kept after demotion to h2 */}
     <h2
-      class="my-[0.67em] text-[56px] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+      class="my-[0.67em] text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px] dark:text-white"
       set:html={accentTitle(blogSection.title)}
     />
-    <p class="subTitle my-[1em] uppercase dark:text-white max-md:text-center max-md:text-[16px] max-md:leading-[normal]">
+    <p class="my-[1em] text-subtitle uppercase max-md:text-center max-md:text-[16px] max-md:leading-[normal] dark:text-white">
       {blogSection.subtitle}
     </p>
   </div>
   <div class="flex">
-    <div class="mb-[30px] grid flex-1 grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-8 min-[300px]:max-[481px]:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
+    <div class="mb-7.5 grid flex-1 grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-8 min-[300px]:max-[481px]:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
       {cards.map(card => (
-        <div class="glow-card box-content h-[200px] cursor-pointer text-blog-container dark:text-white">
+        <div class="box-content h-50 glow-card cursor-pointer text-blog-container dark:text-white">
           {/* 142% of circle()'s reference radius reaches the far corner of any
                 card (√2 ≈ 1.414). */}
           <a
-            class="group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:inset-0 before:-z-1 before:bg-dusk-violet before:transition-[clip-path] before:duration-[450ms] before:ease-out before:content-[''] before:[clip-path:circle(16px_at_100%_0)] hover:before:[clip-path:circle(142%_at_100%_0)] dark:before:bg-blue-light"
+            class="group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:inset-0 before:-z-1 before:bg-dusk-violet before:transition-[clip-path] before:duration-450 before:ease-out before:content-[''] before:[clip-path:circle(16px_at_100%_0)] hover:before:[clip-path:circle(142%_at_100%_0)] dark:before:bg-blue-light"
             href={card.url}
             data-ph-event="blog_card_click"
             data-ph-prop="post"
             data-ph-value={card.title}
           >
             {/* `!` so dark mode beats group-hover:text-white */}
-            <h3 class="mx-5 mt-8 mb-[14px] line-clamp-2 text-[1.375rem] leading-6 font-bold text-blog-title group-hover:text-white group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white! dark:group-hover:text-navy! min-[300px]:max-[481px]:text-[1.125rem]">
+            <h3 class="mx-5 mt-8 mb-3.5 line-clamp-2 text-[1.375rem]/6 font-bold text-blog-title group-hover:text-white group-hover:transition-all group-hover:duration-300 group-hover:ease-out min-[300px]:max-[481px]:text-[1.125rem] dark:text-white! dark:group-hover:text-navy!">
               {card.title}
             </h3>
-            <p class="line-clamp-4 px-5 text-[1.063rem] leading-6 font-normal text-card-subtitle group-hover:text-blog-hover-small group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white! dark:group-hover:text-navy!">
+            <p class="line-clamp-4 px-5 text-[1.063rem]/6 font-normal text-card-subtitle group-hover:text-blog-hover-small group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white! dark:group-hover:text-navy!">
               {card.description}
             </p>
             <div
-              class="absolute top-0 right-0 flex size-8 items-center justify-center overflow-hidden rounded-tr-sm rounded-bl-[32px] bg-dusk-violet dark:bg-blue-light"
+              class="absolute top-0 right-0 flex size-8 items-center justify-center overflow-hidden rounded-tr-sm rounded-bl-4xl bg-dusk-violet dark:bg-blue-light"
               aria-hidden="true"
             >
               <div class="-mt-1 -mr-1 font-[courier,sans] text-white dark:text-navy">→</div>
@@ -56,4 +57,4 @@ const cards = [
       ))}
     </div>
   </div>
-</div>
+</Section>

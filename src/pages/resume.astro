@@ -7,6 +7,8 @@ import { groupByCompany } from "#src/lib/experience.ts";
 import { fetchPinnedRepos } from "#src/lib/github.ts";
 // A webfont, so the CF build image's Chromium prints the same glyphs as local Chrome.
 import { Font } from "astro:assets";
+import "#src/styles/resume.css";
+import ResumeSection from "#src/components/resume/ResumeSection.astro";
 
 const repos = (await fetchPinnedRepos()).filter(r => r.description);
 // Groups by *consecutive* company, so returning to an employer stays two blocks.
@@ -15,7 +17,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class="m-0 box-border bg-backdrop p-0 text-ink **:box-border print:bg-white">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -25,81 +27,94 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
     <meta name="description" content={`${resumeContact.title} resume. ${greeting.subTitle}`} />
     <Font cssVariable="--font-fira-code" preload />
   </head>
-  <body>
-    <main class="sheet">
-      <div class="top-bar"></div>
-      <header class="header">
-        <h1 class="name">{resumeContact.name}</h1>
-        <p class="title">{resumeContact.title}</p>
-        <p class="contact-line">
+  {/* Fira Code's programming ligatures (-> => ==) are wrong in prose. */}
+  <body class="m-0 bg-backdrop p-0 font-(family-name:--font-fira-code) font-features-['calt'_0] text-[9.5pt] leading-[1.36] text-ink print:bg-white">
+    {/* A screen preview of the sheet; print drops the frame (@page in resume.css sets the page size and margins). */}
+    <main class="mx-auto my-8 max-w-204 bg-white px-[0.55in] py-[0.45in] shadow-[0_0.1in_0.3in_rgba(0,0,0,0.15)] print:m-0 print:max-w-none print:p-0 print:shadow-none">
+      <div class="mx-[-0.55in] mt-[-0.45in] mb-[1em] h-2 bg-blue print:mx-0 print:mt-0 print:mb-[1.1em]"></div>
+      <header class="mb-[0.6em]">
+        <h1 class="mt-0 mb-[0.15em] text-[22pt] font-bold tracking-[-0.5px]">
+          {resumeContact.name}
+        </h1>
+        <p class="mt-0 mb-[0.3em] text-[11pt] font-bold text-navy">{resumeContact.title}</p>
+        <p class="m-0 text-[8pt]">
           {/* A no-break space before each pipe, and nowrap links and phone (below), so a wrapped line never starts with a pipe. */}
           {resumeContact.location}
           {"\u00A0| "}
           {resumeContact.phone && (
             <>
-              <span>{resumeContact.phone}</span>
+              <span class="whitespace-nowrap">{resumeContact.phone}</span>
               {"\u00A0| "}
             </>
           )}
-          <a href={`mailto:${resumeContact.email}`}>{resumeContact.email}</a>
-          {"\u00A0| "}
-          <a href={resumeContact.linkedin} target="_blank" rel="noopener noreferrer">
-            {displayUrl(resumeContact.linkedin)}
+          <a href={`mailto:${resumeContact.email}`} class="whitespace-nowrap text-navy underline">
+            {resumeContact.email}
           </a>
-          {"\u00A0| "}
-          <a href={resumeContact.github} target="_blank" rel="noopener noreferrer">
-            {displayUrl(resumeContact.github)}
-          </a>
-          {"\u00A0| "}
-          <a href={resumeContact.site} target="_blank" rel="noopener noreferrer">
-            {displayUrl(resumeContact.site)}
-          </a>
+          {[resumeContact.linkedin, resumeContact.github, resumeContact.site].map(url => (
+            <>
+              {"\u00A0| "}
+              <a
+                href={url}
+                class="whitespace-nowrap text-navy underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {displayUrl(url)}
+              </a>
+            </>
+          ))}
         </p>
       </header>
 
-      <section class="resume-section">
-        <h2>Professional Summary</h2>
-        <p>{greeting.subTitle}</p>
-      </section>
+      <ResumeSection title="Professional Summary">
+        <p class="mt-0 mb-[0.3em]">{greeting.subTitle}</p>
+      </ResumeSection>
 
-      <section class="resume-section">
-        <h2>Skills</h2>
-        <ul class="skills-list">
+      <ResumeSection title="Skills">
+        <ul class="m-0 list-none p-0">
           {skillsCategories.map(({ category, items }) => (
-            <li>
-              <span class="skills-category">{category}:</span> {items}.
+            <li class="mx-0 mt-0 mb-[0.35em] break-inside-avoid">
+              <span class="font-bold">{category}:</span> {items}.
             </li>
           ))}
         </ul>
-      </section>
+      </ResumeSection>
 
-      <section class="resume-section">
-        <h2>Experience</h2>
+      <ResumeSection title="Experience">
+        {" "}
         {stints.map(stint => (
-          <div class="stint-block">
-            <p class="stint-heading">
+          <div class="mb-[0.6em]">
+            {/* company on the left, the stint's full span flush right; never stranded at the foot of a page */}
+            <p class="mt-0 mb-[0.3em] flex break-after-avoid items-baseline justify-between gap-[1em] font-bold">
               <span>
                 {stint.company}
                 {stint.location && `, ${stint.location}`}
               </span>
-              <span class="stint-span">{stint.span}</span>
+              <span class="text-[8pt] font-normal tracking-[0.5px] whitespace-nowrap text-ink-muted uppercase">
+                {stint.span}
+              </span>
             </p>
             {stint.roles.map(exp => (
-              <div class="role-block">
+              /* long roles flow across pages instead of leaving a blank tail */
+              <div class="mb-[0.4em] break-inside-auto pl-[0.9em]">
                 {/* a lone role's dates already sit on the company line */}
-                <p class="role-heading">
-                  <span class="role-title">
+                <p class="mt-0 mb-[0.3em] flex break-after-avoid items-baseline justify-between gap-[1em] font-normal">
+                  <span class="font-normal italic">
                     {exp.role}
                     {exp.partTime && " (Part-time)"}
                     {!stint.location && `, ${exp.location}`}
                   </span>
-                  {stint.roles.length > 1 && <span class="role-span">{exp.date}</span>}
+                  {stint.roles.length > 1 && (
+                    <span class="text-[8pt] font-normal tracking-[0.5px] whitespace-nowrap text-ink-muted uppercase">
+                      {exp.date}
+                    </span>
+                  )}
                 </p>
-                <p class="role-desc">{exp.desc}</p>
+                <p class="mt-0 mb-[0.3em] break-after-avoid">{exp.desc}</p>
                 {exp.descBullets && exp.descBullets.length > 0 && (
-                  <ul>
+                  <ul class="mx-0 mt-[0.2em] mb-0 pl-[1.2em]">
                     {exp.descBullets.map(bullet => (
-                      <li>{bullet}</li>
+                      <li class="mx-0 mt-0 mb-[0.2em] break-inside-avoid">{bullet}</li>
                     ))}
                   </ul>
                 )}
@@ -107,267 +122,50 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
             ))}
           </div>
         ))}
-      </section>
+      </ResumeSection>
 
       {repos.length > 0 && (
-        <section class="resume-section">
-          <h2>Projects</h2>
+        <ResumeSection title="Projects">
+          {" "}
           {repos.map(repo => (
-            <div class="role-block">
-              <p class="role-heading">
+            <div class="mb-[0.55em] break-inside-avoid">
+              <p class="mt-0 mb-[0.3em] font-bold">
                 {repo.name}
                 {repo.homepageUrl && (
                   <>
                     {" | "}
-                    <a href={repo.homepageUrl} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={repo.homepageUrl}
+                      class="text-navy underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       {displayUrl(repo.homepageUrl)}
                     </a>
                   </>
                 )}
               </p>
-              <p class="role-desc">{repo.description}</p>
+              <p class="mt-0 mb-[0.3em]">{repo.description}</p>
             </div>
           ))}
-        </section>
+        </ResumeSection>
       )}
 
-      <section class="resume-section">
-        <h2>Education</h2>
+      <ResumeSection title="Education">
+        {" "}
         {educationInfo.map(edu => (
-          <div class="role-block">
-            <p class="role-heading">
+          <div class="mb-[0.55em] break-inside-avoid">
+            <p class="mt-0 mb-[0.3em] font-bold">
               {edu.schoolName}, {edu.desc.replace(/\.$/, "")} |{" "}
-              <span class="role-title">{edu.subHeader}</span>
+              <span class="font-normal italic">{edu.subHeader}</span>
             </p>
-            <p class="role-date">
+            <p class="mt-0 mb-[0.3em] text-[8pt] tracking-[0.5px] text-ink-muted uppercase">
               {edu.duration}
               {edu.grade && <> · {edu.grade}</>}
             </p>
           </div>
         ))}
-      </section>
+      </ResumeSection>
     </main>
-
-    <style>
-      @page {
-        size: Letter;
-        margin: 0.45in 0.55in;
-      }
-
-      :root {
-        --accent: #06038d;
-        --bar: #4c7dff;
-        --text: #1a1a1a;
-        --gray: #595959;
-        /* the site accent, not the browser default link blue */
-        --link: #06038d;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        background: #f2f2f2;
-        color: var(--text);
-      }
-
-      body {
-        font-family: var(--font-fira-code);
-        font-size: 9.5pt;
-        line-height: 1.36;
-        /* Fira Code's programming ligatures (-> => ==) are wrong in prose. */
-        font-feature-settings: "calt" 0;
-      }
-
-      a {
-        color: var(--link);
-        text-decoration: underline;
-      }
-
-      /* Screen preview; print uses @page margins instead (see @media print). */
-      .sheet {
-        max-width: 8.5in;
-        margin: 2rem auto;
-        padding: 0.45in 0.55in;
-        background: #fff;
-        box-shadow: 0 0.1in 0.3in rgba(0, 0, 0, 0.15);
-      }
-
-      .top-bar {
-        height: 8px;
-        background: var(--bar);
-        margin: -0.45in -0.55in 1em;
-      }
-
-      .header {
-        margin-bottom: 0.6em;
-      }
-
-      .name {
-        font-size: 22pt;
-        font-weight: 700;
-        margin: 0 0 0.15em;
-        letter-spacing: -0.5px;
-      }
-
-      .title {
-        color: var(--accent);
-        font-size: 11pt;
-        font-weight: 700;
-        margin: 0 0 0.3em;
-      }
-
-      .contact-line {
-        font-size: 8pt;
-        margin: 0;
-      }
-
-      .contact-line :is(a, span) {
-        white-space: nowrap;
-      }
-
-      .resume-section {
-        margin-top: 0.75em;
-      }
-
-      .resume-section h2 {
-        color: var(--accent);
-        font-size: 10pt;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        margin: 0 0 0.4em;
-      }
-
-      .resume-section p {
-        margin: 0 0 0.3em;
-      }
-
-      .skills-list {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-
-      .skills-list li {
-        margin: 0 0 0.35em;
-      }
-
-      .skills-category {
-        font-weight: 700;
-      }
-
-      .stint-block {
-        margin-bottom: 0.6em;
-      }
-
-      /* company on the left, the stint's full span flush right */
-      .stint-heading {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 1em;
-        font-weight: 700;
-        margin: 0 0 0.25em;
-        /* never strand a company name at the foot of a page */
-        break-after: avoid;
-        page-break-after: avoid;
-      }
-
-      .stint-span,
-      .role-span {
-        font-size: 8pt;
-        font-weight: 400;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        white-space: nowrap;
-        color: var(--gray);
-      }
-
-      /* roles read as subsections of the company block */
-      .stint-block .role-block {
-        padding-left: 0.9em;
-        margin-bottom: 0.4em;
-        /* long roles flow across pages instead of leaving a blank tail */
-        break-inside: auto;
-        page-break-inside: auto;
-      }
-
-      /* ...but never strand a role title or its intro line at the foot */
-      .stint-block .role-heading,
-      .stint-block .role-desc {
-        break-after: avoid;
-        page-break-after: avoid;
-      }
-
-      .stint-block .role-heading {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 1em;
-        font-weight: 400;
-      }
-
-      .role-block {
-        margin-bottom: 0.55em;
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-
-      .role-heading {
-        font-weight: 700;
-        margin: 0;
-      }
-
-      .role-title {
-        font-weight: 400;
-        font-style: italic;
-      }
-
-      .role-date {
-        font-size: 8pt;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--gray);
-        margin: 0.1em 0 0.3em;
-      }
-
-      .role-desc {
-        margin: 0.2em 0;
-      }
-
-      ul {
-        margin: 0.2em 0 0;
-        padding-left: 1.2em;
-      }
-
-      li {
-        margin: 0 0 0.2em;
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-
-      @media print {
-        html,
-        body {
-          background: #fff;
-        }
-
-        .sheet {
-          max-width: none;
-          margin: 0;
-          padding: 0;
-          box-shadow: none;
-        }
-
-        .top-bar {
-          margin: 0 0 1.1em;
-        }
-      }
-    </style>
   </body>
 </html>

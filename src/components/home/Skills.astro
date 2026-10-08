@@ -4,14 +4,11 @@ import LottiePlayer from "./LottiePlayer.astro";
 import Icon from "#src/components/Icon.astro";
 import Tilt from "./Tilt.astro";
 import { accentTitle } from "#src/lib/accent.ts";
+import Section from "./Section.astro";
 ---
 
-{/* box-content: w-[90%] excludes the padding, as before Preflight's border-box */}
-<div
-  id="skills"
-  class="section-animate mx-auto mt-16 box-content flex w-[90%] overflow-hidden px-2.5 py-5 max-md:flex-col max-xs:w-auto"
->
-  <div class="skills-image-div mb-[30px] flex-1 max-md:order-2">
+<Section id="skills" class="mt-16 flex overflow-hidden max-md:flex-col max-xs:w-auto">
+  <div class="mb-7.5 flex-1 max-md:order-2">
     <Tilt>
       <LottiePlayer
         src="/lottie-coding.json"
@@ -19,19 +16,19 @@ import { accentTitle } from "#src/lib/accent.ts";
       />
     </Tilt>
   </div>
-  <div class="ml-[50px] mb-[30px] flex-1 max-md:m-5">
+  <div class="mb-7.5 ml-12.5 flex-1 max-md:m-5">
     {/* my-[0.67em]: h1 UA margin, kept after demotion to h2 */}
     <h2
-      class="my-[0.67em] text-[56px] font-normal dark:text-white max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
+      class="my-[0.67em] text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px] dark:text-white"
       set:html={accentTitle(skillsSection.title)}
     />
-    <p class="subTitle my-[1em] dark:text-white max-md:text-center max-md:text-[16px]">
+    <p class="my-[1em] text-subtitle max-md:text-center max-md:text-[16px] dark:text-white">
       {skillsSection.subTitle}
     </p>
     <div>
       <ul class="mb-2.5 flex flex-wrap gap-3">
         {skillsSection.softwareSkills.map(skill => (
-          <li class="inline-flex items-center gap-2.5 rounded-3xl border border-chip-outline px-[18px] py-2.5 shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
+          <li class="inline-flex items-center gap-2.5 rounded-3xl border border-chip-outline px-4.5 py-2.5 shadow-glow transition-[border-color,box-shadow] duration-300 ease-[ease] hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
             <Icon name={skill.iconName} size="1.6rem" class="shrink-0 text-navy dark:text-blue" />
             <span class="text-[15px] whitespace-nowrap text-text dark:text-white">
               {skill.skillName}
@@ -42,18 +39,8 @@ import { accentTitle } from "#src/lib/accent.ts";
     </div>
     <div>
       {skillsSection.skills.map(s => (
-        <p class="subTitle my-[1em] dark:text-white max-md:text-[16px]">{s}</p>
+        <p class="my-[1em] text-subtitle max-md:text-[16px] dark:text-white">{s}</p>
       ))}
     </div>
   </div>
-</div>
-
-<style>
-  /* aspect-ratio reserves the 1600x1200 animation box to avoid CLS; global
-     because lottie-web renders into this div at runtime. */
-  .skills-image-div :global(.lottie-holder) {
-    width: 100%;
-    max-width: 100%;
-    aspect-ratio: 1600 / 1200;
-  }
-</style>
+</Section>

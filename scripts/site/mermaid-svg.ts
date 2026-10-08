@@ -5,7 +5,7 @@ import type { ParseMDDOptions } from "@mermaid-js/mermaid-cli";
 
 import type { DiagramTheme } from "#src/lib/blog/mermaid-diagrams.ts";
 
-// Background matches post.css's card (dark is --color-dark-bg).
+// Background matches the blog-post utility's card (dark is --color-dark-bg).
 export const THEMES: Record<DiagramTheme, { mermaid: "neutral" | "dark"; background: string }> = {
   light: { mermaid: "neutral", background: "#fff" },
   dark: { mermaid: "dark", background: "#282c35" }

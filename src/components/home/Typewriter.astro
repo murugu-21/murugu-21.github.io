@@ -6,10 +6,14 @@ interface Props {
 const { roles } = Astro.props;
 ---
 
-<span class="typewriter text-navy dark:text-blue font-semibold" data-roles={JSON.stringify(roles)}>
-  <span class="typewriter-text">{roles[0]}</span>
+<span
+  class="font-semibold text-navy dark:text-blue"
+  data-typewriter
+  data-roles={JSON.stringify(roles)}
+>
+  <span data-typewriter-text>{roles[0]}</span>
   <span
-    class="ml-0.5 font-normal animate-[typewriter-blink_1s_step-end_infinite] motion-reduce:animate-none max-[768px]:hidden"
+    class="ml-0.5 animate-typewriter-blink font-normal motion-reduce:animate-none max-[768px]:hidden"
     aria-hidden="true"
   >
     |
@@ -21,10 +25,10 @@ const { roles } = Astro.props;
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  document.querySelectorAll<HTMLElement>(".typewriter").forEach(el => {
+  document.querySelectorAll<HTMLElement>("[data-typewriter]").forEach(el => {
     if (reduced) return;
     const roles = parseStringArray(el.dataset.roles || "[]");
-    const text = el.querySelector<HTMLElement>(".typewriter-text");
+    const text = el.querySelector<HTMLElement>("[data-typewriter-text]");
     if (!text || roles.length < 2) return;
 
     let index = 0;
@@ -49,15 +53,3 @@ const { roles } = Astro.props;
     setTimeout(tick, 1700);
   });
 </script>
-
-<style>
-  @keyframes typewriter-blink {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0;
-    }
-  }
-</style>

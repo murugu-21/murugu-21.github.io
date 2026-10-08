@@ -1,8 +1,8 @@
 import type { Element } from "hast";
 import type { Options } from "rehype-autolink-headings";
 
-// An <a class="anchor"> with a link icon prepended inside each heading;
-// post.css places and colours `a.anchor`.
+// An <a data-heading-anchor> with a link icon prepended inside each heading;
+// the blog-post utility in global.css places and colours it.
 const linkIcon: Element = {
   type: "element",
   tagName: "svg",
@@ -31,6 +31,6 @@ const linkIcon: Element = {
 
 export const autolinkConfig: Options = {
   behavior: "prepend",
-  properties: { class: "anchor", ariaHidden: "true", tabIndex: -1 },
+  properties: { dataHeadingAnchor: "", ariaHidden: "true", tabIndex: -1 },
   content: linkIcon
 };

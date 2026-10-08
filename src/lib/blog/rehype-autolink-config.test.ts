@@ -26,7 +26,7 @@ describe("autolinkConfig", () => {
       children: [
         {
           tagName: "a",
-          properties: { href: "#why", class: "anchor", ariaHidden: "true", tabIndex: -1 },
+          properties: { href: "#why", dataHeadingAnchor: "", ariaHidden: "true", tabIndex: -1 },
           children: [{ tagName: "svg", properties: { ariaHidden: "true", width: 16 } }]
         },
         { type: "text", value: "Why" }

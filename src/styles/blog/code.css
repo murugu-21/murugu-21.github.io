@@ -1,3 +1,6 @@
+/* eslint-disable no-restricted-syntax -- Shiki's markup carries its own classes and
+   --shiki-* variables, so mapping them onto the theme takes plain rules. */
+
 /* Shiki's fences (`pre.astro-code`). With `defaultColor: false` every colour
    arrives as --shiki-light* / --shiki-dark* variables (themes in
    src/lib/blog/code-themes.ts), which this file maps to the site theme.

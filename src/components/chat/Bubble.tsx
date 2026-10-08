@@ -1,9 +1,9 @@
 // One line of the chat transcript, from a visitor, Jarvis or the room.
+import { cva } from "class-variance-authority";
 import { Fragment } from "react";
 
 import type { JarvisMessage } from "#contracts/chat.ts";
 import { messageText } from "#utils/ui-message.ts";
-import { cn } from "#src/lib/utils.ts";
 
 export type Bubble = { kind: "user" | "assistant" | "system"; text: string };
 
@@ -52,21 +52,19 @@ function renderWithLinks(raw: string) {
   });
 }
 
-const BUBBLE_STYLES: Record<Bubble["kind"], string> = {
-  user: "self-end rounded-br-sm bg-primary text-primary-foreground",
-  assistant: "self-start rounded-bl-sm bg-muted text-foreground",
-  system: "self-center bg-transparent text-center text-xs text-muted-foreground"
-};
+const bubble = cva(
+  "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] wrap-break-word whitespace-pre-wrap",
+  {
+    variants: {
+      kind: {
+        user: "self-end rounded-br-sm bg-primary text-primary-foreground",
+        assistant: "self-start rounded-bl-sm bg-muted text-foreground",
+        system: "self-center bg-transparent text-center text-xs text-muted-foreground"
+      } satisfies Record<Bubble["kind"], string>
+    }
+  }
+);
 
 export function BubbleView({ kind, text }: Bubble) {
-  return (
-    <div
-      className={cn(
-        "max-w-[85%] rounded-xl px-3 py-2 text-sm leading-[1.45] whitespace-pre-wrap wrap-break-word",
-        BUBBLE_STYLES[kind]
-      )}
-    >
-      {renderWithLinks(text)}
-    </div>
-  );
+  return <div className={bubble({ kind })}>{renderWithLinks(text)}</div>;
 }

@@ -4,32 +4,38 @@ import { contactInfo } from "#src/data/portfolio.ts";
 import { fetchGithubProfile } from "#src/lib/github.ts";
 import { accentTitle } from "#src/lib/accent.ts";
 import { resumeContact } from "#src/data/resume.ts";
+import Section from "./Section.astro";
 
 const prof = await fetchGithubProfile();
-
-const contactLink =
-  "mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] hover:transition-all hover:duration-300 hover:ease-[ease] dark:text-white dark:hover:[text-shadow:2px_1px_2px_var(--color-contact-hover-dark)] max-wide:text-[20px]";
+const contactLinks = [
+  ...(contactInfo.number
+    ? [{ href: `tel:${contactInfo.number}`, label: contactInfo.number, value: "phone" }]
+    : []),
+  {
+    href: `mailto:${contactInfo.emailAddress}`,
+    label: contactInfo.emailAddress,
+    value: "email"
+  }
+];
 ---
 
 {prof ? (
-  <div class="section-animate box-content mx-auto mt-16 w-[90%] px-2.5 py-5" id="contact">
+  <Section id="contact" class="mt-16">
     <h2
       class="m-0 text-[40px] font-normal max-md:pb-4 max-md:text-center max-md:text-[32px]"
       set:html={accentTitle("Reach Out to me!")}
     />
     <div class="max-md:text-center">
       <div>
-        <p class="subTitle my-[1em] uppercase dark:text-white max-md:text-center max-md:text-[16px]">
+        <p class="my-[1em] text-subtitle uppercase max-md:text-center max-md:text-[16px] dark:text-white">
           {contactInfo.subtitle}
         </p>
       </div>
       {prof.bio && (
-        <h2 class="text-[22px] font-bold leading-[30px] max-md:text-[16px] my-[0.83em]">
-          "{prof.bio}"
-        </h2>
+        <h2 class="my-[0.83em] text-[22px]/7.5 font-bold max-md:text-[16px]">"{prof.bio}"</h2>
       )}
       <div>
-        <span class="text-[19px] leading-[45px] max-md:text-[16px] max-md:leading-[30px]">
+        <span class="text-[19px]/11.25 max-md:text-base/7.5">
           {/* inline: preflight makes svg a block; keep it on the text's line */}
           <svg
             class="inline align-baseline"
@@ -49,48 +55,37 @@ const contactLink =
       </div>
       <SocialMedia />
     </div>
-  </div>
+  </Section>
 ) : (
-  <div class="section-animate box-content mx-auto mt-16 w-[90%] px-2.5 py-5" id="contact">
-    <div class="flex [&>*]:flex-1">
+  <Section id="contact" class="mt-16">
+    <div class="flex *:flex-1">
       <div>
         <h2
           class="my-[0.67em] text-[65px] font-normal max-wide:text-center max-wide:text-[40px]"
           set:html={accentTitle(contactInfo.title)}
         />
-        <p class="subTitle my-[1em] uppercase dark:text-white max-wide:text-center max-wide:text-[16px] max-wide:leading-[normal]">
+        <p class="my-[1em] text-subtitle uppercase max-wide:text-center max-wide:text-[16px] max-wide:leading-[normal] dark:text-white">
           {contactInfo.subtitle}
         </p>
         <div class="mt-6 max-wide:text-center dark:text-white">
-          {contactInfo.number && (
+          {contactLinks.map(link => (
             <>
               <a
-                class={contactLink}
-                href={"tel:" + contactInfo.number}
+                class="mt-5 text-[40px] font-normal text-subtitle no-underline hover:text-text hover:transition-all hover:duration-300 hover:ease-[ease] hover:[text-shadow:2px_1px_2px_var(--color-contact-hover)] max-wide:text-[20px] dark:text-white dark:hover:[text-shadow:2px_1px_2px_var(--color-contact-hover-dark)]"
+                href={link.href}
                 data-ph-event="social_click"
                 data-ph-prop="social"
-                data-ph-value="phone"
+                data-ph-value={link.value}
               >
-                {contactInfo.number}
+                {link.label}
               </a>
               <br />
               <br />
             </>
-          )}
-          <a
-            class={contactLink}
-            href={"mailto:" + contactInfo.emailAddress}
-            data-ph-event="social_click"
-            data-ph-prop="social"
-            data-ph-value="email"
-          >
-            {contactInfo.emailAddress}
-          </a>
-          <br />
-          <br />
+          ))}
           <SocialMedia />
         </div>
       </div>
     </div>
-  </div>
+  </Section>
 )}

@@ -68,6 +68,8 @@ export default defineConfig({
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
   jsPlugins: ["./scripts/lint/test-behaviour.ts", "./scripts/lint/contracts.ts"],
   categories: { correctness: "error" },
+  // oxlint takes settings only at the top level; the override below scopes the plugin.
+  settings: { tailwindcss: { entryPoint: "src/styles/global.css" } },
   rules: {
     "no-irregular-whitespace": ["error", { skipComments: true }],
     "react/purity": "warn",
@@ -149,6 +151,48 @@ export default defineConfig({
         }
       ]
     ),
+    // oxlint-tailwindcss's recommended set (its README › Setup) plus prefer-scale-token, which
+    // turns px into scale steps, all at error. Class order is oxfmt's (sortTailwindcss).
+    {
+      files: ["src/**/*.{ts,tsx}"],
+      jsPlugins: ["oxlint-tailwindcss"],
+      rules: {
+        "tailwindcss/no-conflicting-classes": "error",
+        "tailwindcss/no-contradicting-variants": "error",
+        "tailwindcss/no-dark-without-light": "error",
+        "tailwindcss/no-duplicate-classes": "error",
+        "tailwindcss/no-dynamic-classes": "error",
+        "tailwindcss/no-unknown-classes": "error",
+        "tailwindcss/enforce-canonical": "error",
+        "tailwindcss/enforce-negative-arbitrary-values": "error",
+        "tailwindcss/no-deprecated-classes": "error",
+        "tailwindcss/no-unnecessary-arbitrary-value": "error",
+        "tailwindcss/prefer-scale-token": "error",
+        "tailwindcss/consistent-variant-order": "error",
+        "tailwindcss/enforce-consistent-important-position": "error",
+        "tailwindcss/enforce-consistent-variable-syntax": "error",
+        "tailwindcss/enforce-shorthand": "error",
+        "tailwindcss/no-unnecessary-whitespace": "error",
+        "tailwindcss/no-hardcoded-colors": "error",
+        // Experimental: a plain element that rebuilds a shadcn primitive from its classes.
+        "tailwindcss/no-borrowed-component-styles": [
+          "error",
+          { components: ["src/components/ui"] }
+        ],
+        "react/forbid-dom-props": [
+          "error",
+          {
+            forbid: [
+              {
+                propName: "style",
+                message:
+                  "Style with Tailwind: utilities in className, or an @utility or @theme token in src/styles/global.css."
+              }
+            ]
+          }
+        ]
+      }
+    },
     { files: ["contracts/**"], rules: { "contracts/shapes-only": "error" } },
     {
       files: ["scripts/site/ts-alias.cjs"],

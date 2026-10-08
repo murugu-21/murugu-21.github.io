@@ -3,9 +3,10 @@ import type { Thing } from "schema-dts";
 // Endpoint table and tool example are generated from the served OpenAPI
 // document (contracts/api/openapi.ts), so they can't drift from the API.
 
-import "#src/styles/prose.css";
 import Layout from "#src/layouts/Layout.astro";
 import Header from "#src/components/Header.astro";
+import LinkRow from "#src/components/LinkRow.astro";
+import Prose from "#src/components/Prose.astro";
 import ScrollTop from "#src/components/ScrollTop.astro";
 import { PERSON_ID, SITE_ORIGIN } from "#src/lib/site.ts";
 import { socialMediaLinks } from "#src/data/portfolio.ts";
@@ -198,8 +199,8 @@ const apiGraph: Thing[] = [
   description="Developer docs for the murugappan.dev API: REST endpoints, OpenAPI 3.1.0 spec, MCP server, authentication, versioning and deprecation policy, rate-limit headers. No key, no signup."
 >
   <Header />
-  {/* /about's column, widened to 900px for tables. pt-28 clears the fixed navbar. */}
-  <main class="prose box-content mx-auto max-w-225 px-5 pt-28 pb-16">
+  {/* /about's column, widened to 900px for tables. */}
+  <Prose class="max-w-225">
     <h1>murugappan.dev API developer portal</h1>
     <p>
       A public, unauthenticated JSON API over everything this site publishes about{" "}
@@ -212,13 +213,7 @@ const apiGraph: Thing[] = [
       <a href="/openapi.json">OpenAPI 3.1.0 specification</a> and the{" "}
       <a href="#mcp">murugappan.dev MCP server</a>.
     </p>
-    <ul class="not-prose link-row">
-      {portalLinks.map(l => (
-        <li>
-          <a href={l.href}>{l.label}</a>
-        </li>
-      ))}
-    </ul>
+    <LinkRow links={portalLinks} />
 
     <section>
       <h2 id="when-to-use">When to use this API</h2>
@@ -628,6 +623,6 @@ Retry-After: 39122</code></pre>
         <code>POST /api/contact</code>.
       </p>
     </section>
-  </main>
+  </Prose>
   <ScrollTop />
 </Layout>

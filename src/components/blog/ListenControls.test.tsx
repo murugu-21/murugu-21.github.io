@@ -133,7 +133,7 @@ let resetRate: (() => Promise<void>) | null = null;
 const mount = async (html = POST) => {
   document.body.insertAdjacentHTML("beforeend", `<div id="page">${html}</div>`);
   const island = document.createElement("div");
-  island.className = "listen-island";
+  island.dataset.listenIsland = "";
   document.body.append(island);
   const screen = await render(<ListenControls slug="hello" />, { container: island });
   const read = (selector: string) => document.querySelector(selector)?.textContent ?? null;
@@ -153,10 +153,10 @@ const mount = async (html = POST) => {
     pause: screen.getByRole("button", { name: "Pause" }),
     // Elapsed, total and the speed pill, as the reader sees them.
     readout: () => island.textContent,
-    // The page docks the bar while this class is set.
-    listening: () => island.classList.contains("listening"),
-    block: () => read(".is-speaking"),
-    word: () => read(".is-word"),
+    // The page docks the bar while this attribute is set.
+    listening: () => island.hasAttribute("data-listening"),
+    block: () => read("[data-speaking]"),
+    word: () => read("[data-current-word]"),
     pickRate
   };
 };
@@ -170,7 +170,7 @@ afterEach(async () => {
   await resetRate?.();
   resetRate = null;
   document.getElementById("page")?.remove();
-  document.querySelectorAll(".listen-island").forEach(island => island.remove());
+  document.querySelectorAll("[data-listen-island]").forEach(island => island.remove());
   audios.length = 0;
   vi.unstubAllGlobals();
 });

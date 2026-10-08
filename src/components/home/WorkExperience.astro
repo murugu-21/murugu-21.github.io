@@ -2,6 +2,7 @@
 import { Image } from "astro:assets";
 import { workExperiences } from "#src/data/portfolio.ts";
 import { accentTitle } from "#src/lib/accent.ts";
+import Section from "./Section.astro";
 import {
   countCompanies,
   currentMonth,
@@ -38,16 +39,17 @@ const total = formatDuration(totalExperienceMonths(allPeriods, now));
 const companyCount = countCompanies(stints.filter(s => !s.partTime));
 ---
 
-<div class="section-animate mx-auto mt-8 box-content flex w-[90%] px-2.5 py-5" id="experience">
+<Section id="experience" class="mt-8 flex">
   <div class="flex-1">
     <div class="mb-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2 max-md:flex-col max-md:items-center">
       <h2
         class="mt-[0.67em] mb-0 text-[56px] font-normal max-wide:text-[40px] max-md:text-center max-md:text-[30px]"
         set:html={accentTitle("Experiences")}
       />
-      <p class="subTitle text-right text-[18px] max-md:text-center">
+      <p class="text-right text-[18px] text-subtitle-muted max-md:text-center">
         <span
-          class="experience-total-value font-semibold text-navy dark:text-blue"
+          class="font-semibold text-navy dark:text-blue"
+          data-experience-total
           data-periods={JSON.stringify(allPeriods)}
         >
           {total}
@@ -59,7 +61,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
       {stints.map(stint => (
         /* `[&:hover]:`, not `hover:` (gated on @media (hover: hover)), so
                 glow-card's :hover scale is also cancelled on tap. */
-        <li class="glow-card px-7 py-6 text-text [&:hover]:transform-none max-md:px-4 max-md:py-5 dark:text-white">
+        <li class="glow-card px-7 py-6 text-text max-md:px-4 max-md:py-5 dark:text-white [&:hover]:transform-none">
           <header class="mb-5 flex items-center gap-5">
             {/* Rendered at 4.5rem (3rem on phones), so 72px + 2x instead of the 256px source. */}
             <Image
@@ -75,11 +77,11 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
               <h3 class="text-[25px] leading-[1.2] font-bold max-md:text-[21px]">
                 {stint.company}
               </h3>
-              <p class="subTitle mt-1 mb-0 text-[16px] dark:text-white/65">
+              <p class="mt-1 mb-0 text-[16px] text-subtitle-muted">
                 {stint.span}
                 {stint.duration && (
                   <span
-                    class="duration"
+                    data-duration
                     data-start={stint.duration.start}
                     data-end={stint.duration.end}
                   >
@@ -95,18 +97,18 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
 
           <ol class="ml-[1.9rem] flex flex-col gap-5 pl-[1.6rem] max-md:ml-[1.15rem] max-md:pl-[1.4rem]">
             {stint.roles.map(role => (
-              <li class="relative before:absolute before:top-[0.45rem] before:-left-[1.6rem] before:size-[0.7rem] before:rounded-full before:bg-navy before:shadow-[0_0_0_3px_rgba(6,3,141,0.18)] before:content-[''] after:absolute after:top-[1.15rem] after:-bottom-5 after:left-[calc(-1.6rem_+_0.35rem_-_1px)] after:w-0.5 after:bg-[rgba(6,3,141,0.25)] after:content-[''] last:after:hidden max-md:before:-left-[1.4rem] max-md:after:left-[calc(-1.4rem_+_0.35rem_-_1px)] dark:before:bg-blue dark:before:shadow-[0_0_0_3px_rgba(76,125,255,0.2)] dark:after:bg-[rgba(76,125,255,0.3)]">
+              <li class="relative before:absolute before:top-[0.45rem] before:left-[-1.6rem] before:size-[0.7rem] before:rounded-full before:bg-navy before:shadow-[0_0_0_3px_rgba(6,3,141,0.18)] before:content-[''] after:absolute after:top-[1.15rem] after:-bottom-5 after:left-[calc(-1.6rem+0.35rem-1px)] after:w-0.5 after:bg-[rgba(6,3,141,0.25)] after:content-[''] last:after:hidden max-md:before:left-[-1.4rem] max-md:after:left-[calc(-1.4rem+0.35rem-1px)] dark:before:bg-blue dark:before:shadow-[0_0_0_3px_rgba(76,125,255,0.2)] dark:after:bg-[rgba(76,125,255,0.3)]">
                 <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <h4 class="text-[20px] leading-[1.3] font-bold max-md:text-[18px]">
                     {role.role}
                   </h4>
                   {/* a lone role's date already sits in the card header */}
                   {stint.roles.length > 1 && (
-                    <p class="subTitle text-[15px] whitespace-nowrap max-md:whitespace-normal dark:text-white/65">
+                    <p class="text-[15px] whitespace-nowrap text-subtitle-muted max-md:whitespace-normal">
                       {role.date}
                       {role.duration && (
                         <span
-                          class="duration"
+                          data-duration
                           data-start={role.duration.start}
                           data-end={role.duration.end}
                         >
@@ -119,13 +121,13 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                     </p>
                   )}
                 </div>
-                <p class="mt-[0.4rem] mb-0 text-[16px] leading-[1.5]">{role.desc}</p>
+                <p class="mt-[0.4rem] mb-0 text-base/normal">{role.desc}</p>
                 {role.descBullets?.length ? (
                   /* `group` drives the chevron's group-open:rotate-45 */
                   <details class="group mt-2">
-                    <summary class="inline-flex cursor-pointer list-none items-center gap-[0.4rem] text-[15px] font-semibold text-navy select-none [&::-webkit-details-marker]:hidden hover:text-amber-ink focus-visible:rounded-[4px] focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-amber-ink dark:text-blue dark:hover:text-white dark:focus-visible:outline-blue">
+                    <summary class="inline-flex cursor-pointer list-none items-center gap-[0.4rem] text-[15px] font-semibold text-navy select-none hover:text-amber-ink focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-[3px] focus-visible:outline-amber-ink dark:text-blue dark:hover:text-white dark:focus-visible:outline-blue [&::-webkit-details-marker]:hidden">
                       <span
-                        class="mb-0.5 inline-block box-content size-[0.45rem] -rotate-45 border-r-2 border-b-2 border-current transition-transform duration-200 ease-[ease] group-open:mt-[-2px] group-open:mb-0 group-open:rotate-45 motion-reduce:transition-none"
+                        class="mb-0.5 box-content inline-block size-[0.45rem] -rotate-45 border-r-2 border-b-2 border-current transition-transform duration-200 ease-[ease] group-open:-mt-0.5 group-open:mb-0 group-open:rotate-45 motion-reduce:transition-none"
                         aria-hidden="true"
                       />
                       {role.descBullets.length}{" "}
@@ -145,7 +147,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
       ))}
     </ol>
   </div>
-</div>
+</Section>
 
 <script>
   // The build stamped "Present" durations for its own month; recompute for today.
@@ -162,12 +164,12 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     const [y, m] = v.split("-").map(Number);
     return { year: y, month: m };
   };
-  document.querySelectorAll<HTMLElement>('.duration[data-end="present"]').forEach(el => {
+  document.querySelectorAll<HTMLElement>('[data-duration][data-end="present"]').forEach(el => {
     const start = el.dataset.start;
     if (!start) return;
     el.textContent = ` · ${formatDuration(monthsBetween({ start: parse(start), end: now }))}`;
   });
-  const total = document.querySelector<HTMLElement>(".experience-total-value");
+  const total = document.querySelector<HTMLElement>("[data-experience-total]");
   const periods = total?.dataset.periods;
   if (total && periods) {
     total.textContent = formatDuration(totalExperienceMonths(parseStringArray(periods), now));

@@ -11,11 +11,12 @@ src/components/   # site chrome shared by every page (Header, Icon, ThemeToggle,
   home/           # homepage sections and the pieces only they use
   blog/           # blog-only components
   chat/           # the Jarvis widget, on every page
+  resume/         # resume-only components, styled by resume.css
   ui/             # shadcn primitives
 src/lib/          # shared logic (site constants, theme, analytics, llms.txt)
   blog/           # blog-only logic
-src/styles/       # global.css and the stylesheets it pulls in, plus prose.css
-  blog/           # blog-only styles
+src/styles/       # global.css (the Tailwind entry) and resume.css (the resume's)
+  blog/           # blog-only styles (code.css, for Shiki)
 src/data/         # hand-written portfolio and resume data
 ```
 

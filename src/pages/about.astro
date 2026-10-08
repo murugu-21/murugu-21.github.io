@@ -1,9 +1,10 @@
 ---
 // Canonical entity page (schema.org ProfilePage), sourced only from
 // src/data/portfolio.ts + resume.ts.
-import "#src/styles/prose.css";
 import Layout from "#src/layouts/Layout.astro";
 import Header from "#src/components/Header.astro";
+import LinkRow from "#src/components/LinkRow.astro";
+import Prose from "#src/components/Prose.astro";
 import ScrollTop from "#src/components/ScrollTop.astro";
 import {
   greeting,
@@ -37,28 +38,22 @@ const links = [
   profilePage
 >
   <Header />
-  <main class="prose box-content mx-auto max-w-[760px] px-5 pt-28 pb-16">
+  <Prose class="max-w-190">
     <h1>About {resumeContact.name}</h1>
     <p>{greeting.subTitle}</p>
-    <p class="subTitle">
+    <p class="text-subtitle-muted">
       {resumeContact.title} · {resumeContact.location} · currently at{" "}
       <a href="https://www.medmehealth.com">MedMe Health</a>
     </p>
 
-    <ul class="not-prose link-row">
-      {links.map(l => (
-        <li>
-          <a href={l.href}>{l.label}</a>
-        </li>
-      ))}
-    </ul>
+    <LinkRow links={links} />
 
     <section>
       <h2>Experience</h2>
       {stints.map(stint => (
         <article>
           <h3>{stint.company}</h3>
-          <p class="subTitle">
+          <p class="text-subtitle-muted">
             {stint.span}
             {stint.location && ` \u00b7 ${stint.location}`}
           </p>
@@ -70,7 +65,7 @@ const links = [
               </h4>
               {/* a lone role's dates already sit under the company name */}
               {stint.roles.length > 1 && (
-                <p class="subTitle">
+                <p class="text-subtitle-muted">
                   {job.date}
                   {!stint.location && ` \u00b7 ${job.location}`}
                 </p>
@@ -105,7 +100,7 @@ const links = [
       {educationInfo.map(school => (
         <article>
           <h3>{school.schoolName}</h3>
-          <p class="subTitle">
+          <p class="text-subtitle-muted">
             {school.subHeader} · {school.duration}
           </p>
           <ul>
@@ -120,13 +115,7 @@ const links = [
     <section>
       <h2>Open source</h2>
       <p>{openSourceCard.subtitle}</p>
-      <ul class="not-prose link-row">
-        {openSourceCard.footerLink.map(l => (
-          <li>
-            <a href={l.url}>{l.name}</a>
-          </li>
-        ))}
-      </ul>
+      <LinkRow links={openSourceCard.footerLink.map(l => ({ href: l.url, label: l.name }))} />
     </section>
 
     <section>
@@ -149,6 +138,6 @@ const links = [
         when to use this site and which call to make.
       </p>
     </section>
-  </main>
+  </Prose>
   <ScrollTop />
 </Layout>

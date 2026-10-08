@@ -1,0 +1,18 @@
+---
+// A row of links under a heading, no bullets. `not-prose` keeps the typography
+// plugin's list and link styles off it, so the links restate Prose's.
+interface Props {
+  links: { href: string; label: string }[];
+}
+const { links } = Astro.props;
+---
+
+<ul class="not-prose my-[1em] flex flex-wrap gap-x-5 gap-y-[0.4rem]">
+  {links.map(l => (
+    <li>
+      <a class="text-(--tw-prose-links) hover:underline" href={l.href}>
+        {l.label}
+      </a>
+    </li>
+  ))}
+</ul>

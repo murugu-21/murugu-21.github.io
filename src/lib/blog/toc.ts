@@ -8,11 +8,13 @@ import type { MarkdownHeading } from "astro";
 // compare on the right side through sub-pixel scroll positions.
 export const TOC_LINE_SLACK = 8;
 
+export type TocEntry = MarkdownHeading & { depth: 2 | 3 };
+
 // h2/h3 with visible text (a bare `##` separator renders as an empty heading).
 // Fewer than two entries yields none.
-export function tocEntries(headings: ReadonlyArray<MarkdownHeading>): MarkdownHeading[] {
+export function tocEntries(headings: ReadonlyArray<MarkdownHeading>): TocEntry[] {
   const entries = headings.filter(
-    h => (h.depth === 2 || h.depth === 3) && h.text.trim().length > 0
+    (h): h is TocEntry => (h.depth === 2 || h.depth === 3) && h.text.trim().length > 0
   );
   return entries.length < 2 ? [] : entries;
 }

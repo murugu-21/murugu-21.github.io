@@ -1,7 +1,7 @@
 // shadcn/ui dropdown-menu (new-york, Tailwind v4), vendored and trimmed; the radio
 // item marks its selection with a full-size check (size-4) rather than upstream's dot.
 // Portals into the island root (`container`, else the chat widget root), not
-// document.body, so the islands.css tokens scoped there still apply.
+// document.body, so the ui-island tokens scoped there still apply.
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check } from "lucide-react";

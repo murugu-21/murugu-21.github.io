@@ -1,5 +1,6 @@
 ---
 import { Font } from "astro:assets";
+import { cva } from "class-variance-authority";
 import type { Thing } from "schema-dts";
 import { jsonLdHtml } from "#src/lib/schema.ts";
 import { BLOG_TITLE, PERSON_ID, SITE_DESCRIPTION, SITE_ORIGIN } from "#src/lib/site.ts";
@@ -28,26 +29,24 @@ export interface Props {
 }
 
 export interface Section {
+  // Picks the page chrome classes below.
+  kind: "portfolio" | "blog";
   siteName: string;
   ogImage: string;
   metaDescription: string;
   socialDescription: string;
-  htmlClass: string;
   // What the section's WebPage nodes are about; blog posts are about their topic.
   pageAbout?: { "@id": string };
-  bodyClass?: string;
-  particlesClass?: string;
 }
 
 const portfolio: Section = {
+  kind: "portfolio",
   siteName: "Murugappan M",
   ogImage: `${SITE_ORIGIN}/og-image.png`,
   // Under 160 chars so Google doesn't truncate it; og/twitter/JSON-LD keep the full pitch.
   metaDescription:
     "I build B2B SaaS that ships in regulated industries. I took a product from 0 to $300k ARR and now automate pharmacy workflows with LLMs at MedMe Health.",
   socialDescription: SITE_DESCRIPTION,
-  // 80px clears the fixed header.
-  htmlClass: "scroll-pt-20",
   pageAbout: { "@id": PERSON_ID }
 };
 
@@ -69,6 +68,31 @@ const twitterHandle = new URL(socialMediaLinks.twitter).pathname.replace(/^\//, 
 // Canonical on the custom domain, so other hosts (workers.dev previews) consolidate to it.
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 
+// Page chrome per section. The portfolio's 80px scroll padding clears its fixed
+// header; the blog has none, and its headings carry their own scroll-margin. The
+// blog overrides the base layer's 19px/23px body type, and dims the stars for
+// reading: between words they read as stray bullets.
+type PerKind = Record<Section["kind"], string>;
+const chrome = {
+  html: cva("scroll-smooth", {
+    variants: {
+      kind: { portfolio: "scroll-pt-20", blog: "motion-reduce:scroll-auto" } satisfies PerKind
+    }
+  }),
+  body: cva("", {
+    variants: {
+      kind: {
+        portfolio: "",
+        blog: "text-base/normal text-text dark:text-text-dark"
+      } satisfies PerKind
+    }
+  }),
+  stars: cva("", {
+    variants: { kind: { portfolio: "", blog: "opacity-50 dark:opacity-70" } satisfies PerKind }
+  })
+};
+const { kind } = section;
+
 const jsonLdScript = jsonLdHtml({
   page: noindex ? null : { url: canonicalUrl, name: title, about: section.pageAbout, profilePage },
   nodes: pageGraph
@@ -76,7 +100,7 @@ const jsonLdScript = jsonLdHtml({
 ---
 
 <!doctype html>
-<html lang="en" class:list={["scroll-smooth", section.htmlClass]}>
+<html lang="en" class={chrome.html({ kind })}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -147,8 +171,8 @@ const jsonLdScript = jsonLdHtml({
     <script type="application/ld+json" set:html={jsonLdScript} />
     <SiteScripts />
   </head>
-  <body class={section.bodyClass}>
-    <Particles class={section.particlesClass} />
+  <body class={chrome.body({ kind })}>
+    <Particles class={chrome.stars({ kind })} />
     <slot />
     <ChatWidget />
   </body>

@@ -2,11 +2,17 @@
 // Shows the theme you'd switch TO. Shared by both apps: clicks go through
 // window.__setPreferredTheme (../lib/theme.ts); the label follows the `themechange` event.
 // Plain Astro, not an island, so it can't shift the header after paint.
+// The hover tint mixes the icon's own colour, so one class covers both themes.
 ---
 
-<button type="button" id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+<button
+  type="button"
+  id="theme-toggle"
+  class="flex size-12 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-inherit transition-[scale,background-color] duration-150 ease-[ease] hover:bg-[color-mix(in_srgb,currentColor_10%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current motion-safe:active:scale-95 motion-reduce:transition-none"
+  aria-label="Toggle theme"
+>
   <svg
-    class="icon sun"
+    class="hidden dark:block"
     width="28"
     height="28"
     viewBox="0 0 24 24"
@@ -28,7 +34,7 @@
     <path d="m19.07 4.93-1.41 1.41"></path>
   </svg>
   <svg
-    class="icon moon"
+    class="block dark:hidden"
     width="28"
     height="28"
     viewBox="0 0 24 24"
@@ -59,61 +65,3 @@
   );
   window.addEventListener("themechange", label);
 </script>
-
-<style>
-  .theme-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    border: 0;
-    border-radius: 9999px;
-    background: transparent;
-    color: inherit;
-    cursor: pointer;
-    transition:
-      transform 0.15s ease,
-      background-color 0.15s ease;
-  }
-
-  /* Tinted from the icon's own colour, so one rule covers both themes. */
-  .theme-toggle:hover {
-    background-color: color-mix(in srgb, currentColor 10%, transparent);
-  }
-
-  .theme-toggle:active {
-    transform: scale(0.95);
-  }
-
-  .theme-toggle:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-  }
-
-  .icon {
-    display: block;
-  }
-
-  .sun {
-    display: none;
-  }
-
-  :global(html.dark-mode) .sun {
-    display: block;
-  }
-
-  :global(html.dark-mode) .moon {
-    display: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .theme-toggle {
-      transition: none;
-    }
-    .theme-toggle:active {
-      transform: none;
-    }
-  }
-</style>

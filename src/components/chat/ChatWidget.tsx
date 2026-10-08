@@ -1,5 +1,5 @@
 // Jarvis chat island, shared by the portfolio and blog via ChatWidget.astro.
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, type ComponentProps } from "react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { useAgent } from "agents/react";
 import { safeValidateUIMessages } from "ai";
@@ -130,6 +130,19 @@ function focusInChat(launcher: HTMLElement | null): boolean {
   );
 }
 
+// The panel header's icon buttons, on the primary fill. Radix triggers wrap
+// them with asChild, so every prop (ref included) passes through.
+function HeaderButton(props: ComponentProps<typeof Button>) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-4.5"
+      {...props}
+    />
+  );
+}
+
 type PanelProps = {
   bubbles: Bubble[];
   phase: Phase;
@@ -160,9 +173,6 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
   // Until the visitor says anything; the greeting doesn't count.
   const showStarters = phase.kind === "idle" && bubbles.every(b => b.kind !== "user");
 
-  const headerBtn =
-    "size-8 rounded-lg text-primary-foreground hover:bg-white/15 hover:text-primary-foreground [&_svg:not([class*='size-'])]:size-4.5";
-
   return (
     <>
       {/* Radix locks page scroll from the overlay, which renders only while modal (phones). */}
@@ -179,7 +189,7 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
         // move focus to the launcher then; closePanel returns focus itself.
         onCloseAutoFocus={e => e.preventDefault()}
       >
-        <Card className="fixed right-7.5 bottom-22.5 z-1001 h-130 max-h-[calc(100vh-120px)] w-92.5 max-w-[calc(100vw-24px)] overflow-hidden rounded-[14px] shadow-2xl max-sm:top-0 max-sm:right-0 max-sm:bottom-0 max-sm:left-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-auto max-sm:max-w-none max-sm:rounded-none max-sm:border-0">
+        <Card className="fixed right-7.5 bottom-22.5 z-1001 h-130 max-h-[calc(100vh-120px)] w-92.5 max-w-[calc(100vw-24px)] overflow-hidden rounded-[14px] shadow-2xl max-sm:inset-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-auto max-sm:max-w-none max-sm:rounded-none max-sm:border-0">
           <CardHeader className="flex-row items-center gap-1 bg-primary py-3 text-primary-foreground">
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-base font-semibold">Chat with Jarvis</DialogTitle>
@@ -189,14 +199,9 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={headerBtn}
-                  aria-label="Conversation options"
-                >
+                <HeaderButton aria-label="Conversation options">
                   <EllipsisVertical />
-                </Button>
+                </HeaderButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => setConfirmRestart(true)}>
@@ -208,9 +213,9 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
               </DropdownMenuContent>
             </DropdownMenu>
             <DialogClose asChild>
-              <Button variant="ghost" size="icon" className={headerBtn} aria-label="Close chat">
+              <HeaderButton aria-label="Close chat">
                 <X />
-              </Button>
+              </HeaderButton>
             </DialogClose>
           </CardHeader>
 
@@ -243,9 +248,12 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
               ))}
               {phase.kind === "loading" && (
                 <div className="flex items-center gap-1 self-start rounded-xl rounded-bl-sm bg-muted p-3">
-                  <span className="chat-dot" />
-                  <span className="chat-dot" />
-                  <span className="chat-dot" />
+                  {[0, 1, 2].map(i => (
+                    <span
+                      key={i}
+                      className="size-1.5 animate-chat-dot rounded-full bg-muted-foreground nth-2:[animation-delay:0.2s] nth-3:[animation-delay:0.4s] motion-reduce:animate-none"
+                    />
+                  ))}
                 </div>
               )}
               {phase.kind === "working" && <ActivityRow activity={phase.activity} />}

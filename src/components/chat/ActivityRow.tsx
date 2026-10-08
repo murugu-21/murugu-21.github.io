@@ -60,8 +60,16 @@ export function ActivityRow({ activity }: { activity: Activity | null }) {
         aria-hidden="true"
         className="flex max-w-[85%] items-center gap-2 self-start rounded-xl rounded-bl-sm bg-muted px-3 py-2 text-sm text-muted-foreground"
       >
-        {activity ? <span className="chat-tool-dot" /> : <span className="chat-spark">✦</span>}
-        <span className="chat-shimmer">
+        {/* The spark marks a thinking beat, the dot a real tool call. */}
+        {activity ? (
+          <span className="size-1.75 flex-none animate-chat-tool-dot rounded-full bg-primary motion-reduce:animate-none" />
+        ) : (
+          <span className="animate-chat-spark text-[12px] leading-none text-primary motion-reduce:animate-none">
+            ✦
+          </span>
+        )}
+        {/* Reduced motion undoes the gradient too, or the label stays transparent. */}
+        <span className="animate-chat-shimmer bg-[linear-gradient(90deg,var(--muted-foreground)_35%,var(--foreground)_50%,var(--muted-foreground)_65%)] bg-size-[220%_100%] bg-clip-text text-transparent [-webkit-text-fill-color:transparent] motion-reduce:animate-none motion-reduce:bg-none motion-reduce:text-muted-foreground motion-reduce:[-webkit-text-fill-color:currentColor]">
           {activity ? toolLabel(activity.name, activity.detail) : word}…
         </span>
         {showElapsed && <span className="text-xs tabular-nums opacity-60">{elapsed}s</span>}

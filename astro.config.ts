@@ -73,7 +73,7 @@ function emptyBodyProblem({ slug, html }: Post) {
 
 function mermaidProblem({ slug, html, source }: Post) {
   const fences = findMermaidFences(source).length;
-  const figures = html.match(/<figure class="mermaid-diagram">/g)?.length ?? 0;
+  const figures = html.match(/<figure data-mermaid="">/g)?.length ?? 0;
   if (fences === figures) return;
   return (
     `${slug} has ${fences} mermaid fence(s) but ${figures} diagram figure(s) in the build. ` +

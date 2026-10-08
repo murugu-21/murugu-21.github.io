@@ -1,9 +1,8 @@
-// WCAG contrast guards for the design tokens: global.css (sky, card, night)
-// and islands.css. The CSS is inlined by vitest.config.ts.
+// WCAG contrast guards for the design tokens in global.css: sky, card, night
+// and the islands. The CSS is inlined by vitest.config.ts.
 import { describe, expect, it } from "vitest";
 
 declare const __GLOBAL_CSS__: string;
-declare const __ISLANDS_CSS__: string;
 const css = __GLOBAL_CSS__;
 
 const channels = (c: string): number[] => {
@@ -118,7 +117,7 @@ describe("blue-hour light palette", () => {
     expect(contrast(over("rgba(255, 255, 255, 0.8)", fill), fill)).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The blog's link hover/focus ink (post.css `.blog-post a:hover`). It sits
+  // The blog's link hover/focus ink (the blog-post utility's link hover). It sits
   // on 16px links that can cross the sky's deep stop, so it needs the
   // normal-text bar there. The plain amber-ink only clears 3:1 on it.
   it("keeps --color-amber-ink-deep readable as 16px link hover on every stop", () => {
@@ -143,10 +142,10 @@ describe("blue-hour light palette", () => {
     }
   });
 
-  // The read-aloud highlight (post.css): the spoken word is --color-amber at
+  // The read-aloud highlight (the blog-post utility): the spoken word is --color-amber at
   // 25% inside its block at 14%, and body ink over both washes must stay AA on
   // the deep stop. The alphas are restated here rather than parsed from
-  // post.css, so a change there must be mirrored in this test.
+  // the blog-post utility, so a change there must be mirrored in this test.
   it("keeps body ink readable through the read-aloud highlight (>= 4.5:1)", () => {
     const amber = channels(ink("amber"));
     const wash = (alpha: number) => `rgba(${amber[0]}, ${amber[1]}, ${amber[2]}, ${alpha})`;
@@ -207,6 +206,15 @@ describe("night palette", () => {
     for (const stop of night) expect(contrast(ink(name), stop)).toBeGreaterThanOrEqual(4.5);
   });
 
+  // Secondary text on the homepage and /about: its day side crosses the sky's
+  // deep stop, its night side is translucent white on the canvas.
+  it("keeps --color-subtitle-muted readable by day and at night (>= 4.5:1)", () => {
+    const { light, dark } = lightDark(ink("subtitle-muted"));
+    const day = /^var\(--([\w-]+)\)$/.exec(light)?.[1];
+    expect(contrast(day ? token(day) : light, sky.deep)).toBeGreaterThanOrEqual(4.5);
+    for (const stop of night) expect(contrast(over(dark, stop), stop)).toBeGreaterThanOrEqual(4.5);
+  });
+
   // The checked tag chip: white text on the box-dark fill (Tag.astro).
   it("keeps white text readable on the checked chip fill (>= 4.5:1)", () => {
     expect(contrast("#ffffff", ink("box-dark"))).toBeGreaterThanOrEqual(4.5);
@@ -220,7 +228,7 @@ describe("night palette", () => {
     }
   });
 
-  // The code fence's and inline code's night edge (code.css, post.css).
+  // The code fence's and inline code's night edge (code.css, the blog-post utility).
   it("shows the blog's dark panel edges against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
       expect(contrast(over(token("color-fence-edge-dark"), stop), stop)).toBeGreaterThanOrEqual(3);
@@ -252,7 +260,7 @@ describe("night palette", () => {
     expect(contrast(placeholder, ink("dark-bg"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The dark read-aloud highlight (post.css): box-dark at 20% for the word
+  // The dark read-aloud highlight (the blog-post utility): box-dark at 20% for the word
   // inside its block at 14%. A LINK inside the spoken word (blue-light) is
   // the tight case; body ink has more room. Alphas restated, as for the light
   // guard above.
@@ -288,10 +296,10 @@ describe("night palette", () => {
 
 describe.each(["light", "dark"] as const)("%s island tokens", mode => {
   const t = (() => {
-    const selector = ".ui-island {";
-    const at = __ISLANDS_CSS__.indexOf(selector);
-    if (at === -1) throw new Error(`no ${selector} block in islands.css`);
-    const body = __ISLANDS_CSS__.slice(at + selector.length, __ISLANDS_CSS__.indexOf("}", at));
+    const selector = "@utility ui-island {";
+    const at = css.indexOf(selector);
+    if (at === -1) throw new Error(`no ${selector} block in global.css`);
+    const body = css.slice(at + selector.length, css.indexOf("}", at));
     return Object.fromEntries(
       [...body.matchAll(/(--[\w-]+)\s*:\s*(light-dark\([^;]+);/g)].map(m => [
         m[1],

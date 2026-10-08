@@ -103,7 +103,7 @@ Two features improve where supported and degrade cleanly. The phone menu's slide
 ```bash
 bun run check-format   # oxfmt, plus prettier for .astro
 typos                  # spelling, configured in _typos.toml
-bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates
+bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates and stylesheets
 bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
 bun run check:src      # type-check src/ (.astro files included), scripts/ and the config files
@@ -116,14 +116,16 @@ bun run test --coverage # the same, plus Istanbul coverage in coverage/
 
 The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
 
-typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:astro` preloads `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
+typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:eslint` preloads `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
 
-Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, over the `.astro` files in `src/` to cover the templates. It lints nothing else, so its rules don't overlap oxlint's. Delete it, along with ESLint and its plugins, once oxlint can parse Astro templates.
+Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, over the `.astro` files in `src/` to cover the templates, and `@eslint/css` over the stylesheets, which oxlint can't parse at all. It lints nothing else, so its rules don't overlap oxlint's. Move the templates to oxlint once it can parse them.
 
 Having both compilers installed has two side effects:
 
 - The TypeScript 6 copy wins `node_modules/.bin/tsc`, so bare `bunx tsc` reports 6.0.3. The `check:*` scripts call `node node_modules/typescript/bin/tsc` by path to get 7.
 - TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace TypeScript version" picks up 6. Point it at the TypeScript 7 language service instead.
+
+Styles are Tailwind only: every class is a Tailwind utility, built in or defined in `src/styles/global.css`, composed with `cn()` or a `cva()` variant, and a script hook is a `data-*` attribute, not a class. Oxlint checks the classes in `.ts` and `.tsx`, and ESLint checks them in `.astro` and keeps hand-written rules out of the stylesheets. The resume has its own entry, `src/styles/resume.css`, without preflight or the site theme. Two changes wait on upstream releases. When `prettier-plugin-tailwindcss` supports `prettier-plugin-astro` 1 (merged in tailwindlabs/prettier-plugin-tailwindcss#473, unreleased as of 2026-10-08), move `.astro` class order from ESLint to Prettier. When oxlint parses `.astro`, widen its Tailwind override's `files` to `.astro`.
 
 ## Deployment
 

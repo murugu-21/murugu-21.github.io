@@ -1,10 +1,12 @@
 ---
-// One tag filter chip: a visually hidden checkbox `.tag` plus its label,
+import { cn } from "#src/lib/utils.ts";
+
+// One tag filter chip: a visually hidden checkbox `[data-tag]` plus its label,
 // styled from the checkbox state; PostList.astro's script reads it on `change`.
 //
-// `[.tag:…+&]:` variants, not `peer-*`: peer compiles to `~`, and all chips are
+// `[[data-tag]:…+&]:` variants, not `peer-*`: peer compiles to `~`, and all chips are
 // siblings, so checking one would paint every later label. Hovering a label
-// forwards `:hover` to its offscreen checkbox, so `.tag:hover + label` works.
+// forwards `:hover` to its offscreen checkbox, so `[data-tag]:hover + label` works.
 export interface TagCount {
   name: string;
   count: number;
@@ -14,26 +16,24 @@ interface Props {
   tag: TagCount;
 }
 const { tag } = Astro.props;
-
-const labelClass = [
-  "mt-[.875em] mr-[.75em] flex cursor-pointer items-center rounded-[.25em]",
-  "[.tag:checked+&]:bg-navy [.tag:checked+&]:text-white dark:[.tag:checked+&]:bg-box-dark",
-  "[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline)] [.tag:hover+&]:outline-none",
-  "dark:[.tag:hover+&]:shadow-[0_0_10px_var(--color-chip-outline-dark)]",
-  // Solid rings: half-alpha ones miss the 3:1 a focus indicator needs.
-  "[.tag:focus-visible+&]:ring-2 [.tag:focus-visible+&]:ring-amber-ink",
-  "dark:[.tag:focus-visible+&]:ring-blue-light"
-].join(" ");
 ---
 
 {/* Visually hidden but focusable: it is the label's styling source. */}
 <input
-  class="tag absolute -left-[99999px] opacity-0"
+  class="absolute left-[-99999px] opacity-0"
+  data-tag
   type="checkbox"
   id={`tag-${tag.name}`}
   value={tag.name}
 />
-<label for={`tag-${tag.name}`} class={labelClass}>
+<label
+  for={`tag-${tag.name}`}
+  class={cn(
+    "mt-[.875em] mr-[.75em] flex cursor-pointer items-center rounded-[.25em] [[data-tag]:checked+&]:bg-navy [[data-tag]:checked+&]:text-white dark:[[data-tag]:checked+&]:bg-box-dark [[data-tag]:hover+&]:shadow-[0_0_10px_var(--color-chip-outline)] [[data-tag]:hover+&]:outline-none dark:[[data-tag]:hover+&]:shadow-[0_0_10px_var(--color-chip-outline-dark)]",
+    // Solid rings: half-alpha ones miss the 3:1 a focus indicator needs.
+    "[[data-tag]:focus-visible+&]:ring-2 [[data-tag]:focus-visible+&]:ring-amber-ink dark:[[data-tag]:focus-visible+&]:ring-blue-light"
+  )}
+>
   {/* Inline-block text spans: on a padded flex item, Chrome paints a
       line-end selection marker out to the cell's edge. An atomic inline
       keeps the text off that line box. */}
@@ -43,7 +43,7 @@ const labelClass = [
   {/* Badge alphas are tuned for AA (palette.test.ts guards night). Not a flex
       box, which would blockify the span and bring the selection marker back;
       `content-center` centres the numeral instead. */}
-  <div class="content-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy [.tag:checked+label_&]:bg-white/10 [.tag:checked+label_&]:text-white dark:bg-blue-light/12 dark:text-blue-light">
+  <div class="content-center self-stretch rounded-[0_.25em_.25em_0] bg-navy/10 px-[.5em] text-[.8em] text-navy dark:bg-blue-light/12 dark:text-blue-light [[data-tag]:checked+label_&]:bg-white/10 [[data-tag]:checked+label_&]:text-white">
     <span class="inline-block">{tag.count}</span>
   </div>
 </label>

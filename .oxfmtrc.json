@@ -4,6 +4,7 @@
   "arrowParens": "avoid",
   "printWidth": 100,
   "sortPackageJson": false,
+  "sortTailwindcss": { "stylesheet": "./src/styles/global.css", "functions": ["cn", "cva"] },
   "overrides": [
     {
       "files": ["content/**/*.md"],

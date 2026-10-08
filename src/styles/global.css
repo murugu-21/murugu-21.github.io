@@ -2,10 +2,25 @@
    sets `color-scheme: dark` (below) so every `light-dark()` pair follows it. */
 
 @import "tailwindcss";
+/* `prose` for /about and /developers (src/components/Prose.astro). */
+@plugin "@tailwindcss/typography";
 
-/* chat.css goes in layer(components) so utilities still beat it. */
-@import "./islands.css";
-@import "./chat.css" layer(components);
+@custom-variant dark (&:where(html.dark-mode *));
+
+/* The blog's table of contents (TableOfContents.astro). Hover pointers get the
+   rail from 64rem. Touch devices only get it, always expanded, from 87rem, where
+   the panel clears the 42rem column: 2 × (19.75rem prose half + 22.25rem panel)
+   = 84rem, plus a 1.5rem gap. */
+@custom-variant toc-shown (@media (min-width: 64rem) and (hover: hover), (min-width: 87rem) and (hover: none));
+/* Collapsed to bars while neither hovered nor keyboard-focused. `:has(:focus-visible)`,
+   not `:focus-within`: a mouse click would leave the panel held open over the prose. */
+@custom-variant toc-collapsed {
+  @media (hover: hover) {
+    :where([data-toc]):not(:hover, :has(:focus-visible)) & {
+      @slot;
+    }
+  }
+}
 
 /* No @source: auto-detection covers everything not gitignored. Add one only
    for a directory outside the project (e.g. node_modules). */
@@ -38,12 +53,14 @@
   --color-dusk-violet: #443c8f;
   --color-amber: #b45309;
   --color-amber-ink: #8a4406;
-  /* Blog link hover (post.css): amber-ink only reaches 3:1 on the deep stop;
+  /* Blog link hover (the blog-post utility): amber-ink only reaches 3:1 on the deep stop;
      this holds 4.5:1 for body-size links. */
   --color-amber-ink-deep: #663000;
   --color-title: #1c1633;
   --color-text: #292444;
   --color-subtitle: #413b58;
+  /* Secondary text: dates, bullets and the header's brackets. */
+  --color-subtitle-muted: light-dark(var(--color-subtitle), rgba(255, 255, 255, 0.65));
   --color-card-subtitle: #56506e;
   --color-blog-title: #241f3f;
   --color-blog-container: #4f4a6b;
@@ -75,7 +92,7 @@
   --color-box-dark: #2a56c8;
   /* Night edge of code fences and inline code: 3:1 so they read as panels. */
   --color-fence-edge-dark: rgba(255, 255, 255, 0.35);
-  /* Blog hr and table rules (post.css); held at 2:1 on every sky stop. */
+  /* Blog hr and table rules (the blog-post utility); held at 2:1 on every sky stop. */
   --color-accent-grey: rgba(6, 3, 141, 0.4);
   --color-accent-grey-dark: #818cab;
   /* TOC rail bars (TableOfContents.astro): a UI component, so 3:1 on every
@@ -96,7 +113,9 @@
   --background-image-page-dark: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
 
   /* +1px because Tailwind's max-* variants are exclusive: `max-md:` means
-     (max-width: 768px). For (min-width: 768px) use `min-[768px]:`, not `md:`. */
+     (max-width: 768px). So `md:` starts at 769px, not Tailwind's 768px: for
+     (min-width: 768px) use `min-[768px]:`. Islands avoid `md:`/`max-md:`
+     altogether; use `sm`/`lg` or an arbitrary value. */
   --breakpoint-xs: 321px;
   --breakpoint-md: 769px;
   --breakpoint-wide: 1381px;
@@ -110,6 +129,100 @@
     }
     to {
       transform: none;
+    }
+  }
+
+  /* The greeting's waving hand. */
+  --animate-wave: wave 1.8s infinite;
+  @keyframes wave {
+    0% {
+      transform: rotate(0deg);
+    }
+    10% {
+      transform: rotate(-10deg);
+    }
+    20% {
+      transform: rotate(12deg);
+    }
+    30% {
+      transform: rotate(-10deg);
+    }
+    40% {
+      transform: rotate(9deg);
+    }
+    50% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
+  /* The typewriter's caret. */
+  --animate-typewriter-blink: typewriter-blink 1s step-end infinite;
+  @keyframes typewriter-blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  /* The chat widget's typing dots and activity row (no shadcn primitive). */
+  --animate-chat-dot: chat-dot 1.2s infinite;
+  @keyframes chat-dot {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  --animate-chat-shimmer: chat-shimmer 2.4s linear infinite;
+  @keyframes chat-shimmer {
+    from {
+      background-position: 130% 0;
+    }
+    to {
+      background-position: -30% 0;
+    }
+  }
+  --animate-chat-spark: chat-spark 1.8s ease-in-out infinite;
+  @keyframes chat-spark {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+  --animate-chat-tool-dot: chat-tool-dot 1.4s ease-out infinite;
+  @keyframes chat-tool-dot {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 6px transparent;
+    }
+  }
+
+  /* The blog's table scroll hint (blog-post below): the mask is drawn 3rem
+     wider than the table so its transparent tail sits off the right edge (no
+     fade); the animation pulls it back to the table's width (fade showing) at
+     scroll start and lets it out again as the table scrolls to its end. */
+  --animate-table-scroll-hint: table-scroll-hint linear both;
+  @keyframes table-scroll-hint {
+    from {
+      mask-size: 100% 100%;
+    }
+    to {
+      mask-size: calc(100% + 3rem) 100%;
     }
   }
 }
@@ -151,24 +264,10 @@
   }
 }
 
-@layer components {
-  /* emitted by src/lib/accent.ts */
-  .accent {
-    color: light-dark(var(--color-amber-ink), var(--color-blue));
-    font-weight: 700;
-  }
-  /* the light subtitle colour doesn't read on the night canvas */
-  .subTitle {
-    color: light-dark(var(--color-subtitle), rgba(255, 255, 255, 0.65));
-  }
-  .section-animate {
-    animation: var(--animate-rise-fade);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .section-animate {
-      animation: none;
-    }
-  }
+/* The highlighted word src/lib/accent.ts wraps in headings it renders as HTML. */
+@utility accent {
+  color: light-dark(var(--color-amber-ink), var(--color-blue));
+  font-weight: 700;
 }
 
 @utility glow-card {
@@ -219,5 +318,420 @@
     font-size: clamp(0.625rem, 6cqi, 1.5rem);
     line-height: 1.2;
     text-align: center;
+  }
+}
+
+/* shadcn tokens for the React islands. Each colour is one `light-dark()` pair,
+   resolved by the `color-scheme` set from `html.dark-mode`. palette.test.ts
+   reads both sides of every pair out of this block: keep the tokens first. */
+@utility ui-island {
+  --background: light-dark(#faf9ff, #282c35);
+  --foreground: light-dark(#2f2a4d, #ffffff);
+  --card: light-dark(#faf9ff, #282c35);
+  --card-foreground: light-dark(#2f2a4d, #ffffff);
+  /* Night: light navy is 1.1:1 on the panel; #7da2ff matches the blog's
+     --color-blue-light, and the foreground flips to navy since white on that
+     blue is only 2.5:1. */
+  --primary: light-dark(#06038d, #7da2ff);
+  --primary-foreground: light-dark(#ffffff, #06038d);
+  /* Light: darker than #4c7dff so the white label keeps AA on hover. */
+  --primary-hover: light-dark(#3b6fe0, #a8c2ff);
+  --secondary: light-dark(#f1eff8, #171c28);
+  --secondary-foreground: light-dark(#2f2a4d, #ffffff);
+  --muted: light-dark(#f1eff8, #171c28);
+  --muted-foreground: light-dark(#56506e, #a7a7a7);
+  --accent: light-dark(#f1eff8, #171c28);
+  --accent-foreground: light-dark(#2f2a4d, #ffffff);
+  --border: light-dark(rgba(34, 27, 61, 0.14), rgba(255, 255, 255, 0.16));
+  --input: light-dark(rgba(34, 27, 61, 0.14), rgba(255, 255, 255, 0.16));
+  --ring: light-dark(#06038d, #7da2ff);
+  --radius: 0.75rem;
+  /* Scoped here, not in @theme inline, so rounded-* keeps Tailwind's defaults
+     outside islands (inlining made them 0 where --radius was undefined). */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  font-family: var(--font-fira-code);
+  /* Pin shadcn's assumed 16px/1.5 so each host's body type doesn't leak in. */
+  font-size: 1rem;
+  line-height: 1.5;
+
+  /* Preflight leaves border-color at currentColor and width-only utilities set
+     no colour, so borders would paint in the text colour. `:where` keeps this
+     below any border utility. */
+  :where(&) *,
+  :where(&) *::before,
+  :where(&) *::after {
+    border-color: var(--border);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* Rendered markdown in a blog post, scoped under the article so nothing leaks
+   into the portfolio. `:where(&)` keeps every descendant rule below a utility
+   class on the same element. `preflight:` marks UA defaults Tailwind's
+   preflight zeroes. */
+@utility blog-post {
+  /* Restates the blog section's body type so the article doesn't depend on it. */
+  font-size: 1rem;
+  line-height: 1.5;
+  color: light-dark(var(--color-text), var(--color-text-dark));
+
+  /* All code, inline and fenced, is Fira Code with its ligatures on; the
+     body turns `calt` off for prose. */
+  :where(&) :is(code, pre) {
+    font-family: var(--font-mono);
+    font-feature-settings: "calt" 1;
+  }
+
+  /* Inline code needs a surface: the prose is Fira Code too. `break-word`,
+     not `anywhere`, which would let table columns compress below their code
+     cells. */
+  :where(&) :not(pre) > code {
+    background: light-dark(rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.06));
+    border: 1px solid light-dark(var(--color-border-soft), var(--color-fence-edge-dark));
+    border-radius: 0.25rem;
+    padding: 0.05em 0.35em;
+    overflow-wrap: break-word;
+  }
+
+  :where(&) hr {
+    background: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+    height: 1px;
+    border: 0;
+    /* preflight: restores the UA `0.5em auto`. */
+    margin: 0.5em auto;
+  }
+
+  /* Headings */
+
+  :where(&) :is(h1, h2, h3, h4, h5, h6) {
+    margin-top: 3rem;
+    margin-bottom: 1.5rem;
+    /* At least Fira Code's 1.23em content box, or a wrapped heading's
+       selection highlight doubles up between lines. Rounded to whole pixels
+       so the seam lands on a pixel boundary. */
+    line-height: 1.32;
+    line-height: round(up, 1.32em, 1px);
+    letter-spacing: -0.025em;
+    /* Containing block for the anchor icons. */
+    position: relative;
+  }
+
+  :where(&) :is(h2, h3, h4, h5, h6) {
+    font-weight: 700;
+    color: light-dark(var(--color-title), var(--color-heading-dark));
+  }
+
+  /* 700 is Fira Code's heaviest weight. */
+  :where(&) h1 {
+    font-weight: 700;
+    font-size: 2.488rem;
+    color: light-dark(var(--color-black), var(--color-white));
+  }
+
+  :where(&) h2 {
+    font-size: 2.074rem;
+  }
+  :where(&) h3 {
+    font-size: 1.728rem;
+  }
+  :where(&) h4 {
+    font-size: 1.44rem;
+  }
+  :where(&) h5 {
+    font-size: 1.2rem;
+  }
+  :where(&) h6 {
+    font-size: 1rem;
+  }
+
+  :where(&) :is(h1, h2, h3, h4, h5, h6) > a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  :where(&) header h1 {
+    margin: 0 0 1rem 0;
+  }
+  :where(&) header p {
+    font-size: 1.2rem;
+  }
+
+  /* Prose */
+
+  :where(&) p {
+    line-height: 1.625;
+    margin: 0 0 2rem 0;
+    padding: 0;
+  }
+
+  :where(&) :is(ul, ol) {
+    margin-left: 0;
+    margin-right: 0;
+    /* Hanging indent so wrapped lines align with the first word. */
+    padding: 0 0 0 1.25rem;
+    /* preflight: the UA top margin, visible after a code block. */
+    margin-top: 1em;
+    margin-bottom: 2rem;
+    list-style-position: outside;
+    list-style-image: none;
+  }
+  /* preflight: list markers. */
+  :where(&) ul {
+    list-style-type: disc;
+  }
+  :where(&) ol {
+    list-style-type: decimal;
+  }
+  /* preflight: nested-list markers. */
+  :where(&) ul ul {
+    list-style-type: circle;
+  }
+  :where(&) ul ul ul {
+    list-style-type: square;
+  }
+
+  :where(&) :is(ul, ol) li {
+    padding-left: 0;
+    margin-bottom: 1rem;
+  }
+
+  :where(&) li > p {
+    margin-bottom: 1rem;
+  }
+
+  :where(&) li *:last-child {
+    margin-bottom: 0;
+  }
+
+  :where(&) li > ul {
+    margin-left: 2rem;
+    margin-top: 1rem;
+  }
+
+  :where(&) blockquote {
+    color: light-dark(var(--color-text-light), var(--color-neutral-100));
+    /* preflight: the UA top margin. */
+    margin-top: 1em;
+    margin-left: -1.5rem;
+    margin-right: 2rem;
+    padding: 0 0 0 1.5rem;
+    border-left: 0.25rem solid light-dark(var(--color-navy), var(--color-blue-light));
+    font-size: 1.2rem;
+    font-style: italic;
+    margin-bottom: 2rem;
+  }
+
+  :where(&) blockquote > :last-child {
+    margin-bottom: 0;
+  }
+
+  :where(&) blockquote > :is(ul, ol) {
+    list-style-position: inside;
+  }
+
+  /* Tables. Wide ones scroll horizontally instead of blowing out the column. */
+  :where(&) table {
+    width: 100%;
+    margin-bottom: 2rem;
+    border-collapse: collapse;
+    display: block;
+    overflow-x: auto;
+    /* Scroll hint for overlay scrollbars: the right edge fades while there is
+       more to the right. The resting mask is no-fade, so a non-overflowing
+       table, or an engine without scroll timelines (0s animation landing on
+       `to`), shows no fade. */
+    mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+    mask-repeat: no-repeat;
+    mask-size: calc(100% + 3rem) 100%;
+    animation: var(--animate-table-scroll-hint);
+  }
+  /* Separate block on purpose: Lightning CSS would fold the timeline into the
+     shorthand, which Chrome rejects. Must follow the shorthand, which resets
+     animation-timeline. */
+  @supports (animation-timeline: scroll()) {
+    :where(&) table {
+      animation-timeline: scroll(self inline);
+      animation-duration: auto;
+    }
+  }
+  /* Print is at scroll position 0, the faded state. */
+  @media print {
+    :where(&) table {
+      mask-image: none;
+      animation: none;
+    }
+  }
+
+  :where(&) :is(th, td) {
+    text-align: left;
+    /* th and td otherwise disagree (UA `middle` vs preflight). */
+    vertical-align: top;
+    padding: 0.5rem 1rem 0.5rem 0;
+    border-bottom: 1px solid light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+  }
+
+  :where(&) thead th {
+    color: light-dark(var(--color-title), var(--color-heading-dark));
+  }
+
+  /* Links. preflight: the UA underline. */
+  :where(&) a {
+    color: light-dark(var(--color-navy), var(--color-blue-light));
+    text-decoration: underline;
+    /* A bare URL as link text has no break opportunity and would widen the
+       page on a phone. */
+    overflow-wrap: break-word;
+  }
+
+  /* Deep amber, not amber-ink: amber-ink is only large-text AA on the sky's
+     deep stop. Night keeps its link blue or it would paint amber. */
+  :where(&) a:is(:hover, :focus) {
+    color: light-dark(var(--color-amber-ink-deep), var(--color-blue-light));
+    text-decoration: none;
+  }
+
+  /* Post-body images, scoped to the post-body <section> so the footer Bio
+     stays plain. preflight: inline, or centred diagrams would left-align. */
+  :where(&) section img {
+    display: inline;
+    vertical-align: baseline;
+    max-width: 100%;
+    height: auto;
+    cursor: zoom-in;
+  }
+
+  /* Heading anchors (src/lib/blog/rehype-autolink-config.ts): the icon sits
+     left of the heading and shows on hover/focus. */
+  :where(&) a[data-heading-anchor] {
+    position: absolute;
+    top: calc(50% - 8px);
+    left: 0;
+    transform: translateX(-100%);
+    padding-right: 4px;
+    line-height: 0;
+    /* The icon's fill and stroke are currentColor; this outranks the heading
+       links' `color: inherit` above. */
+    color: light-dark(var(--color-navy), var(--color-blue-light));
+  }
+
+  :where(&) a[data-heading-anchor] svg {
+    visibility: hidden;
+  }
+
+  :where(&) :is(h1, h2, h3, h4, h5, h6):hover a[data-heading-anchor] svg,
+  :where(&) a[data-heading-anchor]:focus svg {
+    visibility: visible;
+  }
+
+  /* Mermaid diagrams: one <img> per theme (remark-mermaid.ts). The hidden one
+     is lazy with no box, so it is never fetched. */
+  :where(&) [data-mermaid] {
+    margin: 2rem 0;
+    text-align: center;
+  }
+
+  /* Backdrop for labels outside node boxes; matches the background
+     scripts/site/render-mermaid.ts bakes into the SVG. */
+  :where(&) [data-mermaid] img {
+    display: inline;
+    vertical-align: baseline;
+    background: #fff;
+    border-radius: 8px;
+    padding: 12px;
+    max-width: 100%;
+    height: auto;
+  }
+  :where(&) [data-mermaid] img[data-mermaid-theme="dark"] {
+    display: none;
+    @variant dark {
+      display: inline;
+      background: var(--color-dark-bg);
+    }
+  }
+  :where(&) [data-mermaid] img[data-mermaid-theme="light"] {
+    @variant dark {
+      display: none;
+    }
+  }
+
+  /* Read-aloud highlight (src/lib/blog/listen-player.ts) */
+
+  /* Clears the sticky read-aloud bar (12px gap + 58px) for scrollIntoView
+     and heading anchors. */
+  :where(&) [data-speaking],
+  :where(&) :is(h2, h3, h4) {
+    scroll-margin-top: 5rem;
+  }
+
+  /* Warm in light: a blue tint read as a colour cast on the sky. The spoken
+     word is 25% in light and 20% at night over the 14% block, which keeps the
+     ink AA (palette.test.ts guards both). */
+  :where(&) [data-speaking] {
+    --block-wash: color-mix(
+      in srgb,
+      light-dark(var(--color-amber), var(--color-box-dark)) 14%,
+      transparent
+    );
+    --word-wash: light-dark(
+      color-mix(in srgb, var(--color-amber) 25%, transparent),
+      color-mix(in srgb, var(--color-box-dark) 20%, transparent)
+    );
+    background: var(--block-wash);
+    box-shadow: 0 0 0 6px var(--block-wash);
+    border-radius: 4px;
+    transition:
+      background 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+
+  :where(&) [data-speaking] [data-w][data-current-word] {
+    background: var(--word-wash);
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px var(--word-wash);
+  }
+
+  /* Heading line boxes barely clear the content box, so the 2px shadow would
+     spill into the next line; paint a 1lh band instead. */
+  :where(&) [data-speaking]:is(h1, h2, h3, h4, h5, h6) [data-w][data-current-word] {
+    background: linear-gradient(
+      transparent calc(50% - 0.5lh + 1px),
+      var(--word-wash) calc(50% - 0.5lh + 1px),
+      var(--word-wash) calc(50% + 0.5lh - 1px),
+      transparent calc(50% + 0.5lh - 1px)
+    );
+    box-shadow: none;
+  }
+
+  /* Narrow column */
+  @media (max-width: 42rem) {
+    :where(&) blockquote {
+      padding: 0 0 0 1rem;
+      margin-left: 0;
+    }
+    /* Let the table scroll rather than wrap cells one word per line. */
+    :where(&) :is(th, td) {
+      min-width: 9rem;
+    }
   }
 }

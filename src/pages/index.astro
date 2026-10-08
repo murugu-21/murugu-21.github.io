@@ -16,7 +16,8 @@ import ScrollTop from "#src/components/ScrollTop.astro";
 
 <Layout>
   <Header />
-  <main>
+  {/* pt-20 clears the ~70px fixed navbar */}
+  <main class="pt-20 pb-5">
     <Greeting />
     <Skills />
     <WorkExperience />
@@ -30,11 +31,3 @@ import ScrollTop from "#src/components/ScrollTop.astro";
   <AgentFooter />
   <ScrollTop />
 </Layout>
-
-<style>
-  /* clears the ~70px fixed navbar */
-  main {
-    padding-top: 80px;
-    padding-bottom: 20px;
-  }
-</style>

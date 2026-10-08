@@ -66,7 +66,7 @@ const PNG_VIEWPORT = { width: 4000, height: 900, deviceScaleFactor: 2 };
 // mermaid-cli shrinks the viewport to the diagram's right edge, ignoring the
 // body's right margin, so the 100%-wide SVG would draw that much narrower.
 const NO_BODY_MARGIN = cssUrl("body{margin:0}");
-// the 12px card post.css draws around the <img>, at 2x
+// the 12px card the blog-post utility draws around the <img>, at 2x
 const PNG_PADDING = 24;
 
 const { values: options } = parseArgs({ options: { force: { type: "boolean" } } });

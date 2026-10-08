@@ -14,6 +14,7 @@ import {
 import { Slider } from "#src/components/ui/slider.tsx";
 import { track } from "#src/lib/analytics.ts";
 import { readStored, writeStored } from "#src/lib/storage.ts";
+import { cn } from "#src/lib/utils.ts";
 import {
   canPlayAudio,
   canSpeak,
@@ -74,17 +75,16 @@ const reduce = (view: View, action: Action): View => {
 interface ToggleLook {
   label: string;
   Icon: LucideIcon;
-  iconClass: string;
   filled: boolean;
 }
 
-const LISTEN: ToggleLook = { label: "Listen", Icon: Play, iconClass: "ml-0.5", filled: true };
+const LISTEN: ToggleLook = { label: "Listen", Icon: Play, filled: true };
 
 const TOGGLE: Record<Status, ToggleLook> = {
   idle: LISTEN,
   paused: LISTEN,
-  loading: { label: "Loading", Icon: Loader2, iconClass: "animate-spin", filled: false },
-  speaking: { label: "Pause", Icon: Pause, iconClass: "", filled: false }
+  loading: { label: "Loading", Icon: Loader2, filled: false },
+  speaking: { label: "Pause", Icon: Pause, filled: false }
 };
 
 // Elapsed and total, either side of the seek bar.
@@ -115,10 +115,10 @@ export function ListenControls({ slug }: { slug: string }) {
   }, []);
 
   // Dock the transport bar while a session is live, including loading and
-  // pauses; src/pages/blog/[...slug].astro styles `.listening`.
+  // pauses; src/pages/blog/[...slug].astro styles `data-listening`.
   useEffect(() => {
-    const island = root?.closest(".listen-island");
-    island?.classList.toggle("listening", status !== "idle");
+    const island = root?.closest("[data-listen-island]");
+    island?.toggleAttribute("data-listening", status !== "idle");
   }, [root, status]);
 
   const onToggle = async () => {
@@ -182,17 +182,24 @@ export function ListenControls({ slug }: { slug: string }) {
         aria-pressed={status === "speaking"}
         className="size-10 shrink-0 rounded-full p-0 shadow-sm [&_svg:not([class*='size-'])]:size-5"
       >
-        <toggle.Icon className={toggle.iconClass} fill={toggle.filled ? "currentColor" : "none"} />
+        <toggle.Icon
+          // The play glyph sits off-centre in its box, so it nudges right.
+          className={cn(
+            toggle.Icon === Play && "ml-0.5",
+            toggle.Icon === Loader2 && "animate-spin"
+          )}
+          fill={toggle.filled ? "currentColor" : "none"}
+        />
       </Button>
 
-      <span className="w-10 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+      <span className="w-10 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
         {elapsed}
       </span>
 
       {/* Track at 30%/40% foreground: the primitive's 15% vanished on the
           card. Tuned here so the vendored slider keeps shadcn's styling. */}
       <Slider
-        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 **:data-[slot=slider-thumb]:hover:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 dark:**:data-[slot=slider-track]:bg-foreground/40 hover:**:data-[slot=slider-thumb]:opacity-100 focus-within:**:data-[slot=slider-thumb]:opacity-100"
+        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 focus-within:**:data-[slot=slider-thumb]:opacity-100 **:data-[slot=slider-thumb]:hover:opacity-100 hover:**:data-[slot=slider-thumb]:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 dark:**:data-[slot=slider-track]:bg-foreground/40"
         value={[progress.position]}
         max={progress.length || 1}
         step={seekable ? 0.1 : 1}
@@ -203,7 +210,7 @@ export function ListenControls({ slug }: { slug: string }) {
         onValueCommit={() => track("listen_seek")}
       />
 
-      <span className="w-10 shrink-0 text-xs tabular-nums text-muted-foreground">{total}</span>
+      <span className="w-10 shrink-0 text-xs text-muted-foreground tabular-nums">{total}</span>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

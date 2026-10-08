@@ -2,19 +2,19 @@
 // Canvas starfield behind both apps. Idle-loaded so it can't affect LCP, paused
 // while hidden, off under prefers-reduced-motion. z-[-1] sits above the body
 // background, which propagates to the root canvas. `class` lets a host tune it.
+import { cn } from "#src/lib/utils.ts";
+
 const { class: className } = Astro.props;
 ---
 
 <canvas
-  class:list={[
-    "particles-canvas pointer-events-none fixed inset-0 z-[-1] h-full w-full",
-    className
-  ]}
+  data-particles
+  class={cn("pointer-events-none fixed inset-0 z-[-1] size-full", className)}
   aria-hidden="true"
 ></canvas>
 
 <script>
-  const canvas = document.querySelector<HTMLCanvasElement>(".particles-canvas");
+  const canvas = document.querySelector<HTMLCanvasElement>("canvas[data-particles]");
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   if (canvas && !reduced) {

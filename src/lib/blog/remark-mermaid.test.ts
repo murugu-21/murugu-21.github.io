@@ -31,14 +31,14 @@ describe("remarkMermaid", () => {
     expect(tree.children).toHaveLength(3);
     expect(tree.children[1]).toEqual({
       type: "paragraph",
-      data: { hName: "figure", hProperties: { className: ["mermaid-diagram"] } },
+      data: { hName: "figure", hProperties: { dataMermaid: "" } },
       children: ["light", "dark"].map(theme => ({
         type: "image",
         url: `diagrams/${hash}.${theme}.svg`,
         alt: "Diagram 1",
         data: {
           hProperties: {
-            className: [`mermaid-${theme}`],
+            "data-mermaid-theme": theme,
             loading: "lazy",
             decoding: "async",
             width: 400,
@@ -56,7 +56,7 @@ describe("remarkMermaid", () => {
     await remarkMermaid()(tree, file);
 
     expect(JSON.stringify(tree.children[0])).not.toContain("width");
-    expect(JSON.stringify(tree.children[0])).toContain("mermaid-light");
+    expect(JSON.stringify(tree.children[0])).toContain('"data-mermaid-theme":"light"');
   });
 
   it("leaves a post without diagrams alone, and refuses a diagram in a file with no path", async () => {

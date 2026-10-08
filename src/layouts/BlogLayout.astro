@@ -1,7 +1,6 @@
 ---
 import Layout, { type Props as LayoutProps, type Section } from "#src/layouts/Layout.astro";
 import "#src/styles/blog/code.css";
-import "#src/styles/blog/post.css";
 import Icon from "#src/components/Icon.astro";
 import ThemeToggle from "#src/components/ThemeToggle.astro";
 import { BLOG_TITLE, BLOG_DESCRIPTION, BLOG_URL } from "#src/lib/site.ts";
@@ -12,16 +11,11 @@ type Props = Pick<LayoutProps, "title" | "description" | "noindex" | "article" |
 const { title, ...rest } = Astro.props;
 
 const blog: Section = {
+  kind: "blog",
   siteName: BLOG_TITLE,
   ogImage: `${BLOG_URL}/og-image.png`,
   metaDescription: BLOG_DESCRIPTION,
-  socialDescription: BLOG_DESCRIPTION,
-  // No fixed header to clear; headings carry their own scroll-margin (post.css).
-  htmlClass: "motion-reduce:scroll-auto",
-  // Overrides the shared base layer's 19px/23px.
-  bodyClass: "text-base leading-normal text-text dark:text-text-dark",
-  // Dimmed for reading: stars between words read as stray bullets.
-  particlesClass: "opacity-50 dark:opacity-70"
+  socialDescription: BLOG_DESCRIPTION
 };
 
 // Literal: the /blog prefix comes from src/pages/blog/, not Astro's `base`.
@@ -38,7 +32,7 @@ const isRootPath = Astro.url.pathname === rootPath;
   {/* Bio sits in the page slot, so its index-page margin is set from the
        wrapper; (0,3,0) beats Bio's own `mb-16`. */}
   <div
-    class="mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:[&_.bio]:mb-5 max-md:pb-24"
+    class="mx-auto max-w-2xl px-5 py-10 data-[is-root-path=true]:**:data-bio:mb-5 max-md:pb-24"
     data-is-root-path={isRootPath}
   >
     <header class="mb-12 flex flex-row items-center justify-between">

@@ -1,14 +1,12 @@
 ---
 // Notion-style rail of bars on the right edge, one per h2/h3, expanding into
-// the heading list on hover or keyboard focus. Mounted after `</article>` so
-// post.css rules don't apply, the article's links come first in tab order,
+// the heading list on hover or keyboard focus (the toc-shown and toc-collapsed
+// variants in global.css). Mounted after `</article>` so the blog-post
+// utility's rules don't apply, the article's links come first in tab order,
 // and the medium-zoom overlay still paints over it.
-//
-// Hover pointers get the collapsed rail from 64rem. Touch devices only get it,
-// always expanded, from 87rem, where the panel clears the 42rem column:
-// 2 × (19.75rem prose half + 22.25rem panel) = 84rem, plus a 1.5rem gap.
 import type { MarkdownHeading } from "astro";
-import { tocEntries } from "#src/lib/blog/toc.ts";
+import { cva } from "class-variance-authority";
+import { tocEntries, type TocEntry } from "#src/lib/blog/toc.ts";
 
 interface Props {
   headings: MarkdownHeading[];
@@ -16,160 +14,51 @@ interface Props {
 
 const { headings } = Astro.props;
 const entries = tocEntries(headings);
+
+// h3s indent under their h2, as in Notion's open list, and get the shorter bar.
+type PerDepth = Record<TocEntry["depth"], string>;
+const tocLink = cva(
+  "flex items-center py-[0.3rem] leading-[1.35] text-text-light no-underline hover:text-title focus-visible:rounded-sm focus-visible:text-title focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current aria-[current]:font-bold aria-[current]:text-title dark:text-text-dark dark:hover:text-heading-dark dark:focus-visible:text-heading-dark dark:aria-[current]:text-heading-dark toc-collapsed:justify-end toc-collapsed:py-[0.35rem]",
+  {
+    variants: {
+      depth: { 2: "text-sm", 3: "pl-4 text-[0.8125rem]" } satisfies PerDepth
+    }
+  }
+);
+const tocBar = cva(
+  "hidden h-0.5 rounded-[1px] bg-toc-bar in-aria-[current]:bg-title dark:bg-accent-grey-dark dark:in-aria-[current]:bg-heading-dark toc-collapsed:block",
+  {
+    variants: {
+      depth: { 2: "toc-collapsed:w-4", 3: "toc-collapsed:w-2.5" } satisfies PerDepth
+    }
+  }
+);
 ---
 
 {entries.length > 0 && (
-  <nav class="toc" aria-label="On this page">
-    <ol>
+  <nav
+    class="hidden toc-shown:fixed toc-shown:top-1/2 toc-shown:right-0 toc-shown:block toc-shown:-translate-y-1/2 toc-shown:py-4 toc-shown:pr-3 toc-shown:pl-6"
+    aria-label="On this page"
+    data-toc
+  >
+    {/* The nav's padding is the hover target around the 2px bars and keeps the
+        growing panel under the pointer. `right`, not `100vw`: fixed is
+        measured inside a classic scrollbar. */}
+    <ol class="m-0 max-h-[calc(100vh-12rem)] max-w-80 list-none overflow-y-auto rounded-xl bg-nav-scrolled px-4 py-3 shadow-glow backdrop-blur-[15px] transition-[background-color,box-shadow] duration-150 ease-[ease] motion-reduce:transition-none dark:bg-nav-scrolled-dark dark:shadow-glow-dark toc-collapsed:overflow-visible toc-collapsed:bg-transparent toc-collapsed:p-0 toc-collapsed:shadow-none toc-collapsed:backdrop-filter-none">
       {entries.map(entry => (
-        <li class:list={[{ sub: entry.depth === 3 }]}>
-          {/* Collapsed labels are clipped, not display:none, so links keep
-                their accessible name. */}
-          <a href={`#${entry.slug}`}>
-            <span class="bar" aria-hidden="true" />
-            <span class="label">{entry.text}</span>
+        <li>
+          <a href={`#${entry.slug}`} class={tocLink({ depth: entry.depth })}>
+            {/* Only shown collapsed. */}
+            <span class={tocBar({ depth: entry.depth })} aria-hidden="true" />
+            {/* Long headings wrap inside the panel. Collapsed labels are
+                clipped, not display:none, so links keep their accessible name. */}
+            <span class="wrap-anywhere toc-collapsed:sr-only">{entry.text}</span>
           </a>
         </li>
       ))}
     </ol>
   </nav>
 )}
-
-<style>
-  .toc {
-    display: none;
-  }
-
-  /* ---- The expanded panel: the default styling of the list ------------- */
-
-  .toc ol {
-    list-style: none;
-    margin: 0;
-    padding: 0.75rem 1rem;
-    max-width: 20rem;
-    max-height: calc(100vh - 12rem);
-    overflow-y: auto;
-    border-radius: 0.75rem;
-    /* The frosted band the pinned read-aloud bar paints. */
-    background: light-dark(var(--color-nav-scrolled), var(--color-nav-scrolled-dark));
-    -webkit-backdrop-filter: blur(15px);
-    backdrop-filter: blur(15px);
-    box-shadow: var(--shadow-glow);
-    transition:
-      background-color 0.15s ease,
-      box-shadow 0.15s ease;
-  }
-  /* The shadow tokens differ in spread, not only colour, so they stay a pair.
-     `:where` keeps this level with `.toc ol` (so it must follow it) and below
-     the collapsed-rail rule, which clears the shadow. */
-  :global(:where(html.dark-mode)) .toc ol {
-    box-shadow: var(--shadow-glow-dark);
-  }
-
-  .toc a {
-    display: flex;
-    align-items: center;
-    padding: 0.3rem 0;
-    font-size: 0.875rem;
-    line-height: 1.35;
-    color: light-dark(var(--color-text-light), var(--color-text-dark));
-    text-decoration: none;
-  }
-  /* h3s indent under their h2, as in Notion's open list. */
-  .toc li.sub a {
-    padding-left: 1rem;
-    font-size: 0.8125rem;
-  }
-  .toc a:hover,
-  .toc a:focus-visible {
-    color: light-dark(var(--color-title), var(--color-heading-dark));
-  }
-  .toc a[aria-current] {
-    color: light-dark(var(--color-title), var(--color-heading-dark));
-    font-weight: 700;
-  }
-  .toc a:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 2px;
-    border-radius: 0.25rem;
-  }
-
-  /* Long headings wrap inside the 20rem panel rather than widening it. */
-  .toc .label {
-    overflow-wrap: anywhere;
-  }
-
-  /* Only shown in the collapsed state, below. */
-  .toc .bar {
-    display: none;
-    height: 2px;
-    border-radius: 1px;
-    background: light-dark(var(--color-toc-bar), var(--color-accent-grey-dark));
-  }
-  .toc a[aria-current] .bar {
-    background: light-dark(var(--color-title), var(--color-heading-dark));
-  }
-
-  /* ---- Placement --------------------------------------------------------- */
-
-  @media (min-width: 64rem) and (hover: hover), (min-width: 87rem) and (hover: none) {
-    .toc {
-      display: block;
-      position: fixed;
-      /* `right`, not `100vw`: fixed is measured inside a classic scrollbar. */
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      /* The padding is the hover target around the 2px bars and keeps the
-         growing panel under the pointer. */
-      padding: 1rem 0.75rem 1rem 1.5rem;
-    }
-  }
-
-  /* ---- The collapsed rail: bars only, while neither hovered nor focused ---
-     `:has(:focus-visible)`, not `:focus-within`: a mouse click would leave
-     the panel held open over the prose. */
-
-  /* Flat, not nested: Astro leaves nested selectors unscoped, which would
-     drop them to the panel rules' specificity. */
-  @media (hover: hover) {
-    .toc:not(:hover, :has(:focus-visible)) ol {
-      background: transparent;
-      -webkit-backdrop-filter: none;
-      backdrop-filter: none;
-      box-shadow: none;
-      padding: 0;
-      /* No scrollbar beside the bars; extra bars run past max-height. */
-      overflow: visible;
-    }
-    .toc:not(:hover, :has(:focus-visible)) a {
-      justify-content: flex-end;
-      padding: 0.35rem 0;
-    }
-    .toc:not(:hover, :has(:focus-visible)) .bar {
-      display: block;
-      width: 1rem;
-    }
-    .toc:not(:hover, :has(:focus-visible)) li.sub .bar {
-      width: 0.625rem;
-    }
-    /* Visually hidden, still announced. */
-    .toc:not(:hover, :has(:focus-visible)) .label {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .toc ol {
-      transition: none;
-    }
-  }
-</style>
 
 <script>
   // Scroll spy: re-measure headings once per frame on scroll and resize. Not
@@ -178,14 +67,14 @@ const entries = tocEntries(headings);
   // long as the page.
   import { TOC_LINE_SLACK, activeIndex } from "#src/lib/blog/toc.ts";
 
-  const nav = document.querySelector<HTMLElement>("nav.toc");
+  const nav = document.querySelector<HTMLElement>("nav[data-toc]");
   if (nav) {
     const pairs = [...nav.querySelectorAll<HTMLAnchorElement>("a[href^='#']")].flatMap(link => {
       const heading = document.getElementById(decodeURIComponent(link.hash.slice(1)));
       return heading ? [{ link, heading }] : [];
     });
 
-    // Read the scroll margin from the live heading; post.css owns the value.
+    // Read the scroll margin from the live heading; the blog-post utility owns the value.
     const scrollMargin = pairs.length
       ? parseFloat(getComputedStyle(pairs[0].heading).scrollMarginTop) || 0
       : 0;
