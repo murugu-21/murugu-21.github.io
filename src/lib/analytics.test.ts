@@ -193,19 +193,20 @@ describe("initAnalytics", () => {
       api_host: z.string(),
       session_recording: z.object({ maskAllInputs: z.boolean(), maskTextSelector: z.string() })
     });
-    let init: ReturnType<typeof fakeSdk>["init"];
+    let tokens: string[];
     let config: z.infer<typeof InitConfig>;
 
+    // Vitest clears mock calls before each test, so read them here.
     beforeAll(async () => {
-      const fake = fakeSdk();
+      const { sdk, init } = fakeSdk();
       const ph = await fresh();
-      await ph.initAnalytics("phc_test", "https://e.example.dev", async () => fake.sdk);
-      init = fake.init;
+      await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+      tokens = init.mock.calls.map(([token]) => token);
       config = InitConfig.parse(init.mock.calls[0][1]);
     });
 
     it("initialises the SDK once with the token and the proxy host", () => {
-      expect(init.mock.calls.map(([token]) => token)).toEqual(["phc_test"]);
+      expect(tokens).toEqual(["phc_test"]);
       expect(config.api_host).toBe("https://e.example.dev");
     });
 
