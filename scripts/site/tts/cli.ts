@@ -68,12 +68,14 @@ export function ffmpeg(args: string[]): void {
   run("ffmpeg", ["-y", "-loglevel", "error", ...args]);
 }
 
+export type Ffmpeg = typeof ffmpeg;
+
 // Post dirs under the built blog; the post-body check skips the blog's 404.
-export function publishedSlugs(): string[] {
-  if (!existsSync(BLOG_DIST)) throw new Error(`${BLOG_DIST} missing; run \`bun run build\` first`);
-  return readdirSync(BLOG_DIST, { withFileTypes: true })
+export function publishedSlugs(blogDist: string): string[] {
+  if (!existsSync(blogDist)) throw new Error(`${blogDist} missing; run \`bun run build\` first`);
+  return readdirSync(blogDist, { withFileTypes: true })
     .filter(d => {
-      const page = join(BLOG_DIST, d.name, "index.html");
+      const page = join(blogDist, d.name, "index.html");
       return (
         d.isDirectory() &&
         existsSync(page) &&

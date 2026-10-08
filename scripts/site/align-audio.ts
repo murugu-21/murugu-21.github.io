@@ -8,11 +8,10 @@
 //
 // Poorly aligned blocks keep no `words` (paragraph highlight only).
 // Don't run alongside `bun run audio`: both want the GPU.
-import { mkdtempDisposableSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  BLOG_DIST,
   PYTHON,
   alignArgs,
   ffmpeg,
@@ -22,56 +21,20 @@ import {
   runEach
 } from "./tts/cli.ts";
 import { startJsonLines } from "./tts/json-lines.ts";
-import { audioKey, r2Store } from "./tts/r2.ts";
-import { type WhisperClient, alignBlock, whisperClient } from "./tts/align.ts";
-import { StoredTimings, type StoredBlock } from "./tts/timings.ts";
+import { r2Store } from "./tts/r2.ts";
+import { alignPost, whisperClient } from "./tts/align.ts";
 
 const WORKER = join(import.meta.dirname, "tts", "whisper.py");
 
 const options = alignArgs(process.argv.slice(2));
-const r2 = r2Store(options.local);
-
-async function alignPost(slug: string, worker: WhisperClient) {
-  const stored = r2.get(audioKey(slug, "json"));
-  if (!stored) {
-    console.log(`${slug}: no audio in R2, skipping`);
-    return;
-  }
-  const timings = StoredTimings.parse(stored.toString());
-  if (timings.version >= 2 && !options.force) {
-    console.log(`${slug}: already aligned, skipping`);
-    return;
-  }
-  const mp3Body = r2.get(audioKey(slug, "mp3"));
-  if (!mp3Body) throw new Error("mp3 missing in R2");
-
-  using tmp = mkdtempDisposableSync(join(tmpdir(), `align-${slug}-`));
-  const mp3 = join(tmp.path, "post.mp3");
-  const wav = join(tmp.path, "post.wav");
-  writeFileSync(mp3, mp3Body);
-  ffmpeg(["-i", mp3, "-ac", "1", "-ar", "16000", wav]);
-
-  const blocks: StoredBlock[] = [];
-  for (const [i, block] of timings.blocks.entries()) {
-    const slice = join(tmp.path, `b${i}.wav`);
-    ffmpeg(["-ss", String(block.start), "-to", String(block.end), "-i", wav, slice]);
-    const reply = await worker.transcribe({ id: `b${i}`, wav: slice, text: block.text });
-    const result = alignBlock(block, reply);
-    if (result.problem) console.log(`  b${i}: ${result.problem}`);
-    blocks.push(result.block);
-  }
-
-  const jsonPath = join(tmp.path, "timings.json");
-  writeFileSync(jsonPath, JSON.stringify({ ...timings, version: 2, blocks }));
-  r2.put({ key: audioKey(slug, "json"), file: jsonPath, contentType: "application/json" });
-  const aligned = blocks.filter(block => block.words).length;
-  console.log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
-}
+const r2 = r2Store(options.local ? "local" : "remote");
 
 requirePython("mlx_whisper");
 requireFfmpeg();
 r2.checkLogin();
-const targets = options.slugs.length ? options.slugs : publishedSlugs();
-await using worker = whisperClient(startJsonLines(PYTHON, [WORKER]));
-const failures = await runEach(targets, slug => alignPost(slug, worker));
+const targets = options.slugs.length ? options.slugs : publishedSlugs(BLOG_DIST);
+await using whisper = whisperClient(startJsonLines(PYTHON, [WORKER]));
+const failures = await runEach(targets, slug =>
+  alignPost({ r2, ffmpeg }, { slug, whisper, force: options.force })
+);
 if (failures.length) process.exitCode = 1;

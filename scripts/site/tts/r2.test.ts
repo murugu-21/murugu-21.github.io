@@ -1,10 +1,29 @@
+import { mkdtempDisposableSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { isMissingObject } from "./r2.ts";
+import { audioKey, r2Store } from "./r2.ts";
 
-describe("wrangler output", () => {
-  it("tells an absent object from other get failures", () => {
-    expect(isMissingObject("✘ [ERROR] The specified key does not exist.")).toBe(true);
-    expect(isMissingObject("✘ [ERROR] Authentication error [code: 10000]")).toBe(false);
-  });
+describe("r2Store", () => {
+  // Each wrangler call starts miniflare, about a second apiece.
+  it(
+    "gets back what it put, null for an absent key, and throws on other failures",
+    { timeout: 60_000 },
+    () => {
+      using dir = mkdtempDisposableSync(join(tmpdir(), "r2-store-"));
+      const r2 = r2Store({ persistTo: dir.path });
+      const key = audioKey("some-slug", "json");
+      expect(r2.get(key)).toBeNull();
+
+      const file = join(dir.path, "timings.json");
+      writeFileSync(file, '{"blocks":[]}');
+      r2.put({ key, file, contentType: "application/json" });
+      expect(r2.get("blog/breeze/some-slug.json")?.toString()).toBe('{"blocks":[]}');
+
+      // Any other failure (here, a persist dir that is a file) throws rather than
+      // reading as "nothing there yet".
+      expect(() => r2Store({ persistTo: file }).get(key)).toThrow("wrangler r2 object get");
+    }
+  );
 });

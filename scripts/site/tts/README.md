@@ -4,7 +4,7 @@ Every post has a **Listen** control. When `/blog/audio/<slug>.json` exists, the 
 
 Audio generation runs **on a laptop, never in CI**, because the model is 3.9 GB and needs Apple Silicon.
 
-**Pipeline** (`scripts/site/generate-audio.ts`):
+**Pipeline** (`scripts/site/generate-audio.ts`, each post in `scripts/site/tts/render.ts`):
 
 1. Extract text from the built HTML with the same `speechBlocks()` the page uses, then normalize emoji, punctuation and long digit runs. Breeze loops on runs like `0.30000000000000004`, so `normalizeSpeechText` describes them instead of reading them out.
 2. Synthesize sentence groups of at most 300 characters with Breeze TTS 2 ([mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit) via [mlx-audio](https://github.com/Blaizzy/mlx-audio), `scripts/site/tts/synth.py`), cloning `.voice/reference.wav` with no instruction prompt. Use the 8-bit build; bf16 swaps on a 24 GB machine.

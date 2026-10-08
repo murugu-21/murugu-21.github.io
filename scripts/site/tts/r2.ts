@@ -1,5 +1,6 @@
 // R2 helpers for the audio scripts, built on wrangler: get, put and a login
-// check. With --local they use the local state that `bun run preview` serves.
+// check. "local" uses the local state that `bun run preview` serves, and
+// `{ persistTo }` local state in a directory of the caller's choosing.
 import type { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 
@@ -16,34 +17,33 @@ export const audioKey = (slug: string, ext: "mp3" | "json") => `${AUDIO_PREFIX}/
 // post's audio.
 const MAX_OBJECT_BYTES = 1024 * 1024 * 1024;
 
+type R2Location = "remote" | "local" | { persistTo: string };
+
+const locationFlags = (location: R2Location) =>
+  typeof location === "string"
+    ? [`--${location}`]
+    : ["--local", "--persist-to", location.persistTo];
+
 const r2Args = ({
   verb,
   key,
-  local,
+  location,
   extra = []
 }: {
   verb: string;
   key: string;
-  local: boolean;
+  location: R2Location;
   extra?: string[];
-}) => [
-  "wrangler",
-  "r2",
-  "object",
-  verb,
-  `${BUCKET}/${key}`,
-  ...extra,
-  local ? "--local" : "--remote"
-];
+}) => ["wrangler", "r2", "object", verb, `${BUCKET}/${key}`, ...extra, ...locationFlags(location)];
 
 // How `wrangler r2 object get` reports an absent object.
-export const isMissingObject = (output: string) => /does not exist/i.test(output);
+const isMissingObject = (output: string) => /does not exist/i.test(output);
 
-export function r2Store(local: boolean) {
+export function r2Store(location: R2Location) {
   // Null only when the object is absent; other failures (expired login,
   // network) throw so they aren't mistaken for "nothing there yet".
   function get(key: string): Buffer | null {
-    const r = spawnSync("bunx", r2Args({ verb: "get", key, local, extra: ["--pipe"] }), {
+    const r = spawnSync("bunx", r2Args({ verb: "get", key, location, extra: ["--pipe"] }), {
       maxBuffer: MAX_OBJECT_BYTES
     });
     if (r.status === 0) return r.stdout;
@@ -54,12 +54,12 @@ export function r2Store(local: boolean) {
 
   function put({ key, file, contentType }: { key: string; file: string; contentType: string }) {
     const extra = ["--file", file, "--content-type", contentType];
-    run("bunx", r2Args({ verb: "put", key, local, extra }));
+    run("bunx", r2Args({ verb: "put", key, location, extra }));
   }
 
   // Fail fast rather than after hours of local synthesis.
   function checkLogin() {
-    if (local) return;
+    if (location !== "remote") return;
     // `--json` exits non-zero when wrangler is not authenticated.
     const r = spawnSync("bunx", ["wrangler", "whoami", "--json"], { encoding: "utf8" });
     if (r.status !== 0) {
@@ -71,3 +71,5 @@ export function r2Store(local: boolean) {
 
   return { get, put, checkLogin };
 }
+
+export type R2Store = ReturnType<typeof r2Store>;
