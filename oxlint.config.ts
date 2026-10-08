@@ -165,6 +165,7 @@ export default defineConfig({
       plugins: ["vitest"],
       rules: {
         "tests/observe-behaviour": "error",
+        "vitest/consistent-test-it": ["error", { fn: "it" }],
         "vitest/no-conditional-expect": "error",
         "vitest/no-standalone-expect": "error",
         // Vitest's expect(value, message) takes a second argument.

@@ -1,5 +1,5 @@
 import type { UIMessageChunk } from "ai";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 import { z } from "zod";
@@ -131,7 +131,7 @@ afterEach(async () => {
   globalThis.posthog = undefined;
 });
 
-test("sends a question with Enter and streams the reply after the tool step", async () => {
+it("sends a question with Enter and streams the reply after the tool step", async () => {
   await render(<ChatWidget />);
   await openChat();
 
@@ -169,7 +169,7 @@ test("sends a question with Enter and streams the reply after the tool step", as
   expect(events).toEqual(["chat_open", "chat_message_sent"]);
 });
 
-test("sends a multi-line message with the button", async () => {
+it("sends a multi-line message with the button", async () => {
   await render(<ChatWidget />);
   await openChat();
 
@@ -183,7 +183,7 @@ test("sends a multi-line message with the button", async () => {
   await expect.element(input()).toHaveValue("");
 });
 
-test("keeps one room per page load, and can start over, when the browser blocks storage", async () => {
+it("keeps one room per page load, and can start over, when the browser blocks storage", async () => {
   // Chrome's "block all cookies" makes the localStorage getter itself throw.
   vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
     throw new DOMException("The operation is insecure.", "SecurityError");
@@ -210,7 +210,7 @@ test("keeps one room per page load, and can start over, when the browser blocks 
   expect(rooms.size).toBe(2);
 });
 
-test("a starter question sends itself and the starters give way to the conversation", async () => {
+it("a starter question sends itself and the starters give way to the conversation", async () => {
   await render(<ChatWidget />);
   await openChat();
 
@@ -229,7 +229,7 @@ test("a starter question sends itself and the starters give way to the conversat
   expect(events).toEqual(["chat_open", "chat_starter_click", "chat_message_sent"]);
 });
 
-test("resumes a returning visitor's room with its links and notices", async () => {
+it("resumes a returning visitor's room with its links and notices", async () => {
   localStorage.setItem("chatRoomId", "returning");
   histories.set("returning", async () =>
     Response.json([
@@ -276,7 +276,7 @@ test("resumes a returning visitor's room with its links and notices", async () =
 
 const stale = { id: "u1", role: "user", parts: [{ type: "text", text: "Stale question" }] };
 
-test.each([
+it.each([
   ["a server error", async () => Response.json([stale], { status: 500 })],
   [
     "a malformed part",
@@ -300,7 +300,7 @@ test.each([
   await expect.element(page.getByText("Stale question")).not.toBeInTheDocument();
 });
 
-test("holds the composer and the starters until the room's history arrives", async () => {
+it("holds the composer and the starters until the room's history arrives", async () => {
   localStorage.setItem("chatRoomId", "slow");
   let release = () => {};
   histories.set("slow", () => new Promise(resolve => (release = () => resolve(Response.json([])))));
@@ -317,7 +317,7 @@ test("holds the composer and the starters until the room's history arrives", asy
   await expect.element(sendButton()).toBeEnabled();
 });
 
-test.each([
+it.each([
   ["unset", undefined],
   ["empty", ""]
 ])("connects to the page's own origin when PUBLIC_CHAT_HOST is %s", async (_label, host) => {
@@ -329,7 +329,7 @@ test.each([
   expect(fetched).toEqual([`http://${location.host}/agents/chat-room/here/get-messages`]);
 });
 
-test("ignores a blank message and the Enter that commits an IME candidate", async () => {
+it("ignores a blank message and the Enter that commits an IME candidate", async () => {
   await render(<ChatWidget />);
   await openChat();
 
@@ -349,7 +349,7 @@ test("ignores a blank message and the Enter that commits an IME candidate", asyn
   });
 });
 
-test("shows the room's notice when the chat budget runs out", async () => {
+it("shows the room's notice when the chat budget runs out", async () => {
   await render(<ChatWidget />);
   await openChat();
   await userEvent.type(input(), "Hi{Enter}");
@@ -366,7 +366,7 @@ test("shows the room's notice when the chat budget runs out", async () => {
   expect(events).toEqual(["chat_open", "chat_message_sent", "chat_limit"]);
 });
 
-test("says something went wrong when the turn fails, and lets the visitor retry", async () => {
+it("says something went wrong when the turn fails, and lets the visitor retry", async () => {
   await render(<ChatWidget />);
   await openChat();
   await userEvent.type(input(), "Hi{Enter}");
@@ -384,7 +384,7 @@ test("says something went wrong when the turn fails, and lets the visitor retry"
   await expect.poll(() => lastRoom().requests).toHaveLength(2);
 });
 
-test("waits while another tab's turn streams into the same room", async () => {
+it("waits while another tab's turn streams into the same room", async () => {
   await render(<ChatWidget />);
   await openChat();
   const starter = page.getByRole("button", { name: "How has he used LLMs in production?" });
@@ -401,7 +401,7 @@ test("waits while another tab's turn streams into the same room", async () => {
 });
 
 // Desktop: on a phone the modal panel covers the launcher and hides it from assistive tech.
-test("closing by button, launcher or Escape keeps the conversation, and focus returns to the launcher", async () => {
+it("closing by button, launcher or Escape keeps the conversation, and focus returns to the launcher", async () => {
   await page.viewport(1024, 768);
   await render(<ChatWidget />);
   const launcher = page.getByRole("button", { name: LAUNCHER });
@@ -428,7 +428,7 @@ test("closing by button, launcher or Escape keeps the conversation, and focus re
   expect(fetched).toHaveLength(1);
 });
 
-test("starting over moves to a new room once confirmed", async () => {
+it("starting over moves to a new room once confirmed", async () => {
   localStorage.setItem("chatRoomId", "old");
   histories.set("old", async () =>
     Response.json([{ id: "u1", role: "user", parts: [{ type: "text", text: "Old question" }] }])
@@ -462,7 +462,7 @@ test("starting over moves to a new room once confirmed", async () => {
   expect(events).toEqual(["chat_open", "chat_message_sent", "chat_restart"]);
 });
 
-test("downloads the transcript without the room's notices", async () => {
+it("downloads the transcript without the room's notices", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-07T12:00:00Z"));
   localStorage.setItem("chatRoomId", "saved");
@@ -506,7 +506,7 @@ test("downloads the transcript without the room's notices", async () => {
 
 const pageOverflow = () => getComputedStyle(document.body).overflow;
 
-test("on a phone the open panel locks page scroll and leaves the keyboard down", async () => {
+it("on a phone the open panel locks page scroll and leaves the keyboard down", async () => {
   await render(<ChatWidget />);
   await openChat();
 
@@ -518,7 +518,7 @@ test("on a phone the open panel locks page scroll and leaves the keyboard down",
   await expect.element(page.getByRole("button", { name: LAUNCHER })).toHaveFocus();
 });
 
-test("keeps an unsent draft when the screen crosses the phone breakpoint while open", async () => {
+it("keeps an unsent draft when the screen crosses the phone breakpoint while open", async () => {
   await render(<ChatWidget />);
   await openChat();
   await userEvent.type(input(), "half a thought");
@@ -529,7 +529,7 @@ test("keeps an unsent draft when the screen crosses the phone breakpoint while o
   await expect.element(input()).toHaveValue("half a thought");
 });
 
-test("on a desktop the open panel focuses the composer and leaves the page scrollable", async () => {
+it("on a desktop the open panel focuses the composer and leaves the page scrollable", async () => {
   await page.viewport(1024, 768);
   await render(<ChatWidget />);
   await openChat();
@@ -538,7 +538,7 @@ test("on a desktop the open panel focuses the composer and leaves the page scrol
   expect(pageOverflow()).toBe("visible");
 });
 
-test("opens on hydration when the visitor tapped the launcher while the bundle loaded", async () => {
+it("opens on hydration when the visitor tapped the launcher while the bundle loaded", async () => {
   const island = document.createElement("astro-island");
   island.dataset.openOnHydrate = "true";
   document.body.append(island);
@@ -554,7 +554,7 @@ test("opens on hydration when the visitor tapped the launcher while the bundle l
   }
 });
 
-test("introduces the launcher once, then fades the hint away", async () => {
+it("introduces the launcher once, then fades the hint away", async () => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   const hint = page.getByText("Ask Jarvis anything about Murugappan");
   const first = await render(<ChatWidget />);

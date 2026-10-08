@@ -1,4 +1,4 @@
-import { afterEach, expect, test, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { ActivityRow } from "./ActivityRow.tsx";
@@ -7,7 +7,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-test("shows the elapsed seconds only once the wait passes three seconds", async () => {
+it("shows the elapsed seconds only once the wait passes three seconds", async () => {
   vi.useFakeTimers();
   const screen = await render(<ActivityRow activity={{ name: "capture_opportunity" }} />);
   await vi.advanceTimersByTimeAsync(2000);
