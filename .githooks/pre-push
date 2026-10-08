@@ -1,31 +1,35 @@
 #!/bin/sh
-# Mirrors the CI "checks" job (everything except the site build).
+# Mirrors the CI "checks" job.
 set -e
 
 # Bindings come from wrangler.jsonc, so the typechecks below must not read stale ones.
-echo "pre-push 1/8: worker types"
+echo "pre-push 1/9: worker types"
 bun run --silent types >/dev/null
 
-echo "pre-push 2/8: format"
+echo "pre-push 2/9: format"
 bun run --silent check-format
 
-echo "pre-push 3/8: spelling"
+echo "pre-push 3/9: spelling"
 command -v typos >/dev/null || { echo "typos is not installed: brew install typos-cli"; exit 1; }
 typos
 
-echo "pre-push 4/8: lint"
+echo "pre-push 4/9: lint"
 bun run --silent lint
 
-echo "pre-push 5/8: unused files, exports and dependencies"
+echo "pre-push 5/9: unused files, exports and dependencies"
 bun run --silent knip
 
-echo "pre-push 6/8: src typecheck"
+echo "pre-push 6/9: src typecheck"
 bun run --silent check:src
 
-echo "pre-push 7/8: worker typecheck"
+echo "pre-push 7/9: worker typecheck"
 bun run --silent check:worker
 
-echo "pre-push 8/8: unit tests"
+echo "pre-push 8/9: unit tests"
 bun run --silent test
+
+# Last, because it rewrites dist/, which `bun run preview` serves.
+echo "pre-push 9/9: site build"
+bun run --silent build
 
 echo "pre-push: all gates green"
