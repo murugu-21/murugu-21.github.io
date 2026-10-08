@@ -7,7 +7,7 @@ const { roles } = Astro.props;
 ---
 
 <span
-  class="font-semibold text-navy dark:text-blue"
+  class="font-semibold text-navy dark:text-blue-light"
   data-typewriter
   data-roles={JSON.stringify(roles)}
 >
@@ -34,8 +34,21 @@ const { roles } = Astro.props;
     let index = 0;
     let pos = roles[0].length;
     let deleting = true; // the SSR'd role is fully typed; pause, then delete
+    // A printout freezes whatever frame is showing, so print the whole role.
+    let printing = false;
+    window.addEventListener("beforeprint", () => {
+      printing = true;
+      text.textContent = roles[index % roles.length];
+    });
+    window.addEventListener("afterprint", () => {
+      printing = false;
+    });
 
     const tick = () => {
+      if (printing) {
+        setTimeout(tick, 100);
+        return;
+      }
       const current = roles[index % roles.length];
       pos += deleting ? -1 : 1;
       text.textContent = current.slice(0, pos);

@@ -11,7 +11,7 @@ const { text, href, download, newTab, event } = Astro.props;
 ---
 
 <a
-  class="mt-5 block w-max cursor-pointer rounded-md border border-navy bg-navy px-4 py-3 text-center text-sm font-bold text-white uppercase no-underline transition-all duration-300 ease-in-out hover:-translate-y-1 hover:bg-white hover:text-navy md:mr-12 md:px-6 md:text-base dark:border-blue-light dark:bg-blue-light dark:text-navy dark:hover:bg-transparent dark:hover:text-blue-light"
+  class="mt-5 block w-max cursor-pointer rounded-md border border-navy bg-navy px-4 py-3 text-center text-sm font-bold text-white uppercase no-underline transition-all duration-300 ease-in-out hover:-translate-y-1 hover:bg-white hover:text-navy md:mr-12 md:px-6 md:text-base dark:border-blue-light dark:bg-blue-light dark:text-navy dark:hover:bg-transparent dark:hover:text-blue-light print:bg-transparent print:text-navy"
   href={href}
   download={download}
   target={newTab ? "_blank" : undefined}

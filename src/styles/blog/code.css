@@ -19,11 +19,14 @@
   text-decoration: var(--shiki-light-text-decoration);
 }
 
-/* Weight and decoration aren't colours, so they still follow the class. */
-html.dark-mode .astro-code,
-html.dark-mode .astro-code span {
-  font-weight: var(--shiki-dark-font-weight);
-  text-decoration: var(--shiki-dark-text-decoration);
+/* Weight and decoration aren't colours, so they still follow the class, on
+   screen only like the rest of the dark theme. */
+@media screen {
+  html.dark-mode .astro-code,
+  html.dark-mode .astro-code span {
+    font-weight: var(--shiki-dark-font-weight);
+    text-decoration: var(--shiki-dark-text-decoration);
+  }
 }
 
 /* Night Owl's own selection: the light-mode blue would drown its pale tokens. */

@@ -29,7 +29,7 @@ const cards = [
           {/* 142% of circle()'s reference radius reaches the far corner of any
                 card (√2 ≈ 1.414). */}
           <a
-            class="group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:inset-0 before:-z-10 before:bg-dusk-violet before:transition-[clip-path] before:duration-500 before:ease-out before:content-[''] before:[clip-path:circle(16px_at_100%_0)] hover:before:[clip-path:circle(142%_at_100%_0)] dark:before:bg-blue-light"
+            class="group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:inset-0 before:-z-10 before:bg-dusk-violet before:transition-[clip-path] before:duration-500 before:ease-out before:content-[''] before:[clip-path:circle(16px_at_100%_0)] hover:before:[clip-path:circle(142%_at_100%_0)] dark:before:bg-blue-light print:before:hidden"
             href={card.url}
             data-ph-event="blog_card_click"
             data-ph-prop="post"
@@ -43,7 +43,7 @@ const cards = [
               {card.description}
             </p>
             <div
-              class="absolute top-0 right-0 flex size-8 items-center justify-center overflow-hidden rounded-tr-sm rounded-bl-4xl bg-dusk-violet dark:bg-blue-light"
+              class="absolute top-0 right-0 flex size-8 items-center justify-center overflow-hidden rounded-tr-sm rounded-bl-4xl bg-dusk-violet dark:bg-blue-light print:hidden"
               aria-hidden="true"
             >
               <div class="-mt-1 -mr-1 text-white dark:text-navy">→</div>

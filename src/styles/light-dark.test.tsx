@@ -3,6 +3,7 @@
 // `light-dark()` colour follows. The stylesheet is inlined by vitest.config.ts,
 // which routes `.tsx` tests (this one has no JSX) to the browser project.
 import { afterEach, expect, it } from "vitest";
+import { cdp } from "vitest/browser";
 
 import { bootstrapTheme } from "#src/lib/theme.ts";
 
@@ -14,14 +15,15 @@ declare const __GLOBAL_CSS__: string;
 const plain = (css: string) => css.replaceAll(/@import [^;]+;/g, "");
 
 const mounted: Element[] = [];
-afterEach(() => {
+afterEach(async () => {
+  await cdp().send("Emulation.setEmulatedMedia", { media: "" });
   for (const el of mounted) el.remove();
   mounted.length = 0;
   document.documentElement.classList.remove("dark-mode");
   localStorage.removeItem("isDark");
 });
 
-it("the theme toggle flips color-scheme, and light-dark() colours with it", () => {
+const mountProbe = () => {
   const style = document.createElement("style");
   style.textContent = plain(__GLOBAL_CSS__);
   const probe = document.createElement("div");
@@ -29,8 +31,12 @@ it("the theme toggle flips color-scheme, and light-dark() colours with it", () =
   document.head.append(style);
   document.body.append(probe);
   mounted.push(style, probe);
-
   bootstrapTheme(window);
+  return probe;
+};
+
+it("the theme toggle flips color-scheme, and light-dark() colours with it", () => {
+  const probe = mountProbe();
   window.__setPreferredTheme("light");
   expect(getComputedStyle(document.documentElement).colorScheme).toBe("light");
   expect(getComputedStyle(probe).color).toBe("rgb(1, 2, 3)");
@@ -38,4 +44,14 @@ it("the theme toggle flips color-scheme, and light-dark() colours with it", () =
   window.__setPreferredTheme("dark");
   expect(getComputedStyle(document.documentElement).colorScheme).toBe("dark");
   expect(getComputedStyle(probe).color).toBe("rgb(4, 5, 6)");
+});
+
+it("printing in the dark theme resolves light-dark() to the light side", async () => {
+  const probe = mountProbe();
+  window.__setPreferredTheme("dark");
+  expect(getComputedStyle(probe).color).toBe("rgb(4, 5, 6)");
+
+  await cdp().send("Emulation.setEmulatedMedia", { media: "print" });
+  expect(getComputedStyle(document.documentElement).colorScheme).toBe("light");
+  expect(getComputedStyle(probe).color).toBe("rgb(1, 2, 3)");
 });

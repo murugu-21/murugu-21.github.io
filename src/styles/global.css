@@ -1,21 +1,29 @@
 /* The one Tailwind v4 entry for both apps. Dark mode is `html.dark-mode`, which
-   sets `color-scheme: dark` (below) so every `light-dark()` pair follows it. */
+   sets `color-scheme: dark` (below) so every `light-dark()` pair follows it.
+   Screen only: print is on white paper, so it always takes the light theme. */
 
 @import "tailwindcss";
 /* `prose` for blog posts, /about and /developers (src/components/Prose.astro). */
 @plugin "@tailwindcss/typography";
 
-@custom-variant dark (&:where(html.dark-mode *));
+@custom-variant dark {
+  @media screen {
+    &:where(html.dark-mode *) {
+      @slot;
+    }
+  }
+}
 
 /* The blog's table of contents (TableOfContents.astro). Hover pointers get the
    rail from lg (64rem). Touch devices only get it, always expanded, from 2xl
    (96rem), where the panel clears the 42rem column: 2 × (19.75rem prose half +
-   22.25rem panel) = 84rem, plus a gap. */
+   22.25rem panel) = 84rem, plus a gap. Screen only: on paper the headings are
+   the contents. */
 @custom-variant toc-shown {
-  @media (min-width: 64rem) and (hover: hover) {
+  @media screen and (min-width: 64rem) and (hover: hover) {
     @slot;
   }
-  @media (min-width: 96rem) and (hover: none) {
+  @media screen and (min-width: 96rem) and (hover: none) {
     @slot;
   }
 }
@@ -76,7 +84,7 @@
   --color-nav-scrolled-dark: rgba(17, 19, 30, 0.72);
   /* Chip boundaries: 60% is the least that clears 3:1 on every sky stop. */
   --color-chip-outline: rgba(6, 3, 141, 0.6);
-  /* blue-light, not blue: blue stays under 3:1 on the night canvas */
+  /* blue-light, not blue: blue at 60% stays under 3:1 on the night canvas */
   --color-chip-outline-dark: rgba(125, 162, 255, 0.6);
   --color-border-soft: rgba(112, 104, 150, 0.32);
   --color-border-soft-dark: rgba(255, 255, 255, 0.25);
@@ -242,9 +250,11 @@
       line-height: normal;
     }
   }
-  html.dark-mode body {
-    background: var(--background-image-page-dark);
-    color: white;
+  body {
+    @variant dark {
+      background: var(--background-image-page-dark);
+      color: white;
+    }
   }
 
   /* Explicit `light`, not the default `normal`, so the light-dark() pairs
@@ -252,11 +262,13 @@
   html {
     color-scheme: light;
   }
-  html.dark-mode {
-    color-scheme: dark;
-    /* Inherited, so this covers every scroller. No ::-webkit-scrollbar rules:
-       Chrome ignores them wherever scrollbar-color applies, mixing two styles. */
-    scrollbar-color: var(--color-blue-light) var(--color-dark-base);
+  @media screen {
+    html.dark-mode {
+      color-scheme: dark;
+      /* Inherited, so this covers every scroller. No ::-webkit-scrollbar rules:
+         Chrome ignores them wherever scrollbar-color applies, mixing two styles. */
+      scrollbar-color: var(--color-blue-light) var(--color-dark-base);
+    }
   }
 }
 
@@ -280,7 +292,7 @@
   }
   /* The shadow tokens differ in spread, not only colour, so they stay a pair,
      as does `color`, which has no light-side value. */
-  :where(html.dark-mode) & {
+  @variant dark {
     box-shadow: var(--shadow-glow-dark);
     color: white;
     &:hover {
@@ -292,6 +304,9 @@
     &:hover {
       transform: none;
     }
+  }
+  @variant print {
+    break-inside: avoid;
   }
 }
 

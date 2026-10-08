@@ -197,6 +197,22 @@ describe("night palette", () => {
     for (const stop of night) expect(contrast(ink(name), stop)).toBeGreaterThanOrEqual(4.5);
   });
 
+  // --color-blue is under 4.5:1 at night, so it is only for large text (the
+  // .accent heading word, the 404 heading) and icons; smaller text uses blue-light.
+  it("keeps --color-blue legible as night large text and graphics (>= 3:1)", () => {
+    for (const stop of night) expect(contrast(ink("blue"), stop)).toBeGreaterThanOrEqual(3);
+  });
+
+  // Projects.astro's topic chips: blue-light text on blue at 15% over the
+  // canvas. Alpha restated from the utility, as for the tag badge below.
+  it("keeps the project topic chips readable at night (>= 4.5:1)", () => {
+    const [r, g, b] = channels(ink("blue"));
+    for (const stop of night) {
+      const fill = over(`rgba(${r}, ${g}, ${b}, 0.15)`, stop);
+      expect(contrast(ink("blue-light"), fill)).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
   // Secondary text on the homepage and /about: its day side crosses the sky's
   // deep stop, its night side is translucent white on the canvas.
   it("keeps --color-subtitle-muted readable by day and at night (>= 4.5:1)", () => {

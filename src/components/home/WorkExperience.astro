@@ -45,7 +45,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
       <SectionTitle title="Experiences" class="mb-0" />
       <p class="text-right text-lg text-subtitle-muted max-md:text-center">
         <span
-          class="font-semibold text-navy dark:text-blue"
+          class="font-semibold text-navy dark:text-blue-light"
           data-experience-total
           data-periods={JSON.stringify(allPeriods)}
         >
@@ -118,7 +118,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                 {role.descBullets?.length ? (
                   /* `group` drives the chevron's group-open:rotate-45 */
                   <details class="group mt-2">
-                    <summary class="inline-flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-navy select-none hover:text-amber-ink focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-ink dark:text-blue dark:hover:text-white dark:focus-visible:outline-blue [&::-webkit-details-marker]:hidden">
+                    <summary class="inline-flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-navy select-none hover:text-amber-ink focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-ink dark:text-blue-light dark:hover:text-white dark:focus-visible:outline-blue [&::-webkit-details-marker]:hidden">
                       <span
                         class="mb-0.5 box-content inline-block size-2 -rotate-45 border-r-2 border-b-2 border-current transition-transform duration-200 group-open:-mt-0.5 group-open:mb-0 group-open:rotate-45 motion-reduce:transition-none"
                         aria-hidden="true"
@@ -167,4 +167,16 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
   if (total && periods) {
     total.textContent = formatDuration(totalExperienceMonths(parseStringArray(periods), now));
   }
+
+  // Paper can't expand a <details>, and the highlights are the resume's substance.
+  const openedForPrint: HTMLDetailsElement[] = [];
+  window.addEventListener("beforeprint", () => {
+    document.querySelectorAll<HTMLDetailsElement>("#experience details:not([open])").forEach(d => {
+      d.open = true;
+      openedForPrint.push(d);
+    });
+  });
+  window.addEventListener("afterprint", () => {
+    for (const d of openedForPrint.splice(0)) d.open = false;
+  });
 </script>

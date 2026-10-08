@@ -20,7 +20,7 @@ const links = [
    below lg, where the menu sheet continues its surface. */}
 <header
   class={cn(
-    "group fixed inset-x-0 top-0 z-30 mx-auto max-w-full bg-transparent px-5 py-2.5 transition-all duration-300 ease-out data-scrolled:backdrop-blur-lg motion-reduce:transition-none max-lg:bg-surface max-lg:shadow-md lg:flex lg:items-center lg:justify-between lg:data-scrolled:bg-nav-scrolled lg:data-scrolled:shadow-lg dark:max-lg:bg-dark-base dark:lg:data-scrolled:bg-nav-scrolled-dark",
+    "group fixed inset-x-0 top-0 z-30 mx-auto max-w-full bg-transparent px-5 py-2.5 transition-all duration-300 ease-out not-print:data-scrolled:backdrop-blur-lg motion-reduce:transition-none max-lg:not-print:bg-surface max-lg:not-print:shadow-md lg:flex lg:items-center lg:justify-between lg:not-print:data-scrolled:bg-nav-scrolled lg:not-print:data-scrolled:shadow-lg dark:max-lg:bg-dark-base dark:lg:data-scrolled:bg-nav-scrolled-dark print:absolute",
     // Nav text + logo don't fit one row below 2xl, so type steps down in two bands.
     "lg:max-xl:text-sm xl:max-2xl:text-base"
   )}
@@ -40,7 +40,7 @@ const links = [
      unavailable, so the button hides rather than sit dead. */}
   <button
     type="button"
-    class="float-right cursor-pointer px-5 py-7 not-supports-[selector(:popover-open)]:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy lg:hidden"
+    class="float-right cursor-pointer px-5 py-7 not-supports-[selector(:popover-open)]:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy lg:hidden print:hidden"
     popovertarget="site-menu"
   >
     <span class="sr-only">Menu</span>

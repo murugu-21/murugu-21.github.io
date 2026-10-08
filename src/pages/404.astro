@@ -24,11 +24,11 @@ const recovery = [
     </h1>
     <p class="my-5 dark:text-white">
       This page doesn't exist. Try the{" "}
-      <a href="/" class="text-navy underline dark:text-blue">
+      <a href="/" class="text-navy underline dark:text-blue-light">
         portfolio
       </a>{" "}
       or the{" "}
-      <a href="/blog/" class="text-navy underline dark:text-blue">
+      <a href="/blog/" class="text-navy underline dark:text-blue-light">
         blog
       </a>
       .
@@ -37,7 +37,7 @@ const recovery = [
       <ul class="mt-6 flex list-none flex-wrap justify-center gap-x-5 gap-y-1.5 p-0 text-base">
         {recovery.map(link => (
           <li>
-            <a href={link.href} class="text-navy underline dark:text-blue">
+            <a href={link.href} class="text-navy underline dark:text-blue-light">
               {link.label}
             </a>
           </li>
