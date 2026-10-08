@@ -51,9 +51,10 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
           {[resumeContact.linkedin, resumeContact.github, resumeContact.site].map(url => (
             <>
               {"\u00A0| "}
+              {/* On a phone the URLs wrap inside, or the LinkedIn one overflows. */}
               <a
                 href={url}
-                class="whitespace-nowrap text-navy underline"
+                class="wrap-anywhere text-navy underline sm:whitespace-nowrap"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -83,7 +84,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
         {stints.map(stint => (
           <div class="mb-2">
             {/* company on the left, the stint's full span flush right; never stranded at the foot of a page */}
-            <p class="mt-0 mb-1 flex break-after-avoid items-baseline justify-between gap-3 font-bold">
+            <p class="mt-0 mb-1 flex break-after-avoid flex-wrap items-baseline justify-between gap-x-3 font-bold">
               <span>
                 {stint.company}
                 {stint.location && `, ${stint.location}`}
@@ -96,7 +97,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
               /* long roles flow across pages instead of leaving a blank tail */
               <div class="mb-1 break-inside-auto pl-2.5">
                 {/* a lone role's dates already sit on the company line */}
-                <p class="mt-0 mb-1 flex break-after-avoid items-baseline justify-between gap-3 font-normal">
+                <p class="mt-0 mb-1 flex break-after-avoid flex-wrap items-baseline justify-between gap-x-3 font-normal">
                   <span class="font-normal italic">
                     {exp.role}
                     {exp.partTime && " (Part-time)"}
