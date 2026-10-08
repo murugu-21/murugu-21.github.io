@@ -70,57 +70,43 @@ describe("fetchGithubProfile", () => {
     expect(warnings).toEqual([["[github] no GITHUB_TOKEN; rendering contact fallback"]]);
   });
 
-  it.each<{ name: string; reply: Reply; warning: string }>([
+  const offline = new Error("offline");
+
+  it.each<{ name: string; reply: Reply; warning: string; detail: unknown[] }>([
     {
       name: "an HTTP error",
       reply: { status: 502, body: {} },
-      warning: "[github] GraphQL HTTP 502; rendering contact fallback"
+      warning: "[github] GraphQL HTTP 502; rendering contact fallback",
+      detail: []
     },
     {
       name: "GraphQL errors",
       reply: { body: { data: null, errors: [{ message: "Bad credentials" }] } },
-      warning: "[github] GraphQL errors; rendering contact fallback"
+      warning: "[github] GraphQL errors; rendering contact fallback",
+      detail: [["Bad credentials"]]
     },
     {
       name: "data of the wrong shape",
       reply: { body: { data: { user: { bio: 5 } } } },
-      warning: "[github] unexpected GraphQL data; rendering contact fallback"
+      warning: "[github] unexpected GraphQL data; rendering contact fallback",
+      detail: [[expect.objectContaining({ path: ["user", "bio"] })]]
     },
     {
       name: "a network failure",
-      reply: new Error("offline"),
-      warning: "[github] fetch failed; rendering contact fallback"
+      reply: offline,
+      warning: "[github] fetch failed; rendering contact fallback",
+      detail: [offline]
     }
-  ])("falls back to null on $name instead of breaking the build", async ({ reply, warning }) => {
-    stubGithub(reply);
-    const { fetchGithubProfile } = await loadGithub({});
+  ])(
+    "falls back to null on $name and logs why, instead of breaking the build",
+    async ({ reply, warning, detail }) => {
+      stubGithub(reply);
+      const { fetchGithubProfile } = await loadGithub({});
 
-    expect(await fetchGithubProfile()).toBeNull();
-    expect(warnings[0]?.[0]).toBe(warning);
-  });
-
-  it("logs the GraphQL error messages", async () => {
-    stubGithub({ body: { data: null, errors: [{ message: "Bad credentials" }] } });
-    const { fetchGithubProfile } = await loadGithub({});
-
-    await fetchGithubProfile();
-    expect(warnings).toEqual([
-      ["[github] GraphQL errors; rendering contact fallback", ["Bad credentials"]]
-    ]);
-  });
-
-  it("logs the schema issues as one list", async () => {
-    stubGithub({ body: { data: { user: { bio: 5 } } } });
-    const { fetchGithubProfile } = await loadGithub({});
-
-    await fetchGithubProfile();
-    expect(warnings).toEqual([
-      [
-        "[github] unexpected GraphQL data; rendering contact fallback",
-        [expect.objectContaining({ path: ["user", "bio"] })]
-      ]
-    ]);
-  });
+      expect(await fetchGithubProfile()).toBeNull();
+      expect(warnings).toEqual([[warning, ...detail]]);
+    }
+  );
 
   it("returns null when the user does not exist, unless the profile is required", async () => {
     stubGithub({ body: { data: { user: null } } });
