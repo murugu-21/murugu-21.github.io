@@ -74,9 +74,9 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 // like stray bullets between words.
 type PerKind = Record<Section["kind"], string>;
 const chrome = {
-  html: cva("scroll-smooth", {
+  html: cva("scroll-smooth motion-reduce:scroll-auto", {
     variants: {
-      kind: { portfolio: "scroll-pt-20", blog: "motion-reduce:scroll-auto" } satisfies PerKind
+      kind: { portfolio: "scroll-pt-20", blog: "" } satisfies PerKind
     }
   }),
   body: cva("", {
