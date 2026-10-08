@@ -2,6 +2,7 @@
 // assets, and how a miss is answered.
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
+import fc from "fast-check";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
 import { parseRange } from "#worker/audio.ts";
@@ -267,5 +268,36 @@ describe("parseRange", () => {
     [null, null]
   ])("parses %s against a 100-byte object", (header, expected) => {
     expect(parseRange(header, 100)).toEqual(expected);
+  });
+
+  it("returns only non-empty ranges inside the object, and serves any byte a range names", () => {
+    const position = fc.oneof(
+      fc.constant(""),
+      fc.nat(300).map(String),
+      fc.stringMatching(/^\d{1,25}$/)
+    );
+    const header = fc.oneof(
+      fc.tuple(position, position).map(([first, last]) => `bytes=${first}-${last}`),
+      fc.string()
+    );
+    fc.assert(
+      fc.property(header, fc.nat(200), (h, size) => {
+        const range = parseRange(h, size);
+        if (range === null || range === "unsatisfiable") return;
+        expect({
+          nonEmpty: range.length >= 1,
+          inside: range.offset + range.length <= size
+        }).toEqual({
+          nonEmpty: true,
+          inside: true
+        });
+      })
+    );
+    fc.assert(
+      fc.property(fc.nat(199), fc.nat(199), (first, extra) => {
+        const size = first + 1 + extra;
+        expect(parseRange(`bytes=${first}-${first}`, size)).toEqual({ offset: first, length: 1 });
+      })
+    );
   });
 });

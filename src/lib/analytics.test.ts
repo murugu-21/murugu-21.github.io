@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { afterEach, assert, beforeAll, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
 import { z } from "zod";
@@ -245,6 +246,35 @@ describe("initAnalytics", () => {
     await booting;
     expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
     expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
+  });
+
+  it("delivers every event once, in order, whichever events the SDK load lands between", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.scheduler(),
+        fc.array(fc.constantFrom("resume_download", "social_click", "chat_open"), {
+          maxLength: 6
+        }),
+        async (s, events) => {
+          // afterEach runs once per test, not once per run.
+          delete globalThis.posthog;
+          const { sdk, capture } = fakeSdk();
+          const ph = await fresh();
+          const booting = ph.initAnalytics(
+            "phc_test",
+            "https://e.example.dev",
+            s.scheduleFunction(async () => sdk)
+          );
+          s.scheduleSequence(
+            events.map(name => ({ label: name, builder: async () => ph.track(name) }))
+          );
+          await s.waitIdle();
+          await booting;
+          expect(capture.mock.calls.map(([event]) => event)).toEqual(events);
+        }
+      ),
+      { numRuns: 50 }
+    );
   });
 
   it("does nothing until it has both a token and a host", async () => {

@@ -1,3 +1,4 @@
+import fc from "fast-check";
 import { assert, describe, expect, it } from "vitest";
 import { parseHTML } from "linkedom";
 
@@ -46,6 +47,31 @@ describe("packSentences", () => {
 
   it("treats ? and ! as sentence ends", () => {
     expect(packSentences("Why? Because! Fine.", 14)).toEqual(["Why? Because!", "Fine."]);
+  });
+
+  it("loses no text, overruns max only with one sentence, and leaves no two chunks mergeable", () => {
+    const word = fc.stringMatching(/^[a-z]{1,9}$/);
+    const sentence = fc
+      .tuple(fc.array(word, { minLength: 1, maxLength: 12 }), fc.constantFrom(".", "!", "?"))
+      .map(([words, end]) => words.join(" ") + end);
+    const firstSentence = (chunk: string) => chunk.slice(0, chunk.search(/[.!?]/) + 1);
+    fc.assert(
+      fc.property(
+        fc.array(sentence, { minLength: 1, maxLength: 20 }),
+        fc.nat(120),
+        (sentences, max) => {
+          const text = sentences.join(" ");
+          const chunks = packSentences(text, max);
+          expect(chunks.join(" ")).toBe(text);
+          expect({
+            overlong: chunks.filter(c => c.length > max && !sentences.includes(c)),
+            mergeable: chunks
+              .slice(1)
+              .filter((c, i) => chunks[i].length + 1 + firstSentence(c).length <= max)
+          }).toEqual({ overlong: [], mergeable: [] });
+        }
+      )
+    );
   });
 });
 
@@ -284,6 +310,41 @@ describe("alignWords", () => {
     );
     expect(words?.[0]).toEqual({ w: "So", s: 10, e: 11 });
     expect(words?.[4]).toEqual({ w: "far", s: 13.5, e: 14 });
+  });
+
+  it("times every word of the text inside the block, in order, whatever whisper heard", () => {
+    const word = fc.stringMatching(/^[a-z]{1,8}$/);
+    const time = fc.double({ min: -2, max: 6, noNaN: true });
+    const heardAt = fc
+      .tuple(time, time)
+      .map(([a, b]) => ({ start: Math.min(a, b), end: Math.max(a, b) }));
+    // Whisper keeps at least three in five of the text's words, in order, and may add its own.
+    const row = fc.record({
+      word,
+      kept: fc.boolean(),
+      extra: fc.option(word),
+      at: heardAt,
+      extraAt: heardAt
+    });
+    const rows = fc
+      .array(row, { minLength: 1, maxLength: 30 })
+      .filter(all => all.filter(r => r.kept).length >= all.length * 0.6);
+    fc.assert(
+      fc.property(rows, all => {
+        const tokens = all.map(r => r.word);
+        const whisper = all.flatMap(r => [
+          ...(r.kept ? [{ word: ` ${r.word}`, ...r.at }] : []),
+          ...(r.extra ? [{ word: ` ${r.extra}`, ...r.extraAt }] : [])
+        ]);
+        const words = alignWords(tokens.join(" "), whisper, block) ?? [];
+        expect(words.map(w => w.w)).toEqual(tokens);
+        expect(
+          words.filter(
+            (w, i) => w.s < 10 || w.e > 14 || w.e < w.s || (i > 0 && w.s < words[i - 1].e)
+          )
+        ).toEqual([]);
+      })
+    );
   });
 
   it("clamps into the block and keeps times monotonic", () => {
