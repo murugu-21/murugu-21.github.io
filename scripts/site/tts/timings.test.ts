@@ -9,7 +9,7 @@ import {
   round3,
   storedHash
 } from "./timings.ts";
-import { pcmSeconds, splice } from "./wav.ts";
+import { pcmSeconds, splice } from "./pcm.ts";
 
 describe("storedHash", () => {
   it("reads the hash a stored render recorded, and none from a malformed object", () => {

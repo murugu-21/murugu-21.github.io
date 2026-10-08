@@ -39,7 +39,7 @@ Then push as usual. With no slug, `bun run audio` renders every changed post. `-
 
 For a small text fix, `bun run audio --patch <slug>` re-synthesizes only the paragraphs whose text changed and splices them into the MP3 already in R2, which takes minutes instead of a full render. It levels each new paragraph with the same loudnorm pass on its own, shifts the later timings, and keeps a copy of the old R2 objects in the logged `backup/` directory. It needs the same paragraph count as the stored timings, so a post that gained or lost a paragraph needs a full render (`bun run audio <slug> --force`). Run `bun run audio:align <slug> --force` afterwards: the patched paragraphs come back without word timings.
 
-Every render stays in the `$TMPDIR/audio-<slug>-*` directory the script logs, about 370 MB for a 45-minute post, and nothing deletes it. If an upload fails, push the files from there instead of rendering again, MP3 first because the JSON's hash marks the post as done:
+Every render stays in the `$TMPDIR/audio-<slug>-*` directory the script logs, about 370 MB for a 45-minute post, and nothing deletes it. Its `.pcm` files are headerless 16-bit mono audio; play one with `ffplay -f s16le -ar 24000 -ac 1 <file>`. If an upload fails, push the files from there instead of rendering again, MP3 first because the JSON's hash marks the post as done:
 
 ```bash
 bunx wrangler r2 object put murugappan-dev-audio/blog/breeze/<slug>.mp3 --remote --file <dir>/<slug>.mp3 --content-type audio/mpeg
