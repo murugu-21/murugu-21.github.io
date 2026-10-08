@@ -17,16 +17,18 @@ const entries = tocEntries(headings);
 
 // h3s indent under their h2, as in Notion's open list, and get the shorter bar.
 type PerDepth = Record<TocEntry["depth"], string>;
+// Collapsed links are clipped, not display:none, so they keep their name and tab stop.
 const tocLink = cva(
-  "flex items-center py-1 leading-snug text-text-light no-underline hover:text-title focus-visible:rounded-sm focus-visible:text-title focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current aria-[current]:font-bold aria-[current]:text-title dark:text-text-dark dark:hover:text-heading-dark dark:focus-visible:text-heading-dark dark:aria-[current]:text-heading-dark toc-collapsed:justify-end toc-collapsed:py-1.5",
+  "peer block py-1 leading-snug wrap-anywhere text-text-light no-underline hover:text-title focus-visible:rounded-sm focus-visible:text-title focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current aria-[current]:font-bold aria-[current]:text-title dark:text-text-dark dark:hover:text-heading-dark dark:focus-visible:text-heading-dark dark:aria-[current]:text-heading-dark toc-collapsed:sr-only",
   {
     variants: {
       depth: { 2: "text-sm", 3: "pl-4 text-xs" } satisfies PerDepth
     }
   }
 );
+// Hover or focus opens the panel before a mouse click lands, so the bars are only decoration.
 const tocBar = cva(
-  "hidden h-0.5 rounded-xs bg-toc-bar in-aria-[current]:bg-title dark:bg-accent-grey-dark dark:in-aria-[current]:bg-heading-dark toc-collapsed:block",
+  "hidden h-0.5 rounded-xs bg-toc-bar peer-aria-[current]:bg-title dark:bg-accent-grey-dark dark:peer-aria-[current]:bg-heading-dark toc-collapsed:block",
   {
     variants: {
       depth: { 2: "toc-collapsed:w-4", 3: "toc-collapsed:w-2.5" } satisfies PerDepth
@@ -46,14 +48,13 @@ const tocBar = cva(
         measured inside a classic scrollbar. */}
     <ol class="m-0 max-h-[calc(100vh-12rem)] max-w-80 list-none overflow-y-auto rounded-xl bg-nav-scrolled px-4 py-3 shadow-glow backdrop-blur-lg transition duration-150 motion-reduce:transition-none dark:bg-nav-scrolled-dark dark:shadow-glow-dark toc-collapsed:overflow-visible toc-collapsed:bg-transparent toc-collapsed:p-0 toc-collapsed:shadow-none toc-collapsed:backdrop-filter-none">
       {entries.map(entry => (
-        <li>
+        <li class="toc-collapsed:flex toc-collapsed:justify-end toc-collapsed:py-1.5">
+          {/* Long headings wrap inside the panel. */}
           <a href={`#${entry.slug}`} class={tocLink({ depth: entry.depth })}>
-            {/* Only shown collapsed. */}
-            <span class={tocBar({ depth: entry.depth })} aria-hidden="true" />
-            {/* Long headings wrap inside the panel. Collapsed labels are
-                clipped, not display:none, so links keep their accessible name. */}
-            <span class="wrap-anywhere toc-collapsed:sr-only">{entry.text}</span>
+            {entry.text}
           </a>
+          {/* Only shown collapsed; after the link so `peer` can read its aria-current. */}
+          <span class={tocBar({ depth: entry.depth })} aria-hidden="true" />
         </li>
       ))}
     </ol>
