@@ -76,6 +76,7 @@
     "@commitlint/config-conventional": "^21.2.3",
     "@commitlint/types": "^21.2.3",
     "@mermaid-js/mermaid-cli": "^12.0.0",
+    "@modelcontextprotocol/client": "2.0.0",
     "@posthog/rollup-plugin": "^1.6.1",
     "@sparticuz/chromium": "^153.0.0",
     "@tailwindcss/typography": "^0.5.20",

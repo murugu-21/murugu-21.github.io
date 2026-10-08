@@ -1,4 +1,9 @@
 import { env } from "cloudflare:workers";
+import {
+  type CallToolResult,
+  Client,
+  StreamableHTTPClientTransport
+} from "@modelcontextprotocol/client";
 import { assert, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
@@ -25,6 +30,37 @@ const SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
 const POST_URI = `${RESOURCE_ORIGIN}/blog/coin-change-problem/index.md`;
 
+const CLIENT_IP = "203.0.113.70";
+
+type ClientOptions = TestEnvOptions & { ip?: string };
+
+/** An SDK client pinned to the current revision, posting through the worker as `ip`. */
+async function connect({ ip = CLIENT_IP, ...envOptions }: ClientOptions = {}) {
+  const client = new Client(
+    { name: "TestClient", version: "1.0.0" },
+    { versionNegotiation: { mode: { pin: LATEST_PROTOCOL_VERSION } } }
+  );
+  const transport = new StreamableHTTPClientTransport(new URL("https://murugappan.dev/mcp"), {
+    fetch: (url, init) => fetchWorker(String(url), { ...init, ip, env: envOptions })
+  });
+  await client.connect(transport);
+  return client;
+}
+
+/** Calls a tool through the SDK client, so its input and output schema checks run too. */
+async function call(name: string, args: Record<string, unknown> = {}, options?: ClientOptions) {
+  return (await connect(options)).callTool({ name, arguments: args });
+}
+
+function textOf({ content }: CallToolResult): string {
+  const [block, ...rest] = content;
+  assert(
+    block?.type === "text" && !rest.length,
+    `not a single text block: ${JSON.stringify(content)}`
+  );
+  return block.text;
+}
+
 const JsonRpcReply = z.object({
   jsonrpc: z.literal("2.0").optional(),
   id: z.union([z.number(), z.string()]).nullish(),
@@ -34,13 +70,6 @@ const JsonRpcReply = z.object({
     .optional()
 });
 type JsonRpcReply = z.infer<typeof JsonRpcReply>;
-
-// The SDK leaves isError out of a successful result.
-const ToolCallResult = z.object({
-  isError: z.boolean().optional(),
-  content: z.array(z.object({ text: z.string() })),
-  structuredContent: z.unknown().optional()
-});
 
 /** Parses a JSON reply, or the last `data:` line of a legacy request's SSE stream. */
 function parseReply(res: Response, text: string): JsonRpcReply {
@@ -64,7 +93,7 @@ async function send(
 ): Promise<{ res: Response; json: JsonRpcReply }> {
   const res = await fetchWorker("/mcp", {
     method: init.method ?? "POST",
-    ip: init.ip ?? "203.0.113.70",
+    ip: init.ip ?? CLIENT_IP,
     env: init.env,
     headers: {
       "Content-Type": "application/json",
@@ -115,58 +144,9 @@ function modern(
   };
 }
 
-async function callModern(
-  method: string,
-  params: Record<string, unknown> = {},
-  init: { ip?: string; env?: TestEnvOptions } = {}
-) {
-  const { body, headers } = modern(method, params);
-  return send(body, { headers, ...init });
-}
-
 function legacy(method: string, params: Record<string, unknown> = {}) {
   return send({ jsonrpc: "2.0", id: 1, method, params });
 }
-
-const ListedTools = z.object({
-  tools: z.array(
-    z.object({
-      name: z.string(),
-      title: z.string(),
-      description: z.string(),
-      inputSchema: JsonObject,
-      outputSchema: JsonObject
-    })
-  )
-});
-
-/** The tools as a client sees them, JSON Schemas included. */
-async function listedTools() {
-  return resultOf(await callModern("tools/list"), ListedTools).tools;
-}
-
-/** Calls a tool over HTTP, so the SDK's input and output schema checks run too. */
-async function call(
-  name: string,
-  args: Record<string, unknown> = {},
-  { ip, ...options }: TestEnvOptions & { ip?: string } = {}
-) {
-  const reply = await callModern("tools/call", { name, arguments: args }, { ip, env: options });
-  return resultOf(reply, ToolCallResult);
-}
-
-const ResourceList = z.object({
-  resources: z.array(
-    z.object({
-      uri: z.string(),
-      name: z.string(),
-      title: z.string(),
-      description: z.string(),
-      mimeType: z.string(),
-      annotations: z.object({ audience: z.array(z.string()), priority: z.number() })
-    })
-  )
-});
 
 function hasRef(node: unknown): boolean {
   if (Array.isArray(node)) return node.some(hasRef);
@@ -205,12 +185,14 @@ describe("the MCP endpoint", () => {
     );
   });
 
-  it("never mints or echoes a session id", async () => {
+  it("answers with a complete JSON result and never mints or echoes a session id", async () => {
     const { body, headers } = modern("server/discover");
-    const { res } = await send(body, {
+    const { res, json } = await send(body, {
       headers: { ...headers, "Mcp-Session-Id": "abc123" }
     });
     expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toMatch(/^application\/json/);
+    expect(json.result).toHaveProperty("resultType", "complete");
     expect(res.headers.get("Mcp-Session-Id")).toBeNull();
   });
 
@@ -375,7 +357,8 @@ describe("modern request validation", () => {
   });
 
   it("answers 404 with -32601 for an unknown method", async () => {
-    const { res, json } = await callModern("does/not/exist");
+    const { body, headers } = modern("does/not/exist");
+    const { res, json } = await send(body, { headers });
     expect(res.status).toBe(404);
     expect(json.error?.code).toBe(-32601);
   });
@@ -383,10 +366,7 @@ describe("modern request validation", () => {
 
 describe("server/discover", () => {
   it("reports supported versions, capabilities, identity and instructions", async () => {
-    const reply = await callModern("server/discover");
-    expect(reply.res.headers.get("Content-Type")).toMatch(/^application\/json/);
-    const result = resultOf(reply, JsonObject);
-    expect(result.resultType).toBe("complete");
+    const result = await (await connect()).discover();
     expect(result.supportedVersions).toEqual(["2026-07-28"]);
     expect(result.capabilities).toEqual({
       tools: { listChanged: false },
@@ -402,13 +382,9 @@ describe("server/discover", () => {
 });
 
 describe("tools over HTTP", () => {
-  it("lists every tool with our schemas as a cacheable complete result", async () => {
-    const result = resultOf(
-      await callModern("tools/list"),
-      ListedTools.extend({ resultType: z.string(), cacheScope: z.string() })
-    );
-    expect(result.resultType).toBe("complete");
-    expect(result.cacheScope).toBe("public");
+  it("lists every tool with our schemas as a cacheable result", async () => {
+    const result = await (await connect()).listTools();
+    expect(result).toHaveProperty("cacheScope", "public");
     expect(result.tools.map(t => t.name)).toEqual([
       "get_profile",
       "list_experience",
@@ -434,27 +410,22 @@ describe("tools over HTTP", () => {
   });
 
   it("reports an unknown tool as a protocol error", async () => {
-    const { res, json } = await callModern("tools/call", { name: "no_such_tool", arguments: {} });
-    expect(res.status).toBe(200);
-    expect(json.error?.code).toBe(-32602);
-    expect(json.error?.message).toMatch(/no_such_tool/);
+    const calling = call("no_such_tool");
+    await expect(calling).rejects.toMatchObject({ code: -32602 });
+    await expect(calling).rejects.toThrow(/no_such_tool/);
   });
 
   it("passes arguments through and reports a recoverable failure as isError", async () => {
-    const reply = await callModern("tools/call", {
-      name: "get_blog_post",
-      arguments: { slug: "nope" }
-    });
-    expect(reply.json.error).toBeUndefined();
-    const result = resultOf(reply, ToolCallResult);
+    const result = await call("get_blog_post", { slug: "nope" });
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("search_blog_posts");
+    expect(textOf(result)).toContain("search_blog_posts");
   });
 
   it.each([
     ["a call with no tool name", { arguments: {} }],
-    ["non-object arguments", { name: "get_profile", arguments: "nope" }]
-  ])("rejects %s as invalid params", async (_label, params) => {
+    ["non-object arguments", { name: "get_profile", arguments: "nope" }],
+    ["an unknown tool", { name: "no_such_tool", arguments: {} }]
+  ])("rejects %s as invalid params in a 200 reply", async (_label, params) => {
     const { body, headers } = modern("tools/call", params);
     const { res, json } = await send(body, { headers });
     expect(res.status).toBe(200);
@@ -470,54 +441,23 @@ describe("tools over HTTP", () => {
         message: "A perfectly valid message body for the allowance test."
       }
     };
+    const client = await connect({ ip: "198.51.100.81" });
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
-      const reply = await callModern("tools/call", args, { ip: "198.51.100.81" });
-      expect(resultOf(reply, ToolCallResult).structuredContent).toHaveProperty(
-        "status",
-        "accepted"
-      );
+      const accepted = await client.callTool(args);
+      expect(accepted.structuredContent).toHaveProperty("status", "accepted");
     }
-    const result = resultOf(
-      await callModern("tools/call", args, { ip: "198.51.100.81" }),
-      ToolCallResult
-    );
+    const result = await client.callTool(args);
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toMatch(/allowance|limit/i);
+    expect(textOf(result)).toMatch(/allowance|limit/i);
   });
 });
 
 describe("resources over HTTP", () => {
   it("lists the blog post URI template", async () => {
-    const result = resultOf(
-      await callModern("resources/templates/list"),
-      z.object({ resourceTemplates: z.array(z.object({ uriTemplate: z.string() })) })
-    );
+    const result = await (await connect()).listResourceTemplates();
     expect(result.resourceTemplates[0].uriTemplate).toBe(
       "https://murugappan.dev/blog/{slug}/index.md"
     );
-  });
-
-  it("reads a resource", async () => {
-    const uri = `${RESOURCE_ORIGIN}/llms.txt`;
-    const reply = await callModern("resources/read", { uri });
-    expect(reply.res.status).toBe(200);
-    const result = resultOf(
-      reply,
-      z.object({ resultType: z.string(), contents: z.array(JsonObject) })
-    );
-    expect(result.resultType).toBe("complete");
-    expect(result.contents).toEqual([
-      { uri: "https://murugappan.dev/llms.txt", mimeType: "text/plain", text: LLMS_TXT }
-    ]);
-  });
-
-  it("returns -32602 with the uri for a resource that does not exist", async () => {
-    const uri = `${RESOURCE_ORIGIN}/nope`;
-    const { res, json } = await callModern("resources/read", { uri });
-    expect(res.status).toBe(200);
-    expect(json.result).toBeUndefined();
-    expect(json.error?.code).toBe(-32602);
-    expect(json.error?.data).toEqual({ uri: "https://murugappan.dev/nope" });
   });
 });
 
@@ -575,7 +515,7 @@ describe("legacy (initialize-based) clients", () => {
       name: "list_skills",
       arguments: {}
     });
-    expect(resultOf(called, ToolCallResult).structuredContent).toHaveProperty("proficiencies", [
+    expect(called.json.result).toHaveProperty("structuredContent.proficiencies", [
       { area: "Backend", tools: ["Node.js"], level: 90 }
     ]);
   });
@@ -620,9 +560,10 @@ describe("MCP_TOOLS definitions", () => {
   });
 
   it("documents every tool and every input property", async () => {
-    for (const tool of await listedTools()) {
+    const { tools } = await (await connect()).listTools();
+    for (const tool of tools) {
       expect(tool.title, tool.name).toMatch(/\S/);
-      expect(tool.description.length, tool.name).toBeGreaterThan(60);
+      expect(tool.description?.length, tool.name).toBeGreaterThan(60);
       const props = z
         .record(z.string(), z.object({ description: z.string().optional() }))
         .parse(tool.inputSchema.properties ?? {});
@@ -633,8 +574,9 @@ describe("MCP_TOOLS definitions", () => {
   });
 
   it("lists self-contained schemas with an object output", async () => {
-    for (const tool of await listedTools()) {
-      expect(tool.outputSchema.type, tool.name).toBe("object");
+    const { tools } = await (await connect()).listTools();
+    for (const tool of tools) {
+      expect(tool.outputSchema?.type, tool.name).toBe("object");
       expect(hasRef(tool.inputSchema), tool.name).toBe(false);
       expect(hasRef(tool.outputSchema), tool.name).toBe(false);
     }
@@ -660,13 +602,13 @@ describe("dataset tools", () => {
     expect(result.isError).toBeUndefined();
     expect(result.structuredContent).toEqual(Object.fromEntries(keys.map(k => [k, DATASET[k]])));
     // The spec asks for the serialized JSON in a text block too.
-    expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
+    expect(JSON.parse(textOf(result))).toEqual(result.structuredContent);
   });
 
   it("reports a missing dataset as a tool execution error, not a throw", async () => {
     const result = await call("get_profile", {}, { assets: { "/api/dataset.json": null } });
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toMatch(/not available/i);
+    expect(textOf(result)).toMatch(/not available/i);
   });
 });
 
@@ -730,7 +672,7 @@ describe("send_message", () => {
       { ip: "198.51.100.62" }
     );
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toBe(
+    expect(textOf(result)).toBe(
       "Input validation error: Invalid arguments for tool send_message: email: must be a valid email address, message: must be between 20 and 4000 characters"
     );
   });
@@ -743,7 +685,7 @@ describe("send_message", () => {
       { ip: "198.51.100.63", email }
     );
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toBe(
+    expect(textOf(result)).toBe(
       'Input validation error: Invalid arguments for tool send_message: Unrecognized key: "subject"'
     );
     expect(sent).toEqual([]);
@@ -770,19 +712,19 @@ describe("send_message", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const result = await call("send_message", message, { ip: "198.51.100.66" });
     expect(result.isError).toBe(true);
-    expect(result.content[0].text).toContain("could not be delivered");
+    expect(textOf(result)).toContain("could not be delivered");
     expect(logged).toHaveBeenCalledWith("mcp send_message failed", failure);
   });
 });
 
 describe("resources/list", () => {
-  const list = async (envOptions?: TestEnvOptions) =>
-    resultOf(await callModern("resources/list", {}, { env: envOptions }), ResourceList).resources;
+  const list = async (options?: ClientOptions) =>
+    (await (await connect(options)).listResources()).resources;
 
-  it("lists the site's documents and every blog post as a cacheable complete result", async () => {
-    const reply = await callModern("resources/list");
-    expect(reply.json.result).toMatchObject({ resultType: "complete", cacheScope: "public" });
-    expect(resultOf(reply, ResourceList).resources.map(r => r.uri)).toEqual([
+  it("lists the site's documents and every blog post as a cacheable result", async () => {
+    const result = await (await connect()).listResources();
+    expect(result).toHaveProperty("cacheScope", "public");
+    expect(result.resources.map(r => r.uri)).toEqual([
       "https://murugappan.dev/llms.txt",
       "https://murugappan.dev/AGENTS.md",
       "https://murugappan.dev/openapi.json",
@@ -794,7 +736,7 @@ describe("resources/list", () => {
 
   // oxlint-disable-next-line tests/observe-behaviour -- a relation across rows: the summary outranks a post
   it("prioritises the site summary over a single post", async () => {
-    const priority = new Map((await list()).map(r => [r.uri, r.annotations.priority]));
+    const priority = new Map((await list()).map(r => [r.uri, r.annotations?.priority]));
     const summaryPriority = priority.get(`${RESOURCE_ORIGIN}/llms.txt`);
     const postPriority = priority.get(POST_URI);
     assert(summaryPriority !== undefined && postPriority !== undefined, "a priority is missing");
@@ -821,91 +763,55 @@ describe("resources/list", () => {
 });
 
 describe("resources/read", () => {
-  const contents = ({ path, mimeType, text }: { path: string; mimeType: string; text: string }) => [
-    { uri: `${RESOURCE_ORIGIN}${path}`, mimeType, text }
-  ];
+  const read = async (uri: string, assets?: Record<string, string | null>) =>
+    (await (await connect({ assets })).readResource({ uri })).contents;
 
-  const NOT_FOUND = -32602;
-  const read = async (uri: string, assets?: Record<string, string | null>) => {
-    const { json } = await callModern("resources/read", { uri }, { env: { assets } });
-    if (json.error) return json.error.code;
-    return z.object({ contents: z.array(JsonObject) }).parse(json.result).contents;
-  };
+  it.each([
+    { path: "/llms.txt", mimeType: "text/plain", text: LLMS_TXT },
+    { path: "/AGENTS.md", mimeType: "text/markdown", text: AGENTS_MD },
+    { path: "/blog/llms-full.txt", mimeType: "text/plain", text: LLMS_FULL_TXT },
+    { path: "/blog/coin-change-problem/index.md", mimeType: "text/markdown", text: POST_MARKDOWN }
+  ])("reads $path", async ({ path, mimeType, text }) => {
+    const uri = `https://murugappan.dev${path}`;
+    expect(await read(uri)).toEqual([{ uri, mimeType, text }]);
+  });
 
-  it.each<{
-    label: string;
-    uri: string;
-    overrides?: Record<string, string | null>;
-    expected: ReturnType<typeof contents> | typeof NOT_FOUND;
-  }>([
+  it.each<{ label: string; uri: string; overrides?: Record<string, string | null> }>([
     {
-      label: "reads a static document",
-      uri: `${RESOURCE_ORIGIN}/AGENTS.md`,
-      expected: contents({ path: "/AGENTS.md", mimeType: "text/markdown", text: AGENTS_MD })
-    },
-    {
-      label: "reads the full-text blog dump",
-      uri: `${RESOURCE_ORIGIN}/blog/llms-full.txt`,
-      expected: contents({
-        path: "/blog/llms-full.txt",
-        mimeType: "text/plain",
-        text: LLMS_FULL_TXT
-      })
-    },
-    {
-      label: "reads a published post",
-      uri: POST_URI,
-      expected: contents({
-        path: "/blog/coin-change-problem/index.md",
-        mimeType: "text/markdown",
-        text: POST_MARKDOWN
-      })
-    },
-    {
-      label: "is not found for an unpublished post, even one whose markdown is deployed",
+      label: "an unpublished post, even one whose markdown is deployed",
       uri: `${RESOURCE_ORIGIN}/blog/ghost/index.md`,
-      overrides: { "/blog/ghost/index.md": "# Ghost" },
-      expected: NOT_FOUND
+      overrides: { "/blog/ghost/index.md": "# Ghost" }
     },
     {
-      label: "is not found for a listed post whose markdown is missing",
-      uri: `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`,
-      expected: NOT_FOUND
+      label: "a listed post whose markdown is missing",
+      uri: `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`
     },
-    { label: "is not found for a string that is not a uri", uri: "not a uri", expected: NOT_FOUND },
+    { label: "a string that is not a uri", uri: "not a uri" },
     {
-      label: "is not found for a traversal in the slug",
-      uri: `${RESOURCE_ORIGIN}/blog/../../llms.txt/index.md`,
-      expected: NOT_FOUND
+      label: "a traversal in the slug",
+      uri: `${RESOURCE_ORIGIN}/blog/../../llms.txt/index.md`
     },
     {
-      label: "is not found for an encoded traversal in the slug",
-      uri: `${RESOURCE_ORIGIN}/blog/..%2F..%2Fllms.txt/index.md`,
-      expected: NOT_FOUND
+      label: "an encoded traversal in the slug",
+      uri: `${RESOURCE_ORIGIN}/blog/..%2F..%2Fllms.txt/index.md`
     },
     {
-      label: "is not found for a slug outside the slug charset",
-      uri: `${RESOURCE_ORIGIN}/blog/Mixed_Case/index.md`,
-      expected: NOT_FOUND
+      label: "a slug outside the slug charset",
+      uri: `${RESOURCE_ORIGIN}/blog/Mixed_Case/index.md`
     },
+    { label: "a document on another origin", uri: "https://evil.example/llms.txt" },
     {
-      label: "is not found for a document on another origin",
-      uri: "https://evil.example/llms.txt",
-      expected: NOT_FOUND
+      label: "a post on another origin",
+      uri: "https://evil.example/blog/coin-change-problem/index.md"
     },
+    { label: "a nonexistent document", uri: `${RESOURCE_ORIGIN}/nope` },
     {
-      label: "is not found for a post on another origin",
-      uri: "https://evil.example/blog/coin-change-problem/index.md",
-      expected: NOT_FOUND
-    },
-    {
-      label: "is not found for a static document that is not deployed",
+      label: "a static document that is not deployed",
       uri: `${RESOURCE_ORIGIN}/llms.txt`,
-      overrides: { "/llms.txt": null },
-      expected: NOT_FOUND
+      overrides: { "/llms.txt": null }
     }
-  ])("$label", async ({ uri, overrides, expected }) => {
-    expect(await read(uri, overrides)).toEqual(expected);
+  ])("answers $label with -32602 and the uri", async ({ uri, overrides }) => {
+    await expect(read(uri, overrides)).rejects.toMatchObject({ code: -32602, data: { uri } });
   });
 
   it("generates the OpenAPI document rather than reading a file", async () => {
