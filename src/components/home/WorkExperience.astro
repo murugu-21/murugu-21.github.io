@@ -56,9 +56,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     </div>
     <ol class="flex flex-col gap-5">
       {stints.map(stint => (
-        /* `[&:hover]:`, not `hover:` (gated on @media (hover: hover)), so
-                glow-card's :hover scale is also cancelled on tap. */
-        <li class="glow-card px-7 py-6 text-text max-md:px-4 max-md:py-5 dark:text-white [&:hover]:transform-none">
+        <li class="glow-card px-7 py-6 text-text hover:transform-none max-md:px-4 max-md:py-5 dark:text-white">
           <header class="mb-5 flex items-center gap-5">
             {/* Rendered at 4.5rem (3rem on phones), so 72px + 2x instead of the 256px source. */}
             <Image

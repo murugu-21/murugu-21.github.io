@@ -287,7 +287,7 @@
   transition:
     transform 0.5s ease,
     box-shadow 0.5s ease;
-  &:hover {
+  @variant hover {
     transform: scale(1.02);
     box-shadow: var(--shadow-glow-hover);
   }
@@ -296,13 +296,13 @@
   @variant dark {
     box-shadow: var(--shadow-glow-dark);
     color: white;
-    &:hover {
+    @variant hover {
       box-shadow: var(--shadow-glow-dark-hover);
     }
   }
   @media (prefers-reduced-motion: reduce) {
     transition: none;
-    &:hover {
+    @variant hover {
       transform: none;
     }
   }
@@ -432,7 +432,7 @@
   mask-repeat: no-repeat;
   mask-size: calc(100% + 3rem) 100%;
   animation: var(--animate-table-scroll-hint);
-  /* A separate block because Lightning CSS would otherwise fold the timeline into
+  /* This sits in its own block because Lightning CSS would otherwise fold the timeline into
      the shorthand, which Chrome rejects. It must come after the shorthand, which
      resets animation-timeline. */
   @supports (animation-timeline: scroll()) {

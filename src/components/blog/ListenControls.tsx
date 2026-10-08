@@ -199,7 +199,7 @@ export function ListenControls({ slug }: { slug: string }) {
       {/* Track at 30%/40% foreground: the primitive's 15% vanished on the
           card. Tuned here so the vendored slider keeps shadcn's styling. */}
       <Slider
-        className="group min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 focus-within:**:data-[slot=slider-thumb]:opacity-100 **:data-[slot=slider-thumb]:hover:opacity-100 hover:**:data-[slot=slider-thumb]:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 dark:**:data-[slot=slider-track]:bg-foreground/40"
+        className="min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 focus-within:**:data-[slot=slider-thumb]:opacity-100 hover:**:data-[slot=slider-thumb]:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 dark:**:data-[slot=slider-track]:bg-foreground/40"
         value={[progress.position]}
         max={progress.length || 1}
         step={seekable ? 0.1 : 1}
