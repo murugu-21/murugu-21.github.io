@@ -6,21 +6,13 @@ const EVENTS = ["pointerdown", "pointermove", "touchstart", "keydown", "wheel"] 
 
 /** Returns a cancel function; after cancelling, `cb` never runs. */
 export function onFirstInteraction(cb: () => void, target: EventTarget = window): () => void {
-  let done = false;
-  const off = () => {
-    for (const type of EVENTS) target.removeEventListener(type, fire);
-  };
+  const listening = new AbortController();
   const fire = () => {
-    if (done) return;
-    done = true;
-    off();
+    listening.abort();
     cb();
   };
-  // No options: nothing calls preventDefault, and window-level wheel/touch
+  // Only a signal: nothing calls preventDefault, and window-level wheel/touch
   // listeners are passive by default.
-  for (const type of EVENTS) target.addEventListener(type, fire);
-  return () => {
-    done = true;
-    off();
-  };
+  for (const type of EVENTS) target.addEventListener(type, fire, { signal: listening.signal });
+  return () => listening.abort();
 }

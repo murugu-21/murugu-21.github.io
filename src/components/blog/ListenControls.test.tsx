@@ -80,7 +80,15 @@ const fakeSpeech = () => {
 // An <audio> that plays instantly; the test moves its playhead.
 const audios: FakeAudio[] = [];
 class FakeAudio extends EventTarget {
-  currentTime = 0;
+  #time = 0;
+  get currentTime() {
+    return this.#time;
+  }
+  // A real element fires timeupdate whenever the playhead moves.
+  set currentTime(seconds: number) {
+    this.#time = seconds;
+    this.dispatchEvent(new Event("timeupdate"));
+  }
   duration = Number.NaN;
   playbackRate = 1;
   preload = "";

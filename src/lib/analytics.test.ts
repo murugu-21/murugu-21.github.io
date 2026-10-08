@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import {
   initClickTracking,
-  redactBlogFilters,
+  maskReferrers,
   reportError,
   scheduleSdkLoad,
   tag,
@@ -159,22 +159,30 @@ describe("initClickTracking", () => {
   });
 });
 
-describe("redactBlogFilters", () => {
-  it("strips the blog's filter params and keeps the rest", () => {
-    expect(
-      redactBlogFilters(
-        "https://murugappan.dev/blog/?q=closures&tag=javascript&tag=fundamentals&utm_source=x"
-      )
-    ).toBe("https://murugappan.dev/blog/?utm_source=x");
-  });
-
-  it.each([
-    "https://www.google.com/search?q=secret",
-    "https://murugappan.dev/blog/",
-    "https://murugappan.dev/resume/?q=x",
-    "not a url?q=x"
-  ])("leaves %s alone", url => {
-    expect(redactBlogFilters(url)).toBe(url);
+describe("maskReferrers", () => {
+  it("masks the blog's search text and tag in every referrer PostHog leaves alone", () => {
+    const event = {
+      uuid: "u",
+      event: "$pageview",
+      properties: {
+        $current_url: "https://murugappan.dev/blog/coin-change-problem/",
+        $referrer: "https://murugappan.dev/blog/?q=coin&tag=algorithms&utm_source=x",
+        $session_entry_referrer: "https://murugappan.dev/blog/?tag=react#top",
+        distinct_id: "abc"
+      },
+      $set_once: { $initial_referrer: "https://murugappan.dev/blog/?q=oauth" }
+    };
+    expect(maskReferrers(event)).toEqual({
+      ...event,
+      properties: {
+        $current_url: "https://murugappan.dev/blog/coin-change-problem/",
+        $referrer: "https://murugappan.dev/blog/?q=<masked>&tag=<masked>&utm_source=x",
+        $session_entry_referrer: "https://murugappan.dev/blog/?tag=<masked>#top",
+        distinct_id: "abc"
+      },
+      $set_once: { $initial_referrer: "https://murugappan.dev/blog/?q=<masked>" }
+    });
+    expect(maskReferrers(null)).toBeNull();
   });
 });
 
@@ -182,10 +190,7 @@ describe("initAnalytics", () => {
   describe("SDK config", () => {
     const InitConfig = z.object({
       api_host: z.string(),
-      session_recording: z.object({ maskAllInputs: z.boolean(), maskTextSelector: z.string() }),
-      sanitize_properties: z.custom<
-        (properties: Record<string, unknown>) => Record<string, unknown>
-      >(value => typeof value === "function")
+      session_recording: z.object({ maskAllInputs: z.boolean(), maskTextSelector: z.string() })
     });
     let init: ReturnType<typeof fakeSdk>["init"];
     let config: z.infer<typeof InitConfig>;
@@ -206,19 +211,6 @@ describe("initAnalytics", () => {
     it("masks the chat transcript in recordings, not just inputs", () => {
       expect(config.session_recording.maskAllInputs).toBe(true);
       expect(config.session_recording.maskTextSelector).toBe("[data-ph-mask]");
-    });
-
-    it("scrubs blog filter params from captured URLs", () => {
-      const properties = config.sanitize_properties({
-        $current_url: "https://murugappan.dev/blog/?q=socket&tag=backend",
-        $referrer: "https://murugappan.dev/blog/?q=oauth",
-        distinct_id: "abc"
-      });
-      expect(properties).toEqual({
-        $current_url: "https://murugappan.dev/blog/",
-        $referrer: "https://murugappan.dev/blog/",
-        distinct_id: "abc"
-      });
     });
   });
 

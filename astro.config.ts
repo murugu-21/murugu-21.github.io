@@ -16,6 +16,7 @@ import remarkMermaid from "./src/lib/blog/remark-mermaid";
 import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
 import { NIGHT_OWL } from "./src/lib/blog/code-themes";
 import { SITE_ORIGIN } from "./src/lib/site";
+import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/site/fira-code-subset";
 import { modulePreloader } from "./scripts/site/module-preload";
 
@@ -282,8 +283,8 @@ export default defineConfig({
     clientInteractionDirective(),
     modulePreloadHints(),
     sitemap({
-      // only a top-level /404 is auto-excluded
-      filter: page => !/\/404\/?$/.test(page),
+      // only a top-level /404 is auto-excluded; /outdated/ is for old browsers, not search
+      filter: page => !/\/(404|outdated)\/?$/.test(page),
       serialize(item) {
         const { pathname } = new URL(item.url);
         // Matched before the strip below, which turns /blog/ into "", not "blog".
@@ -303,9 +304,12 @@ export default defineConfig({
     buildArtifacts()
   ],
   vite: {
-    // 8 KB for CSS only. A plain number would also inline font subsets into
-    // the stylesheets (tripled the island sheet). `undefined` keeps the default.
     build: {
+      // CSS gets the vendor prefixes and fallbacks the supported browsers need. JS isn't
+      // lowered: Astro pins the client build to esnext.
+      cssTarget: BROWSER_TARGETS,
+      // 8 KB for CSS only. A plain number would also inline font subsets into
+      // the stylesheets (tripled the island sheet). `undefined` keeps the default.
       assetsInlineLimit: (file, content) =>
         file.endsWith(".css") ? content.byteLength < 8192 : undefined
     },

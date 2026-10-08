@@ -29,10 +29,10 @@ const cards = [
     <div class="mb-[30px] grid flex-1 grid-cols-[repeat(auto-fill,minmax(400px,1fr))] gap-8 min-[300px]:max-[481px]:grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
       {cards.map(card => (
         <div class="glow-card box-content h-[200px] cursor-pointer text-blog-container dark:text-white">
-          {/* `group` drives the ::before hover wipe; its scale is tuned per
-                breakpoint so it always covers the card. */}
+          {/* 142% of circle()'s reference radius reaches the far corner of any
+                card (√2 ≈ 1.414). */}
           <a
-            class="group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:-top-4 before:-right-4 before:-z-1 before:size-8 before:origin-center before:scale-100 before:rounded-[32px] before:bg-dusk-violet dark:before:bg-blue-light before:transition-transform before:duration-[400ms] before:ease-out before:content-[''] hover:before:scale-[30] min-[481px]:max-[675px]:before:duration-[450ms] min-[481px]:max-[675px]:hover:before:scale-[40] min-[675px]:max-[925px]:before:duration-[500ms] min-[675px]:max-[860px]:hover:before:scale-[50] min-[860px]:max-[925px]:hover:before:scale-[60] min-[1025px]:max-[1405px]:before:duration-[450ms] min-[1025px]:max-[1405px]:hover:before:scale-[40] min-[1551px]:before:duration-[450ms] min-[1551px]:hover:before:scale-[40]"
+            class="group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:inset-0 before:-z-1 before:bg-dusk-violet before:transition-[clip-path] before:duration-[450ms] before:ease-out before:content-[''] before:[clip-path:circle(16px_at_100%_0)] hover:before:[clip-path:circle(142%_at_100%_0)] dark:before:bg-blue-light"
             href={card.url}
             data-ph-event="blog_card_click"
             data-ph-prop="post"

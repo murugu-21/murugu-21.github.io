@@ -81,6 +81,12 @@ describe("excerpt", () => {
     expect(excerpt(body)).toBe("Title Read the docs now. Done.");
   });
 
+  it("keeps underscores inside words and drops emphasis underscores", () => {
+    expect(excerpt("Set __event_type__ on _each_ café_au_lait row.")).toBe(
+      "Set event_type on each café_au_lait row."
+    );
+  });
+
   it("cuts at a word boundary and adds an ellipsis when too long", () => {
     expect(excerpt("alpha beta gamma delta", 12)).toBe("alpha beta…");
   });

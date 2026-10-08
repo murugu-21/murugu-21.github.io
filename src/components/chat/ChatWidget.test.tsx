@@ -169,23 +169,45 @@ test("sends a question with Enter and streams the reply after the tool step", as
   expect(events).toEqual(["chat_open", "chat_message_sent"]);
 });
 
-test("sends a multi-line message with the button, growing the composer to five lines", async () => {
+test("sends a multi-line message with the button", async () => {
   await render(<ChatWidget />);
   await openChat();
 
-  await userEvent.type(
-    input(),
-    `one{Shift>}{Enter}{/Shift}two{Shift>}${"{Enter}".repeat(8)}{/Shift}`
-  );
-  await expect.element(input()).toHaveStyle({ height: "120px" });
-
+  await userEvent.type(input(), "one{Shift>}{Enter}{/Shift}two");
   await sendButton().click();
 
   await expect.poll(() => lastRoom().requests).toHaveLength(1);
   expect(lastRoom().requests[0]).toMatchObject({
     messages: [{ parts: [{ type: "text", text: "one\ntwo" }] }]
   });
-  await expect.element(input()).not.toHaveStyle({ height: "120px" });
+  await expect.element(input()).toHaveValue("");
+});
+
+test("keeps one room per page load, and can start over, when the browser blocks storage", async () => {
+  // Chrome's "block all cookies" makes the localStorage getter itself throw.
+  vi.spyOn(window, "localStorage", "get").mockImplementation(() => {
+    throw new DOMException("The operation is insecure.", "SecurityError");
+  });
+  await render(<ChatWidget />);
+  await expect.element(page.getByText("Ask Jarvis anything about Murugappan")).toBeVisible();
+  await openChat();
+
+  await userEvent.type(input(), "Hi{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+  lastRoom().stream(reply("Hello."));
+  lastRoom().finish();
+  await expect.element(page.getByText("Hello.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Close chat" }).click();
+  await openChat();
+  await expect.element(page.getByText("Hello.")).toBeVisible();
+  expect(rooms.size).toBe(1);
+
+  await page.getByRole("button", { name: "Conversation options" }).click();
+  await page.getByRole("menuitem", { name: "Start over" }).click();
+  await page.getByRole("button", { name: "Start over" }).click();
+  await expect.element(page.getByText("Hello.")).not.toBeInTheDocument();
+  expect(rooms.size).toBe(2);
 });
 
 test("a starter question sends itself and the starters give way to the conversation", async () => {
@@ -378,7 +400,9 @@ test("waits while another tab's turn streams into the same room", async () => {
   await expect.element(sendButton()).toBeEnabled();
 });
 
-test("closing keeps the conversation, and the launcher reopens it", async () => {
+// Desktop: on a phone the modal panel covers the launcher and hides it from assistive tech.
+test("closing by button, launcher or Escape keeps the conversation, and focus returns to the launcher", async () => {
+  await page.viewport(1024, 768);
   await render(<ChatWidget />);
   const launcher = page.getByRole("button", { name: LAUNCHER });
   await openChat();
@@ -394,6 +418,13 @@ test("closing keeps the conversation, and the launcher reopens it", async () => 
   await expect.element(page.getByText("Remember me")).toBeVisible();
   await launcher.click();
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+
+  // Escape closes it too, and hands focus back to the launcher.
+  await launcher.click();
+  await expect.element(page.getByText("Remember me")).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
+  await expect.element(launcher).toHaveFocus();
   expect(fetched).toHaveLength(1);
 });
 
@@ -473,15 +504,29 @@ test("downloads the transcript without the room's notices", async () => {
   expect(body).toMatch(/\n\nYou: Where\?\n\nJarvis: Toronto\.\n$/);
 });
 
+const pageOverflow = () => getComputedStyle(document.body).overflow;
+
 test("on a phone the open panel locks page scroll and leaves the keyboard down", async () => {
   await render(<ChatWidget />);
   await openChat();
 
-  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(true);
+  expect(pageOverflow()).toBe("hidden");
   await expect.element(input()).not.toHaveFocus();
 
   await page.getByRole("button", { name: "Close chat" }).click();
-  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(false);
+  await expect.poll(pageOverflow).toBe("visible");
+  await expect.element(page.getByRole("button", { name: LAUNCHER })).toHaveFocus();
+});
+
+test("keeps an unsent draft when the screen crosses the phone breakpoint while open", async () => {
+  await render(<ChatWidget />);
+  await openChat();
+  await userEvent.type(input(), "half a thought");
+
+  await page.viewport(1024, 768);
+  await expect.element(input()).toHaveValue("half a thought");
+  await page.viewport(414, 896);
+  await expect.element(input()).toHaveValue("half a thought");
 });
 
 test("on a desktop the open panel focuses the composer and leaves the page scrollable", async () => {
@@ -490,7 +535,7 @@ test("on a desktop the open panel focuses the composer and leaves the page scrol
   await openChat();
 
   await expect.element(input()).toHaveFocus();
-  expect(document.documentElement.classList.contains("chat-panel-locked")).toBe(false);
+  expect(pageOverflow()).toBe("visible");
 });
 
 test("opens on hydration when the visitor tapped the launcher while the bundle loaded", async () => {

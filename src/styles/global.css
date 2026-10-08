@@ -1,4 +1,5 @@
-/* The one Tailwind v4 entry for both apps. Dark mode is `html.dark-mode`. */
+/* The one Tailwind v4 entry for both apps. Dark mode is `html.dark-mode`, which
+   sets `color-scheme: dark` (below) so every `light-dark()` pair follows it. */
 
 @import "tailwindcss";
 
@@ -137,9 +138,15 @@
     color: white;
   }
 
-  /* Inherited, so this covers every scroller. No ::-webkit-scrollbar rules:
-     Chrome ignores them wherever scrollbar-color applies, mixing two styles. */
+  /* Explicit `light`, not the default `normal`, so the light-dark() pairs
+     resolve the same whatever the UA's own default is. */
+  html {
+    color-scheme: light;
+  }
   html.dark-mode {
+    color-scheme: dark;
+    /* Inherited, so this covers every scroller. No ::-webkit-scrollbar rules:
+       Chrome ignores them wherever scrollbar-color applies, mixing two styles. */
     scrollbar-color: var(--color-blue-light) var(--color-dark-base);
   }
 }
@@ -147,18 +154,12 @@
 @layer components {
   /* emitted by src/lib/accent.ts */
   .accent {
-    color: var(--color-amber-ink);
+    color: light-dark(var(--color-amber-ink), var(--color-blue));
     font-weight: 700;
   }
-  html.dark-mode .accent {
-    color: var(--color-blue);
-  }
-  .subTitle {
-    color: var(--color-subtitle);
-  }
   /* the light subtitle colour doesn't read on the night canvas */
-  html.dark-mode .subTitle {
-    color: rgba(255, 255, 255, 0.65);
+  .subTitle {
+    color: light-dark(var(--color-subtitle), rgba(255, 255, 255, 0.65));
   }
   .section-animate {
     animation: var(--animate-rise-fade);
@@ -171,8 +172,8 @@
 }
 
 @utility glow-card {
-  background-color: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(6, 3, 141, 0.18);
+  background-color: light-dark(rgba(255, 255, 255, 0.88), transparent);
+  border: 1px solid light-dark(rgba(6, 3, 141, 0.18), rgba(76, 125, 255, 0.25));
   border-radius: 10px;
   box-shadow: var(--shadow-glow);
   transition:
@@ -182,9 +183,9 @@
     transform: scale(1.02);
     box-shadow: var(--shadow-glow-hover);
   }
+  /* The shadow tokens differ in spread, not only colour, so they stay a pair,
+     as does `color`, which has no light-side value. */
   :where(html.dark-mode) & {
-    background-color: transparent;
-    border-color: rgba(76, 125, 255, 0.25);
     box-shadow: var(--shadow-glow-dark);
     color: white;
     &:hover {
@@ -213,14 +214,10 @@
     display: grid;
     place-items: center;
     padding: 15%;
-    background-color: var(--color-surface);
-    color: var(--color-text);
+    background-color: light-dark(var(--color-surface), var(--color-dark-base));
+    color: light-dark(var(--color-text), white);
     font-size: clamp(0.625rem, 6cqi, 1.5rem);
     line-height: 1.2;
     text-align: center;
-  }
-  :where(html.dark-mode) &::after {
-    background-color: var(--color-dark-base);
-    color: white;
   }
 }

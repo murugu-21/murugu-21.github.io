@@ -234,20 +234,15 @@ function audioPlayer(options: AudioPlayerOptions): Player {
       length: timings.duration || audio.duration || 0
     });
 
+  // The bar follows timeupdate (about 4 Hz); the highlight gets every frame.
   let raf = 0;
-  let lastQuarter = -1;
   const tick = () => {
     syncHighlight(audio.currentTime);
-    // The bar only needs a few updates a second; the highlight gets 60.
-    const quarter = Math.floor(audio.currentTime * 4);
-    if (quarter !== lastQuarter) {
-      lastQuarter = quarter;
-      report();
-    }
     raf = requestAnimationFrame(tick);
   };
 
   report();
+  audio.addEventListener("timeupdate", report);
   audio.addEventListener("play", () => {
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tick);

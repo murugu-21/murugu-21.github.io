@@ -50,6 +50,16 @@ const over = (rgba: string, backdrop: string): string => {
   );
 };
 
+// One side of `light-dark(<light>, <dark>)`: a bare colour or one function such
+// as `rgba(...)`, whose own commas must not split the pair.
+const SIDE = String.raw`\s*((?:[^(),]|\([^)]*\))+?)\s*`;
+const LIGHT_DARK = new RegExp(String.raw`^light-dark\(${SIDE},${SIDE}\)$`);
+const lightDark = (value: string): { light: string; dark: string } => {
+  const m = LIGHT_DARK.exec(value);
+  if (!m) throw new Error(`not a light-dark() pair: ${value}`);
+  return { light: m[1], dark: m[2] };
+};
+
 // The sky's stops, sorted by luminance: `deep` is the stop under the right edge
 // of the page (the gradient runs `to left`), `mid` the body of the page, `warm`
 // the horizon glow under the hero.
@@ -66,9 +76,9 @@ const stops = [sky.deep, sky.mid, sky.warm];
 // The dusk-white card surface (glow-card) that most body-level light-theme text
 // actually sits on, composited over the darkest sky it can float above.
 const card = (() => {
-  const m = /@utility glow-card \{[\s\S]*?background-color:\s*(rgba\([^)]+\))/.exec(css);
+  const m = /@utility glow-card \{[\s\S]*?background-color:\s*([^;]+);/.exec(css);
   if (!m) throw new Error("no glow-card background-color in global.css");
-  return over(m[1], sky.deep);
+  return over(lightDark(m[1]).light, sky.deep);
 })();
 
 const ink = (name: string) => token(`color-${name}`);
@@ -277,17 +287,18 @@ describe("night palette", () => {
 });
 
 describe.each(["light", "dark"] as const)("%s island tokens", mode => {
-  const block = (selector: string): Record<string, string> => {
+  const t = (() => {
+    const selector = ".ui-island {";
     const at = __ISLANDS_CSS__.indexOf(selector);
     if (at === -1) throw new Error(`no ${selector} block in islands.css`);
     const body = __ISLANDS_CSS__.slice(at + selector.length, __ISLANDS_CSS__.indexOf("}", at));
     return Object.fromEntries(
-      [...body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)].map(m => [m[1], m[2].trim()])
+      [...body.matchAll(/(--[\w-]+)\s*:\s*(light-dark\([^;]+);/g)].map(m => [
+        m[1],
+        lightDark(m[2])[mode]
+      ])
     );
-  };
-  const light = block(".ui-island {");
-  // Dark mode inherits every token the dark block does not restate.
-  const t = mode === "light" ? light : { ...light, ...block("html.dark-mode .ui-island {") };
+  })();
 
   // 3:1 is WCAG 1.4.11 for non-text UI; 4.5:1 is 1.4.3 AA for normal text
   // (the panel header title is 16px semibold).
