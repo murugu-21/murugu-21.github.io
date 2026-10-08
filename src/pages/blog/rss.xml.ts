@@ -7,7 +7,8 @@ import { getPublishedPosts, postDescription, postUrl } from "#src/lib/blog/posts
 import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
 import { BLOG_DESCRIPTION, BLOG_TITLE, BLOG_URL, SITE_ORIGIN } from "#src/lib/site.ts";
 
-const parser = new MarkdownIt();
+// html: true so inline HTML in a post (<sup>) reaches readers; sanitize-html drops the unsafe tags.
+const parser = new MarkdownIt({ html: true });
 
 // Feed readers need absolute image URLs; importing post images here yields
 // their hashed, emitted public paths.
