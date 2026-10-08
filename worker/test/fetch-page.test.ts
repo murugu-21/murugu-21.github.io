@@ -41,6 +41,13 @@ describe("fetchSitePage", () => {
     expect(out).not.toContain("<p>");
   });
 
+  it("reads all of a page's main content, every card in it, without the nav", async () => {
+    const assets = fakeAssets({
+      "/about/": `<body><header><nav>Home Blog</nav></header><main><h1>About</h1><article>MedMe</article><article>HyperVerge</article></main></body>`
+    });
+    expect(await fetchSitePage(assets, "/about/")).toBe("About MedMe HyperVerge");
+  });
+
   it("reports unknown pages", async () => {
     const out = await fetchSitePage(fakeAssets(), "https://murugappan.dev/nope/");
     expect(out).toContain("not found");
