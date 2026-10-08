@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Buffer } from "node:buffer";
 
-import { assemble, pcmSeconds, readWav, sharedSampleRate, splice, writeWav } from "./wav.ts";
+import { assemble, splice } from "./pcm.ts";
 
 const SR = 8000;
 const tone = (seconds: number) => {
@@ -11,31 +11,12 @@ const tone = (seconds: number) => {
   return pcm;
 };
 
-describe("wav round trip", () => {
-  it("writes a header readWav understands", () => {
-    const pcm = tone(0.5);
-    const parsed = readWav(writeWav(SR, pcm));
-    expect(parsed.sampleRate).toBe(SR);
-    expect(parsed.channels).toBe(1);
-    expect(parsed.pcm.equals(pcm)).toBe(true);
-    expect(pcmSeconds(parsed.pcm, parsed.sampleRate)).toBe(0.5);
-  });
-
-  it("rejects non-16-bit audio and files that aren't WAV", () => {
-    const wav = writeWav(SR, tone(0.1));
-    wav.writeUInt16LE(24, 34); // bits per sample
-    expect(() => readWav(wav)).toThrow(/16-bit/);
-    expect(() => readWav(Buffer.from("ID3\u0004 an MP3 header"))).toThrow("not a RIFF/WAVE file");
-  });
-});
-
 describe("assemble", () => {
   it("joins chunks with intra gaps, blocks with inter gaps, and reports block timings", () => {
-    const { pcm, timings } = assemble(
-      [[{ pcm: tone(1) }, { pcm: tone(1) }], [{ pcm: tone(2) }]],
-      SR,
-      { intra: 0.5, inter: 1 }
-    );
+    const { pcm, timings } = assemble([[tone(1), tone(1)], [tone(2)]], SR, {
+      intra: 0.5,
+      inter: 1
+    });
     // 1 + 0.5 + 1 = 2.5 s, a 1 s gap, then 2 s: no gap trails the last block
     expect(pcm.length).toBe(SR * 5.5 * 2);
     expect(pcm.subarray(SR * 2.5 * 2, SR * 3.5 * 2).every(b => b === 0)).toBe(true);
@@ -76,23 +57,5 @@ describe("splice", () => {
       { start: 0.005, end: 0.009 },
       { start: 0.01, end: 0.011 }
     ]);
-  });
-});
-
-describe("sharedSampleRate", () => {
-  it("returns the rate every chunk shares, and names the first chunk that differs", () => {
-    expect(
-      sharedSampleRate([
-        { id: "b000-c00", sampleRate: 24000 },
-        { id: "b001-c00", sampleRate: 24000 }
-      ])
-    ).toBe(24000);
-    expect(() =>
-      sharedSampleRate([
-        { id: "b000-c00", sampleRate: 24000 },
-        { id: "b001-c00", sampleRate: 22050 }
-      ])
-    ).toThrow("sample rate mismatch in b001-c00");
-    expect(() => sharedSampleRate([])).toThrow("no chunks rendered");
   });
 });

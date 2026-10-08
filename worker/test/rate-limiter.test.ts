@@ -1,4 +1,5 @@
-import { env, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
@@ -59,6 +60,18 @@ describe("chatAvailable", () => {
       await instance.markChatExhausted();
       // Gated even though the balance still reads funded: the 402 settled it.
       expect(await instance.chatAvailable("sk-test", funded)).toBe(false);
+    });
+  });
+
+  it("keeps a 402 that lands while a balance check is still fetching", async () => {
+    let answer: (response: Response) => void = () => {};
+    const reading = new Promise<Response>(resolve => (answer = resolve));
+    await inLimiter("bal-race", async instance => {
+      const checking = instance.chatAvailable("sk-test", () => reading);
+      await instance.markChatExhausted();
+      answer(new Response(JSON.stringify(usd("1.99"))));
+      await checking;
+      expect(await instance.chatAvailable("sk-test", balanceResponse(usd("1.99")))).toBe(false);
     });
   });
 });

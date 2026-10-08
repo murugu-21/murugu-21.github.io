@@ -46,11 +46,11 @@ export const audio = new Hono<{ Bindings: Env }>();
 audio.get("/:file", async c => {
   const file = c.req.param("file");
   const extension = FILE.exec(file)?.[1];
-  if (!extension) return serveAsset(c.req.raw, c.env.ASSETS);
+  if (!extension) return serveAsset(c);
 
   const key = `${AUDIO_PREFIX}/${file}`;
   const head = await c.env.AUDIO.head(key);
-  if (!head) return serveAsset(c.req.raw, c.env.ASSETS);
+  if (!head) return serveAsset(c);
 
   const etag = head.httpEtag;
   const contentType = head.httpMetadata?.contentType ?? TYPES[extension];
@@ -74,7 +74,7 @@ audio.get("/:file", async c => {
   }
 
   const object = await c.env.AUDIO.get(key, range ? { range } : undefined);
-  if (!object) return serveAsset(c.req.raw, c.env.ASSETS);
+  if (!object) return serveAsset(c);
 
   if (range) {
     const last = range.offset + range.length - 1;

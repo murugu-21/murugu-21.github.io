@@ -2,7 +2,7 @@
 // `html.dark-mode`, global.css turns that into `color-scheme`, and a
 // `light-dark()` colour follows. The stylesheet is inlined by vitest.config.ts,
 // which routes `.tsx` tests (this one has no JSX) to the browser project.
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, it } from "vitest";
 
 import { bootstrapTheme } from "#src/lib/theme.ts";
 
@@ -21,7 +21,7 @@ afterEach(() => {
   localStorage.removeItem("isDark");
 });
 
-test("the theme toggle flips color-scheme, and light-dark() colours with it", () => {
+it("the theme toggle flips color-scheme, and light-dark() colours with it", () => {
   const style = document.createElement("style");
   style.textContent = plain(__GLOBAL_CSS__);
   const probe = document.createElement("div");

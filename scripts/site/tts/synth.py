@@ -79,7 +79,14 @@ def main() -> int:
     t0 = time.time()
     mx.set_cache_limit(CACHE_LIMIT)
     model = load(MODEL)
-    emit({"ready": True, "model": MODEL, "loadSeconds": round(time.time() - t0, 1)})
+    emit(
+        {
+            "ready": True,
+            "model": MODEL,
+            "loadSeconds": round(time.time() - t0, 1),
+            "sampleRate": SAMPLE_RATE,
+        }
+    )
     for line in sys.stdin:
         line = line.strip()
         if not line:

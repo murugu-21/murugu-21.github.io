@@ -1,4 +1,5 @@
-import { env, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
@@ -165,7 +166,7 @@ async function scriptRoom(
   options: TestEnvOptions = {}
 ) {
   const { email, sent } = recordingEmail();
-  await runInDurableObject(stub, (instance: ChatRoom) => {
+  await runInDurableObject(stub, instance => {
     Object.assign(instance, {
       env: { ...testEnv({ email, ...options }), DEEPSEEK_API_KEY: "sk-test" },
       languageModel: () => model
@@ -340,7 +341,7 @@ describe("a chat turn", () => {
     const { socket, frames, stub } = await openRoom("room-daily");
     const model = scriptedModel(textStep("Sure."));
     await scriptRoom(stub, model);
-    await runInDurableObject(stub, (instance: ChatRoom) => {
+    await runInDurableObject(stub, instance => {
       for (let i = 1; i < ROOM_DAILY_LIMIT; i++) {
         instance.ctx.storage.sql.exec(
           `INSERT INTO user_messages (created_at) VALUES (?)`,
@@ -406,6 +407,43 @@ describe("a chat turn", () => {
     ]);
   });
 
+  it("closes a turn with no prose in the error notice, unless the visitor cancelled it", async () => {
+    await fundChat();
+    const silent = await openRoom("room-silent");
+    const noProse = () =>
+      modelStream([
+        { type: "finish", usage: USAGE, finishReason: { unified: "stop", raw: "stop" } }
+      ]);
+    await scriptRoom(silent.stub, scriptedModel(noProse));
+    silent.socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "hi" })] })
+    );
+    expect(noticesIn(await streamedChunks(silent.frames, "r1"))).toEqual([
+      { kind: "error", text: "Something went wrong on my end. Please try again." }
+    ]);
+
+    const cancelled = await openRoom("room-cancelled");
+    // Like the real provider's fetch, the stream ends only when the turn is aborted.
+    const untilAborted = new MockLanguageModelV4({
+      doStream: async ({ abortSignal }) => ({
+        stream: new ReadableStream<LanguageModelV4StreamPart>({
+          start(controller) {
+            if (abortSignal?.aborted) controller.error(abortSignal.reason);
+            abortSignal?.addEventListener("abort", () => controller.error(abortSignal.reason));
+          }
+        })
+      })
+    });
+    await scriptRoom(cancelled.stub, untilAborted);
+    cancelled.socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "hi" })] })
+    );
+    await vi.waitFor(() => assert(cancelled.frames.length > 2, "the turn hasn't started"));
+    cancelled.socket.send(JSON.stringify({ type: "cf_agent_chat_request_cancel", id: "r1" }));
+    const chunks = await streamedChunks(cancelled.frames, "r1");
+    expect(chunks.map(c => c.type)).toEqual(["start"]);
+  });
+
   it("reads a site page for the model and shows the visitor only its path", async () => {
     await fundChat();
     const { socket, frames, stub } = await openRoom("room-fetch");
@@ -445,7 +483,7 @@ describe("a chat turn", () => {
 
   it("answers with the error notice when the room can't reach its rate limiter", async () => {
     const { socket, frames, stub } = await openRoom("room-no-limiter");
-    await runInDurableObject(stub, (instance: ChatRoom) => {
+    await runInDurableObject(stub, instance => {
       Object.assign(instance, {
         env: { ...testEnv(), DEEPSEEK_API_KEY: "sk-test", RateLimiter: undefined }
       });
@@ -619,7 +657,7 @@ describe("ChatRoom leads", () => {
     );
     expect(replyText(await streamedChunks(room.frames, "r2"))).toBe("Second.");
     expect(sent.map(m => m.to)).toEqual(["inbox@example.com"]);
-    const leads = await runInDurableObject(room.stub, (instance: ChatRoom) =>
+    const leads = await runInDurableObject(room.stub, instance =>
       instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
     expect(leads).toEqual([{ contact: "a@b.c" }, { contact: "a@b.c" }]);
@@ -659,7 +697,7 @@ describe("ChatRoom leads", () => {
     expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("Noted.");
     expect(sent).toEqual([]);
     expect(errors.map(e => e[0])).toEqual(["opportunity email skipped: no EMAIL binding or inbox"]);
-    const leads = await runInDurableObject(room.stub, (instance: ChatRoom) =>
+    const leads = await runInDurableObject(room.stub, instance =>
       instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
     expect(leads).toEqual([{ contact: "a@b.c" }]);
@@ -669,9 +707,7 @@ describe("ChatRoom leads", () => {
 describe("ChatRoom recovery", () => {
   it("drops an interrupted turn instead of retrying it, since a retry bills the model again", async () => {
     const { stub } = await connectRoom("room-recovery");
-    const decision = await runInDurableObject(stub, (instance: ChatRoom) =>
-      instance.onChatRecovery()
-    );
+    const decision = await runInDurableObject(stub, instance => instance.onChatRecovery());
     expect(decision).toEqual({ continue: false });
   });
 });

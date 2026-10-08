@@ -49,16 +49,24 @@ export class RateLimiter extends DurableObject<Env> {
     );
   }
 
+  private async cachedBalance(): Promise<CachedBalance | undefined> {
+    return CachedBalance.safeParse(await this.ctx.storage.get(BALANCE_KEY)).data;
+  }
+
   // Fails OPEN on a lookup error, since the next 402 catches an empty account.
   async chatAvailable(
     apiKey: string,
     // Injected by tests only; an RPC caller passes just the key.
     fetcher: typeof fetch = fetch
   ): Promise<boolean> {
-    const cached = CachedBalance.safeParse(await this.ctx.storage.get(BALANCE_KEY)).data;
+    const cached = await this.cachedBalance();
     if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) return hasFunds(cached);
     try {
       const balance = await fetchDeepseekBalance(apiKey, fetcher);
+      // The object takes other calls during the fetch, so anything written meanwhile
+      // (a 402, another check) is newer than this reading.
+      const latest = await this.cachedBalance();
+      if (latest && latest.checkedAt !== cached?.checkedAt) return hasFunds(latest);
       await this.ctx.storage.put(BALANCE_KEY, {
         ...balance,
         checkedAt: Date.now()

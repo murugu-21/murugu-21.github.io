@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
@@ -114,6 +114,18 @@ const lastAudio = () => {
   return audio;
 };
 
+// An <audio> whose source fails: the error event fires, then play() rejects.
+// Each rejection, once settled, is pushed to `rejections`.
+const brokenAudio = (rejections: Promise<void>[] = []) =>
+  class extends FakeAudio {
+    override play() {
+      this.dispatchEvent(new Event("error"));
+      const rejected = Promise.reject(new DOMException("no source", "NotSupportedError"));
+      rejections.push(rejected.catch(() => {}));
+      return rejected;
+    }
+  };
+
 // The speed outlives a mount, so a test that fails mid-way must not leave the
 // next one at its speed. Set by each mount, run after each test.
 let resetRate: (() => Promise<void>) | null = null;
@@ -163,7 +175,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-test("reads the post block by block with speech synthesis when it has no audio", async () => {
+it("reads the post block by block with speech synthesis when it has no audio", async () => {
   serveAudio();
   const speech = fakeSpeech();
   const ui = await mount();
@@ -207,7 +219,7 @@ test("reads the post block by block with speech synthesis when it has no audio",
   await expect.poll(ui.listening).toBe(false);
 });
 
-test("lights the word a speech boundary points at, late in a long paragraph", async () => {
+it("lights the word a speech boundary points at, late in a long paragraph", async () => {
   serveAudio();
   const speech = fakeSpeech();
   const ui = await mount(`<article class="blog-post">
@@ -224,7 +236,7 @@ test("lights the word a speech boundary points at, late in a long paragraph", as
   expect(ui.block()).toBe("It is a long way to go.");
 });
 
-test("stops on a speech synthesis error and when the reader leaves the page", async () => {
+it("stops on a speech synthesis error and when the reader leaves the page", async () => {
   serveAudio();
   const speech = fakeSpeech();
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -245,7 +257,7 @@ test("stops on a speech synthesis error and when the reader leaves the page", as
   expect(speech.texts()).toEqual(["Read me", "Read me"]);
 });
 
-test("plays the pre-rendered audio, lighting the block and word under the playhead", async () => {
+it("plays the pre-rendered audio, lighting the block and word under the playhead", async () => {
   serveAudio(TIMINGS);
   vi.stubGlobal("Audio", FakeAudio);
   const ui = await mount();
@@ -290,21 +302,11 @@ test("plays the pre-rendered audio, lighting the block and word under the playhe
   await expect.poll(ui.listening).toBe(false);
 });
 
-test("falls back to speech synthesis when the audio fails to load", async () => {
+it("falls back to speech synthesis when the audio fails to load", async () => {
   serveAudio(TIMINGS);
   const speech = fakeSpeech();
   const rejections: Promise<void>[] = [];
-  vi.stubGlobal(
-    "Audio",
-    class extends FakeAudio {
-      override play() {
-        this.dispatchEvent(new Event("error"));
-        const rejected = Promise.reject(new DOMException("no source", "NotSupportedError"));
-        rejections.push(rejected.catch(() => {}));
-        return rejected;
-      }
-    }
-  );
+  vi.stubGlobal("Audio", brokenAudio(rejections));
   const ui = await mount();
 
   await userEvent.click(ui.listen);
@@ -317,7 +319,19 @@ test("falls back to speech synthesis when the audio fails to load", async () => 
   expect(speech.texts()).toEqual(["Read me"]);
 });
 
-test("falls back to speech synthesis when the audio player can't be built", async () => {
+it("goes back to Listen when the audio fails and there is no speech synthesis", async () => {
+  serveAudio(TIMINGS);
+  vi.stubGlobal("speechSynthesis", undefined);
+  vi.stubGlobal("Audio", brokenAudio());
+  const ui = await mount();
+
+  await userEvent.click(ui.listen);
+  await expect.poll(() => audios.length).toBe(1);
+  await expect.element(ui.listen).toBeEnabled();
+  await expect.poll(ui.listening).toBe(false);
+});
+
+it("falls back to speech synthesis when the audio player can't be built", async () => {
   serveAudio(TIMINGS);
   const speech = fakeSpeech();
   vi.stubGlobal(
@@ -337,7 +351,7 @@ test("falls back to speech synthesis when the audio player can't be built", asyn
   expect(speech.texts()).toEqual(["Read me"]);
 });
 
-test("a refused play leaves the control ready to try again", async () => {
+it("a refused play leaves the control ready to try again", async () => {
   serveAudio(TIMINGS);
   let refusals = 1;
   vi.stubGlobal(
@@ -358,7 +372,7 @@ test("a refused play leaves the control ready to try again", async () => {
   expect(audios.length).toBe(1);
 });
 
-test.each([
+it.each([
   ["timings in a format it doesn't know", () => serveAudio({ ...TIMINGS, version: 3 })],
   ["a network error", () => vi.stubGlobal("fetch", () => Promise.reject(new TypeError("offline")))]
 ])("uses speech synthesis after %s", async (_, serve) => {
@@ -373,7 +387,7 @@ test.each([
   expect(audios.length).toBe(0);
 });
 
-test("with neither audio nor speech synthesis, retries on the next press", async () => {
+it("with neither audio nor speech synthesis, retries on the next press", async () => {
   const requested = serveAudio();
   vi.stubGlobal("speechSynthesis", undefined);
   const ui = await mount();
@@ -386,7 +400,7 @@ test("with neither audio nor speech synthesis, retries on the next press", async
   await expect.element(ui.listen).toBeEnabled();
 });
 
-test("stays disabled on a page with nothing to read", async () => {
+it("stays disabled on a page with nothing to read", async () => {
   const bare = await mount("<article class='blog-post'><p>No post body here.</p></article>");
   await expect.element(bare.listen).toBeDisabled();
   await expect
@@ -402,7 +416,7 @@ test("stays disabled on a page with nothing to read", async () => {
     .toBeEnabled();
 });
 
-test("a speed picked while the audio loads applies once playback starts", async () => {
+it("a speed picked while the audio loads applies once playback starts", async () => {
   let respond: (res: Response) => void = () => {};
   vi.stubGlobal("fetch", () => new Promise<Response>(resolve => (respond = resolve)));
   const speech = fakeSpeech();
@@ -416,7 +430,7 @@ test("a speed picked while the audio loads applies once playback starts", async 
   expect(speech.rate()).toBe(1.25);
 });
 
-test("restarts the current block at the chosen speed and remembers it", async () => {
+it("restarts the current block at the chosen speed and remembers it", async () => {
   serveAudio();
   const speech = fakeSpeech();
   const ui = await mount();

@@ -1,7 +1,7 @@
 // Shared site fixture for the API and MCP tests: one description of what the
 // deployed build looks like, so the two surfaces are exercised against the
 // same content instead of drifting fixtures.
-import { env } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { assert, expect, vi } from "vitest";
 import { z } from "zod";
 
@@ -254,8 +254,14 @@ export function visitorStorage(instance: ChatRoom): Record<string, unknown> {
 
 /** The pool's env plus the bindings worker/test/wrangler.jsonc leaves out. */
 export function testEnv(options: TestEnvOptions = {}): Env {
+  // Named rather than spread: `env` is typed as the full Env, so a binding added to
+  // ../../wrangler.jsonc fails to type-check here until testEnv supplies it.
+  const { AUDIO, CHAT_DB, ChatRoom, RateLimiter } = env;
   return {
-    ...env,
+    AUDIO,
+    CHAT_DB,
+    ChatRoom,
+    RateLimiter,
     ASSETS: fakeAssets(options.assets),
     OPPORTUNITY_INBOX: options.inbox ?? "inbox@example.com",
     // Env requires it; empty means no key, as in local dev without the secret

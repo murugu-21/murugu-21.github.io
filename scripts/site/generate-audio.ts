@@ -21,14 +21,7 @@
 // changed, each loudness-levelled on its own. Run `bun run audio:align
 // <slug> --force` afterwards, since the changed blocks lose their words.
 import type { Buffer } from "node:buffer";
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  writeFileSync
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -54,7 +47,7 @@ import {
   round3,
   storedHash
 } from "./tts/timings.ts";
-import { assemble, pcmSeconds, readWav, sharedSampleRate, splice, writeWav } from "./tts/wav.ts";
+import { assemble, pcmFormat, pcmSeconds, splice } from "./tts/pcm.ts";
 import { ROOT } from "./site-dir.ts";
 
 // Env overrides are for A/B renders, not production.
@@ -81,6 +74,7 @@ function upload({ slug, mp3, json }: { slug: string; mp3: string; json: string }
 }
 
 type Reference = { audio: string; text: string };
+type Synth = { worker: SynthClient; reference: Reference; sampleRate: number };
 
 function checkPreconditions(): Reference {
   if (!existsSync(BLOG_DIST)) throw new Error(`${BLOG_DIST} missing; run \`bun run build\` first`);
@@ -106,38 +100,43 @@ const extractBlocks = (slug: string) =>
   postBlocks({ slug, html: readFileSync(join(BLOG_DIST, slug, "index.html"), "utf8") });
 
 // Applies tempo per chunk, so the timings measured afterwards are exact.
-function tempoChunk({ outDir, id }: { outDir: string; id: string }) {
+function tempoChunk({
+  outDir,
+  id,
+  sampleRate
+}: {
+  outDir: string;
+  id: string;
+  sampleRate: number;
+}) {
   const src = join(outDir, `${id}.wav`);
-  const dst = join(outDir, `${id}.tempo.wav`);
+  const dst = join(outDir, `${id}.tempo.pcm`);
   if (!existsSync(src)) throw new Error(`missing chunk ${id}`);
-  if (TEMPO === 1) copyFileSync(src, dst);
-  else ffmpeg(["-i", src, "-af", `atempo=${TEMPO}`, "-c:a", "pcm_s16le", dst]);
-  const wav = readWav(readFileSync(dst));
-  if (wav.pcm.length === 0) throw new Error(`empty chunk ${id}`);
-  return { id, ...wav };
+  const tempo = TEMPO === 1 ? [] : ["-af", `atempo=${TEMPO}`];
+  ffmpeg(["-i", src, ...tempo, ...pcmFormat(sampleRate), dst]);
+  const pcm = readFileSync(dst);
+  if (pcm.length === 0) throw new Error(`empty chunk ${id}`);
+  return pcm;
 }
 
 // Renders every chunk and returns them per block, tempo applied.
 async function synthesize({
   tmp,
   blockChunks,
-  worker,
-  reference
+  synth: { worker, reference, sampleRate }
 }: {
   tmp: string;
   blockChunks: Chunk[][];
-  worker: SynthClient;
-  reference: Reference;
+  synth: Synth;
 }) {
   const outDir = join(tmp, "chunks");
   const jobPath = join(tmp, "job.json");
   writeFileSync(jobPath, JSON.stringify({ reference, outDir, chunks: blockChunks.flat() }));
   await worker.runJob(jobPath);
-  const rendered = blockChunks.map(block => block.map(({ id }) => tempoChunk({ outDir, id })));
-  return { rendered, sampleRate: sharedSampleRate(rendered.flat()) };
+  return blockChunks.map(block => block.map(({ id }) => tempoChunk({ outDir, id, sampleRate })));
 }
 
-async function renderPost(slug: string, worker: SynthClient | null, reference: Reference) {
+async function renderPost(slug: string, synth: Synth | null) {
   const blocks = extractBlocks(slug);
   const hash = await spokenHash(blocks);
   const storedJson = options.force ? null : r2.get(audioKey(slug, "json"));
@@ -149,12 +148,13 @@ async function renderPost(slug: string, worker: SynthClient | null, reference: R
   console.log(
     `${slug}: ${blocks.length} blocks, ${blockChunks.flat().length} chunks, ${blocks.join(" ").length} chars`
   );
-  if (!worker) return;
+  if (!synth) return;
 
   // Nothing deletes this dir, so you can push a failed upload by hand.
   const tmp = mkdtempSync(join(tmpdir(), `audio-${slug}-`));
   console.log(`${slug}: rendering in ${tmp}`);
-  const { rendered, sampleRate } = await synthesize({ tmp, blockChunks, worker, reference });
+  const { sampleRate } = synth;
+  const rendered = await synthesize({ tmp, blockChunks, synth });
   const { pcm, timings } = assemble(rendered, sampleRate, GAPS);
   const duration = pcmSeconds(pcm, sampleRate);
   const doc = renderedTimings({
@@ -168,10 +168,11 @@ async function renderPost(slug: string, worker: SynthClient | null, reference: R
   });
 
   // Neither loudnorm nor the encode changes timing.
-  const fullWav = join(tmp, `${slug}.wav`);
+  const full = join(tmp, `${slug}.pcm`);
   const mp3 = join(tmp, `${slug}.mp3`);
-  writeFileSync(fullWav, writeWav(sampleRate, pcm));
-  ffmpeg(["-i", fullWav, ...(POSTFX ? ["-af", POSTFX] : []), "-b:a", "64k", mp3]);
+  writeFileSync(full, pcm);
+  const loudness = POSTFX ? ["-af", POSTFX] : [];
+  ffmpeg([...pcmFormat(sampleRate), "-i", full, ...loudness, "-b:a", "64k", mp3]);
   const json = join(tmp, `${slug}.json`);
   writeFileSync(json, JSON.stringify(doc));
   upload({ slug, mp3, json });
@@ -189,9 +190,9 @@ function decodeMp3({
   sampleRate: number;
   duration: number;
 }) {
-  const wav = `${mp3}.wav`;
-  ffmpeg(["-i", mp3, "-ac", "1", "-ar", String(sampleRate), "-c:a", "pcm_s16le", wav]);
-  const { pcm } = readWav(readFileSync(wav));
+  const raw = `${mp3}.pcm`;
+  ffmpeg(["-i", mp3, ...pcmFormat(sampleRate), raw]);
+  const pcm = readFileSync(raw);
   const decoded = pcmSeconds(pcm, sampleRate);
   if (Math.abs(decoded - duration) > 0.01) {
     throw new Error(`${mp3} decodes to ${decoded.toFixed(3)} s, timings say ${duration} s`);
@@ -214,15 +215,15 @@ function levelBlock({
   sampleRate: number;
 }) {
   if (!POSTFX) return pcm;
-  const src = join(tmp, `${id}.wav`);
-  const dst = join(tmp, `${id}.level.wav`);
-  writeFileSync(src, writeWav(sampleRate, pcm));
-  // loudnorm resamples to 192 kHz internally.
-  ffmpeg(["-i", src, "-af", POSTFX, "-ar", String(sampleRate), "-c:a", "pcm_s16le", dst]);
-  return readWav(readFileSync(dst)).pcm;
+  const src = join(tmp, `${id}.pcm`);
+  const dst = join(tmp, `${id}.level.pcm`);
+  writeFileSync(src, pcm);
+  // loudnorm resamples to 192 kHz internally; the output's -ar brings it back.
+  ffmpeg([...pcmFormat(sampleRate), "-i", src, "-af", POSTFX, ...pcmFormat(sampleRate), dst]);
+  return readFileSync(dst);
 }
 
-async function patchPost(slug: string, worker: SynthClient | null, reference: Reference) {
+async function patchPost(slug: string, synth: Synth | null) {
   const blocks = extractBlocks(slug);
   const storedJson = r2.get(audioKey(slug, "json"));
   if (!storedJson) {
@@ -239,8 +240,12 @@ async function patchPost(slug: string, worker: SynthClient | null, reference: Re
   for (const i of changed) {
     console.log(`  b${i} old: ${timings.blocks[i].text}\n  b${i} new: ${blocks[i]}`);
   }
-  if (!worker) return;
+  if (!synth) return;
 
+  const { sampleRate } = timings;
+  if (synth.sampleRate !== sampleRate) {
+    throw new Error(`synth.py writes ${synth.sampleRate} Hz, stored audio is ${sampleRate} Hz`);
+  }
   const storedMp3 = r2.get(audioKey(slug, "mp3"));
   if (!storedMp3) throw new Error("timings in R2 but no MP3");
   const tmp = mkdtempSync(join(tmpdir(), `audio-${slug}-patch-`));
@@ -251,30 +256,25 @@ async function patchPost(slug: string, worker: SynthClient | null, reference: Re
   writeFileSync(join(backup, `${slug}.json`), storedJson);
   console.log(`${slug}: R2 objects backed up in ${backup}, patching in ${tmp}`);
 
-  const { sampleRate } = timings;
   const oldPcm = decodeMp3({ mp3: oldMp3, sampleRate, duration: timings.duration });
-  const synth = await synthesize({
+  const rendered = await synthesize({
     tmp,
     blockChunks: changed.map(i => chunkBlock(blocks[i], i)),
-    worker,
-    reference
+    synth
   });
-  if (synth.sampleRate !== sampleRate) {
-    throw new Error(`synthesized at ${synth.sampleRate} Hz, stored audio is ${sampleRate} Hz`);
-  }
   const replace = new Map(
     changed.map((b, k) => {
-      const { pcm } = assemble([synth.rendered[k]], sampleRate, GAPS);
+      const { pcm } = assemble([rendered[k]], sampleRate, GAPS);
       return [b, levelBlock({ tmp, id: `b${b}`, pcm, sampleRate })];
     })
   );
   const spliced = splice({ pcm: oldPcm, sampleRate, blocks: timings.blocks, replace });
 
-  const wav = join(tmp, `${slug}.wav`);
+  const full = join(tmp, `${slug}.pcm`);
   const mp3 = join(tmp, `${slug}.mp3`);
-  writeFileSync(wav, writeWav(sampleRate, spliced.pcm));
+  writeFileSync(full, spliced.pcm);
   // No loudnorm here: the untouched audio is already levelled.
-  ffmpeg(["-i", wav, "-b:a", "64k", mp3]);
+  ffmpeg([...pcmFormat(sampleRate), "-i", full, "-b:a", "64k", mp3]);
   const duration = round3(pcmSeconds(spliced.pcm, sampleRate));
   decodeMp3({ mp3, sampleRate, duration });
 
@@ -315,12 +315,15 @@ async function renderAll() {
   }
 
   await using worker = options["dry-run"] ? null : synthClient(startJsonLines(PYTHON, [WORKER]));
+  // Null on a dry run.
+  let synth: Synth | null = null;
   if (worker) {
     const ready = await worker.ready;
     console.log(`model loaded in ${ready.loadSeconds}s`);
+    synth = { worker, reference, sampleRate: ready.sampleRate };
   }
   const render = options.patch ? patchPost : renderPost;
-  const failures = await runEach(targets, slug => render(slug, worker, reference));
+  const failures = await runEach(targets, slug => render(slug, synth));
   if (failures.length) process.exitCode = 1;
 }
 

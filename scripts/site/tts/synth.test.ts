@@ -52,8 +52,8 @@ describe("synthClient over synth.py's JSON lines", () => {
       jsonLines({ command: "synth.py", stdin, stdout, exited: Promise.resolve() })
     );
 
-    stdout.write('{"loadSeconds":12.5}\n');
-    expect(await synth.ready).toEqual({ loadSeconds: 12.5 });
+    stdout.write('{"loadSeconds":12.5,"sampleRate":24000}\n');
+    expect(await synth.ready).toEqual({ loadSeconds: 12.5, sampleRate: 24000 });
 
     const failing = synth.runJob("/tmp/audio-react/job.json");
     // One reply split across writes, as a pipe may deliver it.

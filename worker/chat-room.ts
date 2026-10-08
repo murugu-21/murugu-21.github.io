@@ -178,10 +178,8 @@ export class ChatRoom extends AIChatAgent<Env> {
       failure = await this.failureNotice(err);
     }
     // Every turn ends in prose or a notice; the widget waits for one or the other.
-    // A cancelled turn ends quietly.
-    const notice = call.abortSignal?.aborted
-      ? null
-      : (failure ?? (wroteText ? null : ERROR_NOTICE));
+    // A cancelled turn still ends quietly: the SDK drops what is written after a cancel.
+    const notice = failure ?? (wroteText ? null : ERROR_NOTICE);
     if (notice) writer.write({ type: "data-notice", data: notice });
     writer.write({ type: "finish" });
   }

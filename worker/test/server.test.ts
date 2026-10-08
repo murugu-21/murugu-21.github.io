@@ -1,17 +1,17 @@
 // The worker entry: which requests it claims, which fall through to static
 // assets, and how a miss is answered.
-import { env, runInDurableObject } from "cloudflare:test";
+import { runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
+import fc from "fast-check";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
 import { parseRange } from "#worker/audio.ts";
-import { ChatRoom } from "#worker/chat-room.ts";
-import { markdownNotFound, prefersMarkdown, serveAsset } from "#worker/not-found.ts";
+import { markdownNotFound } from "#worker/not-found.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/visitor.ts";
 import worker from "#worker/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,
   connectRoom,
-  fakeAssets,
   fakeFetcher,
   fetchWorker,
   LLMS_TXT,
@@ -79,28 +79,10 @@ describe("the chat-room WebSocket", () => {
       [VISITOR_COUNTRY_HEADER]: "XX",
       [VISITOR_IP_HEADER]: "203.0.113.66"
     });
-    const stored = await runInDurableObject(stub, async (instance: ChatRoom) =>
-      visitorStorage(instance)
-    );
+    const stored = await runInDurableObject(stub, visitorStorage);
     expect(stored.visitor_country).toBe("IN");
     // Cloudflare sent no IP, so the forged one must not survive either.
     expect(stored.visitor_ip).toBeUndefined();
-  });
-});
-
-describe("prefersMarkdown", () => {
-  it.each([
-    [null, true],
-    // curl and the fetch default send */*.
-    ["*/*", true],
-    ["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", false],
-    ["application/xhtml+xml", false],
-    ["text/markdown, text/html;q=0.5", true],
-    ["TEXT/MARKDOWN", true],
-    ["application/json", true],
-    ["text/plain", true]
-  ])("answers Accept: %s with markdown: %s", (accept, expected) => {
-    expect(prefersMarkdown(accept)).toBe(expected);
   });
 });
 
@@ -128,24 +110,35 @@ describe("markdownNotFound", () => {
   });
 });
 
-describe("serveAsset", () => {
-  const serve = (path: string, init?: RequestInit) =>
-    serveAsset(new Request(`https://murugappan.dev${path}`, init), fakeAssets());
-
+describe("asset requests", () => {
   it("passes a hit through untouched", async () => {
-    const res = await serve("/llms.txt");
+    const res = await fetchWorker("/llms.txt");
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(LLMS_TXT);
   });
 
-  it("answers a miss with markdown for a machine client", async () => {
-    const res = await serve("/nope");
+  it.each([
+    [null, "text/markdown"],
+    // curl and the fetch default send */*.
+    ["*/*", "text/markdown"],
+    ["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "text/html"],
+    ["application/xhtml+xml", "text/html"],
+    ["text/markdown, text/html;q=0.5", "text/markdown"],
+    ["text/markdown;q=0.5, text/html", "text/html"],
+    // Equal q: header order decides.
+    ["text/html, text/markdown", "text/html"],
+    ["text/html;q=0", "text/markdown"],
+    ["TEXT/MARKDOWN", "text/markdown"],
+    ["application/json", "text/markdown"],
+    ["text/plain", "text/markdown"]
+  ])("answers Accept: %s with %s", async (accept, type) => {
+    const res = await fetchWorker("/nope", accept === null ? {} : { headers: { Accept: accept } });
     expect(res.status).toBe(404);
-    expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
+    expect(res.headers.get("Content-Type")).toMatch(new RegExp(`^${type}`));
   });
 
   it("serves the styled page to a browser, and declares the negotiation", async () => {
-    const res = await serve("/nope", {
+    const res = await fetchWorker("/nope", {
       headers: { Accept: "text/html,application/xhtml+xml" }
     });
     expect(res.status).toBe(404);
@@ -156,23 +149,23 @@ describe("serveAsset", () => {
   });
 
   it("serves the blog's own 404 page for a miss under /blog/", async () => {
-    const res = await serve("/blog/no-such-post/", { headers: { Accept: "text/html" } });
+    const res = await fetchWorker("/blog/no-such-post/", { headers: { Accept: "text/html" } });
     expect(res.status).toBe(404);
     expect(await res.text()).toBe(BLOG_NOT_FOUND_HTML);
   });
 
   it("falls back to markdown when the build has no 404 page", async () => {
-    const res = await serveAsset(
-      new Request("https://murugappan.dev/nope", { headers: { Accept: "text/html" } }),
-      fakeAssets({ "/404": null })
-    );
+    const res = await fetchWorker("/nope", {
+      headers: { Accept: "text/html" },
+      env: { assets: { "/404": null } }
+    });
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
     expect(await res.text()).toContain("# 404 Not Found");
   });
 
   it("sends the page's headers but no body for a HEAD", async () => {
-    const res = await serve("/nope", { method: "HEAD", headers: { Accept: "text/html" } });
+    const res = await fetchWorker("/nope", { method: "HEAD", headers: { Accept: "text/html" } });
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/html/);
     expect(await res.text()).toBe("");
@@ -275,5 +268,36 @@ describe("parseRange", () => {
     [null, null]
   ])("parses %s against a 100-byte object", (header, expected) => {
     expect(parseRange(header, 100)).toEqual(expected);
+  });
+
+  it("returns only non-empty ranges inside the object, and serves any byte a range names", () => {
+    const position = fc.oneof(
+      fc.constant(""),
+      fc.nat(300).map(String),
+      fc.stringMatching(/^\d{1,25}$/)
+    );
+    const header = fc.oneof(
+      fc.tuple(position, position).map(([first, last]) => `bytes=${first}-${last}`),
+      fc.string()
+    );
+    fc.assert(
+      fc.property(header, fc.nat(200), (h, size) => {
+        const range = parseRange(h, size);
+        if (range === null || range === "unsatisfiable") return;
+        expect({
+          nonEmpty: range.length >= 1,
+          inside: range.offset + range.length <= size
+        }).toEqual({
+          nonEmpty: true,
+          inside: true
+        });
+      })
+    );
+    fc.assert(
+      fc.property(fc.nat(199), fc.nat(199), (first, extra) => {
+        const size = first + 1 + extra;
+        expect(parseRange(`bytes=${first}-${first}`, size)).toEqual({ offset: first, length: 1 });
+      })
+    );
   });
 });

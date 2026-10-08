@@ -8,10 +8,7 @@ const MAX_CHARS = 24_000;
 
 function htmlToText(html: string): string {
   const scoped =
-    /<article[\s\S]*?<\/article>/i.exec(html)?.[0] ??
-    /<main[\s\S]*?<\/main>/i.exec(html)?.[0] ??
-    /<body[\s\S]*?<\/body>/i.exec(html)?.[0] ??
-    html;
+    /<main[\s\S]*?<\/main>/i.exec(html)?.[0] ?? /<body[\s\S]*?<\/body>/i.exec(html)?.[0] ?? html;
   return scoped
     .replaceAll(/<script[\s\S]*?<\/script>/gi, " ")
     .replaceAll(/<style[\s\S]*?<\/style>/gi, " ")
