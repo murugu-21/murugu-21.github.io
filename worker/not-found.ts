@@ -2,18 +2,12 @@
 // entry points for everything else. Relies on `not_found_handling: "none"`
 // (wrangler.jsonc) so misses reach the Worker, which fetches the 404 page itself.
 
+import type { Context } from "hono";
+import { accepts } from "hono/accepts";
+
 import { API_PATHS, VERSIONED_API_BASE } from "#contracts/api/routes.ts";
 
 const SITE_ORIGIN = "https://murugappan.dev";
-
-/** Markdown unless the client asks for HTML; no Accept or a wildcard gets markdown. */
-export function prefersMarkdown(accept: string | null): boolean {
-  if (!accept) return true;
-  const lower = accept.toLowerCase();
-  if (lower.includes("text/markdown")) return true;
-  if (lower.includes("text/html") || lower.includes("application/xhtml+xml")) return false;
-  return true;
-}
 
 const ENTRY_POINTS: ReadonlyArray<[string, string]> = [
   ["/sitemap.xml", "Every indexable URL on this site"],
@@ -82,8 +76,6 @@ export function markdownNotFound(pathname: string, method: string): Response {
   });
 }
 
-type AssetsLike = { fetch(request: Request): Promise<Response> };
-
 /** Falls back to markdown if the 404 page is missing from the build. */
 function htmlNotFound(request: Request, response: Response): Response {
   if (!(response.headers.get("Content-Type") ?? "").startsWith("text/html"))
@@ -95,20 +87,25 @@ function htmlNotFound(request: Request, response: Response): Response {
   return html;
 }
 
-/** Serves from static assets; only a 404 is rewritten. */
-export async function serveAsset(request: Request, assets: AssetsLike): Promise<Response> {
-  const response = await assets.fetch(request);
+/** Serves from static assets. A 404 gets markdown unless `Accept` ranks HTML or XHTML highest. */
+export async function serveAsset(c: Context<{ Bindings: Env }>): Promise<Response> {
+  const request = c.req.raw;
+  const response = await c.env.ASSETS.fetch(request);
   if (response.status !== 404) return response;
 
-  const { pathname } = new URL(request.url);
-  return prefersMarkdown(request.headers.get("Accept"))
-    ? markdownNotFound(pathname, request.method)
-    : htmlNotFound(request, await notFoundPage(request, assets));
+  const negotiated = accepts(c, {
+    header: "Accept",
+    supports: ["text/markdown", "text/html", "application/xhtml+xml"],
+    default: "text/markdown"
+  });
+  return negotiated === "text/markdown"
+    ? markdownNotFound(new URL(request.url).pathname, request.method)
+    : htmlNotFound(request, await notFoundPage(request, c.env.ASSETS));
 }
 
 // The blog's 404 under /blog/, the site's elsewhere. Fetched as GET (the HEAD
 // body is dropped later) and re-statused 404, since the binding answers it 200.
-async function notFoundPage(request: Request, assets: AssetsLike): Promise<Response> {
+async function notFoundPage(request: Request, assets: Fetcher): Promise<Response> {
   const { pathname } = new URL(request.url);
   const page = pathname === "/blog" || pathname.startsWith("/blog/") ? "/blog/404/" : "/404";
   const res = await assets.fetch(

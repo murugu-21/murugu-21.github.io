@@ -5,13 +5,12 @@ import { env } from "cloudflare:workers";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
 import { parseRange } from "#worker/audio.ts";
-import { markdownNotFound, prefersMarkdown, serveAsset } from "#worker/not-found.ts";
+import { markdownNotFound } from "#worker/not-found.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/visitor.ts";
 import worker from "#worker/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,
   connectRoom,
-  fakeAssets,
   fakeFetcher,
   fetchWorker,
   LLMS_TXT,
@@ -86,22 +85,6 @@ describe("the chat-room WebSocket", () => {
   });
 });
 
-describe("prefersMarkdown", () => {
-  it.each([
-    [null, true],
-    // curl and the fetch default send */*.
-    ["*/*", true],
-    ["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", false],
-    ["application/xhtml+xml", false],
-    ["text/markdown, text/html;q=0.5", true],
-    ["TEXT/MARKDOWN", true],
-    ["application/json", true],
-    ["text/plain", true]
-  ])("answers Accept: %s with markdown: %s", (accept, expected) => {
-    expect(prefersMarkdown(accept)).toBe(expected);
-  });
-});
-
 describe("markdownNotFound", () => {
   it("is an unindexed, uncached 404 that declares the negotiation", async () => {
     const res = markdownNotFound("/nope", "GET");
@@ -126,24 +109,35 @@ describe("markdownNotFound", () => {
   });
 });
 
-describe("serveAsset", () => {
-  const serve = (path: string, init?: RequestInit) =>
-    serveAsset(new Request(`https://murugappan.dev${path}`, init), fakeAssets());
-
+describe("asset requests", () => {
   it("passes a hit through untouched", async () => {
-    const res = await serve("/llms.txt");
+    const res = await fetchWorker("/llms.txt");
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(LLMS_TXT);
   });
 
-  it("answers a miss with markdown for a machine client", async () => {
-    const res = await serve("/nope");
+  it.each([
+    [null, "text/markdown"],
+    // curl and the fetch default send */*.
+    ["*/*", "text/markdown"],
+    ["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "text/html"],
+    ["application/xhtml+xml", "text/html"],
+    ["text/markdown, text/html;q=0.5", "text/markdown"],
+    ["text/markdown;q=0.5, text/html", "text/html"],
+    // Equal q: header order decides.
+    ["text/html, text/markdown", "text/html"],
+    ["text/html;q=0", "text/markdown"],
+    ["TEXT/MARKDOWN", "text/markdown"],
+    ["application/json", "text/markdown"],
+    ["text/plain", "text/markdown"]
+  ])("answers Accept: %s with %s", async (accept, type) => {
+    const res = await fetchWorker("/nope", accept === null ? {} : { headers: { Accept: accept } });
     expect(res.status).toBe(404);
-    expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
+    expect(res.headers.get("Content-Type")).toMatch(new RegExp(`^${type}`));
   });
 
   it("serves the styled page to a browser, and declares the negotiation", async () => {
-    const res = await serve("/nope", {
+    const res = await fetchWorker("/nope", {
       headers: { Accept: "text/html,application/xhtml+xml" }
     });
     expect(res.status).toBe(404);
@@ -154,23 +148,23 @@ describe("serveAsset", () => {
   });
 
   it("serves the blog's own 404 page for a miss under /blog/", async () => {
-    const res = await serve("/blog/no-such-post/", { headers: { Accept: "text/html" } });
+    const res = await fetchWorker("/blog/no-such-post/", { headers: { Accept: "text/html" } });
     expect(res.status).toBe(404);
     expect(await res.text()).toBe(BLOG_NOT_FOUND_HTML);
   });
 
   it("falls back to markdown when the build has no 404 page", async () => {
-    const res = await serveAsset(
-      new Request("https://murugappan.dev/nope", { headers: { Accept: "text/html" } }),
-      fakeAssets({ "/404": null })
-    );
+    const res = await fetchWorker("/nope", {
+      headers: { Accept: "text/html" },
+      env: { assets: { "/404": null } }
+    });
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/markdown/);
     expect(await res.text()).toContain("# 404 Not Found");
   });
 
   it("sends the page's headers but no body for a HEAD", async () => {
-    const res = await serve("/nope", { method: "HEAD", headers: { Accept: "text/html" } });
+    const res = await fetchWorker("/nope", { method: "HEAD", headers: { Accept: "text/html" } });
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toMatch(/^text\/html/);
     expect(await res.text()).toBe("");

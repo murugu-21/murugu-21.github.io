@@ -37,13 +37,13 @@ async function chatRoom(c: AppContext): Promise<Response> {
   const response = await routeAgentRequest(c.req.raw, c.env, {
     onBeforeConnect: request => withVisitorHeaders(c, request)
   });
-  return response ?? serveAsset(c.req.raw, c.env.ASSETS);
+  return response ?? serveAsset(c);
 }
 
 // Only the chat room's socket and the history its widget loads. routeAgentRequest
 // alone would expose every Durable Object, RateLimiter included.
 app.get("/agents/chat-room/:room", c =>
-  c.req.header("Upgrade") === "websocket" ? chatRoom(c) : serveAsset(c.req.raw, c.env.ASSETS)
+  c.req.header("Upgrade") === "websocket" ? chatRoom(c) : serveAsset(c)
 );
 app.get("/agents/chat-room/:room/get-messages", chatRoom);
 
@@ -61,6 +61,6 @@ app.route("/mcp", mcp);
 app.route("/blog/audio", audio);
 
 // Asset and route misses: a content-negotiated 404 (pages bypass the Worker).
-app.all("*", c => serveAsset(c.req.raw, c.env.ASSETS));
+app.all("*", c => serveAsset(c));
 
 export default app;
