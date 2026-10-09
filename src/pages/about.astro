@@ -15,7 +15,7 @@ import {
   socialMediaLinks
 } from "#content/portfolio.ts";
 import { resumeContact } from "#content/resume.ts";
-import { groupByCompany } from "#src/lib/experience.ts";
+import { groupByCompany } from "#content/experience.ts";
 
 // Groups by *consecutive* company, so returning to an employer stays two entries.
 const stints = groupByCompany(workExperiences);

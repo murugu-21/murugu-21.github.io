@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { Dataset } from "#contracts/api/dataset.ts";
-import { buildDataset, splitSkillItems, type DatasetInput } from "#src/lib/dataset.ts";
+import { buildDataset, splitSkillItems, type DatasetInput } from "./dataset.ts";
 
 const DATASET_INPUT: DatasetInput = {
   greeting: {
@@ -38,7 +38,7 @@ const DATASET_INPUT: DatasetInput = {
   skillsSection: { subTitle: "FULL-STACK", skills: ["⚡ Build TypeScript"] },
   skillsCategories: [{ category: "Languages", items: "TypeScript, Python" }],
   techStack: {
-    experience: [{ stack: "Backend", tools: ["Node.js"], progressPercentage: "90%" }]
+    experience: [{ stack: "Backend", tools: [{ name: "Node.js" }], progressPercentage: "90%" }]
   },
   educationInfo: [
     {

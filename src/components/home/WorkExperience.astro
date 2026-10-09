@@ -12,7 +12,7 @@ import {
   monthsBetween,
   periodBounds,
   totalExperienceMonths
-} from "#src/lib/experience.ts";
+} from "#content/experience.ts";
 
 // Ongoing durations are recomputed in the browser (script below) to stay current.
 const now = currentMonth();
@@ -148,7 +148,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     formatDuration,
     monthsBetween,
     totalExperienceMonths
-  } from "#src/lib/experience.ts";
+  } from "#content/experience.ts";
   import { parseStringArray } from "#src/lib/data-attributes.ts";
 
   const now = currentMonth();

@@ -10,7 +10,7 @@ import type { PostSummary } from "#contracts/api/posts.ts";
 import type { ChatRoom } from "#worker/chat-room.ts";
 import worker from "#worker/server.ts";
 
-// What the site build prerenders to /api/dataset.json (src/lib/dataset.ts builds it).
+// What the site build prerenders to /api/dataset.json (content/dataset.ts builds it).
 export const DATASET: Dataset = {
   person: {
     name: "Murugappan M",

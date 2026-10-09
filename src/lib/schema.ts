@@ -1,7 +1,7 @@
 // The schema.org nodes every page shares.
 import type { Graph, Person, Thing, WebPage, WebSite } from "schema-dts";
 import { sameAs, skillsCategories, socialMediaLinks } from "#content/portfolio.ts";
-import { splitSkillItems } from "#src/lib/dataset.ts";
+import { splitSkillItems } from "#content/dataset.ts";
 import { AUTHOR, SITE_ORIGIN } from "#content/site.ts";
 import { PERSON_ID, SITE_DESCRIPTION, WEBSITE_ID } from "#src/lib/site.ts";
 

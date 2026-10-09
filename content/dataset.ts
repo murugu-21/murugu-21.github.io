@@ -1,8 +1,10 @@
 // Builds the dataset in contracts/api/dataset.ts from content/portfolio.ts and resume.ts.
-// Input is typed structurally so a test can build one without the portfolio's images.
+// Input is typed structurally so a test can build a small one.
 
 import type { Dataset, ExperienceEntry } from "#contracts/api/dataset.ts";
 import { parsePeriod } from "./experience.ts";
+import * as portfolio from "./portfolio.ts";
+import * as resume from "./resume.ts";
 
 export type DatasetInput = {
   greeting: { username: string; subTitle: string; resumePath: string };
@@ -35,7 +37,7 @@ export type DatasetInput = {
   techStack: {
     experience: ReadonlyArray<{
       stack: string;
-      tools: ReadonlyArray<string>;
+      tools: ReadonlyArray<{ name: string }>;
       progressPercentage: string;
     }>;
   };
@@ -133,7 +135,8 @@ export function buildDataset(input: DatasetInput): Dataset {
     })),
     proficiencies: techStack.experience.map(e => ({
       area: e.stack,
-      tools: [...e.tools],
+      // Names only: the icon keys are a rendering concern.
+      tools: e.tools.map(t => t.name),
       level: Number.parseInt(e.progressPercentage, 10)
     })),
     education: educationInfo.map(school => {
@@ -162,3 +165,5 @@ export function buildDataset(input: DatasetInput): Dataset {
     ]
   };
 }
+
+export const siteDataset = (): Dataset => buildDataset({ ...portfolio, ...resume });

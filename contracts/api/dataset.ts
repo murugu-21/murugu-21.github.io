@@ -1,4 +1,4 @@
-// The dataset the site prerenders to /api/dataset.json (src/lib/dataset.ts builds it) and the
+// The dataset the site prerenders to /api/dataset.json (content/dataset.ts builds it) and the
 // Worker reads via ASSETS, so the API cannot drift from the site.
 
 import { z } from "zod";
