@@ -1,6 +1,7 @@
 ---
 import { Image } from "astro:assets";
-import { workExperiences } from "#src/data/portfolio.ts";
+import { workExperiences } from "#content/portfolio.ts";
+import { LOGOS } from "#src/data/logos.ts";
 import Section from "./Section.astro";
 import SectionTitle from "./SectionTitle.astro";
 import {
@@ -28,7 +29,7 @@ const duration = (period: string) => {
 
 const stints = groupByCompany(workExperiences).map(stint => ({
   ...stint,
-  logo: stint.roles[0].companyLogo,
+  logo: LOGOS[stint.roles[0].companyLogo],
   duration: duration(stint.span),
   partTime: stint.roles.every(r => r.partTime),
   roles: stint.roles.map(role => ({ ...role, duration: duration(role.date) }))

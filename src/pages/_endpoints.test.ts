@@ -19,7 +19,6 @@ import { GET as homeMarkdown } from "./index.md.ts";
 import { GET as siteLlms } from "./llms.txt.ts";
 
 vi.mock("astro:content", async () => (await import("#src/lib/blog/fixtures.ts")).astroContentMock);
-vi.mock("astro:env/server", () => ({ RESUME_PHONE: undefined }));
 
 const POSTS = [
   blogPost({

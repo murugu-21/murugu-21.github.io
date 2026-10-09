@@ -1,10 +1,5 @@
-import type { ImageMetadata } from "astro";
-import { RESUME_PHONE } from "astro:env/server";
-
-import medmeLogo from "#src/assets/images/medmeLogo.png";
-import hypervergeLogo from "#src/assets/images/hypervergeLogo.png";
-import samsungLogo from "#src/assets/images/samsungLogo.png";
-import kumaraguruLogo from "#src/assets/images/kumaraguruLogo.png";
+// The image beside each employer and school; src/data/logos.ts maps each key to its file.
+export type Logo = "medme" | "hyperverge" | "samsung" | "kumaraguru";
 
 export const greeting = {
   username: "Murugappan M",
@@ -117,7 +112,7 @@ export const techStack = {
 interface WorkExperience {
   role: string;
   company: string;
-  companyLogo: ImageMetadata;
+  companyLogo: Logo;
   location: string;
   date: string;
   desc: string;
@@ -130,7 +125,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "Software Engineer II",
     company: "MedMe Health",
-    companyLogo: medmeLogo,
+    companyLogo: "medme",
     location: "Canada (remote)",
     date: "December 2025 – Present",
     desc: "Leading design of the event-driven RPA platform that automates pharmacy admin work at this YC-backed healthtech startup.",
@@ -143,7 +138,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "SDE 2",
     company: "HyperVerge",
-    companyLogo: hypervergeLogo,
+    companyLogo: "hyperverge",
     location: "Bangalore",
     date: "April 2025 – December 2025",
     desc: "Owned core platform architecture for HyperStart, the company's contract lifecycle management (CLM) product.",
@@ -157,7 +152,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "SDE 1",
     company: "HyperVerge",
-    companyLogo: hypervergeLogo,
+    companyLogo: "hyperverge",
     location: "Bangalore",
     date: "July 2023 – March 2025",
     desc: "Founding engineer on HyperStart CLM, owning features from design through to customer outcome as the product scaled to $300k ARR.",
@@ -173,7 +168,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "SDE Intern",
     company: "HyperVerge",
-    companyLogo: hypervergeLogo,
+    companyLogo: "hyperverge",
     location: "Bangalore",
     date: "August 2022 – June 2023",
     desc: "Built core ingestion and access-control foundations for the CLM platform.",
@@ -185,7 +180,7 @@ export const workExperiences: WorkExperience[] = [
   {
     role: "R&D Intern",
     company: "Samsung R&D Institute India",
-    companyLogo: samsungLogo,
+    companyLogo: "samsung",
     location: "Bangalore (remote)",
     date: "December 2021 – August 2022",
     partTime: true,
@@ -219,7 +214,7 @@ export const skillsCategories = [
 
 interface Education {
   schoolName: string;
-  logo: ImageMetadata;
+  logo: Logo;
   subHeader: string;
   duration: string;
   desc: string;
@@ -231,7 +226,7 @@ interface Education {
 export const educationInfo: Education[] = [
   {
     schoolName: "Kumaraguru College of Technology",
-    logo: kumaraguruLogo,
+    logo: "kumaraguru",
     subHeader: "Bachelor of Engineering in Computer Science",
     duration: "June 2019 - April 2023",
     desc: "Coimbatore, India.",
@@ -295,9 +290,6 @@ export const blogSection = {
 export const contactInfo = {
   title: "Contact Me ☎️",
   subtitle: "Want to discuss a project, a role, or just say hi? My inbox is open.",
-  // Never hardcoded: comes from RESUME_PHONE. Renders only in GithubCard's
-  // no-profile fallback.
-  number: RESUME_PHONE ?? "",
   emailAddress: socialMediaLinks.gmail
 };
 

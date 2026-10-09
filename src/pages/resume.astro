@@ -1,8 +1,9 @@
 ---
 // Print source for dist/resume.pdf (scripts/site/generate-resume.ts): no Layout.astro,
 // no chat or theme toggle, always light.
-import { greeting, workExperiences, skillsCategories, educationInfo } from "#src/data/portfolio.ts";
-import { resumeContact } from "#src/data/resume.ts";
+import { RESUME_PHONE } from "astro:env/server";
+import { greeting, workExperiences, skillsCategories, educationInfo } from "#content/portfolio.ts";
+import { resumeContact } from "#content/resume.ts";
 import { groupByCompany } from "#src/lib/experience.ts";
 import { fetchPinnedRepos } from "#src/lib/github.ts";
 // A webfont, so the CF build image's Chromium prints the same glyphs as local Chrome.
@@ -39,9 +40,9 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
           {/* A no-break space before each pipe, and nowrap links and phone (below), so a wrapped line never starts with a pipe. */}
           {resumeContact.location}
           {"\u00A0| "}
-          {resumeContact.phone && (
+          {RESUME_PHONE && (
             <>
-              <span class="whitespace-nowrap">{resumeContact.phone}</span>
+              <span class="whitespace-nowrap">{RESUME_PHONE}</span>
               {"\u00A0| "}
             </>
           )}

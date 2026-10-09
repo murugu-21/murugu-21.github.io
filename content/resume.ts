@@ -1,17 +1,12 @@
-import { RESUME_PHONE } from "astro:env/server";
+import { socialMediaLinks } from "./portfolio.ts";
+import { SITE_ORIGIN } from "./site.ts";
 
-import { SITE_ORIGIN } from "#content/site.ts";
-import { socialMediaLinks } from "./portfolio";
-
-// The phone number is never hardcoded: it comes from the RESUME_PHONE build
-// env var, and the contact line omits it when unset.
-
+// No phone number in source: the pages that show one read RESUME_PHONE from astro:env.
 interface ResumeContact {
   name: string;
   title: string;
   location: string;
   email: string;
-  phone: string;
   linkedin: string;
   github: string;
   site: string;
@@ -22,7 +17,6 @@ export const resumeContact: ResumeContact = {
   title: "Full Stack Engineer",
   location: "Bangalore, India",
   email: socialMediaLinks.gmail,
-  phone: RESUME_PHONE ?? "",
   linkedin: socialMediaLinks.linkedin,
   github: socialMediaLinks.github,
   site: SITE_ORIGIN

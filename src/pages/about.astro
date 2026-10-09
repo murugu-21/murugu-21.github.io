@@ -1,6 +1,6 @@
 ---
 // Canonical entity page (schema.org ProfilePage), sourced only from
-// src/data/portfolio.ts + resume.ts.
+// content/portfolio.ts + resume.ts.
 import Layout from "#src/layouts/Layout.astro";
 import Header from "#src/components/Header.astro";
 import LinkRow from "#src/components/LinkRow.astro";
@@ -13,8 +13,8 @@ import {
   educationInfo,
   openSourceCard,
   socialMediaLinks
-} from "#src/data/portfolio.ts";
-import { resumeContact } from "#src/data/resume.ts";
+} from "#content/portfolio.ts";
+import { resumeContact } from "#content/resume.ts";
 import { groupByCompany } from "#src/lib/experience.ts";
 
 // Groups by *consecutive* company, so returning to an employer stays two entries.

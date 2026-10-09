@@ -16,8 +16,8 @@ import {
   socialMediaLinks,
   techStack,
   workExperiences
-} from "#src/data/portfolio.ts";
-import { resumeContact } from "#src/data/resume.ts";
+} from "#content/portfolio.ts";
+import { resumeContact } from "#content/resume.ts";
 
 export const GET = (() => {
   const json = JSON.stringify(
