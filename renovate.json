@@ -7,6 +7,10 @@
       "groupName": "typescript content mapper"
     },
     {
+      "matchPackageNames": ["ai", "@ai-sdk/*"],
+      "groupName": "ai sdk"
+    },
+    {
       "matchPackageNames": ["vite-plus", "@voidzero-dev/vite-plus-core", "vitest", "@vitest/*"],
       "groupName": "vite-plus"
     }

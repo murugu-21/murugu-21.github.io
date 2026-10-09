@@ -26,7 +26,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "^4.0.22",
+    "@ai-sdk/provider": "4.0.22",
     "@cloudflare/vite-plugin": "^1.63.1",
     "@cloudflare/vitest-plugin": "^1.4.0",
     "@modelcontextprotocol/client": "2.0.0",
