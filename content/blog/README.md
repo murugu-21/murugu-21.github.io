@@ -8,7 +8,7 @@ src/layouts/BlogLayout.astro  # the blog header around Layout
 src/components/blog/   # search, tags, table of contents, Listen control, bio
 src/lib/blog/          # post helpers, the markdown plugins, read-aloud text prep
 src/styles/blog/       # post and code-block styles
-src/content.config.ts  # content collection schema
+src/content.config.ts  # content collection, validated by contracts/blog.ts
 public/blog/           # static files served verbatim (og-image, sw.js)
 ```
 
@@ -48,7 +48,7 @@ The `blogPostChecks` integration in `astro.config.ts` checks after the build tha
 
 ## Tag vocabulary
 
-Tags are the index's filter chips, so they name broad reader intents that recur across posts. `src/content.config.ts` constrains them (an unknown tag fails the build): **1 to 3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`, `debezium`, `floating-point`) go in `keywords`, which feeds JSON-LD, `article:tag` and the search index but never renders as a chip.
+Tags are the index's filter chips, so they name broad reader intents that recur across posts. `BlogFrontmatter` in `contracts/blog.ts` constrains them (an unknown tag fails the build): **1 to 3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`, `debezium`, `floating-point`) go in `keywords`, which feeds JSON-LD, `article:tag` and the search index but never renders as a chip.
 
 | Tag             | What it covers                                          |
 | --------------- | ------------------------------------------------------- |
@@ -62,4 +62,4 @@ Tags are the index's filter chips, so they name broad reader intents that recur 
 | `react`         | React mental models and the ecosystem                   |
 | `system-design` | Distributed architecture: queues, scaling, event-driven |
 
-To add a tag, add it to `BLOG_TAGS` in `src/content.config.ts`, document it here and tag the posts it covers. Chips come from post counts, so an unused tag stays hidden.
+To add a tag, add it to `BLOG_TAGS` in `contracts/blog.ts`, document it here and tag the posts it covers. Chips come from post counts, so an unused tag stays hidden.
