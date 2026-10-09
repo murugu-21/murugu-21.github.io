@@ -43,13 +43,12 @@ The top-level folders are the packages a monorepo would split this into. Each im
 src/              # the Astro site                     → apps/site
 worker/           # the Worker: API, MCP, chat, audio  → apps/api
 scripts/site/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
-scripts/worker/   # Worker tooling (the live prompt capture)
 scripts/lint/     # repo lint plugins
 contracts/        # what the site, the Worker and scripts agree on → packages/contracts
 utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
 ```
 
-Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts may not import a framework or Worker package, and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, or in `utils/` when the site and the Worker both need it. The one exception is `scripts/worker/live-test-capture.ts`, which reads the built site's `llms.txt` through `scripts/site/site-dir.ts`, the same file Jarvis grounds on in production. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
+Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts may not import a framework or Worker package, and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, or in `utils/` when the site and the Worker both need it. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
 
 ### Build
 
@@ -69,7 +68,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/` and `scripts/` runs on Node. That code runs in the browser, at build time or on Bun, never in a Worker, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner.
+`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/` and `scripts/` runs on Node. That code runs in the browser, at build time or on Bun, never in a Worker, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars` and the built `llms.txt`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 

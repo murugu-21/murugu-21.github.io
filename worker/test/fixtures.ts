@@ -1,6 +1,6 @@
-// Shared site fixture for the API and MCP tests: one description of what the
-// deployed build looks like, so the two surfaces are exercised against the
-// same content instead of drifting fixtures.
+// Shared fixtures for the Worker tests: one description of what the deployed build
+// looks like, so the API and MCP surfaces are exercised against the same content
+// instead of drifting fixtures, plus the chat room socket helpers.
 import { env } from "cloudflare:workers";
 import { assert, expect, vi } from "vitest";
 import { z } from "zod";
@@ -313,3 +313,76 @@ export async function connectRoom(room: string, headers: Record<string, string> 
   socket.close();
   return { stub };
 }
+
+const ResponseFrame = z.object({
+  type: z.literal("cf_agent_use_chat_response"),
+  id: z.string(),
+  body: z.string(),
+  done: z.boolean(),
+  error: z.boolean().optional()
+});
+const Chunk = z.looseObject({
+  type: z.string(),
+  delta: z.string().optional(),
+  data: z.unknown().optional()
+});
+export type Chunk = z.infer<typeof Chunk>;
+
+export const userMessage = ({ id, text }: { id: string; text: string }) => ({
+  id,
+  role: "user",
+  parts: [{ type: "text", text }]
+});
+
+export function chatRequest({
+  id,
+  messages,
+  trigger = "submit-message",
+  page
+}: {
+  id: string;
+  messages: unknown[];
+  trigger?: string;
+  page?: string;
+}): string {
+  return JSON.stringify({
+    type: "cf_agent_use_chat_request",
+    id,
+    init: { method: "POST", body: JSON.stringify({ messages, trigger, page }) }
+  });
+}
+
+/** One request's response frames on a socket, once its terminal frame has arrived. */
+export function responseFrames(
+  frames: unknown[],
+  id: string,
+  { timeout = 5000 }: { timeout?: number } = {}
+) {
+  return vi.waitFor(
+    () => {
+      const mine = frames.flatMap(f => {
+        const frame = ResponseFrame.safeParse(f).data;
+        return frame?.id === id ? [frame] : [];
+      });
+      assert(mine.at(-1)?.done, `no terminal frame for ${id} yet`);
+      return mine;
+    },
+    { timeout, interval: 10 }
+  );
+}
+
+export async function streamedChunks(
+  frames: unknown[],
+  id: string,
+  options?: { timeout?: number }
+): Promise<Chunk[]> {
+  return (await responseFrames(frames, id, options)).flatMap(f =>
+    f.body ? [Chunk.parse(JSON.parse(f.body))] : []
+  );
+}
+
+export const replyText = (chunks: Chunk[]) =>
+  chunks.flatMap(c => (c.type === "text-delta" && c.delta ? [c.delta] : [])).join("");
+
+export const noticesIn = (chunks: Chunk[]) =>
+  chunks.filter(c => c.type === "data-notice").map(c => c.data);

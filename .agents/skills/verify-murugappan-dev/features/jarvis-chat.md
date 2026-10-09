@@ -36,5 +36,5 @@ Steps:
 - While the options menu is open, the rest of the panel leaves the a11y tree and old uids fail. Press Escape and re-snapshot first.
 - A starter button sends immediately, so it's billed like a typed message.
 - A build made without Launch's blanked `PUBLIC_CHAT_HOST` points the widget at the `.env` host (the user's `:8787`). If `worker.log` shows no `/agents/` request after opening the panel, rebuild per Launch.
-- `bun run test:capture` checks the model and prompt only. It calls DeepSeek directly, not through the Worker or the widget, and bills three turns.
+- `bun run test:live` checks the model, prompt, chat room and lead email through a room socket, not the widget, and bills three turns.
 - Chat history lives in this run's `--persist-to` state, so a new run starts with no history.

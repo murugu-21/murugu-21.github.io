@@ -13,13 +13,19 @@ import { fetchActivity, type ChatRoom } from "#worker/chat-room.ts";
 import { parseVisitorContext, VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/visitor.ts";
 import type { RateLimiter } from "#worker/rate-limiter.ts";
 import {
+  chatRequest,
   connectRoom,
   fetchWorker,
+  noticesIn,
   openRoom,
   readJson,
   recordingEmail,
+  replyText,
+  responseFrames,
+  streamedChunks,
   testEnv,
   type TestEnvOptions,
+  userMessage,
   visitorStorage
 } from "./fixtures";
 
@@ -30,74 +36,9 @@ const LIMIT_TEXT =
   "through the social links on this site instead.";
 const UNREADABLE = "Sorry, I couldn't read that message.";
 
-const ResponseFrame = z.object({
-  type: z.literal("cf_agent_use_chat_response"),
-  id: z.string(),
-  body: z.string(),
-  done: z.boolean(),
-  error: z.boolean().optional()
-});
-const Chunk = z.looseObject({
-  type: z.string(),
-  delta: z.string().optional(),
-  data: z.unknown().optional()
-});
-type Chunk = z.infer<typeof Chunk>;
-
 const StoredMessages = z.array(
   z.object({ role: z.string(), parts: z.array(z.looseObject({ type: z.string() })) })
 );
-
-const userMessage = ({ id, text }: { id: string; text: string }) => ({
-  id,
-  role: "user",
-  parts: [{ type: "text", text }]
-});
-
-function chatRequest({
-  id,
-  messages,
-  trigger = "submit-message",
-  page
-}: {
-  id: string;
-  messages: unknown[];
-  trigger?: string;
-  page?: string;
-}): string {
-  return JSON.stringify({
-    type: "cf_agent_use_chat_request",
-    id,
-    init: { method: "POST", body: JSON.stringify({ messages, trigger, page }) }
-  });
-}
-
-/** One request's response frames on a socket, once its terminal frame has arrived. */
-function responseFrames(frames: unknown[], id: string) {
-  return vi.waitFor(
-    () => {
-      const mine = frames.flatMap(f => {
-        const frame = ResponseFrame.safeParse(f).data;
-        return frame?.id === id ? [frame] : [];
-      });
-      assert(mine.at(-1)?.done, `no terminal frame for ${id} yet`);
-      return mine;
-    },
-    { timeout: 5000, interval: 10 }
-  );
-}
-
-async function streamedChunks(frames: unknown[], id: string): Promise<Chunk[]> {
-  return (await responseFrames(frames, id)).flatMap(f =>
-    f.body ? [Chunk.parse(JSON.parse(f.body))] : []
-  );
-}
-
-const replyText = (chunks: Chunk[]) =>
-  chunks.flatMap(c => (c.type === "text-delta" && c.delta ? [c.delta] : [])).join("");
-
-const noticesIn = (chunks: Chunk[]) =>
-  chunks.filter(c => c.type === "data-notice").map(c => c.data);
 
 async function storedMessages(room: string) {
   const res = await fetchWorker(`/agents/chat-room/${room}/get-messages`);

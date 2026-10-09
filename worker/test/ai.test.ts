@@ -26,7 +26,6 @@ describe("deepseek", () => {
     });
 
     const { text } = await generateText({ model: deepseek({ apiKey: "sk-live" }), prompt: "hi" });
-    await generateText({ model: deepseek({ apiKey: "k", model: "deepseek-pro" }), prompt: "hi" });
 
     expect(text).toBe("Hello.");
     expect(seen).toEqual([
@@ -34,8 +33,7 @@ describe("deepseek", () => {
         url: "https://api.deepseek.com/chat/completions",
         auth: "Bearer sk-live",
         model: "deepseek-flash"
-      },
-      { url: "https://api.deepseek.com/chat/completions", auth: "Bearer k", model: "deepseek-pro" }
+      }
     ]);
   });
 });

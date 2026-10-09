@@ -4,9 +4,9 @@ import { z } from "zod";
 
 import { lenient } from "#utils/json.ts";
 
-// Always the current Flash generation. Before swapping it, run `bun run test:capture`,
+// Always the current Flash generation. After changing it, run `bun run test:live` before pushing,
 // because some models narrate a lead capture without calling capture_opportunity and lose the lead.
-export const DEEPSEEK_MODEL = "deepseek-flash";
+const DEEPSEEK_MODEL = "deepseek-flash";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
 // Room for two page fetches and a capture; the step after the last tool step must answer in text.
@@ -17,17 +17,11 @@ export function isInsufficientBalance(err: unknown): boolean {
   return APICallError.isInstance(err) && err.statusCode === 402;
 }
 
-export function deepseek({
-  apiKey,
-  model = DEEPSEEK_MODEL
-}: {
-  apiKey: string;
-  model?: string;
-}): LanguageModel {
-  return createDeepSeek({ apiKey })(model);
+export function deepseek({ apiKey }: { apiKey: string }): LanguageModel {
+  return createDeepSeek({ apiKey })(DEEPSEEK_MODEL);
 }
 
-/** Settings for one Jarvis turn, shared by the Worker's streamText and the live capture test. */
+/** Settings for one Jarvis turn. */
 export function jarvisCall<Tools extends ToolSet>({
   model,
   messages,

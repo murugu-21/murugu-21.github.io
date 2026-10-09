@@ -5,15 +5,7 @@ type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 // The top-level folders are the packages a monorepo would split this repo into (README.md ›
 // Layers). A layer imports itself and the layers in `uses`, through their `#<dir>` subpath imports;
 // import/no-relative-parent-imports stops `../` from going around them.
-const LAYER_NAMES = [
-  "site",
-  "worker",
-  "siteScripts",
-  "workerScripts",
-  "lintScripts",
-  "contracts",
-  "utils"
-] as const;
+const LAYER_NAMES = ["site", "worker", "siteScripts", "lintScripts", "contracts", "utils"] as const;
 type LayerName = (typeof LAYER_NAMES)[number];
 type Layer = { dir: string; uses: LayerName[]; also?: Pattern[] };
 
@@ -21,7 +13,6 @@ const LAYERS: Record<LayerName, Layer> = {
   site: { dir: "src/", uses: ["contracts", "utils"] },
   worker: { dir: "worker/", uses: ["contracts", "utils"] },
   siteScripts: { dir: "scripts/site/", uses: ["site", "contracts", "utils"] },
-  workerScripts: { dir: "scripts/worker/", uses: ["worker", "contracts", "utils"] },
   lintScripts: { dir: "scripts/lint/", uses: [] },
   contracts: {
     dir: "contracts/",

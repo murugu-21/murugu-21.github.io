@@ -26,7 +26,7 @@
     "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",
     "deploy": "bun run db:migrate && wrangler deploy",
     "test": "vitest run",
-    "test:capture": "bun scripts/worker/live-test-capture.ts",
+    "test:live": "vitest run --project workers --tags-filter=live",
     "check:src": "astro sync && node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit --runExternalCode",
     "check:worker": "node node_modules/typescript/bin/tsc -p worker",
     "prepare": "git config core.hooksPath .githooks",
