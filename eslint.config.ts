@@ -31,6 +31,8 @@ export default defineConfig([
   astro.configs["jsx-a11y-recommended"],
   {
     files: ["**/*.astro"],
+    // Arbitrary values and hex colours rely on review until oxlint's Tailwind rules reach .astro
+    // (README.md › Checks). The default palette stays on; resetting --color-* in @theme isn't wanted.
     extends: [tailwind.configs["recommended-error"]],
     // Without rootFontSize, px arbitrary values never canonicalize to the spacing scale.
     settings: {
@@ -44,6 +46,8 @@ export default defineConfig([
       "no-restricted-syntax": [
         "error",
         {
+          // A <style> inside a set:html string slips past this. Accepted, because every set:html
+          // renders trusted build-time strings.
           selector: "JSXElement[openingElement.name.name='style']",
           message: `No <style> blocks. ${useTailwind}`
         },
@@ -56,7 +60,8 @@ export default defineConfig([
           message: "Use class={cn(…)}, which merges Tailwind classes, or a cva() variant."
         },
         {
-          // .tsx has no equivalent check because oxlint has no no-restricted-syntax.
+          // .tsx has no equivalent check: oxlint has no no-restricted-syntax, and a custom
+          // rule for it isn't worth the upkeep.
           selector: "CallExpression[callee.name='cn'] > ConditionalExpression",
           message: "Choosing between class sets is a variant, so use cva()."
         }
