@@ -13,7 +13,7 @@ Read [`features/README.md`](features/README.md) before driving, then the feature
 
 ## Launch
 
-Never use `bun run preview`. It binds `:8787` and `apps/api/.wrangler/state`, which belong to the user's own preview. This launch gets its own port, inspector port and state directory.
+Never use `bun run preview`. It binds `:8787` and `apps/api/.wrangler/state`, which belong to the user's own `bun run dev` or preview. This launch gets its own port, inspector port and state directory.
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
@@ -100,4 +100,4 @@ rm -rf "$RUN/state"
 ls "$RUN/evidence"
 ```
 
-`workerd` exits with its wrangler parent, and wrangler's temp files go with it. Copy anything you need from `apps/api/.wrangler/tmp/` before this step. Close every page you opened with `close_page`. Kill only the PID in `$RUN/worker.pid`, never by process name: the user's `astro dev` and preview are shared. Don't delete `apps/site/dist/` or `apps/api/.wrangler/`. The evidence and logs stay.
+`workerd` exits with its wrangler parent, and wrangler's temp files go with it. Copy anything you need from `apps/api/.wrangler/tmp/` before this step. Close every page you opened with `close_page`. Kill only the PID in `$RUN/worker.pid`, never by process name: the user's `bun run dev` and preview are shared. Don't delete `apps/site/dist/` or `apps/api/.wrangler/`. The evidence and logs stay.

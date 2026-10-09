@@ -26,16 +26,16 @@ Each feature has a README next to its code:
 ```bash
 bun install
 bunx astro sync --root apps/site && bun run types   # once after cloning; lint and the typechecks need the generated types
-bun run dev       # Astro dev server with HMR, pages only, on :4399
+bun run dev       # astro dev on :4399 and the Worker under Vite (vp dev) on :8787
 bun run build     # the site to apps/site/dist/ (markdown renditions, resume PDF), then the Worker to apps/api/dist-worker/
 bun run preview   # the built Worker in workerd over the site's dist/ (wrangler dev), API and chat included, on :8787
 ```
 
-The root scripts run each app's own through `vp run`, such as `vp run @murugappan/site#dev`. Local settings sit with the app that reads them: `apps/site/.env` for Astro and `apps/api/.dev.vars` for wrangler.
+The root scripts run each app's own through `vp run`, such as `vp run @murugappan/api#preview`; `dev` runs every app's `dev` in parallel. Local settings sit with the app that reads them: `apps/site/.env` for Astro and `apps/api/.dev.vars` for wrangler.
 
 `preview` passes `--local-upstream localhost:8787` so the Worker sees the local host, not the `murugappan.dev` route, and the generated discovery documents link back to it. `types` passes `--strict-vars=false` so `OPPORTUNITY_INBOX` is typed `string` and tests can override it.
 
-`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in `apps/site/.env`. The Worker bundles the site content it answers from, so rebuild after editing `apps/api/src/` or `packages/content/`.
+`bun run dev` needs no build. `@murugappan/api#dev` runs the Worker through `@cloudflare/vite-plugin`, which sees the local host as `preview` does. Both bind `:8787` and `apps/api/.wrangler/state`, so stop one before starting the other. The dev Worker's assets are only the site's `public/`, so the chat's `fetch_page` tool and the 404 page miss the built pages; check those under `preview`. The chat widget connects to the page's own origin unless `PUBLIC_CHAT_HOST` is set, so put `PUBLIC_CHAT_HOST=localhost:8787` in `apps/site/.env` to reach the dev Worker from `:4399`. `preview` serves the built Worker, so rebuild after editing `apps/api/src/` or `packages/content/`.
 
 ### Workspaces and layers
 

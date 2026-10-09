@@ -60,7 +60,7 @@ Agents tend to hand-roll what a library or platform feature already does. Before
 
 ## Never
 
-- Stop or kill a dev server you didn't start. The user's `astro dev` is shared; stop only the ones your own session spun up.
+- Stop or kill a dev server you didn't start. The user's `bun run dev` (astro dev and the Worker's vp dev) and `bun run preview` are shared; stop only the ones your own session spun up.
 - Bypass a failing gate: no `--no-verify`, skipped tests, or loosened lint rules to get green. Fix the cause.
 
 ## Definition of done

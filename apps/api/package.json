@@ -6,6 +6,7 @@
     "#src/*": "./src/*"
   },
   "scripts": {
+    "dev": "vp dev",
     "preview": "wrangler dev --local-upstream localhost:8787",
     "deploy": "bun run db:migrate && wrangler deploy",
     "db:migrate": "wrangler d1 migrations apply jarvis-chats --remote",

@@ -11,7 +11,7 @@
     "tooling"
   ],
   "scripts": {
-    "dev": "vp run @murugappan/site#dev",
+    "dev": "vp run -r --parallel --log labeled dev",
     "build": "vp run -r build",
     "preview": "vp run @murugappan/api#preview",
     "format": "vp fmt apps packages tooling vite.config.ts && prettier --write \"apps/site/src/**/*.astro\" && bun run --silent py ruff format apps/tts",
