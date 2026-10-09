@@ -20,7 +20,7 @@ bun run --silent lint
 echo "pre-push 5/10: unused files, exports and dependencies"
 bun run --silent knip
 
-echo "pre-push 6/10: src typecheck"
+echo "pre-push 6/10: site, packages and config typecheck"
 bun run --silent check:src
 
 echo "pre-push 7/10: worker typecheck"
@@ -32,7 +32,8 @@ bun run --silent check:py
 echo "pre-push 9/10: unit tests"
 bun run --silent test
 
-# Last, because it rewrites dist/ and dist-worker/, which `bun run preview` serves.
+# Last, because it rewrites apps/site/dist/ and apps/api/dist-worker/, which `bun run preview`
+# serves.
 echo "pre-push 10/10: site and Worker build"
 bun run --silent build
 

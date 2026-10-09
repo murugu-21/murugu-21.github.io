@@ -1,0 +1,56 @@
+---
+import { Image } from "astro:assets";
+import { educationInfo } from "@murugappan/content/portfolio.ts";
+import { LOGOS } from "#src/data/logos.ts";
+import Section from "./Section.astro";
+import SectionTitle from "./SectionTitle.astro";
+---
+
+<Section id="education" class="mt-8 box-border flex flex-col px-0">
+  <SectionTitle title="Education" class="flex-1" />
+  <div class="mb-8 flex flex-1 flex-col xl:pt-5">
+    {educationInfo.map(school => (
+      <div>
+        <div class="peer flex flex-col pb-2.5 max-md:text-center xl:flex-row xl:pb-0">
+          <div>
+            {/* It renders at 6rem from xl (4rem below), so it ships a 96px file and its
+                2x version instead of the 256px source. */}
+            <Image
+              class="alt-fallback mt-2.5 mb-4 inline-block size-16 rounded-full object-cover align-baseline shadow-lg shadow-shadow-darker md:mt-0 md:mb-2 xl:mr-8 xl:mb-0 xl:size-24"
+              src={LOGOS[school.logo]}
+              width={96}
+              height={96}
+              densities={[1, 2]}
+              alt={school.schoolName + " logo"}
+              loading="lazy"
+            />
+          </div>
+          <div class="max-w-full md:max-w-9/10 xl:max-w-7/10">
+            <h3 class="m-0 truncate text-xl font-bold xl:text-3xl">{school.schoolName}</h3>
+
+            <div>
+              <h4 class="m-0 pt-2 text-base font-bold text-text xl:pt-3 xl:text-lg dark:text-white">
+                {school.subHeader}
+              </h4>
+              <p class="m-0 pt-2 text-base text-title xl:text-lg dark:text-white">
+                {school.duration}
+              </p>
+              {school.grade && (
+                <p class="m-0 pt-2 text-lg text-title dark:text-white">{school.grade}</p>
+              )}
+              <p class="my-2">{school.desc}</p>
+              <div>
+                <ul class="mt-2 mb-5 box-content list-disc pl-10 max-md:mx-auto max-md:my-0 max-md:max-w-4/5">
+                  {school.descBullets.map(item => (
+                    <li class="text-subtitle-muted">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mb-5 box-content h-8 w-full border-t-2 border-border-soft transition-all duration-500 ease-in-out peer-hover:border-amber md:w-9/10 md:peer-hover:w-full xl:w-4/5 xl:peer-hover:w-full dark:border-border-soft-dark dark:peer-hover:border-blue" />
+      </div>
+    ))}
+  </div>
+</Section>

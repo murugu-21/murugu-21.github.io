@@ -1,0 +1,62 @@
+---
+import { Image } from "astro:assets";
+import Icon from "#src/components/Icon.astro";
+import { socialMediaLinks } from "@murugappan/content/portfolio.ts";
+import { AUTHOR } from "@murugappan/content/site.ts";
+// The portfolio's portrait, cropped to a 48px circle. It is a full-body square
+// (face around x 21% to 79%, y 8% to 67%), hence the 175% scale and translate below.
+import portrait from "#src/assets/images/portrait.webp";
+
+const links = [
+  { href: socialMediaLinks.github, icon: "github", value: "github", label: "GitHub profile" },
+  {
+    href: socialMediaLinks.linkedin,
+    icon: "linkedin-in",
+    value: "linkedin",
+    label: "LinkedIn profile"
+  },
+  { href: socialMediaLinks.twitter, icon: "twitter", value: "x", label: "X profile" }
+];
+---
+
+<div class="mb-16 flex" data-bio>
+  <span class="mr-4 size-12 flex-none overflow-hidden rounded-full">
+    <Image
+      class="size-7/4 max-w-none -translate-x-1/5 -translate-y-1/12"
+      src={portrait}
+      width={86}
+      densities={[1, 2]}
+      alt="Profile picture"
+      loading="lazy"
+    />
+  </span>
+  <p class="m-0 p-0 leading-relaxed">
+    technical blog by{" "}
+    <a
+      class="text-navy underline hover:no-underline focus:no-underline dark:text-blue-light"
+      href={socialMediaLinks.twitter}
+      data-ph-event="social_click"
+      data-ph-prop="social"
+      data-ph-value="x"
+    >
+      <strong>{AUTHOR.name}</strong>
+    </a>
+    <br />
+    {AUTHOR.summary}
+  </p>
+</div>
+<div class="flex gap-4">
+  {links.map(link => (
+    <a
+      class="inline-flex text-text hover:text-navy dark:text-text-dark dark:hover:text-blue-light"
+      href={link.href}
+      aria-label={link.label}
+      title={link.label}
+      data-ph-event="social_click"
+      data-ph-prop="social"
+      data-ph-value={link.value}
+    >
+      <Icon name={link.icon} size="1.75rem" />
+    </a>
+  ))}
+</div>

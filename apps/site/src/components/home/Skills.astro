@@ -1,0 +1,42 @@
+---
+import { skillsSection } from "@murugappan/content/portfolio.ts";
+import LottiePlayer from "./LottiePlayer.astro";
+import Icon from "#src/components/Icon.astro";
+import Tilt from "./Tilt.astro";
+import Section from "./Section.astro";
+import SectionTitle from "./SectionTitle.astro";
+---
+
+<Section id="skills" class="mt-16 flex overflow-hidden max-md:flex-col">
+  <div class="mb-8 flex-1 max-md:order-2">
+    <Tilt>
+      <LottiePlayer
+        src="/lottie-coding.json"
+        label="Illustration of a developer at a desk writing code"
+      />
+    </Tilt>
+  </div>
+  <div class="mb-8 ml-12 flex-1 max-md:m-5">
+    <SectionTitle title={skillsSection.title} />
+    <p class="my-5 text-subtitle max-md:text-center max-md:text-base dark:text-white">
+      {skillsSection.subTitle}
+    </p>
+    <div>
+      <ul class="mb-2.5 flex flex-wrap gap-3">
+        {skillsSection.softwareSkills.map(skill => (
+          <li class="inline-flex items-center gap-2.5 rounded-3xl border border-chip-outline px-4 py-2.5 shadow-glow transition duration-300 hover:border-navy hover:shadow-glow-hover motion-reduce:transition-none dark:border-chip-outline-dark dark:shadow-glow-dark dark:hover:border-blue dark:hover:shadow-glow-dark-hover">
+            <Icon name={skill.iconName} size="1.6rem" class="shrink-0 text-navy dark:text-blue" />
+            <span class="text-sm whitespace-nowrap text-text dark:text-white">
+              {skill.skillName}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+    <div>
+      {skillsSection.skills.map(s => (
+        <p class="my-5 text-subtitle max-md:text-base dark:text-white">{s}</p>
+      ))}
+    </div>
+  </div>
+</Section>

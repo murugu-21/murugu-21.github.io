@@ -1,0 +1,142 @@
+---
+// Canonical entity page (schema.org ProfilePage), sourced only from
+// packages/content/portfolio.ts + resume.ts.
+import Layout from "#src/layouts/Layout.astro";
+import Header from "#src/components/Header.astro";
+import LinkRow from "#src/components/LinkRow.astro";
+import Prose from "#src/components/Prose.astro";
+import ScrollTop from "#src/components/ScrollTop.astro";
+import {
+  greeting,
+  workExperiences,
+  skillsCategories,
+  educationInfo,
+  openSourceCard,
+  socialMediaLinks
+} from "@murugappan/content/portfolio.ts";
+import { resumeContact } from "@murugappan/content/resume.ts";
+import { groupByCompany } from "@murugappan/content/experience.ts";
+
+// Groups by *consecutive* company, so returning to an employer stays two entries.
+const stints = groupByCompany(workExperiences);
+
+const links = [
+  { label: "GitHub", href: socialMediaLinks.github },
+  { label: "LinkedIn", href: socialMediaLinks.linkedin },
+  { label: "X / Twitter", href: socialMediaLinks.twitter },
+  { label: "Blog", href: "/blog/" },
+  { label: "Resume (PDF)", href: greeting.resumePath },
+  {
+    label: `Email: ${socialMediaLinks.gmail}`,
+    href: `mailto:${socialMediaLinks.gmail}`
+  }
+];
+---
+
+<Layout
+  title="About Murugappan M | Full Stack Engineer | TypeScript, Node.js, React & AWS"
+  profilePage
+>
+  <Header />
+  <Prose as="main">
+    <h1>About {resumeContact.name}</h1>
+    <p>{greeting.subTitle}</p>
+    <p class="text-subtitle-muted">
+      {resumeContact.title} · {resumeContact.location} · currently at{" "}
+      <a href="https://www.medmehealth.com">MedMe Health</a>
+    </p>
+
+    <LinkRow links={links} />
+
+    <section>
+      <h2>Experience</h2>
+      {stints.map(stint => (
+        <article>
+          <h3>{stint.company}</h3>
+          <p class="text-subtitle-muted">
+            {stint.span}
+            {stint.location && ` \u00b7 ${stint.location}`}
+          </p>
+          {stint.roles.map(job => (
+            <div class="pl-4">
+              <h4>
+                {job.role}
+                {job.partTime && " (Part-time)"}
+              </h4>
+              {/* a lone role's dates already sit under the company name */}
+              {stint.roles.length > 1 && (
+                <p class="text-subtitle-muted">
+                  {job.date}
+                  {!stint.location && ` \u00b7 ${job.location}`}
+                </p>
+              )}
+              <p>{job.desc}</p>
+              {job.descBullets && (
+                <ul>
+                  {job.descBullets.map(b => (
+                    <li>{b}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </article>
+      ))}
+    </section>
+
+    <section>
+      <h2>Skills</h2>
+      <ul>
+        {skillsCategories.map(c => (
+          <li>
+            <strong>{c.category}:</strong> {c.items}
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Education</h2>
+      {educationInfo.map(school => (
+        <article>
+          <h3>{school.schoolName}</h3>
+          <p class="text-subtitle-muted">
+            {school.subHeader} · {school.duration}
+          </p>
+          <ul>
+            {school.descBullets.map(b => (
+              <li>{b}</li>
+            ))}
+          </ul>
+        </article>
+      ))}
+    </section>
+
+    <section>
+      <h2>Open source</h2>
+      <p>{openSourceCard.subtitle}</p>
+      <LinkRow links={openSourceCard.footerLink.map(l => ({ href: l.url, label: l.name }))} />
+    </section>
+
+    <section>
+      <h2>For AI agents</h2>
+      <p>
+        This page is the canonical source of truth about Murugappan M. A machine-readable version
+        lives at <a href="/llms.txt">/llms.txt</a>, and full blog content is at{" "}
+        <a href="/blog/llms-full.txt">/blog/llms-full.txt</a>.
+      </p>
+      <p>
+        A public, unauthenticated API also serves everything on this page as JSON. Start with{" "}
+        <a href="/api/v1/profile">
+          <code>GET /api/v1/profile</code>
+        </a>
+        . The full contract is the <a href="/openapi.json">OpenAPI 3.1.0 spec</a>. The{" "}
+        <a href="/developers/">developer portal</a> documents the endpoints, versioning policy and
+        rate-limit headers. There is an <a href="/mcp">MCP server</a> with a{" "}
+        <a href="/.well-known/mcp.json">manifest</a>, and <a href="/AGENTS.md">/AGENTS.md</a> says
+        when to use this site and which call to make.
+      </p>
+    </section>
+  </Prose>
+  <ScrollTop />
+</Layout>

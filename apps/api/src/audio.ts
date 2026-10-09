@@ -1,0 +1,95 @@
+// Read-only blog audio from R2 (packages/contracts/audio.ts). Supports Range because <audio>
+// seeks with it.
+import { Hono } from "hono";
+
+import { AUDIO_PREFIX } from "@murugappan/contracts/audio.ts";
+import { serveAsset } from "./not-found";
+
+const FILE = /^[a-z0-9-]+\.(mp3|json)$/;
+const CACHE = "public, max-age=3600";
+const TYPES: Record<string, string> = {
+  mp3: "audio/mpeg",
+  json: "application/json"
+};
+
+interface ByteRange {
+  offset: number;
+  length: number;
+}
+
+// Single-range "bytes=a-b" / "bytes=a-" / "bytes=-n". null when absent or
+// malformed.
+export function parseRange(
+  header: string | null,
+  size: number
+): ByteRange | "unsatisfiable" | null {
+  if (!header) return null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!m || (m[1] === "" && m[2] === "")) return null;
+  const [, first, last] = m;
+  // "-n" asks for the final n bytes.
+  const start = first === "" ? size - Math.min(Number(last), size) : Number(first);
+  const end = first === "" || last === "" ? size - 1 : Math.min(Number(last), size - 1);
+  if (start >= size || end < start) return "unsatisfiable";
+  return { offset: start, length: end - start + 1 };
+}
+
+// RFC 9110 §13.1.2: "*" or a list of tags, compared weakly (a W/ prefix is ignored).
+function etagMatches(header: string | undefined, etag: string): boolean {
+  if (!header) return false;
+  if (header.trim() === "*") return true;
+  const opaque = (tag: string) => tag.trim().replace(/^W\//, "");
+  return header.split(",").some(tag => opaque(tag) === opaque(etag));
+}
+
+export const audio = new Hono<{ Bindings: Env }>();
+
+audio.get("/:file", async c => {
+  const file = c.req.param("file");
+  const extension = FILE.exec(file)?.[1];
+  if (!extension) return serveAsset(c);
+
+  const key = `${AUDIO_PREFIX}/${file}`;
+  const head = await c.env.AUDIO.head(key);
+  if (!head) return serveAsset(c);
+
+  const etag = head.httpEtag;
+  const contentType = head.httpMetadata?.contentType ?? TYPES[extension];
+  const baseHeaders = {
+    "Content-Type": contentType,
+    "Accept-Ranges": "bytes",
+    "Cache-Control": CACHE,
+    ETag: etag
+  };
+
+  if (etagMatches(c.req.header("If-None-Match"), etag)) {
+    return new Response(null, { status: 304, headers: baseHeaders });
+  }
+
+  const range = parseRange(c.req.header("Range") ?? null, head.size);
+  if (range === "unsatisfiable") {
+    return new Response(null, {
+      status: 416,
+      headers: { ...baseHeaders, "Content-Range": `bytes */${head.size}` }
+    });
+  }
+
+  const object = await c.env.AUDIO.get(key, range ? { range } : undefined);
+  if (!object) return serveAsset(c);
+
+  if (range) {
+    const last = range.offset + range.length - 1;
+    return new Response(object.body, {
+      status: 206,
+      headers: {
+        ...baseHeaders,
+        "Content-Range": `bytes ${range.offset}-${last}/${head.size}`,
+        "Content-Length": String(range.length)
+      }
+    });
+  }
+  return new Response(object.body, {
+    status: 200,
+    headers: { ...baseHeaders, "Content-Length": String(head.size) }
+  });
+});

@@ -1,0 +1,63 @@
+---
+import { socialMediaLinks } from "@murugappan/content/portfolio.ts";
+import Icon from "#src/components/Icon.astro";
+
+// Monochrome glyphs, matching the blog footer (apps/site/src/components/blog/Bio.astro).
+const links = [
+  {
+    href: socialMediaLinks.github,
+    icon: "github",
+    value: "github",
+    label: "GitHub profile",
+    external: true
+  },
+  {
+    href: socialMediaLinks.linkedin,
+    icon: "linkedin-in",
+    value: "linkedin",
+    label: "LinkedIn profile",
+    external: true
+  },
+  {
+    href: `mailto:${socialMediaLinks.gmail}`,
+    icon: "envelope",
+    value: "email",
+    label: "Send an email",
+    external: false
+  },
+  {
+    href: socialMediaLinks.twitter,
+    icon: "twitter",
+    value: "x",
+    label: "X (formerly Twitter) profile",
+    external: true
+  },
+  {
+    href: socialMediaLinks.rss,
+    icon: "rss",
+    value: "rss",
+    label: "Subscribe to the blog RSS feed",
+    external: true
+  }
+];
+---
+
+<div class="max-md:text-center">
+  {links.map(link => (
+    <a
+      href={link.href}
+      data-ph-event="social_click"
+      data-ph-prop="social"
+      data-ph-value={link.value}
+      class="mx-1 mb-2.5 inline-flex size-10 cursor-pointer items-center justify-center align-middle text-text no-underline transition-colors duration-200 ease-in select-none hover:text-navy dark:text-white dark:hover:text-blue"
+      target={link.external ? "_blank" : undefined}
+      rel={link.external ? "noopener noreferrer" : undefined}
+      aria-label={link.label}
+      title={link.label}
+    >
+      {/* Hit target lives on the anchor: padding + border-radius on the <svg>
+            makes Chrome clip the glyph (shaved the LinkedIn "i" dot). */}
+      <Icon name={link.icon} class="block" size="1.6rem" />
+    </a>
+  ))}
+</div>

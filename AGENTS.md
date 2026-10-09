@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Rules for coding agents working in this repo. (`public/AGENTS.md` is a different file: the public guide served at murugappan.dev/AGENTS.md for agents using the site's API.) `README.md` covers the architecture and tooling; read it before changing the build, the Worker or the dev setup. Each feature folder has its own `README.md`, listed under "Feature docs" there; read the one for the area you touch.
+Rules for coding agents working in this repo. (`packages/content/agent-guide.md` is a different file: the public guide served at murugappan.dev/AGENTS.md for agents using the site's API.) `README.md` covers the architecture and tooling; read it before changing the build, the Worker or the dev setup. Each feature folder has its own `README.md`, listed under "Feature docs" there; read the one for the area you touch.
 
 ## Comments
 
@@ -36,11 +36,11 @@ Five shapes that still pass when every imported function returns `undefined`:
 
 Keep a test of a relation across a table's rows (a key present in two tables, a parent that exists), and a compile-time check in a `*.test-d.ts` file.
 
-`tests/observe-behaviour` (`scripts/lint/test-behaviour.ts`) flags the direct forms of each shape. Per test, it flags shapes 1 to 3, a constant read straight into `expect` and a test that never touches the code under test. Per assertion, it flags an expected value built from data the code under test exports, such as `toBe(LIMIT)` or `toEqual(TOOLS.map(…))`. It also flags a member read by string key (`instance["privateMethod"]`), which skips `private`; drive the code through its public API instead. In a browser test, rendering `<Component />` counts as calling it, and a positive state matcher on `expect.element(locator)` (`toBeVisible`, `toBeEnabled` and the like) counts as an observation, since it fails when nothing renders. Because a helper import counts as touching the code, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule with a reason, on the reported line (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`) or around the whole test (`/* oxlint-disable tests/observe-behaviour -- <why> */` … `/* oxlint-enable tests/observe-behaviour */`). The reviewers check what it can't see.
+`tests/observe-behaviour` (`tooling/oxlint/test-behaviour.ts`) flags the direct forms of each shape. Per test, it flags shapes 1 to 3, a constant read straight into `expect` and a test that never touches the code under test. Per assertion, it flags an expected value built from data the code under test exports, such as `toBe(LIMIT)` or `toEqual(TOOLS.map(…))`. It also flags a member read by string key (`instance["privateMethod"]`), which skips `private`; drive the code through its public API instead. In a browser test, rendering `<Component />` counts as calling it, and a positive state matcher on `expect.element(locator)` (`toBeVisible`, `toBeEnabled` and the like) counts as an observation, since it fails when nothing renders. Because a helper import counts as touching the code, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule with a reason, on the reported line (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`) or around the whole test (`/* oxlint-disable tests/observe-behaviour -- <why> */` … `/* oxlint-enable tests/observe-behaviour */`). The reviewers check what it can't see.
 
 ## Code style
 
-Think about readability and elegance before writing, not after. Every rule a linter can check lives in `lint.config.ts` (or, for `.astro` templates and stylesheets, `eslint.config.ts`) and `bun run lint` enforces it; read those files rather than relying on memory. Styles are Tailwind only, and lint rejects hand-written CSS. On top of those:
+Think about readability and elegance before writing, not after. Every rule a linter can check lives in `tooling/lint.config.ts` (or, for `.astro` templates and stylesheets, `tooling/eslint.config.ts`) and `bun run lint` enforces it; read those files rather than relying on memory. Styles are Tailwind only, and lint rejects hand-written CSS. On top of those:
 
 - Write new code in TypeScript.
 - **Guard clauses.** Return or throw early on edge cases so the main path isn't nested inside `if`/`else`.
@@ -56,20 +56,20 @@ Agents tend to hand-roll what a library or platform feature already does. Before
 ## Ask first
 
 - Anything that costs money or is hard to undo: new paid services or plans, deploys, `wrangler` commands against remote resources (`--remote`, deploy, secrets), D1 migrations, R2 writes.
-- Major decisions: adding or replacing a dependency, changing the architecture, CI, or `wrangler.jsonc`.
+- Major decisions: adding or replacing a dependency, changing the architecture, CI, or `apps/api/wrangler.jsonc`.
 
 ## Never
 
-- Stop or kill a dev server you didn't start. The user's `astro dev` is shared; stop only the ones your own session spun up.
+- Stop or kill a dev server you didn't start. The user's `bun run dev` (astro dev and the Worker's vp dev) and `bun run preview` are shared; stop only the ones your own session spun up.
 - Bypass a failing gate: no `--no-verify`, skipped tests, or loosened lint rules to get green. Fix the cause.
 
 ## Definition of done
 
 Never call a task complete until both of the following have happened.
 
-1. `.githooks/pre-push` passes (format, lint, typechecks, tests, site build). For UI changes, also check the page in the browser in both light and dark themes, following `.agents/skills/verify-murugappan-dev/SKILL.md`. It rebuilds `dist/`, runs its own Worker on a separate port and state directory, and lists how to drive each feature.
+1. `.githooks/pre-push` passes (format, lint, typechecks, tests, site build). For UI changes, also check the page in the browser in both light and dark themes, following `.agents/skills/verify-murugappan-dev/SKILL.md`. It rebuilds the site and the Worker, runs its own Worker on a separate port and state directory, and lists how to drive each feature.
 2. Two independent reviewers (separate subagents, each starting fresh with only the diff and these rules) have reviewed the change:
    - **Behaviour/QA reviewer.** Checks that it does what was asked, that edge cases and regressions are covered, and that it works when run. For every test the diff adds or changes, applies the check in "Test behaviour, not implementation".
-   - **Code-style reviewer.** Checks the diff against every rule in this file, `lint.config.ts` and `eslint.config.ts`.
+   - **Code-style reviewer.** Checks the diff against every rule in this file, `tooling/lint.config.ts` and `tooling/eslint.config.ts`.
 
    Fix what they find, or explain why a finding doesn't apply, before reporting the task as done.

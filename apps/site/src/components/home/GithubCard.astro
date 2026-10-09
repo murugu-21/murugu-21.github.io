@@ -1,0 +1,82 @@
+---
+import { RESUME_PHONE } from "astro:env/server";
+import SocialMedia from "./SocialMedia.astro";
+import { contactInfo } from "@murugappan/content/portfolio.ts";
+import { fetchGithubProfile } from "#src/lib/github.ts";
+import { resumeContact } from "@murugappan/content/resume.ts";
+import Section from "./Section.astro";
+import SectionTitle from "./SectionTitle.astro";
+
+const prof = await fetchGithubProfile();
+const contactLinks = [
+  ...(RESUME_PHONE ? [{ href: `tel:${RESUME_PHONE}`, label: RESUME_PHONE, value: "phone" }] : []),
+  {
+    href: `mailto:${contactInfo.emailAddress}`,
+    label: contactInfo.emailAddress,
+    value: "email"
+  }
+];
+---
+
+{prof ? (
+  <Section id="contact" class="mt-16">
+    <SectionTitle title="Reach Out to me!" class="m-0 pb-4 md:pb-0 xl:text-4xl" />
+    <div class="max-md:text-center">
+      <div>
+        <p class="my-5 text-subtitle uppercase max-md:text-center max-md:text-base dark:text-white">
+          {contactInfo.subtitle}
+        </p>
+      </div>
+      {prof.bio && <h2 class="my-5 text-base font-bold md:text-xl">"{prof.bio}"</h2>}
+      <div>
+        <span class="text-base/8 md:text-lg/11">
+          {/* inline: preflight makes svg a block; keep it on the text's line */}
+          <svg
+            class="inline align-baseline"
+            viewBox="-0.5 -2 20 19"
+            width="22"
+            height="16"
+            aria-hidden="true"
+            stroke="currentColor"
+          >
+            <path
+              fill-rule="evenodd"
+              d="M6 0C2.69 0 0 2.5 0 5.5 0 10.02 6 16 6 16s6-5.98 6-10.5C12 2.5 9.31 0 6 0zm0 14.55C4.14 12.52 1 8.44 1 5.5 1 3.02 3.25 1 6 1c1.34 0 2.61.48 3.56 1.36.92.86 1.44 1.97 1.44 3.14 0 2.94-3.14 7.02-5 9.05zM8 5.5c0 1.11-.89 2-2 2-1.11 0-2-.89-2-2 0-1.11.89-2 2-2 1.11 0 2 .89 2 2z"
+            />
+          </svg>
+          {resumeContact.location}
+        </span>
+      </div>
+      <SocialMedia />
+    </div>
+  </Section>
+) : (
+  <Section id="contact" class="mt-16">
+    <div class="flex *:flex-1">
+      <div>
+        <SectionTitle title={contactInfo.title} class="md:text-center xl:text-start" />
+        <p class="my-5 text-center text-base text-subtitle uppercase xl:text-start xl:text-lg dark:text-white">
+          {contactInfo.subtitle}
+        </p>
+        <div class="mt-6 text-center xl:text-start dark:text-white">
+          {contactLinks.map(link => (
+            <>
+              <a
+                class="mt-5 text-xl font-normal text-subtitle no-underline hover:text-text hover:transition-all hover:duration-300 hover:text-shadow-contact-hover hover:text-shadow-sm xl:text-4xl dark:text-white dark:hover:text-shadow-contact-hover-dark"
+                href={link.href}
+                data-ph-event="social_click"
+                data-ph-prop="social"
+                data-ph-value={link.value}
+              >
+                {link.label}
+              </a>
+              <br />
+              <br />
+            </>
+          ))}
+          <SocialMedia />
+        </div>
+      </div>
+    </div>
+  </Section>
+)}

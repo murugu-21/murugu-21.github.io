@@ -11,7 +11,7 @@
 - Start each recipe from a fresh page in this run's isolated context unless its preconditions say otherwise.
 - Act through accessible names from `take_snapshot`.
 - Copy commands, accessible names and URLs exactly. Only `…` and `<…>` are placeholders.
-- Expected titles and counts reflect the content when the recipe was written. When one differs, check `git log -- content src/data` before calling it a defect. A content change means the map needs updating.
+- Expected titles and counts reflect the content when the recipe was written. When one differs, check `git log -- packages/content apps/site/src/data` before calling it a defect. A content change means the map needs updating.
 - Anything that calls DeepSeek bills the owner. Ask the user before it, and count the turns.
 - Collect proof as [Evidence](../SKILL.md#evidence) says.
 
@@ -37,7 +37,7 @@ Keep implementation detail out. Name only user paths, stable handles, required s
 - [Blog index](./blog-index.md) covers search, tag chips and their URL mirroring.
 - [Jarvis chat](./jarvis-chat.md) covers the launcher, the panel and its menu, and the billed send path.
 - [Public API](./public-api.md) covers the read endpoints, the JSON 404 and the contact endpoint.
-- [MCP server](./mcp-server.md) covers the manifest, the handshake, tool listing and tool calls.
+- [MCP server](./mcp-server.md) covers the manifest, the handshake, tool listing, tool calls and resources.
 - [Agent discovery and 404](./agent-discovery.md) covers the API catalogue, the content-negotiated 404 and the docs redirects.
 
 Not yet mapped: the blog post page (Listen control, table of contents), the resume page and PDF, the outdated-browser redirect, `/developers`, `llms.txt` and the markdown renditions.
