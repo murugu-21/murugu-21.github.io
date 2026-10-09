@@ -20,8 +20,8 @@ The voice reference is a synthetic clip designed once from the persona prompt in
 ```bash
 terraform -chdir=infra apply   # creates the R2 bucket
 brew install ffmpeg
-python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/site/tts/requirements.txt
-.venv-tts/bin/python scripts/site/tts/design-voice.py 3   # writes .voice/candidates/{0,1,2}.wav from the persona prompt
+uv sync --locked --project scripts/site/tts   # the venv, from pyproject.toml and uv.lock
+bun run py python scripts/site/tts/design-voice.py 3   # writes .voice/candidates/{0,1,2}.wav from the persona prompt
 cp .voice/candidates/<k>.wav .voice/reference.wav && cp .voice/candidates/reference.txt .voice/reference.txt
 bun run audio --upload-voice     # durable copy in R2
 ```

@@ -17,8 +17,9 @@
     // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.
     "cloudflare"
   ],
-  // A system tool that scripts/site/tts/cli.ts spawns.
-  "ignoreBinaries": ["ffmpeg"],
+  // System tools: scripts/site/tts/cli.ts spawns ffmpeg, and the py script runs uv
+  // (installed with brew, README.md › Checks).
+  "ignoreBinaries": ["ffmpeg", "uv"],
   // remark-mermaid.ts spawns this path relative to the repo root, not to its own folder.
   "ignoreUnresolved": ["scripts/site/render-mermaid.ts"]
 }

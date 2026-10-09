@@ -1,14 +1,16 @@
 // Fakes for the per-post tests: R2 in memory, an ffmpeg that copies its input
 // to its output, a synth whose chunks last 0.1 s per character, and a whisper
 // that hears every word. Bytes flow through the real pipeline, so timings stay
-// consistent with the audio.
+// consistent with the audio. Also starts the real Python processes on the MLX fakes.
 import { Buffer } from "node:buffer";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
 import { jsonString } from "#utils/json.ts";
-import type { Ffmpeg } from "./cli.ts";
+import { type Ffmpeg, PYTHON, requirePython } from "./cli.ts";
+import { type JsonLines, startJsonLines } from "./json-lines.ts";
 import type { RenderDeps, Synth } from "./render.ts";
 
 function memoryR2() {
@@ -103,4 +105,14 @@ export function writePost({
     `<html><body><article><h1 data-post-title>${title}</h1>
 <section data-post-body>${body}<pre><code>skipped()</code></pre></section></article></body></html>`
   );
+}
+
+/** synth.py or whisper.py running on the MLX fakes (fakes/README.md). */
+export function startOnFakes(script: "synth.py" | "whisper.py"): JsonLines {
+  requirePython("numpy");
+  vi.stubEnv("PYTHONPATH", join(import.meta.dirname, "fakes"));
+  onTestFinished(() => {
+    vi.unstubAllEnvs();
+  });
+  return startJsonLines(PYTHON, [join(import.meta.dirname, script)]);
 }

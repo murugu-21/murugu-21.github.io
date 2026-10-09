@@ -1,9 +1,0 @@
-# basedpyright settings for scripts/site/tts. Not a package: the scripts run under
-# .venv-tts (scripts/site/tts/README.md), which is where the mlx imports resolve.
-[tool.basedpyright]
-venvPath = "."
-venv = ".venv-tts"
-pythonVersion = "3.13"
-# Pyright's default mode. basedpyright's "recommended" adds reportUnknown*/reportAny
-# warnings that the untyped mlx-audio / mlx-whisper APIs cannot satisfy.
-typeCheckingMode = "standard"

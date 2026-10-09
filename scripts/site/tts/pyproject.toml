@@ -1,0 +1,32 @@
+# The read-aloud Python processes (README.md). An application, not a package: the
+# TypeScript side spawns these scripts with .venv/bin/python.
+[project]
+name = "murugappan-dev-tts"
+version = "0"
+requires-python = ">=3.13"
+dependencies = [
+  "numpy>=2.0",
+  # MLX runs only on Apple Silicon. The contract tests always run the scripts against
+  # the fakes in fakes/, so they need no MLX.
+  "mlx-audio==0.5.3; sys_platform == 'darwin' and platform_machine == 'arm64'",
+  "mlx-whisper==0.4.3; sys_platform == 'darwin' and platform_machine == 'arm64'"
+]
+
+[dependency-groups]
+dev = ["basedpyright==1.40.2", "ruff==0.16.10"]
+
+# Matches oxfmt's printWidth for the TypeScript.
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+extend-select = ["B", "BLE", "I", "UP"]
+
+[tool.basedpyright]
+pythonVersion = "3.13"
+# Pyright's default mode. basedpyright's "recommended" adds reportUnknown*/reportAny
+# warnings that the untyped mlx-audio / mlx-whisper APIs cannot satisfy.
+typeCheckingMode = "standard"
+# CI has no MLX, so the fakes stand in for its imports on every machine and the
+# check gives the same result everywhere.
+extraPaths = ["fakes"]

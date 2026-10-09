@@ -4,9 +4,10 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { ROOT, SITE_DIR } from "#scripts/site/site-dir.ts";
+import { SITE_DIR } from "#scripts/site/site-dir.ts";
 
-export const PYTHON = join(ROOT, ".venv-tts", "bin", "python");
+// The uv project in this folder (pyproject.toml); `uv sync` creates it.
+export const PYTHON = join(import.meta.dirname, ".venv", "bin", "python");
 export const BLOG_DIST = join(SITE_DIR, "blog");
 
 const COMMON_OPTIONS = {
@@ -40,12 +41,13 @@ export function alignArgs(args: string[]) {
 }
 
 export function requirePython(module: string): void {
-  if (!existsSync(PYTHON)) throw new Error("no .venv-tts; see scripts/site/tts/README.md");
+  if (!existsSync(PYTHON))
+    throw new Error("no venv; run uv sync --locked --project scripts/site/tts");
   // -P keeps the cwd off sys.path, where the coverage/ report dir would
   // shadow the `coverage` module numba imports.
   if (spawnSync(PYTHON, ["-P", "-c", `import ${module}`]).status !== 0) {
     throw new Error(
-      `.venv-tts cannot import ${module}; reinstall scripts/site/tts/requirements.txt`
+      `the venv cannot import ${module}; run uv sync --locked --project scripts/site/tts`
     );
   }
 }

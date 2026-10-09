@@ -8,6 +8,7 @@ Plain clone on purpose. The reference was already designed (design-voice.py),
 and an instruction here doubles the cost (CFG runs the backbone twice) and lets
 delivery drift. 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
 """
+
 import json
 import sys
 import time
@@ -15,6 +16,7 @@ from pathlib import Path
 
 import mlx.core as mx
 import numpy as np
+
 from wavfile import write_wav
 
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"

@@ -1,8 +1,10 @@
-import { PassThrough } from "node:stream";
+import { mkdtempDisposableSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { jsonLines } from "./json-lines.ts";
-import { chunkBlock, postBlocks, synthClient } from "./synth.ts";
+import { startOnFakes } from "./fixtures.ts";
+import { type Chunk, chunkBlock, postBlocks, synthClient } from "./synth.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -43,36 +45,58 @@ describe("chunkBlock", () => {
   });
 });
 
-describe("synthClient over synth.py's JSON lines", () => {
-  it("reports the model load, logs each chunk and fails a job naming every failed chunk", async () => {
+/** A WAV's rate and length from the header synth.py writes, plus its first sample. */
+function wavInfo(path: string) {
+  const wav = readFileSync(path);
+  return {
+    sampleRate: wav.readUInt32LE(24),
+    frames: wav.readUInt32LE(40) / 2,
+    first: wav.readInt16LE(44)
+  };
+}
+
+describe("synth.py through synthClient", () => {
+  it("writes each chunk as a WAV, names every failed chunk, and keeps serving the next job", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    const stdin = new PassThrough();
-    const stdout = new PassThrough();
-    const synth = synthClient(
-      jsonLines({ command: "synth.py", stdin, stdout, exited: Promise.resolve() })
+    using dir = mkdtempDisposableSync(join(tmpdir(), "synth-"));
+    const job = (slug: string, chunks: Chunk[]) => {
+      const path = join(dir.path, `${slug}.json`);
+      const reference = { audio: "reference.wav", text: "Reference." };
+      writeFileSync(path, JSON.stringify({ outDir: join(dir.path, slug), reference, chunks }));
+      return path;
+    };
+    // The fakes print while loading and generating, as mlx-audio does, so a stray
+    // stdout line would break the JSON protocol here.
+    await using synth = synthClient(startOnFakes("synth.py"));
+    expect((await synth.ready).sampleRate).toBe(24000);
+
+    const failing = synth.runJob(
+      job("react", [
+        { id: "b000-c00", text: "Hello there." },
+        { id: "b000-c01", text: "[raise]" },
+        { id: "b001-c00", text: "[rate] Hi." },
+        { id: "b001-c01", text: "[silent]" }
+      ])
     );
-
-    stdout.write('{"loadSeconds":12.5,"sampleRate":24000}\n');
-    expect(await synth.ready).toEqual({ loadSeconds: 12.5, sampleRate: 24000 });
-
-    const failing = synth.runJob("/tmp/audio-react/job.json");
-    // One reply split across writes, as a pipe may deliver it.
-    stdout.write('{"id":"b000-c00","seconds":3.25,');
-    stdout.write('"wall":9}\n{"id":"b000-c01","error":"empty audio"}\n');
-    stdout.write('{"id":"b001-c00","error":"too long"}\n{"done":true}\n');
     await expect(failing).rejects.toThrow(
-      "synthesis failed for 2 chunk(s):\nb000-c01: empty audio\nb001-c00: too long"
+      "synthesis failed for 3 chunk(s):\n" +
+        "b000-c01: RuntimeError: fake model failure\n" +
+        "b001-c00: RuntimeError: unexpected sample rate 22050\n" +
+        "b001-c01: RuntimeError: model produced no audio"
     );
-    expect(log.mock.calls).toEqual([["  b000-c00 3.3s audio in 9s"]]);
+    expect(readdirSync(join(dir.path, "react"))).toEqual(["b000-c00.wav"]);
+    // 12 characters at 10 ms each, at 0.5 amplitude.
+    expect(wavInfo(join(dir.path, "react", "b000-c00.wav"))).toEqual({
+      sampleRate: 24000,
+      frames: 2880,
+      first: 16383
+    });
 
-    const passing = synth.runJob("/tmp/audio-toolbox/job.json");
-    stdout.write('{"id":"b000-c00","seconds":1,"wall":2}\n{"done":true}\n');
-    await passing;
-    await synth[Symbol.asyncDispose]();
-
-    expect(String(stdin.read())).toBe(
-      "/tmp/audio-react/job.json\n/tmp/audio-toolbox/job.json\nquit\n"
-    );
-    expect(stdin.writableEnded).toBe(true);
+    await synth.runJob(job("toolbox", [{ id: "b000-c00", text: "Bye." }]));
+    expect(wavInfo(join(dir.path, "toolbox", "b000-c00.wav")).frames).toBe(960);
+    expect(log.mock.calls.map(([line]) => String(line).replace(/in [\d.]+s$/, "in Ns"))).toEqual([
+      "  b000-c00 0.1s audio in Ns",
+      "  b000-c00 0.0s audio in Ns"
+    ]);
   });
 });

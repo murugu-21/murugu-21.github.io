@@ -101,18 +101,21 @@ Two features improve where supported and degrade cleanly. The phone menu's slide
 ## Checks
 
 ```bash
-bun run check-format   # oxfmt, plus prettier for .astro
+bun run check-format   # oxfmt, plus prettier for .astro and ruff for Python
 typos                  # spelling, configured in _typos.toml
-bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates and stylesheets
+bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), ESLint on .astro templates and stylesheets, then ruff
 bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
 bun run check:src      # type-check src/ (.astro files included), scripts/ and the config files
 bun run check:worker   # type-check worker/
+bun run check:py       # type-check the read-aloud Python with basedpyright
 bun run test           # vitest in workerd, on Node and in headless Chromium
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 
 [typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
+
+The read-aloud Python in `scripts/site/tts/` is its own [uv](https://docs.astral.sh/uv/) project (`pyproject.toml`, `uv.lock`), so install uv once with `brew install uv`. `bun run py <command>` runs a command in its venv, and the ruff and basedpyright checks go through it. MLX installs only on Apple Silicon; elsewhere, including CI, the venv holds numpy and the dev tools. The contract tests in `synth.test.ts` and `align.test.ts` always run `synth.py` and `whisper.py` against the fakes in `scripts/site/tts/fakes/`, so they need no MLX, but they do need the venv: on a fresh clone run `uv sync --locked --project scripts/site/tts` (or any `bun run py` command) before `bun run test`.
 
 The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
 

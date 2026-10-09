@@ -1,13 +1,11 @@
 import { Buffer } from "node:buffer";
-import { mkdtempDisposableSync } from "node:fs";
+import { mkdtempDisposableSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { alignBlock, alignPost, whisperClient } from "./align.ts";
-import { fakeDeps, fakeWhisper } from "./fixtures.ts";
-import { jsonLines } from "./json-lines.ts";
+import { fakeDeps, fakeWhisper, startOnFakes } from "./fixtures.ts";
 
 describe("alignBlock", () => {
   const block = {
@@ -52,18 +50,32 @@ describe("alignBlock", () => {
   });
 });
 
-describe("whisperClient", () => {
-  it("sends each job as one JSON line and parses the reply", async () => {
-    const stdin = new PassThrough();
-    const stdout = new PassThrough();
-    const whisper = whisperClient(
-      jsonLines({ command: "whisper.py", stdin, stdout, exited: Promise.resolve() })
-    );
-    const reply = whisper.transcribe({ id: "b3", wav: "/tmp/align/b3.wav", text: "Hi." });
-    stdout.write('{"words":[{"word":" Hi.","start":0,"end":0.4}]}\n');
-    expect(await reply).toEqual({ words: [{ word: " Hi.", start: 0, end: 0.4 }] });
-    await whisper[Symbol.asyncDispose]();
-    expect(String(stdin.read())).toBe('{"id":"b3","wav":"/tmp/align/b3.wav","text":"Hi."}\nquit\n');
+describe("whisper.py through whisperClient", () => {
+  it("times the words it hears, retries unprompted when the prompt swallowed them, and reports a failed job", async () => {
+    using dir = mkdtempDisposableSync(join(tmpdir(), "whisper-"));
+    // The fake hears whatever <wav>.txt says (fakes/README.md).
+    const slice = ({ name, heard }: { name: string; heard: string }) => {
+      const wav = join(dir.path, name);
+      writeFileSync(`${wav}.txt`, heard);
+      return wav;
+    };
+    const text = "Hello brave new world.";
+    const words = [
+      { word: "Hello", start: 0, end: 0.5 },
+      { word: "brave", start: 0.5, end: 1 },
+      { word: "new", start: 1, end: 1.5 },
+      { word: "world.", start: 1.5, end: 2 }
+    ];
+    await using whisper = whisperClient(startOnFakes("whisper.py"));
+
+    const clean = slice({ name: "b0.wav", heard: text });
+    expect(await whisper.transcribe({ id: "b0", wav: clean, text })).toEqual({ words });
+    // Prompted, an "echo" slice hears only "Thanks.", under 60% of the 4 expected words.
+    const echoed = slice({ name: "b1-echo.wav", heard: text });
+    expect(await whisper.transcribe({ id: "b1", wav: echoed, text })).toEqual({ words });
+    const missing = join(dir.path, "b2.wav");
+    const failed = await whisper.transcribe({ id: "b2", wav: missing, text });
+    expect(failed.error).toMatch(/^FileNotFoundError: /);
   });
 });
 
