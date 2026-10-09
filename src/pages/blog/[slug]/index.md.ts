@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import type { APIRoute, GetStaticPaths, InferGetStaticPropsType } from "astro";
 
 import { getPublishedPosts } from "#src/lib/blog/posts.ts";
-import { markdownResponse } from "#src/lib/llms.ts";
+import { markdownResponse } from "#src/lib/responses.ts";
 
 export const getStaticPaths = (async () => {
   const posts = await getPublishedPosts();

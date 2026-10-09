@@ -6,7 +6,9 @@ content/blog/          # one directory per post: <slug>/index.md (+ images)
 src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
 src/layouts/BlogLayout.astro  # the blog header around Layout
 src/components/blog/   # search, tags, table of contents, Listen control, bio
-src/lib/blog/          # post helpers, the markdown plugins, read-aloud text prep
+content/posts.ts       # PostSource and the pure post helpers (URLs, excerpt, descriptions, summaries)
+content/llms.ts        # llms.txt, llms-full.txt and the blog index's markdown rendition
+src/lib/blog/          # Astro post helpers, the markdown plugins, read-aloud text prep
 src/styles/blog/       # post and code-block styles
 src/content.config.ts  # content collection, validated by contracts/blog.ts
 public/blog/           # static files served verbatim (og-image, sw.js)

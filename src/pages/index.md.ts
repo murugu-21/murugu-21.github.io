@@ -1,6 +1,8 @@
 // Homepage as markdown; reuses the llms.txt summary.
-import { markdownResponse, siteLlmsText } from "#src/lib/llms.ts";
+import { siteLlmsText } from "#content/llms.ts";
+import { getPostSources } from "#src/lib/blog/posts.ts";
+import { markdownResponse } from "#src/lib/responses.ts";
 
 export async function GET() {
-  return markdownResponse(await siteLlmsText());
+  return markdownResponse(siteLlmsText(await getPostSources()));
 }

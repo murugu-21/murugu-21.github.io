@@ -1,5 +1,6 @@
 // Fixtures for tests of code that reads the `blog` content collection. The test file mocks
 // "astro:content" with `astroContentMock` and sets what the collection holds via `setPosts`.
+import { postSource, type PostFields } from "#content/fixtures.ts";
 import type { Post } from "./posts";
 
 let posts: Post[] = [];
@@ -15,28 +16,9 @@ export const astroContentMock = {
 
 export function blogPost({
   id,
-  title = id,
-  date = "2024-01-01",
-  description,
-  body,
-  tags = ["backend"],
-  keywords = [],
-  filePath
-}: {
-  id: string;
-  title?: string;
-  date?: string;
-  description?: string;
-  body?: string;
-  tags?: Post["data"]["tags"];
-  keywords?: string[];
-  filePath?: string;
-}): Post {
-  return {
-    id,
-    collection: "blog",
-    body,
-    filePath,
-    data: { title, date: new Date(date), description, tags, keywords, featured: false }
-  };
+  filePath,
+  ...fields
+}: PostFields & { id: string; filePath?: string }): Post {
+  const { data } = postSource({ slug: id, ...fields });
+  return { id, collection: "blog", body: fields.body, filePath, data };
 }

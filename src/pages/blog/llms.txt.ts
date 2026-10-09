@@ -1,17 +1,7 @@
-import { BLOG_TITLE, BLOG_DESCRIPTION, AUTHOR } from "#content/site.ts";
-import { postLines, textResponse } from "#src/lib/llms.ts";
+import { blogLlmsText } from "#content/llms.ts";
+import { getPostSources } from "#src/lib/blog/posts.ts";
+import { textResponse } from "#src/lib/responses.ts";
 
-// /blog/llms.txt (https://llmstxt.org): a map of the blog's posts.
 export async function GET() {
-  const lines = [
-    `# ${BLOG_TITLE}`,
-    ``,
-    `> ${BLOG_DESCRIPTION}, by ${AUTHOR.name}.`,
-    ``,
-    `## Posts`,
-    ``,
-    ...(await postLines()),
-    ``
-  ];
-  return textResponse(lines.join(`\n`));
+  return textResponse(blogLlmsText(await getPostSources()));
 }

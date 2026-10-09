@@ -146,9 +146,6 @@ export default defineConfig({
         }
       ]
     ),
-    // Exempt from the shared-code boundary: /llms.txt lists every post, so this imports the
-    // blog's post helpers.
-    restrict(["src/lib/llms.ts"], SITE),
     // The homepage may show the blog's posts; the blog never reaches into the homepage.
     restrict(
       [

@@ -3,9 +3,10 @@ import type { ImageMetadata } from "astro";
 import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
 
-import { getPublishedPosts, postDescription, postUrl } from "#src/lib/blog/posts.ts";
-import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
+import { postDescription, postUrl } from "#content/posts.ts";
 import { BLOG_DESCRIPTION, BLOG_TITLE, SITE_ORIGIN } from "#content/site.ts";
+import { getPostSources } from "#src/lib/blog/posts.ts";
+import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
 import { BLOG_URL } from "#src/lib/site.ts";
 
 // html: true so inline HTML in a post (<sup>) reaches readers; sanitize-html drops the unsafe tags.
@@ -43,19 +44,19 @@ function absolutizeAssets(html: string, postId: string): string {
 // swapped for their light-theme PNGs here: feed readers have no theme toggle and
 // their image proxies can't rasterize SVG (see diagramRaster).
 export async function GET() {
-  const posts = await getPublishedPosts();
+  const posts = await getPostSources();
 
   const items = await Promise.all(
     posts.map(async post => ({
       title: post.data.title,
       pubDate: post.data.date,
-      link: postUrl(post.id),
+      link: postUrl(post.slug),
       description: postDescription(post),
       content: absolutizeAssets(
-        sanitizeHtml(parser.render(await replaceMermaidFences(post.body || "")), {
+        sanitizeHtml(parser.render(await replaceMermaidFences(post.body)), {
           allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"])
         }),
-        post.id
+        post.slug
       )
     }))
   );

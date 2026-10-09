@@ -13,7 +13,7 @@ src/components/   # site chrome shared by every page (Header, Icon, ThemeToggle,
   chat/           # the Jarvis widget, on every page
   resume/         # resume-only components, styled by resume.css
   ui/             # shadcn primitives
-src/lib/          # shared logic (site constants, theme, analytics, llms.txt)
+src/lib/          # shared logic (site constants, theme, analytics, endpoint responses)
   blog/           # blog-only logic
 src/styles/       # global.css (the Tailwind entry) and resume.css (the resume's own Tailwind entry)
   blog/           # blog-only styles (code.css, for Shiki)
@@ -22,7 +22,7 @@ src/data/         # hand-written portfolio and resume data
 
 A file lives in the narrowest folder that holds every importer: a component only the homepage uses goes in `home/`, and one both halves use stays at the root of `components/`.
 
-Lint enforces the direction too (the site-area overrides in `oxlint.config.ts`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely, and so does `lib/llms.ts`, which renders the whole site for agents.
+Lint enforces the direction too (the site-area overrides in `oxlint.config.ts`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely.
 
 [`content/blog/README.md`](../content/blog/README.md) covers the blog's files, and [`worker/README.md`](../worker/README.md#ai-chat-widget) covers the chat widget in `components/chat/`.
 

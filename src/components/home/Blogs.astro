@@ -1,13 +1,14 @@
 ---
 import { blogSection } from "#src/data/portfolio.ts";
-import { getPublishedPosts, postDescription, postPath } from "#src/lib/blog/posts.ts";
+import { postDescription, postPath } from "#content/posts.ts";
+import { getPostSources } from "#src/lib/blog/posts.ts";
 import Section from "./Section.astro";
 import SectionTitle from "./SectionTitle.astro";
 
-const featured = (await getPublishedPosts()).filter(post => post.data.featured);
+const featured = (await getPostSources()).filter(post => post.data.featured);
 const cards = [
   ...featured.map(post => ({
-    url: postPath(post.id),
+    url: postPath(post.slug),
     title: post.data.shortTitle ?? post.data.title,
     description: postDescription(post)
   })),
