@@ -4,8 +4,10 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
+import { contentPosts } from "./scripts/content/posts-plugin.ts";
+
 export default defineConfig({
-  plugins: [cloudflare()],
+  plugins: [contentPosts(), cloudflare()],
   environments: {
     client: { build: { outDir: "dist", emptyOutDir: false, copyPublicDir: false } }
   },

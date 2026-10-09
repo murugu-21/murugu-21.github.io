@@ -1,169 +1,12 @@
-// Shared fixtures for the Worker tests: one description of what the deployed build
-// looks like, so the API and MCP surfaces are exercised against the same content
-// instead of drifting fixtures, plus the chat room socket helpers.
+// Shared fixtures for the Worker tests: the built pages the ASSETS binding serves, the bindings
+// the pool leaves out, and the chat room socket helpers. Site content comes from the real sources,
+// bundled through virtual:content/posts as in production.
 import { env } from "cloudflare:workers";
 import { assert, expect, vi } from "vitest";
 import { z } from "zod";
 
-import type { Dataset } from "#contracts/api/dataset.ts";
-import type { PostSummary } from "#contracts/api/posts.ts";
 import type { ChatRoom } from "#worker/chat-room.ts";
 import worker from "#worker/server.ts";
-
-// What the site build prerenders to /api/dataset.json (content/dataset.ts builds it).
-export const DATASET: Dataset = {
-  person: {
-    name: "Murugappan M",
-    headline: "Full Stack Engineer",
-    pitch: "I build B2B SaaS that ships in regulated industries.",
-    location: "Bangalore, India",
-    email: "murugu2001@example.com",
-    site: "https://murugappan.dev/",
-    availableForWork: true,
-    currentRole: {
-      role: "Software Engineer II",
-      company: "MedMe Health",
-      since: "2025-12"
-    },
-    focus: ["Build TypeScript"]
-  },
-  links: [
-    {
-      label: "Website",
-      url: "https://murugappan.dev/"
-    },
-    {
-      label: "About (canonical entity page)",
-      url: "https://murugappan.dev/about/"
-    },
-    {
-      label: "Blog",
-      url: "https://murugappan.dev/blog/"
-    },
-    {
-      label: "Blog RSS",
-      url: "https://murugappan.dev/blog/rss.xml"
-    },
-    {
-      label: "Resume (PDF)",
-      url: "https://murugappan.dev/resume.pdf"
-    },
-    {
-      label: "GitHub",
-      url: "https://github.example/m"
-    },
-    {
-      label: "LinkedIn",
-      url: "https://linkedin.example/m"
-    },
-    {
-      label: "X / Twitter",
-      url: "https://x.example/m"
-    },
-    {
-      label: "Email",
-      url: "mailto:murugu2001@example.com"
-    },
-    {
-      label: "Developer portal",
-      url: "https://murugappan.dev/developers/"
-    },
-    {
-      label: "OpenAPI spec",
-      url: "https://murugappan.dev/openapi.json"
-    },
-    {
-      label: "llms.txt",
-      url: "https://murugappan.dev/llms.txt"
-    },
-    {
-      label: "Agent instructions",
-      url: "https://murugappan.dev/AGENTS.md"
-    }
-  ],
-  experience: [
-    {
-      role: "Software Engineer II",
-      company: "MedMe Health",
-      location: "Canada (remote)",
-      period: "December 2025 – Present",
-      startDate: "2025-12",
-      endDate: null,
-      current: true,
-      summary: "Event-driven RPA platform.",
-      highlights: ["Lifted extraction accuracy to 95%+."]
-    }
-  ],
-  skills: [
-    {
-      category: "Languages",
-      skills: ["TypeScript", "Python"]
-    }
-  ],
-  proficiencies: [
-    {
-      area: "Backend",
-      tools: ["Node.js"],
-      level: 90
-    }
-  ],
-  education: [
-    {
-      institution: "Kumaraguru College of Technology",
-      credential: "B.E. Computer Science",
-      location: "Coimbatore, India",
-      period: "June 2019 - April 2023",
-      startDate: "2019-06",
-      endDate: "2023-04",
-      grade: null,
-      highlights: ["Distributed systems."]
-    }
-  ],
-  openSource: [
-    {
-      project: "AnkiDroid",
-      role: "Open Source Contributor",
-      description: "3 merged pull requests.",
-      links: [
-        {
-          label: "Image paste",
-          url: "https://gh.example/1"
-        }
-      ]
-    }
-  ]
-};
-
-export const LLMS_TXT = `# Murugappan M
-
-> Pitch.
-
-## Blog posts
-- [Modern distributed rate limiting in the cloud](https://murugappan.dev/blog/cloud-agnostic-rate-limiting/): Why LLM agents make per-user rate limiting essential.
-- [Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/): Find minimum number of coins.
-`;
-
-// What the site build prerenders to /api/posts.json, the same posts LLMS_TXT lists.
-const POSTS: PostSummary[] = [
-  {
-    slug: "cloud-agnostic-rate-limiting",
-    title: "Modern distributed rate limiting in the cloud",
-    url: "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/",
-    description: "Why LLM agents make per-user rate limiting essential."
-  },
-  {
-    slug: "coin-change-problem",
-    title: "Coin Change Problem",
-    url: "https://murugappan.dev/blog/coin-change-problem/",
-    description: "Find minimum number of coins."
-  }
-];
-
-export const POST_MARKDOWN = "---\ntitle: Coin Change Problem\n---\n\nBody text.\n";
-
-export const LLMS_FULL_TXT = "# SDE Journey\n\nEvery post, in full.\n";
-
-export const AGENTS_MD = "# AGENTS.md — murugappan.dev\n\nWhen to use.\n";
 
 /** The site's styled 404 page (404.html in the build). */
 export const NOT_FOUND_HTML = "<!doctype html><h1>404</h1>";
@@ -178,12 +21,6 @@ const HTML_PATHS = new Set(["/404", "/blog/404/"]);
 /** Overriding a path with null makes the assets binding 404 it. */
 function siteFiles(overrides: Record<string, string | null> = {}): Record<string, string | null> {
   return {
-    "/api/dataset.json": JSON.stringify(DATASET),
-    "/api/posts.json": JSON.stringify(POSTS),
-    "/llms.txt": LLMS_TXT,
-    "/blog/coin-change-problem/index.md": POST_MARKDOWN,
-    "/blog/llms-full.txt": LLMS_FULL_TXT,
-    "/AGENTS.md": AGENTS_MD,
     "/404": NOT_FOUND_HTML,
     "/blog/404/": BLOG_NOT_FOUND_HTML,
     ...overrides

@@ -33,7 +33,7 @@ bun run preview   # the built Worker in workerd over dist/ (wrangler dev), API a
 
 `preview` passes `--local-upstream localhost:8787` so the Worker sees the local host, not the `murugappan.dev` route, and the generated discovery documents link back to it. `types` passes `--strict-vars=false` so `OPPORTUNITY_INBOX` is typed `string` and tests can override it.
 
-`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env`. The Worker reads its data (`/api`, `llms.txt`) from `dist/` and runs from `dist-worker/`, so rebuild to refresh either.
+`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env`. The Worker bundles the site content it answers from, so rebuild after editing `worker/` or `content/`.
 
 ### Layers
 
@@ -55,9 +55,9 @@ Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it ma
 
 ### Build
 
-`bun run build` runs two Vite builds. `astro build` writes the static site to `dist/`. Then `vite build` (`vite.config.ts`, with `@cloudflare/vite-plugin`) bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) to `dist-worker/` and writes `.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `dist/` as the static assets, so deploy only after a build.
+`bun run build` runs two Vite builds. `astro build` writes the static site to `dist/`. Then `vite build` (`vite.config.ts`, with `@cloudflare/vite-plugin`) bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) to `dist-worker/` and writes `.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `dist/` as the static assets, so deploy only after a build. Wrangler can't bundle the Worker itself any more, because its esbuild has no loader for the `?raw` and virtual-module imports.
 
-`contentPosts()` (`scripts/content/posts-plugin.ts`) parses each published `content/blog/<slug>/index.md` once per build (frontmatter validated by `contracts/blog.ts`) and serves the list as `virtual:content/posts`. The site's agent texts (`llms.txt`, the markdown renditions) read that module. Astro's content collection still renders the post pages and the blog index, and keeps drafts visible under `astro dev`.
+Both builds load `contentPosts()` (`scripts/content/posts-plugin.ts`). It parses each published `content/blog/<slug>/index.md` once per build (frontmatter validated by `contracts/blog.ts`) and serves the list as `virtual:content/posts`. The site's agent texts and the Worker's API, MCP and chat grounding read that module, so they can't disagree. Astro's content collection still renders the post pages and the blog index, and keeps drafts visible under `astro dev`.
 
 `astro build` produces the site:
 
@@ -65,7 +65,7 @@ Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it ma
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
 - The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `scripts/site/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
 - Scripts that read the build find it through `scripts/site/site-dir.ts`.
-- Imports across top-level folders go through the `#src/*`, `#worker/*`, `#content/*`, `#contracts/*`, `#utils/*` and `#scripts/*` subpath imports in `package.json`, with the file extension, because TypeScript resolves them only as exact paths. Node, Bun, Vite and TypeScript read them natively. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
+- Imports across top-level folders go through the `#src/*`, `#worker/*`, `#content/*`, `#contracts/*`, `#utils/*`, `#scripts/*` and `#public/*` subpath imports in `package.json`, with the file extension, because TypeScript resolves them only as exact paths. Node, Bun, Vite and TypeScript read them natively. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
 
 Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](worker/README.md#discovery-documents-and-the-404).
 
@@ -73,7 +73,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/`, `content/` and `scripts/` runs on Node. That code runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars` and the built `llms.txt`.
+`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/`, `content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 

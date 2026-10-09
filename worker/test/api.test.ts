@@ -4,7 +4,6 @@ import { z } from "zod";
 import { API_PATHS, CURRENT_API_VERSION } from "#contracts/api/routes.ts";
 import {
   fetchWorker,
-  POST_MARKDOWN,
   readJson,
   recordingEmail,
   type FetchOptions,
@@ -60,25 +59,6 @@ describe("GET /api/profile", () => {
     expect(body.person.name).toBe("Murugappan M");
     expect(body.person.currentRole.company).toBe("MedMe Health");
     expect(body.links.map(l => l.label)).toContain("OpenAPI spec");
-  });
-
-  it("answers 503 with a hint when the dataset is not deployed", async () => {
-    const res = await get("/api/profile", {
-      assets: { "/api/dataset.json": null }
-    });
-    expect(res.status).toBe(503);
-    const error = await errorBody(res);
-    expect(error.code).toBe("service_unavailable");
-    expect(error.hint).toContain("retry");
-    expect(error.documentation_url).toBe("https://murugappan.dev/developers/");
-  });
-
-  it("answers 503 when the dataset is present but malformed", async () => {
-    const res = await get("/api/profile", {
-      assets: { "/api/dataset.json": '{"person":{}}' }
-    });
-    expect(res.status).toBe(503);
-    expect((await errorBody(res)).code).toBe("service_unavailable");
   });
 });
 
@@ -149,15 +129,17 @@ describe("path versioning", () => {
 });
 
 describe("GET /api/posts", () => {
-  it("lists every post with a count", async () => {
+  it("lists every published post newest first, with a count", async () => {
     const res = await get("/api/posts");
     expect(res.status).toBe(200);
     const body = await readJson(res, PostList);
-    expect(body.count).toBe(2);
-    expect(body.posts.map(p => p.slug)).toEqual([
-      "cloud-agnostic-rate-limiting",
-      "coin-change-problem"
-    ]);
+    const slugs = body.posts.map(p => p.slug);
+    expect(body.count).toBe(slugs.length);
+    expect(slugs.indexOf("cloud-agnostic-rate-limiting")).toBeLessThan(
+      slugs.indexOf("coin-change-problem")
+    );
+    expect(slugs.at(-1)).toBe("coin-change-problem");
+    expect(slugs.filter(slug => slug.includes("js-closure"))).toEqual([]);
   });
 
   it("filters case-insensitively on title and summary", async () => {
@@ -195,25 +177,31 @@ describe("GET /api/posts", () => {
     const error = await errorBody(res);
     expect(error.details).toEqual([{ field: "q", issue: "must be at most 200 characters" }]);
   });
-
-  it("returns an empty list rather than an error when the post list is missing", async () => {
-    const res = await get("/api/posts", { assets: { "/api/posts.json": null } });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ posts: [], count: 0 });
-  });
 });
 
 describe("GET /api/posts/{slug}", () => {
   it("returns the post with its markdown source", async () => {
     const res = await get("/api/posts/coin-change-problem");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
+    const body = await readJson(
+      res,
+      z.object({
+        slug: z.string(),
+        title: z.string(),
+        url: z.string(),
+        description: z.string(),
+        markdown: z.string()
+      })
+    );
+    expect(body).toMatchObject({
       slug: "coin-change-problem",
       title: "Coin Change Problem",
       url: "https://murugappan.dev/blog/coin-change-problem/",
-      description: "Find minimum number of coins.",
-      markdown: POST_MARKDOWN
+      description: "Find minimum number of coins that make a given value."
     });
+    expect(body.markdown).toMatch(
+      /^---\ntitle: Coin Change Problem\n[\s\S]*\n---\n\nWhen I was a child/
+    );
   });
 
   it("404s a slug that is not published, pointing at the list endpoint", async () => {
@@ -224,10 +212,12 @@ describe("GET /api/posts/{slug}", () => {
     expect(error.hint).toContain("/api/posts");
   });
 
-  it("404s a slug whose markdown rendition is missing", async () => {
-    const res = await get("/api/posts/cloud-agnostic-rate-limiting");
-    expect(res.status).toBe(404);
-    expect((await errorBody(res)).code).toBe("not_found");
+  it("404s a draft by either of its names", async () => {
+    for (const slug of ["js-closure", "draft%2Fjs-closure"]) {
+      const res = await get(`/api/posts/${slug}`);
+      expect(res.status, slug).toBe(404);
+      expect((await errorBody(res)).code, slug).toBe("not_found");
+    }
   });
 
   it("404s a path-traversal attempt as JSON", async () => {
@@ -272,12 +262,6 @@ describe("error handling under /api", () => {
       expect(error.documentation_url).toBe("https://murugappan.dev/developers/");
     }
   );
-
-  it("404s the internal dataset artifact rather than serving it raw", async () => {
-    const res = await get("/api/dataset.json");
-    expect(res.status).toBe(404);
-    expect((await errorBody(res)).code).toBe("not_found");
-  });
 
   it.each([
     ["POST", "/api/profile", "GET, HEAD, OPTIONS"],

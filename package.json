@@ -11,7 +11,8 @@
     "#utils/*": "./utils/*",
     "#contracts/*": "./contracts/*",
     "#content/*": "./content/*",
-    "#scripts/*": "./scripts/*"
+    "#scripts/*": "./scripts/*",
+    "#public/*": "./public/*"
   },
   "scripts": {
     "dev": "astro dev",

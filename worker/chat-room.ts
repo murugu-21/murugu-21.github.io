@@ -14,8 +14,8 @@ import { z } from "zod";
 
 import { deepseek, isInsufficientBalance, jarvisCall } from "./ai";
 import { globalLimiter } from "./api/ratelimit";
-import { readAsset } from "./api/store";
 import { admitFrame } from "./chat-frames";
+import { LLMS_TXT } from "./content";
 import { contactMailer, sendOpportunityEmail } from "./email";
 import { fetchSitePage } from "./fetch-page";
 import { lenient } from "#utils/json.ts";
@@ -190,11 +190,10 @@ export class ChatRoom extends AIChatAgent<Env> {
   private async relayModel({ writer, key, page, abortSignal }: TurnCall): Promise<boolean> {
     // Root llms.txt (~900 tokens) lists every post with its title, summary and link.
     // blog/llms-full.txt costs ~20x the tokens and grows per post.
-    const grounding = (await readAsset(this.env.ASSETS, "/llms.txt")) ?? "";
     const result = streamText({
       ...jarvisCall({
         model: this.languageModel(key),
-        messages: buildMessages(grounding, this.history(), page),
+        messages: buildMessages(LLMS_TXT, this.history(), page),
         tools: jarvisTools({
           fetchPage: url => fetchSitePage(this.env.ASSETS, url),
           captureLead: lead => this.captureLead(lead)

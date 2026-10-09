@@ -1,52 +1,8 @@
-// The parsers behind the read and write endpoints: the prerendered dataset,
-// the prerendered post list and the contact form body.
+// The contact form body parser behind POST /api/contact.
 import { describe, expect, it } from "vitest";
 
 import { CONTACT_LIMITS } from "#contracts/api/contact.ts";
 import { parseContactRequest } from "#worker/api/contact.ts";
-import { loadDataset, loadPosts } from "#worker/api/store.ts";
-import { postMarkdownPath } from "#worker/api/posts.ts";
-import { DATASET, fakeAssets, fakeFetcher } from "./fixtures";
-
-describe("loadDataset", () => {
-  it("reads the prerendered dataset, and is null for a broken or stale artifact or a failing binding", async () => {
-    expect(await loadDataset(fakeAssets())).toEqual(DATASET);
-    expect(await loadDataset(fakeAssets({ "/api/dataset.json": "{truncated" }))).toBeNull();
-    const { experience: _dropped, ...stale } = DATASET;
-    expect(
-      await loadDataset(fakeAssets({ "/api/dataset.json": JSON.stringify(stale) }))
-    ).toBeNull();
-    expect(await loadDataset(fakeAssets({ "/api/dataset.json": null }))).toBeNull();
-    const failing = fakeFetcher(() => Promise.reject(new Error("binding down")));
-    expect(await loadDataset(failing)).toBeNull();
-  });
-});
-
-describe("loadPosts", () => {
-  it("reads the prerendered post list, and is empty for a broken artifact or a failing binding", async () => {
-    expect((await loadPosts(fakeAssets())).map(p => p.slug)).toEqual([
-      "cloud-agnostic-rate-limiting",
-      "coin-change-problem"
-    ]);
-    expect(await loadPosts(fakeAssets({ "/api/posts.json": "[{truncated" }))).toEqual([]);
-    expect(await loadPosts(fakeAssets({ "/api/posts.json": '[{"slug":"Bad Slug"}]' }))).toEqual([]);
-    expect(await loadPosts(fakeAssets({ "/api/posts.json": null }))).toEqual([]);
-    const failing = fakeFetcher(() => Promise.reject(new Error("binding down")));
-    expect(await loadPosts(failing)).toEqual([]);
-  });
-});
-
-describe("postMarkdownPath", () => {
-  it.each([
-    ["coin-change-problem", "/blog/coin-change-problem/index.md"],
-    // Anything but a kebab-case token is rejected.
-    ["../secrets", null],
-    ["Mixed_Case", null],
-    ["", null]
-  ])("maps %j to %j", (slug, path) => {
-    expect(postMarkdownPath(slug)).toBe(path);
-  });
-});
 
 describe("parseContactRequest", () => {
   const valid = {

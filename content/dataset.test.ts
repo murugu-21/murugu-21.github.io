@@ -91,7 +91,7 @@ describe("splitSkillItems", () => {
 describe("buildDataset", () => {
   const dataset = buildDataset(input);
 
-  // The Worker answers 503 for a dataset its schema rejects.
+  // The Worker parses it at startup, so a rejected dataset fails the deploy.
   it("builds a document the contract's schema accepts", () => {
     expect(Dataset.safeParse(dataset).success).toBe(true);
   });

@@ -7,7 +7,7 @@
     "scripts/site/generate-resume.ts",
     "brand/render-x-cover.ts"
   ],
-  // Served by URL, never imported.
+  // Served by URL. worker/content.ts reads AGENTS.md as ?raw text, not as a module.
   "ignore": ["public/**"],
   // The husky plugin parses any hook script; ours live in .githooks (core.hooksPath).
   "husky": { "config": [".githooks/*"] },

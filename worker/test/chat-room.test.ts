@@ -259,22 +259,19 @@ describe("a chat turn", () => {
     ]);
   });
 
-  it("grounds every turn on the deployed llms.txt, so a redeploy shows at once", async () => {
+  it("grounds the turn on the site summary and every published post", async () => {
     await fundChat();
-    const { socket, frames, stub } = await openRoom("room-redeploy");
-    const model = scriptedModel(textStep("One."), textStep("Two."));
-    await scriptRoom(stub, model, { assets: { "/llms.txt": "DEPLOY-ONE" } });
+    const { socket, frames, stub } = await openRoom("room-grounding");
+    const model = scriptedModel(textStep("One."));
+    await scriptRoom(stub, model);
     socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "one" })] }));
     expect(replyText(await streamedChunks(frames, "r1"))).toBe("One.");
 
-    await scriptRoom(stub, model, { assets: { "/llms.txt": "DEPLOY-TWO" } });
-    socket.send(chatRequest({ id: "r2", messages: [userMessage({ id: "u2", text: "two" })] }));
-    expect(replyText(await streamedChunks(frames, "r2"))).toBe("Two.");
-
-    const grounding = model.doStreamCalls.map(c =>
-      JSON.stringify(c.prompt[0]).match(/DEPLOY-\w+/g)
+    const system = JSON.stringify(model.doStreamCalls[0]?.prompt[0]);
+    expect(system).toContain("# Murugappan M, Full Stack Engineer");
+    expect(system).toContain(
+      "[Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/)"
     );
-    expect(grounding).toEqual([["DEPLOY-ONE"], ["DEPLOY-TWO"]]);
   });
 
   it("answers a room's last message of the day, then gates the next one", async () => {

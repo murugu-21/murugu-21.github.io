@@ -1,7 +1,7 @@
 // The public HTTP API. The Worker claims /api/* and /openapi.json ahead of static assets
 // (run_worker_first) so failures are JSON and the spec can name the host that answered.
 
-import { Hono, type Context } from "hono";
+import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { methodNotAllowed } from "hono/method-not-allowed";
@@ -29,7 +29,7 @@ import {
   secondsUntilUtcMidnight
 } from "./ratelimit";
 import { API_PATHS, READ_METHODS } from "#contracts/api/routes.ts";
-import { loadDataset, loadPost, loadPosts } from "./store";
+import { DATASET, findPost, POSTS } from "#worker/content.ts";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
 // Reads depend only on the deployed build; five minutes keeps a redeploy visible quickly.
@@ -46,14 +46,6 @@ function json(data: unknown): Response {
     }
   });
 }
-
-const datasetUnavailable = () =>
-  apiError({
-    status: 503,
-    code: "service_unavailable",
-    message: "The site's content dataset is not available right now.",
-    hint: "This is a transient deployment state, so retry in a minute. If it persists, the site's /api/dataset.json build artifact is missing."
-  });
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
@@ -117,10 +109,7 @@ api.use("*", apiHeaders({ enforceReads: true }));
 api.use("*", jsonMethodNotAllowed(api));
 
 // Each slice schema picks its keys from the dataset; parsing drops the rest.
-const datasetRoute = (slice: z.ZodType) => async (c: Context<{ Bindings: Env }>) => {
-  const data = await loadDataset(c.env.ASSETS);
-  return data ? json(slice.parse(data)) : datasetUnavailable();
-};
+const datasetRoute = (slice: z.ZodType) => () => json(slice.parse(DATASET));
 
 api.on(READ_METHODS, "/profile", datasetRoute(Profile));
 
@@ -132,7 +121,7 @@ api.on(READ_METHODS, "/education", datasetRoute(EducationList));
 
 api.on(READ_METHODS, "/open-source", datasetRoute(OpenSourceList));
 
-api.on(READ_METHODS, "/posts", async c => {
+api.on(READ_METHODS, "/posts", c => {
   const parsed = PostsQuery.safeParse(c.req.query());
   if (!parsed.success) {
     return apiError({
@@ -145,16 +134,16 @@ api.on(READ_METHODS, "/posts", async c => {
   }
 
   const posts = searchPosts({
-    posts: await loadPosts(c.env.ASSETS),
+    posts: POSTS,
     query: parsed.data.q,
     limit: parsed.data.limit
   });
   return json({ posts, count: posts.length });
 });
 
-api.on(READ_METHODS, "/posts/:slug", async c => {
+api.on(READ_METHODS, "/posts/:slug", c => {
   const slug = c.req.param("slug");
-  const post = await loadPost(c.env.ASSETS, slug);
+  const post = findPost(slug);
   if (post) return json(post);
   return apiError({
     status: 404,

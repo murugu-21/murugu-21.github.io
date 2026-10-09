@@ -1,10 +1,7 @@
 import { assert, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 
 import { blogPost, setPosts } from "#src/lib/blog/fixtures.ts";
 import { GET as aboutMarkdown } from "./about/index.md.ts";
-import { GET as dataset } from "./api/dataset.json.ts";
-import { GET as posts } from "./api/posts.json.ts";
 import { GET as blogLlmsFull } from "./blog/llms-full.txt.ts";
 import { GET as blogLlms } from "./blog/llms.txt.ts";
 import { GET as blogIndexMarkdown } from "./blog/index.md.ts";
@@ -85,48 +82,6 @@ describe("post markdown routes", () => {
     expect(await res.text()).toMatch(
       /^---\ntitle: Coin Change Problem\ndate: "2021-08-09T23:46:37\.121Z"\n[\s\S]*\n---\n\nWhen I was a child/
     );
-  });
-});
-
-const POSTS = [
-  blogPost({ id: "first", title: "First post", date: "2024-02-03", description: "The first one" }),
-  blogPost({ id: "nested/draft", title: "Nested" }),
-  blogPost({ id: "second", title: "Second post" })
-];
-
-describe("/api/dataset.json", () => {
-  it("serves the dataset the Worker reads, built from the portfolio data", async () => {
-    const res = dataset();
-    const Served = z.object({ person: z.object({ name: z.string(), headline: z.string() }) });
-
-    expect(res.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
-    expect(Served.parse(JSON.parse(await res.text())).person).toEqual({
-      name: "Murugappan M",
-      headline: "Full Stack Engineer"
-    });
-  });
-});
-
-describe("/api/posts.json", () => {
-  it("lists the top-level posts newest first, with their one-line descriptions", async () => {
-    setPosts(POSTS);
-    const res = await posts();
-
-    expect(res.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
-    expect(JSON.parse(await res.text())).toEqual([
-      {
-        slug: "first",
-        title: "First post",
-        url: "https://murugappan.dev/blog/first/",
-        description: "The first one"
-      },
-      {
-        slug: "second",
-        title: "Second post",
-        url: "https://murugappan.dev/blog/second/",
-        description: ""
-      }
-    ]);
   });
 });
 

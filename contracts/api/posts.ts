@@ -43,9 +43,6 @@ export const PostSummary = z
   .meta({ title: "PostSummary", description: "A blog post without its body." });
 export type PostSummary = z.infer<typeof PostSummary>;
 
-// Every published post, newest first: the prerendered /api/posts.json the Worker searches.
-export const PostSummaries = z.array(PostSummary);
-
 export const PostList = z
   .object({
     posts: z.array(PostSummary).meta({ description: "Matching posts, newest first." }),

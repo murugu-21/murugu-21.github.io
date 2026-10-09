@@ -1,4 +1,3 @@
-// worker/not-found.ts and worker/mcp/resources.ts keep their own copies; change all three.
 export const SITE_ORIGIN = "https://murugappan.dev";
 
 export const BLOG_TITLE = "SDE Journey";
