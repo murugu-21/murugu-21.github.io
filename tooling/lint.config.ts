@@ -1,3 +1,4 @@
+// The root vite.config.ts loads this, so every path in it is relative to the repo root.
 import type { OxlintConfig, OxlintOverride } from "vite-plus/lint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
@@ -10,7 +11,7 @@ const LAYER_NAMES = [
   "api",
   "siteScripts",
   "tts",
-  "lintScripts",
+  "tooling",
   "brand",
   "content",
   // After content: a file gets the last matching override, and this folder sits inside it.
@@ -46,7 +47,7 @@ const LAYERS: Record<LayerName, Layer> = {
     uses: ["site", "contracts", "utils"]
   },
   tts: { dir: "apps/tts/", pkg: "@murugappan/tts", uses: ["content", "contracts", "utils"] },
-  lintScripts: { dir: "scripts/lint/", pkg: "murugappan-dev", uses: [] },
+  tooling: { dir: "tooling/", pkg: "@murugappan/tooling", uses: [] },
   brand: {
     dir: "apps/site/brand/",
     pkg: "@murugappan/site",
@@ -135,7 +136,7 @@ export default {
   ignorePatterns: ["apps/site/public/**"],
   plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
-  jsPlugins: ["./scripts/lint/test-behaviour.ts", "./scripts/lint/contracts.ts"],
+  jsPlugins: ["./tooling/oxlint/test-behaviour.ts", "./tooling/oxlint/contracts.ts"],
   categories: { correctness: "error" },
   // oxlint takes settings only at the top level; the override below scopes the plugin.
   settings: { tailwindcss: { entryPoint: "apps/site/src/styles/global.css" } },
@@ -264,7 +265,7 @@ export default {
     },
     { files: ["packages/contracts/**"], rules: { "contracts/shapes-only": "error" } },
     {
-      files: ["scripts/lint/ts-alias.cjs"],
+      files: ["tooling/ts-alias.cjs"],
       rules: {
         "typescript/no-unsafe-assignment": "off",
         "typescript/no-unsafe-argument": "off",

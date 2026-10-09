@@ -39,7 +39,7 @@ The root scripts run each app's own through `vp run`, such as `vp run @murugappa
 
 ### Workspaces and layers
 
-Bun workspaces (`workspaces` in the root `package.json`) split the repo into three apps and three packages:
+Bun workspaces (`workspaces` in the root `package.json`) split the repo into three apps, three packages and the tooling:
 
 ```text
 apps/site/           # @murugappan/site: the Astro site (src/), its build and blog tooling (scripts/), the X banners (brand/)
@@ -48,14 +48,14 @@ apps/tts/            # @murugappan/tts: the blog's read-aloud audio, generated b
 packages/content/    # @murugappan/content: the site's sources, the pure functions over them, and the posts Vite plugin (vite/)
 packages/contracts/  # @murugappan/contracts: what the site, the Worker and scripts agree on
 packages/utils/      # @murugappan/utils: helpers with no app logic (zod JSON parsing, AI SDK message text)
-scripts/lint/        # the repo's lint plugins, in the root package with the rest of the tooling
+tooling/             # @murugappan/tooling: lint, format and commit config, the oxlint plugins (oxlint/) and their dependencies
 ```
 
 Each package lists the npm packages it imports, and knip checks those lists per workspace. Everything installs into one hoisted `node_modules` at the root.
 
 A package imports another by name and file path, with the extension: `@murugappan/content/posts.ts` (each package exports `./*`). Inside an app, `#src/*` (and `#scripts/*` in the site) are subpath imports from the app's `package.json`. TypeScript resolves both only as exact paths. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
 
-Lint enforces the graph. `LAYERS` in `lint.config.ts` lists each layer (a folder in a package), its package and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. A layer names another in its own package by subpath import and one in another package by name, so no app can import another. `import/no-relative-parent-imports` stops a `../` import from going around them, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `packages/contracts/`. Logic goes in the layer that runs it, in `packages/content/` when two apps derive something from the sources, or in `packages/utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The config files (`apps/site/astro.config.ts`, `apps/api/vite.config.ts`, the root `vite.config.ts`) belong to no layer, since they wire the layers together.
+Lint enforces the graph. `LAYERS` in `tooling/lint.config.ts` lists each layer (a folder in a package), its package and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. A layer names another in its own package by subpath import and one in another package by name, so no app can import another. `import/no-relative-parent-imports` stops a `../` import from going around them, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`tooling/oxlint/contracts.ts`) rejects a function exported from `packages/contracts/`. Logic goes in the layer that runs it, in `packages/content/` when two apps derive something from the sources, or in `packages/utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The config files (`apps/site/astro.config.ts`, `apps/api/vite.config.ts`, the root `vite.config.ts`) belong to no layer, since they wire the layers together.
 
 ### Build
 
@@ -76,7 +76,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in the site's `scripts/` and in `apps/tts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vp test` (Vitest) over three projects. The Worker tests (`apps/api/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`apps/site/src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `apps/site/src/`, `apps/tts/`, `packages/content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `apps/api/.dev.vars`.
+`test` is `vp test` (Vitest) over three projects. The Worker tests (`apps/api/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`apps/site/src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `apps/site/src/`, `apps/tts/`, `packages/content/` and `tooling/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `apps/api/.dev.vars`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -120,7 +120,7 @@ bun run test           # vitest in workerd, on Node and in headless Chromium
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 
-[Vite+](https://viteplus.dev) (`vp`) bundles oxlint, oxfmt and Vitest at versions that match each other. Its Vite core builds the Worker, and Astro uses it too through the `vite` override in `package.json`. The root `vite.config.ts` holds the lint, format and test settings, and its `lint` block imports `lint.config.ts`. The pre-commit hook runs `vp staged` with that file's `staged` rules. The Worker's build lives in `apps/api/vite.config.ts` instead, because its plugins would otherwise load into the workerd test pool. `vite-plus`, the `vite` alias and `vitest` are pinned exactly and must move together, so `renovate.json` groups them.
+[Vite+](https://viteplus.dev) (`vp`) bundles oxlint, oxfmt and Vitest at versions that match each other. Its Vite core builds the Worker, and Astro uses it too through the `vite` override in `package.json`. The root `vite.config.ts` holds the test settings and the `staged` rules, and imports its `lint` and `fmt` blocks from `tooling/lint.config.ts` and `tooling/fmt.config.ts`, because Vite+ reads those two only from the root config. Their paths are relative to the repo root. The pre-commit hook runs `vp staged` with that file's `staged` rules. The Worker's build lives in `apps/api/vite.config.ts` instead, because its plugins would otherwise load into the workerd test pool. `vite-plus`, the `vite` alias and `vitest` are pinned exactly and must move together, so `renovate.json` groups them.
 
 [typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
 
@@ -128,9 +128,9 @@ The read-aloud Python in `apps/tts/` is its own [uv](https://docs.astral.sh/uv/)
 
 The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `apps/site/tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
 
-typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:eslint` preloads `scripts/lint/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
+typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:eslint` preloads `tooling/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
 
-Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts` over the `.astro` files in `apps/site/src/`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, to cover the templates. It also runs `@eslint/css` over the stylesheets, which oxlint can't parse at all. It lints nothing else, so its rules don't overlap oxlint's. Move the templates to oxlint once it can parse them.
+Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `tooling/eslint.config.ts` over the `.astro` files in `apps/site/src/`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, to cover the templates. It also runs `@eslint/css` over the stylesheets, which oxlint can't parse at all. It lints nothing else, so its rules don't overlap oxlint's. Move the templates to oxlint once it can parse them.
 
 Having both compilers installed has two side effects:
 

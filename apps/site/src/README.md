@@ -22,7 +22,7 @@ src/data/         # maps packages/content/portfolio.ts's logo keys to their imag
 
 A file lives in the narrowest folder that holds every importer: a component only the homepage uses goes in `home/`, and one both halves use stays at the root of `components/`.
 
-Lint enforces the direction too (the site-area overrides in `lint.config.ts`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely.
+Lint enforces the direction too (the site-area overrides in `tooling/lint.config.ts`). Shared code never imports from a `blog/` or `home/` folder, and blog code never imports homepage components. The homepage may import blog code, since it shows the featured posts. Pages compose both halves freely.
 
 [`packages/content/blog/README.md`](../../../packages/content/blog/README.md) covers the blog's files, and [`apps/api/README.md`](../../api/README.md#ai-chat-widget) covers the chat widget in `components/chat/`.
 

@@ -1,2 +1,2 @@
 #!/bin/sh
-bunx commitlint --edit "$1"
+bunx commitlint --config tooling/commitlint.config.ts --edit "$1"

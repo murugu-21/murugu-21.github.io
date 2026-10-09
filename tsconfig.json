@@ -2,11 +2,8 @@
   "extends": "astro/tsconfigs/strict",
   "include": [
     "packages/**/*",
-    "scripts/**/*",
+    "tooling/**/*",
     "apps/tts/*.ts",
-    "commitlint.config.ts",
-    "lint.config.ts",
-    "eslint.config.ts",
     "vite.config.ts",
     "apps/api/vite.config.ts"
   ],

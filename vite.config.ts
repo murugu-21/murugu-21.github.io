@@ -5,8 +5,9 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite-plus";
 
-import lint from "./lint.config.ts";
 import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
+import fmt from "@murugappan/tooling/fmt.config.ts";
+import lint from "@murugappan/tooling/lint.config.ts";
 
 // The pool's D1 starts empty; apps/api/test/apply-migrations.ts applies these
 // per test file.
@@ -31,17 +32,7 @@ const liveBindings = live ? readLiveBindings() : {};
 
 export default defineConfig({
   lint,
-  fmt: {
-    ignorePatterns: ["apps/site/public/**"],
-    trailingComma: "none",
-    arrowParens: "avoid",
-    printWidth: 100,
-    sortPackageJson: false,
-    sortTailwindcss: { stylesheet: "./apps/site/src/styles/global.css", functions: ["cn", "cva"] },
-    overrides: [
-      { files: ["packages/content/**/*.md"], options: { semi: false, trailingComma: "all" } }
-    ]
-  },
+  fmt,
   // The flag keeps a commit that only touches ignored files (apps/site/public) from failing.
   staged: {
     "*.{js,mjs,jsx,ts,tsx}": [
@@ -67,7 +58,7 @@ export default defineConfig({
     coverage: {
       provider: "istanbul",
       include: [
-        "{apps/site/src,apps/site/scripts,apps/api/src,packages,scripts}/**/*.{ts,tsx}",
+        "{apps/site/src,apps/site/scripts,apps/api/src,packages,tooling}/**/*.{ts,tsx}",
         "apps/tts/*.ts"
       ],
       exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "apps/api/test/**"],
@@ -106,7 +97,7 @@ export default defineConfig({
           name: "node",
           environment: "node",
           include: [
-            "scripts/**/*.test.ts",
+            "tooling/**/*.test.ts",
             "apps/site/{src,scripts}/**/*.test.ts",
             "apps/tts/*.test.ts",
             "packages/content/**/*.test.ts"
