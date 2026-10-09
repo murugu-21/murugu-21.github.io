@@ -37,7 +37,7 @@ description: One-line description shown in lists, search and feeds.
 - **Headings.** On wide screens, `##` and `###` headings feed the table-of-contents rail (`TableOfContents.astro`). Posts with fewer than two get no rail. Use `---` as a separator, never an empty `##`.
 - **Code** fences are highlighted at build time by Shiki in Night Owl, adjusted for AA contrast and without italics (`apps/site/src/lib/blog/code-themes.ts`). Name the language (` ```ts `), or the fence renders as plain text.
 - **Mermaid** fences render at build time, not in the browser.
-- **Listen** audio comes from `bun run audio`, run on a laptop after the build. [`apps/site/scripts/tts/README.md`](../../../apps/site/scripts/tts/README.md) covers the setup.
+- **Listen** audio comes from `bun run audio`, run on a laptop after the build. [`apps/tts/README.md`](../../../apps/tts/README.md) covers the setup.
 
 ## Mermaid diagrams
 

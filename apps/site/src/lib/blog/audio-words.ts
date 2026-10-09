@@ -1,5 +1,5 @@
 // Word-level timing for the read-aloud highlight: maps DOM spans to the times
-// apps/site/scripts/tts/align-words.ts stored in the timing JSON.
+// apps/tts/align-words.ts stored in the timing JSON.
 
 import type { TimedWord } from "@murugappan/contracts/audio-timings.ts";
 import { normalizeSpeechText, tokenize } from "@murugappan/content/speech.ts";

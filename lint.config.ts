@@ -9,6 +9,7 @@ const LAYER_NAMES = [
   "site",
   "api",
   "siteScripts",
+  "tts",
   "lintScripts",
   "brand",
   "content",
@@ -42,8 +43,9 @@ const LAYERS: Record<LayerName, Layer> = {
     dir: "apps/site/scripts/",
     pkg: "@murugappan/site",
     imports: "#scripts/",
-    uses: ["site", "content", "contracts", "utils"]
+    uses: ["site", "contracts", "utils"]
   },
+  tts: { dir: "apps/tts/", pkg: "@murugappan/tts", uses: ["content", "contracts", "utils"] },
   lintScripts: { dir: "scripts/lint/", pkg: "murugappan-dev", uses: [] },
   brand: {
     dir: "apps/site/brand/",
@@ -60,7 +62,7 @@ const LAYERS: Record<LayerName, Layer> = {
         regex: `${FRAMEWORKS}|\\.(png|jpe?g|gif|webp|avif|svg)$`,
         allowTypeImports: true,
         message:
-          "packages/content/ holds sources and pure functions the site and the Worker share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in apps/site/src/ or apps/api/src/ (README.md › Layers)."
+          "packages/content/ holds sources and pure functions the apps share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in the app that needs them (README.md › Layers)."
       }
     ]
   },

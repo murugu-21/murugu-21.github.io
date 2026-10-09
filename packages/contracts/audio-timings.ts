@@ -1,5 +1,5 @@
 // The timing JSON stored next to each post's MP3 (audio.ts): the fields the page's player reads.
-// apps/site/scripts/generate-audio.ts writes it and align-audio.ts adds the words.
+// apps/tts/generate-audio.ts writes it and align-audio.ts adds the words.
 import { z } from "zod";
 
 export const TimedWord = z.object({ w: z.string(), s: z.number(), e: z.number() });

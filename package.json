@@ -13,10 +13,10 @@
     "dev": "vp run @murugappan/site#dev",
     "build": "vp run -r build",
     "preview": "vp run @murugappan/api#preview",
-    "format": "vp fmt apps packages scripts vite.config.ts commitlint.config.ts lint.config.ts eslint.config.ts && prettier --write \"apps/site/src/**/*.astro\" && bun run --silent py ruff format apps/site/scripts/tts",
-    "check-format": "vp fmt apps packages scripts vite.config.ts commitlint.config.ts lint.config.ts eslint.config.ts --check && prettier --check \"apps/site/src/**/*.astro\" && bun run --silent py ruff format --check apps/site/scripts/tts",
+    "format": "vp fmt apps packages scripts vite.config.ts commitlint.config.ts lint.config.ts eslint.config.ts && prettier --write \"apps/site/src/**/*.astro\" && bun run --silent py ruff format apps/tts",
+    "check-format": "vp fmt apps packages scripts vite.config.ts commitlint.config.ts lint.config.ts eslint.config.ts --check && prettier --check \"apps/site/src/**/*.astro\" && bun run --silent py ruff format --check apps/tts",
     "lint": "astro sync --root apps/site && vp lint apps packages scripts vite.config.ts commitlint.config.ts lint.config.ts eslint.config.ts && bun run lint:eslint apps/site/src && bun run lint:py",
-    "lint:py": "bun run --silent py ruff check apps/site/scripts/tts",
+    "lint:py": "bun run --silent py ruff check apps/tts",
     "lint:eslint": "node --require ./scripts/lint/ts-alias.cjs node_modules/.bin/eslint",
     "lint:fix": "astro sync --root apps/site && vp lint apps packages scripts vite.config.ts commitlint.config.ts lint.config.ts eslint.config.ts --fix && bun run lint:eslint apps/site/src --fix && bun run lint:py --fix",
     "knip": "knip",
@@ -27,13 +27,13 @@
     "test:live": "vp test --project workers --tags-filter=live",
     "check:src": "astro sync --root apps/site && node node_modules/typescript/bin/tsc -p apps/site --noEmit --runExternalCode && node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
     "check:worker": "node node_modules/typescript/bin/tsc -p apps/api",
-    "check:py": "bun run --silent py basedpyright -p apps/site/scripts/tts",
+    "check:py": "bun run --silent py basedpyright -p apps/tts",
     "prepare": "git config core.hooksPath .githooks",
     "diagrams": "vp run @murugappan/site#diagrams",
-    "audio": "vp run @murugappan/site#audio",
-    "audio:align": "vp run @murugappan/site#audio:align",
+    "audio": "vp run @murugappan/tts#audio",
+    "audio:align": "vp run @murugappan/tts#audio:align",
     "types": "vp run @murugappan/api#types",
-    "py": "uv run --locked --project apps/site/scripts/tts"
+    "py": "uv run --locked --project apps/tts"
   },
   "dependencies": {
     "astro": "^7.3.8"

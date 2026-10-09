@@ -129,6 +129,21 @@
         "webmcp-types": "^0.1.10",
       },
     },
+    "apps/tts": {
+      "name": "@murugappan/tts",
+      "dependencies": {
+        "@murugappan/content": "workspace:*",
+        "@murugappan/contracts": "workspace:*",
+        "@murugappan/utils": "workspace:*",
+        "linkedom": "^0.18.13",
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@types/node": "^26.6.4",
+        "fast-check": "^4.10.2",
+        "vitest": "5.0.3",
+      },
+    },
     "packages/content": {
       "name": "@murugappan/content",
       "dependencies": {
@@ -585,6 +600,8 @@
     "@murugappan/contracts": ["@murugappan/contracts@workspace:packages/contracts"],
 
     "@murugappan/site": ["@murugappan/site@workspace:apps/site"],
+
+    "@murugappan/tts": ["@murugappan/tts@workspace:apps/tts"],
 
     "@murugappan/utils": ["@murugappan/utils@workspace:packages/utils"],
 

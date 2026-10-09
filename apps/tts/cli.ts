@@ -4,18 +4,17 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { SITE_DIR } from "#scripts/site-dir.ts";
-
 // The uv project in this folder (pyproject.toml); `uv sync` creates it.
 export const PYTHON = join(import.meta.dirname, ".venv", "bin", "python");
-export const BLOG_DIST = join(SITE_DIR, "blog");
+// The blog pages `bun run build` writes to the site's dist/.
+export const BLOG_DIST = join(import.meta.dirname, "..", "site", "dist", "blog");
 
 const COMMON_OPTIONS = {
   force: { type: "boolean", default: false },
   local: { type: "boolean", default: false }
 } as const;
 
-// `bun run audio [slug…] [flags]`; apps/site/scripts/generate-audio.ts lists the flags.
+// `bun run audio [slug…] [flags]`; apps/tts/generate-audio.ts lists the flags.
 export function audioArgs(args: string[]) {
   const { values, positionals } = parseArgs({
     args,
@@ -41,14 +40,11 @@ export function alignArgs(args: string[]) {
 }
 
 export function requirePython(module: string): void {
-  if (!existsSync(PYTHON))
-    throw new Error("no venv; run uv sync --locked --project apps/site/scripts/tts");
+  if (!existsSync(PYTHON)) throw new Error("no venv; run uv sync --locked --project apps/tts");
   // -P keeps the cwd off sys.path, where the coverage/ report dir would
   // shadow the `coverage` module numba imports.
   if (spawnSync(PYTHON, ["-P", "-c", `import ${module}`]).status !== 0) {
-    throw new Error(
-      `the venv cannot import ${module}; run uv sync --locked --project apps/site/scripts/tts`
-    );
+    throw new Error(`the venv cannot import ${module}; run uv sync --locked --project apps/tts`);
   }
 }
 

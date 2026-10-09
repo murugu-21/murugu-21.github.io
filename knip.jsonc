@@ -24,7 +24,7 @@
     // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.
     "cloudflare"
   ],
-  // System tools: apps/site/scripts/tts/cli.ts spawns ffmpeg, and the py script runs uv
+  // System tools: apps/tts/cli.ts spawns ffmpeg, and the py script runs uv
   // (installed with brew, README.md › Checks).
   "ignoreBinaries": ["ffmpeg", "uv"]
 }

@@ -1,7 +1,7 @@
 // Renders each published post to MP3 with per-paragraph timings and uploads
 // both to R2. Runs locally:
 //
-//   bun run build                # the built site (apps/site/scripts/site-dir.ts) must be current
+//   bun run build                # the built site (apps/site/dist) must be current
 //   bun run audio                # every post whose spoken text changed
 //   bun run audio first-post     # one post
 //   bun run audio --force        # regenerate even if unchanged
@@ -10,7 +10,7 @@
 //   bun run audio --patch react  # re-synthesize only the changed paragraphs
 //   bun run audio --upload-voice # push .voice/* to R2 once
 //
-// Per post (tts/render.ts):
+// Per post (render.ts):
 // 1. speechBlocks, the same extractor the page uses, pulls text from the built HTML.
 // 2. packSentences splits it into chunks of at most 300 characters.
 // 3. synth.py (Breeze TTS 2 via mlx-audio) renders each chunk, and ffmpeg applies atempo.
@@ -33,18 +33,11 @@ import {
   requireFfmpeg,
   requirePython,
   runEach
-} from "./tts/cli.ts";
-import { startJsonLines } from "./tts/json-lines.ts";
-import { VOICE_PREFIX, r2Store } from "./tts/r2.ts";
-import {
-  type Reference,
-  type RenderDeps,
-  type Synth,
-  patchPost,
-  renderPost
-} from "./tts/render.ts";
-import { synthClient } from "./tts/synth.ts";
-import { ROOT } from "./site-dir.ts";
+} from "./cli.ts";
+import { startJsonLines } from "./json-lines.ts";
+import { VOICE_PREFIX, r2Store } from "./r2.ts";
+import { type Reference, type RenderDeps, type Synth, patchPost, renderPost } from "./render.ts";
+import { synthClient } from "./synth.ts";
 
 // Env overrides are for A/B renders, not production.
 //   AUDIO_VOICE_DIR   directory holding reference.wav + reference.txt
@@ -52,10 +45,10 @@ import { ROOT } from "./site-dir.ts";
 //   AUDIO_LOUDNORM    "0" disables the loudness pass
 const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   ? resolve(process.env.AUDIO_VOICE_DIR)
-  : join(ROOT, ".voice");
+  : join(import.meta.dirname, ".voice");
 const VOICE_WAV = join(VOICE_DIR, "reference.wav");
 const VOICE_TXT = join(VOICE_DIR, "reference.txt");
-const WORKER = join(import.meta.dirname, "tts", "synth.py");
+const WORKER = join(import.meta.dirname, "synth.py");
 const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
 // Loudness only. Breeze is ~-60 dBFS between words, so no denoise or gate.
 const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";

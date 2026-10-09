@@ -1,5 +1,5 @@
 // The two read-aloud backends behind ListenControls. Pre-rendered audio from
-// /blog/audio/<slug>.{json,mp3} (apps/site/scripts/generate-audio.ts) is preferred;
+// /blog/audio/<slug>.{json,mp3} (apps/tts/generate-audio.ts) is preferred;
 // browser speech synthesis takes over when that is missing (new post, astro dev
 // has no Worker) or fails.
 

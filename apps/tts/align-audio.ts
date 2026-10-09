@@ -19,12 +19,12 @@ import {
   requireFfmpeg,
   requirePython,
   runEach
-} from "./tts/cli.ts";
-import { startJsonLines } from "./tts/json-lines.ts";
-import { r2Store } from "./tts/r2.ts";
-import { alignPost, whisperClient } from "./tts/align.ts";
+} from "./cli.ts";
+import { startJsonLines } from "./json-lines.ts";
+import { r2Store } from "./r2.ts";
+import { alignPost, whisperClient } from "./align.ts";
 
-const WORKER = join(import.meta.dirname, "tts", "whisper.py");
+const WORKER = join(import.meta.dirname, "whisper.py");
 
 const options = alignArgs(process.argv.slice(2));
 const r2 = r2Store(options.local ? "local" : "remote");

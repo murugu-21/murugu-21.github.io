@@ -1,11 +1,11 @@
-"""Long-lived word-timestamp worker for apps/site/scripts/align-audio.ts.
+"""Long-lived word-timestamp worker for apps/tts/align-audio.ts.
 
 Reads JSON lines from stdin: {"id", "wav", "text"} where wav is a 16 kHz mono
 slice of one block and text is what it says. Replies with one JSON line per
 job: {"id", "words": [{"word", "start", "end"}]} in seconds relative to the
 slice, or {"id", "error"}. The known text is the initial_prompt so whisper
 spells names and numbers like the post, which makes the match in
-audio-words.ts easier.
+align-words.ts easier.
 """
 
 import json

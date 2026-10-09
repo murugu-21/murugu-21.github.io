@@ -1,13 +1,13 @@
 """Design the read-aloud voice once from a persona prompt (Breeze TTS 2 voice design).
 
-  bun run py python apps/site/scripts/tts/design-voice.py [count]
+  bun run py python apps/tts/design-voice.py [count]
 
-Writes <count> candidates (default 3) to apps/site/.voice/candidates/<k>.wav plus
-the sentence they speak in apps/site/.voice/candidates/reference.txt. Listen, then promote
+Writes <count> candidates (default 3) to apps/tts/.voice/candidates/<k>.wav plus
+the sentence they speak in apps/tts/.voice/candidates/reference.txt. Listen, then promote
 the one you like:
 
-  cp apps/site/.voice/candidates/1.wav apps/site/.voice/reference.wav
-  cp apps/site/.voice/candidates/reference.txt apps/site/.voice/reference.txt
+  cp apps/tts/.voice/candidates/1.wav apps/tts/.voice/reference.wav
+  cp apps/tts/.voice/candidates/reference.txt apps/tts/.voice/reference.txt
   bun run audio --upload-voice
 
 Posts are plain clones of that clip (synth.py), which keeps the voice fixed
@@ -46,7 +46,7 @@ def main() -> int:
     from mlx_audio.tts import load
 
     count = int(sys.argv[1]) if len(sys.argv) > 1 else 3
-    out = Path(__file__).resolve().parents[2] / ".voice" / "candidates"
+    out = Path(__file__).resolve().parent / ".voice" / "candidates"
     out.mkdir(parents=True, exist_ok=True)
     (out / "reference.txt").write_text(SENTENCE + "\n")
     with contextlib.redirect_stdout(sys.stderr):

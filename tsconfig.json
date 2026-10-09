@@ -3,6 +3,7 @@
   "include": [
     "packages/**/*",
     "scripts/**/*",
+    "apps/tts/*.ts",
     "commitlint.config.ts",
     "lint.config.ts",
     "eslint.config.ts",

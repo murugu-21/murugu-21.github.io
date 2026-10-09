@@ -9,9 +9,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "diagrams": "bun scripts/render-mermaid.ts",
-    "audio": "bun scripts/generate-audio.ts",
-    "audio:align": "bun scripts/align-audio.ts"
+    "diagrams": "bun scripts/render-mermaid.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "4.0.131",

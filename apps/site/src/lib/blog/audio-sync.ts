@@ -1,5 +1,5 @@
-// Keeps the paragraph highlight in step with pre-rendered audio, whose timing
-// JSON (@murugappan/contracts/audio-timings.ts) apps/site/scripts/generate-audio.ts writes.
+// Keeps the paragraph highlight in step with pre-rendered audio. apps/tts/generate-audio.ts
+// writes its timing JSON (@murugappan/contracts/audio-timings.ts).
 
 import type { TimedBlock } from "@murugappan/contracts/audio-timings.ts";
 

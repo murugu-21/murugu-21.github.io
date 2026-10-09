@@ -66,7 +66,10 @@ export default defineConfig({
     // stay out.
     coverage: {
       provider: "istanbul",
-      include: ["{apps/site/src,apps/site/scripts,apps/api/src,packages,scripts}/**/*.{ts,tsx}"],
+      include: [
+        "{apps/site/src,apps/site/scripts,apps/api/src,packages,scripts}/**/*.{ts,tsx}",
+        "apps/tts/*.ts"
+      ],
       exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "apps/api/test/**"],
       reporter: ["text-summary", "lcov"]
     },
@@ -105,6 +108,7 @@ export default defineConfig({
           include: [
             "scripts/**/*.test.ts",
             "apps/site/{src,scripts}/**/*.test.ts",
+            "apps/tts/*.test.ts",
             "packages/content/**/*.test.ts"
           ]
         }
