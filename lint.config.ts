@@ -42,7 +42,7 @@ const LAYERS: Record<LayerName, Layer> = {
     dir: "apps/site/scripts/",
     pkg: "@murugappan/site",
     imports: "#scripts/",
-    uses: ["site", "contracts", "utils"]
+    uses: ["site", "content", "contracts", "utils"]
   },
   lintScripts: { dir: "scripts/lint/", pkg: "murugappan-dev", uses: [] },
   brand: {

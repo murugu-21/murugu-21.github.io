@@ -3,8 +3,8 @@
 import { parseHTML } from "linkedom";
 import { z } from "zod";
 
-import { speechBlocks } from "#src/lib/blog/speech.ts";
-import { normalizeSpeechText, packSentences } from "#src/lib/blog/audio-prep.ts";
+import { normalizeSpeechText, speechBlocks } from "@murugappan/content/speech.ts";
+import { packSentences } from "./audio-prep.ts";
 import type { JsonLines } from "./json-lines.ts";
 
 const CHUNK_MAX = 300;

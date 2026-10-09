@@ -1,27 +1,7 @@
-// Keeps the paragraph highlight in step with pre-rendered audio. The schema
-// covers the fields the page reads from the timing JSON written by
-// apps/site/scripts/generate-audio.ts.
+// Keeps the paragraph highlight in step with pre-rendered audio, whose timing
+// JSON (@murugappan/contracts/audio-timings.ts) apps/site/scripts/generate-audio.ts writes.
 
-import { z } from "zod";
-
-export const TimedWord = z.object({ w: z.string(), s: z.number(), e: z.number() });
-export type TimedWord = z.infer<typeof TimedWord>;
-
-export const TimedBlock = z.object({
-  text: z.string(),
-  start: z.number(),
-  end: z.number(),
-  // Version 2 only, and only for blocks the alignment pass matched well.
-  words: z.array(TimedWord).optional()
-});
-type TimedBlock = z.infer<typeof TimedBlock>;
-
-export const AudioTimings = z.object({
-  version: z.union([z.literal(1), z.literal(2)]),
-  duration: z.number(),
-  blocks: z.array(TimedBlock)
-});
-export type AudioTimings = z.infer<typeof AudioTimings>;
+import type { TimedBlock } from "@murugappan/contracts/audio-timings.ts";
 
 // Pair page blocks with timings by position, but only when the normalised
 // text still matches: an edited paragraph plays fine, it just isn't lit up.

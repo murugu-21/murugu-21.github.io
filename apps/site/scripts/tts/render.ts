@@ -4,7 +4,7 @@ import type { Buffer } from "node:buffer";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { spokenHash } from "#src/lib/blog/audio-prep.ts";
+import { spokenHash } from "./audio-prep.ts";
 import type { Ffmpeg } from "./cli.ts";
 import { assemble, pcmFormat, pcmSeconds, splice } from "./pcm.ts";
 import { type R2Store, audioKey } from "./r2.ts";
@@ -93,7 +93,7 @@ export async function renderPost(
 ) {
   const { r2, ffmpeg, tmpRoot, settings } = deps;
   const blocks = extractBlocks(deps, slug);
-  const hash = await spokenHash(blocks);
+  const hash = spokenHash(blocks);
   const storedJson = force ? null : r2.get(audioKey(slug, "json"));
   if (storedJson && storedHash(storedJson.toString()) === hash) {
     console.log(`${slug}: unchanged, skipping`);
@@ -231,7 +231,7 @@ export async function patchPost(
   const doc = patchedTimings({
     stored: timings,
     texts: blocks,
-    hash: await spokenHash(blocks),
+    hash: spokenHash(blocks),
     duration,
     spans: spliced.timings,
     patched: new Set(changed)

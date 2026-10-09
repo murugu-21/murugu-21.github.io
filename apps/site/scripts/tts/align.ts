@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
 
-import { alignWords } from "#src/lib/blog/audio-words.ts";
+import { alignWords } from "./align-words.ts";
 import type { Ffmpeg } from "./cli.ts";
 import type { JsonLines } from "./json-lines.ts";
 import { type R2Store, audioKey } from "./r2.ts";

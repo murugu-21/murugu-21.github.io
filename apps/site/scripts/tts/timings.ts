@@ -1,9 +1,9 @@
-// The timing JSON stored next to each post's MP3 in R2 (apps/site/src/lib/blog/audio-sync.ts
-// reads it). A full render writes version 1; align-audio.ts adds `words` as
-// version 2, and a patch keeps whichever version it found.
+// The timing JSON stored next to each post's MP3 in R2 (@murugappan/contracts/audio-timings.ts).
+// A full render writes version 1; align-audio.ts adds `words` as version 2, and a patch
+// keeps whichever version it found.
 import { z } from "zod";
 
-import { AudioTimings, TimedBlock } from "#src/lib/blog/audio-sync.ts";
+import { AudioTimings, TimedBlock } from "@murugappan/contracts/audio-timings.ts";
 import { jsonString } from "@murugappan/utils/json.ts";
 
 export const round3 = (n: number) => Math.round(n * 1000) / 1000;

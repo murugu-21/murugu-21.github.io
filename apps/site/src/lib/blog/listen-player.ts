@@ -3,20 +3,12 @@
 // browser speech synthesis takes over when that is missing (new post, astro dev
 // has no Worker) or fails.
 
+import { AudioTimings, type TimedWord } from "@murugappan/contracts/audio-timings.ts";
+import { normalizeSpeechText, speechBlocks, tokenize } from "@murugappan/content/speech.ts";
 import { tag, track } from "#src/lib/analytics.ts";
 
-import { normalizeSpeechText } from "./audio-prep.ts";
-import {
-  AudioTimings,
-  WORD_BAND,
-  blockAt,
-  matchBlocks,
-  scrollTarget,
-  type ScrollBand,
-  type TimedWord
-} from "./audio-sync.ts";
-import { matchWordSpans, tokenize, wordAt, wrapWords } from "./audio-words.ts";
-import { speechBlocks } from "./speech.ts";
+import { WORD_BAND, blockAt, matchBlocks, scrollTarget, type ScrollBand } from "./audio-sync.ts";
+import { matchWordSpans, wordAt, wrapWords } from "./audio-words.ts";
 
 export interface Block {
   el: Element;
