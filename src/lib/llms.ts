@@ -1,5 +1,5 @@
 // The text served to agents: /llms.txt, the blog post lines in /blog/llms.txt,
-// and the markdown renditions served for Accept: text/markdown.
+// and the index.md markdown renditions.
 // The preamble is a ?raw .txt because it contains backticks.
 import LLMS_PREAMBLE from "#src/data/llms-preamble.txt?raw";
 import { BLOG_DESCRIPTION, BLOG_TITLE } from "#src/lib/site.ts";

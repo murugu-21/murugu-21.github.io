@@ -23,18 +23,6 @@
   Cache-Control: public, max-age=3600
   Link: </openapi.json>; rel="service-desc"; type="application/json", </developers/>; rel="service-doc"; type="text/html", </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"
 
-# Markdown renditions (src/pages/**/index.md.ts). A zone Transform Rule
-# rewrites Accept: text/markdown page requests to these files, so their body
-# is served under the page URL; Vary tells caches it depends on Accept.
-/index.md
-  Vary: Accept
-/about/index.md
-  Vary: Accept
-/blog/index.md
-  Vary: Accept
-/blog/:slug/index.md
-  Vary: Accept
-
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin

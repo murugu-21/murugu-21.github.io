@@ -227,8 +227,8 @@ into tool definitions. Use the `operationId` as the tool name.
   `read_blog_post` and `navigate_to` on `document.modelContext`
   ([WebMCP](https://webmachinelearning.github.io/webmcp/)) where the browser
   supports it.
-- **Markdown.** The home, about and blog pages and every post return markdown
-  for `Accept: text/markdown`.
+- **Markdown.** The home, about and blog pages and every post have a markdown
+  version at `index.md` under the page's path, such as `/about/index.md`.
 - **Bulk text.** `/llms.txt` (site summary + every post),
   `/blog/llms-full.txt` (full post text), `/sitemap.xml`, `/resume.pdf`.
 - **Discovery documents.** `/.well-known/api-catalog` (RFC 9727 link set naming

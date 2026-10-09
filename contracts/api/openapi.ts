@@ -106,7 +106,7 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 
 **Conversation.** The site also runs an AI assistant ("Jarvis") in the chat widget on every page. Its WebSocket is private to the widget and has no published protocol, so programs should use this API or the MCP server.
 
-**Other machine-readable entry points.** \`/.well-known/api-catalog\` (RFC 9727 linkset of every API here), \`/.well-known/mcp.json\` (MCP server manifest), \`/mcp\` (MCP server), \`/llms.txt\` (site summary + every blog post), \`/AGENTS.md\` (agent instructions), \`/blog/llms-full.txt\` (full post text), \`/sitemap.xml\`, and \`Accept: text/markdown\` on any page URL.`;
+**Other machine-readable entry points.** \`/.well-known/api-catalog\` (RFC 9727 linkset of every API here), \`/.well-known/mcp.json\` (MCP server manifest), \`/mcp\` (MCP server), \`/llms.txt\` (site summary + every blog post), \`/AGENTS.md\` (agent instructions), \`/blog/llms-full.txt\` (full post text), \`/sitemap.xml\`, and \`index.md\` under the path of the home, about and blog pages and every post (markdown, such as \`/about/index.md\`).`;
 
 const jsonResponse = (description: string, ref: string) => ({
   description,
