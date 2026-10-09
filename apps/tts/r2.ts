@@ -3,6 +3,7 @@
 // `{ persistTo }` local state in a directory of the caller's choosing.
 import type { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
+import { join } from "node:path";
 
 import { AUDIO_PREFIX } from "@murugappan/contracts/audio.ts";
 import { run } from "./cli.ts";
@@ -19,10 +20,15 @@ const MAX_OBJECT_BYTES = 1024 * 1024 * 1024;
 
 type R2Location = "remote" | "local" | { persistTo: string };
 
-const locationFlags = (location: R2Location) =>
-  typeof location === "string"
-    ? [`--${location}`]
-    : ["--local", "--persist-to", location.persistTo];
+// wrangler dev in apps/api keeps its state here. A bare --local would use this app's
+// .wrangler/state, which nothing serves.
+const PREVIEW_STATE = join(import.meta.dirname, "..", "api", ".wrangler", "state");
+
+const locationFlags = (location: R2Location) => {
+  if (location === "remote") return ["--remote"];
+  const persistTo = location === "local" ? PREVIEW_STATE : location.persistTo;
+  return ["--local", "--persist-to", persistTo];
+};
 
 const r2Args = ({
   verb,

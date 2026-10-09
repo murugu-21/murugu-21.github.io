@@ -5,7 +5,7 @@
 //   bun run audio                # every post whose spoken text changed
 //   bun run audio first-post     # one post
 //   bun run audio --force        # regenerate even if unchanged
-//   bun run audio --local        # target the local R2 that `bun run dev` serves
+//   bun run audio --local        # target the local R2 that `bun run preview` serves
 //   bun run audio --dry-run      # extract + hash only, no synthesis/upload
 //   bun run audio --patch react  # re-synthesize only the changed paragraphs
 //   bun run audio --upload-voice # push .voice/* to R2 once
