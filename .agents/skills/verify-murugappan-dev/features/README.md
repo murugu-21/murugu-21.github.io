@@ -37,7 +37,7 @@ Keep implementation detail out. Name only user paths, stable handles, required s
 - [Blog index](./blog-index.md) covers search, tag chips and their URL mirroring.
 - [Jarvis chat](./jarvis-chat.md) covers the launcher, the panel and its menu, and the billed send path.
 - [Public API](./public-api.md) covers the read endpoints, the JSON 404 and the contact endpoint.
-- [MCP server](./mcp-server.md) covers the manifest, the handshake, tool listing and tool calls.
+- [MCP server](./mcp-server.md) covers the manifest, the handshake, tool listing, tool calls and resources.
 - [Agent discovery and 404](./agent-discovery.md) covers the API catalogue, the content-negotiated 404 and the docs redirects.
 
 Not yet mapped: the blog post page (Listen control, table of contents), the resume page and PDF, the outdated-browser redirect, `/developers`, `llms.txt` and the markdown renditions.

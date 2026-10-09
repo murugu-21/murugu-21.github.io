@@ -13,7 +13,7 @@ The blog index lists every post. A visitor narrows it with a search box and tag 
 - Open `/blog/` and type in the search box (placeholder `Search by title or tag`).
 - Tick tag chips under the search box.
 - Open a shared `/blog/?q=…&tag=…` link.
-- Choose a tag on a post page, which links to `/blog/?tag=<tag>`.
+- Choose a tag on a post page (`All posts tagged <tag>`), which links to `/blog/?tag=<tag>`.
 
 ## Driving it with chrome-devtools
 
@@ -27,6 +27,7 @@ Steps:
 - **`blog-search`.** `fill` the searchbox named `search article by tag or title` with `kafka`. The URL becomes `/blog/?q=kafka`, and the only visible post link is `Forms in, webhooks out: what I learned building an event-driven pipeline with Claude`. It matches on keywords, not its title.
 - **`blog-url-load`.** `navigate_page url: "http://localhost:8791/blog/?tag=ai&tag=backend"`. The checkboxes `ai 3` and `backend 3` are checked, and five post links are visible, because selected tags combine with OR.
 - **`blog-tags`.** `navigate_page url: "http://localhost:8791/blog/"`, re-snapshot, and `click` the `StaticText "system-design"` uid just under the `system-design 3` checkbox. The URL becomes `/blog/?tag=system-design` and three post links are visible.
+- **`blog-url-load`.** From a post page: `navigate_page url: "http://localhost:8791/blog/sitegpt-partykit-durable-objects/"`, re-snapshot, and `click` the link named `All posts tagged system-design`. The URL becomes `/blog/?tag=system-design`, the `system-design 3` checkbox is checked, and three post links are visible.
 - **Read the visible set.** `evaluate_script () => [...document.querySelectorAll('main a[href^="/blog/"]')].filter(a => a.offsetParent !== null).map(a => a.textContent.trim())` lists the visible titles.
 - **Proof.** `take_snapshot filePath: "$E/blog-tags.aria.txt"` and `take_screenshot filePath: "$E/blog-tags.png"`. The snapshot's root line carries the filtered URL.
 

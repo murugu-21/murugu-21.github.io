@@ -6,7 +6,7 @@ A visitor starts in their OS colour scheme and can flip between light and dark f
 
 - `theme-default` follows the OS scheme when nothing is stored.
 - `theme-toggle` switches the page and relabels the button with the theme it would switch to.
-- `theme-persist` keeps a stored choice across navigation, and it beats the OS scheme.
+- `theme-persist` keeps a stored choice across navigation, and it beats the OS scheme on load.
 
 ## How to get to it (user POV)
 
@@ -30,5 +30,5 @@ Steps:
 ## Gotchas
 
 - The button names the theme you'd switch to, not the current one.
-- Emulating the OS scheme does nothing once `isDark` is stored. Test the default in a fresh isolated context.
+- Changing the emulated OS scheme on an open page deletes `isDark`, and the page follows the new scheme. Don't `emulate` between `theme-toggle` and `theme-persist`. Test the default in a fresh isolated context.
 - The homepage subtitle types itself out, so a screenshot can catch it half-written (`Tec`). That's the animation, not a defect.

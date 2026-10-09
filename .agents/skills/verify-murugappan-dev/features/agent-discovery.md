@@ -25,7 +25,7 @@ Steps:
 
 - **`discovery-catalog`.** `curl -sS -i "$B/.well-known/api-catalog"` returns `200` with `Content-Type: application/linkset+json` and entries anchored at `http://localhost:8791/api/v1` and `http://localhost:8791/mcp`.
 - **`notfound-html`.** `curl -sS -i -H 'Accept: text/html' "$B/nope"` returns `404`, `Content-Type: text/html`, `Vary: Accept` and the title `Page not found | Murugappan M`.
-- **`notfound-markdown`.** `curl -sS -i "$B/nope"` returns `404` with `Content-Type: text/markdown`. The body starts with `` `/nope` is not a path on murugappan.dev `` and lists the sitemap, `llms.txt` and the API.
+- **`notfound-markdown`.** `curl -sS -i "$B/nope"` returns `404` with `Content-Type: text/markdown`. The body opens with a `# 404 Not Found` heading, then `` `/nope` is not a path on murugappan.dev ``, and lists the sitemap, `llms.txt` and the API.
 - **`redirect-guesses`.** `curl -sS -o /dev/null -w '%{http_code} %{redirect_url}\n' "$B/docs"` prints `301 http://localhost:8791/developers/`.
 
 ## Gotchas
