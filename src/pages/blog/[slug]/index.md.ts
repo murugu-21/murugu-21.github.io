@@ -1,19 +1,16 @@
-// Each post's markdown source, frontmatter included.
-// Published top-level posts only, so drafts never leak.
-import { readFileSync } from "node:fs";
+// Each published post's markdown source, frontmatter included. Drafts are not in the module.
 import type { APIRoute, GetStaticPaths, InferGetStaticPropsType } from "astro";
+import { posts } from "virtual:content/posts";
 
-import { getPublishedPosts } from "#src/lib/blog/posts.ts";
 import { markdownResponse } from "#src/lib/responses.ts";
 
-export const getStaticPaths = (async () => {
-  const posts = await getPublishedPosts();
-  return posts.flatMap(({ id, filePath }) =>
-    !id.includes("/") && filePath ? [{ params: { slug: id }, props: { filePath } }] : []
-  );
-}) satisfies GetStaticPaths;
+export const getStaticPaths = (() =>
+  posts.map(({ slug, markdown }) => ({
+    params: { slug },
+    props: { markdown }
+  }))) satisfies GetStaticPaths;
 
 type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 
 export const GET = (({ props }: { props: Props }) =>
-  markdownResponse(readFileSync(props.filePath, "utf8"))) satisfies APIRoute<Props>;
+  markdownResponse(props.markdown)) satisfies APIRoute<Props>;

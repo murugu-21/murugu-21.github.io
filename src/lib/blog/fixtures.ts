@@ -14,11 +14,7 @@ export const astroContentMock = {
     filter ? posts.filter(filter) : [...posts]
 };
 
-export function blogPost({
-  id,
-  filePath,
-  ...fields
-}: PostFields & { id: string; filePath?: string }): Post {
+export function blogPost({ id, ...fields }: PostFields & { id: string }): Post {
   const { data } = postSource({ slug: id, ...fields });
-  return { id, collection: "blog", body: fields.body, filePath, data };
+  return { id, collection: "blog", body: fields.body, data };
 }

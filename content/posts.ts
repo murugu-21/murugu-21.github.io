@@ -6,6 +6,9 @@ import { SITE_ORIGIN } from "./site.ts";
 // markdown after it.
 export type PostSource = { slug: string; data: BlogFrontmatter; body: string };
 
+/** A published post as `virtual:content/posts` serves it: `markdown` is the whole file. */
+export type ContentPost = PostSource & { markdown: string };
+
 export const newestFirst = <T extends Pick<PostSource, "data">>(posts: T[]): T[] =>
   posts.toSorted((a, b) => b.data.date.getTime() - a.data.date.getTime());
 

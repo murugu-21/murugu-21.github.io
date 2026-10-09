@@ -20,22 +20,14 @@ import { SITE_ORIGIN } from "./content/site";
 import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/site/fira-code-subset";
 import { modulePreloader } from "./scripts/site/module-preload";
+import { contentPosts, readPosts } from "./scripts/content/posts-plugin";
 
-const BLOG_CONTENT = path.join(process.cwd(), "content/blog");
-const postSource = (slug: string) => path.join(BLOG_CONTENT, slug, "index.md");
-// draft/ holds nested posts, unpublished
-const POST_SLUGS = fs.readdirSync(BLOG_CONTENT).filter(slug => fs.existsSync(postSource(slug)));
+const POSTS = readPosts();
 
-// Maps each slug to its ISO publish date, for the sitemap's <lastmod>.
-function postDates(): Record<string, string> {
-  const dates: Record<string, string> = {};
-  for (const slug of POST_SLUGS) {
-    const match = fs.readFileSync(postSource(slug), "utf8").match(/^date:\s*"?([^"\n]+)"?\s*$/m);
-    if (match) dates[slug] = new Date(match[1]).toISOString();
-  }
-  return dates;
-}
-const POST_DATES = postDates();
+// Each slug's ISO publish date, for the sitemap's <lastmod>.
+const POST_DATES: Record<string, string> = Object.fromEntries(
+  POSTS.map(post => [post.slug, post.data.date.toISOString()])
+);
 const NEWEST_POST = Object.values(POST_DATES).sort().pop();
 
 // @astrojs/sitemap writes an index plus numbered chunks, but robots.txt,
@@ -141,16 +133,16 @@ function blogPostChecks(): AstroIntegration {
     name: "blog-post-checks",
     hooks: {
       "astro:build:done": ({ dir, logger }) => {
-        if (POST_SLUGS.length === 0) throw new Error("blog-post-checks: no blog posts checked");
-        for (const slug of POST_SLUGS) {
+        if (POSTS.length === 0) throw new Error("blog-post-checks: no blog posts checked");
+        for (const { slug, markdown } of POSTS) {
           const page = new URL(`blog/${slug}/index.html`, dir);
           if (!fs.existsSync(page)) {
             throw new Error(`blog-post-checks: blog/${slug}/index.html was not built`);
           }
           const { document } = parseHTML(fs.readFileSync(page, "utf8"));
-          checkPost({ slug, document, source: fs.readFileSync(postSource(slug), "utf8") });
+          checkPost({ slug, document, source: markdown });
         }
-        logger.info(`${POST_SLUGS.length} posts checked`);
+        logger.info(`${POSTS.length} posts checked`);
       }
     }
   };
@@ -329,6 +321,7 @@ export default defineConfig({
         file.endsWith(".css") ? content.byteLength < 8192 : undefined
     },
     plugins: [
+      contentPosts(),
       // single entry: src/styles/global.css
       tailwindcss(),
       // the default host (us.i.posthog.com) matches the SDK's US project

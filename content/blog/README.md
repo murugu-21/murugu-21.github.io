@@ -8,6 +8,7 @@ src/layouts/BlogLayout.astro  # the blog header around Layout
 src/components/blog/   # search, tags, table of contents, Listen control, bio
 content/posts.ts       # PostSource and the pure post helpers (URLs, excerpt, descriptions, summaries)
 content/llms.ts        # llms.txt, llms-full.txt and the blog index's markdown rendition
+scripts/content/posts-plugin.ts  # parses the published posts into virtual:content/posts for the site and the Worker
 src/lib/blog/          # Astro post helpers, the markdown plugins, read-aloud text prep
 src/styles/blog/       # post and code-block styles
 src/content.config.ts  # content collection, validated by contracts/blog.ts

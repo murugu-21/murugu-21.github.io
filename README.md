@@ -43,6 +43,7 @@ The top-level folders are the packages a monorepo would split this into. Each im
 src/              # the Astro site                     → apps/site
 worker/           # the Worker: API, MCP, chat, audio  → apps/api
 scripts/site/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
+scripts/content/  # the Vite plugin that serves content/blog to both builds as virtual:content/posts
 scripts/lint/     # repo lint plugins
 brand/            # X profile banners and their renderer, run by hand (not in the build)
 content/          # the site's sources and the pure functions over them → packages/content
@@ -55,6 +56,8 @@ Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it ma
 ### Build
 
 `bun run build` runs two Vite builds. `astro build` writes the static site to `dist/`. Then `vite build` (`vite.config.ts`, with `@cloudflare/vite-plugin`) bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) to `dist-worker/` and writes `.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `dist/` as the static assets, so deploy only after a build.
+
+`contentPosts()` (`scripts/content/posts-plugin.ts`) parses each published `content/blog/<slug>/index.md` once per build (frontmatter validated by `contracts/blog.ts`) and serves the list as `virtual:content/posts`. The site's agent texts (`llms.txt`, the markdown renditions) read that module. Astro's content collection still renders the post pages and the blog index, and keeps drafts visible under `astro dev`.
 
 `astro build` produces the site:
 

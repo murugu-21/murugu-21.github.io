@@ -9,6 +9,7 @@ const LAYER_NAMES = [
   "site",
   "worker",
   "siteScripts",
+  "contentScripts",
   "lintScripts",
   "brand",
   "content",
@@ -26,6 +27,7 @@ const LAYERS: Record<LayerName, Layer> = {
   site: { dir: "src/", uses: ["content", "contracts", "utils"] },
   worker: { dir: "worker/", uses: ["content", "contracts", "utils"] },
   siteScripts: { dir: "scripts/site/", uses: ["site", "contracts", "utils"] },
+  contentScripts: { dir: "scripts/content/", uses: ["content", "contracts", "utils"] },
   lintScripts: { dir: "scripts/lint/", uses: [] },
   brand: { dir: "brand/", uses: ["siteScripts"] },
   content: {

@@ -6,6 +6,7 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
+import { contentPosts } from "#scripts/content/posts-plugin.ts";
 import { SITE_DIR } from "#scripts/site/site-dir.ts";
 
 // The pool's D1 starts empty; worker/test/apply-migrations.ts applies these
@@ -74,6 +75,7 @@ export default defineConfig({
       // src runs in the browser or at build time, never in a Worker, and starting each file in
       // workerd costs far more than the tests. The scripts run on Node or Bun.
       {
+        plugins: [contentPosts()],
         test: {
           name: "node",
           environment: "node",
