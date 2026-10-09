@@ -1,6 +1,6 @@
 import puppeteer, { type Browser } from "puppeteer";
 
-// Headless Chrome for the renderers (diagrams, resume PDF, brand banners).
+// Headless Chrome for the renderers (diagrams, resume PDF).
 // --no-sandbox because CI AppArmor blocks Chrome's sandbox; it's safe for our own pages.
 const LAUNCH_ARGS = ["--no-sandbox", "--disable-setuid-sandbox"];
 

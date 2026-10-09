@@ -32,6 +32,7 @@
     "prepare": "git config core.hooksPath .githooks",
     "diagrams": "vp run @murugappan/site#diagrams",
     "audio": "vp run @murugappan/tts#audio",
+    "banners": "vp run @murugappan/brand#render",
     "audio:align": "vp run @murugappan/tts#audio:align",
     "types": "vp run @murugappan/api#types",
     "py": "uv run --locked --project apps/tts"

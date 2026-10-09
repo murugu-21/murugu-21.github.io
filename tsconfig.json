@@ -4,6 +4,7 @@
     "packages/**/*",
     "tooling/**/*",
     "apps/tts/*.ts",
+    "apps/brand/*.ts",
     "vite.config.ts",
     "apps/api/vite.config.ts"
   ],

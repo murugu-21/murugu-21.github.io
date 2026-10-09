@@ -7,14 +7,14 @@
     },
     "apps/site": {
       // Files loaded by path, which no plugin parses: the client directive and the resume
-      // script in astro.config.ts, and the banner renderer run by hand.
-      "entry": [
-        "src/directives/interaction.ts",
-        "scripts/generate-resume.ts",
-        "brand/render-x-cover.ts"
-      ],
+      // script in astro.config.ts.
+      "entry": ["src/directives/interaction.ts", "scripts/generate-resume.ts"],
       // Served by URL.
       "ignore": ["public/**"]
+    },
+    "apps/brand": {
+      // x-cover.html loads its font from node_modules by path.
+      "ignoreDependencies": ["firacode"]
     },
     "packages/*": {}
   },

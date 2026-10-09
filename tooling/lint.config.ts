@@ -48,11 +48,7 @@ const LAYERS: Record<LayerName, Layer> = {
   },
   tts: { dir: "apps/tts/", pkg: "@murugappan/tts", uses: ["content", "contracts", "utils"] },
   tooling: { dir: "tooling/", pkg: "@murugappan/tooling", uses: [] },
-  brand: {
-    dir: "apps/site/brand/",
-    pkg: "@murugappan/site",
-    uses: ["siteScripts"]
-  },
+  brand: { dir: "apps/brand/", pkg: "@murugappan/brand", uses: [] },
   content: {
     dir: "packages/content/",
     pkg: "@murugappan/content",

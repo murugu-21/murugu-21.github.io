@@ -4,7 +4,6 @@
     ".astro/types.d.ts",
     "src/**/*",
     "scripts/**/*",
-    "brand/**/*",
     "astro.config.ts",
     // Types `virtual:content/posts`, which the content package's Vite plugin serves.
     "../../packages/content/posts-module.d.ts"

@@ -1,0 +1,13 @@
+{
+  "name": "@murugappan/brand",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "bun render-x-cover.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "firacode": "6.2.0",
+    "puppeteer": "^25.13.0"
+  }
+}

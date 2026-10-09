@@ -1,11 +1,10 @@
-// Renders the X profile banners from apps/site/brand/x-cover.html: both themes, 1x
-// (1500x500) and 2x. Not part of the site build.
+// Renders the X profile banners from x-cover.html: both themes, 1x (1500x500) and 2x.
 //
-//   bun apps/site/brand/render-x-cover.ts
+//   bun run banners
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { launchBrowser } from "#scripts/launch-browser.ts";
+import puppeteer from "puppeteer";
 
 const SOURCE = join(import.meta.dirname, "x-cover.html");
 const THEMES = ["dark", "light"] as const;
@@ -14,7 +13,7 @@ const SCALES = [
   { deviceScaleFactor: 2, suffix: "@2x" }
 ] as const;
 
-await using browser = await launchBrowser("render-x-cover");
+await using browser = await puppeteer.launch();
 const page = await browser.newPage();
 for (const theme of THEMES) {
   for (const { deviceScaleFactor, suffix } of SCALES) {
