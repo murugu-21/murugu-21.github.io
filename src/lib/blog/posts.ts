@@ -1,7 +1,7 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 import getReadingTime from "reading-time";
 
-import { SITE_ORIGIN } from "#src/lib/site.ts";
+import { SITE_ORIGIN } from "#content/site.ts";
 
 export type Post = CollectionEntry<"blog">;
 

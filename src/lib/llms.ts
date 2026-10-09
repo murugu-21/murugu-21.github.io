@@ -2,7 +2,7 @@
 // and the index.md markdown renditions.
 // The preamble is a ?raw .txt because it contains backticks.
 import LLMS_PREAMBLE from "#src/data/llms-preamble.txt?raw";
-import { BLOG_DESCRIPTION, BLOG_TITLE } from "#src/lib/site.ts";
+import { BLOG_DESCRIPTION, BLOG_TITLE } from "#content/site.ts";
 import { getPublishedPosts, postDescription, postUrl, type Post } from "#src/lib/blog/posts.ts";
 
 // llms.txt entries are line-based; a multi-line frontmatter description would break them.

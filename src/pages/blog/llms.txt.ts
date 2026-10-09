@@ -1,4 +1,4 @@
-import { BLOG_TITLE, BLOG_DESCRIPTION, AUTHOR } from "#src/lib/site.ts";
+import { BLOG_TITLE, BLOG_DESCRIPTION, AUTHOR } from "#content/site.ts";
 import { postLines, textResponse } from "#src/lib/llms.ts";
 
 // /blog/llms.txt (https://llmstxt.org): a map of the blog's posts.

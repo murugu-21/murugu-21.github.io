@@ -5,7 +5,8 @@ import sanitizeHtml from "sanitize-html";
 
 import { getPublishedPosts, postDescription, postUrl } from "#src/lib/blog/posts.ts";
 import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
-import { BLOG_DESCRIPTION, BLOG_TITLE, BLOG_URL, SITE_ORIGIN } from "#src/lib/site.ts";
+import { BLOG_DESCRIPTION, BLOG_TITLE, SITE_ORIGIN } from "#content/site.ts";
+import { BLOG_URL } from "#src/lib/site.ts";
 
 // html: true so inline HTML in a post (<sup>) reaches readers; sanitize-html drops the unsafe tags.
 const parser = new MarkdownIt({ html: true });

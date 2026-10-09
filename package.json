@@ -10,6 +10,7 @@
     "#worker/*": "./worker/*",
     "#utils/*": "./utils/*",
     "#contracts/*": "./contracts/*",
+    "#content/*": "./content/*",
     "#scripts/*": "./scripts/*"
   },
   "scripts": {
@@ -18,10 +19,10 @@
     "preview": "wrangler dev --local-upstream localhost:8787",
     "format": "oxfmt src worker contracts scripts utils brand content vitest.config.ts wrangler.jsonc astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && prettier --write \"src/**/*.astro\" && bun run --silent py ruff format scripts/site/tts",
     "check-format": "oxfmt src worker contracts scripts utils brand content vitest.config.ts wrangler.jsonc astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --check && prettier --check \"src/**/*.astro\" && bun run --silent py ruff format --check scripts/site/tts",
-    "lint": "astro sync && oxlint src worker contracts scripts utils brand vitest.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && bun run lint:eslint src && bun run lint:py",
+    "lint": "astro sync && oxlint src worker content contracts scripts utils brand vitest.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && bun run lint:eslint src && bun run lint:py",
     "lint:py": "bun run --silent py ruff check scripts/site/tts",
     "lint:eslint": "node --require ./scripts/site/ts-alias.cjs node_modules/.bin/eslint",
-    "lint:fix": "astro sync && oxlint src worker contracts scripts utils brand vitest.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --fix && bun run lint:eslint src --fix && bun run lint:py --fix",
+    "lint:fix": "astro sync && oxlint src worker content contracts scripts utils brand vitest.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --fix && bun run lint:eslint src --fix && bun run lint:py --fix",
     "knip": "knip",
     "db:migrate": "wrangler d1 migrations apply jarvis-chats --remote",
     "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",

@@ -1,4 +1,4 @@
-import { BLOG_TITLE, BLOG_DESCRIPTION, AUTHOR } from "#src/lib/site.ts";
+import { BLOG_TITLE, BLOG_DESCRIPTION, AUTHOR } from "#content/site.ts";
 import { getPublishedPosts, postUrl } from "#src/lib/blog/posts.ts";
 import { oneLineDescription, textResponse } from "#src/lib/llms.ts";
 

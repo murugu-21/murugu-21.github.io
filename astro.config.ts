@@ -16,7 +16,7 @@ import { autolinkConfig } from "./src/lib/blog/rehype-autolink-config";
 import remarkMermaid from "./src/lib/blog/remark-mermaid";
 import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
 import { NIGHT_OWL } from "./src/lib/blog/code-themes";
-import { SITE_ORIGIN } from "./src/lib/site";
+import { SITE_ORIGIN } from "./content/site";
 import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/site/fira-code-subset";
 import { modulePreloader } from "./scripts/site/module-preload";

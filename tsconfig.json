@@ -7,6 +7,7 @@
     "brand/**/*",
     "utils/**/*",
     "contracts/**/*",
+    "content/**/*",
     "astro.config.ts",
     "commitlint.config.ts",
     "oxlint.config.ts",

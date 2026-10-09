@@ -45,11 +45,12 @@ worker/           # the Worker: API, MCP, chat, audio  → apps/api
 scripts/site/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
 scripts/lint/     # repo lint plugins
 brand/            # X profile banners and their renderer, run by hand (not in the build)
+content/          # the site's sources and the pure functions over them → packages/content
 contracts/        # what the site, the Worker and scripts agree on → packages/contracts
 utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
 ```
 
-Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts may not import a framework or Worker package, and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, or in `utils/` when the site and the Worker both need it. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
+Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, in `content/` when the site and the Worker both derive something from the sources, or in `utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
 
 ### Build
 
@@ -61,7 +62,7 @@ Astro builds a static site to `dist/`. Wrangler bundles the Worker (`worker/serv
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
 - The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `scripts/site/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
 - Scripts that read the build find it through `scripts/site/site-dir.ts`.
-- Imports across top-level folders go through the `#src/*`, `#worker/*`, `#contracts/*`, `#utils/*` and `#scripts/*` subpath imports in `package.json`, with the file extension, because TypeScript resolves them only as exact paths. Node, Bun, Vite and TypeScript read them natively. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
+- Imports across top-level folders go through the `#src/*`, `#worker/*`, `#content/*`, `#contracts/*`, `#utils/*` and `#scripts/*` subpath imports in `package.json`, with the file extension, because TypeScript resolves them only as exact paths. Node, Bun, Vite and TypeScript read them natively. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
 
 Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](worker/README.md#discovery-documents-and-the-404).
 
@@ -69,7 +70,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/` and `scripts/` runs on Node. That code runs in the browser, at build time or on Bun, never in a Worker, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars` and the built `llms.txt`.
+`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/`, `content/` and `scripts/` runs on Node. That code runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars` and the built `llms.txt`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 

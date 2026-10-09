@@ -44,7 +44,7 @@ export default defineConfig({
     // stay out.
     coverage: {
       provider: "istanbul",
-      include: ["{src,worker,utils,contracts,scripts}/**/*.{ts,tsx}"],
+      include: ["{src,worker,utils,content,contracts,scripts}/**/*.{ts,tsx}"],
       exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "worker/test/**"],
       reporter: ["text-summary", "lcov"]
     },
@@ -77,7 +77,7 @@ export default defineConfig({
         test: {
           name: "node",
           environment: "node",
-          include: ["scripts/**/*.test.ts", "src/**/*.test.ts"]
+          include: ["scripts/**/*.test.ts", "src/**/*.test.ts", "content/**/*.test.ts"]
         }
       },
       // React islands and the stylesheet test need a real DOM, media elements and
