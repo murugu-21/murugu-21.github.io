@@ -35,13 +35,13 @@ export default defineConfig({
     // clips the last character of a string.
     taskTitleValueFormatTruncate: Number.MAX_SAFE_INTEGER,
     // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
-    // tests in src/styles would read "".
+    // tests in apps/site/src/styles would read "".
     css: { include: [/global\.css\?raw$/] },
     // The globs name extensions so READMEs and .astro files, which Istanbul can't parse,
     // stay out.
     coverage: {
       provider: "istanbul",
-      include: ["{src,worker,packages,scripts}/**/*.{ts,tsx}"],
+      include: ["{apps/site/src,apps/site/scripts,worker,packages,scripts}/**/*.{ts,tsx}"],
       exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "worker/test/**"],
       reporter: ["text-summary", "lcov"]
     },
@@ -76,7 +76,11 @@ export default defineConfig({
         test: {
           name: "node",
           environment: "node",
-          include: ["scripts/**/*.test.ts", "src/**/*.test.ts", "packages/content/**/*.test.ts"]
+          include: [
+            "scripts/**/*.test.ts",
+            "apps/site/{src,scripts}/**/*.test.ts",
+            "packages/content/**/*.test.ts"
+          ]
         }
       },
       // React islands and the stylesheet test need a real DOM, media elements and
@@ -84,7 +88,7 @@ export default defineConfig({
       {
         test: {
           name: "browser",
-          include: ["src/**/*.test.tsx"],
+          include: ["apps/site/src/**/*.test.tsx"],
           browser: {
             enabled: true,
             headless: true,

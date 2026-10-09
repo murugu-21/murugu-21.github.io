@@ -1,24 +1,14 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [
-    ".astro/types.d.ts",
-    "src/**/*",
+    "packages/**/*",
     "scripts/**/*",
-    "brand/**/*",
-    "packages/utils/**/*",
-    "packages/contracts/**/*",
-    "packages/content/**/*",
-    "astro.config.ts",
     "commitlint.config.ts",
     "lint.config.ts",
     "eslint.config.ts",
     "vitest.config.ts",
     "vite.config.ts"
   ],
-  "exclude": ["dist"],
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "jsxImportSource": "react"
-  },
-  "contentMappers": [{ "package": "@astrojs/ts-content-mapper", "extensions": [".astro"] }]
+  // `?raw` imports in the content package.
+  "compilerOptions": { "types": ["node", "vite/client"] }
 }

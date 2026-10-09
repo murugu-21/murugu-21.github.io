@@ -2,29 +2,29 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      // Files loaded by path strings that no plugin parses: the client directive and
-      // resume script in astro.config.ts, and the banner renderer run by hand.
-      "entry": [
-        "src/directives/interaction.ts",
-        "scripts/site/generate-resume.ts",
-        "brand/render-x-cover.ts"
-      ],
       // The husky plugin parses any hook script; ours live in .githooks (core.hooksPath).
       "husky": { "config": [".githooks/*"] }
     },
+    "apps/site": {
+      // Files loaded by path, which no plugin parses: the client directive and the resume
+      // script in astro.config.ts, and the banner renderer run by hand.
+      "entry": [
+        "src/directives/interaction.ts",
+        "scripts/generate-resume.ts",
+        "brand/render-x-cover.ts"
+      ],
+      // Served by URL.
+      "ignore": ["public/**"]
+    },
     "packages/*": {}
   },
-  // Served by URL.
-  "ignore": ["public/**"],
   "ignoreDependencies": [
-    // Required by name inside scripts/site/ts-alias.cjs.
+    // Required by name inside scripts/lint/ts-alias.cjs.
     "@typescript/typescript6",
     // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.
     "cloudflare"
   ],
-  // System tools: scripts/site/tts/cli.ts spawns ffmpeg, and the py script runs uv
+  // System tools: apps/site/scripts/tts/cli.ts spawns ffmpeg, and the py script runs uv
   // (installed with brew, README.md › Checks).
-  "ignoreBinaries": ["ffmpeg", "uv"],
-  // remark-mermaid.ts spawns this path relative to the repo root, not to its own folder.
-  "ignoreUnresolved": ["scripts/site/render-mermaid.ts"]
+  "ignoreBinaries": ["ffmpeg", "uv"]
 }

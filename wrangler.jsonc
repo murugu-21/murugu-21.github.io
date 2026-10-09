@@ -16,7 +16,7 @@
     "traces": { "enabled": true, "head_sampling_rate": 0.2 }
   },
   "assets": {
-    "directory": "./dist",
+    "directory": "./apps/site/dist",
     "binding": "ASSETS",
     // Misses go to the Worker so worker/not-found.ts can content-negotiate the
     // 404; "404-page" would answer every miss with 404.html.

@@ -32,7 +32,7 @@ jobs:
           key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: bun-${{ runner.os }}-
       # uv runs ruff and basedpyright, and its venv runs the read-aloud contract tests
-      # (scripts/site/tts/fakes/README.md).
+      # (apps/site/scripts/tts/fakes/README.md).
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
       - run: bun install --frozen-lockfile
       - run: bun run types

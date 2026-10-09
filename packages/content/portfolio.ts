@@ -1,4 +1,4 @@
-// The image beside each employer and school; src/data/logos.ts maps each key to its file.
+// The image beside each employer and school; apps/site/src/data/logos.ts maps each key to its file.
 export type Logo = "medme" | "hyperverge" | "samsung" | "kumaraguru";
 
 export const greeting = {
@@ -42,7 +42,7 @@ export const skillsSection = {
     "⚡ Design distributed, event-driven systems on AWS (Lambda, API Gateway, SQS, EventBridge)",
     "⚡ Ship with observability and security built in: OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],
-  // iconName is a <symbol id> in src/assets/icons.svg
+  // iconName is a <symbol id> in apps/site/src/assets/icons.svg
   softwareSkills: [
     { skillName: "TypeScript", iconName: "typescript" },
     { skillName: "React", iconName: "react" },
@@ -192,7 +192,7 @@ export const workExperiences: WorkExperience[] = [
   }
 ];
 
-// Resume SKILLS taxonomy, also folded into the JSON-LD knowsAbout (src/lib/schema.ts).
+// Resume SKILLS taxonomy, also folded into the JSON-LD knowsAbout (apps/site/src/lib/schema.ts).
 export const skillsCategories = [
   { category: "Languages", items: "TypeScript, Python, SQL, Bash, YAML" },
   {

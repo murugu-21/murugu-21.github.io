@@ -28,7 +28,7 @@ name = "trufflehog"
 [[plugin]]
 name = "osv-scanner"
 
-# The Python TTS helpers under scripts/site/tts.
+# The Python TTS helpers under apps/site/scripts/tts.
 [[plugin]]
 name = "ruff"
 drivers = ["lint"]

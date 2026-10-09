@@ -26,15 +26,15 @@ const FRAMEWORKS =
   "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)";
 
 const LAYERS: Record<LayerName, Layer> = {
-  site: { dir: "src/", imports: "#src/", uses: ["content", "contracts", "utils"] },
+  site: { dir: "apps/site/src/", imports: "#src/", uses: ["content", "contracts", "utils"] },
   worker: { dir: "worker/", imports: "#worker/", uses: ["content", "contracts", "utils"] },
   siteScripts: {
-    dir: "scripts/site/",
-    imports: "#scripts/site/",
+    dir: "apps/site/scripts/",
+    imports: "#scripts/",
     uses: ["site", "contracts", "utils"]
   },
   lintScripts: { dir: "scripts/lint/", imports: "#scripts/lint/", uses: [] },
-  brand: { dir: "brand/", imports: "#brand/", uses: ["siteScripts"] },
+  brand: { dir: "apps/site/brand/", imports: "#brand/", uses: ["siteScripts"] },
   content: {
     dir: "packages/content/",
     imports: "@murugappan/content/",
@@ -44,7 +44,7 @@ const LAYERS: Record<LayerName, Layer> = {
         regex: `${FRAMEWORKS}|\\.(png|jpe?g|gif|webp|avif|svg)$`,
         allowTypeImports: true,
         message:
-          "packages/content/ holds sources and pure functions the site and the Worker share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in src/ or worker/ (README.md › Layers)."
+          "packages/content/ holds sources and pure functions the site and the Worker share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in apps/site/src/ or worker/ (README.md › Layers)."
       }
     ]
   },
@@ -57,7 +57,7 @@ const LAYERS: Record<LayerName, Layer> = {
         regex: FRAMEWORKS,
         allowTypeImports: true,
         message:
-          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in src/ or worker/ (README.md › Layers)."
+          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in apps/site/src/ or worker/ (README.md › Layers)."
       }
     ]
   },
@@ -93,12 +93,14 @@ const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
 const SITE = layerPatterns("site");
 
 export default {
+  // Static files served as they are.
+  ignorePatterns: ["apps/site/public/**"],
   plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
   jsPlugins: ["./scripts/lint/test-behaviour.ts", "./scripts/lint/contracts.ts"],
   categories: { correctness: "error" },
   // oxlint takes settings only at the top level; the override below scopes the plugin.
-  settings: { tailwindcss: { entryPoint: "src/styles/global.css" } },
+  settings: { tailwindcss: { entryPoint: "apps/site/src/styles/global.css" } },
   rules: {
     "no-irregular-whitespace": ["error", { skipComments: true }],
     "react/purity": "warn",
@@ -142,13 +144,13 @@ export default {
     // Shared code serves every page, so it can't reach into a page area's folder.
     restrict(
       [
-        "src/components/*",
-        "src/components/chat/**",
-        "src/components/ui/**",
-        "src/layouts/Layout.astro",
-        "src/lib/*",
-        "src/data/**",
-        "src/directives/**"
+        "apps/site/src/components/*",
+        "apps/site/src/components/chat/**",
+        "apps/site/src/components/ui/**",
+        "apps/site/src/layouts/Layout.astro",
+        "apps/site/src/lib/*",
+        "apps/site/src/data/**",
+        "apps/site/src/directives/**"
       ],
       [
         ...SITE,
@@ -156,24 +158,24 @@ export default {
           regex:
             "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\./(blog|home)/|^\\./BlogLayout",
           message:
-            "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (src/README.md › Source layout)."
+            "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (apps/site/src/README.md › Source layout)."
         }
       ]
     ),
     // The homepage may show the blog's posts; the blog never reaches into the homepage.
     restrict(
       [
-        "src/components/blog/**",
-        "src/lib/blog/**",
-        "src/styles/blog/**",
-        "src/layouts/BlogLayout.astro"
+        "apps/site/src/components/blog/**",
+        "apps/site/src/lib/blog/**",
+        "apps/site/src/styles/blog/**",
+        "apps/site/src/layouts/BlogLayout.astro"
       ],
       [
         ...SITE,
         {
           regex: "^#src/components/home/",
           message:
-            "Blog code can't import homepage components. Move a component both use to the root of src/components (src/README.md › Source layout)."
+            "Blog code can't import homepage components. Move a component both use to the root of apps/site/src/components (apps/site/src/README.md › Source layout)."
         }
       ]
     ),
@@ -182,7 +184,7 @@ export default {
     // Tailwind's scale and the theme's tokens; where Tailwind has no default for a value,
     // disable it on that line with the reason. Class order comes from oxfmt (sortTailwindcss).
     {
-      files: ["src/**/*.{ts,tsx}"],
+      files: ["apps/site/src/**/*.{ts,tsx}"],
       jsPlugins: ["oxlint-tailwindcss"],
       rules: {
         "tailwindcss/no-conflicting-classes": "error",
@@ -206,7 +208,7 @@ export default {
         // This rule is experimental. It flags a plain element that rebuilds a shadcn primitive from its classes.
         "tailwindcss/no-borrowed-component-styles": [
           "error",
-          { components: ["src/components/ui"] }
+          { components: ["apps/site/src/components/ui"] }
         ],
         "react/forbid-dom-props": [
           "error",
@@ -215,7 +217,7 @@ export default {
               {
                 propName: "style",
                 message:
-                  "Style with Tailwind: utilities in className, or an @utility or @theme token in src/styles/global.css."
+                  "Style with Tailwind: utilities in className, or an @utility or @theme token in apps/site/src/styles/global.css."
               }
             ]
           }
@@ -224,7 +226,7 @@ export default {
     },
     { files: ["packages/contracts/**"], rules: { "contracts/shapes-only": "error" } },
     {
-      files: ["scripts/site/ts-alias.cjs"],
+      files: ["scripts/lint/ts-alias.cjs"],
       rules: {
         "typescript/no-unsafe-assignment": "off",
         "typescript/no-unsafe-argument": "off",

@@ -6,20 +6,20 @@ Personal portfolio and blog of Murugappan, built with [Astro 7](https://astro.bu
 
 **Live site:** https://murugappan.dev
 
-One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. Every page except the print-only résumé renders through `src/layouts/Layout.astro`, whose `section` prop picks the portfolio or blog head defaults and page classes. The rest of `src/` is grouped by type, with blog-only code in a `blog/` folder inside each type folder (see [Source layout](src/README.md#source-layout)), and posts are markdown in `packages/content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
+One Astro project serves both halves. Blog routes live in `apps/site/src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. Every page except the print-only résumé renders through `apps/site/src/layouts/Layout.astro`, whose `section` prop picks the portfolio or blog head defaults and page classes. The rest of `apps/site/src/` is grouped by type, with blog-only code in a `blog/` folder inside each type folder (see [Source layout](apps/site/src/README.md#source-layout)), and posts are markdown in `packages/content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
 
 ## Feature docs
 
 Each feature has a README next to its code:
 
-- [`src/README.md`](src/README.md) covers the source layout, analytics and the resume.
+- [`apps/site/src/README.md`](apps/site/src/README.md) covers the source layout, analytics and the resume.
 - [`packages/content/blog/README.md`](packages/content/blog/README.md) covers writing posts, mermaid diagrams and the tag vocabulary.
-- [`scripts/site/tts/README.md`](scripts/site/tts/README.md) covers the blog's read-aloud audio.
+- [`apps/site/scripts/tts/README.md`](apps/site/scripts/tts/README.md) covers the blog's read-aloud audio.
 - [`worker/README.md`](worker/README.md) covers the routes the Worker owns, the discovery documents, the 404 and the AI chat widget.
 - [`worker/api/README.md`](worker/api/README.md) covers the public API.
 - [`worker/mcp/README.md`](worker/mcp/README.md) covers the MCP server.
 - [`packages/contracts/README.md`](packages/contracts/README.md) covers what the site, the Worker and the scripts agree on.
-- [`brand/README.md`](brand/README.md) covers the X profile banners.
+- [`apps/site/brand/README.md`](apps/site/brand/README.md) covers the X profile banners.
 
 ## Development
 
@@ -40,12 +40,12 @@ bun run preview   # the built Worker in workerd over dist/ (wrangler dev), API a
 The top-level folders are the packages a monorepo would split this into. Each imports only itself and the layers `LAYERS` in `lint.config.ts` lets it use.
 
 ```text
-src/              # the Astro site                     → apps/site
+apps/site/src/              # the Astro site                     → apps/site
 worker/           # the Worker: API, MCP, chat, audio  → apps/api
-scripts/site/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
+apps/site/scripts/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
 packages/content/vite/  # the Vite plugin that serves packages/content/blog to both builds as virtual:content/posts
 scripts/lint/     # repo lint plugins
-brand/            # X profile banners and their renderer, run by hand (not in the build)
+apps/site/brand/            # X profile banners and their renderer, run by hand (not in the build)
 packages/content/          # the site's sources and the pure functions over them → packages/content
 packages/contracts/        # what the site, the Worker and scripts agree on → packages/contracts
 packages/utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
@@ -61,10 +61,10 @@ Both builds load `contentPosts()` (`packages/content/vite/posts-plugin.ts`). It 
 
 `astro build` produces the site:
 
-- Markdown renditions (`index.md` next to the `index.html` of the home, about and blog pages and of each post) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `packages/content/llms.ts` with `/llms.txt`.
+- Markdown renditions (`index.md` next to the `index.html` of the home, about and blog pages and of each post) are prerendered endpoints under `apps/site/src/pages/**/index.md.ts`. They share `packages/content/llms.ts` with `/llms.txt`.
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
-- The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `scripts/site/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
-- Scripts that read the build find it through `scripts/site/site-dir.ts`.
+- The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `apps/site/scripts/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
+- Scripts that read the build find it through `apps/site/scripts/site-dir.ts`.
 - Imports across top-level folders go through the `#src/*`, `#worker/*`, `#content/*`, `#contracts/*`, `#utils/*`, `#scripts/*` and `#public/*` subpath imports in `package.json`, with the file extension, because TypeScript resolves them only as exact paths. Node, Bun, Vite and TypeScript read them natively. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
 
 Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](worker/README.md#discovery-documents-and-the-404).
@@ -73,7 +73,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vp test` (Vitest) over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/`, `packages/content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars`.
+`test` is `vp test` (Vitest) over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`apps/site/src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `apps/site/src/`, `packages/content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -82,7 +82,7 @@ Bun blocks the install scripts of two packages here, and both are safe to leave 
 - `GITHUB_TOKEN` (any token with public read scope) renders the GitHub profile card from the GraphQL API. Without it the site still builds and shows a contact fallback.
 - `POST_HOG_TOKEN` and `POST_HOG_URL` turn on analytics. If either is missing the SDK never loads, so local and CI builds send nothing.
 - `POSTHOG_API_KEY` (a personal key with error-tracking write) and `POSTHOG_PROJECT_ID` turn on source-map uploads.
-- `RESUME_PHONE` adds a phone line to the resume (see [Resume](src/README.md#resume)).
+- `RESUME_PHONE` adds a phone line to the resume (see [Resume](apps/site/src/README.md#resume)).
 
 ```bash
 GITHUB_TOKEN=ghp_xxx bun run build
@@ -90,7 +90,7 @@ GITHUB_TOKEN=ghp_xxx bun run build
 
 ## Browser support
 
-The site supports Chrome and Edge 123+, Firefox 128+ and Safari 17.5+ (iOS included). `MIN_VERSIONS` in `src/lib/browser-support.ts` holds the versions. The build compiles CSS for them (Vite's `cssTarget`), adding the prefixes and fallbacks those browsers need.
+The site supports Chrome and Edge 123+, Firefox 128+ and Safari 17.5+ (iOS included). `MIN_VERSIONS` in `apps/site/src/lib/browser-support.ts` holds the versions. The build compiles CSS for them (Vite's `cssTarget`), adding the prefixes and fallbacks those browsers need.
 
 An inline script at the top of every page's `<head>` checks the three features below and sends a browser missing any of them to `/outdated/` before the page renders. Both inline scripts are ES5, so they run in browsers far older than the floor. To see the notice, open `/outdated/?from=/about/`. That page lists the versions, and its "Continue to the site anyway" link skips the check in that tab until it closes or leaves the site (it sets `window.name`, so nothing is stored). When a feature raises the floor, change `MIN_VERSIONS` and the checks in `redirectIfOutdated` together.
 
@@ -110,7 +110,7 @@ typos                  # spelling, configured in _typos.toml
 bun run lint           # astro sync, vp lint (type-aware oxlint), ESLint on .astro templates and stylesheets, then ruff
 bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
-bun run check:src      # type-check src/ (.astro files included), scripts/ and the config files
+bun run check:src      # type-check apps/site/src/ (.astro files included), scripts/ and the config files
 bun run check:worker   # type-check worker/
 bun run check:py       # type-check the read-aloud Python with basedpyright
 bun run test           # vitest in workerd, on Node and in headless Chromium
@@ -121,20 +121,20 @@ bun run test --coverage # the same, plus Istanbul coverage in coverage/
 
 [typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
 
-The read-aloud Python in `scripts/site/tts/` is its own [uv](https://docs.astral.sh/uv/) project (`pyproject.toml`, `uv.lock`), so install uv once with `brew install uv`. `bun run py <command>` runs a command in its venv, and the ruff and basedpyright checks go through it. MLX installs only on Apple Silicon; elsewhere, including CI, the venv holds numpy and the dev tools. The contract tests in `synth.test.ts` and `align.test.ts` always run `synth.py` and `whisper.py` against the fakes in `scripts/site/tts/fakes/`, so they need no MLX, but they do need the venv: on a fresh clone run `uv sync --locked --project scripts/site/tts` (or any `bun run py` command) before `bun run test`.
+The read-aloud Python in `apps/site/scripts/tts/` is its own [uv](https://docs.astral.sh/uv/) project (`pyproject.toml`, `uv.lock`), so install uv once with `brew install uv`. `bun run py <command>` runs a command in its venv, and the ruff and basedpyright checks go through it. MLX installs only on Apple Silicon; elsewhere, including CI, the venv holds numpy and the dev tools. The contract tests in `synth.test.ts` and `align.test.ts` always run `synth.py` and `whisper.py` against the fakes in `apps/site/scripts/tts/fakes/`, so they need no MLX, but they do need the venv: on a fresh clone run `uv sync --locked --project apps/site/scripts/tts` (or any `bun run py` command) before `bun run test`.
 
 The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
 
-typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:eslint` preloads `scripts/site/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
+typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:eslint` preloads `scripts/lint/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
 
-Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts` over the `.astro` files in `src/`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, to cover the templates. It also runs `@eslint/css` over the stylesheets, which oxlint can't parse at all. It lints nothing else, so its rules don't overlap oxlint's. Move the templates to oxlint once it can parse them.
+Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `eslint.config.ts` over the `.astro` files in `apps/site/src/`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, to cover the templates. It also runs `@eslint/css` over the stylesheets, which oxlint can't parse at all. It lints nothing else, so its rules don't overlap oxlint's. Move the templates to oxlint once it can parse them.
 
 Having both compilers installed has two side effects:
 
 - The TypeScript 6 copy wins `node_modules/.bin/tsc`, so bare `bunx tsc` reports 6.0.3. The `check:*` scripts call `node node_modules/typescript/bin/tsc` by path to get 7.
 - TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace TypeScript version" picks up 6. Point it at the TypeScript 7 language service instead.
 
-Styles are Tailwind only. Every class is a Tailwind utility, either built in or defined in `src/styles/global.css`, and is composed with `cn()` or a `cva()` variant. A script hook is a `data-*` attribute, not a class. Values come from Tailwind's defaults (breakpoints, spacing, type scale) or the theme's tokens. Oxlint checks the classes in `.ts` and `.tsx`, including `no-arbitrary-value`. Where Tailwind has no default for a value, disable that rule on the line and give the reason. ESLint checks the classes in `.astro` and keeps hand-written rules out of the stylesheets; better-tailwindcss has no arbitrary-value rule, so `.astro` relies on review for that. The resume has its own entry, `src/styles/resume.css`, without preflight or the site theme. Two changes wait on upstream releases. When `prettier-plugin-tailwindcss` supports `prettier-plugin-astro` 1 (merged in tailwindlabs/prettier-plugin-tailwindcss#473, unreleased as of 2026-10-08), move `.astro` class order from ESLint to Prettier. When oxlint parses `.astro`, widen its Tailwind override's `files` to `.astro`.
+Styles are Tailwind only. Every class is a Tailwind utility, either built in or defined in `apps/site/src/styles/global.css`, and is composed with `cn()` or a `cva()` variant. A script hook is a `data-*` attribute, not a class. Values come from Tailwind's defaults (breakpoints, spacing, type scale) or the theme's tokens. Oxlint checks the classes in `.ts` and `.tsx`, including `no-arbitrary-value`. Where Tailwind has no default for a value, disable that rule on the line and give the reason. ESLint checks the classes in `.astro` and keeps hand-written rules out of the stylesheets; better-tailwindcss has no arbitrary-value rule, so `.astro` relies on review for that. The resume has its own entry, `apps/site/src/styles/resume.css`, without preflight or the site theme. Two changes wait on upstream releases. When `prettier-plugin-tailwindcss` supports `prettier-plugin-astro` 1 (merged in tailwindlabs/prettier-plugin-tailwindcss#473, unreleased as of 2026-10-08), move `.astro` class order from ESLint to Prettier. When oxlint parses `.astro`, widen its Tailwind override's `files` to `.astro`.
 
 ## Deployment
 

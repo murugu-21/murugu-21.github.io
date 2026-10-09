@@ -1,0 +1,176 @@
+---
+// Print source for dist/resume.pdf (apps/site/scripts/generate-resume.ts): no Layout.astro,
+// no chat or theme toggle, always light.
+import { RESUME_PHONE } from "astro:env/server";
+import {
+  greeting,
+  workExperiences,
+  skillsCategories,
+  educationInfo
+} from "@murugappan/content/portfolio.ts";
+import { resumeContact } from "@murugappan/content/resume.ts";
+import { groupByCompany } from "@murugappan/content/experience.ts";
+import { fetchPinnedRepos } from "#src/lib/github.ts";
+// A webfont, so the CF build image's Chromium prints the same glyphs as local Chrome.
+import { Font } from "astro:assets";
+import "#src/styles/resume.css";
+import ResumeSection from "#src/components/resume/ResumeSection.astro";
+
+const repos = (await fetchPinnedRepos()).filter(r => r.description);
+// Groups by *consecutive* company, so returning to an employer stays two blocks.
+const stints = groupByCompany(workExperiences);
+const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+---
+
+<!doctype html>
+<html lang="en" class="m-0 box-border bg-backdrop p-0 text-ink **:box-border print:bg-white">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Duplicates homepage content and nothing links here. */}
+    <meta name="robots" content="noindex" />
+    <title>Murugappan M | Resume</title>
+    <meta name="description" content={`${resumeContact.title} resume. ${greeting.subTitle}`} />
+    <Font cssVariable="--font-fira-code" preload />
+  </head>
+  {/* Fira Code's programming ligatures (-> => ==) are wrong in prose. */}
+  <body class="m-0 bg-backdrop p-0 font-mono font-features-['calt'_0] text-xs/snug text-ink print:bg-white">
+    {/* A screen preview of the sheet; print drops the frame (@page in resume.css sets the page size and margins). */}
+    <main class="mx-auto my-8 max-w-204 bg-white px-5 py-11 shadow-xl sm:px-13 print:m-0 print:max-w-none print:p-0 print:shadow-none">
+      <div class="-mx-5 -mt-11 mb-3 h-2 bg-blue sm:-mx-13 print:mx-0 print:mt-0"></div>
+      <header class="mb-2">
+        <h1 class="mt-0 mb-1 text-3xl font-bold tracking-tight">{resumeContact.name}</h1>
+        <p class="mt-0 mb-1 text-sm font-bold text-navy">{resumeContact.title}</p>
+        <p class="m-0 text-xs">
+          {/* A no-break space before each pipe, and nowrap links and phone (below), so a wrapped line never starts with a pipe. */}
+          {resumeContact.location}
+          {"\u00A0| "}
+          {RESUME_PHONE && (
+            <>
+              <span class="whitespace-nowrap">{RESUME_PHONE}</span>
+              {"\u00A0| "}
+            </>
+          )}
+          <a href={`mailto:${resumeContact.email}`} class="whitespace-nowrap text-navy underline">
+            {resumeContact.email}
+          </a>
+          {[resumeContact.linkedin, resumeContact.github, resumeContact.site].map(url => (
+            <>
+              {"\u00A0| "}
+              {/* On a phone the URLs wrap inside, or the LinkedIn one overflows. */}
+              <a
+                href={url}
+                class="wrap-anywhere text-navy underline sm:whitespace-nowrap"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {displayUrl(url)}
+              </a>
+            </>
+          ))}
+        </p>
+      </header>
+
+      <ResumeSection title="Professional Summary">
+        <p class="mt-0 mb-1">{greeting.subTitle}</p>
+      </ResumeSection>
+
+      <ResumeSection title="Skills">
+        <ul class="m-0 list-none p-0">
+          {skillsCategories.map(({ category, items }) => (
+            <li class="mx-0 mt-0 mb-1 break-inside-avoid">
+              <span class="font-bold">{category}:</span> {items}.
+            </li>
+          ))}
+        </ul>
+      </ResumeSection>
+
+      <ResumeSection title="Experience">
+        {" "}
+        {stints.map(stint => (
+          <div class="mb-2">
+            {/* Keeps the company row off the foot of a page, away from its bullets. */}
+            <p class="mt-0 mb-1 flex break-after-avoid flex-wrap items-baseline justify-between gap-x-3 font-bold">
+              <span>
+                {stint.company}
+                {stint.location && `, ${stint.location}`}
+              </span>
+              <span class="text-xs font-normal tracking-wider whitespace-nowrap text-ink-muted uppercase">
+                {stint.span}
+              </span>
+            </p>
+            {stint.roles.map(exp => (
+              /* long roles flow across pages instead of leaving a blank tail */
+              <div class="mb-1 break-inside-auto pl-2.5">
+                {/* a lone role's dates already sit on the company line */}
+                <p class="mt-0 mb-1 flex break-after-avoid flex-wrap items-baseline justify-between gap-x-3 font-normal">
+                  <span class="font-normal italic">
+                    {exp.role}
+                    {exp.partTime && " (Part-time)"}
+                    {!stint.location && `, ${exp.location}`}
+                  </span>
+                  {stint.roles.length > 1 && (
+                    <span class="text-xs font-normal tracking-wider whitespace-nowrap text-ink-muted uppercase">
+                      {exp.date}
+                    </span>
+                  )}
+                </p>
+                <p class="mt-0 mb-1 break-after-avoid">{exp.desc}</p>
+                {exp.descBullets && exp.descBullets.length > 0 && (
+                  <ul class="mx-0 mt-0.5 mb-0 pl-3.5">
+                    {exp.descBullets.map(bullet => (
+                      <li class="mx-0 mt-0 mb-0.5 break-inside-avoid">{bullet}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </ResumeSection>
+
+      {repos.length > 0 && (
+        <ResumeSection title="Projects">
+          {" "}
+          {repos.map(repo => (
+            <div class="mb-1.5 break-inside-avoid">
+              <p class="mt-0 mb-1 font-bold">
+                {repo.name}
+                {repo.homepageUrl && (
+                  <>
+                    {" | "}
+                    <a
+                      href={repo.homepageUrl}
+                      class="text-navy underline"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {displayUrl(repo.homepageUrl)}
+                    </a>
+                  </>
+                )}
+              </p>
+              <p class="mt-0 mb-1">{repo.description}</p>
+            </div>
+          ))}
+        </ResumeSection>
+      )}
+
+      <ResumeSection title="Education">
+        {" "}
+        {educationInfo.map(edu => (
+          <div class="mb-1.5 break-inside-avoid">
+            <p class="mt-0 mb-1 font-bold">
+              {edu.schoolName}, {edu.desc.replace(/\.$/, "")} |{" "}
+              <span class="font-normal italic">{edu.subHeader}</span>
+            </p>
+            <p class="mt-0 mb-1 text-xs tracking-wider text-ink-muted uppercase">
+              {edu.duration}
+              {edu.grade && <> · {edu.grade}</>}
+            </p>
+          </div>
+        ))}
+      </ResumeSection>
+    </main>
+  </body>
+</html>

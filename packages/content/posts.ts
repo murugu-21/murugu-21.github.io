@@ -12,7 +12,7 @@ export type ContentPost = PostSource & { markdown: string };
 export const newestFirst = <T extends Pick<PostSource, "data">>(posts: T[]): T[] =>
   posts.toSorted((a, b) => b.data.date.getTime() - a.data.date.getTime());
 
-// Literal /blog: the site's prefix comes from src/pages/blog/, not an Astro `base`.
+// Literal /blog: the site's prefix comes from apps/site/src/pages/blog/, not an Astro `base`.
 export const postPath = (slug: string) => `/blog/${slug}/`;
 export const postUrl = (slug: string) => `${SITE_ORIGIN}${postPath(slug)}`;
 

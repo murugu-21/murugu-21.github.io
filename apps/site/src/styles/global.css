@@ -1,0 +1,447 @@
+/* The one Tailwind v4 entry for both apps. Dark mode is `html.dark-mode`, which
+   sets `color-scheme: dark` (below) so every `light-dark()` pair follows it.
+   Dark mode is screen only. Print is on white paper, so it always takes the light theme. */
+
+@import "tailwindcss";
+/* `prose` for blog posts, /about and /developers (apps/site/src/components/Prose.astro). */
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark {
+  @media screen {
+    &:where(html.dark-mode *) {
+      @slot;
+    }
+  }
+}
+
+/* The blog's table of contents (TableOfContents.astro). Hover pointers get the
+   rail from lg (64rem). Touch devices only get it, always expanded, from 2xl
+   (96rem), where the panel clears the 42rem column: 2 × (19.75rem prose half +
+   22.25rem panel) = 84rem, plus a gap. It is screen only, because on paper the
+   headings are the contents. */
+@custom-variant toc-shown {
+  @media screen and (min-width: 64rem) and (hover: hover) {
+    @slot;
+  }
+  @media screen and (min-width: 96rem) and (hover: none) {
+    @slot;
+  }
+}
+/* The rail collapses to bars unless it is hovered or keyboard-focused. It tests
+   `:has(:focus-visible)` rather than `:focus-within` because a mouse click would
+   otherwise leave the panel held open over the prose. */
+@custom-variant toc-collapsed {
+  @media (hover: hover) {
+    :where([data-toc]):not(:hover, :has(:focus-visible)) & {
+      @slot;
+    }
+  }
+}
+
+/* No @source: auto-detection covers apps/site, minus gitignored files. Add one only
+   for a directory outside it (e.g. a package or node_modules). */
+
+/* For platforms without Courier New. These fonts share its 1229/2048 em advance,
+   so Astro's generated overrides apply as-is; copy them again if the font changes. */
+@font-face {
+  font-family: "Fira Code metric fallback";
+  src:
+    local("Droid Sans Mono"), local("DroidSansMono"), local("Cousine Regular"),
+    local("Cousine-Regular"), local("Liberation Mono"), local("LiberationMono");
+  font-weight: 300 700;
+  size-adjust: 102.5474%;
+  ascent-override: 90.0146%;
+  descent-override: 30.0049%;
+  line-gap-override: 0%;
+}
+
+@theme {
+  /* <Font> in each layout's head defines --font-fira-code (astro.config.ts) */
+  --font-mono: var(--font-fira-code);
+  --default-font-family: var(--font-mono);
+
+  /* Light theme is "blue hour": violet-slate greys, amber warm end.
+     amber-ink is for text, amber for non-text (glows, borders).
+     palette.test.ts holds every light ink at AA against the sky's deepest stop. */
+  --color-navy: #06038d;
+  --color-blue: #4c7dff;
+  /* dusk-violet: deepened until dusk-white text clears AA on it. */
+  --color-dusk-violet: #443c8f;
+  --color-amber: #b45309;
+  --color-amber-ink: #8a4406;
+  --color-title: #1c1633;
+  --color-text: #292444;
+  --color-subtitle: #413b58;
+  /* Secondary text: dates, bullets and the header's brackets. */
+  --color-subtitle-muted: light-dark(var(--color-subtitle), rgba(255, 255, 255, 0.65));
+  --color-card-subtitle: #56506e;
+  --color-blog-title: #241f3f;
+  --color-blog-container: #4f4a6b;
+  --color-surface: #faf9ff;
+  --color-surface-alt: #f1eff8;
+  --color-dark-bg: #282c35;
+  --color-dark-base: rgb(20, 22, 34);
+  --color-nav-scrolled: rgba(248, 247, 255, 0.72);
+  --color-nav-scrolled-dark: rgba(17, 19, 30, 0.72);
+  /* Chip boundaries: 60% is the least that clears 3:1 on every sky stop. */
+  --color-chip-outline: rgba(6, 3, 141, 0.6);
+  /* This is blue-light because blue at 60% stays under 3:1 on the night canvas. */
+  --color-chip-outline-dark: rgba(125, 162, 255, 0.6);
+  --color-border-soft: rgba(112, 104, 150, 0.32);
+  --color-border-soft-dark: rgba(255, 255, 255, 0.25);
+  --color-shadow-darker: rgba(34, 27, 61, 0.3);
+  --color-repo-text: rgb(84, 78, 110);
+  --color-repo-stats: rgb(104, 98, 128);
+  --color-repo-name: rgb(34, 27, 61);
+  --color-contact-hover: rgba(180, 83, 9, 0.35);
+  --color-contact-hover-dark: #b5b5b5;
+  --color-blog-hover-small: rgba(255, 255, 255, 0.8);
+
+  /* Blog palette. Suffixes: `*-dark` is a token's dark-theme value; `-light`
+     in `text-light` is a light-mode shade, not a variant of `text-dark`.
+     `box-dark` is the dark-theme chip accent fill (legacy blog name). */
+  --color-blue-light: #7da2ff;
+  /* deep enough for white on the checked chip to clear AA */
+  --color-box-dark: #2a56c8;
+  /* Night edge of prose code fences: 3:1 so they read as panels. */
+  --color-fence-edge-dark: rgba(255, 255, 255, 0.35);
+  /* Prose bullets, hr and table rules (prose-site); held at 2:1 on every sky stop. */
+  --color-accent-grey: rgba(6, 3, 141, 0.4);
+  --color-accent-grey-dark: #818cab;
+  /* TOC rail bars (TableOfContents.astro): a UI component, so 3:1 on every
+     stop, which accent-grey misses on the deep end. */
+  --color-toc-bar: rgba(6, 3, 141, 0.6);
+  --color-heading-dark: #f4f4f4;
+  --color-text-dark: #cbcdcf;
+  /* The TOC's inactive labels. */
+  --color-text-light: #322d44;
+
+  --shadow-glow: 0 4px 12px 2px rgba(6, 3, 141, 0.14);
+  --shadow-glow-hover: 0 6px 16px 4px rgba(6, 3, 141, 0.28);
+  --shadow-glow-dark: 0 4px 5px 3px rgba(6, 3, 141, 0.28);
+  --shadow-glow-dark-hover: 0 4px 4px 5px rgba(76, 125, 255, 0.42);
+
+  /* Horizon stop kept below paper-white so white panels keep their edge. */
+  --background-image-page: linear-gradient(to left, #a3aae0, #cfd3ef 52%, #eed6b4);
+  --background-image-page-dark: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
+
+  --animate-rise-fade: rise-fade 1s ease both;
+  /* No opacity fade: Chrome skips elements first painted at opacity 0 as LCP
+     candidates, which pushed LCP ~2 s later. */
+  @keyframes rise-fade {
+    from {
+      transform: translateY(40px);
+    }
+    to {
+      transform: none;
+    }
+  }
+
+  /* The greeting's waving hand. */
+  --animate-wave: wave 1.8s infinite;
+  @keyframes wave {
+    0% {
+      transform: rotate(0deg);
+    }
+    10% {
+      transform: rotate(-10deg);
+    }
+    20% {
+      transform: rotate(12deg);
+    }
+    30% {
+      transform: rotate(-10deg);
+    }
+    40% {
+      transform: rotate(9deg);
+    }
+    50% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(0deg);
+    }
+  }
+  /* The typewriter's caret. */
+  --animate-typewriter-blink: typewriter-blink 1s step-end infinite;
+  @keyframes typewriter-blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+
+  /* The chat widget's typing dots and activity row (no shadcn primitive). */
+  --animate-chat-dot: chat-dot 1.2s infinite;
+  @keyframes chat-dot {
+    0%,
+    100% {
+      opacity: 0.25;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  --animate-chat-shimmer: chat-shimmer 2.4s linear infinite;
+  @keyframes chat-shimmer {
+    from {
+      background-position: 130% 0;
+    }
+    to {
+      background-position: -30% 0;
+    }
+  }
+  --animate-chat-spark: chat-spark 1.8s ease-in-out infinite;
+  @keyframes chat-spark {
+    0%,
+    100% {
+      opacity: 0.45;
+      transform: scale(0.9);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+  --animate-chat-tool-dot: chat-tool-dot 1.4s ease-out infinite;
+  @keyframes chat-tool-dot {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 6px transparent;
+    }
+  }
+
+  /* The table scroll hint (table-scroll-hint below). The mask is 3rem wider than
+     the table, so its transparent tail sits off the right edge and shows no fade.
+     At scroll start the animation pulls the mask back to the table's width, which
+     shows the fade, and lets it out again as the table scrolls to its end. */
+  --animate-table-scroll-hint: table-scroll-hint linear both;
+  @keyframes table-scroll-hint {
+    from {
+      mask-size: 100% 100%;
+    }
+    to {
+      mask-size: calc(100% + 3rem) 100%;
+    }
+  }
+}
+
+@layer base {
+  code {
+    font-family: inherit;
+    font-feature-settings: "calt" 1;
+  }
+  body {
+    font: 19px / 23px var(--font-mono);
+    /* ligatures (-> =>) are wrong in prose; code re-enables them above */
+    font-feature-settings: "calt" 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--background-image-page);
+  }
+  html,
+  body {
+    @variant max-xl {
+      line-height: normal;
+    }
+  }
+  body {
+    @variant dark {
+      background: var(--background-image-page-dark);
+      color: white;
+    }
+  }
+
+  /* Explicit `light`, not the default `normal`, so the light-dark() pairs
+     resolve the same whatever the UA's own default is. */
+  html {
+    color-scheme: light;
+  }
+  @media screen {
+    html.dark-mode {
+      color-scheme: dark;
+      /* Inherited, so this covers every scroller. No ::-webkit-scrollbar rules:
+         Chrome ignores them wherever scrollbar-color applies, mixing two styles. */
+      scrollbar-color: var(--color-blue-light) var(--color-dark-base);
+    }
+  }
+}
+
+/* The highlighted word apps/site/src/lib/accent.ts wraps in headings it renders as HTML. */
+@utility accent {
+  color: light-dark(var(--color-amber-ink), var(--color-blue));
+  font-weight: 700;
+}
+
+@utility glow-card {
+  background-color: light-dark(rgba(255, 255, 255, 0.88), transparent);
+  border: 1px solid light-dark(rgba(6, 3, 141, 0.18), rgba(76, 125, 255, 0.25));
+  border-radius: 10px;
+  box-shadow: var(--shadow-glow);
+  transition:
+    transform 0.5s ease,
+    box-shadow 0.5s ease;
+  @variant hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-glow-hover);
+  }
+  /* The shadow tokens differ in spread, not only colour, so they stay a pair,
+     as does `color`, which has no light-side value. */
+  @variant dark {
+    box-shadow: var(--shadow-glow-dark);
+    color: white;
+    @variant hover {
+      box-shadow: var(--shadow-glow-dark-hover);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    @variant hover {
+      transform: none;
+    }
+  }
+  @variant print {
+    break-inside: avoid;
+  }
+}
+
+/* Chrome and Firefox draw img::after only when the image fails, so this centres
+   the alt text the round frame would clip. Safari ignores it and shows its centred icon. */
+@utility alt-fallback {
+  position: relative;
+  overflow: hidden;
+  container-type: inline-size;
+  font-size: 0;
+  &::after {
+    content: attr(alt);
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 15%;
+    background-color: light-dark(var(--color-surface), var(--color-dark-base));
+    color: light-dark(var(--color-text), white);
+    font-size: clamp(0.625rem, 6cqi, 1.5rem);
+    line-height: 1.2;
+    text-align: center;
+  }
+}
+
+/* shadcn tokens for the React islands. Each colour is one `light-dark()` pair,
+   resolved by the `color-scheme` set from `html.dark-mode`. palette.test.ts
+   reads both sides of every pair out of this block, so keep the tokens first. */
+@utility ui-island {
+  --background: light-dark(#faf9ff, #282c35);
+  --foreground: light-dark(#2f2a4d, #ffffff);
+  --card: light-dark(#faf9ff, #282c35);
+  --card-foreground: light-dark(#2f2a4d, #ffffff);
+  /* Night: light navy is 1.1:1 on the panel; #7da2ff matches the blog's
+     --color-blue-light, and the foreground flips to navy since white on that
+     blue is only 2.5:1. */
+  --primary: light-dark(#06038d, #7da2ff);
+  --primary-foreground: light-dark(#ffffff, #06038d);
+  /* Light: darker than #4c7dff so the white label keeps AA on hover. */
+  --primary-hover: light-dark(#3b6fe0, #a8c2ff);
+  --secondary: light-dark(#f1eff8, #171c28);
+  --secondary-foreground: light-dark(#2f2a4d, #ffffff);
+  --muted: light-dark(#f1eff8, #171c28);
+  --muted-foreground: light-dark(#56506e, #a7a7a7);
+  --accent: light-dark(#f1eff8, #171c28);
+  --accent-foreground: light-dark(#2f2a4d, #ffffff);
+  --border: light-dark(rgba(34, 27, 61, 0.14), rgba(255, 255, 255, 0.16));
+  --input: light-dark(rgba(34, 27, 61, 0.14), rgba(255, 255, 255, 0.16));
+  --ring: light-dark(#06038d, #7da2ff);
+  --radius: 0.75rem;
+  /* Scoped here, not in @theme inline, so rounded-* keeps Tailwind's defaults
+     outside islands (inlining would make them 0 wherever --radius is undefined). */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  font-family: var(--font-fira-code);
+  /* Pin shadcn's assumed 16px/1.5 so each host's body type doesn't leak in. */
+  font-size: 1rem;
+  line-height: 1.5;
+
+  /* Preflight leaves border-color at currentColor and width-only utilities set
+     no colour, so borders would paint in the text colour. `:where` keeps this
+     below any border utility. */
+  :where(&) *,
+  :where(&) *::before,
+  :where(&) *::after {
+    border-color: var(--border);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+/* The typography plugin's colours (apps/site/src/components/Prose.astro), as a custom
+   colour theme per its README. Each is a light-dark() pair, so dark mode needs no
+   prose-invert.
+   palette.test.ts reads the text pairs out of this block. */
+@utility prose-site {
+  --tw-prose-body: light-dark(var(--color-text), var(--color-text-dark));
+  --tw-prose-lead: light-dark(var(--color-text), var(--color-text-dark));
+  --tw-prose-headings: light-dark(var(--color-title), var(--color-heading-dark));
+  --tw-prose-bold: light-dark(var(--color-title), var(--color-heading-dark));
+  --tw-prose-quotes: light-dark(var(--color-title), var(--color-heading-dark));
+  --tw-prose-code: light-dark(var(--color-title), var(--color-heading-dark));
+  --tw-prose-links: light-dark(var(--color-navy), var(--color-blue-light));
+  --tw-prose-counters: var(--color-subtitle-muted);
+  --tw-prose-captions: var(--color-subtitle-muted);
+  --tw-prose-pre-code: light-dark(var(--color-text), var(--color-text-dark));
+  --tw-prose-pre-bg: light-dark(#ffffff, rgba(255, 255, 255, 0.04));
+  --tw-prose-quote-borders: light-dark(var(--color-navy), var(--color-blue-light));
+  --tw-prose-bullets: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+  --tw-prose-hr: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+  --tw-prose-th-borders: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+  --tw-prose-td-borders: light-dark(var(--color-accent-grey), var(--color-accent-grey-dark));
+}
+
+/* A table that scrolls sideways, with a scroll hint for overlay scrollbars. The
+   right edge fades while there is more to the right. The resting mask shows no
+   fade, so a table that fits shows none. Neither does an engine without scroll
+   timelines, where the 0s animation lands on `to`. */
+@utility table-scroll-hint {
+  display: block;
+  overflow-x: auto;
+  mask-image: linear-gradient(to right, #000 calc(100% - 3rem), transparent);
+  mask-repeat: no-repeat;
+  mask-size: calc(100% + 3rem) 100%;
+  animation: var(--animate-table-scroll-hint);
+  /* This sits in its own block because Lightning CSS would otherwise fold the timeline into
+     the shorthand, which Chrome rejects. It must come after the shorthand, which
+     resets animation-timeline. */
+  @supports (animation-timeline: scroll()) {
+    animation-timeline: scroll(self inline);
+    animation-duration: auto;
+  }
+  /* Print is at scroll position 0, the faded state. */
+  @media print {
+    mask-image: none;
+    animation: none;
+  }
+}

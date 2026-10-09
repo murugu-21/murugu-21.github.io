@@ -5,7 +5,7 @@ import { defineConfig } from "eslint/config";
 import { tailwind4 } from "tailwind-csstree";
 
 const useTailwind =
-  "Style with Tailwind: utilities in the markup, or an @utility or @theme token in src/styles/global.css.";
+  "Style with Tailwind: utilities in the markup, or an @utility or @theme token in apps/site/src/styles/global.css.";
 
 // Stylesheets hold Tailwind configuration, not hand-written rules. A style rule may
 // only sit inside @utility, @theme (keyframes), @custom-variant or, in global.css,
@@ -36,7 +36,7 @@ export default defineConfig([
     extends: [tailwind.configs["recommended-error"]],
     // Without rootFontSize, px arbitrary values never canonicalize to the spacing scale.
     settings: {
-      "better-tailwindcss": { entryPoint: "src/styles/global.css", rootFontSize: 16 }
+      "better-tailwindcss": { entryPoint: "apps/site/src/styles/global.css", rootFontSize: 16 }
     },
     rules: {
       // Prettier owns line breaks in .astro.
@@ -70,9 +70,9 @@ export default defineConfig([
   },
   {
     // The resume has its own Tailwind entry (no preflight, no site theme).
-    files: ["src/pages/resume.astro", "src/components/resume/*.astro"],
+    files: ["apps/site/src/pages/resume.astro", "apps/site/src/components/resume/*.astro"],
     settings: {
-      "better-tailwindcss": { entryPoint: "src/styles/resume.css", rootFontSize: 16 }
+      "better-tailwindcss": { entryPoint: "apps/site/src/styles/resume.css", rootFontSize: 16 }
     }
   },
   {
@@ -91,20 +91,21 @@ export default defineConfig([
       // top-level at-rule list below already limits which at-rules may appear.
       "css/no-invalid-at-rules": "off",
       // Its year and "newly" levels don't line up with the floor in
-      // src/lib/browser-support.ts: 2023 rejects light-dark(), 2024 admits Safari 18.
+      // apps/site/src/lib/browser-support.ts: 2023 rejects light-dark(), 2024 admits Safari 18.
       "css/use-baseline": "off",
       "no-restricted-syntax": [
         "error",
         ...tailwindOnlyCss(allowedAtRules),
         {
           selector: "Atrule[name='utility']",
-          message: "Every @utility lives in src/styles/global.css, the one stylesheet to review."
+          message:
+            "Every @utility lives in apps/site/src/styles/global.css, the one stylesheet to review."
         }
       ]
     }
   },
   {
-    files: ["src/styles/global.css"],
+    files: ["apps/site/src/styles/global.css"],
     rules: {
       "no-restricted-syntax": ["error", ...tailwindOnlyCss(`${allowedAtRules}, ${baseLayer}`)]
     }
