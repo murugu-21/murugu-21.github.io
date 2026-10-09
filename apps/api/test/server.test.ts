@@ -5,10 +5,10 @@ import { env } from "cloudflare:workers";
 import fc from "fast-check";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
-import { parseRange } from "#worker/audio.ts";
-import { markdownNotFound } from "#worker/not-found.ts";
-import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/visitor.ts";
-import worker from "#worker/server.ts";
+import { parseRange } from "#src/audio.ts";
+import { markdownNotFound } from "#src/not-found.ts";
+import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/visitor.ts";
+import worker from "#src/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,
   connectRoom,

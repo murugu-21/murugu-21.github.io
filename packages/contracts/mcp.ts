@@ -1,4 +1,4 @@
-// The MCP server's public surface: protocol versions, identity and tool catalogue. worker/mcp
+// The MCP server's public surface: protocol versions, identity and tool catalogue. apps/api/src/mcp
 // serves it, and /developers/ and the server.json manifest list it.
 
 import { z } from "zod";

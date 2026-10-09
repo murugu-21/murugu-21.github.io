@@ -7,7 +7,7 @@ import { cors } from "hono/cors";
 import { methodNotAllowed } from "hono/method-not-allowed";
 import type { z } from "zod";
 
-import { contactMailer, sendContactEmail } from "#worker/email.ts";
+import { contactMailer, sendContactEmail } from "#src/email.ts";
 import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
 import { parseContactRequest } from "./contact";
 import {
@@ -29,7 +29,7 @@ import {
   secondsUntilUtcMidnight
 } from "./ratelimit";
 import { API_PATHS, READ_METHODS } from "@murugappan/contracts/api/routes.ts";
-import { DATASET, findPost, POSTS } from "#worker/content.ts";
+import { DATASET, findPost, POSTS } from "#src/content.ts";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
 // Reads depend only on the deployed build; five minutes keeps a redeploy visible quickly.

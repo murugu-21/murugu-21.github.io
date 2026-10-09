@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { CONTACT_LIMITS } from "@murugappan/contracts/api/contact.ts";
-import { parseContactRequest } from "#worker/api/contact.ts";
+import { parseContactRequest } from "#src/api/contact.ts";
 
 describe("parseContactRequest", () => {
   const valid = {

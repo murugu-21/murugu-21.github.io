@@ -2,13 +2,12 @@ import type { OxlintConfig, OxlintOverride } from "vite-plus/lint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 
-// Each layer is a workspace package or a folder inside one (README.md › Layers). A layer imports
-// itself and the layers in `uses`, by the specifier prefix in `imports`: a package name, or a
-// subpath import inside a package. import/no-relative-parent-imports stops `../` from going
-// around them.
+// Each layer is a folder in a workspace package (README.md › Layers). It imports itself and the
+// layers in `uses`: inside its own package by the subpath import in `imports`, from another
+// package by name. import/no-relative-parent-imports stops `../` from going around them.
 const LAYER_NAMES = [
   "site",
-  "worker",
+  "api",
   "siteScripts",
   "lintScripts",
   "brand",
@@ -19,24 +18,41 @@ const LAYER_NAMES = [
   "utils"
 ] as const;
 type LayerName = (typeof LAYER_NAMES)[number];
-type Layer = { dir: string; imports: string; uses: LayerName[]; also?: Pattern[] };
+type Layer = { dir: string; pkg: string; imports: string; uses: LayerName[]; also?: Pattern[] };
 
 // Contracts and content reach both the browser bundle and the Worker, so they take no framework.
 const FRAMEWORKS =
   "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)";
 
 const LAYERS: Record<LayerName, Layer> = {
-  site: { dir: "apps/site/src/", imports: "#src/", uses: ["content", "contracts", "utils"] },
-  worker: { dir: "worker/", imports: "#worker/", uses: ["content", "contracts", "utils"] },
+  site: {
+    dir: "apps/site/src/",
+    pkg: "@murugappan/site",
+    imports: "#src/",
+    uses: ["content", "contracts", "utils"]
+  },
+  api: {
+    dir: "apps/api/{src,test}/",
+    pkg: "@murugappan/api",
+    imports: "#src/",
+    uses: ["content", "contracts", "utils"]
+  },
   siteScripts: {
     dir: "apps/site/scripts/",
+    pkg: "@murugappan/site",
     imports: "#scripts/",
     uses: ["site", "contracts", "utils"]
   },
-  lintScripts: { dir: "scripts/lint/", imports: "#scripts/lint/", uses: [] },
-  brand: { dir: "apps/site/brand/", imports: "#brand/", uses: ["siteScripts"] },
+  lintScripts: { dir: "scripts/lint/", pkg: "murugappan-dev", imports: "#scripts/lint/", uses: [] },
+  brand: {
+    dir: "apps/site/brand/",
+    pkg: "@murugappan/site",
+    imports: "#brand/",
+    uses: ["siteScripts"]
+  },
   content: {
     dir: "packages/content/",
+    pkg: "@murugappan/content",
     imports: "@murugappan/content/",
     uses: ["contracts", "utils"],
     also: [
@@ -44,12 +60,13 @@ const LAYERS: Record<LayerName, Layer> = {
         regex: `${FRAMEWORKS}|\\.(png|jpe?g|gif|webp|avif|svg)$`,
         allowTypeImports: true,
         message:
-          "packages/content/ holds sources and pure functions the site and the Worker share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in apps/site/src/ or worker/ (README.md › Layers)."
+          "packages/content/ holds sources and pure functions the site and the Worker share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in apps/site/src/ or apps/api/src/ (README.md › Layers)."
       }
     ]
   },
   contracts: {
     dir: "packages/contracts/",
+    pkg: "@murugappan/contracts",
     imports: "@murugappan/contracts/",
     uses: ["utils"],
     also: [
@@ -57,28 +74,43 @@ const LAYERS: Record<LayerName, Layer> = {
         regex: FRAMEWORKS,
         allowTypeImports: true,
         message:
-          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in apps/site/src/ or worker/ (README.md › Layers)."
+          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in apps/site/src/ or apps/api/src/ (README.md › Layers)."
       }
     ]
   },
   contentScripts: {
     dir: "packages/content/vite/",
+    pkg: "@murugappan/content",
     imports: "@murugappan/content/vite/",
     uses: ["content", "contracts", "utils"]
   },
-  utils: { dir: "packages/utils/", imports: "@murugappan/utils/", uses: [] }
+  utils: {
+    dir: "packages/utils/",
+    pkg: "@murugappan/utils",
+    imports: "@murugappan/utils/",
+    uses: []
+  }
 };
 
-const specifier = (name: LayerName) => LAYERS[name].imports;
+// How `from` names `to`: by subpath import inside one package, by package name across two.
+// A library's folders keep their own prefix (@murugappan/content/vite/), which already is one.
+function specifier(from: LayerName, to: LayerName): string {
+  const { pkg, imports } = LAYERS[to];
+  if (LAYERS[from].pkg === pkg || imports.startsWith("@")) return imports;
+  return `${pkg}/`;
+}
 
 function layerPatterns(name: LayerName): Pattern[] {
   const allowed = new Set<LayerName>([name, ...LAYERS[name].uses]);
-  const banned = LAYER_NAMES.filter(other => !allowed.has(other)).map(specifier);
+  const allowedSpecifiers = [...allowed].map(to => specifier(name, to));
+  const banned = [
+    ...new Set(LAYER_NAMES.filter(other => !allowed.has(other)).map(to => specifier(name, to)))
+  ].filter(spec => !allowedSpecifiers.includes(spec));
   if (banned.length === 0) return [];
   return [
     {
       regex: `^(${banned.join("|")})`,
-      message: `${LAYERS[name].dir} imports only ${[...allowed].map(specifier).join(", ")} (README.md › Layers). Move code both sides need to @murugappan/content, contracts or utils.`
+      message: `${LAYERS[name].dir} imports only ${allowedSpecifiers.join(", ")} (README.md › Layers). Move code both sides need to @murugappan/content, contracts or utils.`
     }
   ];
 }

@@ -1,0 +1,37 @@
+{
+  "name": "@murugappan/api",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#src/*": "./src/*"
+  },
+  "scripts": {
+    "preview": "wrangler dev --local-upstream localhost:8787",
+    "deploy": "bun run db:migrate && wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply jarvis-chats --remote",
+    "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",
+    "types": "wrangler types --strict-vars=false"
+  },
+  "dependencies": {
+    "@ai-sdk/deepseek": "3.0.59",
+    "@cloudflare/ai-chat": "0.12.1",
+    "@modelcontextprotocol/server": "^2.3.1",
+    "@murugappan/content": "workspace:*",
+    "@murugappan/contracts": "workspace:*",
+    "@murugappan/utils": "workspace:*",
+    "agents": "0.26.0",
+    "ai": "7.0.128",
+    "hono": "^4.13.13",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@ai-sdk/provider": "^4.0.22",
+    "@cloudflare/vite-plugin": "^1.63.1",
+    "@cloudflare/vitest-plugin": "^1.4.0",
+    "@modelcontextprotocol/client": "2.0.0",
+    "fast-check": "^4.10.2",
+    "vite-plus": "1.1.0",
+    "vitest": "5.0.3",
+    "wrangler": "^4.149.0"
+  }
+}

@@ -6,7 +6,7 @@ import {
   sendContactEmail,
   sendOpportunityEmail,
   type EmailLike
-} from "#worker/email.ts";
+} from "#src/email.ts";
 
 describe("formatOpportunityEmail", () => {
   it("includes lead fields and full transcript", () => {

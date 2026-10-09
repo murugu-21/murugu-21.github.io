@@ -12,11 +12,12 @@
     "types": ["@cloudflare/vitest-plugin/types", "vite/client"]
   },
   "include": [
-    "./**/*.ts",
-    "../packages/utils/**/*.ts",
-    "../packages/contracts/**/*.ts",
-    "../packages/content/**/*.ts",
-    "../worker-configuration.d.ts"
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "../../packages/utils/**/*.ts",
+    "../../packages/contracts/**/*.ts",
+    "../../packages/content/**/*.ts",
+    "worker-configuration.d.ts"
   ],
-  "exclude": ["../packages/content/vite/**"]
+  "exclude": ["../../packages/content/vite/**"]
 }

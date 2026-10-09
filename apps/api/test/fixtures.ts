@@ -5,8 +5,8 @@ import { env } from "cloudflare:workers";
 import { assert, expect, vi } from "vitest";
 import { z } from "zod";
 
-import type { ChatRoom } from "#worker/chat-room.ts";
-import worker from "#worker/server.ts";
+import type { ChatRoom } from "#src/chat-room.ts";
+import worker from "#src/server.ts";
 
 /** The site's styled 404 page (404.html in the build). */
 export const NOT_FOUND_HTML = "<!doctype html><h1>404</h1>";
@@ -89,7 +89,7 @@ export function visitorStorage(instance: ChatRoom): Record<string, unknown> {
   return Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" }));
 }
 
-/** The pool's env plus the bindings worker/test/wrangler.jsonc leaves out. */
+/** The pool's env plus the bindings apps/api/test/wrangler.jsonc leaves out. */
 export function testEnv(options: TestEnvOptions = {}): Env {
   // Named rather than spread: `env` is typed as the full Env, so a binding added to
   // ../../wrangler.jsonc fails to type-check here until testEnv supplies it.

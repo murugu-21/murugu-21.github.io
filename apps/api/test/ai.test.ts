@@ -2,8 +2,8 @@ import { generateText, type ModelMessage } from "ai";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { deepseek, fetchDeepseekBalance } from "#worker/ai.ts";
-import { buildMessages } from "#worker/prompt.ts";
+import { deepseek, fetchDeepseekBalance } from "#src/ai.ts";
+import { buildMessages } from "#src/prompt.ts";
 
 describe("deepseek", () => {
   afterEach(() => vi.unstubAllGlobals());

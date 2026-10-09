@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fetchSitePage } from "#worker/fetch-page.ts";
+import { fetchSitePage } from "#src/fetch-page.ts";
 import { fakeAssets } from "./fixtures";
 
 describe("fetchSitePage", () => {

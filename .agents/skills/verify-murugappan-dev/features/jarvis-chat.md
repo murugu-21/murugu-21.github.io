@@ -21,7 +21,7 @@ Preconditions:
 
 - A page on `http://localhost:8791/` or `/blog/` in this run's isolated context.
 - `E="$RUN/evidence/jarvis-chat"; mkdir -p "$E"`.
-- For `chat-send` only, the user's go-ahead for a stated number of turns, and `DEEPSEEK_API_KEY` in `.dev.vars`.
+- For `chat-send` only, the user's go-ahead for a stated number of turns, and `DEEPSEEK_API_KEY` in `apps/api/.dev.vars`.
 
 Steps:
 

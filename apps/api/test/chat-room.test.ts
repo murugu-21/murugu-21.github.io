@@ -6,12 +6,12 @@ import { MockLanguageModelV4 } from "ai/test";
 import { afterEach, assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { globalLimiter } from "#worker/api/ratelimit.ts";
-import { ROOM_DAILY_LIMIT } from "#worker/prompt.ts";
+import { globalLimiter } from "#src/api/ratelimit.ts";
+import { ROOM_DAILY_LIMIT } from "#src/prompt.ts";
 import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
-import { fetchActivity, type ChatRoom } from "#worker/chat-room.ts";
-import { parseVisitorContext, VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#worker/visitor.ts";
-import type { RateLimiter } from "#worker/rate-limiter.ts";
+import { fetchActivity, type ChatRoom } from "#src/chat-room.ts";
+import { parseVisitorContext, VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/visitor.ts";
+import type { RateLimiter } from "#src/rate-limiter.ts";
 import {
   chatRequest,
   connectRoom,

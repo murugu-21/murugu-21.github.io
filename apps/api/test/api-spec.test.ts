@@ -2,18 +2,14 @@
 // document, checked against each other.
 import { assert, describe, expect, it } from "vitest";
 
-import { api } from "#worker/api/index.ts";
-import { buildOpenApiDocument } from "#worker/api/openapi.ts";
+import { api } from "#src/api/index.ts";
+import { buildOpenApiDocument } from "#src/api/openapi.ts";
 import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
 import {
   CURRENT_VERSION_RECORD,
   type VersionRecord
 } from "@murugappan/contracts/api/versioning.ts";
-import {
-  buildVersionsDocument,
-  versionHeaders,
-  versionLinkHeader
-} from "#worker/api/versioning.ts";
+import { buildVersionsDocument, versionHeaders, versionLinkHeader } from "#src/api/versioning.ts";
 
 describe("version headers", () => {
   const deprecated: VersionRecord = {

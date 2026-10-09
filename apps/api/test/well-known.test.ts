@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { buildApiCatalog, buildMcpManifest } from "#worker/well-known.ts";
+import { buildApiCatalog, buildMcpManifest } from "#src/well-known.ts";
 import { fetchWorker, readJson } from "./fixtures";
 
 describe("buildApiCatalog", () => {

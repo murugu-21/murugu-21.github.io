@@ -5,7 +5,7 @@ description: Drive murugappan.dev (Astro site plus Cloudflare Worker) the way a 
 
 # Verify murugappan.dev
 
-Two surfaces. Visitors use the web pages (portfolio, blog, Jarvis chat widget) in a browser. Agents and developers use the Worker's HTTP routes (`/api/v1`, `/mcp`, discovery documents, the negotiated 404). Both come from one `wrangler dev` running the built Worker (`dist-worker/`) over the built site (`dist/`).
+Two surfaces. Visitors use the web pages (portfolio, blog, Jarvis chat widget) in a browser. Agents and developers use the Worker's HTTP routes (`/api/v1`, `/mcp`, discovery documents, the negotiated 404). Both come from one `wrangler dev` running the built Worker (`apps/api/dist-worker/`) over the built site (`apps/site/dist/`).
 
 Drive the browser with the chrome-devtools MCP and HTTP with `curl`. Without the chrome-devtools MCP, drive the same handles with the repo's `playwright` devDependency; the recipes' handles and end states don't change.
 
@@ -13,17 +13,17 @@ Read [`features/README.md`](features/README.md) before driving, then the feature
 
 ## Launch
 
-Never use `bun run preview`. It binds `:8787` and `.wrangler/state`, which belong to the user's own preview. This launch gets its own port, inspector port and state directory.
+Never use `bun run preview`. It binds `:8787` and `apps/api/.wrangler/state`, which belong to the user's own preview. This launch gets its own port, inspector port and state directory.
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 RUN="${SCRATCHPAD:-${TMPDIR:-/tmp}}/verify-murugappan-dev/$(date +%Y%m%dT%H%M%S)"
 mkdir -p "$RUN/evidence"
 PUBLIC_CHAT_HOST= POST_HOG_TOKEN= bun run build > "$RUN/build.log" 2>&1 || { tail -40 "$RUN/build.log"; exit 1; }
-nohup node node_modules/wrangler/bin/wrangler.js dev \
+(cd apps/api && exec nohup node ../../node_modules/wrangler/bin/wrangler.js dev \
   --port 8791 --inspector-port 9291 --local-upstream localhost:8791 \
   --persist-to "$RUN/state" --show-interactive-dev-session=false \
-  > "$RUN/worker.log" 2>&1 &
+  > "$RUN/worker.log" 2>&1) &
 echo $! > "$RUN/worker.pid"
 for i in $(seq 60); do grep -q 'Ready on http://localhost:8791' "$RUN/worker.log" && break; sleep 0.5; done
 grep 'Ready on' "$RUN/worker.log"
@@ -32,11 +32,11 @@ echo "RUN=$RUN"
 
 Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`. Set `SCRATCHPAD` to your session scratchpad if your harness names one. Run wrangler with `node`, never `bun` or `bunx`: under Bun it reports ready but never answers.
 
-The build takes about 15 s and rewrites the shared `dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going: both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `.env` value, and leave out production analytics.
+The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going: both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics.
 
 If `:8791` is taken by another run, pick a free port and use it everywhere `8791` appears, `--local-upstream` included.
 
-`wrangler dev` serves the Worker that `bun run build` bundled to `dist-worker/`, with the site content inside it, so nothing hot-reloads. After editing `worker/`, `packages/content/`, pages, posts or `apps/site/public/`, run Cleanup, then Launch again, which rebuilds.
+`wrangler dev` serves the Worker that `bun run build` bundled to `apps/api/dist-worker/`, with the site content inside it, so nothing hot-reloads. After editing `apps/api/src/`, `packages/content/`, pages, posts or `apps/site/public/`, run Cleanup, then Launch again, which rebuilds.
 
 ## Doctor
 
@@ -47,7 +47,8 @@ Run before the first drive, and again after any surprising result.
 kill -0 "$(cat "$RUN/worker.pid")" && echo "worker: ours, alive"
 curl -sS -o /dev/null -w 'api: %{http_code}\n' http://localhost:8791/api/v1/profile
 curl -sS http://localhost:8791/mcp.json | grep -c '"url": "http://localhost:8791/mcp"'
-test -f dist/index.html && find src worker content public astro.config.ts -newer dist/index.html -type f \
+test -f apps/site/dist/index.html && find apps/site/src apps/site/public apps/site/astro.config.ts \
+  apps/api/src packages -newer apps/site/dist/index.html -type f \
   -not -name '*.test.*' -not -path '*/__screenshots__/*' | head -3
 ```
 
@@ -99,4 +100,4 @@ rm -rf "$RUN/state"
 ls "$RUN/evidence"
 ```
 
-`workerd` exits with its wrangler parent, and wrangler's temp files go with it. Copy anything you need from `.wrangler/tmp/` before this step. Close every page you opened with `close_page`. Kill only the PID in `$RUN/worker.pid`, never by process name: the user's `astro dev` and preview are shared. Don't delete `dist/` or `.wrangler/`. The evidence and logs stay.
+`workerd` exits with its wrangler parent, and wrangler's temp files go with it. Copy anything you need from `apps/api/.wrangler/tmp/` before this step. Close every page you opened with `close_page`. Kill only the PID in `$RUN/worker.pid`, never by process name: the user's `astro dev` and preview are shared. Don't delete `apps/site/dist/` or `apps/api/.wrangler/`. The evidence and logs stay.

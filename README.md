@@ -15,9 +15,9 @@ Each feature has a README next to its code:
 - [`apps/site/src/README.md`](apps/site/src/README.md) covers the source layout, analytics and the resume.
 - [`packages/content/blog/README.md`](packages/content/blog/README.md) covers writing posts, mermaid diagrams and the tag vocabulary.
 - [`apps/site/scripts/tts/README.md`](apps/site/scripts/tts/README.md) covers the blog's read-aloud audio.
-- [`worker/README.md`](worker/README.md) covers the routes the Worker owns, the discovery documents, the 404 and the AI chat widget.
-- [`worker/api/README.md`](worker/api/README.md) covers the public API.
-- [`worker/mcp/README.md`](worker/mcp/README.md) covers the MCP server.
+- [`apps/api/README.md`](apps/api/README.md) covers the routes the Worker owns, the discovery documents, the 404 and the AI chat widget.
+- [`apps/api/src/api/README.md`](apps/api/src/api/README.md) covers the public API.
+- [`apps/api/src/mcp/README.md`](apps/api/src/mcp/README.md) covers the MCP server.
 - [`packages/contracts/README.md`](packages/contracts/README.md) covers what the site, the Worker and the scripts agree on.
 - [`apps/site/brand/README.md`](apps/site/brand/README.md) covers the X profile banners.
 
@@ -25,37 +25,40 @@ Each feature has a README next to its code:
 
 ```bash
 bun install
-bunx astro sync && bun run types   # once after cloning; lint and the typechecks need the generated types
+bunx astro sync --root apps/site && bun run types   # once after cloning; lint and the typechecks need the generated types
 bun run dev       # Astro dev server with HMR, pages only, on :4399
-bun run build     # the static site to dist/ (markdown renditions, resume PDF), then the Worker to dist-worker/
-bun run preview   # the built Worker in workerd over dist/ (wrangler dev), API and chat included, on :8787
+bun run build     # the site to apps/site/dist/ (markdown renditions, resume PDF), then the Worker to apps/api/dist-worker/
+bun run preview   # the built Worker in workerd over the site's dist/ (wrangler dev), API and chat included, on :8787
 ```
+
+The root scripts run each app's own through `vp run`, such as `vp run @murugappan/site#dev`. Local settings sit with the app that reads them: `apps/site/.env` for Astro and `apps/api/.dev.vars` for wrangler.
 
 `preview` passes `--local-upstream localhost:8787` so the Worker sees the local host, not the `murugappan.dev` route, and the generated discovery documents link back to it. `types` passes `--strict-vars=false` so `OPPORTUNITY_INBOX` is typed `string` and tests can override it.
 
-`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env`. The Worker bundles the site content it answers from, so rebuild after editing `worker/` or `packages/content/`.
+`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in `apps/site/.env`. The Worker bundles the site content it answers from, so rebuild after editing `apps/api/src/` or `packages/content/`.
 
-### Layers
+### Workspaces and layers
 
-The top-level folders are the packages a monorepo would split this into. Each imports only itself and the layers `LAYERS` in `lint.config.ts` lets it use.
+Bun workspaces (`workspaces` in the root `package.json`) split the repo into two apps and three packages:
 
 ```text
-apps/site/src/              # the Astro site                     → apps/site
-worker/           # the Worker: API, MCP, chat, audio  → apps/api
-apps/site/scripts/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
-packages/content/vite/  # the Vite plugin that serves packages/content/blog to both builds as virtual:content/posts
-scripts/lint/     # repo lint plugins
-apps/site/brand/            # X profile banners and their renderer, run by hand (not in the build)
-packages/content/          # the site's sources and the pure functions over them → packages/content
-packages/contracts/        # what the site, the Worker and scripts agree on → packages/contracts
-packages/utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
+apps/site/           # @murugappan/site: the Astro site (src/), its build and blog tooling (scripts/), the X banners (brand/)
+apps/api/            # @murugappan/api: the Worker (src/: API, MCP, chat, audio), its tests, wrangler.jsonc and D1 migrations
+packages/content/    # @murugappan/content: the site's sources, the pure functions over them, and the posts Vite plugin (vite/)
+packages/contracts/  # @murugappan/contracts: what the site, the Worker and scripts agree on
+packages/utils/      # @murugappan/utils: helpers with no app logic (zod JSON parsing, AI SDK message text)
+scripts/lint/        # the repo's lint plugins, in the root package with the rest of the tooling
 ```
 
-Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `packages/contracts/`. Logic goes in the layer that runs it, in `packages/content/` when the site and the Worker both derive something from the sources, or in `packages/utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `vite.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
+Each package lists the npm packages it imports, and knip checks those lists per workspace. Everything installs into one hoisted `node_modules` at the root.
+
+A package imports another by name and file path, with the extension: `@murugappan/content/posts.ts` (each package exports `./*`). Inside an app, `#src/*` (and `#scripts/*` in the site) are subpath imports from the app's `package.json`. TypeScript resolves both only as exact paths. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
+
+Lint enforces the graph. `LAYERS` in `lint.config.ts` lists each layer (a folder in a package), its package and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. A layer names another in its own package by subpath import and one in another package by name, so neither app can import the other. `import/no-relative-parent-imports` stops a `../` import from going around them, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `packages/contracts/`. Logic goes in the layer that runs it, in `packages/content/` when the site and the Worker both derive something from the sources, or in `packages/utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The config files (`apps/site/astro.config.ts`, `apps/api/vite.config.ts`, the root `vite.config.ts`) belong to no layer, since they wire the layers together.
 
 ### Build
 
-`bun run build` runs two Vite builds. `astro build` writes the static site to `dist/`. Then `vp build` (`vite.config.ts`, with `@cloudflare/vite-plugin`) bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) to `dist-worker/` and writes `.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `dist/` as the static assets, so deploy only after a build. Wrangler can't bundle the Worker itself any more, because its esbuild has no loader for the `?raw` and virtual-module imports.
+`bun run build` is `vp run -r build`, two Vite builds. The site's `astro build` writes the static site to `apps/site/dist/`. Then the Worker's `build` task (`apps/api/vite.config.ts`), which depends on the site's, runs `vp build` with `@cloudflare/vite-plugin`. It bundles the Worker (`src/server.ts`, the `main` in `apps/api/wrangler.jsonc`) to `apps/api/dist-worker/` and writes `apps/api/.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `apps/site/dist/` as the static assets, so deploy only after a build. The plugin builds its client environment, and so keeps the assets binding, only when Vite's `publicDir` has files, so `publicDir` names the site's `public/`. Wrangler can't bundle the Worker itself any more, because its esbuild has no loader for the `?raw` and virtual-module imports.
 
 Both builds load `contentPosts()` (`packages/content/vite/posts-plugin.ts`). It parses each published `packages/content/blog/<slug>/index.md` once per build (frontmatter validated by `packages/contracts/blog.ts`) and serves the list as `virtual:content/posts`. The site's agent texts and the Worker's API, MCP and chat grounding read that module, so they can't disagree. Astro's content collection still renders the post pages and the blog index, and keeps drafts visible under `astro dev`.
 
@@ -63,17 +66,16 @@ Both builds load `contentPosts()` (`packages/content/vite/posts-plugin.ts`). It 
 
 - Markdown renditions (`index.md` next to the `index.html` of the home, about and blog pages and of each post) are prerendered endpoints under `apps/site/src/pages/**/index.md.ts`. They share `packages/content/llms.ts` with `/llms.txt`.
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
-- The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `apps/site/scripts/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
+- The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `apps/site/scripts/fira-code-subset.ts` cuts a latin-plus-arrows subset into `apps/site/node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
 - Scripts that read the build find it through `apps/site/scripts/site-dir.ts`.
-- Imports across top-level folders go through the `#src/*`, `#worker/*`, `#content/*`, `#contracts/*`, `#utils/*`, `#scripts/*` and `#public/*` subpath imports in `package.json`, with the file extension, because TypeScript resolves them only as exact paths. Node, Bun, Vite and TypeScript read them natively. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
 
-Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](worker/README.md#discovery-documents-and-the-404).
+Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `apps/api/wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](apps/api/README.md#discovery-documents-and-the-404).
 
 ### Bun and Node
 
-[Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
+[Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in the site's `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vp test` (Vitest) over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`apps/site/src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `apps/site/src/`, `packages/content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars`.
+`test` is `vp test` (Vitest) over three projects. The Worker tests (`apps/api/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`apps/site/src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `apps/site/src/`, `packages/content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `apps/api/.dev.vars`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -109,21 +111,21 @@ bun run check-format   # vp fmt (oxfmt), plus prettier for .astro and ruff for P
 typos                  # spelling, configured in _typos.toml
 bun run lint           # astro sync, vp lint (type-aware oxlint), ESLint on .astro templates and stylesheets, then ruff
 bun run knip           # unused files, exports and dependencies
-bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
-bun run check:src      # type-check apps/site/src/ (.astro files included), scripts/ and the config files
-bun run check:worker   # type-check worker/
+bun run types          # regenerate apps/api/worker-configuration.d.ts from its wrangler.jsonc (Env plus the runtime types)
+bun run check:src      # type-check the site (.astro files included), then the packages and root config files
+bun run check:worker   # type-check the Worker and its tests
 bun run check:py       # type-check the read-aloud Python with basedpyright
 bun run test           # vitest in workerd, on Node and in headless Chromium
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 
-[Vite+](https://viteplus.dev) (`vp`) bundles oxlint, oxfmt and Vitest at versions that match each other. Its Vite core builds the Worker, and Astro uses it too through the `vite` override in `package.json`. Lint and format settings live in `vite.config.ts`, whose `lint` block imports `lint.config.ts`. The pre-commit hook runs `vp staged` with that file's `staged` rules. The tests keep their own `vitest.config.ts`, because the Worker build's plugins in `vite.config.ts` would otherwise load into the workerd test pool. `vite-plus`, the `vite` alias and `vitest` are pinned exactly and must move together, so `renovate.json` groups them.
+[Vite+](https://viteplus.dev) (`vp`) bundles oxlint, oxfmt and Vitest at versions that match each other. Its Vite core builds the Worker, and Astro uses it too through the `vite` override in `package.json`. The root `vite.config.ts` holds the lint, format and test settings, and its `lint` block imports `lint.config.ts`. The pre-commit hook runs `vp staged` with that file's `staged` rules. The Worker's build lives in `apps/api/vite.config.ts` instead, because its plugins would otherwise load into the workerd test pool. `vite-plus`, the `vite` alias and `vitest` are pinned exactly and must move together, so `renovate.json` groups them.
 
 [typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
 
 The read-aloud Python in `apps/site/scripts/tts/` is its own [uv](https://docs.astral.sh/uv/) project (`pyproject.toml`, `uv.lock`), so install uv once with `brew install uv`. `bun run py <command>` runs a command in its venv, and the ruff and basedpyright checks go through it. MLX installs only on Apple Silicon; elsewhere, including CI, the venv holds numpy and the dev tools. The contract tests in `synth.test.ts` and `align.test.ts` always run `synth.py` and `whisper.py` against the fakes in `apps/site/scripts/tts/fakes/`, so they need no MLX, but they do need the venv: on a fresh clone run `uv sync --locked --project apps/site/scripts/tts` (or any `bun run py` command) before `bun run test`.
 
-The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
+The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `apps/site/tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
 
 typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:eslint` preloads `scripts/lint/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
 
@@ -145,10 +147,10 @@ Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Action
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 
 - **Build command.** `bun run build`, which builds the Worker too. Workers Builds installs dependencies from `bun.lock` before running it.
-- **Deploy command.** `bun run deploy` (`wrangler deploy`, which follows `.wrangler/deploy/config.json` to the built Worker), not a bare `wrangler deploy`. It applies pending D1 migrations from `./migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
-- **Build env vars.** `BUN_VERSION` (match `packageManager`; the image's default Bun is too old), `GITHUB_TOKEN`, `REQUIRE_GITHUB_PROFILE=1` (fail the build instead of falling back when the profile fetch fails), `POST_HOG_TOKEN`, `POST_HOG_URL`, `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and optionally `RESUME_PHONE`. Those the site code reads are declared in `env.schema` in `astro.config.ts`; the build fails on a malformed value.
-- **Worker secrets.** `DEEPSEEK_API_KEY`, listed in `secrets.required` in `wrangler.jsonc` and set with `bunx wrangler secret put DEEPSEEK_API_KEY`. Locally it comes from `.dev.vars`.
-- **Contact inbox.** `OPPORTUNITY_INBOX` is a var in `wrangler.jsonc`, and the `EMAIL` binding is locked to the same address (`destination_address`, which must be verified in Email Routing). Change both together.
+- **Deploy command.** `bun run deploy`, which runs the Worker's `deploy` script in `apps/api` (`wrangler deploy`, which follows `.wrangler/deploy/config.json` to the built Worker), not a bare `wrangler deploy`. It applies pending D1 migrations from `apps/api/migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
+- **Build env vars.** `BUN_VERSION` (match `packageManager`; the image's default Bun is too old), `GITHUB_TOKEN`, `REQUIRE_GITHUB_PROFILE=1` (fail the build instead of falling back when the profile fetch fails), `POST_HOG_TOKEN`, `POST_HOG_URL`, `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and optionally `RESUME_PHONE`. Those the site code reads are declared in `env.schema` in `apps/site/astro.config.ts`; the build fails on a malformed value.
+- **Worker secrets.** `DEEPSEEK_API_KEY`, listed in `secrets.required` in `apps/api/wrangler.jsonc` and set with `bunx wrangler secret put DEEPSEEK_API_KEY` from `apps/api`. Locally it comes from `apps/api/.dev.vars`.
+- **Contact inbox.** `OPPORTUNITY_INBOX` is a var in `apps/api/wrangler.jsonc`, and the `EMAIL` binding is locked to the same address (`destination_address`, which must be verified in Email Routing). Change both together.
 
 ## Credits
 

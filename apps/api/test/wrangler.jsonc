@@ -2,7 +2,7 @@
 // and secrets come from testEnv in fixtures.ts), with its own D1 and R2.
 {
   "name": "murugappan-dev-test",
-  "main": "../server.ts",
+  "main": "../src/server.ts",
   "compatibility_date": "2026-10-01",
   // Keep these Durable Object bindings and exports in sync with ../../wrangler.jsonc.
   "durable_objects": {

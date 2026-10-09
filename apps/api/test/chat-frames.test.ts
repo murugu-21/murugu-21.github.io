@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { admitFrame } from "#worker/chat-frames.ts";
+import { admitFrame } from "#src/chat-frames.ts";
 
 const stored = [{ id: "m1", role: "assistant", parts: [{ type: "text", text: "Hi" }] }];
 

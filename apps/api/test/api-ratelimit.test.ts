@@ -9,7 +9,7 @@ import {
   resetReadWindows,
   secondsUntilUtcMidnight,
   takeReadSlot
-} from "#worker/api/ratelimit.ts";
+} from "#src/api/ratelimit.ts";
 import { fetchWorker, readJson } from "./fixtures";
 
 beforeEach(() => resetReadWindows());

@@ -31,7 +31,7 @@ const POST_DATES: Record<string, string> = Object.fromEntries(
 const NEWEST_POST = Object.values(POST_DATES).sort().pop();
 
 // @astrojs/sitemap writes an index plus numbered chunks, but robots.txt,
-// worker/not-found.ts and the api-catalog all name /sitemap.xml. Collapse the
+// apps/api/src/not-found.ts and the api-catalog all name /sitemap.xml. Collapse the
 // single chunk onto it.
 function singleFileSitemap(): AstroIntegration {
   return {

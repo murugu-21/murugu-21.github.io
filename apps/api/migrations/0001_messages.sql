@@ -1,5 +1,5 @@
 -- Analytics mirror of every ChatRoom's transcript. The Durable Object's own
--- SQLite (worker/chat-room.ts, onStart) stays the serving source of truth.
+-- SQLite (apps/api/src/chat-room.ts, onStart) stays the serving source of truth.
 -- This table exists only so you can browse chats in the Cloudflare dashboard, since
 -- rooms aren't enumerable and there is no other global view.
 --
