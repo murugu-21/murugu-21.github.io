@@ -57,7 +57,7 @@ Astro builds a static site to `dist/`. Wrangler bundles the Worker (`worker/serv
 
 `astro build` produces everything:
 
-- Markdown renditions (`index.md` next to each `index.html`, served for `Accept: text/markdown`) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `src/lib/llms.ts` with `/llms.txt`.
+- Markdown renditions (`index.md` next to the `index.html` of the home, about and blog pages and of each post) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `src/lib/llms.ts` with `/llms.txt`.
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
 - The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `scripts/site/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
 - Scripts that read the build find it through `scripts/site/site-dir.ts`.
