@@ -92,7 +92,7 @@ export function reportError(error: unknown, props?: Record<string, string>): voi
 
 const TRACKED = new WeakSet<object>();
 
-// Not `instanceof Element`: the Workers test pool has no DOM globals.
+// Not `instanceof Element`: the Node test project has no DOM globals.
 const isElement = (target: EventTarget | null): target is Element =>
   target !== null && "closest" in target && typeof target.closest === "function";
 

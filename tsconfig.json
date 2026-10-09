@@ -4,6 +4,7 @@
     ".astro/types.d.ts",
     "src/**/*",
     "scripts/**/*",
+    "brand/**/*",
     "utils/**/*",
     "contracts/**/*",
     "astro.config.ts",

@@ -4,7 +4,7 @@ Every post has a **Listen** control. When `/blog/audio/<slug>.json` exists, the 
 
 Audio generation runs **on a laptop, never in CI**, because the model is 3.9 GB and needs Apple Silicon.
 
-**Pipeline** (`scripts/site/generate-audio.ts`):
+**Pipeline** (`scripts/site/generate-audio.ts`, each post in `scripts/site/tts/render.ts`):
 
 1. Extract text from the built HTML with the same `speechBlocks()` the page uses, then normalize emoji, punctuation and long digit runs. Breeze loops on runs like `0.30000000000000004`, so `normalizeSpeechText` describes them instead of reading them out.
 2. Synthesize sentence groups of at most 300 characters with Breeze TTS 2 ([mlx-community/Breeze-TTS-2-mlx-8bit](https://huggingface.co/mlx-community/Breeze-TTS-2-mlx-8bit) via [mlx-audio](https://github.com/Blaizzy/mlx-audio), `scripts/site/tts/synth.py`), cloning `.voice/reference.wav` with no instruction prompt. Use the 8-bit build; bf16 swaps on a 24 GB machine.
@@ -20,8 +20,8 @@ The voice reference is a synthetic clip designed once from the persona prompt in
 ```bash
 terraform -chdir=infra apply   # creates the R2 bucket
 brew install ffmpeg
-python3.13 -m venv .venv-tts && .venv-tts/bin/pip install -r scripts/site/tts/requirements.txt
-.venv-tts/bin/python scripts/site/tts/design-voice.py 3   # writes .voice/candidates/{0,1,2}.wav from the persona prompt
+uv sync --locked --project scripts/site/tts   # the venv, from pyproject.toml and uv.lock
+bun run py python scripts/site/tts/design-voice.py 3   # writes .voice/candidates/{0,1,2}.wav from the persona prompt
 cp .voice/candidates/<k>.wav .voice/reference.wav && cp .voice/candidates/reference.txt .voice/reference.txt
 bun run audio --upload-voice     # durable copy in R2
 ```

@@ -1,11 +1,11 @@
 // Renders the X profile banners from brand/x-cover.html: both themes, 1x
 // (1500x500) and 2x. Not part of the site build.
 //
-//   bun scripts/site/render-x-cover.ts
+//   bun brand/render-x-cover.ts
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { launchBrowser } from "./launch-browser.ts";
+import { launchBrowser } from "#scripts/site/launch-browser.ts";
 
 const SOURCE = "brand/x-cover.html";
 const THEMES = ["dark", "light"] as const;

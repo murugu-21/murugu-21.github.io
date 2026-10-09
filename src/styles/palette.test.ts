@@ -2,7 +2,16 @@
 // and the islands.
 import { describe, expect, it } from "vitest";
 
+import tag from "#src/components/blog/Tag.astro?raw";
+import searchBar from "#src/components/blog/SearchBar.astro?raw";
+import projects from "#src/components/home/Projects.astro?raw";
+import post from "#src/pages/blog/[...slug].astro?raw";
+
 import css from "./global.css?raw";
+
+// Imported dynamically: a static `.ts?raw` default import makes the import plugin
+// look for a default export in audio-words.ts itself.
+const { default: audioWords } = await import("#src/lib/blog/audio-words.ts?raw");
 
 const channels = (c: string): number[] => {
   const hex = /^#([0-9a-f]{6})$/i.exec(c);
@@ -81,6 +90,23 @@ const card = (() => {
 
 const ink = (name: string) => token(`color-${name}`);
 
+// The opacity of a Tailwind colour utility such as `dark:bg-blue/15` in a
+// component's source, as a 0..1 alpha.
+const utilityAlpha = ({ source, utility }: { source: string; utility: string }): number => {
+  const alpha = source
+    .split(/[\s"'`]+/)
+    .find(cls => cls.startsWith(`${utility}/`))
+    ?.slice(utility.length + 1);
+  if (!alpha || !/^\d+$/.test(alpha))
+    throw new Error(`no ${utility}/<alpha> in the component source`);
+  return Number(alpha) / 100;
+};
+
+const rgba = (name: string, alpha: number): string => {
+  const [r, g, b] = channels(ink(name));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 describe("blue-hour light palette", () => {
   // Body copy, headings, section subtitles and the post blockquote ink can
   // cross any part of the sky, including its deepest stop. Normal text
@@ -132,15 +158,14 @@ describe("blue-hour light palette", () => {
     }
   });
 
-  // The read-aloud highlight: the spoken word (audio-words.ts) is --color-amber
-  // at 25% inside its block (blog/[...slug].astro) at 14%, and body ink over
-  // both washes must stay AA on the deep stop. This test restates the alphas instead
-  // of parsing them from those classes, so mirror any change to them here.
+  // The read-aloud highlight: the spoken word (audio-words.ts) is a --color-amber
+  // wash inside its block's own amber wash (blog/[...slug].astro), and body ink
+  // over both must stay AA on the deep stop.
   it("keeps body ink readable through the read-aloud highlight (>= 4.5:1)", () => {
-    const amber = channels(ink("amber"));
-    const wash = (alpha: number) => `rgba(${amber[0]}, ${amber[1]}, ${amber[2]}, ${alpha})`;
-    const block = over(wash(0.14), sky.deep);
-    const word = over(wash(0.25), block);
+    const blockAlpha = utilityAlpha({ source: post, utility: "**:data-speaking:bg-amber" });
+    const wordAlpha = utilityAlpha({ source: audioWords, utility: "data-current-word:bg-amber" });
+    const block = over(rgba("amber", blockAlpha), sky.deep);
+    const word = over(rgba("amber", wordAlpha), block);
     expect(contrast(ink("text"), word)).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -202,12 +227,12 @@ describe("night palette", () => {
     for (const stop of night) expect(contrast(ink("blue"), stop)).toBeGreaterThanOrEqual(3);
   });
 
-  // Projects.astro's topic chips: blue-light text on blue at 15% over the
-  // canvas. The test restates the alpha from the utility, as the tag badge test below does.
+  // Projects.astro's topic chips: blue-light text on a translucent blue fill
+  // over the canvas.
   it("keeps the project topic chips readable at night (>= 4.5:1)", () => {
-    const [r, g, b] = channels(ink("blue"));
+    const alpha = utilityAlpha({ source: projects, utility: "dark:bg-blue" });
     for (const stop of night) {
-      const fill = over(`rgba(${r}, ${g}, ${b}, 0.15)`, stop);
+      const fill = over(rgba("blue", alpha), stop);
       expect(contrast(ink("blue-light"), fill)).toBeGreaterThanOrEqual(4.5);
     }
   });
@@ -241,40 +266,40 @@ describe("night palette", () => {
     }
   });
 
-  // Tag.astro's count badge at night: blue-light numerals on blue-light at 12%
-  // over the canvas; on a checked chip, white on white at 10% over the fill.
-  // Alphas restated from the utilities, as below.
+  // Tag.astro's count badge at night: blue-light numerals on a blue-light wash
+  // over the canvas; on a checked chip, white on a white wash over the fill.
   it("keeps the tag count badge readable at night (>= 4.5:1)", () => {
-    const wash = (name: string, alpha: number) => {
-      const c = channels(ink(name));
-      return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha})`;
-    };
+    const badge = rgba("blue-light", utilityAlpha({ source: tag, utility: "dark:bg-blue-light" }));
     for (const stop of night) {
-      expect(
-        contrast(ink("blue-light"), over(wash("blue-light", 0.12), stop))
-      ).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(ink("blue-light"), over(badge, stop))).toBeGreaterThanOrEqual(4.5);
     }
+    const checkedAlpha = utilityAlpha({ source: tag, utility: "group-has-checked:bg-white" });
     expect(
-      contrast("#ffffff", over("rgba(255, 255, 255, 0.1)", ink("box-dark")))
+      contrast("#ffffff", over(`rgba(255, 255, 255, ${checkedAlpha})`, ink("box-dark")))
     ).toBeGreaterThanOrEqual(4.5);
   });
 
-  // SearchBar.astro's night placeholder: body ink at 75% on the dark-bg field.
+  // SearchBar.astro's night placeholder: translucent body ink on the dark-bg field.
   it("keeps the search placeholder readable on the night field (>= 4.5:1)", () => {
-    const c = channels(ink("text-dark"));
-    const placeholder = over(`rgba(${c[0]}, ${c[1]}, ${c[2]}, 0.75)`, ink("dark-bg"));
+    const alpha = utilityAlpha({ source: searchBar, utility: "dark:placeholder:text-text-dark" });
+    const placeholder = over(rgba("text-dark", alpha), ink("dark-bg"));
     expect(contrast(placeholder, ink("dark-bg"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The dark read-aloud highlight: box-dark at 20% for the word
-  // inside its block at 14%. A LINK inside the spoken word (blue-light) is
-  // the tight case; body ink has more room. Alphas restated, as for the light
-  // guard above.
+  // The dark read-aloud highlight: a box-dark wash for the word inside its
+  // block's own box-dark wash. A LINK inside the spoken word (blue-light) is
+  // the tight case; body ink has more room.
   it("keeps a link readable through the dark read-aloud highlight (>= 4.5:1)", () => {
-    const fill = channels(ink("box-dark"));
-    const wash = (alpha: number) => `rgba(${fill[0]}, ${fill[1]}, ${fill[2]}, ${alpha})`;
+    const blockWash = rgba(
+      "box-dark",
+      utilityAlpha({ source: post, utility: "dark:**:data-speaking:bg-box-dark" })
+    );
+    const wordWash = rgba(
+      "box-dark",
+      utilityAlpha({ source: audioWords, utility: "dark:data-current-word:bg-box-dark" })
+    );
     for (const stop of night) {
-      const word = over(wash(0.2), over(wash(0.14), stop));
+      const word = over(wordWash, over(blockWash, stop));
       expect(contrast(ink("blue-light"), word)).toBeGreaterThanOrEqual(4.5);
       expect(contrast(ink("text-dark"), word)).toBeGreaterThanOrEqual(4.5);
     }

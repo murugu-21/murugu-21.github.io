@@ -1,7 +1,6 @@
-// Pure, Node-free half of the Mermaid pipeline (runs in the Workers test pool
-// and the build). scripts/site/render-mermaid.ts writes a light and dark SVG per
-// fence at build time, named by hash; remark-mermaid.ts and the RSS route swap
-// fences for them.
+// Pure half of the Mermaid pipeline, free of Node APIs. scripts/site/render-mermaid.ts
+// writes a light and dark SVG per fence at build time, named by hash; remark-mermaid.ts
+// and the RSS route swap fences for them.
 import { fromMarkdown } from "mdast-util-from-markdown";
 import type { Code, Parent } from "mdast";
 

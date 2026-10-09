@@ -1,6 +1,6 @@
 """Design the read-aloud voice once from a persona prompt (Breeze TTS 2 voice design).
 
-  .venv-tts/bin/python scripts/site/tts/design-voice.py [count]
+  bun run py python scripts/site/tts/design-voice.py [count]
 
 Writes <count> candidates (default 3) to .voice/candidates/<k>.wav plus the
 sentence they speak in .voice/candidates/reference.txt. Listen, then promote
@@ -13,6 +13,7 @@ the one you like:
 Posts are plain clones of that clip (synth.py), which keeps the voice fixed
 across paragraphs. Design is sampled, so candidates differ.
 """
+
 import contextlib
 import sys
 import time
@@ -20,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+
 from wavfile import write_wav
 
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"
@@ -48,7 +50,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     (out / "reference.txt").write_text(SENTENCE + "\n")
     with contextlib.redirect_stdout(sys.stderr):
-        # load() is typed as the generic nn.Module; generate() is the Breeze model's.
+        # Neither the real nn.Module type nor the fake's Model declares voice design's generate().
         model: Any = load(MODEL)
     for k in range(count):
         t0 = time.time()
@@ -58,7 +60,9 @@ def main() -> int:
         ]
         audio = np.concatenate(parts)
         write_wav(out / f"{k}.wav", audio, SAMPLE_RATE)
-        print(f"candidate {k}: {len(audio) / SAMPLE_RATE:.1f}s in {time.time() - t0:.0f}s, wrote {out / f'{k}.wav'}")
+        print(
+            f"candidate {k}: {len(audio) / SAMPLE_RATE:.1f}s in {time.time() - t0:.0f}s, wrote {out / f'{k}.wav'}"
+        )
     return 0
 
 

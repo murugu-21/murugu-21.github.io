@@ -1,6 +1,9 @@
+import { mkdirSync, mkdtempDisposableSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { alignArgs, audioArgs, run, runEach } from "./cli.ts";
+import { alignArgs, audioArgs, publishedSlugs, run, runEach } from "./cli.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -22,6 +25,20 @@ describe("arguments", () => {
   it("parses `bun run audio:align`, which takes only --force and --local", () => {
     expect(alignArgs(["--force"])).toEqual({ force: true, local: false, slugs: [] });
     expect(() => alignArgs(["--patch"])).toThrow("Unknown option '--patch'");
+  });
+});
+
+describe("publishedSlugs", () => {
+  it("lists only the built dirs whose page has a post body", () => {
+    using dir = mkdtempDisposableSync(join(tmpdir(), "blog-dist-"));
+    mkdirSync(join(dir.path, "first-post"));
+    writeFileSync(join(dir.path, "first-post", "index.html"), "<section data-post-body><p>Hi</p>");
+    mkdirSync(join(dir.path, "404"));
+    writeFileSync(join(dir.path, "404", "index.html"), "<main>Not found</main>");
+    mkdirSync(join(dir.path, "drafts"));
+    writeFileSync(join(dir.path, "rss.xml"), "<rss />");
+    expect(publishedSlugs(dir.path)).toEqual(["first-post"]);
+    expect(() => publishedSlugs(join(dir.path, "missing"))).toThrow("run `bun run build` first");
   });
 });
 

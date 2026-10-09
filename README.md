@@ -43,13 +43,13 @@ The top-level folders are the packages a monorepo would split this into. Each im
 src/              # the Astro site                     → apps/site
 worker/           # the Worker: API, MCP, chat, audio  → apps/api
 scripts/site/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
-scripts/worker/   # Worker tooling (the live prompt capture)
 scripts/lint/     # repo lint plugins
+brand/            # X profile banners and their renderer, run by hand (not in the build)
 contracts/        # what the site, the Worker and scripts agree on → packages/contracts
 utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
 ```
 
-Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts may not import a framework or Worker package, and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, or in `utils/` when the site and the Worker both need it. The one exception is `scripts/worker/live-test-capture.ts`, which reads the built site's `llms.txt` through `scripts/site/site-dir.ts`, the same file Jarvis grounds on in production. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
+Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts may not import a framework or Worker package, and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, or in `utils/` when the site and the Worker both need it. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
 
 ### Build
 
@@ -69,7 +69,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vitest run`. Tests run inside workerd through `@cloudflare/vitest-plugin`, with two exceptions. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. The `scripts/` tests run on Node (the scripts themselves run on Bun), because workerd lacks `node:util`'s `parseArgs`, `node:readline` and the native bindings oxlint's RuleTester loads. A `src` test that needs Node too, such as the ES5 parse check that loads ESLint, is named `*.node.test.ts`. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner.
+`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/` and `scripts/` runs on Node. That code runs in the browser, at build time or on Bun, never in a Worker, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars` and the built `llms.txt`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -101,18 +101,21 @@ Two features improve where supported and degrade cleanly. The phone menu's slide
 ## Checks
 
 ```bash
-bun run check-format   # oxfmt, plus prettier for .astro
+bun run check-format   # oxfmt, plus prettier for .astro and ruff for Python
 typos                  # spelling, configured in _typos.toml
-bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), then ESLint on .astro templates and stylesheets
+bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), ESLint on .astro templates and stylesheets, then ruff
 bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
 bun run check:src      # type-check src/ (.astro files included), scripts/ and the config files
 bun run check:worker   # type-check worker/
-bun run test           # vitest in the workers pool, on Node and in headless Chromium
+bun run check:py       # type-check the read-aloud Python with basedpyright
+bun run test           # vitest in workerd, on Node and in headless Chromium
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
 
 [typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
+
+The read-aloud Python in `scripts/site/tts/` is its own [uv](https://docs.astral.sh/uv/) project (`pyproject.toml`, `uv.lock`), so install uv once with `brew install uv`. `bun run py <command>` runs a command in its venv, and the ruff and basedpyright checks go through it. MLX installs only on Apple Silicon; elsewhere, including CI, the venv holds numpy and the dev tools. The contract tests in `synth.test.ts` and `align.test.ts` always run `synth.py` and `whisper.py` against the fakes in `scripts/site/tts/fakes/`, so they need no MLX, but they do need the venv: on a fresh clone run `uv sync --locked --project scripts/site/tts` (or any `bun run py` command) before `bun run test`.
 
 The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
 

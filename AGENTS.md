@@ -67,7 +67,7 @@ Agents tend to hand-roll what a library or platform feature already does. Before
 
 Never call a task complete until both of the following have happened.
 
-1. `.githooks/pre-push` passes (format, lint, typechecks, tests). For UI changes, also check the page in the browser in both light and dark themes, following `.agents/skills/verify-murugappan-dev/SKILL.md`. It rebuilds `dist/`, runs its own Worker on a separate port and state directory, and lists how to drive each feature.
+1. `.githooks/pre-push` passes (format, lint, typechecks, tests, site build). For UI changes, also check the page in the browser in both light and dark themes, following `.agents/skills/verify-murugappan-dev/SKILL.md`. It rebuilds `dist/`, runs its own Worker on a separate port and state directory, and lists how to drive each feature.
 2. Two independent reviewers (separate subagents, each starting fresh with only the diff and these rules) have reviewed the change:
    - **Behaviour/QA reviewer.** Checks that it does what was asked, that edge cases and regressions are covered, and that it works when run. For every test the diff adds or changes, applies the check in "Test behaviour, not implementation".
    - **Code-style reviewer.** Checks the diff against every rule in this file, `oxlint.config.ts` and `eslint.config.ts`.

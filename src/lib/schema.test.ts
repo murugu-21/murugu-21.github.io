@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { jsonLdHtml } from "./schema";
@@ -54,15 +54,6 @@ describe("jsonLdHtml", () => {
     });
   });
 
-  it("deduplicates the skills the person knows about, ignoring case", () => {
-    const person = parseGraph(jsonLdHtml({ page: null, nodes: [] }))["@graph"][1];
-    const knowsAbout = z.array(z.string()).parse(person?.knowsAbout);
-    const lowered = knowsAbout.map(term => term.toLowerCase());
-
-    expect(knowsAbout.slice(0, 2)).toEqual(["TypeScript", "Node.js"]);
-    expect(new Set(lowered).size).toBe(lowered.length);
-  });
-
   it("escapes < so a post title cannot close the script block", () => {
     const html = jsonLdHtml({
       page: { url: "https://murugappan.dev/", name: "</script><b>", profilePage: false },
@@ -71,5 +62,28 @@ describe("jsonLdHtml", () => {
 
     expect(html).not.toContain("<");
     expect(html).toContain("\\u003c/script>\\u003cb>");
+  });
+});
+
+describe("jsonLdHtml with resume skills that repeat a hand-written term", () => {
+  afterEach(() => {
+    vi.doUnmock("#src/data/portfolio.ts");
+    vi.resetModules();
+  });
+
+  it("keeps one entry per skill, ignoring case, in the hand-written casing", async () => {
+    const portfolio = await import("#src/data/portfolio.ts");
+    vi.resetModules();
+    vi.doMock("#src/data/portfolio.ts", () => ({
+      ...portfolio,
+      skillsCategories: [{ category: "Languages", items: "typescript, Rust" }]
+    }));
+    const schema = await import("./schema");
+
+    const person = parseGraph(schema.jsonLdHtml({ page: null, nodes: [] }))["@graph"][1];
+    const knowsAbout = z.array(z.string()).parse(person?.knowsAbout);
+
+    expect(knowsAbout.filter(term => term.toLowerCase() === "typescript")).toEqual(["TypeScript"]);
+    expect(knowsAbout).toContain("Rust");
   });
 });

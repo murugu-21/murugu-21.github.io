@@ -1,5 +1,5 @@
 // Pure helpers behind the blog "Listen" control. DOM access is typed
-// structurally so tests can use plain objects in the Workers pool (no DOM).
+// structurally so tests can use plain objects on Node (no DOM).
 
 interface BlockLike<C> {
   tagName: string;
