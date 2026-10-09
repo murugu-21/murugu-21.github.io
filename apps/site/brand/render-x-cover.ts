@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 
 import { launchBrowser } from "#scripts/launch-browser.ts";
 
-const SOURCE = "apps/site/brand/x-cover.html";
+const SOURCE = join(import.meta.dirname, "x-cover.html");
 const THEMES = ["dark", "light"] as const;
 const SCALES = [
   { deviceScaleFactor: 1, suffix: "" },
@@ -24,7 +24,7 @@ for (const theme of THEMES) {
     });
     // wait for the webfont, or the shot uses the fallback face
     await page.evaluate(() => document.fonts.ready);
-    const out = join("brand", `x-cover-${theme}${suffix}.png`);
+    const out = join(import.meta.dirname, `x-cover-${theme}${suffix}.png`);
     await page.screenshot({ path: out });
     console.log(out);
   }
