@@ -27,13 +27,13 @@ Each feature has a README next to its code:
 bun install
 bunx astro sync && bun run types   # once after cloning; lint and the typechecks need the generated types
 bun run dev       # Astro dev server with HMR, pages only, on :4399
-bun run build     # the static site to dist/, plus markdown renditions and the resume PDF
-bun run preview   # the Worker in workerd over dist/ (wrangler dev), API and chat included, on :8787
+bun run build     # the static site to dist/ (markdown renditions, resume PDF), then the Worker to dist-worker/
+bun run preview   # the built Worker in workerd over dist/ (wrangler dev), API and chat included, on :8787
 ```
 
 `preview` passes `--local-upstream localhost:8787` so the Worker sees the local host, not the `murugappan.dev` route, and the generated discovery documents link back to it. `types` passes `--strict-vars=false` so `OPPORTUNITY_INBOX` is typed `string` and tests can override it.
 
-`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env`. The Worker reads its data (`/api`, `llms.txt`) from `dist/`, so rebuild to refresh it.
+`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env`. The Worker reads its data (`/api`, `llms.txt`) from `dist/` and runs from `dist-worker/`, so rebuild to refresh either.
 
 ### Layers
 
@@ -50,13 +50,13 @@ contracts/        # what the site, the Worker and scripts agree on → packages/
 utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
 ```
 
-Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, in `content/` when the site and the Worker both derive something from the sources, or in `utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
+Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, in `content/` when the site and the Worker both derive something from the sources, or in `utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `vite.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
 
 ### Build
 
-Astro builds a static site to `dist/`. Wrangler bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) on deploy and uploads `dist/` as its static assets, so deploy only after a build.
+`bun run build` runs two Vite builds. `astro build` writes the static site to `dist/`. Then `vite build` (`vite.config.ts`, with `@cloudflare/vite-plugin`) bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) to `dist-worker/` and writes `.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `dist/` as the static assets, so deploy only after a build.
 
-`astro build` produces everything:
+`astro build` produces the site:
 
 - Markdown renditions (`index.md` next to the `index.html` of the home, about and blog pages and of each post) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `content/llms.ts` with `/llms.txt`.
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
@@ -139,8 +139,8 @@ Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Action
 
 The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
 
-- **Build command.** `bun run build`. Workers Builds installs dependencies from `bun.lock` before running it.
-- **Deploy command.** `bun run deploy` (`wrangler deploy`), not a bare `wrangler deploy`. It applies pending D1 migrations from `./migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
+- **Build command.** `bun run build`, which builds the Worker too. Workers Builds installs dependencies from `bun.lock` before running it.
+- **Deploy command.** `bun run deploy` (`wrangler deploy`, which follows `.wrangler/deploy/config.json` to the built Worker), not a bare `wrangler deploy`. It applies pending D1 migrations from `./migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
 - **Build env vars.** `BUN_VERSION` (match `packageManager`; the image's default Bun is too old), `GITHUB_TOKEN`, `REQUIRE_GITHUB_PROFILE=1` (fail the build instead of falling back when the profile fetch fails), `POST_HOG_TOKEN`, `POST_HOG_URL`, `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and optionally `RESUME_PHONE`. Those the site code reads are declared in `env.schema` in `astro.config.ts`; the build fails on a malformed value.
 - **Worker secrets.** `DEEPSEEK_API_KEY`, listed in `secrets.required` in `wrangler.jsonc` and set with `bunx wrangler secret put DEEPSEEK_API_KEY`. Locally it comes from `.dev.vars`.
 - **Contact inbox.** `OPPORTUNITY_INBOX` is a var in `wrangler.jsonc`, and the `EMAIL` binding is locked to the same address (`destination_address`, which must be verified in Email Routing). Change both together.
