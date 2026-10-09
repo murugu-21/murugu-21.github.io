@@ -10,7 +10,7 @@
     "content/**/*",
     "astro.config.ts",
     "commitlint.config.ts",
-    "oxlint.config.ts",
+    "lint.config.ts",
     "eslint.config.ts",
     "vitest.config.ts",
     "vite.config.ts"

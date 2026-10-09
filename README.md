@@ -37,7 +37,7 @@ bun run preview   # the built Worker in workerd over dist/ (wrangler dev), API a
 
 ### Layers
 
-The top-level folders are the packages a monorepo would split this into. Each imports only itself and the layers `LAYERS` in `oxlint.config.ts` lets it use.
+The top-level folders are the packages a monorepo would split this into. Each imports only itself and the layers `LAYERS` in `lint.config.ts` lets it use.
 
 ```text
 src/              # the Astro site                     → apps/site
@@ -55,7 +55,7 @@ Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it ma
 
 ### Build
 
-`bun run build` runs two Vite builds. `astro build` writes the static site to `dist/`. Then `vite build` (`vite.config.ts`, with `@cloudflare/vite-plugin`) bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) to `dist-worker/` and writes `.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `dist/` as the static assets, so deploy only after a build. Wrangler can't bundle the Worker itself any more, because its esbuild has no loader for the `?raw` and virtual-module imports.
+`bun run build` runs two Vite builds. `astro build` writes the static site to `dist/`. Then `vp build` (`vite.config.ts`, with `@cloudflare/vite-plugin`) bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) to `dist-worker/` and writes `.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `dist/` as the static assets, so deploy only after a build. Wrangler can't bundle the Worker itself any more, because its esbuild has no loader for the `?raw` and virtual-module imports.
 
 Both builds load `contentPosts()` (`scripts/content/posts-plugin.ts`). It parses each published `content/blog/<slug>/index.md` once per build (frontmatter validated by `contracts/blog.ts`) and serves the list as `virtual:content/posts`. The site's agent texts and the Worker's API, MCP and chat grounding read that module, so they can't disagree. Astro's content collection still renders the post pages and the blog index, and keeps drafts visible under `astro dev`.
 
@@ -73,7 +73,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vitest run` over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/`, `content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars`.
+`test` is `vp test` (Vitest) over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/`, `content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 
@@ -105,9 +105,9 @@ Two features improve where supported and degrade cleanly. The phone menu's slide
 ## Checks
 
 ```bash
-bun run check-format   # oxfmt, plus prettier for .astro and ruff for Python
+bun run check-format   # vp fmt (oxfmt), plus prettier for .astro and ruff for Python
 typos                  # spelling, configured in _typos.toml
-bun run lint           # astro sync, oxlint (type-aware via oxlint-tsgolint), ESLint on .astro templates and stylesheets, then ruff
+bun run lint           # astro sync, vp lint (type-aware oxlint), ESLint on .astro templates and stylesheets, then ruff
 bun run knip           # unused files, exports and dependencies
 bun run types          # regenerate worker-configuration.d.ts from wrangler.jsonc (Env plus the runtime types)
 bun run check:src      # type-check src/ (.astro files included), scripts/ and the config files
@@ -116,6 +116,8 @@ bun run check:py       # type-check the read-aloud Python with basedpyright
 bun run test           # vitest in workerd, on Node and in headless Chromium
 bun run test --coverage # the same, plus Istanbul coverage in coverage/
 ```
+
+[Vite+](https://viteplus.dev) (`vp`) bundles oxlint, oxfmt and Vitest at versions that match each other. Its Vite core builds the Worker, and Astro uses it too through the `vite` override in `package.json`. Lint and format settings live in `vite.config.ts`, whose `lint` block imports `lint.config.ts`. The pre-commit hook runs `vp staged` with that file's `staged` rules. The tests keep their own `vitest.config.ts`, because the Worker build's plugins in `vite.config.ts` would otherwise load into the workerd test pool. `vite-plus`, the `vite` alias and `vitest` are pinned exactly and must move together, so `renovate.json` groups them.
 
 [typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
 

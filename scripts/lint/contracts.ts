@@ -1,6 +1,6 @@
 // Oxlint JS plugin for README.md › Layers: contracts/ exports shapes (schemas, types and
 // constants), never behaviour. Logic lives in the layer that runs it.
-import type { RuleTester } from "oxlint/plugins-dev";
+import type { RuleTester } from "vite-plus/lint/plugins-dev";
 
 // oxlint doesn't export its plugin or AST types; derive them from RuleTester.
 type Rule = Parameters<RuleTester["run"]>[1];

@@ -2,4 +2,4 @@
 # Formats and lints staged files; heavy gates run in pre-push.
 set -e
 
-bunx lint-staged
+bunx vp staged

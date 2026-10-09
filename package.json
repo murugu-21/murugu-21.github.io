@@ -16,20 +16,20 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && vite build",
+    "build": "astro build && vp build",
     "preview": "wrangler dev --local-upstream localhost:8787",
-    "format": "oxfmt src worker contracts scripts utils brand content vitest.config.ts vite.config.ts wrangler.jsonc astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && prettier --write \"src/**/*.astro\" && bun run --silent py ruff format scripts/site/tts",
-    "check-format": "oxfmt src worker contracts scripts utils brand content vitest.config.ts vite.config.ts wrangler.jsonc astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --check && prettier --check \"src/**/*.astro\" && bun run --silent py ruff format --check scripts/site/tts",
-    "lint": "astro sync && oxlint src worker content contracts scripts utils brand vitest.config.ts vite.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts && bun run lint:eslint src && bun run lint:py",
+    "format": "vp fmt src worker contracts scripts utils brand content vitest.config.ts vite.config.ts wrangler.jsonc astro.config.ts commitlint.config.ts lint.config.ts eslint.config.ts && prettier --write \"src/**/*.astro\" && bun run --silent py ruff format scripts/site/tts",
+    "check-format": "vp fmt src worker contracts scripts utils brand content vitest.config.ts vite.config.ts wrangler.jsonc astro.config.ts commitlint.config.ts lint.config.ts eslint.config.ts --check && prettier --check \"src/**/*.astro\" && bun run --silent py ruff format --check scripts/site/tts",
+    "lint": "astro sync && vp lint src worker content contracts scripts utils brand vitest.config.ts vite.config.ts astro.config.ts commitlint.config.ts lint.config.ts eslint.config.ts && bun run lint:eslint src && bun run lint:py",
     "lint:py": "bun run --silent py ruff check scripts/site/tts",
     "lint:eslint": "node --require ./scripts/site/ts-alias.cjs node_modules/.bin/eslint",
-    "lint:fix": "astro sync && oxlint src worker content contracts scripts utils brand vitest.config.ts vite.config.ts astro.config.ts commitlint.config.ts oxlint.config.ts eslint.config.ts --fix && bun run lint:eslint src --fix && bun run lint:py --fix",
+    "lint:fix": "astro sync && vp lint src worker content contracts scripts utils brand vitest.config.ts vite.config.ts astro.config.ts commitlint.config.ts lint.config.ts eslint.config.ts --fix && bun run lint:eslint src --fix && bun run lint:py --fix",
     "knip": "knip",
     "db:migrate": "wrangler d1 migrations apply jarvis-chats --remote",
     "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",
     "deploy": "bun run db:migrate && wrangler deploy",
-    "test": "vitest run",
-    "test:live": "vitest run --project workers --tags-filter=live",
+    "test": "vp test",
+    "test:live": "vp test --project workers --tags-filter=live",
     "check:src": "astro sync && node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit --runExternalCode",
     "check:worker": "node node_modules/typescript/bin/tsc -p worker",
     "check:py": "bun run --silent py basedpyright -p scripts/site/tts",
@@ -107,11 +107,7 @@
     "jiti": "^2.7.0",
     "knip": "^6.40.0",
     "linkedom": "^0.18.13",
-    "lint-staged": "^17.6.0",
-    "oxfmt": "^0.72.0",
-    "oxlint": "^1.87.0",
     "oxlint-tailwindcss": "^1.14.0",
-    "oxlint-tsgolint": "^7.0.2003",
     "pdf-parse": "^2.4.5",
     "playwright": "^1.64.0",
     "prettier": "^3.9.9",
@@ -125,30 +121,16 @@
     "tailwindcss": "^4.3.3",
     "typescript": "7.1.0-dev.20261007.1",
     "vfile": "^6.0.3",
-    "vite": "^8.3.4",
-    "vitest": "^5.0.3",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
+    "vite-plus": "1.1.0",
+    "vitest": "5.0.3",
     "vitest-browser-react": "^2.3.0",
     "webmcp-types": "^0.1.10",
     "wrangler": "^4.149.0",
     "yaml": "^2.9.1"
   },
-  "lint-staged": {
-    "*.{js,mjs,jsx,ts,tsx}": [
-      "oxlint --fix",
-      "oxfmt"
-    ],
-    "*.{json,jsonc,md}": "oxfmt",
-    "*.css": [
-      "bun run lint:eslint --fix",
-      "oxfmt"
-    ],
-    "*.astro": [
-      "bun run lint:eslint --fix",
-      "prettier --write"
-    ],
-    "*.py": [
-      "bun run --silent py ruff check --fix",
-      "bun run --silent py ruff format"
-    ]
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
+    "vitest": "5.0.3"
   }
 }

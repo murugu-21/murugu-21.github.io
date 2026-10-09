@@ -1,4 +1,4 @@
-import { defineConfig, type OxlintOverride } from "oxlint";
+import type { OxlintConfig, OxlintOverride } from "vite-plus/lint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 
@@ -80,7 +80,7 @@ const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
 
 const SITE = layerPatterns("site");
 
-export default defineConfig({
+export default {
   plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
   jsPlugins: ["./scripts/lint/test-behaviour.ts", "./scripts/lint/contracts.ts"],
@@ -248,4 +248,4 @@ export default defineConfig({
       }
     }
   ]
-});
+} satisfies OxlintConfig;
