@@ -1,4 +1,4 @@
-import { defineConfig, type OxlintOverride } from "oxlint";
+import type { OxlintConfig, OxlintOverride } from "vite-plus/lint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 
@@ -9,28 +9,45 @@ const LAYER_NAMES = [
   "site",
   "worker",
   "siteScripts",
+  "contentScripts",
   "lintScripts",
   "brand",
+  "content",
   "contracts",
   "utils"
 ] as const;
 type LayerName = (typeof LAYER_NAMES)[number];
 type Layer = { dir: string; uses: LayerName[]; also?: Pattern[] };
 
+// Contracts and content reach both the browser bundle and the Worker, so they take no framework.
+const FRAMEWORKS =
+  "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)";
+
 const LAYERS: Record<LayerName, Layer> = {
-  site: { dir: "src/", uses: ["contracts", "utils"] },
-  worker: { dir: "worker/", uses: ["contracts", "utils"] },
+  site: { dir: "src/", uses: ["content", "contracts", "utils"] },
+  worker: { dir: "worker/", uses: ["content", "contracts", "utils"] },
   siteScripts: { dir: "scripts/site/", uses: ["site", "contracts", "utils"] },
+  contentScripts: { dir: "scripts/content/", uses: ["content", "contracts", "utils"] },
   lintScripts: { dir: "scripts/lint/", uses: [] },
   brand: { dir: "brand/", uses: ["siteScripts"] },
+  content: {
+    dir: "content/",
+    uses: ["contracts", "utils"],
+    also: [
+      {
+        regex: `${FRAMEWORKS}|\\.(png|jpe?g|gif|webp|avif|svg)$`,
+        allowTypeImports: true,
+        message:
+          "content/ holds sources and pure functions the site and the Worker share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in src/ or worker/ (README.md › Layers)."
+      }
+    ]
+  },
   contracts: {
     dir: "contracts/",
     uses: ["utils"],
-    // Contracts reach both the browser bundle and the Worker, so they take no framework.
     also: [
       {
-        regex:
-          "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)",
+        regex: FRAMEWORKS,
         allowTypeImports: true,
         message:
           "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in src/ or worker/ (README.md › Layers)."
@@ -49,7 +66,7 @@ function layerPatterns(name: LayerName): Pattern[] {
   return [
     {
       regex: `^(${banned.join("|")})`,
-      message: `${LAYERS[name].dir} imports only ${[...allowed].map(alias).join(", ")} (README.md › Layers). Move code both sides need to contracts/ or utils/.`
+      message: `${LAYERS[name].dir} imports only ${[...allowed].map(alias).join(", ")} (README.md › Layers). Move code both sides need to content/, contracts/ or utils/.`
     }
   ];
 }
@@ -63,7 +80,7 @@ const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
 
 const SITE = layerPatterns("site");
 
-export default defineConfig({
+export default {
   plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
   jsPlugins: ["./scripts/lint/test-behaviour.ts", "./scripts/lint/contracts.ts"],
@@ -131,9 +148,6 @@ export default defineConfig({
         }
       ]
     ),
-    // Exempt from the shared-code boundary: /llms.txt lists every post, so this imports the
-    // blog's post helpers.
-    restrict(["src/lib/llms.ts"], SITE),
     // The homepage may show the blog's posts; the blog never reaches into the homepage.
     restrict(
       [
@@ -234,4 +248,4 @@ export default defineConfig({
       }
     }
   ]
-});
+} satisfies OxlintConfig;

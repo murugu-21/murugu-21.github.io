@@ -3,7 +3,8 @@ import Layout, { type Props as LayoutProps, type Section } from "#src/layouts/La
 import "#src/styles/blog/code.css";
 import Icon from "#src/components/Icon.astro";
 import ThemeToggle from "#src/components/ThemeToggle.astro";
-import { BLOG_TITLE, BLOG_DESCRIPTION, BLOG_URL } from "#src/lib/site.ts";
+import { BLOG_TITLE, BLOG_DESCRIPTION } from "#content/site.ts";
+import { BLOG_URL } from "#src/lib/site.ts";
 
 // title is omitted for the blog index, which gets the homepage title.
 type Props = Pick<LayoutProps, "title" | "description" | "noindex" | "article" | "graph">;

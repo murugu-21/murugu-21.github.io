@@ -1,6 +1,9 @@
 // Site-wide llms.txt: the hand-written site summary plus every blog post.
-import { siteLlmsText, textResponse } from "#src/lib/llms.ts";
+import { siteLlmsText } from "#content/llms.ts";
+import { posts } from "virtual:content/posts";
 
-export async function GET() {
-  return textResponse(await siteLlmsText());
+import { textResponse } from "#src/lib/responses.ts";
+
+export function GET() {
+  return textResponse(siteLlmsText(posts));
 }

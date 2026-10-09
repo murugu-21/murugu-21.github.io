@@ -14,7 +14,6 @@ import {
   connectRoom,
   fakeFetcher,
   fetchWorker,
-  LLMS_TXT,
   NOT_FOUND_HTML,
   testEnv,
   visitorStorage
@@ -112,9 +111,9 @@ describe("markdownNotFound", () => {
 
 describe("asset requests", () => {
   it("passes a hit through untouched", async () => {
-    const res = await fetchWorker("/llms.txt");
+    const res = await fetchWorker("/llms.txt", { env: { assets: { "/llms.txt": "# Summary\n" } } });
     expect(res.status).toBe(200);
-    expect(await res.text()).toBe(LLMS_TXT);
+    expect(await res.text()).toBe("# Summary\n");
   });
 
   it.each([

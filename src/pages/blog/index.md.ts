@@ -1,6 +1,9 @@
 // Blog index as markdown.
-import { blogIndexMarkdown, markdownResponse } from "#src/lib/llms.ts";
+import { blogIndexMarkdown } from "#content/llms.ts";
+import { posts } from "virtual:content/posts";
 
-export async function GET() {
-  return markdownResponse(await blogIndexMarkdown());
+import { markdownResponse } from "#src/lib/responses.ts";
+
+export function GET() {
+  return markdownResponse(blogIndexMarkdown(posts));
 }

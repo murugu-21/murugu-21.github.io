@@ -1,6 +1,9 @@
 // /about/ as markdown: the same site summary as ../index.md.ts.
-import { markdownResponse, siteLlmsText } from "#src/lib/llms.ts";
+import { siteLlmsText } from "#content/llms.ts";
+import { posts } from "virtual:content/posts";
 
-export async function GET() {
-  return markdownResponse(await siteLlmsText());
+import { markdownResponse } from "#src/lib/responses.ts";
+
+export function GET() {
+  return markdownResponse(siteLlmsText(posts));
 }

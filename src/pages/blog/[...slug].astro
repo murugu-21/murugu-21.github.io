@@ -3,15 +3,15 @@ import { render } from "astro:content";
 import BlogLayout from "#src/layouts/BlogLayout.astro";
 import Bio from "#src/components/blog/Bio.astro";
 import { blog, blogPosting } from "#src/lib/blog/schema.ts";
+import { postDescription, postPath } from "#content/posts.ts";
 import {
   getPublishedPosts,
-  postPath,
-  postDescription,
   postKeywords,
   tagPath,
   formatDate,
   timeToRead,
-  formatReadingTime
+  formatReadingTime,
+  toPostSource
 } from "#src/lib/blog/posts.ts";
 import { ListenControls } from "#src/components/blog/ListenControls.tsx";
 import TableOfContents from "#src/components/blog/TableOfContents.astro";
@@ -35,14 +35,15 @@ const { post, previous, next } = Astro.props;
 // pass afterwards keeps those ids, so `headings` matches the anchors.
 const { Content, headings } = await render(post);
 
-const description = postDescription(post);
+const source = toPostSource(post);
+const description = postDescription(source);
 ---
 
 <BlogLayout
-  graph={[blog, blogPosting(post)]}
+  graph={[blog, blogPosting(source)]}
   title={post.data.title}
   description={description}
-  article={{ published: post.data.date, tags: postKeywords(post) }}
+  article={{ published: post.data.date, tags: postKeywords(source) }}
 >
   {/* data-speaking marks the block being read aloud (listen-player.ts); the
        scroll margin clears the 12+58px pinned read-aloud bar. */}
@@ -54,7 +55,7 @@ const description = postDescription(post);
       <h1 data-post-title>{post.data.title}</h1>
       <p>
         {formatDate(post.data.date)}
-        {` • ${formatReadingTime(timeToRead(post.body))}`}
+        {` • ${formatReadingTime(timeToRead(source.body))}`}
       </p>
       {/* Each tag links to /blog/?tag=…, the URL the index's own chips write. */}
       <div class="not-prose mb-4 flex flex-row flex-wrap gap-2.5">

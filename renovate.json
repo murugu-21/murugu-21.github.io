@@ -5,6 +5,10 @@
     {
       "matchPackageNames": ["typescript", "@astrojs/ts-content-mapper"],
       "groupName": "typescript content mapper"
+    },
+    {
+      "matchPackageNames": ["vite-plus", "@voidzero-dev/vite-plus-core", "vitest", "@vitest/*"],
+      "groupName": "vite-plus"
     }
   ]
 }

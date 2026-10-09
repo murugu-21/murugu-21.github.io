@@ -16,7 +16,7 @@ import {
 } from "./fixtures";
 
 // vitest.config.ts binds these only for bun run test:live.
-const LiveEnv = z.object({ LIVE_DEEPSEEK_API_KEY: z.string(), LIVE_LLMS_TXT: z.string() });
+const LiveEnv = z.object({ LIVE_DEEPSEEK_API_KEY: z.string() });
 
 const CONTACT = "dana.okafor@northlane.io";
 
@@ -29,13 +29,13 @@ const VISITOR_TURNS = [
 
 describe("lead capture against the live model", { tags: ["live"] }, () => {
   it("emails the owner the lead with the visitor's contact", async () => {
-    const { LIVE_DEEPSEEK_API_KEY, LIVE_LLMS_TXT } = LiveEnv.parse(env);
+    const { LIVE_DEEPSEEK_API_KEY } = LiveEnv.parse(env);
     const { socket, frames, stub } = await openRoom("live-capture");
     const { email, sent } = recordingEmail();
     await runInDurableObject(stub, instance => {
       Object.assign(instance, {
         env: {
-          ...testEnv({ email, assets: { "/llms.txt": LIVE_LLMS_TXT } }),
+          ...testEnv({ email }),
           DEEPSEEK_API_KEY: LIVE_DEEPSEEK_API_KEY
         }
       });

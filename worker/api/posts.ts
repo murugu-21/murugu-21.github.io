@@ -1,4 +1,4 @@
-import { SLUG, type PostSummary } from "#contracts/api/posts.ts";
+import type { PostSummary } from "#contracts/api/posts.ts";
 
 /** Case-insensitive substring match on title and description, then the first `limit`. */
 export function searchPosts({
@@ -17,10 +17,4 @@ export function searchPosts({
       )
     : posts;
   return limit === undefined ? matches : matches.slice(0, limit);
-}
-
-// Built by src/pages/blog/[slug]/index.md.ts. The slug comes from the request path, so it is
-// re-validated.
-export function postMarkdownPath(slug: string): string | null {
-  return SLUG.test(slug) ? `/blog/${slug}/index.md` : null;
 }

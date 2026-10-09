@@ -3,7 +3,7 @@
 // independent expected value. The rule is a heuristic by design. It catches the
 // shapes syntax can decide and leaves the rest (and the documented exceptions)
 // to an `oxlint-disable` with a reason.
-import type { RuleTester } from "oxlint/plugins-dev";
+import type { RuleTester } from "vite-plus/lint/plugins-dev";
 
 // oxlint doesn't export its plugin or AST types; derive them from RuleTester.
 type Rule = Parameters<RuleTester["run"]>[1];

@@ -5,7 +5,7 @@ description: Drive murugappan.dev (Astro site plus Cloudflare Worker) the way a 
 
 # Verify murugappan.dev
 
-Two surfaces. Visitors use the web pages (portfolio, blog, Jarvis chat widget) in a browser. Agents and developers use the Worker's HTTP routes (`/api/v1`, `/mcp`, discovery documents, the negotiated 404). Both come from one `wrangler dev` over the built `dist/`.
+Two surfaces. Visitors use the web pages (portfolio, blog, Jarvis chat widget) in a browser. Agents and developers use the Worker's HTTP routes (`/api/v1`, `/mcp`, discovery documents, the negotiated 404). Both come from one `wrangler dev` running the built Worker (`dist-worker/`) over the built site (`dist/`).
 
 Drive the browser with the chrome-devtools MCP and HTTP with `curl`. Without the chrome-devtools MCP, drive the same handles with the repo's `playwright` devDependency; the recipes' handles and end states don't change.
 
@@ -36,7 +36,7 @@ The build takes about 15 s and rewrites the shared `dist/`, which the user's pre
 
 If `:8791` is taken by another run, pick a free port and use it everywhere `8791` appears, `--local-upstream` included.
 
-The Worker hot-reloads `worker/` edits. Pages, posts, `public/` and the prerendered API data come from `dist/`, so rebuild after editing them. Use the same blanked build line. The running instance picks up the new `dist/` without a restart.
+`wrangler dev` serves the Worker that `bun run build` bundled to `dist-worker/`, with the site content inside it, so nothing hot-reloads. After editing `worker/`, `content/`, pages, posts or `public/`, run Cleanup, then Launch again, which rebuilds.
 
 ## Doctor
 
@@ -47,7 +47,7 @@ Run before the first drive, and again after any surprising result.
 kill -0 "$(cat "$RUN/worker.pid")" && echo "worker: ours, alive"
 curl -sS -o /dev/null -w 'api: %{http_code}\n' http://localhost:8791/api/v1/profile
 curl -sS http://localhost:8791/mcp.json | grep -c '"url": "http://localhost:8791/mcp"'
-test -f dist/index.html && find src content public astro.config.ts -newer dist/index.html -type f \
+test -f dist/index.html && find src worker content public astro.config.ts -newer dist/index.html -type f \
   -not -name '*.test.*' -not -path '*/__screenshots__/*' | head -3
 ```
 
@@ -56,7 +56,7 @@ Healthy means all of these hold:
 - The PID is alive.
 - The API answers `200`.
 - The manifest count is `1`, which proves the instance was launched with `--local-upstream localhost:8791`.
-- The last line prints nothing and exits `0`. That means `dist/` exists and is newer than every source it's built from.
+- The last line prints nothing and exits `0`. That means the build exists and is newer than every source it's built from.
 
 Anything else means stop. A dead PID with `:8791` still answering means someone else's instance, so don't drive it. A file listed by `find` means rebuild.
 

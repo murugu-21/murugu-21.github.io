@@ -1,6 +1,7 @@
 ---
 import { Image } from "astro:assets";
-import { workExperiences } from "#src/data/portfolio.ts";
+import { workExperiences } from "#content/portfolio.ts";
+import { LOGOS } from "#src/data/logos.ts";
 import Section from "./Section.astro";
 import SectionTitle from "./SectionTitle.astro";
 import {
@@ -11,7 +12,7 @@ import {
   monthsBetween,
   periodBounds,
   totalExperienceMonths
-} from "#src/lib/experience.ts";
+} from "#content/experience.ts";
 
 // Ongoing durations are recomputed in the browser (script below) to stay current.
 const now = currentMonth();
@@ -28,7 +29,7 @@ const duration = (period: string) => {
 
 const stints = groupByCompany(workExperiences).map(stint => ({
   ...stint,
-  logo: stint.roles[0].companyLogo,
+  logo: LOGOS[stint.roles[0].companyLogo],
   duration: duration(stint.span),
   partTime: stint.roles.every(r => r.partTime),
   roles: stint.roles.map(role => ({ ...role, duration: duration(role.date) }))
@@ -147,7 +148,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
     formatDuration,
     monthsBetween,
     totalExperienceMonths
-  } from "#src/lib/experience.ts";
+  } from "#content/experience.ts";
   import { parseStringArray } from "#src/lib/data-attributes.ts";
 
   const now = currentMonth();

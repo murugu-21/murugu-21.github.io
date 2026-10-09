@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { postSource } from "#content/fixtures.ts";
 import { blogPosting } from "./schema";
-import { blogPost } from "./fixtures";
 
 vi.mock("astro:content", async () => (await import("./fixtures")).astroContentMock);
 
 describe("blogPosting", () => {
   it("describes a post for the blog's graph", () => {
-    const post = blogPost({
-      id: "rate-limiting",
+    const post = postSource({
+      slug: "rate-limiting",
       title: "Rate limiting",
       date: "2024-03-04",
       description: "Why and how",

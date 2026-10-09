@@ -1,19 +1,18 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { parseEnv } from "node:util";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
-import { SITE_DIR } from "#scripts/site/site-dir.ts";
+import { contentPosts } from "#scripts/content/posts-plugin.ts";
 
 // The pool's D1 starts empty; worker/test/apply-migrations.ts applies these
 // per test file.
 const d1Migrations = await readD1Migrations("./migrations");
 
 // Tests tagged "live" bill the DeepSeek API, so only `bun run test:live` runs them, and only
-// that run hands the pool the key and the built llms.txt Jarvis grounds on.
+// that run hands the pool the key.
 const live = process.argv.some(
   (arg, i, argv) =>
     arg === "--tags-filter=live" || (arg === "--tags-filter" && argv[i + 1] === "live")
@@ -24,9 +23,7 @@ function readLiveBindings(): Record<string, string> {
     ? parseEnv(readFileSync(".dev.vars", "utf8")).DEEPSEEK_API_KEY
     : undefined;
   if (!key) throw new Error("bun run test:live needs DEEPSEEK_API_KEY in .dev.vars");
-  const llmsTxt = join(SITE_DIR, "llms.txt");
-  if (!existsSync(llmsTxt)) throw new Error(`${llmsTxt} is missing; run bun run build first`);
-  return { LIVE_DEEPSEEK_API_KEY: key, LIVE_LLMS_TXT: readFileSync(llmsTxt, "utf8") };
+  return { LIVE_DEEPSEEK_API_KEY: key };
 }
 const liveBindings = live ? readLiveBindings() : {};
 
@@ -44,7 +41,7 @@ export default defineConfig({
     // stay out.
     coverage: {
       provider: "istanbul",
-      include: ["{src,worker,utils,contracts,scripts}/**/*.{ts,tsx}"],
+      include: ["{src,worker,utils,content,contracts,scripts}/**/*.{ts,tsx}"],
       exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "worker/test/**"],
       reporter: ["text-summary", "lcov"]
     },
@@ -52,6 +49,7 @@ export default defineConfig({
       {
         define: { __D1_MIGRATIONS__: JSON.stringify(d1Migrations) },
         plugins: [
+          contentPosts(),
           cloudflareTest({
             wrangler: { configPath: "./worker/test/wrangler.jsonc" },
             miniflare: { bindings: liveBindings }
@@ -71,13 +69,14 @@ export default defineConfig({
           include: ["worker/test/**/*.test.ts"]
         }
       },
-      // src runs in the browser or at build time, never in a Worker, and starting each file in
-      // workerd costs far more than the tests. The scripts run on Node or Bun.
+      // src runs in the browser or at build time and content/ is pure, so neither needs workerd,
+      // and starting each file there costs far more than the tests. The scripts run on Node or Bun.
       {
+        plugins: [contentPosts()],
         test: {
           name: "node",
           environment: "node",
-          include: ["scripts/**/*.test.ts", "src/**/*.test.ts"]
+          include: ["scripts/**/*.test.ts", "src/**/*.test.ts", "content/**/*.test.ts"]
         }
       },
       // React islands and the stylesheet test need a real DOM, media elements and

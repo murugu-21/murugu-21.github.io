@@ -7,10 +7,9 @@ import {
   type McpServer
 } from "@modelcontextprotocol/server";
 
+import { SITE_ORIGIN } from "#content/site.ts";
 import { buildOpenApiDocument } from "#worker/api/openapi.ts";
-import { loadPost, loadPosts, readAsset, type AssetsLike } from "#worker/api/store.ts";
-
-export const RESOURCE_ORIGIN = "https://murugappan.dev";
+import { AGENTS_MD, findPost, LLMS_FULL_TXT, LLMS_TXT, POSTS } from "#worker/content.ts";
 
 type ResourceAnnotations = {
   audience: Array<"user" | "assistant">;
@@ -32,18 +31,16 @@ type ResourceContents = {
   text: string;
 };
 
-type ResourceContext = { assets: AssetsLike };
-
 const forAssistant = (priority: number): ResourceAnnotations => ({
   audience: ["assistant"],
   priority
 });
 
-// In preference order. `assetPath` is null for the generated OpenAPI document.
-const STATIC_RESOURCES: Array<ResourceDescriptor & { assetPath: string | null }> = [
+// In preference order.
+const STATIC_RESOURCES: Array<ResourceDescriptor & { text: () => string }> = [
   {
-    uri: `${RESOURCE_ORIGIN}/llms.txt`,
-    assetPath: "/llms.txt",
+    uri: `${SITE_ORIGIN}/llms.txt`,
+    text: () => LLMS_TXT,
     name: "llms.txt",
     title: "Site summary for LLMs",
     description:
@@ -52,8 +49,8 @@ const STATIC_RESOURCES: Array<ResourceDescriptor & { assetPath: string | null }>
     annotations: forAssistant(0.9)
   },
   {
-    uri: `${RESOURCE_ORIGIN}/AGENTS.md`,
-    assetPath: "/AGENTS.md",
+    uri: `${SITE_ORIGIN}/AGENTS.md`,
+    text: () => AGENTS_MD,
     name: "AGENTS.md",
     title: "Agent instructions",
     description:
@@ -62,8 +59,8 @@ const STATIC_RESOURCES: Array<ResourceDescriptor & { assetPath: string | null }>
     annotations: forAssistant(0.8)
   },
   {
-    uri: `${RESOURCE_ORIGIN}/openapi.json`,
-    assetPath: null,
+    uri: `${SITE_ORIGIN}/openapi.json`,
+    text: () => JSON.stringify(buildOpenApiDocument(SITE_ORIGIN), null, 2),
     name: "openapi.json",
     title: "OpenAPI 3.1.0 specification",
     description:
@@ -72,8 +69,8 @@ const STATIC_RESOURCES: Array<ResourceDescriptor & { assetPath: string | null }>
     annotations: forAssistant(0.7)
   },
   {
-    uri: `${RESOURCE_ORIGIN}/blog/llms-full.txt`,
-    assetPath: "/blog/llms-full.txt",
+    uri: `${SITE_ORIGIN}/blog/llms-full.txt`,
+    text: () => LLMS_FULL_TXT,
     name: "llms-full.txt",
     title: "Full text of every blog post",
     description:
@@ -84,7 +81,7 @@ const STATIC_RESOURCES: Array<ResourceDescriptor & { assetPath: string | null }>
 ];
 
 const BLOG_POST_TEMPLATE = {
-  uriTemplate: `${RESOURCE_ORIGIN}/blog/{slug}/index.md`,
+  uriTemplate: `${SITE_ORIGIN}/blog/{slug}/index.md`,
   name: "blog-post",
   title: "Blog post (markdown)",
   description:
@@ -92,12 +89,10 @@ const BLOG_POST_TEMPLATE = {
   mimeType: "text/markdown"
 };
 
-const postUri = (slug: string) => `${RESOURCE_ORIGIN}/blog/${slug}/index.md`;
+const postUri = (slug: string) => `${SITE_ORIGIN}/blog/${slug}/index.md`;
 
-/** A missing post list yields no posts, so resources/list still returns the static documents. */
-async function listPostResources(ctx: ResourceContext): Promise<ResourceDescriptor[]> {
-  const posts = await loadPosts(ctx.assets);
-  return posts.map(post => ({
+const listPostResources = (): ResourceDescriptor[] =>
+  POSTS.map(post => ({
     uri: postUri(post.slug),
     name: post.slug,
     title: post.title,
@@ -105,29 +100,23 @@ async function listPostResources(ctx: ResourceContext): Promise<ResourceDescript
     mimeType: "text/markdown",
     annotations: forAssistant(0.4)
   }));
-}
 
 const contents = (content: ResourceContents) => ({ contents: [content] });
 
-// Each read throws ResourceNotFoundError, which the SDK answers with -32602; the spec forbids an
-// empty contents array.
-export function registerResources(server: McpServer, ctx: ResourceContext): void {
-  for (const { assetPath, uri, name, ...metadata } of STATIC_RESOURCES) {
-    server.registerResource(name, uri, metadata, async () => {
-      const text =
-        assetPath === null
-          ? JSON.stringify(buildOpenApiDocument(RESOURCE_ORIGIN), null, 2)
-          : await readAsset(ctx.assets, assetPath);
-      if (text === null) throw new ResourceNotFoundError(uri);
-      return contents({ uri, mimeType: metadata.mimeType, text });
-    });
+// A missing post throws ResourceNotFoundError, which the SDK answers with -32602; the spec forbids
+// an empty contents array.
+export function registerResources(server: McpServer): void {
+  for (const { text, uri, name, ...metadata } of STATIC_RESOURCES) {
+    server.registerResource(name, uri, metadata, () =>
+      contents({ uri, mimeType: metadata.mimeType, text: text() })
+    );
   }
 
   const { uriTemplate, name, ...metadata } = BLOG_POST_TEMPLATE;
-  const list = async () => ({ resources: await listPostResources(ctx) });
+  const list = () => ({ resources: listPostResources() });
   const template = new ResourceTemplate(uriTemplate, { list });
-  server.registerResource(name, template, metadata, async (uri, { slug }) => {
-    const post = typeof slug === "string" ? await loadPost(ctx.assets, slug) : null;
+  server.registerResource(name, template, metadata, (uri, { slug }) => {
+    const post = typeof slug === "string" ? findPost(slug) : undefined;
     if (!post) throw new ResourceNotFoundError(uri.href);
     return contents({ uri: uri.href, mimeType: metadata.mimeType, text: post.markdown });
   });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { Dataset } from "#contracts/api/dataset.ts";
-import { buildDataset, splitSkillItems, type DatasetInput } from "#src/lib/dataset.ts";
+import { buildDataset, splitSkillItems, type DatasetInput } from "./dataset.ts";
 
 const DATASET_INPUT: DatasetInput = {
   greeting: {
@@ -38,7 +38,7 @@ const DATASET_INPUT: DatasetInput = {
   skillsSection: { subTitle: "FULL-STACK", skills: ["⚡ Build TypeScript"] },
   skillsCategories: [{ category: "Languages", items: "TypeScript, Python" }],
   techStack: {
-    experience: [{ stack: "Backend", tools: ["Node.js"], progressPercentage: "90%" }]
+    experience: [{ stack: "Backend", tools: [{ name: "Node.js" }], progressPercentage: "90%" }]
   },
   educationInfo: [
     {
@@ -91,7 +91,7 @@ describe("splitSkillItems", () => {
 describe("buildDataset", () => {
   const dataset = buildDataset(input);
 
-  // The Worker answers 503 for a dataset its schema rejects.
+  // The Worker parses it at startup, so a rejected dataset fails the deploy.
   it("builds a document the contract's schema accepts", () => {
     expect(Dataset.safeParse(dataset).success).toBe(true);
   });

@@ -120,15 +120,7 @@ const rateLimited = errorResponse(
   "The client's read allowance for the current window is spent (`rate_limited`). `Retry-After` and the `RateLimit` header say when to come back. See the Rate limits section above."
 );
 
-// The dataset is a build artifact, so "not deployed yet" is a real state and answers 503, not 500.
 const readFailures = {
-  "429": rateLimited,
-  "500": errorResponse("Unexpected server error."),
-  "503": errorResponse("The site's content dataset is missing or unreadable. Retry shortly.")
-};
-
-// Self-describing endpoints read nothing from the build (no 503) but share the read allowance.
-const metaFailures = {
   "429": rateLimited,
   "500": errorResponse("Unexpected server error.")
 };
@@ -393,7 +385,7 @@ export const OPENAPI_DOCUMENT: Omit<OpenApiDocument, "servers"> = {
             "The version catalogue and the policy governing it.",
             "#/components/schemas/ApiVersions"
           ),
-          ...metaFailures
+          ...readFailures
         }
       }
     },
@@ -417,7 +409,7 @@ export const OPENAPI_DOCUMENT: Omit<OpenApiDocument, "servers"> = {
               }
             }
           },
-          ...metaFailures
+          ...readFailures
         }
       }
     }

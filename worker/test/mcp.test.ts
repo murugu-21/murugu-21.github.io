@@ -10,25 +10,16 @@ import { z } from "zod";
 import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
 import { JsonObject } from "#utils/json.ts";
 import { LATEST_PROTOCOL_VERSION } from "#contracts/mcp.ts";
-import { RESOURCE_ORIGIN } from "#worker/mcp/resources.ts";
+import { SITE_ORIGIN } from "#content/site.ts";
 import { MCP_TOOLS } from "#contracts/mcp.ts";
-import {
-  AGENTS_MD,
-  DATASET,
-  fetchWorker,
-  LLMS_FULL_TXT,
-  LLMS_TXT,
-  POST_MARKDOWN,
-  recordingEmail,
-  type TestEnvOptions
-} from "./fixtures";
+import { fetchWorker, recordingEmail, type TestEnvOptions } from "./fixtures";
 
 const META = "io.modelcontextprotocol/protocolVersion";
 const CAPS = "io.modelcontextprotocol/clientCapabilities";
 const INFO = "io.modelcontextprotocol/clientInfo";
 const SERVER_INFO = "io.modelcontextprotocol/serverInfo";
 
-const POST_URI = `${RESOURCE_ORIGIN}/blog/coin-change-problem/index.md`;
+const POST_URI = `${SITE_ORIGIN}/blog/coin-change-problem/index.md`;
 
 const CLIENT_IP = "203.0.113.70";
 
@@ -262,7 +253,7 @@ describe("the MCP endpoint", () => {
 
 describe("modern request validation", () => {
   const getProfile = { name: "get_profile", arguments: {} };
-  const readLlms = { uri: `${RESOURCE_ORIGIN}/llms.txt` };
+  const readLlms = { uri: `${SITE_ORIGIN}/llms.txt` };
 
   // undefined deletes the header.
   it.each<{
@@ -311,7 +302,7 @@ describe("modern request validation", () => {
       label: "an Mcp-Name that disagrees with the uri",
       method: "resources/read",
       params: readLlms,
-      edits: { "Mcp-Name": `${RESOURCE_ORIGIN}/AGENTS.md` }
+      edits: { "Mcp-Name": `${SITE_ORIGIN}/AGENTS.md` }
     }
   ])("rejects $label with HeaderMismatch", async ({ method, params, edits }) => {
     const { body, headers } = modern(method, params);
@@ -515,9 +506,11 @@ describe("legacy (initialize-based) clients", () => {
       name: "list_skills",
       arguments: {}
     });
-    expect(called.json.result).toHaveProperty("structuredContent.proficiencies", [
-      { area: "Backend", tools: ["Node.js"], level: 90 }
-    ]);
+    expect(called.json.result).toHaveProperty("structuredContent.proficiencies.0", {
+      area: "Backend",
+      tools: ["Node.js", "Nest.js", "Event-driven"],
+      level: 90
+    });
   });
 
   it.each([
@@ -536,13 +529,13 @@ describe("legacy (initialize-based) clients", () => {
     expect(list.json.result).not.toHaveProperty("resultType");
 
     const read = await legacy("resources/read", {
-      uri: `${RESOURCE_ORIGIN}/AGENTS.md`
+      uri: `${SITE_ORIGIN}/AGENTS.md`
     });
     const { contents } = resultOf(
       read,
       z.object({ contents: z.array(z.object({ text: z.string() })) })
     );
-    expect(contents[0].text).toBe(AGENTS_MD);
+    expect(contents[0].text).toMatch(/^# AGENTS\.md for murugappan\.dev\n/);
   });
 
   it("answers an unknown legacy method with 200 and -32601, not 404", async () => {
@@ -591,24 +584,39 @@ describe("MCP_TOOLS definitions", () => {
 });
 
 describe("dataset tools", () => {
-  it.each<[string, Array<keyof typeof DATASET>]>([
-    ["get_profile", ["person", "links"]],
-    ["list_experience", ["experience"]],
-    ["list_skills", ["skills", "proficiencies"]],
-    ["list_education", ["education"]],
-    ["list_open_source", ["openSource"]]
-  ])("%s returns its slice of the dataset", async (name, keys) => {
+  it.each<{ name: string; keys: string[]; path: string; value: string }>([
+    { name: "get_profile", keys: ["person", "links"], path: "person.name", value: "Murugappan M" },
+    {
+      name: "list_experience",
+      keys: ["experience"],
+      path: "experience.0.company",
+      value: "MedMe Health"
+    },
+    {
+      name: "list_skills",
+      keys: ["skills", "proficiencies"],
+      path: "skills.0.category",
+      value: "Languages"
+    },
+    {
+      name: "list_education",
+      keys: ["education"],
+      path: "education.0.institution",
+      value: "Kumaraguru College of Technology"
+    },
+    {
+      name: "list_open_source",
+      keys: ["openSource"],
+      path: "openSource.0.project",
+      value: "AnkiDroid"
+    }
+  ])("$name returns its slice of the dataset", async ({ name, keys, path, value }) => {
     const result = await call(name);
     expect(result.isError).toBeUndefined();
-    expect(result.structuredContent).toEqual(Object.fromEntries(keys.map(k => [k, DATASET[k]])));
+    expect(Object.keys(result.structuredContent ?? {})).toEqual(keys);
+    expect(result.structuredContent).toHaveProperty(path, value);
     // The spec asks for the serialized JSON in a text block too.
     expect(JSON.parse(textOf(result))).toEqual(result.structuredContent);
-  });
-
-  it("reports a missing dataset as a tool execution error, not a throw", async () => {
-    const result = await call("get_profile", {}, { assets: { "/api/dataset.json": null } });
-    expect(result.isError).toBe(true);
-    expect(textOf(result)).toMatch(/not available/i);
   });
 });
 
@@ -617,7 +625,10 @@ describe("search_blog_posts", () => {
     (await call("search_blog_posts", args)).structuredContent;
 
   it("lists every post by default and applies limit", async () => {
-    expect(await search({})).toHaveProperty("count", 2);
+    expect(await search({})).toHaveProperty(
+      "posts",
+      expect.arrayContaining([expect.objectContaining({ slug: "coin-change-problem" })])
+    );
     expect(await search({ limit: 1 })).toHaveProperty("count", 1);
   });
 
@@ -633,7 +644,10 @@ describe("get_blog_post", () => {
   it("returns the post markdown", async () => {
     const { structuredContent } = await call("get_blog_post", { slug: "coin-change-problem" });
     expect(structuredContent).toHaveProperty("title", "Coin Change Problem");
-    expect(structuredContent).toHaveProperty("markdown", POST_MARKDOWN);
+    expect(structuredContent).toHaveProperty(
+      "markdown",
+      expect.stringMatching(/^---\ntitle: Coin Change Problem\n/)
+    );
   });
 });
 
@@ -718,26 +732,30 @@ describe("send_message", () => {
 });
 
 describe("resources/list", () => {
-  const list = async (options?: ClientOptions) =>
-    (await (await connect(options)).listResources()).resources;
+  const list = async () => (await (await connect()).listResources()).resources;
 
   it("lists the site's documents and every blog post as a cacheable result", async () => {
     const result = await (await connect()).listResources();
     expect(result).toHaveProperty("cacheScope", "public");
-    expect(result.resources.map(r => r.uri)).toEqual([
+    const uris = result.resources.map(r => r.uri);
+    expect(uris.slice(0, 4)).toEqual([
       "https://murugappan.dev/llms.txt",
       "https://murugappan.dev/AGENTS.md",
       "https://murugappan.dev/openapi.json",
-      "https://murugappan.dev/blog/llms-full.txt",
-      "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/index.md",
-      "https://murugappan.dev/blog/coin-change-problem/index.md"
+      "https://murugappan.dev/blog/llms-full.txt"
     ]);
+    expect(uris.slice(4)).toEqual(
+      expect.arrayContaining([
+        "https://murugappan.dev/blog/cloud-agnostic-rate-limiting/index.md",
+        "https://murugappan.dev/blog/coin-change-problem/index.md"
+      ])
+    );
   });
 
   // oxlint-disable-next-line tests/observe-behaviour -- a relation across rows: the summary outranks a post
   it("prioritises the site summary over a single post", async () => {
     const priority = new Map((await list()).map(r => [r.uri, r.annotations?.priority]));
-    const summaryPriority = priority.get(`${RESOURCE_ORIGIN}/llms.txt`);
+    const summaryPriority = priority.get(`${SITE_ORIGIN}/llms.txt`);
     const postPriority = priority.get(POST_URI);
     assert(summaryPriority !== undefined && postPriority !== undefined, "a priority is missing");
     expect(summaryPriority).toBeGreaterThan(postPriority);
@@ -750,72 +768,61 @@ describe("resources/list", () => {
     expect(post.description).toContain("per-user rate limiting");
     expect(post.mimeType).toBe("text/markdown");
   });
-
-  it("still lists the static documents when the post list is unavailable", async () => {
-    const uris = (await list({ assets: { "/api/posts.json": null } })).map(r => r.uri);
-    expect(uris).toEqual([
-      "https://murugappan.dev/llms.txt",
-      "https://murugappan.dev/AGENTS.md",
-      "https://murugappan.dev/openapi.json",
-      "https://murugappan.dev/blog/llms-full.txt"
-    ]);
-  });
 });
 
 describe("resources/read", () => {
-  const read = async (uri: string, assets?: Record<string, string | null>) =>
-    (await (await connect({ assets })).readResource({ uri })).contents;
+  const read = async (uri: string) => (await (await connect()).readResource({ uri })).contents;
+  const Contents = z.array(z.object({ uri: z.string(), mimeType: z.string(), text: z.string() }));
 
   it.each([
-    { path: "/llms.txt", mimeType: "text/plain", text: LLMS_TXT },
-    { path: "/AGENTS.md", mimeType: "text/markdown", text: AGENTS_MD },
-    { path: "/blog/llms-full.txt", mimeType: "text/plain", text: LLMS_FULL_TXT },
-    { path: "/blog/coin-change-problem/index.md", mimeType: "text/markdown", text: POST_MARKDOWN }
-  ])("reads $path", async ({ path, mimeType, text }) => {
+    { path: "/llms.txt", mimeType: "text/plain", start: /^# Murugappan M, Full Stack Engineer\n/ },
+    { path: "/AGENTS.md", mimeType: "text/markdown", start: /^# AGENTS\.md for murugappan\.dev\n/ },
+    {
+      path: "/blog/llms-full.txt",
+      mimeType: "text/plain",
+      start: /^# SDE Journey: full content\n/
+    },
+    {
+      path: "/blog/coin-change-problem/index.md",
+      mimeType: "text/markdown",
+      start: /^---\ntitle: Coin Change Problem\n/
+    }
+  ])("reads $path", async ({ path, mimeType, start }) => {
     const uri = `https://murugappan.dev${path}`;
-    expect(await read(uri)).toEqual([{ uri, mimeType, text }]);
+    const [content, ...rest] = Contents.parse(await read(uri));
+    expect(rest).toEqual([]);
+    expect(content).toMatchObject({ uri, mimeType });
+    expect(content?.text).toMatch(start);
   });
 
-  it.each<{ label: string; uri: string; overrides?: Record<string, string | null> }>([
-    {
-      label: "an unpublished post, even one whose markdown is deployed",
-      uri: `${RESOURCE_ORIGIN}/blog/ghost/index.md`,
-      overrides: { "/blog/ghost/index.md": "# Ghost" }
-    },
-    {
-      label: "a listed post whose markdown is missing",
-      uri: `${RESOURCE_ORIGIN}/blog/cloud-agnostic-rate-limiting/index.md`
-    },
+  it.each<{ label: string; uri: string }>([
+    { label: "an unpublished post", uri: `${SITE_ORIGIN}/blog/ghost/index.md` },
+    { label: "a draft", uri: `${SITE_ORIGIN}/blog/js-closure/index.md` },
     { label: "a string that is not a uri", uri: "not a uri" },
     {
       label: "a traversal in the slug",
-      uri: `${RESOURCE_ORIGIN}/blog/../../llms.txt/index.md`
+      uri: `${SITE_ORIGIN}/blog/../../llms.txt/index.md`
     },
     {
       label: "an encoded traversal in the slug",
-      uri: `${RESOURCE_ORIGIN}/blog/..%2F..%2Fllms.txt/index.md`
+      uri: `${SITE_ORIGIN}/blog/..%2F..%2Fllms.txt/index.md`
     },
     {
       label: "a slug outside the slug charset",
-      uri: `${RESOURCE_ORIGIN}/blog/Mixed_Case/index.md`
+      uri: `${SITE_ORIGIN}/blog/Mixed_Case/index.md`
     },
     { label: "a document on another origin", uri: "https://evil.example/llms.txt" },
     {
       label: "a post on another origin",
       uri: "https://evil.example/blog/coin-change-problem/index.md"
     },
-    { label: "a nonexistent document", uri: `${RESOURCE_ORIGIN}/nope` },
-    {
-      label: "a static document that is not deployed",
-      uri: `${RESOURCE_ORIGIN}/llms.txt`,
-      overrides: { "/llms.txt": null }
-    }
-  ])("answers $label with -32602 and the uri", async ({ uri, overrides }) => {
-    await expect(read(uri, overrides)).rejects.toMatchObject({ code: -32602, data: { uri } });
+    { label: "a nonexistent document", uri: `${SITE_ORIGIN}/nope` }
+  ])("answers $label with -32602 and the uri", async ({ uri }) => {
+    await expect(read(uri)).rejects.toMatchObject({ code: -32602, data: { uri } });
   });
 
-  it("generates the OpenAPI document rather than reading a file", async () => {
-    const result = await read(`${RESOURCE_ORIGIN}/openapi.json`, { "/openapi.json": null });
+  it("serves the generated OpenAPI document", async () => {
+    const result = await read(`${SITE_ORIGIN}/openapi.json`);
     const [content] = z.array(z.object({ mimeType: z.string(), text: z.string() })).parse(result);
     assert(content, "openapi.json returned no contents");
     expect(content.mimeType).toBe("application/json");

@@ -33,3 +33,6 @@ coverage/
 # Vitest browser screenshots, failure attachments and reports.
 __screenshots__/
 .vitest/
+
+# the built Worker (vite build), which wrangler deploy reads through .wrangler/deploy/config.json
+dist-worker/

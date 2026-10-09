@@ -3,19 +3,18 @@ import BlogLayout from "#src/layouts/BlogLayout.astro";
 import PostList from "#src/components/blog/PostList.astro";
 import Bio from "#src/components/blog/Bio.astro";
 import { blog } from "#src/lib/blog/schema.ts";
+import { excerpt, postPath } from "#content/posts.ts";
 import {
-  getPublishedPosts,
-  postPath,
+  getPostSources,
   formatDate,
   timeToRead,
-  excerpt,
   type SerializedPost
 } from "#src/lib/blog/posts.ts";
 
-const posts = await getPublishedPosts();
+const posts = await getPostSources();
 
 const serialized: SerializedPost[] = posts.map(post => ({
-  href: postPath(post.id),
+  href: postPath(post.slug),
   title: post.data.title,
   dateFormatted: formatDate(post.data.date),
   minutes: timeToRead(post.body),

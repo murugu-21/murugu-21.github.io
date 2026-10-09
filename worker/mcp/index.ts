@@ -58,7 +58,7 @@ function buildServer(ctx: ToolContext): McpServer {
     }
   );
   registerTools(server, ctx);
-  registerResources(server, ctx);
+  registerResources(server);
   return server;
 }
 
@@ -99,7 +99,6 @@ mcp.all("*", async c => {
     );
   }
   const ctx: ToolContext = {
-    assets: c.env.ASSETS,
     env: c.env,
     clientIp: c.req.header("CF-Connecting-IP") ?? "unknown"
   };

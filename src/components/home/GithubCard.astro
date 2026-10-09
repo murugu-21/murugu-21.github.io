@@ -1,16 +1,15 @@
 ---
+import { RESUME_PHONE } from "astro:env/server";
 import SocialMedia from "./SocialMedia.astro";
-import { contactInfo } from "#src/data/portfolio.ts";
+import { contactInfo } from "#content/portfolio.ts";
 import { fetchGithubProfile } from "#src/lib/github.ts";
-import { resumeContact } from "#src/data/resume.ts";
+import { resumeContact } from "#content/resume.ts";
 import Section from "./Section.astro";
 import SectionTitle from "./SectionTitle.astro";
 
 const prof = await fetchGithubProfile();
 const contactLinks = [
-  ...(contactInfo.number
-    ? [{ href: `tel:${contactInfo.number}`, label: contactInfo.number, value: "phone" }]
-    : []),
+  ...(RESUME_PHONE ? [{ href: `tel:${RESUME_PHONE}`, label: RESUME_PHONE, value: "phone" }] : []),
   {
     href: `mailto:${contactInfo.emailAddress}`,
     label: contactInfo.emailAddress,

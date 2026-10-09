@@ -1,6 +1,6 @@
 // MCP tool handlers. contracts/mcp.ts declares each tool's name, schemas and annotations;
-// these are thin adapters over the REST API's loaders. Anything a model could fix by
-// retrying with other arguments is an `isError` result, not a protocol error.
+// these are thin adapters over the content the REST API serves (worker/content.ts). Anything a
+// model could fix by retrying with other arguments is an `isError` result, not a protocol error.
 
 import type { McpServer } from "@modelcontextprotocol/server";
 
@@ -15,11 +15,10 @@ import {
   type McpToolName
 } from "#contracts/mcp.ts";
 import { globalLimiter } from "#worker/api/ratelimit.ts";
-import { loadDataset, loadPost, loadPosts, type AssetsLike } from "#worker/api/store.ts";
+import { DATASET, findPost, POSTS } from "#worker/content.ts";
 import { contactMailer, sendContactEmail } from "#worker/email.ts";
 
 export type ToolContext = {
-  assets: AssetsLike;
   env: Env;
   /** Keys the send_message allowance. */
   clientIp: string;
@@ -33,7 +32,11 @@ type ToolResult = {
   isError?: boolean;
 };
 
-type Run = (args: unknown, ctx: ToolContext, tool: McpToolDescriptor) => Promise<ToolResult>;
+type Run = (
+  args: unknown,
+  ctx: ToolContext,
+  tool: McpToolDescriptor
+) => ToolResult | Promise<ToolResult>;
 
 /** The spec asks for the serialized JSON alongside structuredContent. */
 function ok(data: unknown): ToolResult {
@@ -47,14 +50,8 @@ function fail(text: string): ToolResult {
   return { content: [{ type: "text", text }], isError: true };
 }
 
-const DATASET_UNAVAILABLE =
-  "The site's content dataset is not available right now. This is a transient deployment state. Retry in a minute, or read https://murugappan.dev/llms.txt instead.";
-
 /** A dataset tool answers with the slice of the dataset its outputSchema picks. */
-const fromDataset: Run = async (_args, ctx, tool) => {
-  const data = await loadDataset(ctx.assets);
-  return data ? ok(tool.outputSchema.parse(data)) : fail(DATASET_UNAVAILABLE);
-};
+const fromDataset: Run = (_args, _ctx, tool) => ok(tool.outputSchema.parse(DATASET));
 
 // Keyed by name, so a tool in the catalogue without a handler fails to compile.
 const RUN: Record<McpToolName, Run> = {
@@ -63,14 +60,14 @@ const RUN: Record<McpToolName, Run> = {
   list_skills: fromDataset,
   list_education: fromDataset,
   list_open_source: fromDataset,
-  async search_blog_posts(args, ctx) {
+  search_blog_posts(args) {
     const { query, limit } = SearchArgs.parse(args);
-    const posts = searchPosts({ posts: await loadPosts(ctx.assets), query, limit });
+    const posts = searchPosts({ posts: POSTS, query, limit });
     return ok({ posts, count: posts.length });
   },
-  async get_blog_post(args, ctx) {
+  get_blog_post(args) {
     const { slug } = PostArgs.parse(args);
-    const post = await loadPost(ctx.assets, slug);
+    const post = findPost(slug);
     if (post) return ok(post);
     return fail(
       `No published post has the slug '${slug}'. Call search_blog_posts to see which slugs exist.`
