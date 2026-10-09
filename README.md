@@ -44,6 +44,7 @@ src/              # the Astro site                     → apps/site
 worker/           # the Worker: API, MCP, chat, audio  → apps/api
 scripts/site/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
 scripts/lint/     # repo lint plugins
+brand/            # X profile banners and their renderer, run by hand (not in the build)
 contracts/        # what the site, the Worker and scripts agree on → packages/contracts
 utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
 ```

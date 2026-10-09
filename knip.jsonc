@@ -1,11 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   // Files loaded by path strings that no plugin parses: the client directive and
-  // resume script in astro.config.ts, and a script run by hand.
+  // resume script in astro.config.ts, and the banner renderer run by hand.
   "entry": [
     "src/directives/interaction.ts",
     "scripts/site/generate-resume.ts",
-    "scripts/site/render-x-cover.ts"
+    "brand/render-x-cover.ts"
   ],
   // Served by URL, never imported.
   "ignore": ["public/**"],
