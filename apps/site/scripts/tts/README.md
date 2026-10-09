@@ -21,12 +21,13 @@ The voice reference is a synthetic clip designed once from the persona prompt in
 terraform -chdir=infra apply   # creates the R2 bucket
 brew install ffmpeg
 uv sync --locked --project apps/site/scripts/tts   # the venv, from pyproject.toml and uv.lock
-bun run py python apps/site/scripts/tts/design-voice.py 3   # writes .voice/candidates/{0,1,2}.wav from the persona prompt
-cp .voice/candidates/<k>.wav .voice/reference.wav && cp .voice/candidates/reference.txt .voice/reference.txt
+bun run py python apps/site/scripts/tts/design-voice.py 3   # writes apps/site/.voice/candidates/{0,1,2}.wav from the persona prompt
+cp apps/site/.voice/candidates/<k>.wav apps/site/.voice/reference.wav
+cp apps/site/.voice/candidates/reference.txt apps/site/.voice/reference.txt
 bun run audio --upload-voice     # durable copy in R2
 ```
 
-To reuse the current voice instead, skip the design step: `bun run audio` restores `.voice/` from `voice/breeze/` in R2 when it's missing. The voice reference and venv are gitignored, and the reference is never served.
+To reuse the current voice instead, skip the design step: `bun run audio` restores `apps/site/.voice/` from `voice/breeze/` in R2 when it's missing. The voice reference and venv are gitignored, and the reference is never served.
 
 **Publishing a post**
 

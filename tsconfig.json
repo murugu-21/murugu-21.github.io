@@ -6,8 +6,8 @@
     "commitlint.config.ts",
     "lint.config.ts",
     "eslint.config.ts",
-    "vitest.config.ts",
-    "vite.config.ts"
+    "vite.config.ts",
+    "apps/api/vite.config.ts"
   ],
   // `?raw` imports in the content package.
   "compilerOptions": { "types": ["node", "vite/client"] }

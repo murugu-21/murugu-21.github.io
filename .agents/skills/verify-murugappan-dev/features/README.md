@@ -11,7 +11,7 @@
 - Start each recipe from a fresh page in this run's isolated context unless its preconditions say otherwise.
 - Act through accessible names from `take_snapshot`.
 - Copy commands, accessible names and URLs exactly. Only `…` and `<…>` are placeholders.
-- Expected titles and counts reflect the content when the recipe was written. When one differs, check `git log -- content apps/site/src/data` before calling it a defect. A content change means the map needs updating.
+- Expected titles and counts reflect the content when the recipe was written. When one differs, check `git log -- packages/content apps/site/src/data` before calling it a defect. A content change means the map needs updating.
 - Anything that calls DeepSeek bills the owner. Ask the user before it, and count the turns.
 - Collect proof as [Evidence](../SKILL.md#evidence) says.
 

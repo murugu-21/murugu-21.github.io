@@ -394,7 +394,7 @@ export function ChatWidget({ host }: { host?: string }) {
     setRoom(next);
   };
 
-  // Honour a launcher tap recorded by apps/site/src/directives/interaction.ts while this bundle loaded.
+  // Honour a launcher tap recorded by src/directives/interaction.ts while this bundle loaded.
   useEffect(() => {
     const island = launcherRef.current?.closest("astro-island");
     if (!(island instanceof HTMLElement) || !island.dataset.openOnHydrate) return;

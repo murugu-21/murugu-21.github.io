@@ -183,7 +183,7 @@ function firaCodeSubset(): AstroIntegration {
   };
 }
 
-// Registers `client:interaction`, which hydrates on first input (apps/site/src/directives/interaction.ts).
+// Registers `client:interaction`, which hydrates on first input (src/directives/interaction.ts).
 function clientInteractionDirective(): AstroIntegration {
   return {
     name: "client-interaction-directive",

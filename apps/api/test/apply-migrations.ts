@@ -1,5 +1,5 @@
 // Run before every test file: the pool's D1 starts empty, so without the schema
-// the fire-and-forget chat mirrors land in a logged .catch(). vitest.config.ts
+// the fire-and-forget chat mirrors land in a logged .catch(). The root vite.config.ts
 // inlines the migrations because the pool has no filesystem.
 import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";

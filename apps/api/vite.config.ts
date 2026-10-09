@@ -1,8 +1,5 @@
-// `vp build` bundles the Worker (`main` in wrangler.jsonc). It runs after the site's build: the
-// plugin makes the client build the Worker's assets directory, so the client build is pointed at
-// the site's dist/ and told to leave Astro's output, public/ copies included, as it is. The
-// plugin only builds the client, and so only keeps the Worker's assets binding, when publicDir
-// has files, so publicDir names the site's public/.
+// Bundles the Worker. The client build's output is the Worker's assets
+// directory, so it points at the site's dist/ and leaves Astro's output as it is.
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite-plus";
 
@@ -10,6 +7,7 @@ import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
 
 export default defineConfig({
   plugins: [contentPosts(), cloudflare()],
+  // The plugin builds the client, and keeps the assets binding, only when publicDir has files.
   publicDir: "../site/public",
   environments: {
     client: { build: { outDir: "../site/dist", emptyOutDir: false, copyPublicDir: false } }

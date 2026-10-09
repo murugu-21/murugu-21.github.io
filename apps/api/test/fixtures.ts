@@ -92,7 +92,7 @@ export function visitorStorage(instance: ChatRoom): Record<string, unknown> {
 /** The pool's env plus the bindings apps/api/test/wrangler.jsonc leaves out. */
 export function testEnv(options: TestEnvOptions = {}): Env {
   // Named rather than spread: `env` is typed as the full Env, so a binding added to
-  // ../../wrangler.jsonc fails to type-check here until testEnv supplies it.
+  // ../wrangler.jsonc fails to type-check here until testEnv supplies it.
   const { AUDIO, CHAT_DB, ChatRoom, RateLimiter } = env;
   return {
     AUDIO,

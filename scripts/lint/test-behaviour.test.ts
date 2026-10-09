@@ -187,6 +187,12 @@ it("has an inbox", () => { expect(env.INBOX).toBe("x"); });`,
       errors: [{ messageId: "expectedFromSubject", data: { name: "TOOLS" }, line: 4 }]
     },
     {
+      name: "a workspace package's constant as the expected value",
+      code: `import { LIMIT, slugify } from "@murugappan/content/slug.ts";
+it("caps", () => { expect(slugify("x")).toBe(LIMIT); });`,
+      errors: [{ messageId: "expectedFromSubject", data: { name: "LIMIT" }, line: 2 }]
+    },
+    {
       name: "a subject constant reached through a top-level const",
       code: `${SUBJECT_IMPORT}const WANT = \`\${LIMIT};w=60\`;
 it("reports the policy", () => { expect(slugify("p")).toBe(WANT); });`,

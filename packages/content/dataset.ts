@@ -1,4 +1,4 @@
-// Builds the dataset in packages/contracts/api/dataset.ts from packages/content/portfolio.ts and resume.ts.
+// Builds the dataset in packages/contracts/api/dataset.ts from portfolio.ts and resume.ts.
 // Input is typed structurally so a test can build a small one.
 
 import type { Dataset, ExperienceEntry } from "@murugappan/contracts/api/dataset.ts";

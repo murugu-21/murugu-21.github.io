@@ -1,5 +1,5 @@
-// Counts requests against the quotas in packages/contracts/api/quotas.ts and writes the headers: the
-// draft fields plus the de-facto X-RateLimit-* trio most tooling reads (`-Reset` is delta-seconds).
+// Counts requests against the quotas in packages/contracts/api/quotas.ts and writes the headers:
+// the draft fields plus the de-facto X-RateLimit-* trio most tooling reads (`-Reset` is delta-seconds).
 //   RateLimit: "name";r=<remaining>;t=<seconds to reset>  (the policy closest to exhaustion)
 
 import {

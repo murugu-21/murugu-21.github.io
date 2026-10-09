@@ -1,18 +1,18 @@
 # Blog
 
 ```text
-packages/content/blog/          # one directory per post: <slug>/index.md (+ images)
-  draft/               # drafts: visible in dev, excluded from production builds
-apps/site/src/pages/blog/        # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
+packages/content/blog/                  # one directory per post: <slug>/index.md (+ images)
+  draft/                                # drafts: visible in dev, excluded from production builds
+apps/site/src/pages/blog/               # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
 apps/site/src/layouts/BlogLayout.astro  # the blog header around Layout
-apps/site/src/components/blog/   # search, tags, table of contents, Listen control, bio
-packages/content/posts.ts       # PostSource and the pure post helpers (URLs, excerpt, descriptions, summaries)
-packages/content/llms.ts        # llms.txt, llms-full.txt and the blog index's markdown rendition
-packages/content/vite/posts-plugin.ts  # parses the published posts into virtual:content/posts for the site and the Worker
-apps/site/src/lib/blog/          # Astro post helpers, the markdown plugins, read-aloud text prep
-apps/site/src/styles/blog/       # post and code-block styles
-apps/site/src/content.config.ts  # content collection, validated by packages/contracts/blog.ts
-apps/site/public/blog/           # static files served verbatim (og-image, sw.js)
+apps/site/src/components/blog/          # search, tags, table of contents, Listen control, bio
+packages/content/posts.ts               # PostSource and the pure post helpers (URLs, excerpt, descriptions, summaries)
+packages/content/llms.ts                # llms.txt, llms-full.txt and the blog index's markdown rendition
+packages/content/vite/posts-plugin.ts   # parses the published posts into virtual:content/posts for the site and the Worker
+apps/site/src/lib/blog/                 # Astro post helpers, the markdown plugins, read-aloud text prep
+apps/site/src/styles/blog/              # post and code-block styles
+apps/site/src/content.config.ts         # content collection, validated by packages/contracts/blog.ts
+apps/site/public/blog/                  # static files served verbatim (og-image, sw.js)
 ```
 
 The index mirrors its search box and tag chips into the URL (`/blog/?q=…&tag=…`, one `tag` per chip), so filtered views survive a reload and can be shared. Post pages link their tags to the same URLs. Unknown tags are ignored.

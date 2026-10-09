@@ -2,22 +2,22 @@
 
 ## Source layout
 
-`apps/site/src/` is grouped by type first. Astro reserves only `apps/site/src/pages/`, and the other folders follow its documented defaults.
+`src/` is grouped by type first. Astro reserves only `src/pages/`, and the other folders follow its documented defaults.
 
 ```text
-apps/site/src/pages/        # routes
-apps/site/src/layouts/      # Layout.astro (every page) and BlogLayout.astro
-apps/site/src/components/   # site chrome shared by every page (Header, Icon, ThemeToggle, …)
+src/pages/        # routes
+src/layouts/      # Layout.astro (every page) and BlogLayout.astro
+src/components/   # site chrome shared by every page (Header, Icon, ThemeToggle, …)
   home/           # homepage sections and the pieces only they use
   blog/           # blog-only components
   chat/           # the Jarvis widget, on every page
   resume/         # resume-only components, styled by resume.css
   ui/             # shadcn primitives
-apps/site/src/lib/          # shared logic (site constants, theme, analytics, endpoint responses)
+src/lib/          # shared logic (site constants, theme, analytics, endpoint responses)
   blog/           # blog-only logic
-apps/site/src/styles/       # global.css (the Tailwind entry) and resume.css (the resume's own Tailwind entry)
+src/styles/       # global.css (the Tailwind entry) and resume.css (the resume's own Tailwind entry)
   blog/           # blog-only styles (code.css, for Shiki)
-apps/site/src/data/         # maps packages/content/portfolio.ts's logo keys to their images
+src/data/         # maps packages/content/portfolio.ts's logo keys to their images
 ```
 
 A file lives in the narrowest folder that holds every importer: a component only the homepage uses goes in `home/`, and one both halves use stays at the root of `components/`.

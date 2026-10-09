@@ -2,12 +2,12 @@
 
   bun run py python apps/site/scripts/tts/design-voice.py [count]
 
-Writes <count> candidates (default 3) to .voice/candidates/<k>.wav plus the
-sentence they speak in .voice/candidates/reference.txt. Listen, then promote
+Writes <count> candidates (default 3) to apps/site/.voice/candidates/<k>.wav plus
+the sentence they speak in apps/site/.voice/candidates/reference.txt. Listen, then promote
 the one you like:
 
-  cp .voice/candidates/1.wav .voice/reference.wav
-  cp .voice/candidates/reference.txt .voice/reference.txt
+  cp apps/site/.voice/candidates/1.wav apps/site/.voice/reference.wav
+  cp apps/site/.voice/candidates/reference.txt apps/site/.voice/reference.txt
   bun run audio --upload-voice
 
 Posts are plain clones of that clip (synth.py), which keeps the voice fixed

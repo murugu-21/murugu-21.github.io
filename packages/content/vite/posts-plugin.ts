@@ -26,7 +26,7 @@ export function parsePost({ slug, markdown }: { slug: string; markdown: string }
 
 const postFile = (slug: string) => path.join(BLOG_DIR, slug, "index.md");
 
-/** Each packages/content/blog/<slug>/index.md. Drafts sit one level deeper, under draft/, so they never match. */
+/** Each blog/<slug>/index.md. Drafts sit one level deeper, under draft/, so they never match. */
 export const readPosts = (): ContentPost[] =>
   fs
     .readdirSync(BLOG_DIR)

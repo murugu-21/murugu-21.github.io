@@ -13,12 +13,13 @@ const LAYER_NAMES = [
   "brand",
   "content",
   // After content: a file gets the last matching override, and this folder sits inside it.
-  "contentScripts",
+  "contentVite",
   "contracts",
   "utils"
 ] as const;
 type LayerName = (typeof LAYER_NAMES)[number];
-type Layer = { dir: string; pkg: string; imports: string; uses: LayerName[]; also?: Pattern[] };
+// `imports` is left out for a layer nothing imports.
+type Layer = { dir: string; pkg: string; imports?: string; uses: LayerName[]; also?: Pattern[] };
 
 // Contracts and content reach both the browser bundle and the Worker, so they take no framework.
 const FRAMEWORKS =
@@ -43,11 +44,10 @@ const LAYERS: Record<LayerName, Layer> = {
     imports: "#scripts/",
     uses: ["site", "contracts", "utils"]
   },
-  lintScripts: { dir: "scripts/lint/", pkg: "murugappan-dev", imports: "#scripts/lint/", uses: [] },
+  lintScripts: { dir: "scripts/lint/", pkg: "murugappan-dev", uses: [] },
   brand: {
     dir: "apps/site/brand/",
     pkg: "@murugappan/site",
-    imports: "#brand/",
     uses: ["siteScripts"]
   },
   content: {
@@ -78,7 +78,7 @@ const LAYERS: Record<LayerName, Layer> = {
       }
     ]
   },
-  contentScripts: {
+  contentVite: {
     dir: "packages/content/vite/",
     pkg: "@murugappan/content",
     imports: "@murugappan/content/vite/",
@@ -94,17 +94,21 @@ const LAYERS: Record<LayerName, Layer> = {
 
 // How `from` names `to`: by subpath import inside one package, by package name across two.
 // A library's folders keep their own prefix (@murugappan/content/vite/), which already is one.
-function specifier(from: LayerName, to: LayerName): string {
+// A layer without `imports` has no name inside its own package.
+function specifier({ from, to }: { from: LayerName; to: LayerName }): string[] {
   const { pkg, imports } = LAYERS[to];
-  if (LAYERS[from].pkg === pkg || imports.startsWith("@")) return imports;
-  return `${pkg}/`;
+  if (imports?.startsWith("@")) return [imports];
+  if (LAYERS[from].pkg !== pkg) return [`${pkg}/`];
+  return imports ? [imports] : [];
 }
 
 function layerPatterns(name: LayerName): Pattern[] {
   const allowed = new Set<LayerName>([name, ...LAYERS[name].uses]);
-  const allowedSpecifiers = [...allowed].map(to => specifier(name, to));
+  const allowedSpecifiers = [...allowed].flatMap(to => specifier({ from: name, to }));
   const banned = [
-    ...new Set(LAYER_NAMES.filter(other => !allowed.has(other)).map(to => specifier(name, to)))
+    ...new Set(
+      LAYER_NAMES.filter(other => !allowed.has(other)).flatMap(to => specifier({ from: name, to }))
+    )
   ].filter(spec => !allowedSpecifiers.includes(spec));
   if (banned.length === 0) return [];
   return [

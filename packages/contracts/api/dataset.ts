@@ -1,5 +1,5 @@
-// The dataset the API serves, built by packages/content/dataset.ts from the same sources the site renders,
-// so the API cannot drift from the site.
+// The dataset the API serves, built by packages/content/dataset.ts from the same sources the site
+// renders, so the API cannot drift from the site.
 
 import { z } from "zod";
 

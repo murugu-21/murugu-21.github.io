@@ -15,7 +15,7 @@ import {
   userMessage
 } from "./fixtures";
 
-// vitest.config.ts binds these only for bun run test:live.
+// The root vite.config.ts binds these only for bun run test:live.
 const LiveEnv = z.object({ LIVE_DEEPSEEK_API_KEY: z.string() });
 
 const CONTACT = "dana.okafor@northlane.io";
