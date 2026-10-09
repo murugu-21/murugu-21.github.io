@@ -8,7 +8,7 @@ import { methodNotAllowed } from "hono/method-not-allowed";
 import type { z } from "zod";
 
 import { contactMailer, sendContactEmail } from "#worker/email.ts";
-import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
 import { parseContactRequest } from "./contact";
 import {
   EducationList,
@@ -16,11 +16,11 @@ import {
   OpenSourceList,
   Profile,
   SkillsResponse
-} from "#contracts/api/dataset.ts";
+} from "@murugappan/contracts/api/dataset.ts";
 import { apiError, fieldIssues } from "./errors";
 import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "./openapi";
-import { PostsQuery } from "#contracts/api/posts.ts";
+import { PostsQuery } from "@murugappan/contracts/api/posts.ts";
 import { searchPosts } from "./posts";
 import {
   contactRateLimitHeaders,
@@ -28,7 +28,7 @@ import {
   RATE_LIMIT_EXPOSED_HEADERS,
   secondsUntilUtcMidnight
 } from "./ratelimit";
-import { API_PATHS, READ_METHODS } from "#contracts/api/routes.ts";
+import { API_PATHS, READ_METHODS } from "@murugappan/contracts/api/routes.ts";
 import { DATASET, findPost, POSTS } from "#worker/content.ts";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 

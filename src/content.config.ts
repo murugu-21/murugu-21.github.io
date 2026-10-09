@@ -1,14 +1,14 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 
-import { BlogFrontmatter } from "#contracts/blog.ts";
+import { BlogFrontmatter } from "@murugappan/contracts/blog.ts";
 
-// content/blog/<slug>/index.md; the id (URL slug) is the directory name.
-// Drafts under content/blog/draft/ are filtered in src/lib/blog/posts.ts.
+// packages/content/blog/<slug>/index.md; the id (URL slug) is the directory name.
+// Drafts under packages/content/blog/draft/ are filtered in src/lib/blog/posts.ts.
 const blog = defineCollection({
   loader: glob({
     pattern: "**/index.md",
-    base: "./content/blog",
+    base: "./packages/content/blog",
     generateId: ({ entry }) => entry.replace(/\/index\.md$/, "")
   }),
   schema: BlogFrontmatter

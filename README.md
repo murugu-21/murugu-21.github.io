@@ -6,19 +6,19 @@ Personal portfolio and blog of Murugappan, built with [Astro 7](https://astro.bu
 
 **Live site:** https://murugappan.dev
 
-One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. Every page except the print-only résumé renders through `src/layouts/Layout.astro`, whose `section` prop picks the portfolio or blog head defaults and page classes. The rest of `src/` is grouped by type, with blog-only code in a `blog/` folder inside each type folder (see [Source layout](src/README.md#source-layout)), and posts are markdown in `content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
+One Astro project serves both halves. Blog routes live in `src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. Every page except the print-only résumé renders through `src/layouts/Layout.astro`, whose `section` prop picks the portfolio or blog head defaults and page classes. The rest of `src/` is grouped by type, with blog-only code in a `blog/` folder inside each type folder (see [Source layout](src/README.md#source-layout)), and posts are markdown in `packages/content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
 
 ## Feature docs
 
 Each feature has a README next to its code:
 
 - [`src/README.md`](src/README.md) covers the source layout, analytics and the resume.
-- [`content/blog/README.md`](content/blog/README.md) covers writing posts, mermaid diagrams and the tag vocabulary.
+- [`packages/content/blog/README.md`](packages/content/blog/README.md) covers writing posts, mermaid diagrams and the tag vocabulary.
 - [`scripts/site/tts/README.md`](scripts/site/tts/README.md) covers the blog's read-aloud audio.
 - [`worker/README.md`](worker/README.md) covers the routes the Worker owns, the discovery documents, the 404 and the AI chat widget.
 - [`worker/api/README.md`](worker/api/README.md) covers the public API.
 - [`worker/mcp/README.md`](worker/mcp/README.md) covers the MCP server.
-- [`contracts/README.md`](contracts/README.md) covers what the site, the Worker and the scripts agree on.
+- [`packages/contracts/README.md`](packages/contracts/README.md) covers what the site, the Worker and the scripts agree on.
 - [`brand/README.md`](brand/README.md) covers the X profile banners.
 
 ## Development
@@ -33,7 +33,7 @@ bun run preview   # the built Worker in workerd over dist/ (wrangler dev), API a
 
 `preview` passes `--local-upstream localhost:8787` so the Worker sees the local host, not the `murugappan.dev` route, and the generated discovery documents link back to it. `types` passes `--strict-vars=false` so `OPPORTUNITY_INBOX` is typed `string` and tests can override it.
 
-`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env`. The Worker bundles the site content it answers from, so rebuild after editing `worker/` or `content/`.
+`bun run dev` serves pages but not the Worker's routes. For the chat widget in dev, run `bun run build` once, start `bun run preview` alongside `bun run dev`, and put `PUBLIC_CHAT_HOST=localhost:8787` in a root `.env`. The Worker bundles the site content it answers from, so rebuild after editing `worker/` or `packages/content/`.
 
 ### Layers
 
@@ -43,25 +43,25 @@ The top-level folders are the packages a monorepo would split this into. Each im
 src/              # the Astro site                     → apps/site
 worker/           # the Worker: API, MCP, chat, audio  → apps/api
 scripts/site/     # site build steps and blog tooling (resume, mermaid, font subset, read-aloud audio)
-scripts/content/  # the Vite plugin that serves content/blog to both builds as virtual:content/posts
+packages/content/vite/  # the Vite plugin that serves packages/content/blog to both builds as virtual:content/posts
 scripts/lint/     # repo lint plugins
 brand/            # X profile banners and their renderer, run by hand (not in the build)
-content/          # the site's sources and the pure functions over them → packages/content
-contracts/        # what the site, the Worker and scripts agree on → packages/contracts
-utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
+packages/content/          # the site's sources and the pure functions over them → packages/content
+packages/contracts/        # what the site, the Worker and scripts agree on → packages/contracts
+packages/utils/            # helpers with no app logic (zod JSON parsing, AI SDK message text)  → packages/utils
 ```
 
-Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `contracts/`. Logic goes in the layer that runs it, in `content/` when the site and the Worker both derive something from the sources, or in `utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `vite.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
+Lint enforces the graph. `LAYERS` lists each layer's folder and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. `import/no-relative-parent-imports` stops a `../` import from going around the subpath imports, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`scripts/lint/contracts.ts`) rejects a function exported from `packages/contracts/`. Logic goes in the layer that runs it, in `packages/content/` when the site and the Worker both derive something from the sources, or in `packages/utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The root config files (`astro.config.ts`, `vite.config.ts`, `wrangler.jsonc`, `vitest.config.ts`) belong to no layer, since they wire the layers together.
 
 ### Build
 
 `bun run build` runs two Vite builds. `astro build` writes the static site to `dist/`. Then `vp build` (`vite.config.ts`, with `@cloudflare/vite-plugin`) bundles the Worker (`worker/server.ts`, the `main` in `wrangler.jsonc`) to `dist-worker/` and writes `.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. That config uploads `dist/` as the static assets, so deploy only after a build. Wrangler can't bundle the Worker itself any more, because its esbuild has no loader for the `?raw` and virtual-module imports.
 
-Both builds load `contentPosts()` (`scripts/content/posts-plugin.ts`). It parses each published `content/blog/<slug>/index.md` once per build (frontmatter validated by `contracts/blog.ts`) and serves the list as `virtual:content/posts`. The site's agent texts and the Worker's API, MCP and chat grounding read that module, so they can't disagree. Astro's content collection still renders the post pages and the blog index, and keeps drafts visible under `astro dev`.
+Both builds load `contentPosts()` (`packages/content/vite/posts-plugin.ts`). It parses each published `packages/content/blog/<slug>/index.md` once per build (frontmatter validated by `packages/contracts/blog.ts`) and serves the list as `virtual:content/posts`. The site's agent texts and the Worker's API, MCP and chat grounding read that module, so they can't disagree. Astro's content collection still renders the post pages and the blog index, and keeps drafts visible under `astro dev`.
 
 `astro build` produces the site:
 
-- Markdown renditions (`index.md` next to the `index.html` of the home, about and blog pages and of each post) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `content/llms.ts` with `/llms.txt`.
+- Markdown renditions (`index.md` next to the `index.html` of the home, about and blog pages and of each post) are prerendered endpoints under `src/pages/**/index.md.ts`. They share `packages/content/llms.ts` with `/llms.txt`.
 - Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
 - The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `scripts/site/fira-code-subset.ts` cuts a latin-plus-arrows subset into `node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
 - Scripts that read the build find it through `scripts/site/site-dir.ts`.
@@ -73,7 +73,7 @@ Cloudflare serves pages straight from static assets. The Worker runs only for it
 
 [Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in `scripts/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
 
-`test` is `vp test` (Vitest) over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/`, `content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars`.
+`test` is `vp test` (Vitest) over three projects. The Worker tests (`worker/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `src/`, `packages/content/` and `scripts/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `.dev.vars`.
 
 Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
 

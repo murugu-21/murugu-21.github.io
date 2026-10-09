@@ -20,6 +20,11 @@ tester.run("observe-behaviour", plugin.rules["observe-behaviour"], {
       code: `${SUBJECT_IMPORT}it("slugs", () => { expect(slugify("Hi There")).toBe("hi-there"); });`
     },
     {
+      name: "a workspace package as the code under test",
+      code: `import { slugify } from "@murugappan/content/slug.ts";
+it("slugs", () => { expect(slugify("Hi There")).toBe("hi-there"); });`
+    },
+    {
       name: "a constant as input, a literal as expected",
       code: `${SUBJECT_IMPORT}it("caps", () => { expect(slugify("x".repeat(LIMIT + 1))).toHaveLength(20); });`
     },

@@ -115,7 +115,7 @@ describe("/blog/rss.xml", () => {
     );
     expect(xml).toContain("<pubDate>Mon, 06 May 2024 00:00:00 GMT</pubDate>");
     expect(itemHtml(xml)).toBe(
-      '<p><img src="https://murugappan.dev/content/blog/429-googleapis/quota.png" alt="quota" /> ' +
+      '<p><img src="https://murugappan.dev/packages/content/blog/429-googleapis/quota.png" alt="quota" /> ' +
         '<img src="/brand/logo.png" alt="logo" /> <img src="https://cdn.example/x.png" alt="remote" /> ' +
         '<img src="missing.png" alt="gone" /></p>\n<p>In my 3<sup>rd</sup> year.</p>\n'
     );

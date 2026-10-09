@@ -4,7 +4,7 @@
 import type { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 
-import { AUDIO_PREFIX } from "#contracts/audio.ts";
+import { AUDIO_PREFIX } from "@murugappan/contracts/audio.ts";
 import { run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";

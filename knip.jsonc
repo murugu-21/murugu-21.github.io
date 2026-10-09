@@ -1,16 +1,21 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  // Files loaded by path strings that no plugin parses: the client directive and
-  // resume script in astro.config.ts, and the banner renderer run by hand.
-  "entry": [
-    "src/directives/interaction.ts",
-    "scripts/site/generate-resume.ts",
-    "brand/render-x-cover.ts"
-  ],
-  // Served by URL. worker/content.ts reads AGENTS.md as ?raw text, not as a module.
+  "workspaces": {
+    ".": {
+      // Files loaded by path strings that no plugin parses: the client directive and
+      // resume script in astro.config.ts, and the banner renderer run by hand.
+      "entry": [
+        "src/directives/interaction.ts",
+        "scripts/site/generate-resume.ts",
+        "brand/render-x-cover.ts"
+      ],
+      // The husky plugin parses any hook script; ours live in .githooks (core.hooksPath).
+      "husky": { "config": [".githooks/*"] }
+    },
+    "packages/*": {}
+  },
+  // Served by URL.
   "ignore": ["public/**"],
-  // The husky plugin parses any hook script; ours live in .githooks (core.hooksPath).
-  "husky": { "config": [".githooks/*"] },
   "ignoreDependencies": [
     // Required by name inside scripts/site/ts-alias.cjs.
     "@typescript/typescript6",

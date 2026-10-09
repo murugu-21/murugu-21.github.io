@@ -1,7 +1,7 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 import getReadingTime from "reading-time";
 
-import { newestFirst, type PostSource } from "#content/posts.ts";
+import { newestFirst, type PostSource } from "@murugappan/content/posts.ts";
 
 export type Post = CollectionEntry<"blog">;
 
@@ -18,7 +18,7 @@ export interface SerializedPost {
   excerpt: string;
 }
 
-// Newest first. Drafts (content/blog/draft/**) are excluded in production.
+// Newest first. Drafts (packages/content/blog/draft/**) are excluded in production.
 export async function getPublishedPosts(): Promise<Post[]> {
   const posts = await getCollection(
     "blog",

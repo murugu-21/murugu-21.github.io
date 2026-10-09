@@ -1,7 +1,7 @@
-// Read-only blog audio from R2 (contracts/audio.ts). Supports Range because <audio> seeks with it.
+// Read-only blog audio from R2 (packages/contracts/audio.ts). Supports Range because <audio> seeks with it.
 import { Hono } from "hono";
 
-import { AUDIO_PREFIX } from "#contracts/audio.ts";
+import { AUDIO_PREFIX } from "@murugappan/contracts/audio.ts";
 import { serveAsset } from "./not-found";
 
 const FILE = /^[a-z0-9-]+\.(mp3|json)$/;

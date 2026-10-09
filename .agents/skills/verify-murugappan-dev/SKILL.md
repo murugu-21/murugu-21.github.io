@@ -36,7 +36,7 @@ The build takes about 15 s and rewrites the shared `dist/`, which the user's pre
 
 If `:8791` is taken by another run, pick a free port and use it everywhere `8791` appears, `--local-upstream` included.
 
-`wrangler dev` serves the Worker that `bun run build` bundled to `dist-worker/`, with the site content inside it, so nothing hot-reloads. After editing `worker/`, `content/`, pages, posts or `public/`, run Cleanup, then Launch again, which rebuilds.
+`wrangler dev` serves the Worker that `bun run build` bundled to `dist-worker/`, with the site content inside it, so nothing hot-reloads. After editing `worker/`, `packages/content/`, pages, posts or `public/`, run Cleanup, then Launch again, which rebuilds.
 
 ## Doctor
 

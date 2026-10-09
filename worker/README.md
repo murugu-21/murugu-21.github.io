@@ -2,7 +2,7 @@
 
 `worker/server.ts` is the Worker's entrypoint. The public API lives in [`api/`](api/README.md) and the MCP server in [`mcp/`](mcp/README.md).
 
-`worker/content.ts` holds the site content the API, MCP and chat answer from: the dataset, the post list and markdown, `llms.txt`, `blog/llms-full.txt` and `AGENTS.md`. They are bundled at build time from `content/`, `virtual:content/posts` and `public/AGENTS.md` (README.md › Build), not read from the deployed assets. Only `fetch_page` and the 404 pages read `ASSETS`.
+`worker/content.ts` holds the site content the API, MCP and chat answer from: the dataset, the post list and markdown, `llms.txt`, `blog/llms-full.txt` and `AGENTS.md`. They are bundled at build time from `packages/content/`, `virtual:content/posts` and `packages/content/agent-guide.md` (README.md › Build), not read from the deployed assets. Only `fetch_page` and the 404 pages read `ASSETS`.
 
 ## Routes the Worker owns
 

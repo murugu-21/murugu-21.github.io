@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Send } from "lucide-react";
 
-import { MAX_MESSAGE_LENGTH } from "#contracts/chat.ts";
+import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
 import { Button } from "#src/components/ui/button.tsx";
 import { Textarea } from "#src/components/ui/textarea.tsx";
 

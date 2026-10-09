@@ -11,8 +11,8 @@ import {
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
-import { API_VERSION } from "#contracts/api/versioning.ts";
-import { SERVER_NAME, SUPPORTED_PROTOCOL_VERSIONS } from "#contracts/mcp.ts";
+import { API_VERSION } from "@murugappan/contracts/api/versioning.ts";
+import { SERVER_NAME, SUPPORTED_PROTOCOL_VERSIONS } from "@murugappan/contracts/mcp.ts";
 import { registerResources } from "./resources";
 import { registerTools, type ToolContext } from "./tools";
 

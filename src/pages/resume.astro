@@ -2,9 +2,14 @@
 // Print source for dist/resume.pdf (scripts/site/generate-resume.ts): no Layout.astro,
 // no chat or theme toggle, always light.
 import { RESUME_PHONE } from "astro:env/server";
-import { greeting, workExperiences, skillsCategories, educationInfo } from "#content/portfolio.ts";
-import { resumeContact } from "#content/resume.ts";
-import { groupByCompany } from "#content/experience.ts";
+import {
+  greeting,
+  workExperiences,
+  skillsCategories,
+  educationInfo
+} from "@murugappan/content/portfolio.ts";
+import { resumeContact } from "@murugappan/content/resume.ts";
+import { groupByCompany } from "@murugappan/content/experience.ts";
 import { fetchPinnedRepos } from "#src/lib/github.ts";
 // A webfont, so the CF build image's Chromium prints the same glyphs as local Chrome.
 import { Font } from "astro:assets";

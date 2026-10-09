@@ -15,7 +15,7 @@ import sharp from "sharp";
 import subsetFont from "subset-font";
 import { z } from "zod";
 
-import { jsonString } from "#utils/json.ts";
+import { jsonString } from "@murugappan/utils/json.ts";
 import { FIRA_CODE_FEATURES, FIRA_CODE_VF } from "./fira-code-subset.ts";
 import { launchBrowser } from "./launch-browser.ts";
 import { ROOT } from "./site-dir.ts";
@@ -31,7 +31,7 @@ import {
   usedText
 } from "./mermaid-svg.ts";
 
-// Renders every ```mermaid fence under content/blog to
+// Renders every ```mermaid fence under packages/content/blog to
 // <slug>/diagrams/<hash>.<theme>.svg plus a light <hash>.png for RSS (feed
 // mirrors can't draw the SVGs), and prunes orphans. The output is gitignored:
 // `astro build` runs this first, and remark-mermaid.ts runs it when a fence has
@@ -44,7 +44,7 @@ import {
 // An SVG in <img> can't reach page fonts, so each embeds a Fira Code subset;
 // otherwise a substitute face's widths make labels overrun their boxes.
 
-const CONTENT_DIR = join(ROOT, "content/blog");
+const CONTENT_DIR = join(ROOT, "packages/content/blog");
 // mermaid-cli's own mermaid; nothing else installs another copy.
 const MERMAID_VERSION = jsonString(z.object({ version: z.string() })).parse(
   readFileSync(join(ROOT, "node_modules/mermaid/package.json"), "utf8")

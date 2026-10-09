@@ -1,6 +1,6 @@
-import type { ContactMessage } from "#contracts/api/contact.ts";
+import type { ContactMessage } from "@murugappan/contracts/api/contact.ts";
 import type { Lead } from "./prompt";
-import type { ChatHistoryEntry } from "#contracts/chat.ts";
+import type { ChatHistoryEntry } from "@murugappan/contracts/chat.ts";
 
 const SENDER_ADDRESS = "chatbot@murugappan.dev";
 

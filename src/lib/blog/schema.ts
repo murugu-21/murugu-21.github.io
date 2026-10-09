@@ -1,8 +1,8 @@
 // The blog's schema.org nodes, for the @graph Layout writes on each blog page.
 import type { Blog, BlogPosting } from "schema-dts";
-import { BLOG_DESCRIPTION, BLOG_TITLE } from "#content/site.ts";
+import { BLOG_DESCRIPTION, BLOG_TITLE } from "@murugappan/content/site.ts";
 import { BLOG_ID, BLOG_URL, PERSON_ID, WEBSITE_ID } from "#src/lib/site.ts";
-import { postDescription, postUrl, type PostSource } from "#content/posts.ts";
+import { postDescription, postUrl, type PostSource } from "@murugappan/content/posts.ts";
 import { postKeywords } from "./posts";
 
 export const blog: Blog = {

@@ -1,4 +1,4 @@
-import type { PostSummary } from "#contracts/api/posts.ts";
+import type { PostSummary } from "@murugappan/contracts/api/posts.ts";
 
 /** Case-insensitive substring match on title and description, then the first `limit`. */
 export function searchPosts({

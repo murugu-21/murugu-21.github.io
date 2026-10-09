@@ -5,7 +5,7 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
-import { contentPosts } from "#scripts/content/posts-plugin.ts";
+import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
 
 // The pool's D1 starts empty; worker/test/apply-migrations.ts applies these
 // per test file.
@@ -41,7 +41,7 @@ export default defineConfig({
     // stay out.
     coverage: {
       provider: "istanbul",
-      include: ["{src,worker,utils,content,contracts,scripts}/**/*.{ts,tsx}"],
+      include: ["{src,worker,packages,scripts}/**/*.{ts,tsx}"],
       exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "worker/test/**"],
       reporter: ["text-summary", "lcov"]
     },
@@ -69,14 +69,14 @@ export default defineConfig({
           include: ["worker/test/**/*.test.ts"]
         }
       },
-      // src runs in the browser or at build time and content/ is pure, so neither needs workerd,
+      // src runs in the browser or at build time and packages/content/ is pure, so neither needs workerd,
       // and starting each file there costs far more than the tests. The scripts run on Node or Bun.
       {
         plugins: [contentPosts()],
         test: {
           name: "node",
           environment: "node",
-          include: ["scripts/**/*.test.ts", "src/**/*.test.ts", "content/**/*.test.ts"]
+          include: ["scripts/**/*.test.ts", "src/**/*.test.ts", "packages/content/**/*.test.ts"]
         }
       },
       // React islands and the stylesheet test need a real DOM, media elements and

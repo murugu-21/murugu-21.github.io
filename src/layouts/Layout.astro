@@ -3,7 +3,7 @@ import { Font } from "astro:assets";
 import { cva } from "class-variance-authority";
 import type { Thing } from "schema-dts";
 import { jsonLdHtml } from "#src/lib/schema.ts";
-import { BLOG_TITLE, SITE_ORIGIN } from "#content/site.ts";
+import { BLOG_TITLE, SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { PERSON_ID, SITE_DESCRIPTION } from "#src/lib/site.ts";
 import { outdatedRedirectScript } from "#src/lib/browser-support.ts";
 import { themeBootstrapScript } from "#src/lib/theme.ts";
@@ -12,7 +12,7 @@ import ChatWidget from "#src/components/chat/ChatWidget.astro";
 import Favicons from "#src/components/Favicons.astro";
 import Particles from "#src/components/Particles.astro";
 import SiteScripts from "#src/components/SiteScripts.astro";
-import { socialMediaLinks } from "#content/portfolio.ts";
+import { socialMediaLinks } from "@murugappan/content/portfolio.ts";
 
 export interface Props {
   title?: string;

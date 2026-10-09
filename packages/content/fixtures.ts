@@ -1,5 +1,5 @@
 // Builds a PostSource for tests, defaulting every field the test doesn't care about.
-import type { BlogFrontmatter } from "#contracts/blog.ts";
+import type { BlogFrontmatter } from "@murugappan/contracts/blog.ts";
 import type { PostSource } from "./posts.ts";
 
 export type PostFields = {

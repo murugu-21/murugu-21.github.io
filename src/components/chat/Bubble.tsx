@@ -2,8 +2,8 @@
 import { cva } from "class-variance-authority";
 import { Fragment } from "react";
 
-import type { JarvisMessage } from "#contracts/chat.ts";
-import { messageText } from "#utils/ui-message.ts";
+import type { JarvisMessage } from "@murugappan/contracts/chat.ts";
+import { messageText } from "@murugappan/utils/ui-message.ts";
 
 export type Bubble = { kind: "user" | "assistant" | "system"; text: string };
 

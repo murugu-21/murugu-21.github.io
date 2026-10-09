@@ -1,11 +1,11 @@
-// A blog post's frontmatter: content/blog/<slug>/index.md. The site's content collection
+// A blog post's frontmatter: packages/content/blog/<slug>/index.md. The site's content collection
 // validates it at build time.
 
 import { z } from "zod";
 
 // Controlled tag vocabulary (the index's filter chips): broad, recurring
 // reader intents only; precise terms go in `keywords`. Keep in sync with
-// "Tag vocabulary" in content/blog/README.md. Lowercase, kebab-case,
+// "Tag vocabulary" in packages/content/blog/README.md. Lowercase, kebab-case,
 // singular, 1-3 per post.
 const BLOG_TAGS = [
   "ai",

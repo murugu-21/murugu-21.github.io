@@ -2,7 +2,7 @@ import { createDeepSeek } from "@ai-sdk/deepseek";
 import { APICallError, stepCountIs, type LanguageModel, type ModelMessage, type ToolSet } from "ai";
 import { z } from "zod";
 
-import { lenient } from "#utils/json.ts";
+import { lenient } from "@murugappan/utils/json.ts";
 
 // Always the current Flash generation. After changing it, run `bun run test:live` before pushing,
 // because some models narrate a lead capture without calling capture_opportunity and lose the lead.

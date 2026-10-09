@@ -64,8 +64,12 @@ const RENDERED_STATE_MATCHERS = new Set([
 // `harness` is `cloudflare:test`, whose SELF and env are how tests reach the Worker.
 type ImportKind = "subject" | "helper" | "harness";
 
+// The repo's own code: relative paths, subpath imports and the workspace packages.
 const isLocalSource = (source: string) =>
-  source.startsWith(".") || source.startsWith("#") || source.startsWith("cloudflare:");
+  source.startsWith(".") ||
+  source.startsWith("#") ||
+  source.startsWith("@murugappan/") ||
+  source.startsWith("cloudflare:");
 
 function importKind(source: string): ImportKind {
   if (source.startsWith("cloudflare:")) return "harness";

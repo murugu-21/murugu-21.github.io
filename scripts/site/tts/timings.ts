@@ -4,7 +4,7 @@
 import { z } from "zod";
 
 import { AudioTimings, TimedBlock } from "#src/lib/blog/audio-sync.ts";
-import { jsonString } from "#utils/json.ts";
+import { jsonString } from "@murugappan/utils/json.ts";
 
 export const round3 = (n: number) => Math.round(n * 1000) / 1000;
 

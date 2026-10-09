@@ -1,8 +1,8 @@
 import type { WSMessage } from "agents";
 import { z } from "zod";
 
-import { jsonString, lenient } from "#utils/json.ts";
-import { MAX_MESSAGE_LENGTH } from "#contracts/chat.ts";
+import { jsonString, lenient } from "@murugappan/utils/json.ts";
+import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
 
 // Frames that can't start a model call or touch stored messages, passed through as sent.
 const PASSTHROUGH_FRAMES = new Set([

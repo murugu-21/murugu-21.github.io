@@ -1,7 +1,7 @@
 // fetch_page tool backend. Reads only through the ASSETS binding, so it cannot
 // reach other hosts. Errors are tool-result strings phrased for the model.
 
-import { SITE_ORIGIN } from "#content/site.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 
 type AssetsLike = { fetch(input: string): Promise<Response> };
 

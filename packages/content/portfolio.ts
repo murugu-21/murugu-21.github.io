@@ -279,7 +279,7 @@ export const blogSection = {
   title: "Blogs",
   subtitle:
     "I write about real-world software engineering: distributed systems, cloud architecture, and lessons from production.",
-  // Follows the featured posts (content/blog, `featured: true`).
+  // Follows the featured posts (packages/content/blog, `featured: true`).
   blogIndexCard: {
     url: "/blog/",
     title: "SDE Journey, my technical blog",

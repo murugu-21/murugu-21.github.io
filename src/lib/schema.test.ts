@@ -65,14 +65,14 @@ describe("jsonLdHtml", () => {
 
 describe("jsonLdHtml with resume skills that repeat a hand-written term", () => {
   afterEach(() => {
-    vi.doUnmock("#content/portfolio.ts");
+    vi.doUnmock("@murugappan/content/portfolio.ts");
     vi.resetModules();
   });
 
   it("keeps one entry per skill, ignoring case, in the hand-written casing", async () => {
-    const portfolio = await import("#content/portfolio.ts");
+    const portfolio = await import("@murugappan/content/portfolio.ts");
     vi.resetModules();
-    vi.doMock("#content/portfolio.ts", () => ({
+    vi.doMock("@murugappan/content/portfolio.ts", () => ({
       ...portfolio,
       skillsCategories: [{ category: "Languages", items: "typescript, Rust" }]
     }));

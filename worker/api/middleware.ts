@@ -5,7 +5,7 @@ import type { MiddlewareHandler } from "hono";
 import { basePath } from "hono/route";
 
 import { apiError } from "./errors";
-import { CONTACT_POLICY, READ_POLICY, READ_QUOTA } from "#contracts/api/quotas.ts";
+import { CONTACT_POLICY, READ_POLICY, READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
 import { versionHeaders, versionLinkHeader } from "./versioning";
 import { readRateLimitHeaders, takeReadSlot, type ReadSlot } from "./ratelimit";
 

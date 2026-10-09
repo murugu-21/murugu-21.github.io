@@ -7,7 +7,7 @@ import {
   type McpServer
 } from "@modelcontextprotocol/server";
 
-import { SITE_ORIGIN } from "#content/site.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { buildOpenApiDocument } from "#worker/api/openapi.ts";
 import { AGENTS_MD, findPost, LLMS_FULL_TXT, LLMS_TXT, POSTS } from "#worker/content.ts";
 

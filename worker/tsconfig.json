@@ -13,9 +13,10 @@
   },
   "include": [
     "./**/*.ts",
-    "../utils/**/*.ts",
-    "../contracts/**/*.ts",
-    "../content/**/*.ts",
+    "../packages/utils/**/*.ts",
+    "../packages/contracts/**/*.ts",
+    "../packages/content/**/*.ts",
     "../worker-configuration.d.ts"
-  ]
+  ],
+  "exclude": ["../packages/content/vite/**"]
 }

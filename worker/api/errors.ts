@@ -1,4 +1,4 @@
-// The one error envelope (contracts/api/errors.ts) every /api/* failure answers with.
+// The one error envelope (packages/contracts/api/errors.ts) every /api/* failure answers with.
 
 import type { z } from "zod";
 
@@ -7,7 +7,7 @@ import {
   type ApiErrorCode,
   type ErrorBody,
   type FieldIssue
-} from "#contracts/api/errors.ts";
+} from "@murugappan/contracts/api/errors.ts";
 
 /** One entry per zod issue, named by the top-level field it is about. */
 export const fieldIssues = (error: z.ZodError): FieldIssue[] =>

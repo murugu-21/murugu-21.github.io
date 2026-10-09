@@ -7,7 +7,12 @@ import { z } from "zod";
 import { nanoid } from "nanoid";
 import { Download, EllipsisVertical, MessageCircle, RotateCcw, X } from "lucide-react";
 
-import { ERROR_NOTICE, GREETING, type Activity, type JarvisMessage } from "#contracts/chat.ts";
+import {
+  ERROR_NOTICE,
+  GREETING,
+  type Activity,
+  type JarvisMessage
+} from "@murugappan/contracts/chat.ts";
 import { ActivityRow } from "./ActivityRow";
 import { BubbleView, toBubbles, type Bubble } from "./Bubble";
 import { Composer } from "./Composer";

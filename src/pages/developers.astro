@@ -1,44 +1,47 @@
 ---
 import type { Thing } from "schema-dts";
 // Endpoint table and tool example are generated from the served OpenAPI
-// document (contracts/api/openapi.ts), so they can't drift from the API.
+// document (packages/contracts/api/openapi.ts), so they can't drift from the API.
 
 import Layout from "#src/layouts/Layout.astro";
 import Header from "#src/components/Header.astro";
 import LinkRow from "#src/components/LinkRow.astro";
 import Prose from "#src/components/Prose.astro";
 import ScrollTop from "#src/components/ScrollTop.astro";
-import { SITE_ORIGIN } from "#content/site.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { PERSON_ID } from "#src/lib/site.ts";
-import { socialMediaLinks } from "#content/portfolio.ts";
-import { OPENAPI_DOCUMENT } from "#contracts/api/openapi.ts";
-import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
+import { socialMediaLinks } from "@murugappan/content/portfolio.ts";
+import { OPENAPI_DOCUMENT } from "@murugappan/contracts/api/openapi.ts";
+import {
+  CONTACT_DAILY_GLOBAL,
+  CONTACT_DAILY_PER_CLIENT
+} from "@murugappan/contracts/api/contact.ts";
 import {
   LATEST_PROTOCOL_VERSION,
   LEGACY_PROTOCOL_VERSIONS,
   MCP_SERVER_NAME,
   MCP_SERVER_SCHEMA,
   MCP_TOOLS
-} from "#contracts/mcp.ts";
+} from "@murugappan/contracts/mcp.ts";
 import {
   API_BASE,
   API_PATHS,
   CURRENT_API_VERSION,
   VERSIONED_API_BASE
-} from "#contracts/api/routes.ts";
+} from "@murugappan/contracts/api/routes.ts";
 import {
   API_VERSION,
   CURRENT_VERSION_RECORD,
   DEPRECATION_NOTICE_DAYS,
   POLICY_RULES,
   VERSIONS
-} from "#contracts/api/versioning.ts";
+} from "@murugappan/contracts/api/versioning.ts";
 import {
   CONTACT_CLIENT_QUOTA,
   CONTACT_POLICY,
   READ_POLICY,
   READ_QUOTA
-} from "#contracts/api/quotas.ts";
+} from "@murugappan/contracts/api/quotas.ts";
 
 const operations = Object.entries(OPENAPI_DOCUMENT.paths).flatMap(([path, item]) =>
   Object.entries(item).map(([method, { operationId, summary, description }]) => ({

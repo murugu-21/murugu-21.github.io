@@ -1,4 +1,4 @@
-import { SITE_ORIGIN } from "#content/site.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 
 // Stable JSON-LD @ids, so crawlers merge every page into one entity.
 export const PERSON_ID = `${SITE_ORIGIN}/#person`;

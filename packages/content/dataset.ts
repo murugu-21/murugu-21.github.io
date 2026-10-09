@@ -1,7 +1,7 @@
-// Builds the dataset in contracts/api/dataset.ts from content/portfolio.ts and resume.ts.
+// Builds the dataset in packages/contracts/api/dataset.ts from packages/content/portfolio.ts and resume.ts.
 // Input is typed structurally so a test can build a small one.
 
-import type { Dataset, ExperienceEntry } from "#contracts/api/dataset.ts";
+import type { Dataset, ExperienceEntry } from "@murugappan/contracts/api/dataset.ts";
 import { parsePeriod } from "./experience.ts";
 import * as portfolio from "./portfolio.ts";
 import * as resume from "./resume.ts";

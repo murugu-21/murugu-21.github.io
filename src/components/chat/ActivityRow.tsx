@@ -1,7 +1,7 @@
 // Fills the wait before the first token: the running tool, or a rotating word while the model reasons.
 import { useEffect, useState } from "react";
 
-import type { Activity, ToolName } from "#contracts/chat.ts";
+import type { Activity, ToolName } from "@murugappan/contracts/chat.ts";
 
 // Jarvis's voice: dry, never cutesy. No promises about the answer, nothing that reads like an error.
 const WORDS = [

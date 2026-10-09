@@ -2,7 +2,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite-plus";
 
 import lint from "./lint.config.ts";
-import { contentPosts } from "./scripts/content/posts-plugin.ts";
+import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
 
 export default defineConfig({
   // `vp build` bundles the Worker (`main` in wrangler.jsonc). Run it after `astro build`: the
@@ -20,7 +20,9 @@ export default defineConfig({
     printWidth: 100,
     sortPackageJson: false,
     sortTailwindcss: { stylesheet: "./src/styles/global.css", functions: ["cn", "cva"] },
-    overrides: [{ files: ["content/**/*.md"], options: { semi: false, trailingComma: "all" } }]
+    overrides: [
+      { files: ["packages/content/**/*.md"], options: { semi: false, trailingComma: "all" } }
+    ]
   },
   staged: {
     "*.{js,mjs,jsx,ts,tsx}": ["vp lint --fix", "vp fmt"],

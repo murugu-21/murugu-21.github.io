@@ -2,48 +2,55 @@ import type { OxlintConfig, OxlintOverride } from "vite-plus/lint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 
-// The top-level folders are the packages a monorepo would split this repo into (README.md ›
-// Layers). A layer imports itself and the layers in `uses`, through their `#<dir>` subpath imports;
-// import/no-relative-parent-imports stops `../` from going around them.
+// Each layer is a workspace package or a folder inside one (README.md › Layers). A layer imports
+// itself and the layers in `uses`, by the specifier prefix in `imports`: a package name, or a
+// subpath import inside a package. import/no-relative-parent-imports stops `../` from going
+// around them.
 const LAYER_NAMES = [
   "site",
   "worker",
   "siteScripts",
-  "contentScripts",
   "lintScripts",
   "brand",
   "content",
+  // After content: a file gets the last matching override, and this folder sits inside it.
+  "contentScripts",
   "contracts",
   "utils"
 ] as const;
 type LayerName = (typeof LAYER_NAMES)[number];
-type Layer = { dir: string; uses: LayerName[]; also?: Pattern[] };
+type Layer = { dir: string; imports: string; uses: LayerName[]; also?: Pattern[] };
 
 // Contracts and content reach both the browser bundle and the Worker, so they take no framework.
 const FRAMEWORKS =
   "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)";
 
 const LAYERS: Record<LayerName, Layer> = {
-  site: { dir: "src/", uses: ["content", "contracts", "utils"] },
-  worker: { dir: "worker/", uses: ["content", "contracts", "utils"] },
-  siteScripts: { dir: "scripts/site/", uses: ["site", "contracts", "utils"] },
-  contentScripts: { dir: "scripts/content/", uses: ["content", "contracts", "utils"] },
-  lintScripts: { dir: "scripts/lint/", uses: [] },
-  brand: { dir: "brand/", uses: ["siteScripts"] },
+  site: { dir: "src/", imports: "#src/", uses: ["content", "contracts", "utils"] },
+  worker: { dir: "worker/", imports: "#worker/", uses: ["content", "contracts", "utils"] },
+  siteScripts: {
+    dir: "scripts/site/",
+    imports: "#scripts/site/",
+    uses: ["site", "contracts", "utils"]
+  },
+  lintScripts: { dir: "scripts/lint/", imports: "#scripts/lint/", uses: [] },
+  brand: { dir: "brand/", imports: "#brand/", uses: ["siteScripts"] },
   content: {
-    dir: "content/",
+    dir: "packages/content/",
+    imports: "@murugappan/content/",
     uses: ["contracts", "utils"],
     also: [
       {
         regex: `${FRAMEWORKS}|\\.(png|jpe?g|gif|webp|avif|svg)$`,
         allowTypeImports: true,
         message:
-          "content/ holds sources and pure functions the site and the Worker share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in src/ or worker/ (README.md › Layers)."
+          "packages/content/ holds sources and pure functions the site and the Worker share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in src/ or worker/ (README.md › Layers)."
       }
     ]
   },
   contracts: {
-    dir: "contracts/",
+    dir: "packages/contracts/",
+    imports: "@murugappan/contracts/",
     uses: ["utils"],
     also: [
       {
@@ -54,19 +61,24 @@ const LAYERS: Record<LayerName, Layer> = {
       }
     ]
   },
-  utils: { dir: "utils/", uses: [] }
+  contentScripts: {
+    dir: "packages/content/vite/",
+    imports: "@murugappan/content/vite/",
+    uses: ["content", "contracts", "utils"]
+  },
+  utils: { dir: "packages/utils/", imports: "@murugappan/utils/", uses: [] }
 };
 
-const alias = (name: LayerName) => `#${LAYERS[name].dir}`;
+const specifier = (name: LayerName) => LAYERS[name].imports;
 
 function layerPatterns(name: LayerName): Pattern[] {
   const allowed = new Set<LayerName>([name, ...LAYERS[name].uses]);
-  const banned = LAYER_NAMES.filter(other => !allowed.has(other)).map(alias);
+  const banned = LAYER_NAMES.filter(other => !allowed.has(other)).map(specifier);
   if (banned.length === 0) return [];
   return [
     {
       regex: `^(${banned.join("|")})`,
-      message: `${LAYERS[name].dir} imports only ${[...allowed].map(alias).join(", ")} (README.md › Layers). Move code both sides need to content/, contracts/ or utils/.`
+      message: `${LAYERS[name].dir} imports only ${[...allowed].map(specifier).join(", ")} (README.md › Layers). Move code both sides need to @murugappan/content, contracts or utils.`
     }
   ];
 }
@@ -210,7 +222,7 @@ export default {
         ]
       }
     },
-    { files: ["contracts/**"], rules: { "contracts/shapes-only": "error" } },
+    { files: ["packages/contracts/**"], rules: { "contracts/shapes-only": "error" } },
     {
       files: ["scripts/site/ts-alias.cjs"],
       rules: {

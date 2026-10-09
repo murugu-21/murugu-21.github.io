@@ -1,7 +1,7 @@
 // Parses a contact request body into the message or the field issues to report.
 
-import type { FieldIssue } from "#contracts/api/errors.ts";
-import { ContactRequest, type ContactMessage } from "#contracts/api/contact.ts";
+import type { FieldIssue } from "@murugappan/contracts/api/errors.ts";
+import { ContactRequest, type ContactMessage } from "@murugappan/contracts/api/contact.ts";
 import { fieldIssues } from "./errors";
 
 type ContactParseResult =

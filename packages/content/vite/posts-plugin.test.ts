@@ -31,7 +31,7 @@ describe("parsePost", () => {
 
   it("rejects a post without frontmatter or with a tag outside the vocabulary", () => {
     expect(() => parsePost({ slug: "bare", markdown: "# Just a heading\n" })).toThrow(
-      "content/blog/bare/index.md has no frontmatter"
+      "packages/content/blog/bare/index.md has no frontmatter"
     );
     expect(() =>
       parsePost({

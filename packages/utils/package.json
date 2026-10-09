@@ -1,0 +1,12 @@
+{
+  "name": "@murugappan/utils",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./*"
+  },
+  "dependencies": {
+    "ai": "7.0.128",
+    "zod": "^4.6.5"
+  }
+}

@@ -1,5 +1,5 @@
 // The version catalogue document and the headers that carry the policy in
-// contracts/api/versioning.ts.
+// packages/contracts/api/versioning.ts.
 
 import type { z } from "zod";
 
@@ -8,7 +8,7 @@ import {
   API_PATHS,
   CURRENT_API_VERSION,
   VERSIONED_API_BASE
-} from "#contracts/api/routes.ts";
+} from "@murugappan/contracts/api/routes.ts";
 import {
   API_VERSION,
   ApiVersions,
@@ -17,7 +17,7 @@ import {
   POLICY_RULES,
   VERSIONS,
   type VersionRecord
-} from "#contracts/api/versioning.ts";
+} from "@murugappan/contracts/api/versioning.ts";
 
 /** URLs are absolute against the host that was asked. */
 export function buildVersionsDocument(origin: string): z.infer<typeof ApiVersions> {

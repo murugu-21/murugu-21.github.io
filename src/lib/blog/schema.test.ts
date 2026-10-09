@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { postSource } from "#content/fixtures.ts";
+import { postSource } from "@murugappan/content/fixtures.ts";
 import { blogPosting } from "./schema";
 
 vi.mock("astro:content", async () => (await import("./fixtures")).astroContentMock);

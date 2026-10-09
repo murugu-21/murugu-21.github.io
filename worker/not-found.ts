@@ -5,8 +5,8 @@
 import type { Context } from "hono";
 import { accepts } from "hono/accepts";
 
-import { SITE_ORIGIN } from "#content/site.ts";
-import { API_PATHS, VERSIONED_API_BASE } from "#contracts/api/routes.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
 
 const ENTRY_POINTS: ReadonlyArray<[string, string]> = [
   ["/sitemap.xml", "Every indexable URL on this site"],

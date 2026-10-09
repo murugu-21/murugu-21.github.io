@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
-import { READ_QUOTA } from "#contracts/api/quotas.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
+import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
 import {
   contactRateLimitHeaders,
   readRateLimitHeaders,

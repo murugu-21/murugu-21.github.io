@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { Dataset } from "#contracts/api/dataset.ts";
+import { Dataset } from "@murugappan/contracts/api/dataset.ts";
 import { buildDataset, splitSkillItems, type DatasetInput } from "./dataset.ts";
 
 const DATASET_INPUT: DatasetInput = {

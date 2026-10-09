@@ -1,4 +1,4 @@
-// Counts requests against the quotas in contracts/api/quotas.ts and writes the headers: the
+// Counts requests against the quotas in packages/contracts/api/quotas.ts and writes the headers: the
 // draft fields plus the de-facto X-RateLimit-* trio most tooling reads (`-Reset` is delta-seconds).
 //   RateLimit: "name";r=<remaining>;t=<seconds to reset>  (the policy closest to exhaustion)
 
@@ -9,7 +9,7 @@ import {
   READ_POLICY,
   READ_QUOTA,
   type Quota
-} from "#contracts/api/quotas.ts";
+} from "@murugappan/contracts/api/quotas.ts";
 
 const clamp = (n: number) => Math.max(0, Math.floor(n));
 

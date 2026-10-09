@@ -1,15 +1,15 @@
 // Serves the published posts as `virtual:content/posts`, so the site and the Worker read one
-// parse of content/blog. Both builds are Vite, and each loads this plugin.
+// parse of packages/content/blog. Both builds are Vite, and each loads this plugin.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Plugin } from "vite";
 import { parse } from "yaml";
 
-import type { ContentPost } from "#content/posts.ts";
-import { BlogFrontmatter } from "#contracts/blog.ts";
+import type { ContentPost } from "@murugappan/content/posts.ts";
+import { BlogFrontmatter } from "@murugappan/contracts/blog.ts";
 
-const BLOG_DIR = fileURLToPath(new URL("../../content/blog/", import.meta.url));
+const BLOG_DIR = fileURLToPath(new URL("../blog/", import.meta.url));
 const MODULE_ID = "virtual:content/posts";
 const RESOLVED_ID = `\0${MODULE_ID}`;
 
@@ -18,14 +18,15 @@ const FRONTMATTER = /^---(\n[\s\S]*?\n)---/;
 
 export function parsePost({ slug, markdown }: { slug: string; markdown: string }): ContentPost {
   const raw = FRONTMATTER.exec(markdown)?.[1];
-  if (raw === undefined) throw new Error(`content/blog/${slug}/index.md has no frontmatter`);
+  if (raw === undefined)
+    throw new Error(`packages/content/blog/${slug}/index.md has no frontmatter`);
   const data = BlogFrontmatter.parse(parse(raw));
   return { slug, data, body: markdown.replace(`---${raw}---`, ""), markdown };
 }
 
 const postFile = (slug: string) => path.join(BLOG_DIR, slug, "index.md");
 
-/** Each content/blog/<slug>/index.md. Drafts sit one level deeper, under draft/, so they never match. */
+/** Each packages/content/blog/<slug>/index.md. Drafts sit one level deeper, under draft/, so they never match. */
 export const readPosts = (): ContentPost[] =>
   fs
     .readdirSync(BLOG_DIR)

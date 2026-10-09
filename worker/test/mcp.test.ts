@@ -7,11 +7,11 @@ import {
 import { assert, describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
-import { JsonObject } from "#utils/json.ts";
-import { LATEST_PROTOCOL_VERSION } from "#contracts/mcp.ts";
-import { SITE_ORIGIN } from "#content/site.ts";
-import { MCP_TOOLS } from "#contracts/mcp.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
+import { JsonObject } from "@murugappan/utils/json.ts";
+import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
 import { fetchWorker, recordingEmail, type TestEnvOptions } from "./fixtures";
 
 const META = "io.modelcontextprotocol/protocolVersion";

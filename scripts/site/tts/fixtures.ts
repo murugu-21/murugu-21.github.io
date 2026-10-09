@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
-import { jsonString } from "#utils/json.ts";
+import { jsonString } from "@murugappan/utils/json.ts";
 import { type Ffmpeg, PYTHON, requirePython } from "./cli.ts";
 import { type JsonLines, startJsonLines } from "./json-lines.ts";
 import type { RenderDeps, Synth } from "./render.ts";

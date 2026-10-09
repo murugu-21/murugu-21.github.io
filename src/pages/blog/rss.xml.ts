@@ -3,8 +3,8 @@ import type { ImageMetadata } from "astro";
 import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
 
-import { postDescription, postUrl } from "#content/posts.ts";
-import { BLOG_DESCRIPTION, BLOG_TITLE, SITE_ORIGIN } from "#content/site.ts";
+import { postDescription, postUrl } from "@murugappan/content/posts.ts";
+import { BLOG_DESCRIPTION, BLOG_TITLE, SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { getPostSources } from "#src/lib/blog/posts.ts";
 import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
 import { BLOG_URL } from "#src/lib/site.ts";
@@ -15,14 +15,14 @@ const parser = new MarkdownIt({ html: true });
 // Feed readers need absolute image URLs; importing post images here yields
 // their hashed, emitted public paths.
 const assets = import.meta.glob<{ default: ImageMetadata | string }>(
-  "../../../content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}",
+  "../../../packages/content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}",
   { eager: true }
 );
 const ASSET_URLS = new Map(
   Object.entries(assets).map(([file, mod]) => {
     const asset = mod.default;
     return [
-      file.replace("../../../content/blog/", ""),
+      file.replace("../../../packages/content/blog/", ""),
       SITE_ORIGIN + (typeof asset === "string" ? asset : asset.src)
     ];
   })

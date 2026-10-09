@@ -1,8 +1,8 @@
-import type { BlogFrontmatter } from "#contracts/blog.ts";
-import { SLUG, type PostSummary } from "#contracts/api/posts.ts";
+import type { BlogFrontmatter } from "@murugappan/contracts/blog.ts";
+import { SLUG, type PostSummary } from "@murugappan/contracts/api/posts.ts";
 import { SITE_ORIGIN } from "./site.ts";
 
-// A post from content/blog/<slug>/index.md: `data` is its parsed frontmatter and `body` the
+// A post from packages/content/blog/<slug>/index.md: `data` is its parsed frontmatter and `body` the
 // markdown after it.
 export type PostSource = { slug: string; data: BlogFrontmatter; body: string };
 

@@ -18,8 +18,8 @@ import { admitFrame } from "./chat-frames";
 import { LLMS_TXT } from "./content";
 import { contactMailer, sendOpportunityEmail } from "./email";
 import { fetchSitePage } from "./fetch-page";
-import { lenient } from "#utils/json.ts";
-import { messageText } from "#utils/ui-message.ts";
+import { lenient } from "@murugappan/utils/json.ts";
+import { messageText } from "@murugappan/utils/ui-message.ts";
 import { buildMessages, jarvisTools, ROOM_DAILY_LIMIT, type Lead } from "./prompt";
 import {
   ERROR_NOTICE,
@@ -28,7 +28,7 @@ import {
   type ChatHistoryEntry,
   type JarvisMessage,
   type Notice
-} from "#contracts/chat.ts";
+} from "@murugappan/contracts/chat.ts";
 import { parseVisitorContext } from "./visitor";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

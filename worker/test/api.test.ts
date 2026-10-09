@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { API_PATHS, CURRENT_API_VERSION } from "#contracts/api/routes.ts";
+import { API_PATHS, CURRENT_API_VERSION } from "@murugappan/contracts/api/routes.ts";
 import {
   fetchWorker,
   readJson,

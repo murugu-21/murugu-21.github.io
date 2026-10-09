@@ -1,6 +1,6 @@
 // Fixtures for tests of code that reads the `blog` content collection. The test file mocks
 // "astro:content" with `astroContentMock` and sets what the collection holds via `setPosts`.
-import { postSource, type PostFields } from "#content/fixtures.ts";
+import { postSource, type PostFields } from "@murugappan/content/fixtures.ts";
 import type { Post } from "./posts";
 
 let posts: Post[] = [];

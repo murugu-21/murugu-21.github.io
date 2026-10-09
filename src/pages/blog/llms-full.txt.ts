@@ -1,4 +1,4 @@
-import { blogLlmsFullText } from "#content/llms.ts";
+import { blogLlmsFullText } from "@murugappan/content/llms.ts";
 import { posts } from "virtual:content/posts";
 
 import { textResponse } from "#src/lib/responses.ts";

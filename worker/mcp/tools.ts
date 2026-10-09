@@ -1,10 +1,10 @@
-// MCP tool handlers. contracts/mcp.ts declares each tool's name, schemas and annotations;
+// MCP tool handlers. packages/contracts/mcp.ts declares each tool's name, schemas and annotations;
 // these are thin adapters over the content the REST API serves (worker/content.ts). Anything a
 // model could fix by retrying with other arguments is an `isError` result, not a protocol error.
 
 import type { McpServer } from "@modelcontextprotocol/server";
 
-import { CONTACT_DAILY_PER_CLIENT } from "#contracts/api/contact.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
 import { searchPosts } from "#worker/api/posts.ts";
 import {
   MCP_TOOLS,
@@ -13,7 +13,7 @@ import {
   SendMessageArgs,
   type McpToolDescriptor,
   type McpToolName
-} from "#contracts/mcp.ts";
+} from "@murugappan/contracts/mcp.ts";
 import { globalLimiter } from "#worker/api/ratelimit.ts";
 import { DATASET, findPost, POSTS } from "#worker/content.ts";
 import { contactMailer, sendContactEmail } from "#worker/email.ts";

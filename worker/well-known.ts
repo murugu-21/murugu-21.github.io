@@ -5,15 +5,15 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { publicOrigin } from "./api";
-import { API_PATHS, READ_METHODS, VERSIONED_API_BASE } from "#contracts/api/routes.ts";
-import { API_VERSION } from "#contracts/api/versioning.ts";
+import { API_PATHS, READ_METHODS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
+import { API_VERSION } from "@murugappan/contracts/api/versioning.ts";
 import {
   LATEST_PROTOCOL_VERSION,
   MCP_SERVER_NAME,
   MCP_SERVER_SCHEMA,
   MCP_TOOLS,
   SERVER_NAME
-} from "#contracts/mcp.ts";
+} from "@murugappan/contracts/mcp.ts";
 
 /** RFC 9727 media type for a link set serialised as JSON (RFC 9264). */
 const LINKSET_MEDIA_TYPE = "application/linkset+json";

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { jsonString, lenient } from "#utils/json.ts";
+import { jsonString, lenient } from "@murugappan/utils/json.ts";
 
 describe("jsonString", () => {
   const Payload = jsonString(z.object({ n: z.number() }));
