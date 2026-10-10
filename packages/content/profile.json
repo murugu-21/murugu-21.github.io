@@ -1,0 +1,148 @@
+{
+  "summary": "I build B2B SaaS for regulated industries, using TypeScript end-to-end and event-driven services on AWS. As the founding engineer on HyperStart CLM, I scaled it from 0 to $300k ARR, and I now lead pharmacy automation with LLMs at MedMe Health.",
+  "workExperiences": [
+    {
+      "role": "SWE 2",
+      "company": "MedMe Health",
+      "companyLogo": "medme",
+      "location": "Toronto (remote)",
+      "date": "December 2025 – Present",
+      "desc": "Leading design of the fax-to-entry platform that automates pharmacy admin work at MedMe Health (YC W21).",
+      "descBullets": [
+        "Led development of an LLM-based extractor that turns unstructured patient questionnaire answers into structured medication data. Working through its long tail of edge cases lifted fax-to-entry accuracy from ~60-65% to 95%+.",
+        "Drove HIPAA compliance: access-logged S3 buckets, PHI/PII scrubbing from logs, and server-side encryption of data at rest.",
+        "Made every service debuggable from one Grafana view, with vendor-agnostic OpenTelemetry traces and metrics across the platform."
+      ]
+    },
+    {
+      "role": "SDE 2",
+      "company": "HyperVerge",
+      "companyLogo": "hyperverge",
+      "location": "Bangalore (onsite)",
+      "date": "April 2025 – December 2025",
+      "desc": "Owned core platform architecture for HyperStart, the company's contract lifecycle management (CLM) product.",
+      "descBullets": [
+        "Cut infrastructure spend to a 10% MRR-to-server-cost ratio by profiling usage and reallocating resources over 3 months.",
+        "Built the event-driven job system on AWS SQS and EventBridge that runs all of the platform's async and scheduled work.",
+        "Led the architecture for CRM integrations (Salesforce, HubSpot) that prefill deal data to speed up the client deal-closure pipeline.",
+        "Mentored junior engineers and introduced a standard code-review process to raise code quality."
+      ]
+    },
+    {
+      "role": "SDE 1",
+      "company": "HyperVerge",
+      "companyLogo": "hyperverge",
+      "location": "Bangalore (onsite)",
+      "date": "July 2023 – March 2025",
+      "desc": "Founding engineer on HyperStart CLM, owning features from design through to customer outcome as the product scaled to $300k ARR.",
+      "descBullets": [
+        "Architected an LLM-based pipeline that extracts metadata from signed contracts, one of the product's main selling points.",
+        "Cut contract-listing latency to under 5 seconds across 15,000+ records by restructuring responses and tuning queries.",
+        "Led VAPT and static code analysis for SOC 2 compliance, hardening API Gateways and Auto Scaling Groups.",
+        "Built an end-to-end testing pipeline in GitLab CI with Playwright and Docker that gates deployments.",
+        "Benchmarked an open-source PDF converter, then designed and deployed it as a production microservice.",
+        "Built a config-driven UI for stamp-paper procurement, so adding a new Article code is a single JSON change."
+      ]
+    },
+    {
+      "role": "SDE Intern",
+      "company": "HyperVerge",
+      "companyLogo": "hyperverge",
+      "location": "Bangalore (onsite)",
+      "date": "August 2022 – June 2023",
+      "desc": "Built core ingestion and access-control foundations for the CLM platform.",
+      "descBullets": [
+        "Built a Role-Based Access Control (RBAC) system, with database schemas and APIs that manage resource access through user groups.",
+        "Built Google Drive and OneDrive integrations that ingest PDFs for the AI extraction workflows."
+      ]
+    },
+    {
+      "role": "R&D Intern",
+      "company": "Samsung R&D Institute India",
+      "companyLogo": "samsung",
+      "location": "Bangalore (remote)",
+      "date": "December 2021 – August 2022",
+      "partTime": true,
+      "desc": "Applied machine learning to anomaly detection for security use cases.",
+      "descBullets": [
+        "Built an unsupervised Isolation Forest model that detects anomalous user activity from IP, API URL, and MAC-address signals, an approach that also applies to fraud detection.",
+        "Generated synthetic training datasets and deployed the inference endpoint with Python/Django on Heroku."
+      ]
+    }
+  ],
+  "skillsCategories": [
+    {
+      "category": "Languages",
+      "items": "TypeScript, Python, SQL, Bash, YAML"
+    },
+    {
+      "category": "Full Stack",
+      "items": "TypeScript end-to-end; React.js, Astro, Node.js, Nest.js, Express.js, Hono; event-driven architecture (Kafka, SQS), microservices, REST APIs"
+    },
+    {
+      "category": "Observability & Compliance",
+      "items": "OpenTelemetry, Grafana (LGTM stack); SOC 2, VAPT, HIPAA"
+    },
+    {
+      "category": "Cloud & Infra",
+      "items": "AWS, Terraform, Docker, GitHub Actions, Cloudflare"
+    }
+  ],
+  "educationInfo": [
+    {
+      "schoolName": "Kumaraguru College of Technology",
+      "logo": "kumaraguru",
+      "subHeader": "Bachelor of Engineering in Computer Science",
+      "duration": "June 2019 - April 2023",
+      "desc": "Coimbatore, India.",
+      "grade": "CGPA 9.53 / 10",
+      "descBullets": [
+        "Graduated with a focus on distributed systems, databases, and software engineering."
+      ]
+    }
+  ],
+  "openSourceContributions": [
+    {
+      "project": "Vite",
+      "role": "Contributor",
+      "description": "A merged fix to Vite (83k+ GitHub stars), the frontend build tool: source maps whose sourceRoot is a URL, as published by packages like domutils and entities, no longer trigger false \"outside its package\" warnings.",
+      "image": "https://avatars.githubusercontent.com/u/65625612?v=4",
+      "imageAlt": "Vite logo",
+      "links": [
+        {
+          "label": "URL source roots (#23519)",
+          "url": "https://github.com/vitejs/vite/pull/23519"
+        },
+        {
+          "label": "All my PRs",
+          "url": "https://github.com/vitejs/vite/pulls?q=is%3Apr+author%3Amurugu-21"
+        }
+      ]
+    },
+    {
+      "project": "AnkiDroid",
+      "role": "Contributor",
+      "description": "3 merged pull requests to AnkiDroid, the popular open-source spaced-repetition flashcard app for Android (11k+ GitHub stars, millions of installs). Contributions include clipboard image paste, a deprecation-API wrapper, and test-configuration improvements.",
+      "image": "https://avatars.githubusercontent.com/u/3320903?v=4",
+      "imageAlt": "AnkiDroid logo",
+      "links": [
+        {
+          "label": "All my PRs",
+          "url": "https://github.com/ankidroid/Anki-Android/pulls?q=is%3Apr+author%3Amurugu-21"
+        },
+        {
+          "label": "Image paste (#10320)",
+          "url": "https://github.com/ankidroid/Anki-Android/pull/10320"
+        },
+        {
+          "label": "Deprecation API (#10617)",
+          "url": "https://github.com/ankidroid/Anki-Android/pull/10617"
+        },
+        {
+          "label": "Test config (#10288)",
+          "url": "https://github.com/ankidroid/Anki-Android/pull/10288"
+        }
+      ]
+    }
+  ]
+}

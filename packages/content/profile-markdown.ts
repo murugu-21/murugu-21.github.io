@@ -1,12 +1,13 @@
 // The about page and the resume as markdown, with the same sections as their HTML pages, from
-// the same data. Both lay out experience alike. Links are absolute so the text is useful when quoted.
+// the same data. Both lay out experience alike, and /llms.txt reuses the section blocks. Links are
+// absolute so the text is useful when quoted.
 import { groupByCompany } from "./experience.ts";
 import {
   aboutLinks,
   currentEmployer,
   educationInfo,
   greeting,
-  openSourceCard,
+  openSourceContributions,
   skillsCategories,
   workExperiences
 } from "./portfolio.ts";
@@ -25,12 +26,12 @@ const link = ({ label, href }: { label: string; href: string }) =>
 const bullets = (items: string[]) => items.map(item => `- ${item}`).join("\n");
 const markdown = (blocks: string[]) => `${blocks.join("\n\n")}\n`;
 
-const skillBlocks = () => [
+export const skillBlocks = () => [
   "## Skills",
   bullets(skillsCategories.map(({ category, items }) => `**${category}:** ${items}`))
 ];
 
-function experienceBlocks(): string[] {
+export function experienceBlocks(): string[] {
   return [
     "## Experience",
     ...groupByCompany(workExperiences).flatMap(stint => [
@@ -49,6 +50,24 @@ function experienceBlocks(): string[] {
   ];
 }
 
+export const educationBlocks = () => [
+  "## Education",
+  ...educationInfo.flatMap(school => [
+    `### ${school.schoolName}`,
+    `${school.subHeader} · ${school.duration}`,
+    bullets(school.descBullets)
+  ])
+];
+
+export const openSourceBlocks = () => [
+  "## Open source",
+  ...openSourceContributions.flatMap(({ project, description, links }) => [
+    `### ${project}`,
+    description,
+    bullets(links.map(({ label, url }) => link({ label, href: url })))
+  ])
+];
+
 /** /about/index.md */
 export const aboutMarkdown = () =>
   markdown([
@@ -58,15 +77,8 @@ export const aboutMarkdown = () =>
     bullets(aboutLinks.map(link)),
     ...experienceBlocks(),
     ...skillBlocks(),
-    "## Education",
-    ...educationInfo.flatMap(school => [
-      `### ${school.schoolName}`,
-      `${school.subHeader} · ${school.duration}`,
-      bullets(school.descBullets)
-    ]),
-    "## Open source",
-    openSourceCard.subtitle,
-    bullets(openSourceCard.footerLink.map(({ name, url }) => link({ label: name, href: url }))),
+    ...educationBlocks(),
+    ...openSourceBlocks(),
     // The prose of about.astro's "For AI agents" section, which has inline links.
     "## For AI agents",
     `This page is the canonical source of truth about ${resumeContact.name}. A machine-readable version lives at ${link({ label: "/llms.txt", href: "/llms.txt" })}, and full blog content is at ${link({ label: "/blog/llms-full.txt", href: "/blog/llms-full.txt" })}.`,
@@ -108,6 +120,12 @@ export function resumeMarkdown({
           ])
         ]
       : []),
+    "## Open Source",
+    ...openSourceContributions.flatMap(({ project, description, links: [pr] }) => [
+      `### ${project}`,
+      ...(pr ? [urlLink(pr.url)] : []),
+      description
+    ]),
     "## Education",
     ...educationInfo.flatMap(school => [
       `### ${school.schoolName}, ${school.desc.replace(/\.$/, "")} | ${school.subHeader}`,

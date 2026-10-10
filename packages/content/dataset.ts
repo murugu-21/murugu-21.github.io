@@ -49,11 +49,12 @@ export type DatasetInput = {
     grade?: string;
     descBullets: string[];
   }>;
-  openSourceCard: {
-    title: string;
-    subtitle: string;
-    footerLink: ReadonlyArray<{ name: string; url: string }>;
-  };
+  openSourceContributions: ReadonlyArray<{
+    project: string;
+    role: string;
+    description: string;
+    links: ReadonlyArray<{ label: string; url: string }>;
+  }>;
   isHireable: boolean;
 };
 
@@ -75,7 +76,7 @@ export function buildDataset(input: DatasetInput): Dataset {
     skillsCategories,
     techStack,
     educationInfo,
-    openSourceCard,
+    openSourceContributions,
     isHireable
   } = input;
   const site = resumeContact.site.replace(/\/$/, "");
@@ -91,8 +92,6 @@ export function buildDataset(input: DatasetInput): Dataset {
     highlights: job.descBullets ?? []
   }));
   const currentJob = experience.find(job => job.current) ?? null;
-
-  const [project = openSourceCard.title, role = ""] = openSourceCard.title.split(/\s+—\s+/);
 
   return {
     person: {
@@ -152,17 +151,13 @@ export function buildDataset(input: DatasetInput): Dataset {
         highlights: school.descBullets
       };
     }),
-    openSource: [
-      {
-        project: project.trim(),
-        role: role.trim(),
-        description: openSourceCard.subtitle,
-        links: openSourceCard.footerLink.map(l => ({
-          label: l.name,
-          url: l.url
-        }))
-      }
-    ]
+    // Drops the card image, which only the homepage shows.
+    openSource: openSourceContributions.map(({ project, role, description, links }) => ({
+      project,
+      role,
+      description,
+      links: [...links]
+    }))
   };
 }
 

@@ -2,7 +2,7 @@
 
 Agent instructions for murugappan.dev, the personal site and public API of
 **Murugappan M**, a full stack engineer (TypeScript, Node.js, React, AWS) based
-in Bangalore, India, currently Software Engineer II at MedMe Health.
+in Bangalore, India, currently at MedMe Health.
 
 Canonical machine-readable contract: <https://murugappan.dev/openapi.json>
 Human documentation: <https://murugappan.dev/developers/>

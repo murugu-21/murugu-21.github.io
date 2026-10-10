@@ -13,7 +13,7 @@ import {
   workExperiences,
   skillsCategories,
   educationInfo,
-  openSourceCard
+  openSourceContributions
 } from "@murugappan/content/portfolio.ts";
 import { resumeContact } from "@murugappan/content/resume.ts";
 import { groupByCompany } from "@murugappan/content/experience.ts";
@@ -103,8 +103,13 @@ const stints = groupByCompany(workExperiences);
 
     <section>
       <h2>Open source</h2>
-      <p>{openSourceCard.subtitle}</p>
-      <LinkRow links={openSourceCard.footerLink.map(l => ({ href: l.url, label: l.name }))} />
+      {openSourceContributions.map(({ project, description, links }) => (
+        <article>
+          <h3>{project}</h3>
+          <p>{description}</p>
+          <LinkRow links={links.map(({ label, url }) => ({ href: url, label }))} />
+        </article>
+      ))}
     </section>
 
     <section>

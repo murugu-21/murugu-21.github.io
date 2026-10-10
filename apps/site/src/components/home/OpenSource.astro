@@ -1,5 +1,5 @@
 ---
-import { openSourceSection, openSourceCard } from "@murugappan/content/portfolio.ts";
+import { openSourceSection, openSourceContributions } from "@murugappan/content/portfolio.ts";
 import Section from "./Section.astro";
 import SectionTitle from "./SectionTitle.astro";
 ---
@@ -13,38 +13,40 @@ import SectionTitle from "./SectionTitle.astro";
   </div>
   {/* biome-ignore lint/nursery/noTailwindArbitraryValue: Tailwind has no auto-fit track default */}
   <div class="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
-    <div class="glow-card p-6">
-      <div class="relative flex h-64 items-center justify-center overflow-hidden">
-        <img
-          src={openSourceCard.image}
-          alt={openSourceCard.imageAlt}
-          class="h-auto w-64 max-w-full"
-          width="250"
-          height="250"
-          loading="lazy"
-        />
+    {openSourceContributions.map(oss => (
+      <div class="glow-card p-6">
+        <div class="relative flex h-64 items-center justify-center overflow-hidden">
+          <img
+            src={oss.image}
+            alt={oss.imageAlt}
+            class="h-auto w-64 max-w-full"
+            width="250"
+            height="250"
+            loading="lazy"
+          />
+        </div>
+        <div class="text-center">
+          <h3 class="m-0 mt-4 text-xl font-bold text-title dark:text-white">
+            {oss.project} — {oss.role}
+          </h3>
+          <p class="my-4 text-base text-card-subtitle dark:text-white">{oss.description}</p>
+        </div>
+        <div class="flex flex-wrap items-center justify-center">
+          {oss.links.map(link => (
+            <a
+              class="mr-2 mb-2 inline-flex h-6 items-center justify-center rounded-sm bg-navy px-2 align-middle text-xs/normal whitespace-nowrap text-surface-alt no-underline transition-colors duration-200 ease-in hover:bg-dusk-violet dark:hover:bg-blue-light dark:hover:text-navy print:border print:border-navy print:bg-transparent print:text-navy"
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-ph-event="oss_link_click"
+              data-ph-prop="oss"
+              data-ph-value={`${oss.project}: ${link.label}`}
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
       </div>
-      <div class="text-center">
-        <h3 class="m-0 mt-4 text-xl font-bold text-title dark:text-white">
-          {openSourceCard.title}
-        </h3>
-        <p class="my-4 text-base text-card-subtitle dark:text-white">{openSourceCard.subtitle}</p>
-      </div>
-      <div class="flex flex-wrap items-center justify-center">
-        {openSourceCard.footerLink.map(f => (
-          <a
-            class="mr-2 mb-2 inline-flex h-6 items-center justify-center rounded-sm bg-navy px-2 align-middle text-xs/normal whitespace-nowrap text-surface-alt no-underline transition-colors duration-200 ease-in hover:bg-dusk-violet dark:hover:bg-blue-light dark:hover:text-navy print:border print:border-navy print:bg-transparent print:text-navy"
-            href={f.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-ph-event="oss_link_click"
-            data-ph-prop="oss"
-            data-ph-value={f.name}
-          >
-            {f.name}
-          </a>
-        ))}
-      </div>
-    </div>
+    ))}
   </div>
 </Section>
