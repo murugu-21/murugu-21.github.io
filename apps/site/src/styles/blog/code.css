@@ -1,4 +1,4 @@
-/* eslint-disable no-restricted-syntax -- Shiki's markup carries its own classes and
+/* biome-ignore-all lint/plugin/tailwind-only-css: Shiki's markup carries its own classes and
    --shiki-* variables, so mapping them onto the theme takes plain rules. */
 
 /* Shiki's fences (`pre.astro-code`). With `defaultColor: false` every colour

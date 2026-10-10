@@ -31,6 +31,7 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
         {projectsSection.subtitle}
       </p>
     </div>
+    {/* biome-ignore lint/nursery/noTailwindArbitraryValue: Tailwind has no auto-fit track default */}
     <div class="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4 md:grid-cols-[repeat(auto-fit,minmax(min(400px,100%),1fr))]">
       {repos.map(repo => (
         <a
@@ -75,12 +76,12 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
               {repo.primaryLanguage && (
                 <span class="mr-3 flex items-center">
                   {repo.primaryLanguage.color && (
-                    /* eslint-disable no-restricted-syntax -- GitHub's language colour arrives as data at build time. */
+                    /* biome-ignore-start lint/nursery/noInlineStyles: GitHub's language colour arrives as data at build time */
                     <div
                       class="mr-1 size-2.5 rounded-full bg-(--lang)"
                       style={`--lang:${repo.primaryLanguage.color}`}
                     />
-                    /* eslint-enable no-restricted-syntax */
+                    /* biome-ignore-end lint/nursery/noInlineStyles: see above */
                   )}
                   <p class="m-0">{repo.primaryLanguage.name}</p>
                 </span>

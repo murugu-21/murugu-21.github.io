@@ -11,6 +11,7 @@ import SectionTitle from "./SectionTitle.astro";
       {openSourceSection.subtitle}
     </p>
   </div>
+  {/* biome-ignore lint/nursery/noTailwindArbitraryValue: Tailwind has no auto-fit track default */}
   <div class="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">
     <div class="glow-card p-6">
       <div class="relative flex h-64 items-center justify-center overflow-hidden">

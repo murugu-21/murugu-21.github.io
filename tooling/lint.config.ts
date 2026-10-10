@@ -260,16 +260,6 @@ export default {
     },
     { files: ["packages/contracts/**"], rules: { "contracts/shapes-only": "error" } },
     {
-      files: ["tooling/ts-alias.cjs"],
-      rules: {
-        "typescript/no-unsafe-assignment": "off",
-        "typescript/no-unsafe-argument": "off",
-        "typescript/no-unsafe-call": "off",
-        "typescript/no-unsafe-member-access": "off",
-        "typescript/no-unsafe-return": "off"
-      }
-    },
-    {
       files: ["**/*.test.{ts,tsx}"],
       plugins: ["vitest"],
       rules: {

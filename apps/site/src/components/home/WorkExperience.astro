@@ -91,7 +91,7 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
 
           <ol class="ml-5 flex flex-col gap-5 pl-6 md:ml-8">
             {stint.roles.map(role => (
-              <li class="relative before:absolute before:top-2.5 before:-left-6 before:size-2.5 before:rounded-full before:bg-navy before:ring-3 before:ring-navy/20 before:content-[''] after:absolute after:top-5 after:-bottom-5 after:-left-5 after:w-0.5 after:bg-navy/25 after:content-[''] last:after:hidden dark:before:bg-blue dark:before:ring-blue/20 dark:after:bg-blue/30">
+              <li class="relative before:absolute before:top-2.5 before:-left-6 before:size-2.5 before:rounded-full before:bg-navy before:ring-3 before:ring-navy/20 after:absolute after:top-5 after:-bottom-5 after:-left-5 after:w-0.5 after:bg-navy/25 last:after:hidden dark:before:bg-blue dark:before:ring-blue/20 dark:after:bg-blue/30">
                 <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <h4 class="text-lg font-bold md:text-xl">{role.role}</h4>
                   {/* a lone role's date already sits in the card header */}

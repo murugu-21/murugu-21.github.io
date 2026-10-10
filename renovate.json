@@ -7,6 +7,15 @@
       "groupName": "typescript content mapper"
     },
     {
+      "description": "Insiders build for tailwindlabs/prettier-plugin-tailwindcss#473 (prettier-plugin-astro 1). Allow only a stable release above 0.8.1, which lacks it.",
+      "matchPackageNames": ["prettier-plugin-tailwindcss"],
+      "allowedVersions": ">0.8.1"
+    },
+    {
+      "matchPackageNames": ["astro", "@astrojs/compiler-rs"],
+      "groupName": "astro compiler"
+    },
+    {
       "matchPackageNames": ["ai", "@ai-sdk/*"],
       "groupName": "ai sdk"
     },

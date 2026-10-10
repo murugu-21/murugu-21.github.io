@@ -1,0 +1,6 @@
+language js;
+
+`cn($args)` where {
+  $args <: some `$_ ? $_ : $_` as $choice,
+  register_diagnostic(span=$choice, message="Choosing between class sets is a variant, so use cva().")
+}

@@ -19,8 +19,6 @@
     "packages/*": {}
   },
   "ignoreDependencies": [
-    // Required by name inside tooling/ts-alias.cjs.
-    "@typescript/typescript6",
     // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.
     "cloudflare"
   ],

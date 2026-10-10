@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  // Biome lints .astro templates and lints and formats stylesheets, which oxc can't parse.
+  // oxlint still lints .astro frontmatter and scripts, so Biome's JavaScript rules stay off.
+  "files": { "includes": ["apps/site/src/**/*.astro", "apps/site/src/**/*.css"] },
+  "formatter": { "indentStyle": "space", "lineWidth": 100 },
+  "css": { "parser": { "tailwindDirectives": true } },
+  // Biome's formatter breaks lines where Astro then drops spaces, so Prettier formats .astro
+  // until oxfmt does (oxc-project/oxc#27386).
+  "html": { "experimentalFullSupportEnabled": true, "formatter": { "enabled": false } },
+  "assist": { "enabled": false },
+  "plugins": ["./tooling/biome/cn-variants.grit"],
+  "linter": { "rules": { "preset": "none" } },
+  "overrides": [
+    {
+      "includes": ["**", "!apps/site/src/pages/outdated.astro"],
+      "plugins": ["./tooling/biome/tailwind-only-css.grit"]
+    },
+    { "includes": ["**/*.css"], "linter": { "rules": { "preset": "recommended" } } },
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
+        "rules": {
+          "a11y": { "preset": "recommended" },
+          "nursery": {
+            "noAstroConflictingSetDirectives": "error",
+            "useAstroClientOnlyDirectiveValue": "error",
+            "noInlineStyles": "error",
+            "noTailwindArbitraryValue": "error",
+            "noTailwindRawColors": "error",
+            "useTailwindShorthandClasses": "error"
+          }
+        }
+      }
+    }
+  ]
+}

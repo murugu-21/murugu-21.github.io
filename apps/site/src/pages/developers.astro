@@ -352,9 +352,8 @@ Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;;
         At least {DEPRECATION_NOTICE_DAYS} days pass between the first <code>Deprecation</code>{" "}
         header and the sunset date; after sunset the version answers <code>410</code> with the usual
         error envelope pointing at its successor. Nothing is deprecated today.{" "}
-        <code>{CURRENT_VERSION_RECORD.version}</code> is
-        {CURRENT_VERSION_RECORD.status}, released {CURRENT_VERSION_RECORD.releasedOn}. The whole of
-        this section is served as data at{" "}
+        <code>{CURRENT_VERSION_RECORD.version}</code> is {CURRENT_VERSION_RECORD.status}, released{" "}
+        {CURRENT_VERSION_RECORD.releasedOn}. The whole of this section is served as data at{" "}
         <a href={API_PATHS.versions}>
           <code>{API_PATHS.versions}</code>
         </a>{" "}
@@ -393,10 +392,10 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
         <strong>
           <code>POST {API_PATHS.contact}</code>
         </strong>{" "}
-        sends real email, so it is metered at
-        {CONTACT_DAILY_PER_CLIENT} requests per client IP per UTC day and {CONTACT_DAILY_GLOBAL}{" "}
-        site-wide. Past either it answers <code>429</code> with code <code>rate_limited</code>, a{" "}
-        <code>Retry-After</code> counting down to 00:00 UTC, and the tier that ran out:
+        sends real email, so it is metered at {CONTACT_DAILY_PER_CLIENT} requests per client IP per
+        UTC day and {CONTACT_DAILY_GLOBAL} site-wide. Past either it answers <code>429</code> with
+        code <code>rate_limited</code>, a <code>Retry-After</code> counting down to 00:00 UTC, and
+        the tier that ran out:
       </p>
       <pre><code>RateLimit-Policy: {CONTACT_POLICY}
 RateLimit: "{CONTACT_CLIENT_QUOTA.name}";r=0;t=39122

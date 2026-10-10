@@ -47,7 +47,7 @@ const links = [
     {/* The middle bar is the span and the outer bars are its ::before and ::after.
        While the menu is open, they cross into an X. Write each variant out in full
        because Tailwind scans this file as text. */}
-    <span class="relative block h-1 w-6 rounded-full bg-navy transition-colors duration-200 ease-out group-has-open:bg-transparent before:absolute before:top-2 before:block before:size-full before:rounded-full before:bg-navy before:transition-all before:duration-200 before:ease-out before:content-[''] group-has-open:before:top-0 group-has-open:before:-rotate-45 after:absolute after:-top-2 after:block after:size-full after:rounded-full after:bg-navy after:transition-all after:duration-200 after:ease-out after:content-[''] group-has-open:after:top-0 group-has-open:after:rotate-45 dark:bg-blue dark:before:bg-blue dark:after:bg-blue"></span>
+    <span class="relative block h-1 w-6 rounded-full bg-navy transition-colors duration-200 ease-out group-has-open:bg-transparent before:absolute before:top-2 before:block before:size-full before:rounded-full before:bg-navy before:transition-all before:duration-200 before:ease-out group-has-open:before:top-0 group-has-open:before:-rotate-45 after:absolute after:-top-2 after:block after:size-full after:rounded-full after:bg-navy after:transition-all after:duration-200 after:ease-out group-has-open:after:top-0 group-has-open:after:rotate-45 dark:bg-blue dark:before:bg-blue dark:after:bg-blue"></span>
   </button>
   <nav aria-label="Main" class="lg:ml-auto">
     {/* The list is a popover. Escape and a tap outside close it, and the browser
@@ -66,6 +66,7 @@ const links = [
         "max-lg:max-h-0 max-lg:overflow-hidden max-lg:shadow-md max-lg:open:max-h-120",
         // The sheet slides max-height up from 0 and back. display and overlay are discrete,
         // so it leaves the top layer only once the slide ends.
+        // biome-ignore lint/nursery/noTailwindArbitraryValue: no transition-property default lists display and overlay
         "max-lg:transition-[max-height,display,overlay] max-lg:transition-discrete max-lg:starting:open:max-h-0",
         // The breakpoint variant must wrap motion-reduce, or the transition rule above outranks it.
         "max-lg:duration-200 max-lg:ease-out max-lg:motion-reduce:transition-none"
@@ -77,7 +78,7 @@ const links = [
           <a
             href={l.href}
             data-ph-event={l.event}
-            class="relative block px-5 py-4 text-text no-underline after:absolute after:inset-x-5 after:bottom-2 after:h-1 after:origin-left after:scale-x-0 after:rounded-full after:bg-navy after:transition-transform after:duration-300 after:ease-out after:content-[''] hover:after:scale-x-100 focus-visible:after:scale-x-100 motion-reduce:after:transition-none lg:max-xl:px-2.5 lg:max-xl:after:inset-x-2.5 xl:max-2xl:px-3 xl:max-2xl:after:inset-x-3 dark:text-white dark:after:bg-blue"
+            class="relative block px-5 py-4 text-text no-underline after:absolute after:inset-x-5 after:bottom-2 after:h-1 after:origin-left after:scale-x-0 after:rounded-full after:bg-navy after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100 focus-visible:after:scale-x-100 motion-reduce:after:transition-none lg:max-xl:px-2.5 lg:max-xl:after:inset-x-2.5 xl:max-2xl:px-3 xl:max-2xl:after:inset-x-3 dark:text-white dark:after:bg-blue"
           >
             {l.label}
           </a>

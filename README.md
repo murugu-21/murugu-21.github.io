@@ -56,8 +56,9 @@ Packages import each other by name and full file path, like `@murugappan/content
 - Before the first run, install Chromium with `bunx playwright install --only-shell chromium` and set up Python with `uv sync --locked --project apps/tts`.
 - `bun run test:live` runs the tests that call the real DeepSeek API. They cost money, so the normal run skips them.
 - Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
-- The type checker is a TypeScript 7 nightly. A TypeScript 6 copy is installed for ESLint, so bare `bunx tsc` runs version 6, and your editor may pick up 6 too. Point the editor at the TypeScript 7 language service. The `check:*` scripts call the right one.
-- ESLint only covers `.astro` templates and CSS. Oxlint covers the rest.
+- The type checker is a TypeScript 7 nightly. Point your editor at the TypeScript 7 language service.
+- Oxlint and oxfmt cover TypeScript, JSON and Markdown. Biome lints `.astro` templates and lints and formats CSS, which oxc can't parse (`biome.jsonc`). Prettier formats `.astro` templates and sorts their Tailwind classes until oxfmt can.
+- Astro deletes a line break beside a tag or `{expression}`, so `on\n<a>` renders as `on<a>`. Write the space as `{" "}` at the end of the line. `tooling/astro-whitespace.test.ts` fails on a line break that joins two words and on a space just inside an inline element.
 - In CSS, use the `--font-fira-code` variable, never `"Fira Code"`. The build renames the font.
 
 ## Build settings
