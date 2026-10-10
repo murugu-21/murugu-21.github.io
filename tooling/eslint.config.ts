@@ -25,7 +25,7 @@ const tailwindOnlyCss = (topLevelAtRules: string) => [
 ];
 
 // Covers .astro templates until oxlint can parse them, and stylesheets, which oxlint
-// can't parse at all (docs/adr/0008-oxlint-first.md).
+// can't parse at all (README.md › Tests and checks).
 export default defineConfig([
   astro.configs.recommended,
   astro.configs["jsx-a11y-recommended"],
