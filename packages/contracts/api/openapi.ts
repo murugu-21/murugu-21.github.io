@@ -1,5 +1,4 @@
-// The OpenAPI 3.1.0 document; api-spec.test.ts checks it against the router. The component
-// schemas come from the zod schemas the API and MCP tools validate with.
+// api-spec.test.ts checks this document against the router.
 
 import { z } from "zod";
 

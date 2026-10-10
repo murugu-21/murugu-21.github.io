@@ -1,59 +1,40 @@
 # Blog
 
-```text
-packages/content/blog/                  # one directory per post: <slug>/index.md (+ images)
-  draft/                                # drafts: visible in dev, excluded from production builds
-apps/site/src/pages/blog/               # index, [...slug] post pages, 404, rss.xml, llms.txt, llms-full.txt
-apps/site/src/layouts/BlogLayout.astro  # the blog header around Layout
-apps/site/src/components/blog/          # search, tags, table of contents, Listen control, bio
-packages/content/posts.ts               # PostSource and the pure post helpers (URLs, excerpt, descriptions, summaries)
-packages/content/llms.ts                # llms.txt, llms-full.txt and the blog index's markdown rendition
-packages/content/vite/posts-plugin.ts   # parses the published posts into virtual:content/posts for the site and the Worker
-apps/site/src/lib/blog/                 # Astro post helpers, the markdown plugins, read-aloud text prep
-apps/site/src/styles/blog/              # post and code-block styles
-apps/site/src/content.config.ts         # content collection, validated by packages/contracts/blog.ts
-apps/site/public/blog/                  # static files served verbatim (og-image, sw.js)
-```
+## Write a post
 
-The index mirrors its search box and tag chips into the URL (`/blog/?q=…&tag=…`, one `tag` per chip), so filtered views survive a reload and can be shared. Post pages link their tags to the same URLs. Unknown tags are ignored.
-
-## Writing a post
-
-Create `packages/content/blog/<slug>/index.md`. The directory name is the slug, so the post appears at `/blog/<slug>/` and in the sitemap, RSS feed, both `llms.txt` files and the markdown renditions.
+Create `packages/content/blog/<slug>/index.md`. The folder name becomes the URL, `/blog/<slug>/`. Put images in the same folder and link them relatively. Drafts go in `draft/`, which shows in dev but not in production.
 
 ```yaml
 ---
 title: My post title
 date: "2026-06-10T10:00:00.000Z"
+description: One line, shown in lists, search and feeds.
 tags: ["system-design"]
-keywords: ["kafka", "outbox"] # optional: SEO and search terms, never shown as chips
-featured: true # optional: a card in the homepage's Blogs section, newest first
-shortTitle: Short title # optional: the card's title when the full one runs past two lines
-description: One-line description shown in lists, search and feeds.
+keywords: ["kafka", "outbox"] # optional, for search and SEO only
+featured: true # optional, puts it on the homepage
+shortTitle: Short title # optional, for the homepage card if the title is long
 ---
 ```
 
-- **Images** next to `index.md` can be referenced relatively (`![alt](image.png)`) and are optimized at build time.
-- **Headings.** On wide screens, `##` and `###` headings feed the table-of-contents rail (`TableOfContents.astro`). Posts with fewer than two get no rail. Use `---` as a separator, never an empty `##`.
-- **Code** fences are highlighted at build time by Shiki in Night Owl, adjusted for AA contrast and without italics (`apps/site/src/lib/blog/code-themes.ts`). Name the language (` ```ts `), or the fence renders as plain text.
-- **Mermaid** fences render at build time, not in the browser.
-- **Listen** audio comes from `bun run audio`, run on a laptop after the build. [`apps/tts/README.md`](../../../apps/tts/README.md) covers the setup.
+A few rules:
 
-## Mermaid diagrams
+- Use `##` and `###` headings. A post with two or more gets a table of contents on wide screens.
+- Name the language on code blocks (` ```ts `), or they won't be highlighted.
+- For audio, run `bun run audio` after the build. See [read-aloud audio](../../../apps/tts/README.md).
 
-`apps/site/scripts/render-mermaid.ts` renders each ` ```mermaid ` fence to a light and a dark SVG (with a Fira Code subset embedded, so labels measure the same inside `<img>`) and a light PNG, under `packages/content/blog/<slug>/diagrams/`, named by a hash of the fence. It prunes renderings no fence uses.
+## Diagrams
 
-The renderings are gitignored; only the fence source is committed. `bun run build` renders them first, the markdown plugin renders any fence that has no rendering yet (useful under `astro dev`), and `bun run diagrams` renders on demand. Each file records the mermaid version that rendered it, so an upgrade re-renders automatically; `--force` re-renders everything. If you change the renderer's own output (theme, font), bump `RENDERER_VERSION` in `apps/site/src/lib/blog/mermaid-diagrams.ts` so the hashes change.
+Write diagrams as ` ```mermaid ` code blocks. The build turns each one into images, so readers never load mermaid. The images aren't committed. Only the code block is.
 
-The RSS feed uses the PNG. Feed readers and mirrors like dev.to rasterize images without an HTML engine or web fonts, so mermaid's `foreignObject` labels come out blank in the SVG.
+If you change how diagrams look (theme, font), bump `RENDERER_VERSION` in `apps/site/src/lib/blog/mermaid-diagrams.ts` so they all re-render. `bun run diagrams --force` re-renders everything by hand.
 
-The `blogPostChecks` integration in `apps/site/astro.config.ts` checks after the build that every post rendered one figure per fence. Without it, a markdown failure would ship a blank article, because the content layer only logs the error and caches the empty result in `node_modules/.astro`. It also checks each post's head: exactly one canonical URL, the post's own, and a `BlogPosting` whose author resolves to the `Person` in the same JSON-LD `@graph`.
+The build fails if a post is missing a diagram. Without that check, a broken post would ship blank, because Astro only logs the error and caches the empty page.
 
-## Tag vocabulary
+## Tags
 
-Tags are the index's filter chips, so they name broad reader intents that recur across posts. `BlogFrontmatter` in `packages/contracts/blog.ts` constrains them (an unknown tag fails the build): **1 to 3 per post, lowercase, kebab-case, singular, no vendor names**. Precise terms (`kafka`, `debezium`, `floating-point`) go in `keywords`, which feeds JSON-LD, `article:tag` and the search index but never renders as a chip.
+Tags are the filter chips on the blog index, so keep them broad. Give each post 1 to 3, lowercase and singular. Specific terms like `kafka` go in `keywords` instead. An unknown tag fails the build.
 
-| Tag             | What it covers                                          |
+| Tag             | Covers                                                  |
 | --------------- | ------------------------------------------------------- |
 | `ai`            | LLM agents, AI-assisted development                     |
 | `algorithms`    | DSA and interview-style problem solving                 |
@@ -65,4 +46,4 @@ Tags are the index's filter chips, so they name broad reader intents that recur 
 | `react`         | React mental models and the ecosystem                   |
 | `system-design` | Distributed architecture: queues, scaling, event-driven |
 
-To add a tag, add it to `BLOG_TAGS` in `packages/contracts/blog.ts`, document it here and tag the posts it covers. Chips come from post counts, so an unused tag stays hidden.
+To add a tag, add it to `BLOG_TAGS` in `packages/contracts/blog.ts` and to this table. A tag no post uses stays hidden.

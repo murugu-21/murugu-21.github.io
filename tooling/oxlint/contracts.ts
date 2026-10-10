@@ -1,4 +1,4 @@
-// Oxlint JS plugin for README.md › Layers: packages/contracts/ exports shapes (schemas, types and
+// Oxlint JS plugin for README.md › Imports: packages/contracts/ exports shapes (schemas, types and
 // constants), never behaviour. Logic lives in the layer that runs it.
 import type { RuleTester } from "vite-plus/lint/plugins-dev";
 
@@ -56,7 +56,7 @@ export default {
         },
         messages: {
           exportedBehaviour:
-            "packages/contracts/ exports schemas, types and constants, not functions or classes. Move {{name}} to the layer that calls it, or to packages/utils/ if the site and the Worker both do (README.md › Layers)."
+            "packages/contracts/ exports schemas, types and constants, not functions or classes. Move {{name}} to the layer that calls it, or to packages/utils/ if the site and the Worker both do (README.md › Imports)."
         }
       },
       create(context) {

@@ -1,4 +1,3 @@
-// Jarvis chat island, shared by the portfolio and blog via ChatWidget.astro.
 import { Suspense, useEffect, useRef, useState, type ComponentProps } from "react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { useAgent } from "agents/react";
@@ -135,8 +134,7 @@ function focusInChat(launcher: HTMLElement | null): boolean {
   );
 }
 
-// An icon button for the panel header, styled for the primary fill. Radix triggers
-// wrap it with asChild, so every prop (ref included) passes through.
+// Radix triggers wrap it with asChild, so every prop (ref included) passes through.
 function HeaderButton(props: ComponentProps<typeof Button>) {
   return (
     <Button
@@ -402,7 +400,6 @@ export function ChatWidget({ host }: { host?: string }) {
     openPanel();
   }, []);
 
-  // One-time quiet tooltip.
   useEffect(() => {
     if (readStored(TOOLTIP_KEY)) return;
     writeStored({ key: TOOLTIP_KEY, value: "1" });

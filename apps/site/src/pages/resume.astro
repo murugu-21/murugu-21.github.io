@@ -34,6 +34,7 @@ const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$
     <Font cssVariable="--font-fira-code" preload />
   </head>
   {/* Fira Code's programming ligatures (-> => ==) are wrong in prose. */}
+  {/* biome-ignore lint/nursery/noTailwindArbitraryValue: Tailwind has no utility that turns a font feature off */}
   <body class="m-0 bg-backdrop p-0 font-mono font-features-['calt'_0] text-xs/snug text-ink print:bg-white">
     {/* A screen preview of the sheet; print drops the frame (@page in resume.css sets the page size and margins). */}
     <main class="mx-auto my-8 max-w-204 bg-white px-5 py-11 shadow-xl sm:px-13 print:m-0 print:max-w-none print:p-0 print:shadow-none">

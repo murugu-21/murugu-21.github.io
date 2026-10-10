@@ -1,5 +1,5 @@
-// fetch_page tool backend. Reads only through the ASSETS binding, so it cannot
-// reach other hosts. Errors are tool-result strings phrased for the model.
+// Reads only through the ASSETS binding, so it cannot reach other hosts. Errors are tool-result
+// strings phrased for the model.
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 
@@ -8,7 +8,6 @@ type AssetsLike = { fetch(input: string): Promise<Response> };
 const SITE_HOST = new URL(SITE_ORIGIN).host;
 const MAX_CHARS = 24_000;
 
-/** The asset's text, or null when it is absent, non-2xx or the binding throws. */
 async function readAsset(assets: AssetsLike, path: string): Promise<string | null> {
   try {
     // The assets binding matches only the path.

@@ -2,7 +2,6 @@
 // @murugappan/content/speech.ts, shared with the page's player.
 import { createHash } from "node:crypto";
 
-// Sentence boundary: terminal punctuation followed by whitespace.
 const SENTENCE_END = /(?<=[.!?])\s+/;
 
 // Greedily packs sentences into chunks of at most `max` chars; a longer

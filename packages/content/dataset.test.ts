@@ -105,7 +105,6 @@ describe("buildDataset", () => {
       email: "murugu2001@example.com",
       site: "https://murugappan.dev/",
       availableForWork: true,
-      // the bullet emoji is stripped from the focus statements
       focus: ["Build TypeScript"]
     });
   });

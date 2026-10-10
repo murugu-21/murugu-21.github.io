@@ -40,8 +40,8 @@ export default defineConfig({
       "vp fmt --no-error-on-unmatched-pattern"
     ],
     "*.{json,jsonc,md}": "vp fmt --no-error-on-unmatched-pattern",
-    "*.css": ["bun run lint:eslint --fix", "vp fmt --no-error-on-unmatched-pattern"],
-    "*.astro": ["bun run lint:eslint --fix", "prettier --write"],
+    "*.css": "biome check --write --no-errors-on-unmatched",
+    "*.astro": ["biome lint --write --no-errors-on-unmatched", "prettier --write"],
     "*.py": ["bun run --silent py ruff check --fix", "bun run --silent py ruff format"]
   },
   test: {

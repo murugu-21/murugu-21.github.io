@@ -24,18 +24,21 @@ const cards = [
     </p>
   </div>
   <div class="flex">
+    {/* biome-ignore lint/nursery/noTailwindArbitraryValue: Tailwind has no auto-fill track default */}
     <div class="mb-8 grid flex-1 grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-8 sm:grid-cols-[repeat(auto-fill,minmax(400px,1fr))]">
       {cards.map(card => (
         <div class="box-content h-50 glow-card cursor-pointer text-blog-container dark:text-white">
           {/* 142% of circle()'s reference radius reaches the far corner of any
                 card (√2 ≈ 1.414). */}
+          {/* biome-ignore-start lint/nursery/noTailwindArbitraryValue: Tailwind has no clip-path utility */}
           <a
-            class="group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:inset-0 before:-z-10 before:bg-dusk-violet before:transition-[clip-path] before:duration-500 before:ease-out before:content-[''] before:[clip-path:circle(16px_at_100%_0)] hover:before:[clip-path:circle(142%_at_100%_0)] dark:before:bg-blue-light print:before:hidden"
+            class="group relative z-0 block h-full overflow-hidden rounded-sm no-underline before:absolute before:inset-0 before:-z-10 before:bg-dusk-violet before:transition-[clip-path] before:duration-500 before:ease-out before:[clip-path:circle(16px_at_100%_0)] hover:before:[clip-path:circle(142%_at_100%_0)] dark:before:bg-blue-light print:before:hidden"
             href={card.url}
             data-ph-event="blog_card_click"
             data-ph-prop="post"
             data-ph-value={card.title}
           >
+            {/* biome-ignore-end lint/nursery/noTailwindArbitraryValue: see above */}
             {/* `!` so dark mode beats group-hover:text-white */}
             <h3 class="mx-5 mt-8 mb-3.5 line-clamp-2 text-lg font-bold text-blog-title group-hover:text-white group-hover:transition-all group-hover:duration-300 group-hover:ease-out sm:text-xl dark:text-white! dark:group-hover:text-navy!">
               {card.title}

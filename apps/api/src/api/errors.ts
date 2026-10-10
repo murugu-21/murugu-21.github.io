@@ -1,5 +1,3 @@
-// The one error envelope (packages/contracts/api/errors.ts) every /api/* failure answers with.
-
 import type { z } from "zod";
 
 import {

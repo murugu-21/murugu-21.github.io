@@ -1,5 +1,3 @@
-"""16-bit mono WAV writer shared by synth.py and design-voice.py."""
-
 import wave
 from pathlib import Path
 

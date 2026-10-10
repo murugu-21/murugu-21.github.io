@@ -1,15 +1,8 @@
--- Analytics mirror of every ChatRoom's transcript. The Durable Object's own
--- SQLite (apps/api/src/chat-room.ts, onStart) stays the serving source of truth.
--- This table exists only so you can browse chats in the Cloudflare dashboard, since
--- rooms aren't enumerable and there is no other global view.
+-- Mirror of every ChatRoom's transcript for browsing in the Cloudflare dashboard, since rooms
+-- aren't enumerable. The Durable Object's own SQLite stays the source of truth.
 --
--- `room_id` is the DO name, so it is the one column the DO's table doesn't
--- have. Everything else mirrors ChatRoom.persist().
---
--- Deliberately permissive: no CHECK on `role` and no foreign keys. Mirror
--- writes are fire-and-forget (the .catch() in persist() logs and moves on), so
--- a constraint that starts rejecting rows would fail silently and lose
--- transcripts rather than surface an error.
+-- No CHECK on `role` and no foreign keys: mirror writes are fire-and-forget, so a constraint
+-- that starts rejecting rows would lose transcripts silently.
 CREATE TABLE IF NOT EXISTS messages (
   id INTEGER PRIMARY KEY,
   room_id TEXT NOT NULL,

@@ -24,7 +24,6 @@ import { contentPosts, readPosts } from "@murugappan/content/vite/posts-plugin.t
 
 const POSTS = readPosts();
 
-// Each slug's ISO publish date, for the sitemap's <lastmod>.
 const POST_DATES: Record<string, string> = Object.fromEntries(
   POSTS.map(post => [post.slug, post.data.date.toISOString()])
 );
@@ -326,7 +325,6 @@ export default defineConfig({
     },
     plugins: [
       contentPosts(),
-      // single entry: apps/site/src/styles/global.css
       tailwindcss(),
       // the default host (us.i.posthog.com) matches the SDK's US project
       ...(POSTHOG_API_KEY && POSTHOG_PROJECT_ID

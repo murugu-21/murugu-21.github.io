@@ -15,9 +15,7 @@
 /toolbox /blog/toolbox/ 301
 /toolbox/ /blog/toolbox/ 301
 
-# Predictable aliases for the developer portal. Agents and people guess these
-# before they guess /developers/, so each one is a permanent redirect rather
-# than a 404 that has to be recovered from.
+# Aliases agents and people guess before /developers/: a 301, not a 404 to recover from.
 /docs /developers/ 301
 /docs/ /developers/ 301
 /api-docs /developers/ 301

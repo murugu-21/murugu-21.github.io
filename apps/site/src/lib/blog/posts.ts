@@ -55,7 +55,6 @@ export const postKeywords = (post: PostSource): string[] => [
   ...post.data.keywords
 ];
 
-// Whole minutes, at least 1.
 export const timeToRead = (body: string) => Math.max(1, Math.ceil(getReadingTime(body).minutes));
 
 export function formatReadingTime(minutes: number): string {

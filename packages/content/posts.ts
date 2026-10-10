@@ -37,8 +37,7 @@ export const postDescription = (post: PostSource) => post.data.description || ex
 export const oneLineDescription = (post: PostSource) =>
   postDescription(post).replaceAll(/\s+/g, " ").trim();
 
-// Newest first, and only slugs the API accepts, so a directory name outside SLUG never reaches
-// a PostSummary.
+// Only slugs the API accepts, so a directory name outside SLUG never reaches a PostSummary.
 export const postSummaries = (posts: PostSource[]): PostSummary[] =>
   newestFirst(posts)
     .filter(post => SLUG.test(post.slug))

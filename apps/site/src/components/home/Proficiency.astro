@@ -10,6 +10,7 @@ import SectionTitle from "./SectionTitle.astro";
     <SectionTitle title="Proficiency" />
     <dl class="m-0 flex flex-col gap-4">
       {techStack.experience.map(exp => (
+        /* biome-ignore lint/nursery/noTailwindArbitraryValue: a fixed label column beside a fluid one has no default */
         <div class="grid grid-cols-1 gap-1.5 md:grid-cols-[12rem_1fr] md:items-center md:gap-x-6 md:gap-y-2">
           <dt class="m-0 text-base font-semibold text-text md:text-lg dark:text-white">
             {exp.stack}

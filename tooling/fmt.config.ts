@@ -2,7 +2,8 @@
 import type { OxfmtConfig } from "vite-plus/fmt";
 
 export default {
-  ignorePatterns: ["apps/site/public/**"],
+  // Biome formats stylesheets (biome.jsonc).
+  ignorePatterns: ["apps/site/public/**", "apps/site/src/**/*.css"],
   trailingComma: "none",
   arrowParens: "avoid",
   printWidth: 100,

@@ -197,7 +197,6 @@ it("reads the post block by block with speech synthesis when it has no audio", a
   // Resuming restarts the paragraph that was cut off.
   await userEvent.click(ui.pause);
   await expect.element(ui.listen).toHaveAttribute("aria-pressed", "false");
-  // Paused, not stopped: the place and the docked bar stay.
   expect(ui.readout()).toBe("2/3¶1×");
   expect(ui.listening()).toBe(true);
   await userEvent.click(ui.listen);
@@ -273,7 +272,6 @@ it("plays the pre-rendered audio, lighting the block and word under the playhead
   expect(ui.block()).toBe("Hello big world.");
   expect(ui.readout()).toBe("0:020:091×");
 
-  // Seeking past the last block keeps the highlight; back to the start lights the title.
   ui.screen.getByRole("slider", { name: "Seek" }).element().focus();
   await userEvent.keyboard("{End}");
   expect(audio.currentTime).toBe(9.5);
@@ -451,7 +449,6 @@ it("restarts the current block at the chosen speed and remembers it", async () =
     .toHaveAttribute("aria-checked", "true");
   await userEvent.keyboard("{Escape}");
 
-  // While paused nothing restarts; the next block plays at the new speed.
   await userEvent.click(ui.pause);
   await ui.pickRate("1×");
   expect(localStorage.getItem("listenRate")).toBe("1");

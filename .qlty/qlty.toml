@@ -1,8 +1,8 @@
 # Qlty CLI and Qlty Cloud read this file. Reference: https://qlty.sh/d/qlty-toml
 #
-# Formatting, linting and unused-code checks run in CI (oxfmt, oxlint, ESLint for .astro,
-# Prettier for .astro, knip), so Qlty runs none of them: its Prettier ignores .astro and
-# disagrees with oxfmt everywhere else, and its ESLint and knip can't load this repo's config.
+# Formatting, linting and unused-code checks run in CI (oxfmt, oxlint, Biome, Prettier for .astro,
+# knip), so Qlty runs none of them: its Prettier ignores .astro and disagrees with oxfmt everywhere
+# else, its knip can't load this repo's config, and its Biome would only repeat CI.
 config_version = "0"
 
 exclude_patterns = ["**/node_modules/**", "**/dist/**", "**/*.d.ts", "**/*.min.*"]

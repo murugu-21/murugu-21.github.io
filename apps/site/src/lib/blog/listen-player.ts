@@ -281,9 +281,7 @@ function audioPlayer(options: AudioPlayerOptions): Player {
   };
 }
 
-// Picks the backend on first use: audio when the post has timings, else
-// speech synthesis, else null. The rate is read after the timings arrive, so a
-// speed picked while loading applies.
+// The rate is read after the timings arrive, so a speed picked while loading applies.
 export async function loadPlayer({
   slug,
   blocks,

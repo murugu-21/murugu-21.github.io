@@ -1,5 +1,3 @@
-// WCAG contrast guards for the design tokens in global.css: sky, card, night
-// and the islands.
 import { describe, expect, it } from "vitest";
 
 import tag from "#src/components/blog/Tag.astro?raw";
@@ -42,7 +40,6 @@ const token = (name: string): string => {
   return m[1].trim();
 };
 
-// A translucent surface composited over an opaque backdrop.
 const over = (rgba: string, backdrop: string): string => {
   const m = /^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/.exec(rgba);
   if (!m) throw new Error(`not an rgba colour: ${rgba}`);
@@ -90,8 +87,7 @@ const card = (() => {
 
 const ink = (name: string) => token(`color-${name}`);
 
-// The opacity of a Tailwind colour utility such as `dark:bg-blue/15` in a
-// component's source, as a 0..1 alpha.
+// `dark:bg-blue/15` in a component's source as 0.15.
 const utilityAlpha = ({ source, utility }: { source: string; utility: string }): number => {
   const alpha = source
     .split(/[\s"'`]+/)
@@ -108,9 +104,7 @@ const rgba = (name: string, alpha: number): string => {
 };
 
 describe("blue-hour light palette", () => {
-  // Body copy, headings, section subtitles and the post blockquote ink can
-  // cross any part of the sky, including its deepest stop. Normal text
-  // (19px, and the 19.2px blockquote) needs 4.5:1.
+  // Body copy can cross any part of the sky, including its deepest stop.
   it.each(["text", "title", "subtitle", "text-light"])(
     "keeps --color-%s readable on the sky's deep stop",
     name => {
@@ -142,25 +136,19 @@ describe("blue-hour light palette", () => {
     expect(contrast(over("rgba(255, 255, 255, 0.8)", fill), fill)).toBeGreaterThanOrEqual(4.5);
   });
 
-  // Chip outlines (tag filter chips, per-post tags, the portfolio's skill
-  // chips) are the boundary of a UI component: 3:1 against the sky they sit on.
   it("shows the chip outline against every sky stop (>= 3:1)", () => {
     for (const stop of stops) {
       expect(contrast(over(token("color-chip-outline"), stop), stop)).toBeGreaterThanOrEqual(3);
     }
   });
 
-  // The blog's hr and table rules. Separators are WCAG-exempt; 2:1 keeps them
-  // reading as lines.
+  // Separators are WCAG-exempt; 2:1 keeps them reading as lines.
   it("keeps the blog's rules visible on every sky stop (>= 2:1)", () => {
     for (const stop of stops) {
       expect(contrast(over(token("color-accent-grey"), stop), stop)).toBeGreaterThanOrEqual(2);
     }
   });
 
-  // The read-aloud highlight: the spoken word (audio-words.ts) is a --color-amber
-  // wash inside its block's own amber wash (blog/[...slug].astro), and body ink
-  // over both must stay AA on the deep stop.
   it("keeps body ink readable through the read-aloud highlight (>= 4.5:1)", () => {
     const blockAlpha = utilityAlpha({ source: post, utility: "**:data-speaking:bg-amber" });
     const wordAlpha = utilityAlpha({ source: audioWords, utility: "data-current-word:bg-amber" });
@@ -175,28 +163,20 @@ describe("blue-hour light palette", () => {
     }
   });
 
-  // A card that barely separates from the sky behind it stops reading as a
-  // panel. Its border carries some of that (not asserted here), but the surface
-  // itself must not vanish.
+  // Below this the card stops reading as a panel; its border (not asserted)
+  // carries the rest.
   it("separates the card surface from the sky it sits on (>= 1.8:1)", () => {
     expect(contrast(card, sky.deep)).toBeGreaterThanOrEqual(1.8);
   });
 
-  // The post's table-of-contents rail (apps/site/src/components/blog/TableOfContents.astro).
-  // Collapsed, each heading is a bar drawn straight on the sky: a UI component
-  // at 3:1 on every stop. The hr/table rule (accent-grey, 2:1 above) is too
-  // faint for that, so the rail has its own translucent navy.
   it("shows the ToC bars against every sky stop (>= 3:1)", () => {
     for (const stop of stops) {
       expect(contrast(over(token("color-toc-bar"), stop), stop)).toBeGreaterThanOrEqual(3);
     }
   });
 
-  // Expanded, the heading labels (14px) sit on the frosted nav surface
-  // (nav-scrolled, the same band the pinned read-aloud bar paints): normal
-  // text, 4.5:1. The rail is pinned to the right edge, which is the sky's
-  // deep stop (the gradient runs `to left`), so only that stop is checked.
-  // text-light is the inactive label, title the active one.
+  // The rail is pinned to the right edge, which is the sky's deep stop (the
+  // gradient runs `to left`), so only that stop is checked.
   it("keeps the ToC labels readable on the frosted surface (>= 4.5:1)", () => {
     const surface = over(token("color-nav-scrolled"), sky.deep);
     for (const name of ["text-light", "title"]) {
@@ -216,7 +196,6 @@ const night = (() => {
 })();
 
 describe("night palette", () => {
-  // Body copy and the blog's links / post titles on the canvas.
   it.each(["text-dark", "blue-light"])("keeps --color-%s readable on the night canvas", name => {
     for (const stop of night) expect(contrast(ink(name), stop)).toBeGreaterThanOrEqual(4.5);
   });
@@ -227,8 +206,6 @@ describe("night palette", () => {
     for (const stop of night) expect(contrast(ink("blue"), stop)).toBeGreaterThanOrEqual(3);
   });
 
-  // Projects.astro's topic chips: blue-light text on a translucent blue fill
-  // over the canvas.
   it("keeps the project topic chips readable at night (>= 4.5:1)", () => {
     const alpha = utilityAlpha({ source: projects, utility: "dark:bg-blue" });
     for (const stop of night) {
@@ -237,8 +214,6 @@ describe("night palette", () => {
     }
   });
 
-  // Secondary text on the homepage and /about: its day side crosses the sky's
-  // deep stop, its night side is translucent white on the canvas.
   it("keeps --color-subtitle-muted readable by day and at night (>= 4.5:1)", () => {
     const { light, dark } = lightDark(ink("subtitle-muted"));
     const day = /^var\(--([\w-]+)\)$/.exec(light)?.[1];
@@ -246,7 +221,6 @@ describe("night palette", () => {
     for (const stop of night) expect(contrast(over(dark, stop), stop)).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The checked tag chip: white text on the box-dark fill (Tag.astro).
   it("keeps white text readable on the checked chip fill (>= 4.5:1)", () => {
     expect(contrast("#ffffff", ink("box-dark"))).toBeGreaterThanOrEqual(4.5);
   });
@@ -259,15 +233,12 @@ describe("night palette", () => {
     }
   });
 
-  // The prose code fence's night edge (Prose.astro).
   it("shows the blog's dark panel edges against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
       expect(contrast(over(token("color-fence-edge-dark"), stop), stop)).toBeGreaterThanOrEqual(3);
     }
   });
 
-  // Tag.astro's count badge at night: blue-light numerals on a blue-light wash
-  // over the canvas; on a checked chip, white on a white wash over the fill.
   it("keeps the tag count badge readable at night (>= 4.5:1)", () => {
     const badge = rgba("blue-light", utilityAlpha({ source: tag, utility: "dark:bg-blue-light" }));
     for (const stop of night) {
@@ -279,16 +250,12 @@ describe("night palette", () => {
     ).toBeGreaterThanOrEqual(4.5);
   });
 
-  // SearchBar.astro's night placeholder: translucent body ink on the dark-bg field.
   it("keeps the search placeholder readable on the night field (>= 4.5:1)", () => {
     const alpha = utilityAlpha({ source: searchBar, utility: "dark:placeholder:text-text-dark" });
     const placeholder = over(rgba("text-dark", alpha), ink("dark-bg"));
     expect(contrast(placeholder, ink("dark-bg"))).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The dark read-aloud highlight: a box-dark wash for the word inside its
-  // block's own box-dark wash. A LINK inside the spoken word (blue-light) is
-  // the tight case; body ink has more room.
   it("keeps a link readable through the dark read-aloud highlight (>= 4.5:1)", () => {
     const blockWash = rgba(
       "box-dark",
@@ -305,10 +272,7 @@ describe("night palette", () => {
     }
   });
 
-  // The ToC rail at night: bars are accent-grey-dark straight on the canvas
-  // (3:1 as a UI component, which also covers the blog's dark hr and table
-  // rules in the same token), labels are text-dark / heading-dark on the dark
-  // frosted band (nav-scrolled-dark) over each stop.
+  // accent-grey-dark is also the blog's dark hr and table rule, so this covers those.
   it("shows the ToC bars against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
       expect(contrast(ink("accent-grey-dark"), stop)).toBeGreaterThanOrEqual(3);
@@ -325,8 +289,6 @@ describe("night palette", () => {
   });
 });
 
-// The typography plugin's text colours (prose-site), each side on its own
-// canvas: by day the sky's deep stop, at night every night stop.
 describe("prose colours", () => {
   const body = (() => {
     const selector = "@utility prose-site {";
@@ -382,7 +344,6 @@ describe.each(["light", "dark"] as const)("%s island tokens", mode => {
   // 3:1 is WCAG 1.4.11 for non-text UI; 4.5:1 is 1.4.3 AA for normal text
   // (the panel header title is 16px semibold).
   it.each([
-    // the ✦ spark and the tool dot on the bg-muted activity row
     { label: "activity-row indicators", fg: "--primary", bg: "--muted", min: 3 },
     { label: "primary button against the panel", fg: "--primary", bg: "--card", min: 3 },
     { label: "primary button label", fg: "--primary-foreground", bg: "--primary", min: 4.5 },

@@ -1,5 +1,3 @@
-// The worker entry: which requests it claims, which fall through to static
-// assets, and how a miss is answered.
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import fc from "fast-check";

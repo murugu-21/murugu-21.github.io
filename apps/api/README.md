@@ -1,33 +1,26 @@
 # Worker
 
-`apps/api/src/server.ts` is the Worker's entrypoint. The public API lives in [`api/`](src/api/README.md) and the MCP server in [`mcp/`](src/mcp/README.md).
+`src/server.ts` is the entry point. The [public API](src/api/README.md) and the [MCP server](src/mcp/README.md) have their own READMEs.
 
-`apps/api/src/content.ts` holds the site content the API, MCP and chat answer from: the dataset, the post list and markdown, `llms.txt`, `blog/llms-full.txt` and `AGENTS.md`. They are bundled at build time from `packages/content/`, `virtual:content/posts` and `packages/content/agent-guide.md` (README.md › Build), not read from the deployed assets. Only `fetch_page` and the 404 pages read `ASSETS`.
+Cloudflare serves pages straight from the built site. The Worker only runs for the routes in `run_worker_first` in `wrangler.jsonc`, and for requests that match no page. If you add a route to `server.ts`, add it there too.
 
-## Routes the Worker owns
+## The 404 page
 
-`run_worker_first` in `wrangler.jsonc` claims `/api/*`, `/openapi.json`, `/mcp*`, `/mcp.json`, `/.well-known/*`, `/agents/*` and `/blog/audio/*`. That keeps API errors in the JSON envelope rather than HTML, and lets generated discovery documents name the host that answered. Keep the list in sync with `apps/api/src/server.ts`.
+A browser gets the normal 404 page. Anything else, like curl or an AI agent, gets a short markdown guide to the site. Both get a real 404 status.
 
-## Discovery documents and the 404
+The Worker also serves `/.well-known/api-catalog` and `/.well-known/mcp.json`, which tell agents where the API and the MCP server are.
 
-These let an agent that has never seen the site find its way in, and recover from a wrong guess.
+## Jarvis
 
-- **`/.well-known/api-catalog`** (`apps/api/src/well-known.ts`): an RFC 9727 API catalogue as an RFC 9264 link set (`application/linkset+json`). It has one entry for the REST API (anchored at `/api/v1`, with `service-desc` pointing to `/openapi.json`, `service-doc` to `/developers/` and `service-meta` to `/api/v1/versions`) and one for the MCP server. Pages advertise it with `Link: rel="api-catalog"` and a `<link>` in the layout head.
-- **`/.well-known/mcp.json`** and **`/mcp.json`**: the MCP `server.json` manifest, following the published schema, with a reverse-DNS `name` (`dev.murugappan/murugappan-dev`), a `description` under the 100-character cap and one `streamable-http` remote. Extras go in `_meta` under a reverse-DNS key. It's generated, so the remote URL names the host that answered.
-- **The 404** (`apps/api/src/not-found.ts`). With `not_found_handling: "none"`, every asset miss reaches the Worker, which negotiates on `Accept`, honouring q-values. `text/html` ranked highest gets the styled page (the blog's under `/blog/`, the site's elsewhere). Anything else, including no `Accept` header or the `*/*` that curl and `fetch` send, gets a short markdown body that points to the sitemap, `llms.txt`, `AGENTS.md`, `/developers/`, the OpenAPI document, the API catalogue, the MCP manifest and the pages that exist. Both carry `Vary: Accept`, the discovery links and a real 404 status.
+Jarvis is the chat widget on every page. The widget is in `apps/site/src/components/chat/`. Each conversation is a `ChatRoom` Durable Object (`src/chat-room.ts`), and replies come from DeepSeek.
 
-`apps/site/public/_redirects` also 301s common guesses (`/docs`, `/api-docs`, `/developer`, `/api-reference`, `/mcp-server`) to `/developers/`.
+To run it locally, put `DEEPSEEK_API_KEY=sk-...` in `apps/api/.dev.vars`, then run `bun run build && bun run preview`. Without the key, the chat turns itself off. Local chats call the real API and cost real money.
 
-## AI chat widget
+Things to know:
 
-Jarvis, an AI concierge on every portfolio and blog page.
-
-- **Server.** `ChatRoom` (`apps/api/src/chat-room.ts`) is an `AIChatAgent` from `@cloudflare/ai-chat`, a Durable Object that keeps the transcript in its own SQLite and streams replies over a WebSocket at `/agents/chat-room/:roomId`. `apps/api/src/server.ts` routes only that socket and its `get-messages` history route, because `routeAgentRequest` alone would also expose `RateLimiter`. The socket is the widget's private channel, not a public API, and `/developers` says so.
-- **Client frames.** `AIChatAgent` trusts the client's transcript. It persists whatever history a request carries, and a tool-result frame can start a model turn. `ChatRoom` wraps the SDK's message handler with an allowlist, `admitFrame` in `apps/api/src/chat-frames.ts`. It admits one new visitor text message (an unused id, `trigger: "submit-message"`), rebuilt on the room's stored history, plus the resume and cancel frames, and drops the rest. Interrupted turns aren't retried, because a retry bills DeepSeek again. `agents` and `@cloudflare/ai-chat` are 0.x and break in minor releases, so they're pinned exactly. Read their changesets before a bump, since the wrapper depends on how `AIChatAgent` installs its handler, and `apps/api/test/chat-room.test.ts` fails if a forged frame gets through.
-- **Model.** DeepSeek `deepseek-flash`, the only provider. The name tracks DeepSeek's current Flash generation, so behaviour can change without a deploy. It authenticates with the `DEEPSEEK_API_KEY` secret. The AI SDK (`streamText` with `@ai-sdk/deepseek`) runs the tool loop. `ai` pins `@ai-sdk/provider` exactly, so the test-only `@ai-sdk/provider` devDependency is pinned to the same version to keep one copy, and `renovate.json` groups the `ai` packages. Thinking is on (`thinking: {type: "enabled"}`) to improve tool selection, and the reasoning never leaves the Worker. There's no `max_tokens` on purpose, because reasoning can use up a cap and leave an empty reply.
-- **Changing the model.** After changing `DEEPSEEK_MODEL`, run `bun run test:live` before pushing. `apps/api/test/live-capture.test.ts` plays a lead-capture conversation through a chat room socket against the live model and fails unless the owner's email carries the visitor's contact detail. Unit tests can't catch a model that claims a capture it never made. It needs `apps/api/.dev.vars` and costs a fraction of a cent.
-- **Loading.** The widget is a React island hydrated with `client:interaction`, a custom directive (`apps/site/src/directives/interaction.ts`, registered in `apps/site/astro.config.ts`) that loads React and the widget on the visitor's first input. A page that's only loaded, such as a Lighthouse run, never downloads it. A tap on the server-rendered launcher while the bundle is loading is remembered, and the panel opens once mounted.
-- **Widget.** `apps/site/src/components/chat/`, which the blog imports too. While a turn is in flight, `ActivityRow` shows a rotating label ("Discombobulating…") with an elapsed counter, then the real action when the reply gains an `activity` part ("Reading blog/…", "Noting your details"). The stream carries only prose, `activity` parts (a tool name and a page path) and `notice` parts (the spend limit or a failure). Tool arguments and results stay on the Worker. The row is `aria-hidden` behind a stable `sr-only` "Jarvis is typing", so the live region stays quiet.
-- **Visitor context.** The Worker reads the country from the WebSocket upgrade (`request.cf.country`, falling back to `CF-IPCountry`) and the IP from `CF-Connecting-IP`, and passes both to the room as headers, since a Durable Object never sees `request.cf`. Client-sent copies are deleted first so they can't be spoofed. `ChatRoom.onConnect` stores them under `visitor_*` keys in Durable Object storage (`ctx.storage.kv`) and upserts one `rooms` row per room into D1 (`apps/api/migrations/0002_rooms.sql`), keeping `first_seen`. IPs are personal data: they stay in the room and that table, never in analytics.
-- **Limits.** 40 messages per day per conversation (`ROOM_DAILY_LIMIT`), 1000 characters per message (`MAX_MESSAGE_LENGTH`). The `RateLimiter` Durable Object reads DeepSeek's `GET /user/balance` (cached 10 minutes, shared by every room, fails open) and stops chat below `BALANCE_RESERVE_USD`. A 402 from a chat call stops every room immediately. A top-up takes effect at the next cache expiry, with no deploy. At about $0.003 per turn, the account balance is the spending cap.
-- **Local dev.** Put `DEEPSEEK_API_KEY=sk-...` in `apps/api/.dev.vars` (gitignored), then run `bun run build && bun run preview` (http://localhost:8787), where the widget connects on the same origin. `bun run dev` also serves the chat on `:8787` without a build; see [Development](../../README.md#development) for what differs. Without the key the chat disables itself. Dev calls hit the real DeepSeek API and are billed. Don't put `OPPORTUNITY_INBOX` there: it would override the var, and the binding's `destination_address` lock rejects any other address.
+- After changing `DEEPSEEK_MODEL`, run `bun run test:live` before pushing. It checks that the new model really emails a lead instead of only saying it did.
+- `ChatRoom` only accepts a small set of message types from the browser.
+- Chat stops when the DeepSeek balance runs low. Each room also has a daily message limit.
+- `agents` and `@cloudflare/ai-chat` are pinned to exact versions because minor releases break them. Read their changelogs before upgrading.
+- Don't put `OPPORTUNITY_INBOX` in `.dev.vars`. It overrides the real value, and the email binding only sends to that one address.
+- The widget downloads on the visitor's first input, so a page that's only loaded never fetches it.

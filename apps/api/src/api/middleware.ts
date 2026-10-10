@@ -29,7 +29,6 @@ function throttled(slot: ReadSlot): Response {
   });
 }
 
-/** The allowance a response reports: the contact policy, the read slot just spent, or the read policy. */
 function allowanceHeaders({
   isContact,
   slot

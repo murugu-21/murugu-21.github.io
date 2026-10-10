@@ -14,7 +14,6 @@ export interface Chunk {
   text: string;
 }
 
-// The spoken blocks of a built post page: its title, then the body.
 export function postBlocks({ slug, html }: { slug: string; html: string }): string[] {
   const { document } = parseHTML(html);
   const title = document.querySelector("[data-post-title]");
@@ -43,7 +42,6 @@ const JobMsg = z.union([z.object({ done: z.literal(true) }), ChunkMsg]);
 export function synthClient({ next, send, close }: JsonLines) {
   return {
     ready: next().then(msg => ReadyMsg.parse(msg)),
-    // Logs each rendered chunk, and throws once the job ends if any failed.
     async runJob(jobPath: string): Promise<void> {
       send(jobPath);
       const errors: string[] = [];

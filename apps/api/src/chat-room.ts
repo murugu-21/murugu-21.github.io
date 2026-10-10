@@ -167,7 +167,6 @@ export class ChatRoom extends AIChatAgent<Env> {
     if (content) this.mirrorMessage("assistant", content);
   }
 
-  // One reply: the model's stream, then the notice (if any) that closes the turn.
   private async reply({ writer, ...call }: TurnCall): Promise<void> {
     writer.write({ type: "start" });
     let wroteText = false;
@@ -184,9 +183,8 @@ export class ChatRoom extends AIChatAgent<Env> {
     writer.write({ type: "finish" });
   }
 
-  // The AI SDK tool loop. Only prose and the running tool's name reach the client: tool
-  // inputs hold contact details, and outputs hold whole pages. Resolves to whether any
-  // prose was written.
+  // Only prose and the running tool's name reach the client: tool inputs hold contact
+  // details, and outputs hold whole pages.
   private async relayModel({ writer, key, page, abortSignal }: TurnCall): Promise<boolean> {
     // Root llms.txt (~900 tokens) lists every post with its title, summary and link.
     // blog/llms-full.txt costs ~20x the tokens and grows per post.
@@ -259,8 +257,6 @@ export class ChatRoom extends AIChatAgent<Env> {
     }
   }
 
-  // Stored under `visitor_*` storage keys and mirrored to one D1 `rooms` row.
-  // A missing value never erases a known one.
   private recordVisitor(request: Request): void {
     const visitor = parseVisitorContext(request.headers);
     if (!visitor) return;
@@ -312,7 +308,6 @@ export class ChatRoom extends AIChatAgent<Env> {
       .one().n;
   }
 
-  // Counts the visitor's newest message toward the room's daily limit and mirrors it to D1.
   private recordUserMessage(): void {
     this.ctx.storage.sql.exec(`INSERT INTO user_messages (created_at) VALUES (?)`, Date.now());
     const latest = this.messages.findLast(m => m.role === "user");

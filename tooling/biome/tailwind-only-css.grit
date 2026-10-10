@@ -1,0 +1,35 @@
+language css;
+
+// Stylesheets hold Tailwind configuration, not hand-written rules, and .astro <style> blocks hold
+// neither. A style rule may only sit inside @utility, @theme (keyframes), @custom-variant or, in
+// global.css, `@layer base`. @font-face and @page are allowed because Tailwind can't write them.
+predicate use_tailwind($span) {
+  register_diagnostic(span=$span, message="Style with Tailwind: utilities in the markup, or an @utility or @theme token in apps/site/src/styles/global.css.")
+}
+
+predicate in_global_css() {
+  $filename <: r".*/apps/site/src/styles/global\.css"
+}
+
+or {
+  CssQualifiedRule() as $rule where {
+    not $rule <: within CssAtRule(),
+    use_tailwind(span=$rule)
+  },
+  CssAtRule(rule=$inner) as $rule where {
+    not $rule <: within or { CssDeclarationOrRuleBlock(), CssDeclarationOrAtRuleBlock(), CssRuleBlock() },
+    or {
+      $filename <: r".*\.astro",
+      not $inner <: or { CssImportAtRule(), TwPluginAtRule(), TwSourceAtRule(), TwThemeAtRule(), TwUtilityAtRule(), TwCustomVariantAtRule(), CssFontFaceAtRule(), CssPageAtRule() }
+    },
+    not and { in_global_css(), $rule <: r"@layer base\b[\s\S]*" },
+    use_tailwind(span=$rule)
+  },
+  TwApplyAtRule() as $rule where {
+    register_diagnostic(span=$rule, message="No @apply: when utilities repeat, extract a component (Tailwind › Managing duplication).")
+  },
+  TwUtilityAtRule() as $rule where {
+    not in_global_css(),
+    register_diagnostic(span=$rule, message="Every @utility lives in apps/site/src/styles/global.css, the one stylesheet to review.")
+  }
+}

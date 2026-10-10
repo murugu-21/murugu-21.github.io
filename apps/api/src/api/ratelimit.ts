@@ -1,5 +1,4 @@
-// Counts requests against the quotas in packages/contracts/api/quotas.ts and writes the headers:
-// the draft fields plus the de-facto X-RateLimit-* trio most tooling reads (`-Reset` is delta-seconds).
+// Writes the draft RateLimit fields plus the de-facto X-RateLimit-* trio most tooling reads (`-Reset` is delta-seconds).
 //   RateLimit: "name";r=<remaining>;t=<seconds to reset>  (the policy closest to exhaustion)
 
 import {
@@ -19,7 +18,6 @@ function rateLimitField({ quota, remaining, resetSeconds }: Reported): string {
   return `"${quota.name}";r=${clamp(remaining)};t=${clamp(resetSeconds)}`;
 }
 
-/** The draft fields plus the de-facto `X-RateLimit-*` trio, reporting one quota. */
 function rateLimitHeaders(policy: string, reported: Reported): Record<string, string> {
   return {
     "RateLimit-Policy": policy,
@@ -58,7 +56,6 @@ function prune(now: number): void {
   }
 }
 
-/** Spends one read slot for `client` and reports what is left. */
 export function takeReadSlot(client: string, now = Date.now()): ReadSlot {
   const windowMs = READ_QUOTA.windowSeconds * 1000;
   let window = windows.get(client);
@@ -108,7 +105,6 @@ export function globalLimiter(env: Env) {
   return env.RateLimiter.get(env.RateLimiter.idFromName("global"));
 }
 
-/** Seconds until the daily contact allowances reset (00:00 UTC). */
 export function secondsUntilUtcMidnight(now = new Date()): number {
   const midnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1);
   return Math.max(1, Math.ceil((midnight - now.getTime()) / 1000));

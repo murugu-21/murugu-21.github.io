@@ -1,6 +1,14 @@
 {
-	"plugins": ["prettier-plugin-astro"],
+	"plugins": ["prettier-plugin-astro", "prettier-plugin-tailwindcss"],
 	"trailingComma": "none",
 	"arrowParens": "avoid",
-	"printWidth": 100
+	"printWidth": 100,
+	"tailwindStylesheet": "./apps/site/src/styles/global.css",
+	"tailwindFunctions": ["cn", "cva"],
+	"overrides": [
+		{
+			"files": ["apps/site/src/pages/resume.astro", "apps/site/src/components/resume/**/*.astro"],
+			"options": { "tailwindStylesheet": "./apps/site/src/styles/resume.css" }
+		}
+	]
 }

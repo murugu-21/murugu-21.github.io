@@ -422,7 +422,6 @@ it("closing by button, launcher or Escape keeps the conversation, and focus retu
   await launcher.click();
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument();
 
-  // Escape closes it too, and hands focus back to the launcher.
   await launcher.click();
   await expect.element(page.getByText("Remember me")).toBeVisible();
   await userEvent.keyboard("{Escape}");

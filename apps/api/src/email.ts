@@ -8,7 +8,6 @@ export type EmailLike = {
   send(msg: { to: string; from: string; subject: string; text: string }): Promise<unknown>;
 };
 
-/** The configured relay and inbox, or null when either is missing. */
 export function contactMailer(env: Env): { email: EmailLike; inbox: string } | null {
   // wrangler.jsonc always sets both. The check stays so a misconfigured
   // env answers "not configured" instead of throwing.

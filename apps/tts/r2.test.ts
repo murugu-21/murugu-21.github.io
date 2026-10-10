@@ -21,8 +21,7 @@ describe("r2Store", () => {
       r2.put({ key, file, contentType: "application/json" });
       expect(r2.get("blog/breeze/some-slug.json")?.toString()).toBe('{"blocks":[]}');
 
-      // Any other failure (here, a persist dir that is a file) throws rather than
-      // reading as "nothing there yet".
+      // A persist dir that is a file fails for a reason other than absence.
       expect(() => r2Store({ persistTo: file }).get(key)).toThrow("wrangler r2 object get");
     }
   );

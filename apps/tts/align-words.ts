@@ -93,7 +93,6 @@ export function alignWords(
     i = j;
   }
 
-  // Monotonic: no word may start before the previous one ends.
   for (let k = 1; k < out.length; k++) {
     if (out[k].s < out[k - 1].e) out[k].s = out[k - 1].e;
     if (out[k].e < out[k].s) out[k].e = out[k].s;
