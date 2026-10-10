@@ -2,7 +2,11 @@
 
 `src/server.ts` is the entry point. The [public API](src/api/README.md) and the [MCP server](src/mcp/README.md) have their own READMEs.
 
-Cloudflare serves pages straight from the built site. The Worker only runs for the routes in `run_worker_first` in `wrangler.jsonc`, and for requests that match no page. If you add a route to `server.ts`, add it there too.
+Cloudflare serves assets straight from the built site. The Worker only runs for the routes in `run_worker_first` in `wrangler.jsonc`, and for requests that match no file. If you add a route to `server.ts`, add it there too.
+
+## Markdown pages
+
+The Worker also runs for every page (directory) URL, such as `/about/`. A client whose `Accept` ranks `text/markdown` above HTML gets the page's `index.md`. Everyone else, and every page without an `index.md`, gets the HTML. An HTML page that has an `index.md` names it in a `Link: <…/index.md>; rel="alternate"; type="text/markdown"` header. The Worker checks for that file while it fetches the page, so the check itself adds no wait. Both answers carry `Vary: Accept`. Asset URLs all end in a filename, so they never match `/*/` and never run the Worker first.
 
 ## The 404 page
 

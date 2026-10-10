@@ -7,30 +7,19 @@ import LinkRow from "#src/components/LinkRow.astro";
 import Prose from "#src/components/Prose.astro";
 import ScrollTop from "#src/components/ScrollTop.astro";
 import {
+  aboutLinks,
+  currentEmployer,
   greeting,
   workExperiences,
   skillsCategories,
   educationInfo,
-  openSourceCard,
-  socialMediaLinks
+  openSourceCard
 } from "@murugappan/content/portfolio.ts";
 import { resumeContact } from "@murugappan/content/resume.ts";
 import { groupByCompany } from "@murugappan/content/experience.ts";
 
 // Groups by *consecutive* company, so returning to an employer stays two entries.
 const stints = groupByCompany(workExperiences);
-
-const links = [
-  { label: "GitHub", href: socialMediaLinks.github },
-  { label: "LinkedIn", href: socialMediaLinks.linkedin },
-  { label: "X / Twitter", href: socialMediaLinks.twitter },
-  { label: "Blog", href: "/blog/" },
-  { label: "Resume (PDF)", href: greeting.resumePath },
-  {
-    label: `Email: ${socialMediaLinks.gmail}`,
-    href: `mailto:${socialMediaLinks.gmail}`
-  }
-];
 ---
 
 <Layout
@@ -43,10 +32,10 @@ const links = [
     <p>{greeting.subTitle}</p>
     <p class="text-subtitle-muted">
       {resumeContact.title} · {resumeContact.location} · currently at{" "}
-      <a href="https://www.medmehealth.com">MedMe Health</a>
+      <a href={currentEmployer.url}>{currentEmployer.name}</a>
     </p>
 
-    <LinkRow links={links} />
+    <LinkRow links={aboutLinks} />
 
     <section>
       <h2>Experience</h2>

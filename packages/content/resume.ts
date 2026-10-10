@@ -21,3 +21,6 @@ export const resumeContact: ResumeContact = {
   github: socialMediaLinks.github,
   site: SITE_ORIGIN
 };
+
+/** A URL as the resume prints it, without the scheme or a trailing slash. */
+export const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");

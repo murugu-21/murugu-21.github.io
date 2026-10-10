@@ -47,11 +47,9 @@ export async function fetchSitePage(assets: AssetsLike, rawUrl: string): Promise
     return `Only pages on ${SITE_HOST} can be fetched.`;
   }
 
-  // A blog page's index.md is its own markdown. Elsewhere it is the site summary, not the page.
-  if (/^\/blog(\/|$)/.test(url.pathname)) {
-    const markdown = await readAsset(assets, `${url.pathname.replace(/\/$/, "")}/index.md`);
-    if (markdown) return markdown.slice(0, MAX_CHARS);
-  }
+  // A page's index.md is its markdown rendition, cleaner than text stripped from the HTML.
+  const markdown = await readAsset(assets, `${url.pathname.replace(/\/$/, "")}/index.md`);
+  if (markdown) return markdown.slice(0, MAX_CHARS);
 
   const body = await readAsset(assets, url.pathname);
   if (body === null) {

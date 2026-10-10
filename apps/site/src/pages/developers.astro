@@ -602,9 +602,13 @@ Retry-After: 39122</code></pre>
         </tbody>
       </table>
       <p>
-        The home, about and blog pages and every post have a markdown version at{" "}
+        The home, about, resume and blog pages and every post have a markdown version at{" "}
         <code>index.md</code> under the page's path, such as{" "}
-        <a href="/about/index.md">/about/index.md</a>.
+        <a href="/about/index.md">/about/index.md</a>. The page's own URL returns the same markdown
+        when <code>Accept</code> ranks <code>text/markdown</code> above <code>text/html</code>, by
+        q-value and then by order. Other pages and other <code>Accept</code> headers get the HTML,
+        whose <code>Link</code> header names the markdown version as <code>rel="alternate"</code>{" "}
+        when there is one.
       </p>
     </section>
 
