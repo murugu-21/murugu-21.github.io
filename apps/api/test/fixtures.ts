@@ -12,10 +12,6 @@ export const NOT_FOUND_HTML = "<!doctype html><h1>404</h1>";
 /** The blog's styled 404 page (blog/404/index.html in the build). */
 export const BLOG_NOT_FOUND_HTML = "<!doctype html><h1>SDE Journey: 404</h1>";
 
-// Served as text/html, like the real binding does for .html files and the
-// directory-index paths html_handling resolves to them.
-const HTML_PATHS = new Set(["/404", "/blog/404/"]);
-
 /** Overriding a path with null makes the assets binding 404 it. */
 function siteFiles(overrides: Record<string, string | null> = {}): Record<string, string | null> {
   return {
@@ -48,17 +44,18 @@ export function fakeAssets(overrides: Record<string, string | null> = {}): Fetch
     const body = files[path];
     // A miss is an empty 404, which is what the real binding returns under
     // assets.not_found_handling: "none" (see wrangler.jsonc).
-    return Promise.resolve(
-      body == null
-        ? new Response(null, { status: 404 })
-        : new Response(body, {
-            status: 200,
-            headers:
-              path.endsWith(".html") || HTML_PATHS.has(path)
-                ? { "Content-Type": "text/html; charset=utf-8" }
-                : undefined
-          })
-    );
+    if (body == null) return Promise.resolve(new Response(null, { status: 404 }));
+
+    const etag = `"${path}"`;
+    const ifNoneMatch = input instanceof Request ? input.headers.get("If-None-Match") : null;
+    if (ifNoneMatch === etag)
+      return Promise.resolve(new Response(null, { status: 304, headers: { ETag: etag } }));
+
+    const headers = new Headers({ ETag: etag });
+    // As the real binding does for .html files and the paths html_handling resolves to them.
+    if (path === "/404" || path.endsWith("/") || path.endsWith(".html"))
+      headers.set("Content-Type", "text/html; charset=utf-8");
+    return Promise.resolve(new Response(body, { status: 200, headers }));
   });
 }
 

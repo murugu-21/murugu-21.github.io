@@ -1,9 +1,7 @@
-// /about/ as markdown: the same site summary as ../index.md.ts.
-import { siteLlmsText } from "@murugappan/content/llms.ts";
-import { posts } from "virtual:content/posts";
+import { aboutMarkdown } from "@murugappan/content/profile-markdown.ts";
 
 import { markdownResponse } from "#src/lib/responses.ts";
 
 export function GET() {
-  return markdownResponse(siteLlmsText(posts));
+  return markdownResponse(aboutMarkdown());
 }

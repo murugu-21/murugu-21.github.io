@@ -1,4 +1,4 @@
-import { assert, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, describe, expect, it, vi } from "vitest";
 
 import { blogPost, setPosts } from "#src/lib/blog/fixtures.ts";
 import { GET as aboutMarkdown } from "./about/index.md.ts";
@@ -12,28 +12,112 @@ import {
 } from "./blog/[slug]/index.md.ts";
 import { GET as homeMarkdown } from "./index.md.ts";
 import { GET as siteLlms } from "./llms.txt.ts";
+import { GET as resumeMarkdown } from "./resume/index.md.ts";
 
 vi.mock("astro:content", async () => (await import("#src/lib/blog/fixtures.ts")).astroContentMock);
+
+const buildEnv = vi.hoisted(
+  (): {
+    GITHUB_TOKEN: string;
+    REQUIRE_GITHUB_PROFILE: string;
+    RESUME_PHONE: string | undefined;
+  } => ({
+    GITHUB_TOKEN: "tok",
+    REQUIRE_GITHUB_PROFILE: "0",
+    RESUME_PHONE: undefined
+  })
+);
+vi.mock("astro:env/server", () => buildEnv);
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  buildEnv.RESUME_PHONE = undefined;
+});
 
 const COIN_CHANGE_LINE =
   "- [Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/): Find minimum number of coins that make a given value.";
 
 describe("markdown renditions of the site", () => {
-  it("serve the same summary at /llms.txt, /index.md and /about/index.md", async () => {
+  it("serve the same summary at /llms.txt and /index.md", async () => {
     const llms = siteLlms();
     const home = homeMarkdown();
-    const about = aboutMarkdown();
 
     expect(llms.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
     expect(home.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
-    expect(about.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
     const text = await llms.text();
     expect(text).toMatch(/^# Murugappan M, Full Stack Engineer\n/);
     expect(text).toContain(`\n## Blog posts\n`);
     expect(text).toContain(`\n${COIN_CHANGE_LINE}\n`);
     expect(text).not.toContain("js-closure");
     expect(await home.text()).toBe(text);
-    expect(await about.text()).toBe(text);
+  });
+
+  it("render the about page at /about/index.md, with absolute links", async () => {
+    const res = aboutMarkdown();
+    const text = await res.text();
+
+    expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
+    expect(text).toMatch(/^# About Murugappan M\n\nI build B2B SaaS /);
+    expect(text).toContain("\n- [Blog](https://murugappan.dev/blog/)\n");
+    expect(text).toContain(
+      "\n### HyperVerge\n\nAugust 2022 – December 2025 · Bangalore\n\n#### SDE 2\n\nApril 2025 – December 2025\n"
+    );
+    expect(text).toContain("\n- **Languages:** TypeScript, Python, SQL, Bash, YAML\n");
+  });
+
+  it("render the resume at /resume/index.md, with the phone only when it is set", async () => {
+    vi.stubGlobal("fetch", async () => Response.json({ data: { user: null } }));
+    const contactLine = async () => (await (await resumeMarkdown()).text()).split("\n")[4];
+
+    const res = await resumeMarkdown();
+    const text = await res.text();
+    expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
+    expect(text).toMatch(/^# Murugappan M\n\nFull Stack Engineer\n\nBangalore, India \| /);
+    expect(text).toContain("\n### MedMe Health\n\nDecember 2025 – Present · Canada (remote)\n");
+    expect(text).toContain("\n- **Languages:** TypeScript, Python, SQL, Bash, YAML\n");
+    expect(await contactLine()).toBe(
+      "Bangalore, India | [murugu2001@gmail.com](mailto:murugu2001@gmail.com) | [www.linkedin.com/in/murugappan-m-56920a192](https://www.linkedin.com/in/murugappan-m-56920a192/) | [github.com/murugu-21](https://github.com/murugu-21) | [murugappan.dev](https://murugappan.dev)"
+    );
+
+    buildEnv.RESUME_PHONE = "+91 98765 43210";
+    expect(await contactLine()).toMatch(
+      /^Bangalore, India \| \+91 98765 43210 \| \[murugu2001@gmail\.com\]/
+    );
+  });
+
+  it("list the pinned repos that have a description under the resume's Projects", async () => {
+    const repo = {
+      url: "https://github.com/murugu-21/x",
+      forkCount: 0,
+      diskUsage: 1,
+      primaryLanguage: null,
+      stargazers: { totalCount: 0 }
+    };
+    vi.stubGlobal("fetch", async () =>
+      Response.json({
+        data: {
+          user: {
+            pinnedItems: {
+              edges: [
+                {
+                  node: {
+                    ...repo,
+                    name: "portfolio",
+                    description: "This site.",
+                    homepageUrl: "https://murugappan.dev/"
+                  }
+                },
+                { node: { ...repo, name: "undescribed", description: null, homepageUrl: null } }
+              ]
+            }
+          }
+        }
+      })
+    );
+
+    expect(await (await resumeMarkdown()).text()).toContain(
+      "\n## Projects\n\n### portfolio\n\n[murugappan.dev](https://murugappan.dev/)\n\nThis site.\n\n## Education\n"
+    );
   });
 
   it("lists the posts at /blog/index.md and /blog/llms.txt", async () => {

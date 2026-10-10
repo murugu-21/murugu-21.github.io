@@ -2,10 +2,11 @@
 // fetches the 404 page itself.
 
 import type { Context } from "hono";
-import { accepts } from "hono/accepts";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
+
+import { ranksAbove } from "./accept";
 
 const ENTRY_POINTS: ReadonlyArray<[string, string]> = [
   ["/sitemap.xml", "Every indexable URL on this site"],
@@ -90,23 +91,23 @@ export async function serveAsset(c: Context<{ Bindings: Env }>): Promise<Respons
   const response = await c.env.ASSETS.fetch(request);
   if (response.status !== 404) return response;
 
-  const negotiated = accepts(c, {
-    header: "Accept",
-    supports: ["text/markdown", "text/html", "application/xhtml+xml"],
-    default: "text/markdown"
+  const wantsHtml = ranksAbove(c.req.header("Accept"), {
+    preferred: ["text/html", "application/xhtml+xml"],
+    others: ["text/markdown"]
   });
-  return negotiated === "text/markdown"
-    ? markdownNotFound(new URL(request.url).pathname, request.method)
-    : htmlNotFound(request, await notFoundPage(request, c.env.ASSETS));
+  return wantsHtml
+    ? htmlNotFound(request, await notFoundPage(request, c.env.ASSETS))
+    : markdownNotFound(new URL(request.url).pathname, request.method);
 }
 
 // The blog's 404 under /blog/, the site's elsewhere. Fetched as GET (the HEAD
 // body is dropped later) and re-statused 404, since the binding answers it 200.
+// Unconditionally, or a cached copy's ETag would turn it into an empty 304.
 async function notFoundPage(request: Request, assets: Fetcher): Promise<Response> {
   const { pathname } = new URL(request.url);
   const page = pathname === "/blog" || pathname.startsWith("/blog/") ? "/blog/404/" : "/404";
-  const res = await assets.fetch(
-    new Request(new URL(page, request.url), { headers: request.headers })
-  );
+  const headers = new Headers(request.headers);
+  headers.delete("If-None-Match");
+  const res = await assets.fetch(new Request(new URL(page, request.url), { headers }));
   return new Response(res.body, { status: 404, headers: res.headers });
 }

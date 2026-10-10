@@ -124,3 +124,12 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
     topics: (repositoryTopics?.nodes ?? []).map(t => t.topic.name)
   }));
 }
+
+type DescribedRepo = GithubRepo & { description: string };
+
+/** The pinned repos the resume lists: those with a description to show. */
+export async function fetchResumeProjects(): Promise<DescribedRepo[]> {
+  return (await fetchPinnedRepos()).filter(
+    (repo): repo is DescribedRepo => (repo.description ?? "") !== ""
+  );
+}

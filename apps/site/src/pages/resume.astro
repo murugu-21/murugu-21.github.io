@@ -8,18 +8,17 @@ import {
   skillsCategories,
   educationInfo
 } from "@murugappan/content/portfolio.ts";
-import { resumeContact } from "@murugappan/content/resume.ts";
+import { displayUrl, resumeContact } from "@murugappan/content/resume.ts";
 import { groupByCompany } from "@murugappan/content/experience.ts";
-import { fetchPinnedRepos } from "#src/lib/github.ts";
+import { fetchResumeProjects } from "#src/lib/github.ts";
 // A webfont, so the CF build image's Chromium prints the same glyphs as local Chrome.
 import { Font } from "astro:assets";
 import "#src/styles/resume.css";
 import ResumeSection from "#src/components/resume/ResumeSection.astro";
 
-const repos = (await fetchPinnedRepos()).filter(r => r.description);
+const repos = await fetchResumeProjects();
 // Groups by *consecutive* company, so returning to an employer stays two blocks.
 const stints = groupByCompany(workExperiences);
-const displayUrl = (url: string) => url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 ---
 
 <!doctype html>

@@ -26,6 +26,18 @@ export const socialMediaLinks = {
   rss: "https://murugappan.dev/blog/rss.xml"
 };
 
+export const currentEmployer = { name: "MedMe Health", url: "https://www.medmehealth.com" };
+
+/** The about page's link row. Site paths are relative. */
+export const aboutLinks = [
+  { label: "GitHub", href: socialMediaLinks.github },
+  { label: "LinkedIn", href: socialMediaLinks.linkedin },
+  { label: "X / Twitter", href: socialMediaLinks.twitter },
+  { label: "Blog", href: "/blog/" },
+  { label: "Resume (PDF)", href: greeting.resumePath },
+  { label: `Email: ${socialMediaLinks.gmail}`, href: `mailto:${socialMediaLinks.gmail}` }
+];
+
 // schema.org Person.sameAs.
 export const sameAs = [
   socialMediaLinks.github,

@@ -35,4 +35,6 @@ Things to know:
 
 `/resume` is a print-styled page built from the same content as the site. After every build, `scripts/generate-resume.ts` prints it to `resume.pdf` with headless Chromium. The build fails if the PDF's text can't be extracted, since job sites need to parse it.
 
-The phone number isn't in the repo. Set `RESUME_PHONE` to add it.
+`/resume/index.md` is the same resume as markdown, built by `packages/content/profile-markdown.ts`, which also builds `/about/index.md`.
+
+The phone number isn't in the repo. Set `RESUME_PHONE` to add it to the page, the PDF and the markdown.

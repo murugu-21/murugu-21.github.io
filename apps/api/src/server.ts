@@ -6,6 +6,7 @@ import { audio } from "./audio";
 import { ChatRoom } from "./chat-room";
 import { mcp } from "./mcp";
 import { serveAsset } from "./not-found";
+import { servePage } from "./pages";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "./visitor";
 import { RateLimiter } from "./rate-limiter";
 import { mcpManifest, wellKnown } from "./well-known";
@@ -60,7 +61,9 @@ app.route("/mcp", mcp);
 
 app.route("/blog/audio", audio);
 
-// Asset and route misses: a content-negotiated 404 (pages bypass the Worker).
+// Directory URLs are pages and may answer markdown (Hono routes HEAD here too).
+// Anything else is an asset or route miss: a content-negotiated 404.
+app.get("*", c => (c.req.path.endsWith("/") ? servePage(c) : serveAsset(c)));
 app.all("*", c => serveAsset(c));
 
 export default app;
