@@ -181,7 +181,6 @@ type Assertion = {
   onElement: boolean;
 };
 
-// `expect`, `expect.poll` or `expect.element`, the last two returning the variant's name.
 function expectVariant(callee: Node): "expect" | "poll" | "element" | undefined {
   if (callee.type === "Identifier") return callee.name === "expect" ? "expect" : undefined;
   if (callee.type !== "MemberExpression" || callee.object.type !== "Identifier") return undefined;

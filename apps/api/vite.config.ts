@@ -1,5 +1,4 @@
-// Bundles the Worker. The client build's output is the Worker's assets
-// directory, so it points at the site's dist/ and leaves Astro's output as it is.
+// Not in the root vite.config.ts, whose plugins would load into the workerd test pool.
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite-plus";
 
@@ -10,6 +9,8 @@ export default defineConfig({
   // The plugin builds the client, and keeps the assets binding, only when publicDir has files.
   publicDir: "../site/public",
   environments: {
+    // The client build only feeds the Worker its assets, so it points at the site's dist/ without
+    // emptying it.
     client: { build: { outDir: "../site/dist", emptyOutDir: false, copyPublicDir: false } },
     // Vite leaves server environments unminified. Source maps (which the plugin uploads on
     // deploy) stay out of the client build, whose output is public. keepNames because the

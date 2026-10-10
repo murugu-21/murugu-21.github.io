@@ -1,5 +1,3 @@
-// The API's contract as data: the router, the version catalogue and the OpenAPI
-// document, checked against each other.
 import { assert, describe, expect, it } from "vitest";
 
 import { api } from "#src/api/index.ts";

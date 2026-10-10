@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Rules for coding agents working in this repo. (`packages/content/agent-guide.md` is a different file: the public guide served at murugappan.dev/AGENTS.md for agents using the site's API.) `README.md` covers the architecture and tooling; read it before changing the build, the Worker or the dev setup. Each feature folder has its own `README.md`, listed under "Feature docs" there; read the one for the area you touch.
+Rules for coding agents working in this repo. The agent guide that the site serves at `/AGENTS.md` is a different file, `packages/content/agent-guide.md`. `README.md` covers the architecture and tooling. Read it before changing the build, the Worker or the dev setup, and read the feature `README.md` for the area you touch (listed under "Where things are" there).
 
 ## Comments
 
@@ -36,7 +36,7 @@ Five shapes that still pass when every imported function returns `undefined`:
 
 Keep a test of a relation across a table's rows (a key present in two tables, a parent that exists), and a compile-time check in a `*.test-d.ts` file.
 
-`tests/observe-behaviour` (`tooling/oxlint/test-behaviour.ts`) flags the direct forms of each shape. Per test, it flags shapes 1 to 3, a constant read straight into `expect` and a test that never touches the code under test. Per assertion, it flags an expected value built from data the code under test exports, such as `toBe(LIMIT)` or `toEqual(TOOLS.map(…))`. It also flags a member read by string key (`instance["privateMethod"]`), which skips `private`; drive the code through its public API instead. In a browser test, rendering `<Component />` counts as calling it, and a positive state matcher on `expect.element(locator)` (`toBeVisible`, `toBeEnabled` and the like) counts as an observation, since it fails when nothing renders. Because a helper import counts as touching the code, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule with a reason, on the reported line (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`) or around the whole test (`/* oxlint-disable tests/observe-behaviour -- <why> */` … `/* oxlint-enable tests/observe-behaviour */`). The reviewers check what it can't see.
+`tests/observe-behaviour` (`tooling/oxlint/test-behaviour.ts`) flags the direct forms of each shape. Per test, it flags shapes 1 to 3, a constant read straight into `expect` and a test that never touches the code under test. Per assertion, it flags an expected value built from data the code under test exports, such as `toBe(LIMIT)` or `toEqual(TOOLS.map(…))`. It also flags a member read by string key (`instance["privateMethod"]`), which skips `private`. Drive the code through its public API instead. In a browser test, rendering `<Component />` counts as calling it, and a positive state matcher on `expect.element(locator)` (`toBeVisible`, `toBeEnabled` and the like) counts as an observation, since it fails when nothing renders. Because a helper import counts as touching the code, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule with a reason, on the reported line (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`) or around the whole test (`/* oxlint-disable tests/observe-behaviour -- <why> */` … `/* oxlint-enable tests/observe-behaviour */`). The reviewers check what it can't see.
 
 ## Code style
 
@@ -44,7 +44,7 @@ Think about readability and elegance before writing, not after. Every rule a lin
 
 - Write new code in TypeScript.
 - **Guard clauses.** Return or throw early on edge cases so the main path isn't nested inside `if`/`else`.
-- **Named parameters (an options object).** Lint caps functions at 3 parameters; below that, a new or changed function whose parameters share a type also takes a single destructured object (`fn({ from, to })`, not `fn(from, to)`) so call sites can't silently swap them.
+- **Named parameters (an options object).** Lint caps functions at 3 parameters. Below that, a new or changed function whose parameters share a type also takes a single destructured object (`fn({ from, to })`, not `fn(from, to)`) so call sites can't silently swap them.
 - **No `as` casts** (lint allows only `as const`). Fix the type instead: `satisfies` to check a value against a type without widening it, a type guard or `in` check to narrow, zod for parsed or untrusted data.
 - **No `any` leaks.** Type-aware lint rejects annotating an `any` (`const x: T = JSON.parse(...)`, `await res.json()`). Take it as `unknown` and narrow it. Lint can't catch two cases, so check them by hand: `.astro` scripts (type-aware rules don't run there), and the Workers generics `res.json<T>()` / `storage.get<T>()`, which are casts in disguise (call them without a type argument and parse the result).
 - **DRY and YAGNI.** Extract a helper once logic repeats, not before. Don't add options, abstractions or config for needs that don't exist yet.
@@ -60,7 +60,7 @@ Agents tend to hand-roll what a library or platform feature already does. Before
 
 ## Never
 
-- Stop or kill a dev server you didn't start. The user's `bun run dev` (astro dev and the Worker's vp dev) and `bun run preview` are shared; stop only the ones your own session spun up.
+- Stop or kill a dev server you didn't start. The user's `bun run dev` (astro dev and the Worker's vp dev) and `bun run preview` are shared. Stop only the ones your own session spun up.
 - Bypass a failing gate: no `--no-verify`, skipped tests, or loosened lint rules to get green. Fix the cause.
 
 ## Definition of done

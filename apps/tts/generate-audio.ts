@@ -9,17 +9,6 @@
 //   bun run audio --dry-run      # extract + hash only, no synthesis/upload
 //   bun run audio --patch react  # re-synthesize only the changed paragraphs
 //   bun run audio --upload-voice # push .voice/* to R2 once
-//
-// Per post (render.ts):
-// 1. speechBlocks, the same extractor the page uses, pulls text from the built HTML.
-// 2. packSentences splits it into chunks of at most 300 characters.
-// 3. synth.py (Breeze TTS 2 via mlx-audio) renders each chunk, and ffmpeg applies atempo.
-// 4. assemble() joins the chunks sample-accurately and loudnorm levels the result.
-// 5. The 64 kbps MP3 and its timing JSON go to R2.
-//
-// --patch keeps the MP3 in R2 and splices in only the blocks whose text
-// changed, each loudness-levelled on its own. Run `bun run audio:align
-// <slug> --force` afterwards, since the changed blocks lose their words.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -103,7 +92,6 @@ async function renderAll() {
   }
 
   await using worker = options["dry-run"] ? null : synthClient(startJsonLines(PYTHON, [WORKER]));
-  // Null on a dry run.
   let synth: Synth | null = null;
   if (worker) {
     const ready = await worker.ready;

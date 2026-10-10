@@ -1,6 +1,4 @@
-// Shared fixtures for the Worker tests: the built pages the ASSETS binding serves, the bindings
-// the pool leaves out, and the chat room socket helpers. Site content comes from the real sources,
-// bundled through virtual:content/posts as in production.
+// Site content comes from the real sources, bundled through virtual:content/posts as in production.
 import { env } from "cloudflare:workers";
 import { assert, expect, vi } from "vitest";
 import { z } from "zod";
@@ -27,7 +25,6 @@ function siteFiles(overrides: Record<string, string | null> = {}): Record<string
   };
 }
 
-/** Accepts a string, URL or Request, like the real ASSETS binding. */
 function assetPath(input: RequestInfo | URL): string {
   if (typeof input === "string") return new URL(input).pathname;
   if (input instanceof URL) return input.pathname;
@@ -72,11 +69,9 @@ export type TestEnvOptions = {
   email?: SendEmail;
 };
 
-/** An EMAIL binding that records every message instead of sending it. */
 export function recordingEmail(): { email: SendEmail; sent: EmailMessageBuilder[] } {
   const sent: EmailMessageBuilder[] = [];
   const send = async (message: EmailMessage | EmailMessageBuilder) => {
-    // the worker only sends builders; a raw EmailMessage has no subject
     if (!("subject" in message)) throw new Error("recordingEmail only records message builders");
     sent.push(message);
     return { messageId: `test-${sent.length}` };
@@ -84,7 +79,6 @@ export function recordingEmail(): { email: SendEmail; sent: EmailMessageBuilder[
   return { email: { send }, sent };
 }
 
-/** The visitor_* values a ChatRoom keeps in its storage. */
 export function visitorStorage(instance: ChatRoom): Record<string, unknown> {
   return Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" }));
 }
@@ -107,7 +101,6 @@ export function testEnv(options: TestEnvOptions = {}): Env {
   };
 }
 
-/** A response's JSON body, checked against `schema`. */
 export async function readJson<S extends z.ZodType>(res: Response, schema: S): Promise<z.infer<S>> {
   return schema.parse(await res.json());
 }

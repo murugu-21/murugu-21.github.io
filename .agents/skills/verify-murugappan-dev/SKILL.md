@@ -5,7 +5,7 @@ description: Drive murugappan.dev (Astro site plus Cloudflare Worker) the way a 
 
 # Verify murugappan.dev
 
-Two surfaces. Visitors use the web pages (portfolio, blog, Jarvis chat widget) in a browser. Agents and developers use the Worker's HTTP routes (`/api/v1`, `/mcp`, discovery documents, the negotiated 404). Both come from one `wrangler dev` running the built Worker (`apps/api/dist-worker/`) over the built site (`apps/site/dist/`).
+The site has two surfaces. Visitors use the web pages (portfolio, blog, Jarvis chat widget) in a browser. Agents and developers use the Worker's HTTP routes (`/api/v1`, `/mcp`, discovery documents, the negotiated 404). Both come from one `wrangler dev` running the built Worker (`apps/api/dist-worker/`) over the built site (`apps/site/dist/`).
 
 Drive the browser with the chrome-devtools MCP and HTTP with `curl`. Without the chrome-devtools MCP, drive the same handles with the repo's `playwright` devDependency; the recipes' handles and end states don't change.
 
@@ -30,9 +30,9 @@ grep 'Ready on' "$RUN/worker.log"
 echo "RUN=$RUN"
 ```
 
-Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`. Set `SCRATCHPAD` to your session scratchpad if your harness names one. Run wrangler with `node`, never `bun` or `bunx`: under Bun it reports ready but never answers.
+Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`. Set `SCRATCHPAD` to your session scratchpad if your harness names one. Run wrangler with `node`, never `bun` or `bunx`, because under Bun it reports ready but never answers.
 
-The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going: both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics.
+The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going. Both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics.
 
 If `:8791` is taken by another run, pick a free port and use it everywhere `8791` appears, `--local-upstream` included.
 
@@ -100,4 +100,4 @@ rm -rf "$RUN/state"
 ls "$RUN/evidence"
 ```
 
-`workerd` exits with its wrangler parent, and wrangler's temp files go with it. Copy anything you need from `apps/api/.wrangler/tmp/` before this step. Close every page you opened with `close_page`. Kill only the PID in `$RUN/worker.pid`, never by process name: the user's `bun run dev` and preview are shared. Don't delete `apps/site/dist/` or `apps/api/.wrangler/`. The evidence and logs stay.
+`workerd` exits with its wrangler parent, and wrangler's temp files go with it. Copy anything you need from `apps/api/.wrangler/tmp/` before this step. Close every page you opened with `close_page`. Kill only the PID in `$RUN/worker.pid`, never by process name, because the user's `bun run dev` and preview are shared. Don't delete `apps/site/dist/` or `apps/api/.wrangler/`. The evidence and logs stay.

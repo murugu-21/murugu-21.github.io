@@ -2,159 +2,92 @@
 
 [![Code Coverage](https://qlty.sh/gh/murugu-21/projects/murugu-21.github.io/coverage.svg)](https://qlty.sh/gh/murugu-21/projects/murugu-21.github.io)
 
-Personal portfolio and blog of Murugappan, built with [Astro 7](https://astro.build) and deployed as one Cloudflare Worker.
+My portfolio and blog, live at https://murugappan.dev. It's an Astro site served by one Cloudflare Worker, which also runs the AI chat (Jarvis), a public API and an MCP server.
 
-**Live site:** https://murugappan.dev
+## Where things are
 
-One Astro project serves both halves. Blog routes live in `apps/site/src/pages/blog/`, so the `/blog` prefix comes from file position, not an Astro `base`. Every page except the print-only résumé renders through `apps/site/src/layouts/Layout.astro`, whose `section` prop picks the portfolio or blog head defaults and page classes. The rest of `apps/site/src/` is grouped by type, with blog-only code in a `blog/` folder inside each type folder (see [Source layout](apps/site/src/README.md#source-layout)), and posts are markdown in `packages/content/blog/<slug>/index.md`. Both halves share the light/dark theme through the `isDark` localStorage key.
+```text
+apps/site/           the Astro site
+apps/api/            the Worker: chat, API, MCP, audio, 404
+apps/tts/            makes the blog's read-aloud audio, run by hand on a Mac
+apps/brand/          the X profile banners
+packages/content/    the site's content, including blog posts
+packages/contracts/  types and schemas the site and the Worker share
+packages/utils/      small shared helpers
+tooling/             lint and format config
+```
 
-## Feature docs
+More detail lives next to the code:
 
-Each feature has a README next to its code:
+- [Site](apps/site/src/README.md): folder layout, analytics, the resume.
+- [Blog](packages/content/blog/README.md): writing a post, diagrams, tags.
+- [Read-aloud audio](apps/tts/README.md)
+- [Worker](apps/api/README.md): routes, the 404, Jarvis.
+- [Public API](apps/api/src/api/README.md) and [MCP server](apps/api/src/mcp/README.md)
+- [Contracts](packages/contracts/README.md) and [banners](apps/brand/README.md)
 
-- [`apps/site/src/README.md`](apps/site/src/README.md) covers the source layout, analytics and the resume.
-- [`packages/content/blog/README.md`](packages/content/blog/README.md) covers writing posts, mermaid diagrams and the tag vocabulary.
-- [`apps/tts/README.md`](apps/tts/README.md) covers the blog's read-aloud audio.
-- [`apps/api/README.md`](apps/api/README.md) covers the routes the Worker owns, the discovery documents, the 404 and the AI chat widget.
-- [`apps/api/src/api/README.md`](apps/api/src/api/README.md) covers the public API.
-- [`apps/api/src/mcp/README.md`](apps/api/src/mcp/README.md) covers the MCP server.
-- [`packages/contracts/README.md`](packages/contracts/README.md) covers what the site, the Worker and the scripts agree on.
-- [`apps/brand/README.md`](apps/brand/README.md) covers the X profile banners.
-
-## Development
+## Run it locally
 
 ```bash
 bun install
-bunx astro sync --root apps/site && bun run types   # once after cloning; lint and the typechecks need the generated types
-bun run dev       # astro dev on :4399 and the Worker under Vite (vp dev) on :8787
-bun run build     # the site to apps/site/dist/ (markdown renditions, resume PDF), then the Worker to apps/api/dist-worker/
-bun run preview   # the built Worker in workerd over the site's dist/ (wrangler dev), API and chat included, on :8787
+bunx astro sync --root apps/site && bun run types   # once, after cloning
+bun run dev       # site on :4399, Worker on :8787
+bun run build     # builds the site, then the Worker
+bun run preview   # serves the built site and Worker on :8787
 ```
 
-The root scripts run each app's own through `vp run`, such as `vp run @murugappan/api#preview`; `dev` runs every app's `dev` in parallel. Local settings sit with the app that reads them: `apps/site/.env` for Astro and `apps/api/.dev.vars` for wrangler.
+Things that will trip you up:
 
-`preview` passes `--local-upstream localhost:8787` so the Worker sees the local host, not the `murugappan.dev` route, and the generated discovery documents link back to it. `types` passes `--strict-vars=false` so `OPPORTUNITY_INBOX` is typed `string` and tests can override it.
+- `dev` and `preview` both use port 8787. Stop one before starting the other.
+- In `dev`, the Worker can't see the built pages, so the chat's page fetching and the 404 page don't work there. Use `preview` for those.
+- To use the chat from `:4399`, add `PUBLIC_CHAT_HOST=localhost:8787` to `apps/site/.env`.
+- `preview` runs the built Worker, so rebuild after changing `apps/api/src/` or `packages/content/`.
+- Local settings go in `apps/site/.env` (site) and `apps/api/.dev.vars` (Worker).
 
-`bun run dev` needs no build. `@murugappan/api#dev` runs the Worker through `@cloudflare/vite-plugin`, which sees the local host as `preview` does. Both bind `:8787` and `apps/api/.wrangler/state`, so stop one before starting the other. The dev Worker's assets are only the site's `public/`, so the chat's `fetch_page` tool and the 404 page miss the built pages; check those under `preview`. The chat widget connects to the page's own origin unless `PUBLIC_CHAT_HOST` is set, so put `PUBLIC_CHAT_HOST=localhost:8787` in `apps/site/.env` to reach the dev Worker from `:4399`. `preview` serves the built Worker, so rebuild after editing `apps/api/src/` or `packages/content/`.
+## Imports
 
-### Workspaces and layers
+Packages import each other by name and full file path, like `@murugappan/content/posts.ts`. Inside an app, use the `#src/*` imports. Lint blocks `../` imports and controls which folder may import which (`LAYERS` in `tooling/lint.config.ts`). If lint blocks an import, the code probably belongs somewhere else. Logic both apps need goes in `packages/content/` or `packages/utils/`.
 
-Bun workspaces (`workspaces` in the root `package.json`) split the repo into four apps, three packages and the tooling:
+## Tests and checks
 
-```text
-apps/site/           # @murugappan/site: the Astro site (src/), its build and blog tooling (scripts/)
-apps/api/            # @murugappan/api: the Worker (src/: API, MCP, chat, audio), its tests, wrangler.jsonc and D1 migrations
-apps/tts/            # @murugappan/tts: the blog's read-aloud audio, generated by hand on a laptop (TypeScript and a uv Python project)
-apps/brand/          # @murugappan/brand: the X profile banners, rendered by hand from one HTML page
-packages/content/    # @murugappan/content: the site's sources, the pure functions over them, and the posts Vite plugin (vite/)
-packages/contracts/  # @murugappan/contracts: what the site, the Worker and scripts agree on
-packages/utils/      # @murugappan/utils: helpers with no app logic (zod JSON parsing, AI SDK message text)
-tooling/             # @murugappan/tooling: lint, format and commit config, the oxlint plugins (oxlint/) and their dependencies
-```
+`.githooks/pre-push` runs every check CI runs. It needs two tools from Homebrew: `brew install typos-cli uv`.
 
-Each package lists the npm packages it imports, and knip checks those lists per workspace. Everything installs into one hoisted `node_modules` at the root.
+- Run tests with `bun run test`. `bun test` starts Bun's own test runner, which is the wrong one.
+- Before the first run, install Chromium with `bunx playwright install --only-shell chromium` and set up Python with `uv sync --locked --project apps/tts`.
+- `bun run test:live` runs the tests that call the real DeepSeek API. They cost money, so the normal run skips them.
+- Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
+- The type checker is a TypeScript 7 nightly. A TypeScript 6 copy is installed for ESLint, so bare `bunx tsc` runs version 6, and your editor may pick up 6 too. Point the editor at the TypeScript 7 language service. The `check:*` scripts call the right one.
+- ESLint only covers `.astro` templates and CSS. Oxlint covers the rest.
+- In CSS, use the `--font-fira-code` variable, never `"Fira Code"`. The build renames the font.
 
-A package imports another by name and file path, with the extension: `@murugappan/content/posts.ts` (each package exports `./*`). Inside an app, `#src/*` (and `#scripts/*` in the site) are subpath imports from the app's `package.json`. TypeScript resolves both only as exact paths. Lint rejects `../` imports. Imports within a folder or its subfolders stay relative.
+## Build settings
 
-Lint enforces the graph. `LAYERS` in `tooling/lint.config.ts` lists each layer (a folder in a package), its package and the layers it may use, and generates a `no-restricted-imports` rule per layer from it. A layer names another in its own package by subpath import and one in another package by name, so no app can import another. `import/no-relative-parent-imports` stops a `../` import from going around them, contracts and content may not import a framework or Worker package (nor content an image), and `contracts/shapes-only` (`tooling/oxlint/contracts.ts`) rejects a function exported from `packages/contracts/`. Logic goes in the layer that runs it, in `packages/content/` when two apps derive something from the sources, or in `packages/utils/` when both need a helper with no app logic. To add a layer or let one use another, edit `LAYERS`. The config files (`apps/site/astro.config.ts`, `apps/api/vite.config.ts`, the root `vite.config.ts`) belong to no layer, since they wire the layers together.
+These env vars change the build. All are optional locally.
 
-### Build
-
-`bun run build` is `vp run -r build`, two Vite builds. The site's `astro build` writes the static site to `apps/site/dist/`. Then the Worker's `build` task (`apps/api/vite.config.ts`), which depends on the site's, runs `vp build` with `@cloudflare/vite-plugin`. It bundles the Worker (`src/server.ts`, the `main` in `apps/api/wrangler.jsonc`) to `apps/api/dist-worker/` and writes `apps/api/.wrangler/deploy/config.json`, which points `wrangler deploy` and `wrangler dev` at the generated config. The Worker build is minified with source maps, and the plugin sets `upload_source_maps` in the generated config so stack traces in Workers Logs stay readable. That config uploads `apps/site/dist/` as the static assets, so deploy only after a build. The plugin builds its client environment, and so keeps the assets binding, only when Vite's `publicDir` has files, so `publicDir` names the site's `public/`. Wrangler can't bundle the Worker itself any more, because its esbuild has no loader for the `?raw` and virtual-module imports.
-
-Both builds load `contentPosts()` (`packages/content/vite/posts-plugin.ts`). It parses each published `packages/content/blog/<slug>/index.md` once per build (frontmatter validated by `packages/contracts/blog.ts`) and serves the list as `virtual:content/posts`. The site's agent texts and the Worker's API, MCP and chat grounding read that module, so they can't disagree. Astro's content collection still renders the post pages and the blog index, and keeps drafts visible under `astro dev`.
-
-`astro build` produces the site:
-
-- Markdown renditions (`index.md` next to the `index.html` of the home, about and blog pages and of each post) are prerendered endpoints under `apps/site/src/pages/**/index.md.ts`. They share `packages/content/llms.ts` with `/llms.txt`.
-- Mermaid diagrams and the resume PDF come from the `build-artifacts` integration in `astro.config.ts`.
-- The site font is Fira Code 6.2 from the author's `firacode` package. Its release ships only full fonts, so `apps/site/scripts/fira-code-subset.ts` cuts a latin-plus-arrows subset into `apps/site/node_modules/.cache/fira-code/` at config setup (dev and build). The Astro Fonts API serves it with a fallback sized to Fira Code's metrics (local Courier New), and `global.css` adds the same sizing for Droid Sans Mono, Cousine and Liberation Mono (Android, ChromeOS, Linux with Liberation Mono), so the swap doesn't rewrap text. `<Font>` in each `<head>` defines `--font-fira-code`; the family name is hashed, so reference the variable, never `"Fira Code"`.
-- Scripts that read the build find it through `apps/site/scripts/site-dir.ts`. The read-aloud generator, in another app, names `apps/site/dist/blog` in `apps/tts/cli.ts`.
-
-Cloudflare serves pages straight from static assets. The Worker runs only for its own routes (`run_worker_first` in `apps/api/wrangler.jsonc`) and for requests that match no asset (`not_found_handling: "none"`), which get the negotiated 404 described under [Discovery](apps/api/README.md#discovery-documents-and-the-404).
-
-### Bun and Node
-
-[Bun](https://bun.sh) installs dependencies, runs the package scripts and runs the TypeScript in the site's `scripts/`, `apps/tts/` and `apps/brand/` directly. Its version is pinned in `packageManager` in `package.json`. Node (version in `.nvmrc`) runs Astro, Wrangler, Vitest and `tsc`. Under Bun, `wrangler dev` reports ready but never answers a request.
-
-`test` is `vp test` (Vitest) over three projects. The Worker tests (`apps/api/test/`) run inside workerd through `@cloudflare/vitest-plugin`. The React island tests (`apps/site/src/**/*.test.tsx`) run in headless Chromium through Vitest browser mode and `vitest-browser-react`. Everything else in `apps/site/src/`, `apps/tts/`, `packages/content/` and `tooling/` runs on Node. That code is pure or runs in the browser, at build time or on Bun, and starting each file in workerd costs far more than its tests. Run `bunx playwright install --only-shell chromium` once before the first run. Use `bun run test`, not `bun test`, which is Bun's own runner. Tests tagged `live` call the paid DeepSeek API, so `test` skips them; `bun run test:live` runs only those, with the key from `apps/api/.dev.vars`.
-
-Bun blocks the install scripts of two packages here, and both are safe to leave blocked. `@posthog/cli` downloads its binary the first time a source-map upload runs, and `core-js` only prints a funding banner.
-
-### Build-time environment
-
-- `GITHUB_TOKEN` (any token with public read scope) renders the GitHub profile card from the GraphQL API. Without it the site still builds and shows a contact fallback.
-- `POST_HOG_TOKEN` and `POST_HOG_URL` turn on analytics. If either is missing the SDK never loads, so local and CI builds send nothing.
-- `POSTHOG_API_KEY` (a personal key with error-tracking write) and `POSTHOG_PROJECT_ID` turn on source-map uploads.
-- `RESUME_PHONE` adds a phone line to the resume (see [Resume](apps/site/src/README.md#resume)).
-
-```bash
-GITHUB_TOKEN=ghp_xxx bun run build
-```
+- `GITHUB_TOKEN`: any token with public read access. It shows the GitHub card on the homepage.
+- `POST_HOG_TOKEN` and `POST_HOG_URL`: turn on analytics.
+- `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID`: upload source maps for error tracking.
+- `RESUME_PHONE`: adds a phone number to the resume.
 
 ## Browser support
 
-The site supports Chrome and Edge 123+, Firefox 128+ and Safari 17.5+ (iOS included). `MIN_VERSIONS` in `apps/site/src/lib/browser-support.ts` holds the versions. The build compiles CSS for them (Vite's `cssTarget`), adding the prefixes and fallbacks those browsers need.
+Chrome and Edge 123+, Firefox 128+ and Safari 17.5+, including iOS. Older browsers get sent to a notice page. Open `/outdated/?from=/about/` to see it.
 
-An inline script at the top of every page's `<head>` checks the three features below and sends a browser missing any of them to `/outdated/` before the page renders. Both inline scripts are ES5, so they run in browsers far older than the floor. To see the notice, open `/outdated/?from=/about/`. That page lists the versions, and its "Continue to the site anyway" link skips the check in that tab until it closes or leaves the site (it sets `window.name`, so nothing is stored). When a feature raises the floor, change `MIN_VERSIONS` and the checks in `redirectIfOutdated` together.
+The floor comes from `light-dark()` colours, Tailwind 4 and the Popover API in the phone menu. If you use a newer feature, either make it fail gracefully or raise the floor. Raising it means changing `MIN_VERSIONS` and `redirectIfOutdated` in `apps/site/src/lib/browser-support.ts` together.
 
-JavaScript isn't lowered (Astro builds client code as `esnext`), so new syntax and APIs need a support check by hand. What sets each floor:
+## Deploying
 
-- `light-dark()`, which holds every light/dark colour pair (Chrome 123, Firefox 120, Safari 17.5). Older browsers drop the whole declaration, so the page loses its colours.
-- Tailwind 4 (Chrome 111, Firefox 128, Safari 16.4).
-- The phone menu's Popover API (Chrome 114, Firefox 125, Safari 17). Without it the menu button hides.
+Every push to `main` deploys. Cloudflare Workers Builds does the deploy, and GitHub Actions only runs checks. Weekly jobs check links and run Lighthouse against the live site, and Renovate opens dependency updates.
 
-Two features improve where supported and degrade cleanly. The phone menu's slide uses `@starting-style` (Firefox 129) and `overlay` (Chromium only): Safari and newer Firefox snap shut, and Firefox 128 also snaps open. The chat composer grows with `field-sizing` (Chrome 123, Firefox 152, Safari 26.2); elsewhere it stays one line and scrolls.
+The build settings live in the Cloudflare dashboard, not in this repo:
 
-## Checks
+- Build command `bun run build`. Deploy command `bun run deploy`, which applies D1 migrations before it deploys.
+- Build env vars: the ones above, plus `BUN_VERSION` (match `packageManager` in `package.json`) and `REQUIRE_GITHUB_PROFILE=1` to fail the build if the GitHub card can't load.
+- The Worker secret `DEEPSEEK_API_KEY`. Set it with `bunx wrangler secret put DEEPSEEK_API_KEY` from `apps/api`.
 
-```bash
-bun run check-format   # vp fmt (oxfmt), plus prettier for .astro and ruff for Python
-typos                  # spelling, configured in _typos.toml
-bun run lint           # astro sync, vp lint (type-aware oxlint), ESLint on .astro templates and stylesheets, then ruff
-bun run knip           # unused files, exports and dependencies
-bun run types          # regenerate apps/api/worker-configuration.d.ts from its wrangler.jsonc (Env plus the runtime types)
-bun run check:src      # type-check the site (.astro files included), then the packages and root config files
-bun run check:worker   # type-check the Worker and its tests
-bun run check:py       # type-check the read-aloud Python with basedpyright
-bun run test           # vitest in workerd, on Node and in headless Chromium
-bun run test --coverage # the same, plus Istanbul coverage in coverage/
-```
-
-[Vite+](https://viteplus.dev) (`vp`) bundles oxlint, oxfmt and Vitest at versions that match each other. Its Vite core builds the Worker, and Astro uses it too through the `vite` override in `package.json`. The root `vite.config.ts` holds the test settings and the `staged` rules, and imports its `lint` and `fmt` blocks from `tooling/lint.config.ts` and `tooling/fmt.config.ts`, because Vite+ reads those two only from the root config. Their paths are relative to the repo root. The pre-commit hook runs `vp staged` with that file's `staged` rules. The Worker's build lives in `apps/api/vite.config.ts` instead, because its plugins would otherwise load into the workerd test pool. `vite-plus`, the `vite` alias and `vitest` are pinned exactly and must move together, so `renovate.json` groups them.
-
-[typos](https://github.com/crate-ci/typos) is a Rust binary, not an npm package, so install it once with `brew install typos-cli`. CI runs it through `crate-ci/typos`, pinned in `ci.yml`.
-
-The read-aloud Python in `apps/tts/` is its own [uv](https://docs.astral.sh/uv/) project (`pyproject.toml`, `uv.lock`), so install uv once with `brew install uv`. `bun run py <command>` runs a command in its venv, and the ruff and basedpyright checks go through it. MLX installs only on Apple Silicon; elsewhere, including CI, the venv holds numpy and the dev tools. The contract tests in `synth.test.ts` and `align.test.ts` always run `synth.py` and `whisper.py` against the fakes in `apps/tts/fakes/`, so they need no MLX, but they do need the venv: on a fresh clone run `uv sync --locked --project apps/tts` (or any `bun run py` command) before `bun run test`.
-
-The project compiler is a TypeScript 7.1 nightly, because 7.1 adds content mappers. `contentMappers` in `apps/site/tsconfig.json` hands `.astro` files to `@astrojs/ts-content-mapper`, so `check:src` type-checks them with `tsc`. Content mappers only load with `--runExternalCode`. The compiler and the mapper are pinned exactly, since the protocol between them still changes between nightlies, and `renovate.json` groups them so they update together. Renovate offers the stable 7.1 release once it ships.
-
-typescript-eslint (which parses `.astro` frontmatter for ESLint) refuses TypeScript 7, whose native build ships no JS compiler API. Microsoft publishes that API as `@typescript/typescript6`, and `lint:eslint` preloads `tooling/ts-alias.cjs` to point `require("typescript")` at it. Remove `@typescript/typescript6` and `ts-alias.cjs` once typescript-eslint supports TypeScript 7.
-
-Oxlint lints `.astro` frontmatter and `<script>` blocks but not the HTML template, because its JS plugins can't take a custom parser yet. `bun run lint` runs `tooling/eslint.config.ts` over the `.astro` files in `apps/site/src/`, with `eslint-plugin-astro`'s `recommended` and `jsx-a11y-recommended` sets, to cover the templates. It also runs `@eslint/css` over the stylesheets, which oxlint can't parse at all. It lints nothing else, so its rules don't overlap oxlint's. Move the templates to oxlint once it can parse them.
-
-Having both compilers installed has two side effects:
-
-- The TypeScript 6 copy wins `node_modules/.bin/tsc`, so bare `bunx tsc` reports 6.0.3. The `check:*` scripts call `node node_modules/typescript/bin/tsc` by path to get 7.
-- TypeScript 7 ships no `tsserver`, so an editor set to "use the workspace TypeScript version" picks up 6. Point it at the TypeScript 7 language service instead.
-
-Styles are Tailwind only. Every class is a Tailwind utility, either built in or defined in `apps/site/src/styles/global.css`, and is composed with `cn()` or a `cva()` variant. A script hook is a `data-*` attribute, not a class. Values come from Tailwind's defaults (breakpoints, spacing, type scale) or the theme's tokens. Oxlint checks the classes in `.ts` and `.tsx`, including `no-arbitrary-value`. Where Tailwind has no default for a value, disable that rule on the line and give the reason. ESLint checks the classes in `.astro` and keeps hand-written rules out of the stylesheets; better-tailwindcss has no arbitrary-value rule, so `.astro` relies on review for that. The resume has its own entry, `apps/site/src/styles/resume.css`, without preflight or the site theme. Two changes wait on upstream releases. When `prettier-plugin-tailwindcss` supports `prettier-plugin-astro` 1 (merged in tailwindlabs/prettier-plugin-tailwindcss#473, unreleased as of 2026-10-08), move `.astro` class order from ESLint to Prettier. When oxlint parses `.astro`, widen its Tailwind override's `files` to `.astro`.
-
-## Deployment
-
-Cloudflare Workers Builds builds and deploys every push to `main`. GitHub Actions (`.github/workflows/ci.yml`) only runs checks: format, spelling, lint, unused code, type-checks, tests and a full build including the resume. It uploads the test coverage (`coverage/lcov.info`) to [Qlty](https://qlty.sh) over OIDC, so no token is stored. A failed upload, such as on a fork's pull request, doesn't fail the job.
-
-`.github/workflows/links.yml` checks every link in the repo's markdown with [lychee](https://lychee.cli.rs) each Monday and fails on a broken one; its settings and the hosts it skips are in `lychee.toml`, and `lychee .` runs the same check locally (`brew install lychee`). `.github/workflows/lighthouse.yml` runs Lighthouse CI against the live site each Monday (the homepage, `/blog/` and one long post, three runs each) and fails when a category score on the median run (picked by performance) drops below its floor in `lighthouserc.yml`. It audits the deployed site rather than a local build, so the scores include Cloudflare's caching and compression. Each run links its HTML reports on the run's summary page; Lighthouse CI's temporary public storage keeps them for a few days. [Renovate](https://docs.renovatebot.com) (`renovate.json`, read by the Renovate GitHub app) opens dependency updates once a week and keeps actions pinned to a commit SHA with the version as a comment.
-
-The build and deploy commands are dashboard settings on the Worker's page, not read from this repo:
-
-- **Build command.** `bun run build`, which builds the Worker too. Workers Builds installs dependencies from `bun.lock` before running it.
-- **Deploy command.** `bun run deploy`, which runs the Worker's `deploy` script in `apps/api` (`wrangler deploy`, which follows `.wrangler/deploy/config.json` to the built Worker), not a bare `wrangler deploy`. It applies pending D1 migrations from `apps/api/migrations` first. The Worker never issues DDL, so skipping this leaves the chat mirror writing to tables that don't exist.
-- **Build env vars.** `BUN_VERSION` (match `packageManager`; the image's default Bun is too old), `GITHUB_TOKEN`, `REQUIRE_GITHUB_PROFILE=1` (fail the build instead of falling back when the profile fetch fails), `POST_HOG_TOKEN`, `POST_HOG_URL`, `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and optionally `RESUME_PHONE`. Those the site code reads are declared in `env.schema` in `apps/site/astro.config.ts`; the build fails on a malformed value.
-- **Worker secrets.** `DEEPSEEK_API_KEY`, listed in `secrets.required` in `apps/api/wrangler.jsonc` and set with `bunx wrangler secret put DEEPSEEK_API_KEY` from `apps/api`. Locally it comes from `apps/api/.dev.vars`.
-- **Contact inbox.** `OPPORTUNITY_INBOX` is a var in `apps/api/wrangler.jsonc`, and the `EMAIL` binding is locked to the same address (`destination_address`, which must be verified in Email Routing). Change both together.
+The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/wrangler.jsonc`. The `EMAIL` binding's `destination_address` must be the same address, so change both together.
 
 ## Credits
 
-- Design language inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio). The hero desk illustration is adapted from it, recoloured to this site's navy theme.
+- Design inspired by [Soumyajit4419's Portfolio](https://github.com/soumyajit4419/Portfolio). The hero desk illustration is adapted from it.
 - Originally based on [developerFolio](https://github.com/saadpasta/developerFolio).

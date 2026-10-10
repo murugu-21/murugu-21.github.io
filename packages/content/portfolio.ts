@@ -11,7 +11,6 @@ export const greeting = {
   resumeFileName: "Murugappan-M-Resume.pdf"
 };
 
-// Roles looped by the hero typewriter
 export const typewriterRoles = [
   "Full Stack Engineer",
   "TypeScript · Node.js · React",
@@ -218,7 +217,6 @@ interface Education {
   subHeader: string;
   duration: string;
   desc: string;
-  /** Final grade as displayed, e.g. "CGPA 9.53 / 10". */
   grade?: string;
   descBullets: string[];
 }

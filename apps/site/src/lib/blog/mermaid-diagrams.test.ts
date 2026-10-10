@@ -98,7 +98,6 @@ describe("replaceMermaidFences", () => {
     expect(out).toContain("![Diagram 2](diagrams/99d2cdad7c76.png)");
     expect(out).not.toContain("```mermaid\nflowchart LR");
     expect(out).not.toContain("~~~mermaid");
-    // the js fence, the nested sample and the prose survive
     expect(out).toContain('const notADiagram = "```mermaid";');
     expect(out).toContain("```mermaid\nflowchart TD\n    X --> Y\n```\n````");
     expect(out).toContain("Text between.");

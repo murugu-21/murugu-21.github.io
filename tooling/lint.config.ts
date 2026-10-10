@@ -3,7 +3,7 @@ import type { OxlintConfig, OxlintOverride } from "vite-plus/lint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 
-// Each layer is a folder in a workspace package (README.md › Layers). It imports itself and the
+// Each layer is a folder in a workspace package (README.md › Imports). It imports itself and the
 // layers in `uses`: inside its own package by the subpath import in `imports`, from another
 // package by name. import/no-relative-parent-imports stops `../` from going around them.
 const LAYER_NAMES = [
@@ -59,7 +59,7 @@ const LAYERS: Record<LayerName, Layer> = {
         regex: `${FRAMEWORKS}|\\.(png|jpe?g|gif|webp|avif|svg)$`,
         allowTypeImports: true,
         message:
-          "packages/content/ holds sources and pure functions the apps share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in the app that needs them (README.md › Layers)."
+          "packages/content/ holds sources and pure functions the apps share, so it imports no framework, runtime package or image (type imports are fine). Resolve those in the app that needs them (README.md › Imports)."
       }
     ]
   },
@@ -73,7 +73,7 @@ const LAYERS: Record<LayerName, Layer> = {
         regex: FRAMEWORKS,
         allowTypeImports: true,
         message:
-          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in apps/site/src/ or apps/api/src/ (README.md › Layers)."
+          "Contracts hold only shapes and import no framework or runtime package (type imports are fine). Keep framework and Worker code in apps/site/src/ or apps/api/src/ (README.md › Imports)."
       }
     ]
   },
@@ -113,7 +113,7 @@ function layerPatterns(name: LayerName): Pattern[] {
   return [
     {
       regex: `^(${banned.join("|")})`,
-      message: `${LAYERS[name].dir} imports only ${allowedSpecifiers.join(", ")} (README.md › Layers). Move code both sides need to @murugappan/content, contracts or utils.`
+      message: `${LAYERS[name].dir} imports only ${allowedSpecifiers.join(", ")} (README.md › Imports). Move code both sides need to @murugappan/content, contracts or utils.`
     }
   ];
 }
@@ -128,7 +128,6 @@ const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
 const SITE = layerPatterns("site");
 
 export default {
-  // Static files served as they are.
   ignorePatterns: ["apps/site/public/**"],
   plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
@@ -193,7 +192,7 @@ export default {
           regex:
             "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\./(blog|home)/|^\\./BlogLayout",
           message:
-            "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (apps/site/src/README.md › Source layout)."
+            "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (apps/site/src/README.md › Folders)."
         }
       ]
     ),
@@ -210,7 +209,7 @@ export default {
         {
           regex: "^#src/components/home/",
           message:
-            "Blog code can't import homepage components. Move a component both use to the root of apps/site/src/components (apps/site/src/README.md › Source layout)."
+            "Blog code can't import homepage components. Move a component both use to the root of apps/site/src/components (apps/site/src/README.md › Folders)."
         }
       ]
     ),

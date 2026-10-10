@@ -1,6 +1,3 @@
-// The version catalogue document and the headers that carry the policy in
-// packages/contracts/api/versioning.ts.
-
 import type { z } from "zod";
 
 import {
@@ -60,7 +57,6 @@ function sunsetFieldValue(isoDate: string): string {
   return new Date(`${isoDate}T00:00:00Z`).toUTCString();
 }
 
-/** Deprecation and Sunset appear only once the record carries those dates. */
 export function versionHeaders(
   record: VersionRecord = CURRENT_VERSION_RECORD
 ): Record<string, string> {
@@ -75,7 +71,6 @@ export function versionHeaders(
   return headers;
 }
 
-/** Discovery links, plus migration pointers once the version is deprecated. */
 export function versionLinkHeader(record: VersionRecord = CURRENT_VERSION_RECORD): string {
   const links = [
     `<${API_PATHS.openapiRoot}>; rel="service-desc"; type="application/json"`,

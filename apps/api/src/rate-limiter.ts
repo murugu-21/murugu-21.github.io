@@ -9,8 +9,7 @@ import {
   CONTACT_DAILY_PER_CLIENT
 } from "@murugappan/contracts/api/contact.ts";
 
-// Chat is gated on the real DeepSeek balance. The reserve keeps the last
-// exchange from running out mid-reply.
+// The reserve keeps the last exchange from running out mid-reply.
 export const BALANCE_RESERVE_USD = 0.05;
 
 // DeepSeek's balance lags real usage, so a shorter TTL buys little; the 402
@@ -91,8 +90,7 @@ export class RateLimiter extends DurableObject<Env> {
     } satisfies CachedBalance);
   }
 
-  // Synchronous so read-check-increment is atomic in the DO. A client-blocked
-  // request never touches the global counter.
+  // Synchronous so read-check-increment is atomic in the DO.
   takeContactSlot(client: string): ContactSlot {
     const day = this.today();
     this.sql.exec(`DELETE FROM contact_counters WHERE key NOT LIKE ?`, `${day}:%`);

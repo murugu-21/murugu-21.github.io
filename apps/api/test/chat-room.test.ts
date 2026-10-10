@@ -100,7 +100,6 @@ async function fundChat(): Promise<void> {
   );
 }
 
-/** Gives a room a key, a scripted model, site assets and an EMAIL binding that records instead of sending (unless `options.email` says otherwise). */
 async function scriptRoom(
   stub: DurableObjectStub<ChatRoom>,
   model: MockLanguageModelV4,
@@ -467,10 +466,9 @@ describe("ChatRoom storage", () => {
     });
 
     const second = await stored({ "CF-IPCountry": "DE" });
-    expect(second.visitor_country).toBe("DE"); // the latest country wins
-    expect(second.visitor_ip).toBe("203.0.113.7"); // but a missing value never erases one
+    expect(second.visitor_country).toBe("DE");
+    expect(second.visitor_ip).toBe("203.0.113.7");
     expect(second.visitor_first_seen).toBe(first.visitor_first_seen);
-    // Stored as epoch milliseconds.
     const lastSeen = (values: Record<string, unknown>) =>
       z.number().parse(values.visitor_last_seen);
     expect(lastSeen(second)).toBeGreaterThanOrEqual(lastSeen(first));
@@ -505,8 +503,7 @@ describe("ChatRoom storage", () => {
     await connectRoom(room, { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" });
     const first = await mirrored({ country: "IN", ip: "203.0.113.9" });
 
-    // A reconnect without an IP refreshes the country and last_seen, but must
-    // not erase the address already known.
+    // A reconnect without an IP must not erase the address already known.
     await connectRoom(room, { "CF-IPCountry": "DE" });
     const second = await mirrored({ country: "DE", ip: "203.0.113.9" });
     expect(second.first_seen).toBe(first.first_seen);

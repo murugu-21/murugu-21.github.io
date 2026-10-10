@@ -48,7 +48,6 @@ describe("packSentences", () => {
 });
 
 describe("spokenHash", () => {
-  // The hash keys the generated audio, so a changed block must change it.
   it("hashes the spoken texts, and changes when a block changes", () => {
     expect(spokenHash(["Hello.", "World."])).toBe(
       "7d13afdeb11f0525de841ec656b6519daa6bce7b8abd6a7c3682b30c54b01c45"

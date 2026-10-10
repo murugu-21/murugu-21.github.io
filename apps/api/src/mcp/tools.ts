@@ -1,6 +1,5 @@
-// MCP tool handlers. packages/contracts/mcp.ts declares each tool's name, schemas and annotations;
-// these are thin adapters over the content the REST API serves (src/content.ts). Anything a
-// model could fix by retrying with other arguments is an `isError` result, not a protocol error.
+// packages/contracts/mcp.ts declares each tool's name, schemas and annotations. Anything a model
+// could fix by retrying with other arguments is an `isError` result, not a protocol error.
 
 import type { McpServer } from "@modelcontextprotocol/server";
 
@@ -50,7 +49,6 @@ function fail(text: string): ToolResult {
   return { content: [{ type: "text", text }], isError: true };
 }
 
-/** A dataset tool answers with the slice of the dataset its outputSchema picks. */
 const fromDataset: Run = (_args, _ctx, tool) => ok(tool.outputSchema.parse(DATASET));
 
 // Keyed by name, so a tool in the catalogue without a handler fails to compile.

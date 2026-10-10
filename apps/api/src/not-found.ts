@@ -1,6 +1,5 @@
-// Content-negotiated 404: the styled page for a browser, a markdown list of
-// entry points for everything else. Relies on `not_found_handling: "none"`
-// (wrangler.jsonc) so misses reach the Worker, which fetches the 404 page itself.
+// Relies on `not_found_handling: "none"` (wrangler.jsonc) so misses reach the Worker, which
+// fetches the 404 page itself.
 
 import type { Context } from "hono";
 import { accepts } from "hono/accepts";
@@ -59,7 +58,6 @@ const LINK_HEADER = [
   `</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"`
 ].join(", ");
 
-/** `method` is honoured so a HEAD gets no body. */
 export function markdownNotFound(pathname: string, method: string): Response {
   const body = method === "HEAD" ? null : notFoundMarkdown(pathname);
   return new Response(body, {
@@ -86,7 +84,7 @@ function htmlNotFound(request: Request, response: Response): Response {
   return html;
 }
 
-/** Serves from static assets. A 404 gets markdown unless `Accept` ranks HTML or XHTML highest. */
+/** A 404 gets markdown unless `Accept` ranks HTML or XHTML highest. */
 export async function serveAsset(c: Context<{ Bindings: Env }>): Promise<Response> {
   const request = c.req.raw;
   const response = await c.env.ASSETS.fetch(request);

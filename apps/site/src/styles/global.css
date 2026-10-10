@@ -137,7 +137,6 @@
     }
   }
 
-  /* The greeting's waving hand. */
   --animate-wave: wave 1.8s infinite;
   @keyframes wave {
     0% {
@@ -162,7 +161,6 @@
       transform: rotate(0deg);
     }
   }
-  /* The typewriter's caret. */
   --animate-typewriter-blink: typewriter-blink 1s step-end infinite;
   @keyframes typewriter-blink {
     0%,

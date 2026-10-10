@@ -28,7 +28,7 @@ const isPostHog = (p: unknown): p is PostHog =>
   "register" in p &&
   typeof p.register === "function";
 
-/** Injectable for tests; production dynamic-imports the real browser SDK. */
+/** Injectable for tests. */
 type SdkLoader = () => Promise<PostHog>;
 
 const loadSdk: SdkLoader = () => import("posthog-js").then(m => m.default);
@@ -53,7 +53,6 @@ const client = (): PostHog | null => {
   return isPostHog(globalThis.posthog) ? globalThis.posthog : null;
 };
 
-// Run now if the SDK is up, buffer while it loads, drop otherwise.
 const send = (fn: (ph: PostHog) => void): void => {
   const ph = client();
   if (!ph) {

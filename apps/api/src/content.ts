@@ -17,7 +17,6 @@ export { default as AGENTS_MD } from "@murugappan/content/agent-guide.md?raw";
 
 const MARKDOWN = new Map(posts.map(post => [post.slug, post.markdown]));
 
-/** A listed post with its markdown source, frontmatter included. */
 export function findPost(slug: string): (PostSummary & { markdown: string }) | undefined {
   const post = POSTS.find(p => p.slug === slug);
   const markdown = MARKDOWN.get(slug);

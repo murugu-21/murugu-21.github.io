@@ -81,10 +81,6 @@ function parseMonth(label: string): YearMonth | null {
   return { year: Number(m[2]), month };
 }
 
-/**
- * null unless the period has two parts and its start parses. `end` is null when the period is
- * open-ended or its end doesn't parse.
- */
 function splitPeriod(
   period: string
 ): { start: YearMonth; end: YearMonth | null; openEnded: boolean } | null {

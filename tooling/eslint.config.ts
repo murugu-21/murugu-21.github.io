@@ -25,14 +25,14 @@ const tailwindOnlyCss = (topLevelAtRules: string) => [
 ];
 
 // Covers .astro templates until oxlint can parse them, and stylesheets, which oxlint
-// can't parse at all (README.md › Checks).
+// can't parse at all (docs/adr/0008-oxlint-first.md).
 export default defineConfig([
   astro.configs.recommended,
   astro.configs["jsx-a11y-recommended"],
   {
     files: ["**/*.astro"],
-    // Arbitrary values and hex colours rely on review until oxlint's Tailwind rules reach .astro
-    // (README.md › Checks). The default palette stays on; resetting --color-* in @theme isn't wanted.
+    // Arbitrary values and hex colours rely on review until oxlint's Tailwind rule
+    // reaches .astro. The default palette stays on; resetting --color-* in @theme isn't wanted.
     extends: [tailwind.configs["recommended-error"]],
     // Without rootFontSize, px arbitrary values never canonicalize to the spacing scale.
     settings: {

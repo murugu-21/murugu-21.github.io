@@ -25,6 +25,6 @@
     "cloudflare"
   ],
   // System tools: apps/tts/cli.ts spawns ffmpeg, and the py script runs uv
-  // (installed with brew, README.md › Checks).
+  // (installed with brew, README.md › Tests and checks).
   "ignoreBinaries": ["ffmpeg", "uv"]
 }

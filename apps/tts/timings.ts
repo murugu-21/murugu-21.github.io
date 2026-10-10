@@ -26,7 +26,6 @@ export type StoredBlock = StoredTimings["blocks"][number];
 
 const StoredHash = jsonString(z.object({ hash: z.string() }));
 
-// The spoken-text hash the stored audio was rendered from, if it recorded one.
 export const storedHash = (json: string): string | null =>
   StoredHash.safeParse(json).data?.hash ?? null;
 

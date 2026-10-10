@@ -1,6 +1,4 @@
-// The text served to agents: /llms.txt, /blog/llms.txt, /blog/llms-full.txt and the markdown
-// renditions of the homepage and blog index. The preamble is a ?raw .txt because it contains
-// backticks.
+// The preamble is a ?raw .txt because it contains backticks.
 import LLMS_PREAMBLE from "./llms-preamble.txt?raw";
 import { newestFirst, oneLineDescription, postUrl, type PostSource } from "./posts.ts";
 import { AUTHOR, BLOG_DESCRIPTION, BLOG_TITLE } from "./site.ts";

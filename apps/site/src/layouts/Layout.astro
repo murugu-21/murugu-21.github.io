@@ -30,7 +30,6 @@ export interface Props {
 }
 
 export interface Section {
-  // Picks the page chrome classes below.
   kind: "portfolio" | "blog";
   siteName: string;
   ogImage: string;
@@ -113,7 +112,6 @@ const jsonLdScript = jsonLdHtml({
     {!noindex && <link rel="canonical" href={canonicalUrl} />}
     {/* the entity page, kept out of the human nav */}
     <link rel="author" href="/about/" />
-    {/* IANA link relations for agent discovery */}
     <link
       rel="service-desc"
       type="application/json"

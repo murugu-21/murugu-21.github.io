@@ -1,3 +1,5 @@
 # Contracts
 
-`packages/contracts/` holds the HTTP API's definition (`api/`: paths, zod schemas, versions, quotas and the OpenAPI document), the MCP server's identity and tool catalogue (`mcp.ts`), the chat widget's wire protocol (`chat.ts`), the R2 key and timing JSON for blog audio (`audio.ts`, `audio-timings.ts`) and the blog frontmatter schema (`blog.ts`). The Worker serves these, `/developers/` and the chat widget render from them, and the audio scripts write to them. Contracts hold only shapes: zod schemas, types and constants. Both `check:src` and `check:worker` type-check them, so a contract that reaches for `Env` or a Worker binding fails the site's check, and lint rejects value imports from framework, AI SDK and `node:` packages. Type imports are fine.
+The types and schemas the site, the Worker and the scripts all agree on: the API, the MCP tools, the chat messages, the audio files and blog frontmatter.
+
+Only shapes go here: zod schemas, types and constants. Lint rejects functions. Put logic in the app that runs it.

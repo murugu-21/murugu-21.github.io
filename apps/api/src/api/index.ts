@@ -1,6 +1,3 @@
-// The public HTTP API. The Worker claims /api/* and /openapi.json ahead of static assets
-// (run_worker_first) so failures are JSON and the spec can name the host that answered.
-
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
@@ -282,7 +279,6 @@ api.all("*", c =>
   })
 );
 
-/** The OpenAPI document, with `servers` set to the host that was asked. */
 function specResponse(requestUrl: string): Response {
   return json(buildOpenApiDocument(publicOrigin(requestUrl)));
 }

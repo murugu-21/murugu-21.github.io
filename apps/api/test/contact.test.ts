@@ -1,4 +1,3 @@
-// The contact form body parser behind POST /api/contact.
 import { describe, expect, it } from "vitest";
 
 import { CONTACT_LIMITS } from "@murugappan/contracts/api/contact.ts";

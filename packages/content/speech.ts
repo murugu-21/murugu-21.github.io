@@ -70,8 +70,7 @@ export function normalizeSpeechText(text: string): string {
     .trim();
 }
 
-// Whitespace-delimited tokens of a normalised block text; punctuation stays
-// attached to its word so tokens map 1:1 onto rendered text.
+// Punctuation stays attached to its word so tokens map 1:1 onto rendered text.
 export function tokenize(text: string): string[] {
   return text.split(/\s+/).filter(t => t.length > 0);
 }

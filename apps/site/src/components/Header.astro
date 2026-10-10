@@ -101,7 +101,7 @@ const links = [
   const menu = document.getElementById("site-menu");
   if (!menu) throw new Error("Header: #site-menu is missing");
 
-  // Without the Popover API the button is hidden (menuButton) and there is nothing to close.
+  // Without the Popover API the button is hidden and there is nothing to close.
   if ("hidePopover" in menu) {
     // Light dismiss ignores taps inside the popover, and a same-page hash link
     // never navigates away, so a chosen link closes the menu itself.

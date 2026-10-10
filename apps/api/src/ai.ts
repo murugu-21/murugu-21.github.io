@@ -21,7 +21,6 @@ export function deepseek({ apiKey }: { apiKey: string }): LanguageModel {
   return createDeepSeek({ apiKey })(DEEPSEEK_MODEL);
 }
 
-/** Settings for one Jarvis turn. */
 export function jarvisCall<Tools extends ToolSet>({
   model,
   messages,

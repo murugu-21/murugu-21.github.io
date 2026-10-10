@@ -1,5 +1,3 @@
-// The blog post shapes the REST API and MCP tools accept and return.
-
 import { z } from "zod";
 
 import { text } from "./fields";

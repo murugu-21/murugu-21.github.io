@@ -39,7 +39,6 @@ const Job = jsonString(
   z.object({ outDir: z.string(), chunks: z.array(z.object({ id: z.string(), text: z.string() })) })
 );
 
-// Posts and render dirs both go under `root`.
 export function fakeDeps(root: string) {
   const r2 = memoryR2();
   return {

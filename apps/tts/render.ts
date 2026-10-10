@@ -68,7 +68,6 @@ function tempoChunk(
   return pcm;
 }
 
-// Renders every chunk and returns them per block, tempo applied.
 async function synthesize(
   deps: RenderDeps,
   {
@@ -86,7 +85,6 @@ async function synthesize(
   );
 }
 
-// Skips a post whose stored hash matches its spoken text, unless `force`.
 export async function renderPost(
   deps: RenderDeps,
   { slug, synth, force }: { slug: string; synth: Synth | null; force: boolean }

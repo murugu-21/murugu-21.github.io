@@ -48,7 +48,6 @@ export function alignBlock(
   return { block: { ...rest, words } };
 }
 
-// Rewrites the post's JSON as version 2. Skips a version 2 post unless `force`.
 export async function alignPost(
   { r2, ffmpeg }: { r2: Pick<R2Store, "get" | "put">; ffmpeg: Ffmpeg },
   {

@@ -53,11 +53,9 @@
   "send_email": [{ "name": "EMAIL", "destination_address": "murugu2001@gmail.com" }],
   // Deploy fails while it is unset.
   "secrets": { "required": ["DEEPSEEK_API_KEY"] },
-  // A copy of each chat room (messages, country, IP) for browsing chats in the
-  // Cloudflare dashboard. ChatRoom's own SQLite stays the source of truth, and
-  // replies never wait on these writes. The Worker creates no tables, so run
-  // `bun run db:migrate` first, or every write fails with only a
-  // "d1 mirror failed" log line.
+  // A mirror of each chat room for browsing in the dashboard; ChatRoom's SQLite stays the
+  // source of truth. The Worker creates no tables, so run `bun run db:migrate` first, or
+  // every write fails with only a "d1 mirror failed" log line.
   "d1_databases": [
     {
       "binding": "CHAT_DB",

@@ -53,7 +53,6 @@ export function findMermaidFences(markdown: string): MermaidFence[] {
   });
 }
 
-// 12 hex chars of SHA-256 over the normalised source and renderer version.
 export async function diagramHash(source: string): Promise<string> {
   const normalised = source.replaceAll(/\r\n?/g, "\n").trim();
   return (await sha256Hex(`${RENDERER_VERSION}\n${normalised}`)).slice(0, 12);
