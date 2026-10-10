@@ -49,11 +49,20 @@ const DATASET_INPUT: DatasetInput = {
       descBullets: ["Distributed systems."]
     }
   ],
-  openSourceCard: {
-    title: "AnkiDroid — Open Source Contributor",
-    subtitle: "3 merged pull requests.",
-    footerLink: [{ name: "Image paste", url: "https://gh.example/1" }]
-  },
+  openSourceContributions: [
+    {
+      project: "Vite",
+      role: "Contributor",
+      description: "A merged sourcemap fix.",
+      links: [{ label: "URL source roots (#23519)", url: "https://gh.example/2" }]
+    },
+    {
+      project: "AnkiDroid",
+      role: "Contributor",
+      description: "3 merged pull requests.",
+      links: [{ label: "Image paste", url: "https://gh.example/1" }]
+    }
+  ],
   isHireable: true
 };
 
@@ -181,11 +190,17 @@ describe("buildDataset", () => {
     expect(buildDataset(DATASET_INPUT).education[0].grade).toBeNull();
   });
 
-  it("names the open-source project from the card title", () => {
+  it("lists one open-source entry per project, in order", () => {
     expect(dataset.openSource).toEqual([
       {
+        project: "Vite",
+        role: "Contributor",
+        description: "A merged sourcemap fix.",
+        links: [{ label: "URL source roots (#23519)", url: "https://gh.example/2" }]
+      },
+      {
         project: "AnkiDroid",
-        role: "Open Source Contributor",
+        role: "Contributor",
         description: "3 merged pull requests.",
         links: [{ label: "Image paste", url: "https://gh.example/1" }]
       }

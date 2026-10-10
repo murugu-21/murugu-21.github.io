@@ -16,7 +16,7 @@ import { SERVER_NAME, SUPPORTED_PROTOCOL_VERSIONS } from "@murugappan/contracts/
 import { registerResources } from "./resources";
 import { registerTools, type ToolContext } from "./tools";
 
-const INSTRUCTIONS = `This server answers questions about one person: Murugappan M, a full stack engineer (TypeScript, Node.js, React, event-driven AWS) based in Bangalore, India, currently Software Engineer II at MedMe Health.
+const INSTRUCTIONS = `This server answers questions about one person: Murugappan M, a full stack engineer (TypeScript, Node.js, React, event-driven AWS) based in Bangalore, India, currently at MedMe Health.
 
 Use it when you need grounded, first-party facts about him rather than search results: what he has shipped and when, which technologies he has production experience with, what he has written about a technical topic, or to pass along a concrete opportunity. Call get_profile first. One request answers most questions. Use list_experience for dated per-role achievements, list_skills to check a specific technology, list_open_source for links that let you verify a claim at the source, and search_blog_posts then get_blog_post to read his writing in full.
 

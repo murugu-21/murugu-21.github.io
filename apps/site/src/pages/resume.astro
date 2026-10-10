@@ -6,7 +6,8 @@ import {
   greeting,
   workExperiences,
   skillsCategories,
-  educationInfo
+  educationInfo,
+  openSourceContributions
 } from "@murugappan/content/portfolio.ts";
 import { displayUrl, resumeContact } from "@murugappan/content/resume.ts";
 import { groupByCompany } from "@murugappan/content/experience.ts";
@@ -155,6 +156,31 @@ const stints = groupByCompany(workExperiences);
           ))}
         </ResumeSection>
       )}
+
+      <ResumeSection title="Open Source">
+        {" "}
+        {openSourceContributions.map(({ project, description, links: [pr] }) => (
+          <div class="mb-1.5 break-inside-avoid">
+            <p class="mt-0 mb-1 font-bold">
+              {project}
+              {pr && (
+                <>
+                  {" | "}
+                  <a
+                    href={pr.url}
+                    class="text-navy underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {displayUrl(pr.url)}
+                  </a>
+                </>
+              )}
+            </p>
+            <p class="mt-0 mb-1">{description}</p>
+          </div>
+        ))}
+      </ResumeSection>
 
       <ResumeSection title="Education">
         {" "}

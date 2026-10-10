@@ -1,6 +1,14 @@
 // The preamble is a ?raw .txt because it contains backticks.
 import LLMS_PREAMBLE from "./llms-preamble.txt?raw";
+import { greeting } from "./portfolio.ts";
 import { newestFirst, oneLineDescription, postUrl, type PostSource } from "./posts.ts";
+import {
+  educationBlocks,
+  experienceBlocks,
+  openSourceBlocks,
+  skillBlocks
+} from "./profile-markdown.ts";
+import { resumeContact } from "./resume.ts";
 import { AUTHOR, BLOG_DESCRIPTION, BLOG_TITLE } from "./site.ts";
 
 // Newest-first "- [title](url): description" lines, shared by /llms.txt, /blog/llms.txt and
@@ -12,9 +20,18 @@ const postLines = (posts: PostSource[]): string[] =>
     return desc ? `- ${link}: ${desc}` : `- ${link}`;
   });
 
-/** /llms.txt: the hand-written site summary plus every blog post. */
+/** /llms.txt: the hand-written guide to the site, the resume from profile.json, then every blog post. */
 export const siteLlmsText = (posts: PostSource[]) =>
-  `${LLMS_PREAMBLE.trimEnd()}\n\n## Blog posts\n${postLines(posts).join("\n")}\n`;
+  `${[
+    `# ${resumeContact.name}, ${resumeContact.title}`,
+    `> ${greeting.subTitle}`,
+    LLMS_PREAMBLE.trimEnd(),
+    ...experienceBlocks(),
+    ...skillBlocks(),
+    ...educationBlocks(),
+    ...openSourceBlocks(),
+    `## Blog posts\n${postLines(posts).join("\n")}`
+  ].join("\n\n")}\n`;
 
 /** /blog/index.md: the blog's title and description over its post list. */
 export const blogIndexMarkdown = (posts: PostSource[]) =>

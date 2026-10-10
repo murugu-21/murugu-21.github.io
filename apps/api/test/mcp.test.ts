@@ -508,7 +508,7 @@ describe("legacy (initialize-based) clients", () => {
     });
     expect(called.json.result).toHaveProperty("structuredContent.proficiencies.0", {
       area: "Backend",
-      tools: ["Node.js", "Nest.js", "Event-driven"],
+      tools: ["Node.js", "Express.js", "Nest.js", "Hono", "Event-driven"],
       level: 90
     });
   });
@@ -608,7 +608,7 @@ describe("dataset tools", () => {
       name: "list_open_source",
       keys: ["openSource"],
       path: "openSource.0.project",
-      value: "AnkiDroid"
+      value: "Vite"
     }
   ])("$name returns its slice of the dataset", async ({ name, keys, path, value }) => {
     const result = await call(name);

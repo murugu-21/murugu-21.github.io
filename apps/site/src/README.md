@@ -13,7 +13,7 @@ components/   shared by every page
   ui/         shadcn components
 lib/          shared logic, with blog/ for blog-only logic
 styles/       global.css (Tailwind), resume.css, and blog/
-data/         logo images for packages/content/portfolio.ts
+data/         logo images for packages/content/profile.json
 ```
 
 Put a file in the narrowest folder that covers everything that imports it. Shared code can't import from `home/` or `blog/`, and lint enforces that. The homepage may import blog code, because it shows featured posts.

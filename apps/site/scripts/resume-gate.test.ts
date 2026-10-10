@@ -6,7 +6,7 @@ const RESUME = [
   "Murugappan M · murugu2001@gmail.com",
   "PROFESSIONAL SUMMARY Backend engineer.",
   "SKILLS TypeScript, Node.js",
-  "EXPERIENCE Software Engineer II. Kept 95%+ of syncs on time and saved $300k a year.",
+  "EXPERIENCE SWE 2. Kept 95%+ of syncs on time and saved $300k a year.",
   "EDUCATION B.E."
 ].join("\n");
 

@@ -45,7 +45,13 @@ describe("markdown renditions of the site", () => {
     expect(llms.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
     expect(home.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
     const text = await llms.text();
-    expect(text).toMatch(/^# Murugappan M, Full Stack Engineer\n/);
+    expect(text).toMatch(/^# Murugappan M, Full Stack Engineer\n\n> I build B2B SaaS /);
+    expect(text).toContain(
+      "\n## Open source\n\n### Vite\n\nA merged fix to Vite (83k+ GitHub stars)"
+    );
+    expect(text).toContain(
+      "\n- [URL source roots (#23519)](https://github.com/vitejs/vite/pull/23519)\n"
+    );
     expect(text).toContain(`\n## Blog posts\n`);
     expect(text).toContain(`\n${COIN_CHANGE_LINE}\n`);
     expect(text).not.toContain("js-closure");
@@ -60,7 +66,7 @@ describe("markdown renditions of the site", () => {
     expect(text).toMatch(/^# About Murugappan M\n\nI build B2B SaaS /);
     expect(text).toContain("\n- [Blog](https://murugappan.dev/blog/)\n");
     expect(text).toContain(
-      "\n### HyperVerge\n\nAugust 2022 – December 2025 · Bangalore\n\n#### SDE 2\n\nApril 2025 – December 2025\n"
+      "\n### HyperVerge\n\nAugust 2022 – December 2025 · Bangalore (onsite)\n\n#### SDE 2\n\nApril 2025 – December 2025\n"
     );
     expect(text).toContain("\n- **Languages:** TypeScript, Python, SQL, Bash, YAML\n");
   });
@@ -73,7 +79,13 @@ describe("markdown renditions of the site", () => {
     const text = await res.text();
     expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
     expect(text).toMatch(/^# Murugappan M\n\nFull Stack Engineer\n\nBangalore, India \| /);
-    expect(text).toContain("\n### MedMe Health\n\nDecember 2025 – Present · Canada (remote)\n");
+    expect(text).toContain("\n### MedMe Health\n\nDecember 2025 – Present · Toronto (remote)\n");
+    expect(text).toContain(
+      "\n## Open Source\n\n### Vite\n\n[github.com/vitejs/vite/pull/23519](https://github.com/vitejs/vite/pull/23519)\n\nA merged fix"
+    );
+    expect(text).toContain(
+      "\n### AnkiDroid\n\n[github.com/ankidroid/Anki-Android/pulls?q=is%3Apr+author%3Amurugu-21]"
+    );
     expect(text).toContain("\n- **Languages:** TypeScript, Python, SQL, Bash, YAML\n");
     expect(await contactLine()).toBe(
       "Bangalore, India | [murugu2001@gmail.com](mailto:murugu2001@gmail.com) | [www.linkedin.com/in/murugappan-m-56920a192](https://www.linkedin.com/in/murugappan-m-56920a192/) | [github.com/murugu-21](https://github.com/murugu-21) | [murugappan.dev](https://murugappan.dev)"
@@ -116,7 +128,7 @@ describe("markdown renditions of the site", () => {
     );
 
     expect(await (await resumeMarkdown()).text()).toContain(
-      "\n## Projects\n\n### portfolio\n\n[murugappan.dev](https://murugappan.dev/)\n\nThis site.\n\n## Education\n"
+      "\n## Projects\n\n### portfolio\n\n[murugappan.dev](https://murugappan.dev/)\n\nThis site.\n\n## Open Source\n"
     );
   });
 

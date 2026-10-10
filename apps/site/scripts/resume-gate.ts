@@ -9,7 +9,7 @@ export const ATS_REQUIRED_TOKENS = [
   "SKILLS",
   "EXPERIENCE",
   "EDUCATION",
-  "Software Engineer II",
+  "SWE 2",
   "95%+",
   "$300k"
 ];
