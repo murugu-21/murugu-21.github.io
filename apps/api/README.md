@@ -66,6 +66,7 @@ To run it locally, put `DEEPSEEK_API_KEY=sk-...` in `apps/api/.dev.vars`, then r
 Things to know:
 
 - After changing `DEEPSEEK_MODEL`, run `bun run test:live` before pushing. It checks that the new model really emails a lead instead of only saying it did.
+- The socket opens only for a room name shaped like the widget's (21 characters from nanoid) and an `Origin` on the site itself, or any local page in local dev. CORS doesn't cover WebSockets, so without that check another site's page could spend the chat budget.
 - `ChatRoom` only accepts a small set of message types from the browser.
 - Chat stops when the DeepSeek balance runs low. Each room also has a daily message limit.
 - `agents` and `@cloudflare/ai-chat` are pinned to exact versions because minor releases break them. Read their changelogs before upgrading.

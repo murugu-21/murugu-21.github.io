@@ -5,6 +5,7 @@ import { testClient } from "hono/testing";
 import { assert, expect, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { appLayer, type AppLayer } from "#src/app.module.ts";
 import { createApp } from "#src/app.ts";
 import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
@@ -135,6 +136,11 @@ export function sharedLimiter() {
   return limiter;
 }
 
+/** Every fetch answers `body`, as DeepSeek's balance endpoint would. Undo with vi.unstubAllGlobals(). */
+export function stubDeepseekBalance(body: unknown, status = 200): void {
+  vi.stubGlobal("fetch", async () => new Response(JSON.stringify(body), { status }));
+}
+
 /** A response from `fetchWorker` or `apiClient`. */
 export type JsonBody = { json(): Promise<unknown> };
 
@@ -158,7 +164,7 @@ export async function fetchWorker(
   if (ip) headers.set("CF-Connecting-IP", ip);
   const app = layer ? createApp(layer) : worker;
   return app.fetch(
-    new Request(new URL(path, "https://murugappan.dev"), { ...init, headers }),
+    new Request(new URL(path, SITE_ORIGIN), { ...init, headers }),
     testEnv(envOptions)
   );
 }
@@ -181,10 +187,16 @@ export function apiClient({
   );
 }
 
-/** A real WebSocket to a chat room through the worker, recording every frame it receives. */
+/** A room name the Worker accepts: 21 characters, like the widget's nanoid(). */
+export const roomName = (label: string) => label.padEnd(21, "-");
+
+/**
+ * A real WebSocket to a chat room through the worker, from the site's own page, recording every
+ * frame it receives.
+ */
 export async function openRoom(room: string, headers: Record<string, string> = {}) {
   const response = await fetchWorker(`/agents/chat-room/${room}`, {
-    headers: { Upgrade: "websocket", ...headers }
+    headers: { Upgrade: "websocket", Origin: SITE_ORIGIN, ...headers }
   });
   expect(response.status).toBe(101);
   const socket = response.webSocket;

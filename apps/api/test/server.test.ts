@@ -2,6 +2,7 @@ import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/visitor.ts";
 import worker from "#src/server.ts";
 import {
@@ -10,6 +11,7 @@ import {
   fakeFetcher,
   fetchWorker,
   NOT_FOUND_HTML,
+  roomName,
   testEnv,
   visitorStorage
 } from "./fixtures";
@@ -58,17 +60,60 @@ describe("routing", () => {
 });
 
 describe("the chat-room WebSocket", () => {
-  it("is the only agent route: no other Durable Object or sub-path upgrades", async () => {
+  it("is the only agent route: no other Durable Object, sub-path or room name upgrades", async () => {
     const upgrade = (path: string) =>
-      fetchWorker(path, { headers: { Upgrade: "websocket" } }).then(r => r.status);
-    expect(await upgrade("/agents/chat-room/route-room")).toBe(101);
+      fetchWorker(path, { headers: { Upgrade: "websocket", Origin: SITE_ORIGIN } }).then(
+        r => r.status
+      );
+    expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT")).toBe(101);
     expect(await upgrade("/agents/rate-limiter/global")).toBe(404);
-    expect(await upgrade("/agents/chat-room/route-room/sub/chat-room/other")).toBe(404);
-    expect((await fetchWorker("/agents/chat-room/route-room")).status).toBe(404);
+    expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT/sub/chat-room/other")).toBe(404);
+    expect((await fetchWorker("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT")).status).toBe(404);
+    // The widget mints 21 characters of A-Za-z0-9_-.
+    expect(await upgrade("/agents/chat-room/short")).toBe(404);
+    expect(await upgrade(`/agents/chat-room/${"a".repeat(22)}`)).toBe(404);
+    expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B.myT")).toBe(404);
+    expect((await fetchWorker("/agents/chat-room/short/get-messages")).status).toBe(404);
+  });
+
+  it.each([
+    { from: "the site's own page", site: SITE_ORIGIN, origin: SITE_ORIGIN, status: 101 },
+    {
+      from: "a local dev page on another port",
+      site: "http://localhost:8787",
+      origin: "http://localhost:4399",
+      status: 101
+    },
+    { from: "another site", site: SITE_ORIGIN, origin: "https://evil.example", status: 403 },
+    {
+      from: "a local page against production",
+      site: SITE_ORIGIN,
+      origin: "http://localhost:4399",
+      status: 403
+    },
+    { from: "a client that sends no Origin", site: SITE_ORIGIN, origin: undefined, status: 403 },
+    {
+      from: "a lookalike host",
+      site: SITE_ORIGIN,
+      origin: "https://murugappan.dev.evil.example",
+      status: 403
+    },
+    { from: "the site over http", site: SITE_ORIGIN, origin: "http://murugappan.dev", status: 403 },
+    {
+      from: "another site in local dev",
+      site: "http://localhost:8787",
+      origin: "https://evil.example",
+      status: 403
+    }
+  ])("upgrades a socket from $from with $status", async ({ site, origin, status }) => {
+    const headers = new Headers({ Upgrade: "websocket" });
+    if (origin) headers.set("Origin", origin);
+    const res = await fetchWorker(`${site}/agents/chat-room/V1StGXR8_Z5jdHi6B-myT`, { headers });
+    expect(res.status).toBe(status);
   });
 
   it("replaces client-supplied visitor headers with what Cloudflare reports", async () => {
-    const { stub } = await connectRoom("spoof-room-ws", {
+    const { stub } = await connectRoom(roomName("spoof-room-ws"), {
       "CF-IPCountry": "IN",
       [VISITOR_COUNTRY_HEADER]: "XX",
       [VISITOR_IP_HEADER]: "203.0.113.66"

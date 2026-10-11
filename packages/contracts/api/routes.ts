@@ -20,6 +20,3 @@ export const API_PATHS = {
   // Agents probe the site root for the spec. Not in the spec's own `paths`.
   openapiRoot: "/openapi.json"
 } as const;
-
-// Typed, not `as const`: Hono's `.on` takes a mutable array and needs the literals to type routes.
-export const READ_METHODS: ("GET" | "HEAD")[] = ["GET", "HEAD"];

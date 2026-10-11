@@ -313,8 +313,11 @@ export class ChatRoom extends AIChatAgent<Env> {
       .one().n;
   }
 
+  // The rows exist only to count today's messages, so each insert drops those past the window.
   private recordUserMessage(): void {
-    this.ctx.storage.sql.exec(`INSERT INTO user_messages (created_at) VALUES (?)`, Date.now());
+    const now = Date.now();
+    this.ctx.storage.sql.exec(`DELETE FROM user_messages WHERE created_at <= ?`, now - DAY_MS);
+    this.ctx.storage.sql.exec(`INSERT INTO user_messages (created_at) VALUES (?)`, now);
     const latest = this.messages.findLast(m => m.role === "user");
     if (latest) this.mirrorMessage("user", messageText(latest));
   }

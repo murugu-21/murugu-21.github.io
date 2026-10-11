@@ -8,6 +8,9 @@ export type ReadSlot = {
 
 type Window = { resetAt: number; used: number };
 
+/** Why a read was refused, for the REST 429 and the MCP server alike. */
+export const READ_LIMIT_MESSAGE = `More than ${READ_QUOTA.quota} read requests in ${READ_QUOTA.windowSeconds} seconds from this client.`;
+
 // Fixed windows in the isolate, not a DO, because a cross-region round trip per read costs more
 // than the limit is worth. So the ceiling is per edge location, as /developers/ documents.
 const windows = new Map<string, Window>();

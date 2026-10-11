@@ -19,11 +19,12 @@ import { PostsService } from "#src/modules/posts/posts.service.ts";
 import { ProfileService } from "#src/modules/profile/profile.service.ts";
 import type { ContactLimitReached } from "#src/modules/rate-limit/contact-quota.repository.ts";
 import type { ContactUsage } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
+import { READ_LIMIT_MESSAGE, takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
 
 export type ToolContext = {
   services: RequestServices;
-  /** Keys the send_message allowance. */
-  clientIp: string;
+  /** Keys the read window and the send_message allowance. */
+  clientIp: string | undefined;
 };
 
 type ToolTextContent = { type: "text"; text: string };
@@ -90,6 +91,25 @@ const fromDataset: Run = (_args, { services }, tool) =>
     render: { success: ok, failures: {} }
   });
 
+/**
+ * Spends one read from the client's REST read window, which the spec's rate limit on tool calls
+ * and resource reads asks for. Like the REST guard, it counts nothing without a client address.
+ * Returns why the read is refused, or null when it may go ahead.
+ */
+export function refusedRead(clientIp: string | undefined): string | null {
+  const slot = clientIp ? takeReadSlot(clientIp) : null;
+  if (!slot || slot.allowed) return null;
+  return `${READ_LIMIT_MESSAGE} Wait ${slot.resetSeconds} seconds, then try again.`;
+}
+
+// send_message has its own allowance, so only the read tools are wrapped.
+const readLimited =
+  (run: Run): Run =>
+  (args, ctx, tool) => {
+    const refused = refusedRead(ctx.clientIp);
+    return refused ? fail(refused) : run(args, ctx, tool);
+  };
+
 // Keyed by name, so a tool in the catalogue without a handler fails to compile.
 const RUN: Record<McpToolName, Run> = {
   get_profile: fromDataset,
@@ -131,7 +151,10 @@ const RUN: Record<McpToolName, Run> = {
     }
     return runInRequest({
       services: ctx.services,
-      program: ContactService.use(contact => contact.deliver({ client: ctx.clientIp, message })),
+      program: ContactService.use(contact =>
+        // Callers without an address share one allowance.
+        contact.deliver({ client: ctx.clientIp ?? "unknown", message })
+      ),
       render: sendMessageResults
     });
   }
@@ -139,7 +162,7 @@ const RUN: Record<McpToolName, Run> = {
 
 export function registerTools(server: McpServer, ctx: ToolContext): void {
   for (const tool of MCP_TOOLS) {
-    const run = RUN[tool.name];
+    const run = tool.annotations.readOnlyHint ? readLimited(RUN[tool.name]) : RUN[tool.name];
     server.registerTool(
       tool.name,
       {

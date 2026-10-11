@@ -3,6 +3,22 @@ import { z } from "zod";
 
 import { fetchWorker, readJson } from "./fixtures";
 
+// Hono answers HEAD from the GET route.
+describe("HEAD on the discovery documents", () => {
+  it.each(["/.well-known/api-catalog", "/.well-known/mcp.json", "/mcp.json"])(
+    "answers HEAD %s with GET's status and Content-Type and no body",
+    async path => {
+      const get = await fetchWorker(path);
+      const head = await fetchWorker(path, { method: "HEAD" });
+      expect(get.status).toBe(200);
+      expect(head.status).toBe(200);
+      expect(head.headers.get("Content-Type")).toBe(get.headers.get("Content-Type"));
+      expect(await get.text()).toMatch(/^\{/);
+      expect(await head.text()).toBe("");
+    }
+  );
+});
+
 describe("/.well-known/api-catalog", () => {
   it("is served cross-origin with the RFC 9727 media type", async () => {
     const res = await fetchWorker("/.well-known/api-catalog");

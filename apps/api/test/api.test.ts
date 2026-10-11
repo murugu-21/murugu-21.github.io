@@ -173,25 +173,23 @@ describe("the dataset endpoints", () => {
   });
 });
 
+// Hono answers HEAD from the GET route, so the typed client, which has no $head, can't send one.
 describe("HEAD on the read endpoints", () => {
-  it.each<[string, (method: "$get" | "$head") => Promise<ClientResponse<unknown>>]>([
-    ["/api/v1/profile", method => v1.profile[method]()],
-    ["/api/v1/experience", method => v1.experience[method]()],
-    ["/api/v1/skills", method => v1.skills[method]()],
-    ["/api/v1/education", method => v1.education[method]()],
-    ["/api/v1/open-source", method => v1["open-source"][method]()],
-    ["/api/v1/posts", method => v1.posts[method]({ query: {} })],
-    [
-      "/api/v1/posts/coin-change-problem",
-      method => v1.posts[":slug"][method]({ param: { slug: "coin-change-problem" } })
-    ],
-    ["/api/v1/versions", method => v1.versions[method]()],
-    ["/api/v1/openapi.json", method => v1["openapi.json"][method]()],
-    ["/api/profile", method => client.api.profile[method]()],
-    ["/openapi.json", method => client["openapi.json"][method]()]
-  ])("answers HEAD %s with GET's headers and no body", async (_, request) => {
-    const get = await request("$get");
-    const head = await request("$head");
+  it.each([
+    "/api/v1/profile",
+    "/api/v1/experience",
+    "/api/v1/skills",
+    "/api/v1/education",
+    "/api/v1/open-source",
+    "/api/v1/posts",
+    "/api/v1/posts/coin-change-problem",
+    "/api/v1/versions",
+    "/api/v1/openapi.json",
+    "/api/profile",
+    "/openapi.json"
+  ])("answers HEAD %s with GET's headers and no body", async path => {
+    const get = await fetchWorker(path);
+    const head = await fetchWorker(path, { method: "HEAD" });
     for (const [method, res] of [
       ["GET", get],
       ["HEAD", head]

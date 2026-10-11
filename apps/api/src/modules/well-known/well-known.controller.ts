@@ -2,7 +2,6 @@
 
 import { Hono } from "hono";
 
-import { READ_METHODS } from "@murugappan/contracts/api/routes.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
 import { publicOrigin } from "#src/common/http/public-origin.ts";
 import { readOnlyCorsMiddleware } from "#src/common/middleware/cors.middleware.ts";
@@ -26,18 +25,18 @@ export const wellKnownController = new Hono<AppEnv>();
 
 wellKnownController.use("*", readOnlyCorsMiddleware);
 
-wellKnownController.on(READ_METHODS, "/api-catalog", c =>
+wellKnownController.get("/api-catalog", c =>
   document(buildApiCatalog(publicOrigin(c.req.url)), LINKSET_MEDIA_TYPE)
 );
 
 const manifestResponse = (requestUrl: string) =>
   document(buildMcpManifest(publicOrigin(requestUrl)), "application/json");
 
-wellKnownController.on(READ_METHODS, "/mcp.json", c => manifestResponse(c.req.url));
+wellKnownController.get("/mcp.json", c => manifestResponse(c.req.url));
 
 /** The same manifest at the site root, where clients look first. */
 export const mcpManifestController = new Hono<AppEnv>();
 
 mcpManifestController.use("*", readOnlyCorsMiddleware);
 
-mcpManifestController.on(READ_METHODS, "/", c => manifestResponse(c.req.url));
+mcpManifestController.get("/", c => manifestResponse(c.req.url));

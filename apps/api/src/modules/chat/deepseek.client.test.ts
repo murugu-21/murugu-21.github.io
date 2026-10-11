@@ -3,10 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { deepseek, fetchDeepseekBalance } from "#src/modules/chat/deepseek.client.ts";
+import { stubDeepseekBalance } from "#test/fixtures.ts";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("deepseek", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it("calls DeepSeek's chat API with the key and the chosen model, Flash by default", async () => {
     const seen: { url: string; auth: string | null; model: string }[] = [];
     vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -38,34 +39,27 @@ describe("deepseek", () => {
 });
 
 describe("fetchDeepseekBalance", () => {
-  function json(body: unknown, status = 200): typeof fetch {
-    return async () => new Response(JSON.stringify(body), { status });
-  }
-
   it("reads is_available and the USD balance, ignoring other currencies", async () => {
-    const balance = await fetchDeepseekBalance(
-      "sk-test",
-      json({
-        is_available: true,
-        balance_infos: [
-          { currency: "CNY", total_balance: "7.00" },
-          { currency: "USD", total_balance: "1.99" }
-        ]
-      })
-    );
+    stubDeepseekBalance({
+      is_available: true,
+      balance_infos: [
+        { currency: "CNY", total_balance: "7.00" },
+        { currency: "USD", total_balance: "1.99" }
+      ]
+    });
+    const balance = await fetchDeepseekBalance("sk-test");
     // total_balance is a decimal string in the API response, not a number.
     expect(balance).toEqual({ available: true, totalUsd: 1.99 });
   });
 
   it("reports zero when there is no USD row", async () => {
-    const balance = await fetchDeepseekBalance(
-      "sk-test",
-      json({ is_available: true, balance_infos: [] })
-    );
+    stubDeepseekBalance({ is_available: true, balance_infos: [] });
+    const balance = await fetchDeepseekBalance("sk-test");
     expect(balance).toEqual({ available: true, totalUsd: 0 });
   });
 
   it("throws on a non-OK response", async () => {
-    await expect(fetchDeepseekBalance("sk-test", json({}, 401))).rejects.toThrow("401");
+    stubDeepseekBalance({}, 401);
+    await expect(fetchDeepseekBalance("sk-test")).rejects.toThrow("401");
   });
 });

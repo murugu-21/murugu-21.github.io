@@ -59,11 +59,8 @@ const BalanceResponse = z.object({
   )
 });
 
-export async function fetchDeepseekBalance(
-  apiKey: string,
-  fetcher: typeof fetch = fetch
-): Promise<DeepseekBalance> {
-  const res = await fetcher(`${DEEPSEEK_BASE_URL}/user/balance`, {
+export async function fetchDeepseekBalance(apiKey: string): Promise<DeepseekBalance> {
+  const res = await fetch(`${DEEPSEEK_BASE_URL}/user/balance`, {
     headers: { authorization: `Bearer ${apiKey}` }
   });
   if (!res.ok) throw new Error(`deepseek balance request failed: ${res.status}`);

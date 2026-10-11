@@ -52,7 +52,7 @@ mcpController.use("*", mcpCorsMiddleware);
 mcpController.all("*", webOriginGuard, async c => {
   const ctx: ToolContext = {
     services: c.var.services,
-    clientIp: c.req.header("CF-Connecting-IP") ?? "unknown"
+    clientIp: c.req.header("CF-Connecting-IP")
   };
   // A handler per request: the SDK's factory sees the Request but not this request's services and
   // client IP, which the tools read.

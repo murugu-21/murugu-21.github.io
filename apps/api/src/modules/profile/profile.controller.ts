@@ -8,7 +8,6 @@ import {
   Profile,
   SkillsResponse
 } from "@murugappan/contracts/api/dataset.ts";
-import { READ_METHODS } from "@murugappan/contracts/api/routes.ts";
 import { runInRequest } from "#src/app.module.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
 import { json } from "#src/common/http/json.ts";
@@ -22,8 +21,8 @@ const sliceHandler = (slice: z.ZodType) => (c: Context<AppEnv>) =>
   });
 
 export const profileController = new Hono<AppEnv>()
-  .on(READ_METHODS, "/profile", sliceHandler(Profile))
-  .on(READ_METHODS, "/experience", sliceHandler(ExperienceList))
-  .on(READ_METHODS, "/skills", sliceHandler(SkillsResponse))
-  .on(READ_METHODS, "/education", sliceHandler(EducationList))
-  .on(READ_METHODS, "/open-source", sliceHandler(OpenSourceList));
+  .get("/profile", sliceHandler(Profile))
+  .get("/experience", sliceHandler(ExperienceList))
+  .get("/skills", sliceHandler(SkillsResponse))
+  .get("/education", sliceHandler(EducationList))
+  .get("/open-source", sliceHandler(OpenSourceList));

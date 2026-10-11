@@ -8,7 +8,7 @@ Rules lint can't check:
 
 - **HONO-1.** Write handlers inline in the route call, so Hono infers params and `c.var`. Don't pull `(c) => …` helpers out of a controller. If one is unavoidable, build it with `createFactory().createHandlers()` or move it to a `*.client.ts`.
 - **HONO-2.** Read request input only through the pipes (`jsonBodyPipe`, `queryPipe`) and then `c.var.body` or `c.var.query`. Never parse `c.req` in a handler. Hono's own `validator` hands `{}` to the schema when `Content-Type` is wrong, which is why the pipes exist.
-- **HONO-3.** Register read routes with `.get()`. Hono already answers `HEAD` from the `GET` route, so a `"HEAD"` in `.on([...])` registers a route that never runs. The existing `.on(READ_METHODS, …)` routes have this flaw too, so don't accept new code that copies them.
+- **HONO-3.** Register read routes with `.get()`. Hono already answers `HEAD` from the `GET` route, so a `"HEAD"` in `.on([...])` registers a route that never runs.
 - **HONO-4.** Mount a new router in `app.ts` before any broader prefix that would swallow it, and add its path to `run_worker_first` in `apps/api/wrangler.jsonc`, or static assets answer it.
 - **HONO-5.** Put an API endpoint under `apiController` (`modules/api/api.controller.ts`), so the filter, CORS, throttle, headers interceptor and 405s apply. Don't install that stack a second time.
 - **HONO-6.** Answer expected outcomes from the controller's `render` table. Throw only for bugs. The API's error shape is `apiError`, not a thrown `HTTPException`.

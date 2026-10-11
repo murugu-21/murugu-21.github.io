@@ -1,18 +1,21 @@
 import { createMiddleware } from "hono/factory";
 import { basePath } from "hono/route";
 
-import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
 import type { ApiEnv } from "#src/common/app-env.ts";
 import { apiError } from "#src/common/http/api-error.ts";
 import { versionHeaders, versionLinkHeader } from "#src/common/http/version-headers.ts";
 import { readRateLimitHeaders } from "#src/modules/rate-limit/rate-limit-headers.ts";
-import { takeReadSlot, type ReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
+import {
+  READ_LIMIT_MESSAGE,
+  takeReadSlot,
+  type ReadSlot
+} from "#src/modules/rate-limit/read-quota.store.ts";
 
 function throttled(slot: ReadSlot): Response {
   return apiError({
     status: 429,
     code: "rate_limited",
-    message: `More than ${READ_QUOTA.quota} read requests in ${READ_QUOTA.windowSeconds} seconds from this client.`,
+    message: READ_LIMIT_MESSAGE,
     hint: `Wait ${slot.resetSeconds} seconds. Read responses are cacheable for 5 minutes, so reuse the ones you already have, and read the RateLimit header to see what is left.`,
     headers: {
       "Retry-After": String(slot.resetSeconds),

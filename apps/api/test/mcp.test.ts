@@ -9,9 +9,11 @@ import { z } from "zod";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
+import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
 import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
 import { MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
 import { JsonObject } from "@murugappan/utils/json.ts";
+import { takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
 import {
   ContactLimitReached,
   QuotaUnavailable
@@ -452,6 +454,47 @@ describe("tools over HTTP", () => {
     expect(result.isError).toBe(true);
     expect(textOf(result)).toBe(
       "This client has already used its daily allowance of 3 messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
+    );
+  });
+});
+
+describe("the read limit", () => {
+  it("shares the REST read window, so a client past it gets isError from a read tool but can still send", async () => {
+    const ip = "198.51.100.82";
+    for (let i = 0; i < READ_QUOTA.quota; i++) await fetchWorker("/api/v1/profile", { ip });
+    const client = await connect({ ip });
+
+    const read = await client.callTool({ name: "get_profile", arguments: {} });
+    expect(read.isError).toBe(true);
+    expect(textOf(read)).toMatch(
+      /^More than 600 read requests in 60 seconds from this client\. Wait \d+ seconds/
+    );
+
+    const sent = await client.callTool({
+      name: "send_message",
+      arguments: {
+        email: "ada@example.com",
+        dryRun: true,
+        message: "A perfectly valid message body for the allowance test."
+      }
+    });
+    expect(sent.structuredContent).toHaveProperty("status", "validated");
+  });
+
+  it("never refuses a client without an address, as the REST guard doesn't count one", async () => {
+    for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot("unknown");
+    const result = await call("get_profile", {}, { ip: "" });
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent).toHaveProperty("person.name", "Murugappan M");
+  });
+
+  it("refuses a resource read past the same window with the seconds to wait", async () => {
+    const ip = "198.51.100.83";
+    for (let i = 0; i < READ_QUOTA.quota; i++) await fetchWorker("/api/v1/profile", { ip });
+    const reading = (await connect({ ip })).readResource({ uri: POST_URI });
+    await expect(reading).rejects.toMatchObject({ code: -32000 });
+    await expect(reading).rejects.toThrow(
+      /More than 600 read requests in 60 seconds from this client\. Wait \d+ seconds/
     );
   });
 });

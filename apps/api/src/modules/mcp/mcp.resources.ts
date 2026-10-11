@@ -2,6 +2,7 @@
 // client can GET directly. Reads accept only the allowlist or a validated blog slug.
 
 import {
+  ProtocolError,
   ResourceNotFoundError,
   ResourceTemplate,
   type McpServer
@@ -12,7 +13,7 @@ import type { PostSummary } from "@murugappan/contracts/api/posts.ts";
 import { runInRequest } from "#src/app.module.ts";
 import { AGENTS_MD, LLMS_FULL_TXT, LLMS_TXT } from "#src/common/content.ts";
 import type { Render } from "#src/common/di/render.ts";
-import type { ToolContext } from "#src/modules/mcp/mcp.tools.ts";
+import { refusedRead, type ToolContext } from "#src/modules/mcp/mcp.tools.ts";
 import { buildOpenApiDocument } from "#src/modules/openapi/openapi-document.ts";
 import type { Post, PostNotFound } from "#src/modules/posts/posts.repository.ts";
 import { PostsService } from "#src/modules/posts/posts.service.ts";
@@ -109,6 +110,14 @@ const postResources = (posts: PostSummary[]): ResourceDescriptor[] =>
 
 const contents = (content: ResourceContents) => ({ contents: [content] });
 
+// JSON-RPC leaves -32000 to -32099 to the server; resources have no isError result.
+const RATE_LIMITED = -32000;
+
+function spendRead(clientIp: string | undefined): void {
+  const refused = refusedRead(clientIp);
+  if (refused) throw new ProtocolError(RATE_LIMITED, refused);
+}
+
 const markdownOrNull: Render<Post, PostNotFound, string | null> = {
   success: post => post.markdown,
   failures: { PostNotFound: () => null }
@@ -116,11 +125,12 @@ const markdownOrNull: Render<Post, PostNotFound, string | null> = {
 
 // A missing post throws ResourceNotFoundError, which the SDK answers with -32602; the spec forbids
 // an empty contents array.
-export function registerResources(server: McpServer, { services }: ToolContext): void {
+export function registerResources(server: McpServer, { services, clientIp }: ToolContext): void {
   for (const { text, uri, name, ...metadata } of STATIC_RESOURCES) {
-    server.registerResource(name, uri, metadata, () =>
-      contents({ uri, mimeType: metadata.mimeType, text: text() })
-    );
+    server.registerResource(name, uri, metadata, () => {
+      spendRead(clientIp);
+      return contents({ uri, mimeType: metadata.mimeType, text: text() });
+    });
   }
 
   const { uriTemplate, name, ...metadata } = BLOG_POST_TEMPLATE;
@@ -132,6 +142,7 @@ export function registerResources(server: McpServer, { services }: ToolContext):
     });
   const template = new ResourceTemplate(uriTemplate, { list });
   server.registerResource(name, template, metadata, async (uri, { slug }) => {
+    spendRead(clientIp);
     if (typeof slug !== "string") throw new ResourceNotFoundError(uri.href);
     const markdown = await runInRequest({
       services,

@@ -56,15 +56,11 @@ export class RateLimiter extends DurableObject<Env> {
   }
 
   // Fails OPEN on a lookup error, since the next 402 catches an empty account.
-  public async chatAvailable(
-    apiKey: string,
-    // Injected by tests only; an RPC caller passes just the key.
-    fetcher: typeof fetch = fetch
-  ): Promise<boolean> {
+  public async chatAvailable(apiKey: string): Promise<boolean> {
     const cached = await this.cachedBalance();
     if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) return hasFunds(cached);
     try {
-      const balance = await fetchDeepseekBalance(apiKey, fetcher);
+      const balance = await fetchDeepseekBalance(apiKey);
       // The object takes other calls during the fetch, so anything written meanwhile
       // (a 402, another check) is newer than this reading.
       const latest = await this.cachedBalance();

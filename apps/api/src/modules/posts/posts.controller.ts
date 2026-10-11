@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 
 import { PostsQuery } from "@murugappan/contracts/api/posts.ts";
-import { READ_METHODS } from "@murugappan/contracts/api/routes.ts";
 import { runInRequest } from "#src/app.module.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
 import { apiError } from "#src/common/http/api-error.ts";
@@ -10,8 +9,7 @@ import { queryPipe } from "#src/common/pipes/query.pipe.ts";
 import { PostsService } from "#src/modules/posts/posts.service.ts";
 
 export const postsController = new Hono<AppEnv>()
-  .on(
-    READ_METHODS,
+  .get(
     "/posts",
     queryPipe({
       schema: PostsQuery,
@@ -26,7 +24,7 @@ export const postsController = new Hono<AppEnv>()
       });
     }
   )
-  .on(READ_METHODS, "/posts/:slug", c =>
+  .get("/posts/:slug", c =>
     runInRequest({
       services: c.var.services,
       program: PostsService.use(posts => posts.findBySlug(c.req.param("slug"))),

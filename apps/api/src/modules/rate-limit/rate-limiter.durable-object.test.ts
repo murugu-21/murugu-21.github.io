@@ -1,6 +1,6 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   CONTACT_DAILY_GLOBAL,
@@ -10,15 +10,12 @@ import {
   BALANCE_RESERVE_USD,
   RateLimiter
 } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
+import { stubDeepseekBalance } from "#test/fixtures.ts";
 
 /** Runs inside the instance, so the synchronous contact methods skip an RPC per call. */
 function inLimiter(name: string, fn: (instance: RateLimiter) => Promise<void> | void) {
   const stub = env.RateLimiter.get(env.RateLimiter.idFromName(name));
   return runInDurableObject(stub, fn);
-}
-
-function balanceResponse(body: unknown, status = 200): typeof fetch {
-  return async () => new Response(JSON.stringify(body), { status });
 }
 
 const usd = (total: number | string, available = true) => ({
@@ -27,11 +24,15 @@ const usd = (total: number | string, available = true) => ({
 });
 
 describe("chatAvailable", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it("allows chat on a funded account and caches the reading", async () => {
     await inLimiter("bal-ok", async instance => {
-      expect(await instance.chatAvailable("sk-test", balanceResponse(usd("1.99")))).toBe(true);
+      stubDeepseekBalance(usd("1.99"));
+      expect(await instance.chatAvailable("sk-test")).toBe(true);
       // The second answer comes from the cache, not this empty account.
-      expect(await instance.chatAvailable("sk-test", balanceResponse(usd("0", false)))).toBe(true);
+      stubDeepseekBalance(usd("0", false));
+      expect(await instance.chatAvailable("sk-test")).toBe(true);
     });
   });
 
@@ -51,17 +52,18 @@ describe("chatAvailable", () => {
     { label: "fails open when the balance lookup errors", body: {}, status: 500, expected: true }
   ])("$label", async ({ label, body, status, expected }) => {
     await inLimiter(`bal-${label}`, async instance => {
-      expect(await instance.chatAvailable("sk-test", balanceResponse(body, status))).toBe(expected);
+      stubDeepseekBalance(body, status);
+      expect(await instance.chatAvailable("sk-test")).toBe(expected);
     });
   });
 
   it("gates every room immediately once DeepSeek reports a 402", async () => {
-    const funded = balanceResponse(usd("1.99"));
+    stubDeepseekBalance(usd("1.99"));
     await inLimiter("bal-402", async instance => {
-      expect(await instance.chatAvailable("sk-test", funded)).toBe(true);
+      expect(await instance.chatAvailable("sk-test")).toBe(true);
       await instance.markChatExhausted();
       // Gated even though the balance still reads funded: the 402 settled it.
-      expect(await instance.chatAvailable("sk-test", funded)).toBe(false);
+      expect(await instance.chatAvailable("sk-test")).toBe(false);
     });
   });
 
@@ -69,11 +71,13 @@ describe("chatAvailable", () => {
     let answer: (response: Response) => void = () => {};
     const reading = new Promise<Response>(resolve => (answer = resolve));
     await inLimiter("bal-race", async instance => {
-      const checking = instance.chatAvailable("sk-test", () => reading);
+      vi.stubGlobal("fetch", () => reading);
+      const checking = instance.chatAvailable("sk-test");
       await instance.markChatExhausted();
       answer(new Response(JSON.stringify(usd("1.99"))));
       await checking;
-      expect(await instance.chatAvailable("sk-test", balanceResponse(usd("1.99")))).toBe(false);
+      stubDeepseekBalance(usd("1.99"));
+      expect(await instance.chatAvailable("sk-test")).toBe(false);
     });
   });
 });

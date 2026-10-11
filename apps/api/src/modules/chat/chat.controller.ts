@@ -2,6 +2,7 @@ import { routeAgentRequest } from "agents";
 import { Hono, type Context } from "hono";
 
 import type { AppEnv } from "#src/common/app-env.ts";
+import { siteOriginGuard } from "#src/modules/chat/site-origin.guard.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/visitor.ts";
 import { serveAsset } from "#src/modules/pages/assets.client.ts";
 
@@ -36,7 +37,11 @@ async function chatRoom(c: Context<AppEnv>): Promise<Response> {
  */
 export const chatController = new Hono<AppEnv>();
 
-chatController.get("/:room", c =>
+// The widget names a room with nanoid(): 21 characters of A-Za-z0-9_-. Any other name falls
+// through to the 404.
+const ROOM = "/:room{[\\w-]{21}}";
+
+chatController.get(ROOM, siteOriginGuard, c =>
   c.req.header("Upgrade") === "websocket" ? chatRoom(c) : serveAsset(c)
 );
-chatController.get("/:room/get-messages", chatRoom);
+chatController.get(`${ROOM}/get-messages`, chatRoom);

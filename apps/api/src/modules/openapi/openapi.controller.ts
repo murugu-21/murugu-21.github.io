@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 
-import { READ_METHODS } from "@murugappan/contracts/api/routes.ts";
 import type { ApiEnv, AppEnv } from "#src/common/app-env.ts";
 import { json } from "#src/common/http/json.ts";
 import { publicOrigin } from "#src/common/http/public-origin.ts";
@@ -11,7 +10,7 @@ import { buildOpenApiDocument } from "#src/modules/openapi/openapi-document.ts";
 const specResponse = (requestUrl: string) => json(buildOpenApiDocument(publicOrigin(requestUrl)));
 
 /** /api/openapi.json, inside the API router. */
-export const openapiController = new Hono<AppEnv>().on(READ_METHODS, "/openapi.json", c =>
+export const openapiController = new Hono<AppEnv>().get("/openapi.json", c =>
   specResponse(c.req.url)
 );
 
@@ -20,4 +19,4 @@ export const openapiController = new Hono<AppEnv>().on(READ_METHODS, "/openapi.j
 export const openapiRootController = useApiStack(new Hono<ApiEnv>(), {
   cors: specCorsMiddleware,
   enforceReads: false
-}).on(READ_METHODS, "/", c => specResponse(c.req.url));
+}).get("/", c => specResponse(c.req.url));
