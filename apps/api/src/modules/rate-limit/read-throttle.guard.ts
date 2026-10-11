@@ -1,4 +1,4 @@
-import { createMiddleware } from "hono/factory";
+import { defineMiddleware } from "hono/factory";
 import { basePath } from "hono/route";
 
 import type { ApiEnv } from "#src/common/app-env.ts";
@@ -31,7 +31,7 @@ function throttled(slot: ReadSlot): Response {
  * document, because a throttled client must still be able to learn why.
  */
 export const readThrottleGuard = ({ enforce }: { enforce: boolean }) =>
-  createMiddleware<ApiEnv>(async (c, next) => {
+  defineMiddleware<ApiEnv>(async (c, next) => {
     // Path within the mount, so /api/contact and /api/v1/contact both match.
     const isContact = c.req.path.slice(basePath(c).length) === "/contact";
     const isRead = c.req.method === "GET" || c.req.method === "HEAD";

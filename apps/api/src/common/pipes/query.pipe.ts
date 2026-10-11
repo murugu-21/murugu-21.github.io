@@ -1,4 +1,4 @@
-import { createMiddleware } from "hono/factory";
+import { defineMiddleware } from "hono/factory";
 import type { z } from "zod";
 
 import type { AppEnv } from "#src/common/app-env.ts";
@@ -6,7 +6,7 @@ import { apiError, fieldIssues } from "#src/common/http/api-error.ts";
 
 /** Validates the query string (first value per key) into `c.var.query`, or answers 400. */
 export const queryPipe = <S extends z.ZodType>({ schema, hint }: { schema: S; hint: string }) =>
-  createMiddleware<
+  defineMiddleware<
     AppEnv & { Variables: { query: z.infer<S> } },
     string,
     { in: { query: z.input<S> } }

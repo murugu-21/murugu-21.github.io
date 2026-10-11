@@ -387,6 +387,20 @@ describe("error handling under /api", () => {
     );
   });
 
+  it("answers a failure that isn't an Error on the unversioned alias with the JSON 500", async () => {
+    const layer = appLayer(
+      Layer.succeed(PostsRepository, {
+        all: Effect.die("store unreachable"),
+        findBySlug: () => Effect.die("store unreachable")
+      })
+    );
+    capturedErrors();
+    const res = await apiClient({ layer }).api.posts.$get({ query: {} });
+    expect(res.status).toBe(500);
+    expect(res.headers.get("API-Version")).toBe("1.0.0");
+    expect(await errorBody(res)).toMatchObject({ code: "internal_error" });
+  });
+
   it("answers a CORS preflight", async () => {
     const res = await fetchWorker("/api/contact", {
       method: "OPTIONS",

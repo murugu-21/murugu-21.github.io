@@ -1,5 +1,5 @@
 import { INVALID_REQUEST } from "@modelcontextprotocol/server";
-import { createMiddleware } from "hono/factory";
+import { defineMiddleware } from "hono/factory";
 
 import type { AppEnv } from "#src/common/app-env.ts";
 
@@ -18,7 +18,7 @@ function isAllowedOrigin(origin: string | null): boolean {
 }
 
 /** Answers a JSON-RPC 403, since only the MCP endpoint uses it. */
-export const webOriginGuard = createMiddleware<AppEnv>(async (c, next) => {
+export const webOriginGuard = defineMiddleware<AppEnv>(async (c, next) => {
   if (!isAllowedOrigin(c.req.header("Origin") ?? null)) {
     return c.json(
       {

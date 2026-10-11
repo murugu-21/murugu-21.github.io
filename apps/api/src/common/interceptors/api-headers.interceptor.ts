@@ -1,7 +1,7 @@
 // Version, Link and rate-limit headers for every API response, applied here so no endpoint can
 // be added without them.
 
-import { createMiddleware } from "hono/factory";
+import { defineMiddleware } from "hono/factory";
 
 import { CONTACT_POLICY, READ_POLICY } from "@murugappan/contracts/api/quotas.ts";
 import type { ApiEnv } from "#src/common/app-env.ts";
@@ -21,7 +21,7 @@ function allowanceHeaders({
 }
 
 /** Runs after `readThrottleGuard`, which leaves `readSlot` and `isContact` for it. */
-export const apiHeadersInterceptor = createMiddleware<ApiEnv>(async (c, next) => {
+export const apiHeadersInterceptor = defineMiddleware<ApiEnv>(async (c, next) => {
   await next();
 
   const headers = c.res.headers;

@@ -178,7 +178,7 @@ const HONO_CONTEXT: ImportPath = {
   importNames: ["Context"],
   allowTypeImports: true,
   message:
-    "Write the handler inline after its path so Hono infers its types, or build it with createFactory().createHandlers() (hono.dev › Best Practices). A Context type import is fine."
+    "Write the handler inline after its path so Hono infers its types, or build it with defineHandler() from hono/factory. A Context type import is fine."
 };
 const EFFECT_SCHEMA_MESSAGE =
   "Validate with zod from @murugappan/contracts, which the site shares, not effect/Schema (apps/api/README.md › Layers).";

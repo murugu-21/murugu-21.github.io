@@ -32,9 +32,9 @@ describe("buildOpenApiDocument", () => {
 
   /* oxlint-disable tests/observe-behaviour -- relation: spec paths against the router's own table */
   it("documents exactly the paths and methods the router serves", () => {
-    // ALL is middleware or the 404.
+    // ALL is middleware or the 404. An `@` method is an onError or notFound scope.
     const served = apiController.routes
-      .filter(r => r.method !== "ALL")
+      .filter(r => r.method !== "ALL" && !r.method.startsWith("@"))
       .map(r => `${r.method} ${VERSIONED_API_BASE}${r.path.replaceAll(/:(\w+)/g, "{$1}")}`);
     const documented = Object.entries(doc.paths).flatMap(([path, item]) =>
       Object.keys(item).map(method => `${method.toUpperCase()} ${path}`)

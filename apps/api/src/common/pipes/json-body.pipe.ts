@@ -1,4 +1,4 @@
-import { createMiddleware } from "hono/factory";
+import { defineMiddleware } from "hono/factory";
 import type { z } from "zod";
 
 import type { AppEnv } from "#src/common/app-env.ts";
@@ -16,7 +16,7 @@ export const jsonBodyPipe = <S extends z.ZodType>({
   schema: S;
   schemaName: string;
 }) =>
-  createMiddleware<
+  defineMiddleware<
     AppEnv & { Variables: { body: z.infer<S> } },
     string,
     { in: { json: z.input<S> } }

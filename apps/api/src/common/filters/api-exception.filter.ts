@@ -8,9 +8,9 @@ import { versionHeaders, versionLinkHeader } from "#src/common/http/version-head
  * The API's last resort, like Nest's global exception filter: anything a controller's `Render`
  * table didn't handle answers the documented JSON 500 instead of Hono's plain-text one.
  */
-export const apiExceptionFilter: ErrorHandler = (error, c) => {
-  if (error instanceof HTTPException) return error.getResponse();
-  console.error("api request failed", c.req.method, c.req.path, error);
+export const apiExceptionFilter: ErrorHandler = c => {
+  if (c.error instanceof HTTPException) return c.error.getResponse();
+  console.error("api request failed", c.req.method, c.req.path, c.error);
   return apiError({
     status: 500,
     code: "internal_error",
