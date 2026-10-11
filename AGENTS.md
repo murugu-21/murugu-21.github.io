@@ -68,8 +68,8 @@ Agents tend to hand-roll what a library or platform feature already does. Before
 Never call a task complete until both of the following have happened.
 
 1. `.githooks/pre-push` passes (format, lint, typechecks, tests, site build). For UI changes, also check the page in the browser in both light and dark themes, following `.agents/skills/verify-murugappan-dev/SKILL.md`. It rebuilds the site and the Worker, runs its own Worker on a separate port and state directory, and lists how to drive each feature.
-2. Two independent reviewers (separate subagents, each starting fresh with only the diff and these rules) have reviewed the change:
-   - **Behaviour/QA reviewer.** Checks that it does what was asked, that edge cases and regressions are covered, and that it works when run. For every test the diff adds or changes, applies the check in "Test behaviour, not implementation".
-   - **Code-style reviewer.** Checks the diff against every rule in this file, `tooling/lint.config.ts`, `biome.jsonc` and `tooling/biome/`.
+2. Two independent reviewers (separate subagents, each starting fresh with only the diff, these rules and its skill) have reviewed the change:
+   - **Behaviour/QA reviewer.** Follows `.agents/skills/review-behaviour/SKILL.md`. Checks that it does what was asked, that edge cases and regressions are covered, and that it works when run. For every test the diff adds or changes, applies the check in "Test behaviour, not implementation".
+   - **Code-style reviewer.** Follows `.agents/skills/review-code-style/SKILL.md`. Checks the diff against every rule in this file, the lint config, and the framework references that skill picks for the paths the diff touches.
 
    Fix what they find, or explain why a finding doesn't apply, before reporting the task as done.

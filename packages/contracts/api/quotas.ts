@@ -1,6 +1,6 @@
 // The published quotas, advertised as a draft-ietf-httpapi-ratelimit-headers field (RFC 9651):
 //   RateLimit-Policy: "name";q=<quota>;w=<window seconds>   (a list)
-// apps/api/src/api/ratelimit.ts counts against them: reads per edge, contact in the RateLimiter DO.
+// Reads count per edge in apps/api/src/modules/rate-limit/read-quota.store.ts, contact in the RateLimiter DO.
 
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./contact";
 

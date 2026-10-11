@@ -1,12 +1,5 @@
-import { RuleTester } from "vite-plus/lint/plugins-dev";
-import { describe, it } from "vitest";
-
 import plugin from "./contracts.ts";
-
-RuleTester.describe = describe;
-RuleTester.it = it;
-
-const tester = new RuleTester({ languageOptions: { parserOptions: { lang: "ts" } } });
+import { tester } from "./rule-tester.ts";
 
 const exported = (name: string) => ({ messageId: "exportedBehaviour", data: { name } });
 

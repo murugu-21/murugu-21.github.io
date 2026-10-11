@@ -1,9 +1,16 @@
 // Site content comes from the real sources, bundled through virtual:content/posts as in production.
 import { env } from "cloudflare:workers";
-import { assert, expect, vi } from "vitest";
+import { Effect, Layer } from "effect";
+import { testClient } from "hono/testing";
+import { assert, expect, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
-import type { ChatRoom } from "#src/chat-room.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { appLayer, type AppLayer } from "#src/app.module.ts";
+import { createApp } from "#src/app.ts";
+import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
+import { ContactQuotaRepository } from "#src/modules/rate-limit/contact-quota.repository.ts";
+import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
 import worker from "#src/server.ts";
 
 /** The site's styled 404 page (404.html in the build). */
@@ -98,29 +105,98 @@ export function testEnv(options: TestEnvOptions = {}): Env {
   };
 }
 
-export async function readJson<S extends z.ZodType>(res: Response, schema: S): Promise<z.infer<S>> {
+/** Silences `console.error` for this test and records what it was called with. */
+export function capturedErrors() {
+  const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+  onTestFinished(() => spy.mockRestore());
+  return spy;
+}
+
+/**
+ * The app's services with the contact quota answering from `quota`, as Nest's overrideProvider
+ * does. A quota call the test leaves out fails it.
+ */
+export function fakeContactQuota(quota: Partial<ContactQuotaRepository["Service"]>): AppLayer {
+  const unexpected = () => Effect.die(new Error("this test did not fake that quota call"));
+  return appLayer(
+    Layer.succeed(ContactQuotaRepository, { take: unexpected, usage: unexpected, ...quota })
+  );
+}
+
+/**
+ * The RateLimiter stub every request in this test reaches, so a test can spy on its RPCs. Every
+ * mock, including the test's own spies, is restored when the test finishes.
+ */
+export function sharedLimiter() {
+  onTestFinished(() => {
+    vi.restoreAllMocks();
+  });
+  const limiter = globalLimiter(env);
+  vi.spyOn(env.RateLimiter, "get").mockReturnValue(limiter);
+  return limiter;
+}
+
+/** Every fetch answers `body`, as DeepSeek's balance endpoint would. Undo with vi.unstubAllGlobals(). */
+export function stubDeepseekBalance(body: unknown, status = 200): void {
+  vi.stubGlobal("fetch", async () => new Response(JSON.stringify(body), { status }));
+}
+
+/** A response from `fetchWorker` or `apiClient`. */
+export type JsonBody = { json(): Promise<unknown> };
+
+export async function readJson<S extends z.ZodType>(res: JsonBody, schema: S): Promise<z.infer<S>> {
   return schema.parse(await res.json());
 }
 
-export type FetchOptions = RequestInit & { ip?: string; env?: TestEnvOptions };
+export type FetchOptions = RequestInit & {
+  ip?: string;
+  env?: TestEnvOptions;
+  /** The app's services with some providers faked, from a helper such as `fakeContactQuota`. */
+  layer?: AppLayer;
+};
 
 /** Sends a request through the worker entry; a bare path resolves against the site. */
 export async function fetchWorker(
   path: string,
-  { ip, env: envOptions, ...init }: FetchOptions = {}
+  { ip, env: envOptions, layer, ...init }: FetchOptions = {}
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   if (ip) headers.set("CF-Connecting-IP", ip);
-  return worker.fetch(
-    new Request(new URL(path, "https://murugappan.dev"), { ...init, headers }),
+  const app = layer ? createApp(layer) : worker;
+  return app.fetch(
+    new Request(new URL(path, SITE_ORIGIN), { ...init, headers }),
     testEnv(envOptions)
   );
 }
 
-/** A real WebSocket to a chat room through the worker, recording every frame it receives. */
+/**
+ * hono/testing's typed client over `createApp(layer)`, so paths, params, queries and JSON bodies
+ * are checked against the real router. Every request gets the env `testEnv(env)` builds, and `ip`
+ * as its CF-Connecting-IP. Its base URL is fixed at http://localhost.
+ */
+export function apiClient({
+  ip,
+  env: envOptions,
+  layer
+}: Pick<FetchOptions, "ip" | "env" | "layer"> = {}) {
+  return testClient(
+    createApp(layer),
+    testEnv(envOptions),
+    undefined,
+    ip ? { headers: { "CF-Connecting-IP": ip } } : undefined
+  );
+}
+
+/** A room name the Worker accepts: 21 characters, like the widget's nanoid(). */
+export const roomName = (label: string) => label.padEnd(21, "-");
+
+/**
+ * A real WebSocket to a chat room through the worker, from the site's own page, recording every
+ * frame it receives.
+ */
 export async function openRoom(room: string, headers: Record<string, string> = {}) {
   const response = await fetchWorker(`/agents/chat-room/${room}`, {
-    headers: { Upgrade: "websocket", ...headers }
+    headers: { Upgrade: "websocket", Origin: SITE_ORIGIN, ...headers }
   });
   expect(response.status).toBe(101);
   const socket = response.webSocket;

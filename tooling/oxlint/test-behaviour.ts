@@ -3,13 +3,9 @@
 // independent expected value. The rule is a heuristic by design. It catches the
 // shapes syntax can decide and leaves the rest (and the documented exceptions)
 // to an `oxlint-disable` with a reason.
-import type { RuleTester } from "vite-plus/lint/plugins-dev";
+import type { NodeOf, Plugin, Rule } from "./plugin-types.ts";
 
-// oxlint doesn't export its plugin or AST types; derive them from RuleTester.
-type Rule = Parameters<RuleTester["run"]>[1];
 type Context = Parameters<NonNullable<Rule["create"]>>[0];
-type Visitor = ReturnType<NonNullable<Rule["create"]>>;
-type NodeOf<K extends keyof Visitor> = Parameters<NonNullable<Visitor[K]>>[0];
 type CallExpression = NodeOf<"CallExpression">;
 type Node = CallExpression["parent"];
 type Identifier = Extract<Node, { type: "Identifier" }>;
@@ -536,4 +532,4 @@ export default {
       }
     }
   }
-} satisfies { meta: { name: string }; rules: Record<string, Rule> };
+} satisfies Plugin;

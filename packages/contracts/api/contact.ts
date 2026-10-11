@@ -1,5 +1,6 @@
 // The request and response of POST /api/contact, the HTTP twin of Jarvis's capture_opportunity
-// tool. apps/api/src/api/contact.ts names each rejected field so a model can repair its arguments.
+// tool. fieldIssues in apps/api/src/common/http/api-error.ts names each rejected field so a model
+// can repair its arguments.
 
 import { z } from "zod";
 

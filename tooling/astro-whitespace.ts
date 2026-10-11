@@ -57,6 +57,8 @@ type Node = Record<string, unknown>;
 
 export type SpacingMistake = { line: number; text: string; kind: "joins words" | "pads element" };
 
+type Finding = { node: Node; kind: SpacingMistake["kind"]; label?: string };
+
 const isNode = (value: unknown): value is Node => typeof value === "object" && value !== null;
 
 const child = (node: Node | undefined, key: string): Node | undefined => {
@@ -67,7 +69,10 @@ const child = (node: Node | undefined, key: string): Node | undefined => {
 const textOf = (node: Node | undefined): string | undefined =>
   node?.type === "JSXText" && typeof node.value === "string" ? node.value : undefined;
 
-const elementName = (node: Node): unknown => child(child(node, "openingElement"), "name")?.name;
+const elementName = (node: Node | undefined): string | undefined => {
+  const name = child(child(node, "openingElement"), "name")?.name;
+  return typeof name === "string" ? name : undefined;
+};
 
 /** True when the node renders beside its neighbours on the same line. */
 function isInline(node: Node | undefined): boolean {
@@ -77,70 +82,81 @@ function isInline(node: Node | undefined): boolean {
     return !(typeof value === "string" && value.trim() === "");
   }
   const name = node?.type === "JSXElement" ? elementName(node) : undefined;
-  return typeof name === "string" && !BLOCK_ELEMENTS.has(name);
+  return name !== undefined && !BLOCK_ELEMENTS.has(name);
+}
+
+/** Text that opens or closes an inline element with a space, which compression keeps. */
+function paddedEdges(kids: Node[]): Finding[] {
+  const first = kids[0];
+  const last = kids.at(-1);
+  const padsStart = /^[ \t]+\S/.test(textOf(first) ?? "");
+  const padsEnd = /\S[ \t]+$/.test(textOf(last) ?? "");
+  const found: Finding[] = [];
+  if (first && padsStart) found.push({ node: first, kind: "pads element" });
+  // A lone child padded at both ends is one mistake.
+  if (last && padsEnd && !(last === first && padsStart)) {
+    found.push({ node: last, kind: "pads element" });
+  }
+  return found;
+}
+
+/** Text whose line break beside an inline neighbour is deleted, running words together. */
+function joinedWords(kids: Node[]): Finding[] {
+  const isProse = kids.some(kid => textOf(kid)?.trim());
+  const found: Finding[] = [];
+  for (const [i, node] of kids.entries()) {
+    const text = textOf(node);
+    if (text === undefined) continue;
+    const next = kids[i + 1];
+    const breakAfterPrevious = isInline(kids[i - 1]) && /^\s*\n/.test(text);
+    const breakBeforeNext = isInline(next) && /\n\s*$/.test(text);
+    const words = text.trim();
+    if (words === "") {
+      // Two inline elements on separate lines run together in a sentence.
+      if (isProse && breakAfterPrevious && breakBeforeNext) {
+        found.push({ node, kind: "joins words", label: `before <${elementName(next) ?? "{…}"}>` });
+      }
+      continue;
+    }
+    if (breakAfterPrevious && !STARTS_WITH_CLOSER.test(words)) {
+      found.push({ node, kind: "joins words" });
+    }
+    if (breakBeforeNext && !ENDS_WITH_OPENER.test(words)) {
+      found.push({ node, kind: "joins words" });
+    }
+  }
+  return found;
+}
+
+/** Walks the template AST, in source order, for padded elements and joined words. */
+function collectFindings(value: unknown, inExpression: boolean): Finding[] {
+  if (Array.isArray(value)) return value.flatMap(item => collectFindings(item, inExpression));
+  // A <pre> keeps its whitespace.
+  if (!isNode(value) || elementName(value) === "pre") return [];
+  const isExpression = value.type === "JSXExpressionContainer";
+  const nested = Object.entries(value).flatMap(([key, v]) =>
+    key === "frontmatter" ? [] : collectFindings(v, inExpression || isExpression)
+  );
+  // Text directly inside {…} is JavaScript, not page text.
+  if (isExpression || !Array.isArray(value.children)) return nested;
+  const kids = value.children.filter(isNode);
+  // Markup inside {…} is JSX, where a space beside a tag on the same line is meant, so only
+  // template markup can be padded by mistake.
+  const padded = !inExpression && isInline(value) ? paddedEdges(kids) : [];
+  return [...padded, ...joinedWords(kids), ...nested];
+}
+
+function toMistake(source: string, { node, kind, label }: Finding): SpacingMistake {
+  const text = textOf(node) ?? "";
+  if (typeof node.start !== "number") throw new Error(`no position for ${JSON.stringify(text)}`);
+  const firstWord = node.start + text.length - text.trimStart().length;
+  const line = source.slice(0, firstWord).split("\n").length;
+  return { line, text: label ?? text.trim().slice(0, 40), kind };
 }
 
 /** Spots where the rendered spacing differs from what the source reads. */
 export function spacingMistakes(source: string): SpacingMistake[] {
-  const found: SpacingMistake[] = [];
-  const report = (node: Node, kind: SpacingMistake["kind"], label?: string) => {
-    const text = textOf(node) ?? "";
-    if (typeof node.start !== "number") throw new Error(`no position for ${JSON.stringify(text)}`);
-    const firstWord = node.start + text.length - text.trimStart().length;
-    const line = source.slice(0, firstWord).split("\n").length;
-    found.push({ line, text: label ?? text.trim().slice(0, 40), kind });
-  };
-
-  const checkChildren = (parent: Node, kids: Node[], inExpression: boolean) => {
-    // Markup inside {…} is JSX, where a space beside a tag on the same line is meant, so only
-    // template markup can be padded by mistake.
-    if (!inExpression && isInline(parent)) {
-      const first = kids[0];
-      const last = kids.at(-1);
-      const padsStart = first !== undefined && /^[ \t]+\S/.test(textOf(first) ?? "");
-      if (padsStart) report(first, "pads element");
-      if (last && !(last === first && padsStart) && /\S[ \t]+$/.test(textOf(last) ?? "")) {
-        report(last, "pads element");
-      }
-    }
-    const isProse = kids.some(kid => textOf(kid)?.trim());
-    kids.forEach((kid, i) => {
-      const text = textOf(kid);
-      if (text === undefined) return;
-      const words = text.trim();
-      const next = kids[i + 1];
-      const breakAfterPrevious = isInline(kids[i - 1]) && /^\s*\n/.test(text);
-      const breakBeforeNext = isInline(next) && /\n\s*$/.test(text);
-      if (words === "") {
-        // Two inline elements on separate lines run together in a sentence.
-        if (isProse && breakAfterPrevious && breakBeforeNext && next) {
-          const name = elementName(next);
-          report(kid, "joins words", `before <${typeof name === "string" ? name : "{…}"}>`);
-        }
-        return;
-      }
-      if (breakAfterPrevious && !STARTS_WITH_CLOSER.test(words)) report(kid, "joins words");
-      if (breakBeforeNext && !ENDS_WITH_OPENER.test(words)) report(kid, "joins words");
-    });
-  };
-
-  const visit = (value: unknown, inExpression: boolean): void => {
-    if (Array.isArray(value)) {
-      for (const item of value) visit(item, inExpression);
-      return;
-    }
-    // A <pre> keeps its whitespace.
-    if (!isNode(value) || elementName(value) === "pre") return;
-    const isExpression = value.type === "JSXExpressionContainer";
-    // Text directly inside {…} is JavaScript, not page text.
-    if (Array.isArray(value.children) && !isExpression) {
-      checkChildren(value, value.children.filter(isNode), inExpression);
-    }
-    for (const [key, v] of Object.entries(value)) {
-      if (key !== "frontmatter") visit(v, inExpression || isExpression);
-    }
-  };
-
-  visit(parse(source).ast, false);
-  return found.toSorted((a, b) => a.line - b.line);
+  return collectFindings(parse(source).ast, false)
+    .map(finding => toMistake(source, finding))
+    .toSorted((a, b) => a.line - b.line);
 }

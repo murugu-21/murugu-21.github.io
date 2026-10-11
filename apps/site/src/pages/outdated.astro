@@ -79,6 +79,7 @@ import { MIN_VERSIONS, continueLinkScript } from "#src/lib/browser-support.ts";
         Continue to the site anyway
       </a>
     </main>
+    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/browser-support.ts, inlined unbundled since this page must work in browsers the bundle doesn't support */}
     <script is:inline set:html={continueLinkScript} />
   </body>
 </html>

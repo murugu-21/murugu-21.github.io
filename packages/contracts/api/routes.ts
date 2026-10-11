@@ -20,5 +20,3 @@ export const API_PATHS = {
   // Agents probe the site root for the spec. Not in the spec's own `paths`.
   openapiRoot: "/openapi.json"
 } as const;
-
-export const READ_METHODS = ["GET", "HEAD"];

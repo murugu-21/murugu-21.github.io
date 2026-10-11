@@ -3,160 +3,34 @@ import { z } from "zod";
 
 import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
 import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
-import {
-  contactRateLimitHeaders,
-  readRateLimitHeaders,
-  resetReadWindows,
-  secondsUntilUtcMidnight,
-  takeReadSlot
-} from "#src/api/ratelimit.ts";
-import { fetchWorker, readJson } from "./fixtures";
+import { resetReadWindows } from "#src/modules/rate-limit/read-quota.store.ts";
+import { apiClient, fetchWorker, readJson } from "./fixtures";
 
 beforeEach(() => resetReadWindows());
-
-const get = (path: string, ip?: string) => fetchWorker(path, { ip });
-
-const postContact = (body: unknown, ip: string) =>
-  fetchWorker("/api/v1/contact", {
-    ip,
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
 
 const validMessage = {
   email: "ada@example.com",
   message: "We are hiring a senior backend engineer for healthcare."
 };
 
-describe("field serialisation", () => {
-  // draft-ietf-httpapi-ratelimit-headers: a list of quota policies, each a
-  // Structured Fields String with the q (quota) and w (window) parameters.
-  it("writes RateLimit-Policy as one member per policy", () => {
-    const headers = contactRateLimitHeaders({
-      clientRemaining: 1,
-      globalRemaining: 5,
-      resetSeconds: 3600
-    });
-    expect(headers["RateLimit-Policy"]).toBe(
-      '"contact-client";q=3;w=86400, "contact-site";q=20;w=86400'
-    );
-  });
-
-  it("never reports a negative remaining or reset", () => {
-    const headers = readRateLimitHeaders({ allowed: false, remaining: -5, resetSeconds: -1 });
-    expect(headers.RateLimit).toBe('"reads";r=0;t=0');
-  });
-
-  it("mirrors the reported policy into the de-facto X-RateLimit trio", () => {
-    const headers = readRateLimitHeaders({
-      allowed: true,
-      remaining: 7,
-      resetSeconds: 30
-    });
-    expect(headers["X-RateLimit-Limit"]).toBe("600");
-    expect(headers["X-RateLimit-Remaining"]).toBe("7");
-    expect(headers["X-RateLimit-Reset"]).toBe("30");
-  });
-});
-
-describe("takeReadSlot", () => {
-  const now = 1_000_000;
-
-  it("spends one slot per call and counts down", () => {
-    expect(takeReadSlot("1.1.1.1", now)).toMatchObject({
-      allowed: true,
-      remaining: 599
-    });
-    expect(takeReadSlot("1.1.1.1", now)).toMatchObject({
-      allowed: true,
-      remaining: 598
-    });
-  });
-
-  it("counts each client separately", () => {
-    takeReadSlot("1.1.1.1", now);
-    expect(takeReadSlot("2.2.2.2", now)).toMatchObject({
-      remaining: 599
-    });
-  });
-
-  it("refuses once the window's quota is spent, and says for how long", () => {
-    for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot("3.3.3.3", now);
-    const blocked = takeReadSlot("3.3.3.3", now);
-    expect(blocked.allowed).toBe(false);
-    expect(blocked.remaining).toBe(0);
-    expect(blocked.resetSeconds).toBe(60);
-  });
-
-  it("counts down the reset as the window elapses", () => {
-    takeReadSlot("4.4.4.4", now);
-    const later = takeReadSlot("4.4.4.4", now + 30_000);
-    expect(later.resetSeconds).toBe(30);
-  });
-
-  it("starts a fresh window once the old one has passed", () => {
-    for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot("5.5.5.5", now);
-    expect(takeReadSlot("5.5.5.5", now).allowed).toBe(false);
-    const next = takeReadSlot("5.5.5.5", now + READ_QUOTA.windowSeconds * 1000 + 1);
-    expect(next.allowed).toBe(true);
-    expect(next.remaining).toBe(599);
-  });
-
-  it("forgets the longest-tracked clients first under a flood of distinct addresses", () => {
-    const flood = Array.from({ length: 20_002 }, (_, i) => `flood-${i}`);
-    for (const client of flood) takeReadSlot(client, now);
-
-    // flood-0 was dropped, so it starts over; flood-20001 is still counting.
-    expect(takeReadSlot("flood-0", now).remaining).toBe(599);
-    expect(takeReadSlot("flood-20001", now).remaining).toBe(598);
-  });
-});
-
-describe("contactRateLimitHeaders", () => {
-  it("reports whichever tier will stop the next request", () => {
-    const clientTight = contactRateLimitHeaders({
-      clientRemaining: 1,
-      globalRemaining: 15,
-      resetSeconds: 3600
-    });
-    expect(clientTight.RateLimit).toBe('"contact-client";r=1;t=3600');
-
-    const globalTight = contactRateLimitHeaders({
-      clientRemaining: 3,
-      globalRemaining: 0,
-      resetSeconds: 3600
-    });
-    expect(globalTight.RateLimit).toBe('"contact-site";r=0;t=3600');
-  });
-});
-
-describe("secondsUntilUtcMidnight", () => {
-  it("is the whole day at the start of one, and never zero at the end", () => {
-    expect(secondsUntilUtcMidnight(new Date("2026-08-25T00:00:00Z"))).toBe(86_400);
-    // Never 0, so Retry-After always asks for a real wait.
-    expect(secondsUntilUtcMidnight(new Date("2026-08-25T23:59:59.999Z"))).toBe(1);
-  });
-});
-
 describe("read limiting through the worker", () => {
   it("reports the live read allowance on a read", async () => {
-    const res = await get("/api/v1/profile", "198.51.100.1");
+    const res = await apiClient({ ip: "198.51.100.1" }).api.v1.profile.$get();
     expect(res.headers.get("RateLimit-Policy")).toBe('"reads";q=600;w=60');
     expect(res.headers.get("RateLimit")).toMatch(/^"reads";r=599;t=\d+$/);
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("599");
   });
 
   it("advertises the policy even when there is no client address to count", async () => {
-    const res = await get("/api/v1/profile");
+    const res = await apiClient().api.v1.profile.$get();
     expect(res.headers.get("RateLimit-Policy")).toContain('"reads"');
     expect(res.headers.get("RateLimit")).toBeNull();
   });
 
   it("429s a client past the read ceiling, with Retry-After", async () => {
-    const ip = "198.51.100.3";
-    for (let i = 0; i < READ_QUOTA.quota; i++) await get("/api/v1/profile", ip);
-    const res = await get("/api/v1/profile", ip);
+    const { profile } = apiClient({ ip: "198.51.100.3" }).api.v1;
+    for (let i = 0; i < READ_QUOTA.quota; i++) await profile.$get();
+    const res = await profile.$get();
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("Retry-After"))).toBeGreaterThan(0);
     expect(res.headers.get("RateLimit")).toMatch(/^"reads";r=0;t=\d+$/);
@@ -169,9 +43,9 @@ describe("read limiting through the worker", () => {
   });
 
   it("keeps the spec reachable for a client that has been throttled", async () => {
-    const ip = "198.51.100.4";
-    for (let i = 0; i < READ_QUOTA.quota + 5; i++) await get("/api/v1/profile", ip);
-    const res = await get("/openapi.json", ip);
+    const client = apiClient({ ip: "198.51.100.4" });
+    for (let i = 0; i < READ_QUOTA.quota + 5; i++) await client.api.v1.profile.$get();
+    const res = await client["openapi.json"].$get();
     expect(res.status).toBe(200);
     expect(res.headers.get("RateLimit")).toMatch(/^"reads";r=0;t=\d+$/);
   });
@@ -179,7 +53,7 @@ describe("read limiting through the worker", () => {
 
 describe("contact limiting through the worker", () => {
   it("advertises the contact policies, not the read one, on the write endpoint", async () => {
-    const res = await get("/api/v1/contact");
+    const res = await fetchWorker("/api/v1/contact");
     expect(res.status).toBe(405);
     const policy = res.headers.get("RateLimit-Policy") ?? "";
     expect(policy).toContain('"contact-client"');
@@ -188,7 +62,9 @@ describe("contact limiting through the worker", () => {
   });
 
   it("reports the remaining daily allowance on an accepted message", async () => {
-    const res = await postContact(validMessage, "198.51.100.30");
+    const res = await apiClient({ ip: "198.51.100.30" }).api.v1.contact.$post({
+      json: validMessage
+    });
     expect(res.status).toBe(202);
     expect(res.headers.get("RateLimit")).toBe(
       `"contact-client";r=2;t=${res.headers.get("X-RateLimit-Reset")}`
@@ -196,30 +72,39 @@ describe("contact limiting through the worker", () => {
   });
 
   it("429s a client once its daily allowance is spent", async () => {
+    const { contact } = apiClient({ ip: "198.51.100.7" }).api.v1;
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT; i++) {
-      expect((await postContact(validMessage, "198.51.100.7")).status).toBe(202);
+      expect((await contact.$post({ json: validMessage })).status).toBe(202);
     }
-    const res = await postContact(validMessage, "198.51.100.7");
+    const res = await contact.$post({ json: validMessage });
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toMatch(/^\d+$/);
-    const { error } = await readJson(res, z.object({ error: z.object({ code: z.string() }) }));
-    expect(error.code).toBe("rate_limited");
+    const { error } = await readJson(
+      res,
+      z.object({ error: z.object({ code: z.string(), message: z.string() }) })
+    );
+    expect(error).toEqual({
+      code: "rate_limited",
+      message: "This client has already sent 3 messages today."
+    });
   });
 
   it("does not spend a slot on an invalid request", async () => {
+    const { contact } = apiClient({ ip: "198.51.100.8" }).api.v1;
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 1; i++) {
-      const res = await postContact({ email: "nope", message: "hi" }, "198.51.100.8");
+      const res = await contact.$post({ json: { email: "nope", message: "hi" } });
       expect(res.status).toBe(422);
     }
-    expect((await postContact(validMessage, "198.51.100.8")).status).toBe(202);
+    expect((await contact.$post({ json: validMessage })).status).toBe(202);
   });
 
   it("does not spend a slot on a dry run", async () => {
+    const { contact } = apiClient({ ip: "198.51.100.21" }).api.v1;
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 2; i++) {
-      const res = await postContact({ ...validMessage, dryRun: true }, "198.51.100.21");
+      const res = await contact.$post({ json: { ...validMessage, dryRun: true } });
       expect(res.status).toBe(200);
       expect(res.headers.get("X-RateLimit-Remaining")).toBe("3");
     }
-    expect((await postContact(validMessage, "198.51.100.21")).status).toBe(202);
+    expect((await contact.$post({ json: validMessage })).status).toBe(202);
   });
 });

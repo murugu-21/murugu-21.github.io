@@ -1,4 +1,4 @@
-// Version catalogue and deprecation policy; apps/api/src/api/versioning.ts sends the headers.
+// Version catalogue and deprecation policy; apps/api/src/common/http/version-headers.ts sends the headers.
 // Standards: URL path versioning, RFC 9745 `Deprecation`, RFC 8594 `Sunset`, RFC 8288 Link
 // relations.
 

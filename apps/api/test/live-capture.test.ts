@@ -10,6 +10,7 @@ import {
   openRoom,
   recordingEmail,
   replyText,
+  roomName,
   streamedChunks,
   testEnv,
   userMessage
@@ -30,7 +31,7 @@ const VISITOR_TURNS = [
 describe("lead capture against the live model", { tags: ["live"] }, () => {
   it("emails the owner the lead with the visitor's contact", async () => {
     const { LIVE_DEEPSEEK_API_KEY } = LiveEnv.parse(env);
-    const { socket, frames, stub } = await openRoom("live-capture");
+    const { socket, frames, stub } = await openRoom(roomName("live-capture"));
     const { email, sent } = recordingEmail();
     await runInDurableObject(stub, instance => {
       Object.assign(instance, {

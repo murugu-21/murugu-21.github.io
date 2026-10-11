@@ -9,7 +9,22 @@
     "allowImportingTsExtensions": true,
     "skipLibCheck": true,
     "verbatimModuleSyntax": true,
-    "types": ["@cloudflare/vitest-plugin/types", "vite/client"]
+    "types": ["@cloudflare/vitest-plugin/types", "vite/client"],
+    "plugins": [
+      {
+        "name": "@effect/language-service",
+        "diagnosticSeverity": {
+          "floatingEffect": "error",
+          "missingStarInYieldEffectGen": "error",
+          "missingEffectContext": "error",
+          "missingEffectError": "error",
+          "missingLayerContext": "error",
+          "leakingRequirements": "error",
+          "runEffectInsideEffect": "error",
+          "multipleEffectProvide": "error"
+        }
+      }
+    ]
   },
   "include": [
     "src/**/*.ts",

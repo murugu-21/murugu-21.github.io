@@ -1,18 +1,31 @@
-import { env } from "cloudflare:workers";
+import { Effect } from "effect";
 import {
   type CallToolResult,
   Client,
   StreamableHTTPClientTransport
 } from "@modelcontextprotocol/client";
-import { assert, describe, expect, it, onTestFinished, vi } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
-import { JsonObject } from "@murugappan/utils/json.ts";
-import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
+import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
+import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
 import { MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
-import { fetchWorker, recordingEmail, type TestEnvOptions } from "./fixtures";
+import { JsonObject } from "@murugappan/utils/json.ts";
+import { takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
+import {
+  ContactLimitReached,
+  QuotaUnavailable
+} from "#src/modules/rate-limit/contact-quota.repository.ts";
+import {
+  capturedErrors,
+  fakeContactQuota,
+  fetchWorker,
+  recordingEmail,
+  type FetchOptions,
+  type TestEnvOptions
+} from "./fixtures";
 
 const META = "io.modelcontextprotocol/protocolVersion";
 const CAPS = "io.modelcontextprotocol/clientCapabilities";
@@ -23,16 +36,16 @@ const POST_URI = `${SITE_ORIGIN}/blog/coin-change-problem/index.md`;
 
 const CLIENT_IP = "203.0.113.70";
 
-type ClientOptions = TestEnvOptions & { ip?: string };
+type ClientOptions = TestEnvOptions & Pick<FetchOptions, "ip" | "layer">;
 
 /** An SDK client pinned to the current revision, posting through the worker as `ip`. */
-async function connect({ ip = CLIENT_IP, ...envOptions }: ClientOptions = {}) {
+async function connect({ ip = CLIENT_IP, layer, ...envOptions }: ClientOptions = {}) {
   const client = new Client(
     { name: "TestClient", version: "1.0.0" },
     { versionNegotiation: { mode: { pin: LATEST_PROTOCOL_VERSION } } }
   );
   const transport = new StreamableHTTPClientTransport(new URL("https://murugappan.dev/mcp"), {
-    fetch: (url, init) => fetchWorker(String(url), { ...init, ip, env: envOptions })
+    fetch: (url, init) => fetchWorker(String(url), { ...init, ip, layer, env: envOptions })
   });
   await client.connect(transport);
   return client;
@@ -439,7 +452,50 @@ describe("tools over HTTP", () => {
     }
     const result = await client.callTool(args);
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toMatch(/allowance|limit/i);
+    expect(textOf(result)).toBe(
+      "This client has already used its daily allowance of 3 messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
+    );
+  });
+});
+
+describe("the read limit", () => {
+  it("shares the REST read window, so a client past it gets isError from a read tool but can still send", async () => {
+    const ip = "198.51.100.82";
+    for (let i = 0; i < READ_QUOTA.quota; i++) await fetchWorker("/api/v1/profile", { ip });
+    const client = await connect({ ip });
+
+    const read = await client.callTool({ name: "get_profile", arguments: {} });
+    expect(read.isError).toBe(true);
+    expect(textOf(read)).toMatch(
+      /^More than 600 read requests in 60 seconds from this client\. Wait \d+ seconds/
+    );
+
+    const sent = await client.callTool({
+      name: "send_message",
+      arguments: {
+        email: "ada@example.com",
+        dryRun: true,
+        message: "A perfectly valid message body for the allowance test."
+      }
+    });
+    expect(sent.structuredContent).toHaveProperty("status", "validated");
+  });
+
+  it("never refuses a client without an address, as the REST guard doesn't count one", async () => {
+    for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot("unknown");
+    const result = await call("get_profile", {}, { ip: "" });
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent).toHaveProperty("person.name", "Murugappan M");
+  });
+
+  it("refuses a resource read past the same window with the seconds to wait", async () => {
+    const ip = "198.51.100.83";
+    for (let i = 0; i < READ_QUOTA.quota; i++) await fetchWorker("/api/v1/profile", { ip });
+    const reading = (await connect({ ip })).readResource({ uri: POST_URI });
+    await expect(reading).rejects.toMatchObject({ code: -32000 });
+    await expect(reading).rejects.toThrow(
+      /More than 600 read requests in 60 seconds from this client\. Wait \d+ seconds/
+    );
   });
 });
 
@@ -705,28 +761,53 @@ describe("send_message", () => {
     expect(sent).toEqual([]);
   });
 
-  it.each<[string, TestEnvOptions & { ip: string }]>([
-    ["an unconfigured inbox", { ip: "198.51.100.64", inbox: "" }],
+  it.each<[string, TestEnvOptions & { ip: string }, string]>([
+    [
+      "an unconfigured inbox",
+      { ip: "198.51.100.64", inbox: "" },
+      "Message delivery is not configured on this deployment. Use one of the contact links from get_profile instead."
+    ],
     [
       "a failed delivery",
-      { ip: "198.51.100.65", email: { send: () => Promise.reject(new Error("relay down")) } }
+      { ip: "198.51.100.65", email: { send: () => Promise.reject(new Error("relay down")) } },
+      "The message could not be delivered right now. Retry in a few minutes, or use one of the contact links from get_profile."
     ]
-  ])("reports %s as a tool execution error", async (_label, options) => {
-    expect((await call("send_message", message, options)).isError).toBe(true);
+  ])("reports %s as a tool execution error", async (_label, options, text) => {
+    const result = await call("send_message", message, options);
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe(text);
+  });
+
+  it("reports a spent site-wide allowance without sending", async () => {
+    const layer = fakeContactQuota({
+      take: () =>
+        Effect.fail(
+          new ContactLimitReached({
+            scope: "global",
+            usage: { clientRemaining: 3, globalRemaining: 0 }
+          })
+        )
+    });
+    const { email, sent } = recordingEmail();
+    const result = await call("send_message", message, { ip: "198.51.100.67", email, layer });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe(
+      "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
+    );
+    expect(sent).toEqual([]);
   });
 
   it("logs a rate limiter failure and reports it as a tool execution error", async () => {
-    onTestFinished(() => {
-      vi.restoreAllMocks();
-    });
     const failure = new Error("limiter down");
-    const limiter = env.RateLimiter.get(env.RateLimiter.idFromName("global"));
-    vi.spyOn(limiter, "takeContactSlot").mockRejectedValue(failure);
-    vi.spyOn(env.RateLimiter, "get").mockReturnValue(limiter);
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    const result = await call("send_message", message, { ip: "198.51.100.66" });
+    const layer = fakeContactQuota({
+      take: () => Effect.fail(new QuotaUnavailable({ cause: failure }))
+    });
+    const logged = capturedErrors();
+    const result = await call("send_message", message, { ip: "198.51.100.66", layer });
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toContain("could not be delivered");
+    expect(textOf(result)).toBe(
+      "The message could not be delivered right now. Retry in a few minutes, or use one of the contact links from get_profile."
+    );
     expect(logged).toHaveBeenCalledWith("mcp send_message failed", failure);
   });
 });

@@ -36,8 +36,7 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
       </div>
     </header>
     <section>
-      {/* Trusted frontmatter / excerpt HTML. */}
-      <p class="leading-relaxed" set:html={post.description || post.excerpt} />
+      <p class="leading-relaxed">{post.description || post.excerpt}</p>
     </section>
   </article>
 </li>

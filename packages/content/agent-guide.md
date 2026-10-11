@@ -167,7 +167,9 @@ RateLimit: "reads";r=599;t=60
 
 - **Reads** have a fair-use ceiling of 600 requests per 60 seconds per client
   address. Each edge location counts separately, so the advertised number is a
-  floor rather than a cap.
+  floor rather than a cap. The MCP server's read tools and resource reads spend
+  the same allowance. Past it, a read tool returns `isError` and a resource read
+  fails with JSON-RPC error `-32000`, both saying how many seconds to wait.
 - **`POST /api/v1/contact`** allows 3 per client IP per UTC day, 20 site-wide,
   `RateLimit-Policy: "contact-client";q=3;w=86400,
   "contact-site";q=20;w=86400`. A rejected request spends nothing, and neither

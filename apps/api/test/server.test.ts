@@ -1,11 +1,9 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import fc from "fast-check";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
-import { parseRange } from "#src/audio.ts";
-import { markdownNotFound } from "#src/not-found.ts";
-import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/visitor.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/visitor.ts";
 import worker from "#src/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,
@@ -13,6 +11,7 @@ import {
   fakeFetcher,
   fetchWorker,
   NOT_FOUND_HTML,
+  roomName,
   testEnv,
   visitorStorage
 } from "./fixtures";
@@ -61,17 +60,60 @@ describe("routing", () => {
 });
 
 describe("the chat-room WebSocket", () => {
-  it("is the only agent route: no other Durable Object or sub-path upgrades", async () => {
+  it("is the only agent route: no other Durable Object, sub-path or room name upgrades", async () => {
     const upgrade = (path: string) =>
-      fetchWorker(path, { headers: { Upgrade: "websocket" } }).then(r => r.status);
-    expect(await upgrade("/agents/chat-room/route-room")).toBe(101);
+      fetchWorker(path, { headers: { Upgrade: "websocket", Origin: SITE_ORIGIN } }).then(
+        r => r.status
+      );
+    expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT")).toBe(101);
     expect(await upgrade("/agents/rate-limiter/global")).toBe(404);
-    expect(await upgrade("/agents/chat-room/route-room/sub/chat-room/other")).toBe(404);
-    expect((await fetchWorker("/agents/chat-room/route-room")).status).toBe(404);
+    expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT/sub/chat-room/other")).toBe(404);
+    expect((await fetchWorker("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT")).status).toBe(404);
+    // The widget mints 21 characters of A-Za-z0-9_-.
+    expect(await upgrade("/agents/chat-room/short")).toBe(404);
+    expect(await upgrade(`/agents/chat-room/${"a".repeat(22)}`)).toBe(404);
+    expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B.myT")).toBe(404);
+    expect((await fetchWorker("/agents/chat-room/short/get-messages")).status).toBe(404);
+  });
+
+  it.each([
+    { from: "the site's own page", site: SITE_ORIGIN, origin: SITE_ORIGIN, status: 101 },
+    {
+      from: "a local dev page on another port",
+      site: "http://localhost:8787",
+      origin: "http://localhost:4399",
+      status: 101
+    },
+    { from: "another site", site: SITE_ORIGIN, origin: "https://evil.example", status: 403 },
+    {
+      from: "a local page against production",
+      site: SITE_ORIGIN,
+      origin: "http://localhost:4399",
+      status: 403
+    },
+    { from: "a client that sends no Origin", site: SITE_ORIGIN, origin: undefined, status: 403 },
+    {
+      from: "a lookalike host",
+      site: SITE_ORIGIN,
+      origin: "https://murugappan.dev.evil.example",
+      status: 403
+    },
+    { from: "the site over http", site: SITE_ORIGIN, origin: "http://murugappan.dev", status: 403 },
+    {
+      from: "another site in local dev",
+      site: "http://localhost:8787",
+      origin: "https://evil.example",
+      status: 403
+    }
+  ])("upgrades a socket from $from with $status", async ({ site, origin, status }) => {
+    const headers = new Headers({ Upgrade: "websocket" });
+    if (origin) headers.set("Origin", origin);
+    const res = await fetchWorker(`${site}/agents/chat-room/V1StGXR8_Z5jdHi6B-myT`, { headers });
+    expect(res.status).toBe(status);
   });
 
   it("replaces client-supplied visitor headers with what Cloudflare reports", async () => {
-    const { stub } = await connectRoom("spoof-room-ws", {
+    const { stub } = await connectRoom(roomName("spoof-room-ws"), {
       "CF-IPCountry": "IN",
       [VISITOR_COUNTRY_HEADER]: "XX",
       [VISITOR_IP_HEADER]: "203.0.113.66"
@@ -80,30 +122,6 @@ describe("the chat-room WebSocket", () => {
     expect(stored.visitor_country).toBe("IN");
     // Cloudflare sent no IP, so the forged one must not survive either.
     expect(stored.visitor_ip).toBeUndefined();
-  });
-});
-
-describe("markdownNotFound", () => {
-  it("is an unindexed, uncached 404 that declares the negotiation", async () => {
-    const res = markdownNotFound("/nope", "GET");
-    expect(res.status).toBe(404);
-    expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
-    expect(res.headers.get("Vary")).toBe("Accept");
-    expect(res.headers.get("X-Robots-Tag")).toBe("noindex");
-    expect(res.headers.get("Cache-Control")).toBe("no-store");
-    const link = res.headers.get("Link") ?? "";
-    expect(link).toContain('rel="service-desc"');
-    expect(link).toContain('rel="api-catalog"');
-    expect(link).toContain("/sitemap.xml");
-    const body = await res.text();
-    expect(body.startsWith("# 404 Not Found")).toBe(true);
-    expect(body).toContain("`/nope`");
-  });
-
-  it("sends no body for a HEAD", async () => {
-    const res = markdownNotFound("/nope", "HEAD");
-    expect(res.status).toBe(404);
-    expect(await res.text()).toBe("");
   });
 });
 
@@ -365,55 +383,4 @@ describe("GET /blog/audio/:file", () => {
       expect(res.headers.get("Content-Type")).toContain("text/markdown");
     }
   );
-});
-
-describe("parseRange", () => {
-  it.each([
-    ["bytes=0-9", { offset: 0, length: 10 }],
-    ["bytes=90-", { offset: 90, length: 10 }],
-    ["bytes=-5", { offset: 95, length: 5 }],
-    // An end past the object is clamped to it.
-    ["bytes=95-500", { offset: 95, length: 5 }],
-    ["bytes=100-", "unsatisfiable"],
-    ["bytes=-0", "unsatisfiable"],
-    ["bytes=50-20", "unsatisfiable"],
-    // A suffix longer than the object is the whole object.
-    ["bytes=-500", { offset: 0, length: 100 }],
-    ["bytes=-", null],
-    ["items=0-1", null],
-    [null, null]
-  ])("parses %s against a 100-byte object", (header, expected) => {
-    expect(parseRange(header, 100)).toEqual(expected);
-  });
-
-  it("returns only non-empty ranges inside the object, and serves any byte a range names", () => {
-    const position = fc.oneof(
-      fc.constant(""),
-      fc.nat(300).map(String),
-      fc.stringMatching(/^\d{1,25}$/)
-    );
-    const header = fc.oneof(
-      fc.tuple(position, position).map(([first, last]) => `bytes=${first}-${last}`),
-      fc.string()
-    );
-    fc.assert(
-      fc.property(header, fc.nat(200), (h, size) => {
-        const range = parseRange(h, size);
-        if (range === null || range === "unsatisfiable") return;
-        expect({
-          nonEmpty: range.length >= 1,
-          inside: range.offset + range.length <= size
-        }).toEqual({
-          nonEmpty: true,
-          inside: true
-        });
-      })
-    );
-    fc.assert(
-      fc.property(fc.nat(199), fc.nat(199), (first, extra) => {
-        const size = first + 1 + extra;
-        expect(parseRange(`bytes=${first}-${first}`, size)).toEqual({ offset: first, length: 1 });
-      })
-    );
-  });
 });

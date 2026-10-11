@@ -27,6 +27,12 @@ type Layer = { dir: string; pkg: string; imports?: string; uses: LayerName[]; al
 const FRAMEWORKS =
   "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)";
 
+const NO_TEST_FIXTURES: Pattern = {
+  regex: "^#test/",
+  message:
+    "Only tests import #test/ fixtures. Move what Worker code needs into apps/api/src/ (apps/api/README.md › Layers)."
+};
+
 const LAYERS: Record<LayerName, Layer> = {
   site: {
     dir: "apps/site/src/",
@@ -127,18 +133,240 @@ const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
 
 const SITE = layerPatterns("site");
 
+type ImportPath = {
+  name: string;
+  importNames: string[];
+  allowTypeImports?: boolean;
+  message: string;
+};
+type Property = { object?: string; property: string; message: string };
+
+const WORKER_PROPERTIES: Property[] = [
+  {
+    object: "Math",
+    property: "random",
+    message:
+      "Math.random() is predictable. Use crypto.randomUUID() or crypto.getRandomValues() (Cloudflare Workers › Best practices)."
+  },
+  {
+    property: "passThroughOnException",
+    message:
+      "passThroughOnException hides the error. Catch it and answer, or let the router's exception filter do it (Cloudflare Workers › Best practices)."
+  }
+];
+
+// The Worker's roles, by file suffix (apps/api/README.md › Layers). They replace the api layer's
+// override, so the layer loop below skips it.
+const API = layerPatterns("api");
+const NO_EFFECT: Pattern[] = [
+  {
+    regex: "^effect($|/)",
+    allowTypeImports: true,
+    message:
+      "Effect runs only in services, repositories, the DI wiring and tests (type imports are fine). Put the logic in a *.service.ts or *.repository.ts and call it from the controller with runInRequest (apps/api/README.md › Layers)."
+  }
+];
+
+const ROUTE_AGENT: ImportPath = {
+  name: "agents",
+  importNames: ["routeAgentRequest"],
+  message:
+    "routeAgentRequest reaches every Durable Object class. Only modules/chat/chat.controller.ts calls it, behind its own routes (apps/api/README.md › Layers)."
+};
+const HONO_CONTEXT: ImportPath = {
+  name: "hono",
+  importNames: ["Context"],
+  allowTypeImports: true,
+  message:
+    "Write the handler inline after its path so Hono infers its types, or build it with defineHandler() from hono/factory. A Context type import is fine."
+};
+const EFFECT_SCHEMA_MESSAGE =
+  "Validate with zod from @murugappan/contracts, which the site shares, not effect/Schema (apps/api/README.md › Layers).";
+
+const HTTP_IMPORTS: Pattern[] = [
+  {
+    regex: "\\.repository\\.ts$",
+    allowTypeImports: true,
+    message:
+      "The HTTP layer calls a service through runInRequest, never a repository. Its error and record types are fine (apps/api/README.md › Layers)."
+  },
+  {
+    regex: "\\.durable-object\\.ts$",
+    allowTypeImports: true,
+    message:
+      "Reach a Durable Object through its repository or client, not from the HTTP layer. Type imports are fine (apps/api/README.md › Layers)."
+  },
+  {
+    regex: "/di/worker-env\\.ts$",
+    message:
+      "Bindings reach Effect only through repositories and integration services (apps/api/README.md › Layers)."
+  }
+];
+const PLUMBING_IMPORTS: Pattern[] = [
+  {
+    regex: "\\.service\\.ts$|^#src/app\\.module\\.ts$",
+    message:
+      "Guards, pipes, interceptors, middleware and filters gate or reshape a request. Call services and run programs in the controller (apps/api/README.md › Layers)."
+  }
+];
+const DOMAIN_IMPORTS: Pattern[] = [
+  {
+    regex: "^hono($|/)",
+    message:
+      "Services and repositories don't know about HTTP. Return an outcome and let the controller build the response (apps/api/README.md › Layers)."
+  },
+  {
+    regex:
+      "\\.(controller|tools|resources|guard|pipe|interceptor|middleware|filter)\\.ts$|/common/http/|^#src/app\\.module\\.ts$",
+    message:
+      "Services and repositories don't import the HTTP layer or the DI wiring. Move what both need to a file without a suffix (apps/api/README.md › Layers)."
+  },
+  { regex: "^effect/Schema$", message: EFFECT_SCHEMA_MESSAGE }
+];
+
+const RUN_EFFECT: Property[] = [
+  "runPromise",
+  "runPromiseExit",
+  "runSync",
+  "runSyncExit",
+  "runFork",
+  "runCallback"
+].map(property => ({
+  object: "Effect",
+  property,
+  message:
+    "Run an Effect only at the edge: runInRequest in app.module.ts runs every program (apps/api/README.md › Layers)."
+}));
+const SWALLOW_DEFECTS: Property[] = [
+  ...[
+    "catch",
+    "catchCause",
+    "catchDefect",
+    "ignore",
+    "ignoreCause",
+    "sandbox",
+    "orElseSucceed",
+    "orDie"
+  ].map(property => ({
+    object: "Effect",
+    property,
+    message:
+      "Let defects reach the exception filter, and handle each typed failure by tag with catchTag or catchTags so a new tag fails the type check (apps/api/README.md › Layers)."
+  })),
+  {
+    object: "Effect",
+    property: "promise",
+    message:
+      "Effect.promise turns a rejection into a defect. Use Effect.tryPromise with a tagged error, or disable this line saying why a rejection is a bug (apps/api/README.md › Layers)."
+  }
+];
+const BINDINGS: Property = {
+  object: "c",
+  property: "env",
+  message:
+    "Only *.client.ts files, and repositories through WorkerEnv, read bindings. Move the call there (apps/api/README.md › Layers)."
+};
+
+const bySuffix = (...suffixes: string[]) => suffixes.map(s => `apps/api/src/**/*.${s}.ts`);
+const DOMAIN = bySuffix("service", "repository");
+const HTTP = bySuffix("controller", "tools", "resources");
+const PLUMBING = bySuffix("guard", "pipe", "interceptor", "middleware", "filter");
+
+// What sets one role apart. apiRole adds the api layer's patterns and the Workers bans, and
+// each rule's list is whole, since an override replaces a rule's options rather than adding to
+// them. Later roles win, so the most specific comes last.
+type ApiRole = {
+  files: string[];
+  patterns: Pattern[];
+  paths: ImportPath[];
+  properties: Property[];
+};
+const API_ROLES: ApiRole[] = [
+  {
+    files: ["apps/api/{src,test}/**"],
+    patterns: [...NO_EFFECT, NO_TEST_FIXTURES],
+    paths: [ROUTE_AGENT],
+    properties: RUN_EFFECT
+  },
+  {
+    files: ["apps/api/src/common/di/**"],
+    patterns: [NO_TEST_FIXTURES],
+    paths: [ROUTE_AGENT],
+    properties: RUN_EFFECT
+  },
+  // The edge that runs every program.
+  {
+    files: ["apps/api/src/app.module.ts"],
+    patterns: [NO_TEST_FIXTURES],
+    paths: [ROUTE_AGENT],
+    properties: []
+  },
+  {
+    files: DOMAIN,
+    patterns: [NO_TEST_FIXTURES, ...DOMAIN_IMPORTS],
+    paths: [
+      ROUTE_AGENT,
+      { name: "effect", importNames: ["Schema"], message: EFFECT_SCHEMA_MESSAGE }
+    ],
+    properties: [...RUN_EFFECT, ...SWALLOW_DEFECTS, BINDINGS]
+  },
+  {
+    files: HTTP,
+    patterns: [...NO_EFFECT, NO_TEST_FIXTURES, ...HTTP_IMPORTS],
+    paths: [ROUTE_AGENT, HONO_CONTEXT],
+    properties: [...RUN_EFFECT, BINDINGS]
+  },
+  {
+    files: PLUMBING,
+    patterns: [...NO_EFFECT, NO_TEST_FIXTURES, ...HTTP_IMPORTS, ...PLUMBING_IMPORTS],
+    paths: [ROUTE_AGENT],
+    properties: [...RUN_EFFECT, BINDINGS]
+  },
+  // The one caller of routeAgentRequest. Its c.env read stays banned and is disabled with the reason.
+  {
+    files: ["apps/api/src/modules/chat/chat.controller.ts"],
+    patterns: [...NO_EFFECT, NO_TEST_FIXTURES, ...HTTP_IMPORTS],
+    paths: [HONO_CONTEXT],
+    properties: [...RUN_EFFECT, BINDINGS]
+  },
+  // Last, so a test beside its source drops that role's bans: tests build fakes as Effect layers,
+  // run them, and import #test/ fixtures.
+  {
+    files: ["apps/api/src/**/*.test.ts", "apps/api/src/**/*.test-d.ts", "apps/api/test/**"],
+    patterns: [],
+    paths: [ROUTE_AGENT],
+    properties: []
+  }
+];
+
+const apiRole = ({ files, patterns, paths, properties }: ApiRole): OxlintOverride => ({
+  files,
+  rules: {
+    "no-restricted-imports": ["error", { paths, patterns: [...API, ...patterns] }],
+    "no-restricted-properties": ["error", ...WORKER_PROPERTIES, ...properties]
+  }
+});
+
 export default {
   ignorePatterns: ["apps/site/public/**"],
-  plugins: ["typescript", "unicorn", "oxc", "react", "import", "promise"],
+  plugins: ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "import", "promise"],
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
-  jsPlugins: ["./tooling/oxlint/test-behaviour.ts", "./tooling/oxlint/contracts.ts"],
+  jsPlugins: [
+    "./tooling/oxlint/test-behaviour.ts",
+    "./tooling/oxlint/contracts.ts",
+    "./tooling/oxlint/effect.ts",
+    "./tooling/oxlint/astro.ts",
+    "./tooling/oxlint/workers.ts"
+  ],
   categories: { correctness: "error" },
   // oxlint takes settings only at the top level; the override below scopes the plugin.
   settings: { tailwindcss: { entryPoint: "apps/site/src/styles/global.css" } },
   rules: {
     "no-irregular-whitespace": ["error", { skipComments: true }],
-    "react/purity": "warn",
-    "react/set-state-in-effect": "warn",
+    "react/no-deriving-state-in-effects": "error",
+    "react/no-unstable-nested-components": "error",
+    "react/exhaustive-effect-dependencies": "error",
+    "react/no-array-index-key": "error",
     "typescript/no-explicit-any": "error",
     "typescript/ban-ts-comment": [
       "error",
@@ -166,15 +394,26 @@ export default {
     "typescript/no-deprecated": "error",
     "typescript/only-throw-error": "error",
     "typescript/no-misused-promises": "error",
+    "typescript/prefer-promise-reject-errors": "error",
+    "typescript/use-unknown-in-catch-callback-variable": "error",
+    "promise/catch-or-return": "error",
+    "promise/no-nesting": "error",
+    "promise/no-return-wrap": "error",
+    "promise/no-multiple-resolved": "error",
+    "promise/no-promise-in-callback": "error",
     "typescript/return-await": "error",
     // `||` on strings is deliberate: a blank value counts as missing.
     "typescript/prefer-nullish-coalescing": ["error", { ignorePrimitives: { string: true } }],
-    "import/no-relative-parent-imports": "error"
+    "import/no-relative-parent-imports": "error",
+    "import/no-cycle": "error"
   },
   overrides: [
-    ...LAYER_NAMES.map(name =>
+    ...LAYER_NAMES.filter(name => name !== "api").map(name =>
       restrict([`${LAYERS[name].dir}**`], [...layerPatterns(name), ...(LAYERS[name].also ?? [])])
     ),
+    ...API_ROLES.map(apiRole),
+    // Services log through Effect, so the log carries the span each Effect.fn method opens.
+    { files: DOMAIN, rules: { "no-console": "error", "effect/use-fn": "error" } },
     // Shared code serves every page, so it can't reach into a page area's folder.
     restrict(
       [
@@ -213,6 +452,42 @@ export default {
         }
       ]
     ),
+    // Effect's Service.use and Hono's useApiStack aren't hooks, so React's naming rule stays on
+    // the site. oxlint files it under pedantic, which the correctness category leaves off.
+    { files: ["apps/site/src/**"], rules: { "react/rules-of-hooks": "error" } },
+    { files: ["apps/site/src/**/*.astro"], rules: { "astro/typed-props": "error" } },
+    {
+      files: ["apps/api/**"],
+      rules: {
+        // A promise the response doesn't wait for is cancelled with the request, so `void` loses it.
+        // Await it, return it, or hand it to ctx.waitUntil with a .catch.
+        "typescript/no-floating-promises": ["error", { ignoreVoid: false }]
+      }
+    },
+    {
+      files: ["apps/api/src/**"],
+      rules: { "workers/no-module-state": "error", "workers/sql-bindings": "error" }
+    },
+    // A store is the one place per-isolate state lives (apps/api/README.md › Layers).
+    { files: ["apps/api/src/**/*.store.ts"], rules: { "workers/no-module-state": "off" } },
+    {
+      files: ["apps/api/src/**/*.durable-object.ts"],
+      rules: {
+        // Every public member of a Durable Object is reachable over RPC, so each one says which it is.
+        "typescript/explicit-member-accessibility": [
+          "error",
+          { accessibility: "explicit", overrides: { constructors: "no-public" } }
+        ],
+        "no-restricted-globals": [
+          "error",
+          ...["setTimeout", "setInterval"].map(name => ({
+            name,
+            message:
+              "Timers keep a Durable Object from hibernating. Schedule the work with an alarm or the agents SDK's this.schedule() (Cloudflare Durable Objects best practices)."
+          }))
+        ]
+      }
+    },
     // oxlint-tailwindcss's recommended set (its README › Setup) plus two rules, all at error.
     // prefer-scale-token turns px into scale steps. no-arbitrary-value keeps values on
     // Tailwind's scale and the theme's tokens; where Tailwind has no default for a value,

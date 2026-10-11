@@ -16,14 +16,42 @@
       "includes": ["**", "!apps/site/src/pages/outdated.astro"],
       "plugins": ["./tooling/biome/tailwind-only-css.grit"]
     },
-    { "includes": ["**/*.css"], "linter": { "rules": { "preset": "recommended" } } },
+    {
+      "includes": ["**/*.css"],
+      "linter": {
+        "rules": {
+          "preset": "recommended",
+          "nursery": {
+            "noDuplicateSelectors": "error",
+            // Baseline 2024 is the nearest year to the browser floor (README.md › Browser
+            // support). The allowed features are newer but degrade gracefully: older
+            // browsers keep their default scrollbar and selection colours.
+            "useBaseline": {
+              "level": "error",
+              "options": {
+                "available": 2024,
+                "allowProperties": ["scrollbar-color"],
+                "allowSelectors": ["selection"]
+              }
+            }
+          }
+        }
+      }
+    },
     {
       "includes": ["**/*.astro"],
       "linter": {
         "rules": {
-          "a11y": { "preset": "recommended" },
+          "a11y": { "preset": "all" },
+          "security": { "noScriptUrl": "error" },
           "nursery": {
+            "noNonScalableViewport": "error",
+            "noObsoleteTags": "error",
+            "noMisplacedListElements": "error",
+            "useControlLabel": "error",
+            "useIframeSandbox": "error",
             "noAstroConflictingSetDirectives": "error",
+            "noAstroSetHtmlDirective": "error",
             "useAstroClientOnlyDirectiveValue": "error",
             "noInlineStyles": "error",
             "noTailwindArbitraryValue": "error",

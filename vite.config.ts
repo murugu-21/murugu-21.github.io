@@ -50,6 +50,9 @@ export default defineConfig({
     // Keeps `$field` values in it.each titles whole. 0 doesn't switch the limit off: it still
     // clips the last character of a string.
     taskTitleValueFormatTruncate: Number.MAX_SAFE_INTEGER,
+    // Random file and test order surfaces tests that lean on state an earlier test left.
+    // Each run prints its seed. Pass --sequence.seed=<seed> to replay that order.
+    sequence: { shuffle: true },
     // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
     // tests in apps/site/src/styles would read "".
     css: { include: [/global\.css\?raw$/] },
@@ -61,7 +64,13 @@ export default defineConfig({
         "{apps/site/src,apps/site/scripts,apps/api/src,packages,tooling}/**/*.{ts,tsx}",
         "apps/tts/*.ts"
       ],
-      exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "apps/api/test/**"],
+      exclude: [
+        "**/*.test.ts",
+        "**/*.test-d.ts",
+        "**/*.d.ts",
+        "**/fixtures.ts",
+        "apps/api/test/**"
+      ],
       reporter: ["text-summary", "lcov"]
     },
     projects: [
@@ -85,12 +94,15 @@ export default defineConfig({
             }
           ],
           setupFiles: ["./apps/api/test/apply-migrations.ts"],
-          include: ["apps/api/test/**/*.test.ts"]
+          // TODO: rename API tests to NestJS's convention (*.spec.ts beside the source,
+          // *.e2e-spec.ts in test/) and update this glob, the coverage excludes and the test
+          // globs in tooling/lint.config.ts.
+          include: ["apps/api/{src,test}/**/*.test.ts"]
         }
       },
-      // The site runs in the browser or at build time and the content package is pure, so neither
-      // needs workerd, and starting each file there costs far more than the tests. The scripts
-      // run on Node or Bun.
+      // The site runs in the browser or at build time and the content and utils packages are pure,
+      // so none of them needs workerd, and starting each file there costs far more than the tests.
+      // The scripts run on Node or Bun.
       {
         plugins: [contentPosts()],
         test: {
@@ -100,7 +112,8 @@ export default defineConfig({
             "tooling/**/*.test.ts",
             "apps/site/{src,scripts}/**/*.test.ts",
             "apps/tts/*.test.ts",
-            "packages/content/**/*.test.ts"
+            "packages/content/**/*.test.ts",
+            "packages/utils/**/*.test.ts"
           ]
         }
       },

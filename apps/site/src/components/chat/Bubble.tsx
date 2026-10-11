@@ -5,7 +5,7 @@ import { Fragment } from "react";
 import type { JarvisMessage } from "@murugappan/contracts/chat.ts";
 import { messageText } from "@murugappan/utils/ui-message.ts";
 
-export type Bubble = { kind: "user" | "assistant" | "system"; text: string };
+export type Bubble = { id: string; kind: "user" | "assistant" | "system"; text: string };
 
 // The room's `notice` parts (the spend limit, a failure) render as system lines.
 export function toBubbles(messages: JarvisMessage[]): Bubble[] {
@@ -13,10 +13,11 @@ export function toBubbles(messages: JarvisMessage[]): Bubble[] {
     const text = messageText(message);
     const bubbles: Bubble[] =
       text && message.role !== "system"
-        ? [{ kind: message.role === "user" ? "user" : "assistant", text }]
+        ? [{ id: message.id, kind: message.role === "user" ? "user" : "assistant", text }]
         : [];
-    for (const part of message.parts) {
-      if (part.type === "data-notice") bubbles.push({ kind: "system", text: part.data.text });
+    for (const [i, part] of message.parts.entries()) {
+      if (part.type !== "data-notice") continue;
+      bubbles.push({ id: `${message.id}:${i}`, kind: "system", text: part.data.text });
     }
     return bubbles;
   });
@@ -37,6 +38,7 @@ function renderWithLinks(raw: string) {
     const trailing = /[.,!?;:)]+$/.exec(part)?.[0] ?? "";
     const url = trailing ? part.slice(0, -trailing.length) : part;
     return (
+      // oxlint-disable-next-line react/no-array-index-key -- the pieces of one message's text, which never reorder
       <Fragment key={i}>
         <a
           href={url}
@@ -65,6 +67,6 @@ const bubble = cva(
   }
 );
 
-export function BubbleView({ kind, text }: Bubble) {
+export function BubbleView({ kind, text }: Omit<Bubble, "id">) {
   return <div className={bubble({ kind })}>{renderWithLinks(text)}</div>;
 }

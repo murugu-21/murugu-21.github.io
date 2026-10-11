@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#src/*": "./src/*"
+    "#src/*": "./src/*",
+    "#test/*": "./test/*"
   },
   "scripts": {
     "dev": "vp dev",
@@ -22,7 +23,8 @@
     "@murugappan/utils": "workspace:*",
     "agents": "0.26.0",
     "ai": "7.0.128",
-    "hono": "^4.13.13",
+    "effect": "^4.0.2",
+    "hono": "5.0.0-rc.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
