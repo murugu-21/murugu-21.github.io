@@ -242,17 +242,15 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background: var(--background-image-page);
+    @variant dark {
+      background: var(--background-image-page-dark);
+      color: white;
+    }
   }
   html,
   body {
     @variant max-xl {
       line-height: normal;
-    }
-  }
-  body {
-    @variant dark {
-      background: var(--background-image-page-dark);
-      color: white;
     }
   }
 

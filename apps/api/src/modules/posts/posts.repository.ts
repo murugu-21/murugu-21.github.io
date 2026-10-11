@@ -17,12 +17,11 @@ export class PostsRepository extends Context.Service<
 >()("@murugappan/api/PostsRepository") {
   static readonly layer = Layer.succeed(PostsRepository, {
     all: Effect.succeed(POSTS),
-    findBySlug: slug => {
+    findBySlug: Effect.fn("PostsRepository.findBySlug")(function* (slug: string) {
       const post = POSTS.find(p => p.slug === slug);
       const markdown = POST_MARKDOWN.get(slug);
-      return post && markdown !== undefined
-        ? Effect.succeed({ ...post, markdown })
-        : Effect.fail(new PostNotFound({ slug }));
-    }
+      if (!post || markdown === undefined) return yield* new PostNotFound({ slug });
+      return { ...post, markdown };
+    })
   });
 }

@@ -50,6 +50,9 @@ export default defineConfig({
     // Keeps `$field` values in it.each titles whole. 0 doesn't switch the limit off: it still
     // clips the last character of a string.
     taskTitleValueFormatTruncate: Number.MAX_SAFE_INTEGER,
+    // Random file and test order surfaces tests that lean on state an earlier test left.
+    // Each run prints its seed. Pass --sequence.seed=<seed> to replay that order.
+    sequence: { shuffle: true },
     // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
     // tests in apps/site/src/styles would read "".
     css: { include: [/global\.css\?raw$/] },

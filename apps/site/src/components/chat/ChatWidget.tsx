@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef, useState, type ComponentProps } from "react";
+import { Suspense, useEffect, useEffectEvent, useRef, useState, type ComponentProps } from "react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { useAgent } from "agents/react";
 import { safeValidateUIMessages } from "ai";
@@ -146,6 +146,10 @@ function HeaderButton(props: ComponentProps<typeof Button>) {
   );
 }
 
+// Until the visitor says anything; the greeting doesn't count.
+const startersShown = (bubbles: Bubble[], phase: Phase) =>
+  phase.kind === "idle" && bubbles.every(b => b.kind !== "user");
+
 type PanelProps = {
   bubbles: Bubble[];
   phase: Phase;
@@ -164,17 +168,15 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
     onSend(text);
   };
 
-  // Stick to the bottom, except on a fresh conversation where the greeting must
-  // stay visible above overflowing starter chips.
+  // Stick to the bottom, except while the starter chips show: the greeting above them
+  // must stay visible.
   useEffect(() => {
     const v = viewportRef.current;
     if (!v) return;
-    const fresh = bubbles.every(b => b.kind === "system");
-    v.scrollTop = fresh ? 0 : v.scrollHeight;
+    v.scrollTop = startersShown(bubbles, phase) ? 0 : v.scrollHeight;
   }, [bubbles, phase]);
 
-  // Until the visitor says anything; the greeting doesn't count.
-  const showStarters = phase.kind === "idle" && bubbles.every(b => b.kind !== "user");
+  const showStarters = startersShown(bubbles, phase);
 
   return (
     <>
@@ -249,8 +251,8 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
                 (data-ph-mask is the maskTextSelector in lib/analytics.ts). */}
             <div className="flex flex-col gap-2 p-3" aria-live="polite" data-ph-mask="true">
               <BubbleView kind="assistant" text={GREETING} />
-              {bubbles.map((b, i) => (
-                <BubbleView key={i} kind={b.kind} text={b.text} />
+              {bubbles.map(b => (
+                <BubbleView key={b.id} kind={b.kind} text={b.text} />
               ))}
               {phase.kind === "loading" && (
                 <div className="flex items-center gap-1 self-start rounded-xl rounded-bl-sm bg-muted p-3">
@@ -286,7 +288,7 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
           </ScrollArea>
 
           <CardFooter className="border-t p-2.5">
-            {/* Not on phones: focusing pops the keyboard over the greeting. */}
+            {/* oxlint-disable-next-line jsx-a11y/no-autofocus -- the visitor opened the panel to type into it. Not on phones: focusing pops the keyboard over the greeting. */}
             <Composer disabled={phase.kind !== "idle"} autoFocus={!phone} onSend={send} />
           </CardFooter>
         </Card>
@@ -339,7 +341,7 @@ function ChatSession({ room, host, open, onRestart }: SessionProps) {
     (awaitingReply && status !== "error" && !replyStarted);
 
   const bubbles = toBubbles(messages);
-  if (status === "error") bubbles.push({ kind: "system", text: ERROR_NOTICE.text });
+  if (status === "error") bubbles.push({ id: "error", kind: "system", text: ERROR_NOTICE.text });
 
   const onSend = (text: string) => {
     setAwaitingReply(true);
@@ -393,12 +395,13 @@ export function ChatWidget({ host }: { host?: string }) {
   };
 
   // Honour a launcher tap recorded by src/directives/interaction.ts while this bundle loaded.
-  useEffect(() => {
+  const openOnHydrate = useEffectEvent(() => {
     const island = launcherRef.current?.closest("astro-island");
     if (!(island instanceof HTMLElement) || !island.dataset.openOnHydrate) return;
     delete island.dataset.openOnHydrate;
     openPanel();
-  }, []);
+  });
+  useEffect(() => openOnHydrate(), []);
 
   useEffect(() => {
     if (readStored(TOOLTIP_KEY)) return;

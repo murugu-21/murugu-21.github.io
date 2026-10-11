@@ -28,22 +28,22 @@ export class ContactQuotaRepository extends Context.Service<
     ContactQuotaRepository,
     WorkerEnv.useSync(env => ({
       // The type arguments merge the stub's union of promise types, which inference can't.
-      take: client =>
-        Effect.tryPromise<ContactSlot, QuotaUnavailable>({
+      take: Effect.fn("ContactQuotaRepository.take")(function* (client) {
+        const slot = yield* Effect.tryPromise<ContactSlot, QuotaUnavailable>({
           try: () => globalLimiter(env).takeContactSlot(client),
           catch: cause => new QuotaUnavailable({ cause })
-        }).pipe(
-          Effect.flatMap(slot =>
-            slot.allowed
-              ? Effect.succeed(slot)
-              : Effect.fail(new ContactLimitReached({ scope: slot.scope, usage: slot }))
-          )
-        ),
-      usage: client =>
-        Effect.tryPromise({
+        });
+        if (!slot.allowed) {
+          return yield* new ContactLimitReached({ scope: slot.scope, usage: slot });
+        }
+        return slot;
+      }),
+      usage: Effect.fn("ContactQuotaRepository.usage")(function* (client) {
+        return yield* Effect.tryPromise({
           try: () => globalLimiter(env).contactUsage(client),
           catch: cause => new QuotaUnavailable({ cause })
-        })
+        });
+      })
     }))
   );
 }

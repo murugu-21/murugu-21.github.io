@@ -1,4 +1,5 @@
 ---
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
 import { render } from "astro:content";
 import BlogLayout from "#src/layouts/BlogLayout.astro";
 import Bio from "#src/components/blog/Bio.astro";
@@ -18,7 +19,7 @@ import TableOfContents from "#src/components/blog/TableOfContents.astro";
 import Prose from "#src/components/Prose.astro";
 
 // previous is the older post, next the newer one; the list is newest first.
-export async function getStaticPaths() {
+export const getStaticPaths = (async () => {
   const posts = await getPublishedPosts();
   return posts.map((post, index) => ({
     params: { slug: post.id },
@@ -28,8 +29,9 @@ export async function getStaticPaths() {
       next: posts[index - 1] ?? null
     }
   }));
-}
+}) satisfies GetStaticPaths;
 
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 const { post, previous, next } = Astro.props;
 // rehypeHeadingIds runs in astro.config before the autolink plugin; Astro's own
 // pass afterwards keeps those ids, so `headings` matches the anchors.

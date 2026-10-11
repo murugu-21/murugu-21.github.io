@@ -100,6 +100,14 @@ const lastRoom = () => {
 const input = () => page.getByRole("textbox", { name: "Your message" });
 const sendButton = () => page.getByRole("button", { name: "Send" });
 
+// A returning visitor's room whose empty history arrives only once the test calls release().
+function holdHistory() {
+  localStorage.setItem("chatRoomId", "slow");
+  let release = () => {};
+  histories.set("slow", () => new Promise(resolve => (release = () => resolve(Response.json([])))));
+  return () => release();
+}
+
 async function openChat() {
   await page.getByRole("button", { name: LAUNCHER }).click();
   await expect.element(sendButton()).toBeEnabled();
@@ -229,6 +237,47 @@ it("a starter question sends itself and the starters give way to the conversatio
   expect(events).toEqual(["chat_open", "chat_starter_click", "chat_message_sent"]);
 });
 
+function transcriptScroll(): "fits" | "top" | "bottom" | "between" {
+  const viewport = document.querySelector('[data-slot="scroll-area-viewport"]');
+  if (!(viewport instanceof HTMLElement)) throw new Error("the transcript isn't open");
+  const { scrollTop, scrollHeight, clientHeight } = viewport;
+  if (scrollHeight <= clientHeight) return "fits";
+  if (scrollTop === 0) return "top";
+  return scrollTop + clientHeight >= scrollHeight - 1 ? "bottom" : "between";
+}
+
+it("follows the loading dots, keeps the greeting in view above the starters, then follows the reply to its end", async () => {
+  // Vitest loads no Tailwind, so the panel has no height of its own. Give the transcript
+  // one that the greeting and the loading dots overflow.
+  const short = document.createElement("style");
+  short.textContent = '[data-slot="scroll-area-viewport"] { height: 30px; }';
+  document.head.append(short);
+  const release = holdHistory();
+
+  try {
+    await render(<ChatWidget />);
+    await page.getByRole("button", { name: LAUNCHER }).click();
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+    await expect.poll(transcriptScroll).toBe("bottom");
+
+    release();
+    await expect.element(sendButton()).toBeEnabled();
+    await expect.poll(transcriptScroll).toBe("top");
+
+    await userEvent.type(input(), "Tell me everything{Enter}");
+    await expect.poll(() => lastRoom().requests).toHaveLength(1);
+    const lines = Array.from({ length: 30 }, (_, i) => `Line ${i + 1}.`);
+    lastRoom().stream(reply(lines.join("\n")));
+    await expect.element(page.getByText(/Line 30\./)).toBeInTheDocument();
+    await expect.poll(transcriptScroll).toBe("bottom");
+    lastRoom().finish();
+    await expect.element(sendButton()).toBeEnabled();
+    expect(transcriptScroll()).toBe("bottom");
+  } finally {
+    short.remove();
+  }
+});
+
 it("resumes a returning visitor's room with its links and notices", async () => {
   localStorage.setItem("chatRoomId", "returning");
   histories.set("returning", async () =>
@@ -301,9 +350,7 @@ it.each([
 });
 
 it("holds the composer and the starters until the room's history arrives", async () => {
-  localStorage.setItem("chatRoomId", "slow");
-  let release = () => {};
-  histories.set("slow", () => new Promise(resolve => (release = () => resolve(Response.json([])))));
+  const release = holdHistory();
   const starter = page.getByRole("button", { name: "How has he used LLMs in production?" });
 
   await render(<ChatWidget />);

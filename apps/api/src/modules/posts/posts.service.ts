@@ -40,14 +40,13 @@ export class PostsService extends Context.Service<
     Effect.gen(function* () {
       const repository = yield* PostsRepository;
       return {
-        search: ({ query, limit }) =>
-          repository.all.pipe(
-            Effect.map(all => {
-              const posts = searchPosts({ posts: all, query, limit });
-              return { posts, count: posts.length };
-            })
-          ),
-        findBySlug: slug => repository.findBySlug(slug)
+        search: Effect.fn("PostsService.search")(function* ({ query, limit }) {
+          const posts = searchPosts({ posts: yield* repository.all, query, limit });
+          return { posts, count: posts.length };
+        }),
+        findBySlug: Effect.fn("PostsService.findBySlug")(function* (slug) {
+          return yield* repository.findBySlug(slug);
+        })
       };
     })
   );

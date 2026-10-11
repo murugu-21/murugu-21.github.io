@@ -1,4 +1,4 @@
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
+const LOCAL_HOSTS: ReadonlySet<string> = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
 
 /** Forces https for real hosts, since Cloudflare redirects http at the edge. */
 export function publicOrigin(requestUrl: string): string {

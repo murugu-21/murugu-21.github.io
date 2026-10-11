@@ -56,7 +56,7 @@ export class RateLimiter extends DurableObject<Env> {
   }
 
   // Fails OPEN on a lookup error, since the next 402 catches an empty account.
-  async chatAvailable(
+  public async chatAvailable(
     apiKey: string,
     // Injected by tests only; an RPC caller passes just the key.
     fetcher: typeof fetch = fetch
@@ -82,7 +82,7 @@ export class RateLimiter extends DurableObject<Env> {
 
   // Parks the cache as exhausted; it expires normally, so a top-up is picked
   // up at the next TTL boundary.
-  async markChatExhausted(): Promise<void> {
+  public async markChatExhausted(): Promise<void> {
     await this.ctx.storage.put(BALANCE_KEY, {
       available: false,
       totalUsd: 0,
@@ -91,7 +91,7 @@ export class RateLimiter extends DurableObject<Env> {
   }
 
   // Synchronous so read-check-increment is atomic in the DO.
-  takeContactSlot(client: string): ContactSlot {
+  public takeContactSlot(client: string): ContactSlot {
     const day = this.today();
     this.sql.exec(`DELETE FROM contact_counters WHERE key NOT LIKE ?`, `${day}:%`);
     const clientKey = `${day}:client:${client}`;
@@ -119,7 +119,7 @@ export class RateLimiter extends DurableObject<Env> {
   }
 
   /** Remaining allowance without spending any, for a dry run. */
-  contactUsage(client: string): ContactUsage {
+  public contactUsage(client: string): ContactUsage {
     const day = this.today();
     return this.remaining({
       clientUsed: this.contactCount(`${day}:client:${client}`),

@@ -23,6 +23,7 @@ function withVisitorHeaders(c: Context<AppEnv>, request: Request): Request {
 }
 
 async function chatRoom(c: Context<AppEnv>): Promise<Response> {
+  // oxlint-disable-next-line no-restricted-properties -- the agents SDK's router needs the bindings to reach ChatRoom (apps/api/README.md › Layers)
   const response = await routeAgentRequest(c.req.raw, c.env, {
     onBeforeConnect: request => withVisitorHeaders(c, request)
   });

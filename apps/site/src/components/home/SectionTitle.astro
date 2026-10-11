@@ -11,6 +11,7 @@ interface Props {
 const { title, class: className } = Astro.props;
 ---
 
+{/* biome-ignore lint/nursery/noAstroSetHtmlDirective: accentTitle escapes the title and adds only its own <span class="accent"> */}
 <h2
   class={cn(
     "my-8 text-center text-3xl font-normal md:text-start md:text-4xl xl:text-6xl dark:text-white",

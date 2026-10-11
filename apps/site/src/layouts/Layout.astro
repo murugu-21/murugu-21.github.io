@@ -105,6 +105,7 @@ const jsonLdScript = jsonLdHtml({
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     {/* First, so a browser below the floor leaves before anything renders. */}
+    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/browser-support.ts, inlined unbundled so it runs before paint */}
     <script is:inline set:html={outdatedRedirectScript} />
     <title>{title}</title>
     <meta name="description" content={pageMetaDescription} />
@@ -166,7 +167,9 @@ const jsonLdScript = jsonLdHtml({
 
     <Font cssVariable="--font-fira-code" preload />
 
+    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/theme.ts, inlined unbundled so the theme applies before paint */}
     <script is:inline set:html={themeBootstrapScript} />
+    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: JSON-LD that jsonLdHtml serialises with every "<" escaped, so no value can close the script */}
     <script type="application/ld+json" set:html={jsonLdScript} />
     <SiteScripts />
   </head>

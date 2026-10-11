@@ -5,7 +5,7 @@ import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
 import { jsonString, lenient } from "@murugappan/utils/json.ts";
 
 // Frames that can't start a model call or touch stored messages, passed through as sent.
-const PASSTHROUGH_FRAMES = new Set([
+const PASSTHROUGH_FRAMES: ReadonlySet<string> = new Set([
   "cf_agent_stream_resume_request",
   "cf_agent_stream_resume_ack",
   "cf_agent_chat_request_cancel"

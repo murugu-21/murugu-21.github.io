@@ -43,7 +43,9 @@ export class ContactService extends Context.Service<
           yield* send(message);
           return usage;
         }),
-        usage: client => quota.usage(client)
+        usage: Effect.fn("ContactService.usage")(function* (client) {
+          return yield* quota.usage(client);
+        })
       };
     })
   );

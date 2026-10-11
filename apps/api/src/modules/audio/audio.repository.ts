@@ -24,11 +24,17 @@ export class AudioRepository extends Context.Service<
       const found = <T>(object: T | null) =>
         object ? Effect.succeed(object) : Effect.fail(new AudioNotFound());
       return {
-        head: file => Effect.promise(() => env.AUDIO.head(key(file))).pipe(Effect.flatMap(found)),
-        read: ({ file, range }) =>
-          Effect.promise(() => env.AUDIO.get(key(file), range ? { range } : undefined)).pipe(
-            Effect.flatMap(found)
-          )
+        head: Effect.fn("AudioRepository.head")(function* (file) {
+          // oxlint-disable-next-line no-restricted-properties -- an R2 error is a defect, so the route 500s
+          const object = yield* Effect.promise(() => env.AUDIO.head(key(file)));
+          return yield* found(object);
+        }),
+        read: Effect.fn("AudioRepository.read")(function* ({ file, range }) {
+          const options = range ? { range } : undefined;
+          // oxlint-disable-next-line no-restricted-properties -- an R2 error is a defect, so the route 500s
+          const object = yield* Effect.promise(() => env.AUDIO.get(key(file), options));
+          return yield* found(object);
+        })
       };
     })
   );

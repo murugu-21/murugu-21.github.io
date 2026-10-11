@@ -1,12 +1,5 @@
-import { RuleTester } from "vite-plus/lint/plugins-dev";
-import { describe, it } from "vitest";
-
 import plugin from "./test-behaviour.ts";
-
-RuleTester.describe = describe;
-RuleTester.it = it;
-
-const tester = new RuleTester({ languageOptions: { parserOptions: { lang: "ts" } } });
+import { tester } from "./rule-tester.ts";
 
 const SUBJECT_IMPORT = 'import { LIMIT, slugify, TOOLS } from "./subject";\n';
 const WIDGET_IMPORT =

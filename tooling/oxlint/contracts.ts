@@ -1,11 +1,7 @@
 // Oxlint JS plugin for README.md › Imports: packages/contracts/ exports shapes (schemas, types and
 // constants), never behaviour. Logic lives in the layer that runs it.
-import type { RuleTester } from "vite-plus/lint/plugins-dev";
+import type { NodeOf, Plugin } from "./plugin-types.ts";
 
-// oxlint doesn't export its plugin or AST types; derive them from RuleTester.
-type Rule = Parameters<RuleTester["run"]>[1];
-type Visitor = ReturnType<NonNullable<Rule["create"]>>;
-type NodeOf<K extends keyof Visitor> = Parameters<NonNullable<Visitor[K]>>[0];
 type Node = NodeOf<"ExportNamedDeclaration">["parent"];
 type Export = { node: Node; value: Node | null; name: string };
 
@@ -92,4 +88,4 @@ export default {
       }
     }
   }
-} satisfies { meta: { name: string }; rules: Record<string, Rule> };
+} satisfies Plugin;

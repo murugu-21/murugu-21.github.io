@@ -12,6 +12,10 @@
       // Served by URL.
       "ignore": ["public/**"]
     },
+    "apps/api": {
+      // The tsconfig plugin name that @effect/tsgo (a root dependency) reads, not a package.
+      "ignoreDependencies": ["@effect/language-service"]
+    },
     "apps/brand": {
       // x-cover.html loads its font from node_modules by path.
       "ignoreDependencies": ["firacode"]

@@ -15,7 +15,9 @@ export class ProfileService extends Context.Service<
     Effect.gen(function* () {
       const repository = yield* ProfileRepository;
       return {
-        slice: schema => repository.dataset.pipe(Effect.map(dataset => schema.parse(dataset)))
+        slice: Effect.fn("ProfileService.slice")(function* <S extends z.ZodType>(schema: S) {
+          return schema.parse(yield* repository.dataset);
+        })
       };
     })
   );

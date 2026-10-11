@@ -57,6 +57,8 @@ Packages import each other by name and full file path, like `@murugappan/content
 - `bun run test:live` runs the tests that call the real DeepSeek API. They cost money, so the normal run skips them.
 - Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
 - The type checker is a TypeScript 7 nightly. Point your editor at the TypeScript 7 language service.
+- `bun run check:effect` runs Effect's diagnostics (`@effect/tsgo`) over `apps/api`. It fails on every Effect error and warning, and the plugin entry in `apps/api/tsconfig.json` raises more rules to errors. Without that entry it checks nothing and passes.
+- Each `@effect/tsgo` release supports only the TypeScript versions its README lists, so `typescript` is pinned to one of them. Renovate bumps the two in one PR, which fails until you set `typescript` to a version the new `@effect/tsgo` lists.
 - Oxlint and oxfmt cover TypeScript, JSON and Markdown. Biome lints `.astro` templates and lints and formats CSS, which oxc can't parse (`biome.jsonc`). Prettier formats `.astro` templates and sorts their Tailwind classes until oxfmt can.
 - Astro deletes a line break beside a tag or `{expression}`, so `on\n<a>` renders as `on<a>`. Write the space as `{" "}` at the end of the line. `tooling/astro-whitespace.test.ts` fails on a line break that joins two words and on a space just inside an inline element.
 - In CSS, use the `--font-fira-code` variable, never `"Fira Code"`. The build renames the font.

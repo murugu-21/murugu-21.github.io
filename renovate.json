@@ -3,8 +3,9 @@
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests", "schedule:weekly"],
   "packageRules": [
     {
-      "matchPackageNames": ["typescript", "@astrojs/ts-content-mapper"],
-      "groupName": "typescript content mapper"
+      "description": "Each @effect/tsgo release supports only the TypeScript versions its README lists, so bun run check:effect fails if typescript moves alone. Set typescript by hand to a version the new @effect/tsgo lists.",
+      "matchPackageNames": ["typescript", "@astrojs/ts-content-mapper", "@effect/tsgo"],
+      "groupName": "typescript"
     },
     {
       "description": "Insiders build for tailwindlabs/prettier-plugin-tailwindcss#473 (prettier-plugin-astro 1). Allow only a stable release above 0.8.1, which lacks it.",

@@ -86,9 +86,9 @@ function streamChunk(
 }
 
 export class ChatRoom extends AIChatAgent<Env> {
-  maxPersistedMessages = 200;
+  public maxPersistedMessages = 200;
   // A message sent while a turn runs (another tab, say) is refused, so turns never interleave.
-  messageConcurrency = "drop" as const;
+  public messageConcurrency = "drop" as const;
 
   // Public so tests can drive `ctx.storage.sql` via `runInDurableObject`.
   declare public ctx: DurableObjectState<Record<string, unknown>>;
@@ -116,7 +116,7 @@ export class ChatRoom extends AIChatAgent<Env> {
     );
   }
 
-  onStart(): void {
+  public onStart(): void {
     this.ctx.storage.sql.exec(
       `CREATE TABLE IF NOT EXISTS user_messages (created_at INTEGER NOT NULL);
        CREATE TABLE IF NOT EXISTS leads (
@@ -129,16 +129,16 @@ export class ChatRoom extends AIChatAgent<Env> {
     );
   }
 
-  onConnect(_connection: Connection, ctx: ConnectionContext): void {
+  public onConnect(_connection: Connection, ctx: ConnectionContext): void {
     this.recordVisitor(ctx.request);
   }
 
   // An interrupted turn is dropped rather than retried, since a retry bills the model again.
-  async onChatRecovery(): Promise<{ continue: false }> {
+  public async onChatRecovery(): Promise<{ continue: false }> {
     return { continue: false };
   }
 
-  async onChatMessage(
+  public async onChatMessage(
     _onFinish: unknown,
     options?: { abortSignal?: AbortSignal; body?: Record<string, unknown> }
   ): Promise<Response> {
