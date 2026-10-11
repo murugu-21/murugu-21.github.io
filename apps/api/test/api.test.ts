@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { API_PATHS, CURRENT_API_VERSION } from "@murugappan/contracts/api/routes.ts";
@@ -6,6 +6,7 @@ import {
   fetchWorker,
   readJson,
   recordingEmail,
+  sharedLimiter,
   type FetchOptions,
   type TestEnvOptions
 } from "./fixtures";
@@ -395,10 +396,17 @@ describe("POST /api/contact", () => {
     expect((await errorBody(res)).code).toBe("payload_too_large");
   });
 
-  it("answers 503 when no inbox is configured", async () => {
+  it("answers 503 when no inbox is configured, without spending the client's slot", async () => {
     const res = await post("/api/contact", valid, { ip: "203.0.113.15", env: { inbox: "" } });
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
+
+    const sent = await post("/api/contact", valid, {
+      ip: "203.0.113.15",
+      env: { email: recordingEmail().email }
+    });
+    expect(sent.status).toBe(202);
+    expect(sent.headers.get("X-RateLimit-Remaining")).toBe("2");
   });
 
   it("answers 503 when the email send fails", async () => {
@@ -409,6 +417,49 @@ describe("POST /api/contact", () => {
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
   });
+
+  it("answers 429 and sends nothing once the site-wide allowance is spent", async () => {
+    vi.spyOn(sharedLimiter(), "takeContactSlot").mockResolvedValue({
+      allowed: false,
+      scope: "global",
+      clientRemaining: 3,
+      globalRemaining: 0
+    });
+    const { email, sent } = recordingEmail();
+    const res = await post("/api/contact", valid, { ip: "203.0.113.19", env: { email } });
+    expect(res.status).toBe(429);
+    expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");
+    expect(await errorBody(res)).toMatchObject({
+      code: "rate_limited",
+      message: "The site-wide daily message allowance is spent."
+    });
+    expect(sent).toEqual([]);
+  });
+
+  it.each([
+    { dryRun: false, rpc: "takeContactSlot" },
+    { dryRun: true, rpc: "contactUsage" }
+  ] as const)(
+    "answers 503 and sends nothing when the rate limiter's $rpc fails (dryRun: $dryRun)",
+    async ({ dryRun, rpc }) => {
+      const failure = new Error("limiter down");
+      vi.spyOn(sharedLimiter(), rpc).mockRejectedValue(failure);
+      const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+      const { email, sent } = recordingEmail();
+      const res = await post(
+        "/api/contact",
+        { ...valid, dryRun },
+        { ip: "203.0.113.18", env: { email } }
+      );
+      expect(res.status).toBe(503);
+      expect(await errorBody(res)).toMatchObject({
+        code: "service_unavailable",
+        message: "The daily message allowance could not be checked right now."
+      });
+      expect(logged).toHaveBeenCalledWith("contact rate limiter failed", failure);
+      expect(sent).toEqual([]);
+    }
+  );
 });
 
 describe("POST /api/contact with dryRun", () => {

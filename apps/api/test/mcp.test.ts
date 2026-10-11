@@ -1,10 +1,9 @@
-import { env } from "cloudflare:workers";
 import {
   type CallToolResult,
   Client,
   StreamableHTTPClientTransport
 } from "@modelcontextprotocol/client";
-import { assert, describe, expect, it, onTestFinished, vi } from "vitest";
+import { assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
@@ -12,7 +11,7 @@ import { JsonObject } from "@murugappan/utils/json.ts";
 import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
-import { fetchWorker, recordingEmail, type TestEnvOptions } from "./fixtures";
+import { fetchWorker, recordingEmail, sharedLimiter, type TestEnvOptions } from "./fixtures";
 
 const META = "io.modelcontextprotocol/protocolVersion";
 const CAPS = "io.modelcontextprotocol/clientCapabilities";
@@ -439,7 +438,9 @@ describe("tools over HTTP", () => {
     }
     const result = await client.callTool(args);
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toMatch(/allowance|limit/i);
+    expect(textOf(result)).toBe(
+      "This client has already used its daily allowance of 3 messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
+    );
   });
 });
 
@@ -705,28 +706,48 @@ describe("send_message", () => {
     expect(sent).toEqual([]);
   });
 
-  it.each<[string, TestEnvOptions & { ip: string }]>([
-    ["an unconfigured inbox", { ip: "198.51.100.64", inbox: "" }],
+  it.each<[string, TestEnvOptions & { ip: string }, string]>([
+    [
+      "an unconfigured inbox",
+      { ip: "198.51.100.64", inbox: "" },
+      "Message delivery is not configured on this deployment. Use one of the contact links from get_profile instead."
+    ],
     [
       "a failed delivery",
-      { ip: "198.51.100.65", email: { send: () => Promise.reject(new Error("relay down")) } }
+      { ip: "198.51.100.65", email: { send: () => Promise.reject(new Error("relay down")) } },
+      "The message could not be delivered right now. Retry in a few minutes, or use one of the contact links from get_profile."
     ]
-  ])("reports %s as a tool execution error", async (_label, options) => {
-    expect((await call("send_message", message, options)).isError).toBe(true);
+  ])("reports %s as a tool execution error", async (_label, options, text) => {
+    const result = await call("send_message", message, options);
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe(text);
+  });
+
+  it("reports a spent site-wide allowance without sending", async () => {
+    vi.spyOn(sharedLimiter(), "takeContactSlot").mockResolvedValue({
+      allowed: false,
+      scope: "global",
+      clientRemaining: 3,
+      globalRemaining: 0
+    });
+    const { email, sent } = recordingEmail();
+    const result = await call("send_message", message, { ip: "198.51.100.67", email });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toBe(
+      "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
+    );
+    expect(sent).toEqual([]);
   });
 
   it("logs a rate limiter failure and reports it as a tool execution error", async () => {
-    onTestFinished(() => {
-      vi.restoreAllMocks();
-    });
     const failure = new Error("limiter down");
-    const limiter = env.RateLimiter.get(env.RateLimiter.idFromName("global"));
-    vi.spyOn(limiter, "takeContactSlot").mockRejectedValue(failure);
-    vi.spyOn(env.RateLimiter, "get").mockReturnValue(limiter);
+    vi.spyOn(sharedLimiter(), "takeContactSlot").mockRejectedValue(failure);
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     const result = await call("send_message", message, { ip: "198.51.100.66" });
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toContain("could not be delivered");
+    expect(textOf(result)).toBe(
+      "The message could not be delivered right now. Retry in a few minutes, or use one of the contact links from get_profile."
+    );
     expect(logged).toHaveBeenCalledWith("mcp send_message failed", failure);
   });
 });

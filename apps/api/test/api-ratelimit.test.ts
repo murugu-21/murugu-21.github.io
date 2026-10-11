@@ -202,8 +202,14 @@ describe("contact limiting through the worker", () => {
     const res = await postContact(validMessage, "198.51.100.7");
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toMatch(/^\d+$/);
-    const { error } = await readJson(res, z.object({ error: z.object({ code: z.string() }) }));
-    expect(error.code).toBe("rate_limited");
+    const { error } = await readJson(
+      res,
+      z.object({ error: z.object({ code: z.string(), message: z.string() }) })
+    );
+    expect(error).toEqual({
+      code: "rate_limited",
+      message: "This client has already sent 3 messages today."
+    });
   });
 
   it("does not spend a slot on an invalid request", async () => {

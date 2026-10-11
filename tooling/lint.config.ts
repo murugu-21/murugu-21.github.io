@@ -38,7 +38,15 @@ const LAYERS: Record<LayerName, Layer> = {
     dir: "apps/api/{src,test}/",
     pkg: "@murugappan/api",
     imports: "#src/",
-    uses: ["content", "contracts", "utils"]
+    uses: ["content", "contracts", "utils"],
+    also: [
+      {
+        regex: "^effect($|/)",
+        allowTypeImports: true,
+        message:
+          "Effect runs only in apps/api/src/programs/ (type imports are fine). Put the logic there and call it with runInRequest (apps/api/README.md › Effect handlers)."
+      }
+    ]
   },
   siteScripts: {
     dir: "apps/site/scripts/",
@@ -175,6 +183,8 @@ export default {
     ...LAYER_NAMES.map(name =>
       restrict([`${LAYERS[name].dir}**`], [...layerPatterns(name), ...(LAYERS[name].also ?? [])])
     ),
+    // After the layers, so programs/ gets the api patterns without the `effect` ban.
+    restrict(["apps/api/src/programs/**"], layerPatterns("api")),
     // Shared code serves every page, so it can't reach into a page area's folder.
     restrict(
       [

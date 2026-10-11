@@ -13,9 +13,14 @@ import {
   type McpToolDescriptor,
   type McpToolName
 } from "@murugappan/contracts/mcp.ts";
-import { globalLimiter } from "#src/api/ratelimit.ts";
 import { DATASET, findPost, POSTS } from "#src/content.ts";
-import { contactMailer, sendContactEmail } from "#src/email.ts";
+import {
+  deliverContact,
+  type ContactError,
+  type ContactLimitReached
+} from "#src/programs/contact-delivery.ts";
+import { runInRequest, type Render } from "#src/programs/run-in-request.ts";
+import type { ContactUsage } from "#src/rate-limiter.ts";
 
 export type ToolContext = {
   env: Env;
@@ -49,6 +54,37 @@ function fail(text: string): ToolResult {
   return { content: [{ type: "text", text }], isError: true };
 }
 
+const LIMIT_TEXT = {
+  client: `This client has already used its daily allowance of ${CONTACT_DAILY_PER_CLIENT} messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile.`,
+  global:
+    "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
+} as const satisfies Record<ContactLimitReached["scope"], string>;
+
+// Otherwise the SDK would send the raw error message as the isError text and log nothing.
+function undelivered(cause: unknown): ToolResult {
+  console.error("mcp send_message failed", cause);
+  return fail(
+    "The message could not be delivered right now. Retry in a few minutes, or use one of the contact links from get_profile."
+  );
+}
+
+const sendMessageResults: Render<ContactUsage, ContactError, ToolResult> = {
+  success: () =>
+    ok({
+      status: "accepted",
+      message: "Message accepted. Murugappan will reply to the address you gave."
+    }),
+  failures: {
+    DeliveryNotConfigured: () =>
+      fail(
+        "Message delivery is not configured on this deployment. Use one of the contact links from get_profile instead."
+      ),
+    ContactLimitReached: ({ scope }) => fail(LIMIT_TEXT[scope]),
+    DeliveryFailed: ({ cause }) => undelivered(cause),
+    QuotaUnavailable: ({ cause }) => undelivered(cause)
+  }
+};
+
 const fromDataset: Run = (_args, _ctx, tool) => ok(tool.outputSchema.parse(DATASET));
 
 // Keyed by name, so a tool in the catalogue without a handler fails to compile.
@@ -72,39 +108,17 @@ const RUN: Record<McpToolName, Run> = {
     );
   },
   async send_message(args, ctx) {
-    const { dryRun, ...msg } = SendMessageArgs.parse(args);
+    const { dryRun, ...message } = SendMessageArgs.parse(args);
     if (dryRun) {
       return ok({
         status: "validated",
         message: "The request is valid. Call again without dryRun to deliver it."
       });
     }
-
-    const mailer = contactMailer(ctx.env);
-    if (!mailer)
-      return fail(
-        "Message delivery is not configured on this deployment. Use one of the contact links from get_profile instead."
-      );
-
-    // Without this catch the SDK would send the raw error message as the isError text and log nothing.
-    try {
-      const slot = await globalLimiter(ctx.env).takeContactSlot(ctx.clientIp);
-      if (!slot.allowed)
-        return fail(
-          slot.scope === "client"
-            ? `This client has already used its daily allowance of ${CONTACT_DAILY_PER_CLIENT} messages. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile.`
-            : "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
-        );
-      await sendContactEmail({ ...mailer, msg });
-    } catch (err) {
-      console.error("mcp send_message failed", err);
-      return fail(
-        "The message could not be delivered right now. Retry in a few minutes, or use one of the contact links from get_profile."
-      );
-    }
-    return ok({
-      status: "accepted",
-      message: "Message accepted. Murugappan will reply to the address you gave."
+    return runInRequest({
+      env: ctx.env,
+      program: deliverContact({ client: ctx.clientIp, message }),
+      render: sendMessageResults
     });
   }
 };

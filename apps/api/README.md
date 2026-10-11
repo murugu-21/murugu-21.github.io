@@ -8,6 +8,17 @@ Cloudflare serves assets straight from the built site. The Worker only runs for 
 
 The Worker also runs for every page (directory) URL, such as `/about/`. A client whose `Accept` ranks `text/markdown` above HTML gets the page's `index.md`. Everyone else, and every page without an `index.md`, gets the HTML. An HTML page that has an `index.md` names it in a `Link: <…/index.md>; rel="alternate"; type="text/markdown"` header. The Worker checks for that file while it fetches the page, so the check itself adds no wait. Both answers carry `Vary: Accept`. Asset URLs all end in a filename, so they never match `/*/` and never run the Worker first.
 
+## Effect handlers
+
+Logic with several ways to fail is an Effect program in its own module under `src/programs/`, as contact delivery is in `src/programs/contact-delivery.ts`.
+
+- The program names its failures as `Data.TaggedError`s and reads services built from `env`.
+- Only `src/programs/` imports `effect`, and lint fails any other value import of it in `src/` or `test/`. Type imports are fine.
+- A route or MCP tool parses its own input, then calls `runInRequest({ env, program, render })`.
+- `render` is a plain object with a `success` function and one `failures` entry per error tag. The type check fails if an entry is missing or unknown, or if an error's `_tag` is a plain `string`. `bun run check:worker` proves it with `test/run-in-request.test-d.ts`.
+- A rejected promise the program doesn't turn into a tagged error rejects `runInRequest` too, so a route answers Hono's 500. Give every failure a caller can act on its own tag instead.
+- To add a service, give it a `static fromEnv(env)` and add it to `RequestServices` in `src/programs/run-in-request.ts`.
+
 ## The 404 page
 
 A browser gets the normal 404 page. Anything else, like curl or an AI agent, gets a short markdown guide to the site. Both get a real 404 status.

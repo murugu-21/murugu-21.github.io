@@ -368,7 +368,9 @@ export const OPENAPI_DOCUMENT: Omit<OpenApiDocument, "servers"> = {
             "The per-client or site-wide daily allowance is spent. Retry after 00:00 UTC."
           ),
           "500": errorResponse("Unexpected server error."),
-          "503": errorResponse("Email delivery is not configured or is temporarily unavailable.")
+          "503": errorResponse(
+            "Email delivery is not configured, or delivery or the daily allowance check is temporarily unavailable."
+          )
         }
       }
     },

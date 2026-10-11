@@ -7,3 +7,4 @@ A free JSON API over the site's content at `/api/v1`, with no auth. Users read a
 - To deprecate a version, add it to `VERSIONS` in `packages/contracts/api/versioning.ts`. The deprecation headers follow from that.
 - Rate limits are in `packages/contracts/api/quotas.ts`.
 - `POST /api/v1/contact` emails me. Send `"dryRun": true` to test without sending.
+- The delivery steps for contact live in `apps/api/src/programs/contact-delivery.ts`, shared with MCP. `contact.ts` here parses the request and maps each outcome to a response.

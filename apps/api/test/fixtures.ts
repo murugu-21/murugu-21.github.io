@@ -1,8 +1,9 @@
 // Site content comes from the real sources, bundled through virtual:content/posts as in production.
 import { env } from "cloudflare:workers";
-import { assert, expect, vi } from "vitest";
+import { assert, expect, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
+import { globalLimiter } from "#src/api/ratelimit.ts";
 import type { ChatRoom } from "#src/chat-room.ts";
 import worker from "#src/server.ts";
 
@@ -96,6 +97,19 @@ export function testEnv(options: TestEnvOptions = {}): Env {
     DEEPSEEK_API_KEY: "",
     EMAIL: options.email ?? recordingEmail().email
   };
+}
+
+/**
+ * The RateLimiter stub every request in this test reaches, so a test can spy on its RPCs. Every
+ * mock, including the test's own spies, is restored when the test finishes.
+ */
+export function sharedLimiter() {
+  onTestFinished(() => {
+    vi.restoreAllMocks();
+  });
+  const limiter = globalLimiter(env);
+  vi.spyOn(env.RateLimiter, "get").mockReturnValue(limiter);
+  return limiter;
 }
 
 export async function readJson<S extends z.ZodType>(res: Response, schema: S): Promise<z.infer<S>> {

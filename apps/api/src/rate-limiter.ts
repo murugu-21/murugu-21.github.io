@@ -29,9 +29,9 @@ const hasFunds = ({ available, totalUsd }: DeepseekBalance): boolean =>
   available && totalUsd > BALANCE_RESERVE_USD;
 
 /** What is left of each contact tier today, after the reporting call. */
-type ContactUsage = { clientRemaining: number; globalRemaining: number };
+export type ContactUsage = { clientRemaining: number; globalRemaining: number };
 
-type ContactSlot = ContactUsage &
+export type ContactSlot = ContactUsage &
   ({ allowed: true } | { allowed: false; scope: "client" | "global" });
 
 // One fixed-name instance ("global") shared by every ChatRoom, so the balance

@@ -4,9 +4,9 @@ import { cors } from "hono/cors";
 import { methodNotAllowed } from "hono/method-not-allowed";
 import type { z } from "zod";
 
-import { contactMailer, sendContactEmail } from "#src/email.ts";
-import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
-import { parseContactRequest } from "./contact";
+import { contactUsage, deliverContact } from "#src/programs/contact-delivery.ts";
+import { runInRequest } from "#src/programs/run-in-request.ts";
+import { deliveryResponses, dryRunResponse, parseContactRequest } from "./contact";
 import {
   EducationList,
   ExperienceList,
@@ -19,13 +19,8 @@ import { apiHeaders } from "./middleware";
 import { buildOpenApiDocument } from "./openapi";
 import { PostsQuery } from "@murugappan/contracts/api/posts.ts";
 import { searchPosts } from "./posts";
-import {
-  contactRateLimitHeaders,
-  globalLimiter,
-  RATE_LIMIT_EXPOSED_HEADERS,
-  secondsUntilUtcMidnight
-} from "./ratelimit";
-import { API_PATHS, READ_METHODS } from "@murugappan/contracts/api/routes.ts";
+import { RATE_LIMIT_EXPOSED_HEADERS } from "./ratelimit";
+import { READ_METHODS } from "@murugappan/contracts/api/routes.ts";
 import { DATASET, findPost, POSTS } from "#src/content.ts";
 import { buildVersionsDocument, META_EXPOSED_HEADERS } from "./versioning";
 
@@ -68,25 +63,6 @@ const jsonMethodNotAllowed = (app: Hono<{ Bindings: Env }>) =>
       });
     }
   });
-
-/** Never cached: the body confirms a side effect and the headers are a snapshot. */
-function contactResponse(
-  status: 200 | 202,
-  body: { status: string; message: string },
-  usage: { clientRemaining: number; globalRemaining: number }
-): Response {
-  return new Response(JSON.stringify(body, null, 2), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-      ...contactRateLimitHeaders({
-        ...usage,
-        resetSeconds: secondsUntilUtcMidnight()
-      })
-    }
-  });
-}
 
 export const api = new Hono<{ Bindings: Env }>();
 
@@ -200,73 +176,18 @@ api.post("/contact", contactBodyLimit, async c => {
     });
   }
 
-  const limiter = globalLimiter(c.env);
-  const clientIp = c.req.header("CF-Connecting-IP") ?? "unknown";
+  const client = c.req.header("CF-Connecting-IP") ?? "unknown";
 
-  if (parsed.dryRun) {
-    // Reports the real allowance, which is how a client sizes a real send.
-    const usage = await limiter.contactUsage(clientIp);
-    return contactResponse(
-      200,
-      {
-        status: "validated",
-        message: "The request is valid. Send it again without dryRun to deliver it."
-      },
-      usage
-    );
-  }
-
-  const mailer = contactMailer(c.env);
-  if (!mailer) {
-    return apiError({
-      status: 503,
-      code: "service_unavailable",
-      message: "Message delivery is not configured on this deployment.",
-      hint: "Use one of the contact links in GET /api/profile instead."
-    });
-  }
+  // Reports the real allowance, which is how a client sizes a real send.
+  if (parsed.dryRun)
+    return runInRequest({ env: c.env, program: contactUsage(client), render: dryRunResponse });
 
   // Spend a slot only after validation, so retrying a bad body cannot lock a caller out.
-  const slot = await limiter.takeContactSlot(clientIp);
-  if (!slot.allowed) {
-    return apiError({
-      status: 429,
-      code: "rate_limited",
-      message:
-        slot.scope === "client"
-          ? `This client has already sent ${CONTACT_DAILY_PER_CLIENT} messages today.`
-          : "The site-wide daily message allowance is spent.",
-      hint: `The allowance resets at 00:00 UTC. The Retry-After and RateLimit headers on this response say when and how much. For anything urgent, use the email link in GET ${API_PATHS.profile}.`,
-      headers: {
-        "Retry-After": String(secondsUntilUtcMidnight()),
-        ...contactRateLimitHeaders({
-          ...slot,
-          resetSeconds: secondsUntilUtcMidnight()
-        })
-      }
-    });
-  }
-
-  try {
-    await sendContactEmail({ ...mailer, msg: parsed.value });
-  } catch (err) {
-    console.error("contact email failed", err);
-    return apiError({
-      status: 503,
-      code: "service_unavailable",
-      message: "The message could not be delivered right now.",
-      hint: "Retry in a few minutes, or use the email link in GET /api/profile."
-    });
-  }
-
-  return contactResponse(
-    202,
-    {
-      status: "accepted",
-      message: "Message accepted. Murugappan will reply to the address you gave."
-    },
-    slot
-  );
+  return runInRequest({
+    env: c.env,
+    program: deliverContact({ client, message: parsed.value }),
+    render: deliveryResponses
+  });
 });
 
 // jsonMethodNotAllowed turns this into a 405 when the path exists under another method.
