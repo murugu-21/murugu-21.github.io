@@ -1,9 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 import { CONTACT_LIMITS } from "@murugappan/contracts/api/contact.ts";
-import { parseContactRequest } from "#src/api/contact.ts";
+import { fetchWorker, readJson, recordingEmail } from "./fixtures";
 
-describe("parseContactRequest", () => {
+let lastIp = 0;
+
+const postContact = (body: unknown, email = recordingEmail()) =>
+  fetchWorker("/api/v1/contact", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    ip: `203.0.113.${100 + ++lastIp}`,
+    env: { email: email.email }
+  });
+
+const Issues = z.object({
+  error: z.object({ details: z.array(z.object({ field: z.string(), issue: z.string() })) })
+});
+
+describe("POST /api/contact body parsing", () => {
   const valid = {
     name: "Ada Lovelace",
     email: "ada@example.com",
@@ -12,10 +28,6 @@ describe("parseContactRequest", () => {
   };
   const minimal = { email: valid.email, message: valid.message };
 
-  it("accepts a complete request", () => {
-    expect(parseContactRequest(valid)).toEqual({ ok: true, value: valid, dryRun: false });
-  });
-
   it.each([
     ["only email and message", minimal],
     [
@@ -23,16 +35,38 @@ describe("parseContactRequest", () => {
       { email: `  ${valid.email}  `, message: `  ${valid.message}  ` }
     ],
     ["blank optional fields, dropped", { ...valid, name: "   ", company: "" }]
-  ])("accepts %s", (_, raw) => {
-    expect(parseContactRequest(raw)).toEqual({ ok: true, value: minimal, dryRun: false });
+  ])("accepts %s and emails the cleaned message", async (_, raw) => {
+    const email = recordingEmail();
+    const res = await postContact(raw, email);
+    expect(res.status).toBe(202);
+    expect(email.sent.map(m => m.text)).toEqual([
+      [
+        "Name:    (not given)",
+        "Email:   ada@example.com",
+        "Company: (not given)",
+        "Source:  POST /api/contact",
+        "",
+        "--- Message ---",
+        valid.message
+      ].join("\n")
+    ]);
   });
 
-  it("reports a dryRun request separately from the message itself", () => {
-    expect(parseContactRequest({ ...valid, dryRun: true })).toEqual({
-      ok: true,
-      value: valid,
-      dryRun: true
-    });
+  it("emails every field of a complete request sent with dryRun false", async () => {
+    const email = recordingEmail();
+    const res = await postContact({ ...valid, dryRun: false }, email);
+    expect(res.status).toBe(202);
+    expect(email.sent.map(m => m.text)).toEqual([
+      [
+        "Name:    Ada Lovelace",
+        "Email:   ada@example.com",
+        "Company: Analytical Engines Ltd",
+        "Source:  POST /api/contact",
+        "",
+        "--- Message ---",
+        valid.message
+      ].join("\n")
+    ]);
   });
 
   it.each<[string, unknown, string[]]>([
@@ -57,10 +91,10 @@ describe("parseContactRequest", () => {
       ["company"]
     ],
     ["a non-string name", { ...valid, name: 42 }, ["name"]]
-  ])("rejects %s", (_, raw, fields) => {
-    expect(parseContactRequest(raw)).toMatchObject({
-      ok: false,
-      issues: fields.map(field => ({ field }))
-    });
+  ])("rejects %s with 422, naming the field", async (_, raw, fields) => {
+    const res = await postContact(raw);
+    expect(res.status).toBe(422);
+    const { error } = await readJson(res, Issues);
+    expect(error.details.map(d => d.field)).toEqual(fields);
   });
 });

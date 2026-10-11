@@ -23,7 +23,7 @@ More detail lives next to the code:
 - [Blog](packages/content/blog/README.md): writing a post, diagrams, tags.
 - [Read-aloud audio](apps/tts/README.md)
 - [Worker](apps/api/README.md): routes, the 404, Jarvis.
-- [Public API](apps/api/src/api/README.md) and [MCP server](apps/api/src/mcp/README.md)
+- [Public API](apps/api/src/modules/api/README.md) and [MCP server](apps/api/src/modules/mcp/README.md)
 - [Contracts](packages/contracts/README.md) and [banners](apps/brand/README.md)
 
 ## Run it locally

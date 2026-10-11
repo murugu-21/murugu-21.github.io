@@ -1,13 +1,14 @@
 import { assert, describe, expect, it } from "vitest";
 
-import { api } from "#src/api/index.ts";
-import { buildOpenApiDocument } from "#src/api/openapi.ts";
+import { apiController } from "#src/modules/api/api.controller.ts";
+import { buildOpenApiDocument } from "#src/modules/openapi/openapi-document.ts";
 import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
 import {
   CURRENT_VERSION_RECORD,
   type VersionRecord
 } from "@murugappan/contracts/api/versioning.ts";
-import { buildVersionsDocument, versionHeaders, versionLinkHeader } from "#src/api/versioning.ts";
+import { versionHeaders, versionLinkHeader } from "#src/common/http/version-headers.ts";
+import { buildVersionsDocument } from "#src/modules/versioning/versions-document.ts";
 
 describe("version headers", () => {
   const deprecated: VersionRecord = {
@@ -91,7 +92,7 @@ describe("buildOpenApiDocument", () => {
   /* oxlint-disable tests/observe-behaviour -- relation: spec paths against the router's own table */
   it("documents exactly the paths and methods the router serves", () => {
     // HEAD rides along with GET and is not a separate operation; ALL is middleware or the 404.
-    const served = api.routes
+    const served = apiController.routes
       .filter(r => r.method !== "ALL" && r.method !== "HEAD")
       .map(r => `${r.method} ${VERSIONED_API_BASE}${r.path.replaceAll(/:(\w+)/g, "{$1}")}`);
     const documented = Object.entries(doc.paths).flatMap(([path, item]) =>

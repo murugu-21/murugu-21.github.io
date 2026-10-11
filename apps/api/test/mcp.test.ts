@@ -1,17 +1,29 @@
+import { Effect } from "effect";
 import {
   type CallToolResult,
   Client,
   StreamableHTTPClientTransport
 } from "@modelcontextprotocol/client";
-import { assert, describe, expect, it, vi } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
-import { JsonObject } from "@murugappan/utils/json.ts";
-import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
+import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
 import { MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
-import { fetchWorker, recordingEmail, sharedLimiter, type TestEnvOptions } from "./fixtures";
+import { JsonObject } from "@murugappan/utils/json.ts";
+import {
+  ContactLimitReached,
+  QuotaUnavailable
+} from "#src/modules/rate-limit/contact-quota.repository.ts";
+import {
+  capturedErrors,
+  fakeContactQuota,
+  fetchWorker,
+  recordingEmail,
+  type FetchOptions,
+  type TestEnvOptions
+} from "./fixtures";
 
 const META = "io.modelcontextprotocol/protocolVersion";
 const CAPS = "io.modelcontextprotocol/clientCapabilities";
@@ -22,16 +34,16 @@ const POST_URI = `${SITE_ORIGIN}/blog/coin-change-problem/index.md`;
 
 const CLIENT_IP = "203.0.113.70";
 
-type ClientOptions = TestEnvOptions & { ip?: string };
+type ClientOptions = TestEnvOptions & Pick<FetchOptions, "ip" | "layer">;
 
 /** An SDK client pinned to the current revision, posting through the worker as `ip`. */
-async function connect({ ip = CLIENT_IP, ...envOptions }: ClientOptions = {}) {
+async function connect({ ip = CLIENT_IP, layer, ...envOptions }: ClientOptions = {}) {
   const client = new Client(
     { name: "TestClient", version: "1.0.0" },
     { versionNegotiation: { mode: { pin: LATEST_PROTOCOL_VERSION } } }
   );
   const transport = new StreamableHTTPClientTransport(new URL("https://murugappan.dev/mcp"), {
-    fetch: (url, init) => fetchWorker(String(url), { ...init, ip, env: envOptions })
+    fetch: (url, init) => fetchWorker(String(url), { ...init, ip, layer, env: envOptions })
   });
   await client.connect(transport);
   return client;
@@ -724,14 +736,17 @@ describe("send_message", () => {
   });
 
   it("reports a spent site-wide allowance without sending", async () => {
-    vi.spyOn(sharedLimiter(), "takeContactSlot").mockResolvedValue({
-      allowed: false,
-      scope: "global",
-      clientRemaining: 3,
-      globalRemaining: 0
+    const layer = fakeContactQuota({
+      take: () =>
+        Effect.fail(
+          new ContactLimitReached({
+            scope: "global",
+            usage: { clientRemaining: 3, globalRemaining: 0 }
+          })
+        )
     });
     const { email, sent } = recordingEmail();
-    const result = await call("send_message", message, { ip: "198.51.100.67", email });
+    const result = await call("send_message", message, { ip: "198.51.100.67", email, layer });
     expect(result.isError).toBe(true);
     expect(textOf(result)).toBe(
       "The site-wide daily message allowance is spent. It resets at 00:00 UTC. Until then, use one of the contact links from get_profile."
@@ -741,9 +756,11 @@ describe("send_message", () => {
 
   it("logs a rate limiter failure and reports it as a tool execution error", async () => {
     const failure = new Error("limiter down");
-    vi.spyOn(sharedLimiter(), "takeContactSlot").mockRejectedValue(failure);
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    const result = await call("send_message", message, { ip: "198.51.100.66" });
+    const layer = fakeContactQuota({
+      take: () => Effect.fail(new QuotaUnavailable({ cause: failure }))
+    });
+    const logged = capturedErrors();
+    const result = await call("send_message", message, { ip: "198.51.100.66", layer });
     expect(result.isError).toBe(true);
     expect(textOf(result)).toBe(
       "The message could not be delivered right now. Retry in a few minutes, or use one of the contact links from get_profile."

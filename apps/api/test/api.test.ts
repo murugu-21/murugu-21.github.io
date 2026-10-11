@@ -1,12 +1,20 @@
-import { describe, expect, it, vi } from "vitest";
+import { Effect, Layer } from "effect";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { API_PATHS, CURRENT_API_VERSION } from "@murugappan/contracts/api/routes.ts";
+import { appLayer } from "#src/app.module.ts";
+import { PostsRepository } from "#src/modules/posts/posts.repository.ts";
 import {
+  ContactLimitReached,
+  QuotaUnavailable
+} from "#src/modules/rate-limit/contact-quota.repository.ts";
+import {
+  capturedErrors,
+  fakeContactQuota,
   fetchWorker,
   readJson,
   recordingEmail,
-  sharedLimiter,
   type FetchOptions,
   type TestEnvOptions
 } from "./fixtures";
@@ -279,6 +287,30 @@ describe("error handling under /api", () => {
     expect(error.message).toBe(`${method} is not supported on ${path}.`);
   });
 
+  it("answers an unexpected failure with the documented JSON 500 and the API headers", async () => {
+    const failure = new Error("store unreachable");
+    const layer = appLayer(
+      Layer.succeed(PostsRepository, {
+        all: Effect.die(failure),
+        findBySlug: () => Effect.die(failure)
+      })
+    );
+    const logged = capturedErrors();
+    const res = await fetchWorker("/api/v1/posts/coin-change-problem", { layer });
+    expect(res.status).toBe(500);
+    expect(res.headers.get("API-Version")).toBe("1.0.0");
+    expect(await errorBody(res)).toMatchObject({
+      code: "internal_error",
+      message: "The server failed while answering this request."
+    });
+    expect(logged).toHaveBeenCalledWith(
+      "api request failed",
+      "GET",
+      "/api/v1/posts/coin-change-problem",
+      failure
+    );
+  });
+
   it("answers a CORS preflight", async () => {
     const res = await fetchWorker("/api/contact", {
       method: "OPTIONS",
@@ -419,14 +451,21 @@ describe("POST /api/contact", () => {
   });
 
   it("answers 429 and sends nothing once the site-wide allowance is spent", async () => {
-    vi.spyOn(sharedLimiter(), "takeContactSlot").mockResolvedValue({
-      allowed: false,
-      scope: "global",
-      clientRemaining: 3,
-      globalRemaining: 0
+    const layer = fakeContactQuota({
+      take: () =>
+        Effect.fail(
+          new ContactLimitReached({
+            scope: "global",
+            usage: { clientRemaining: 3, globalRemaining: 0 }
+          })
+        )
     });
     const { email, sent } = recordingEmail();
-    const res = await post("/api/contact", valid, { ip: "203.0.113.19", env: { email } });
+    const res = await post("/api/contact", valid, {
+      ip: "203.0.113.19",
+      env: { email },
+      layer
+    });
     expect(res.status).toBe(429);
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");
     expect(await errorBody(res)).toMatchObject({
@@ -436,20 +475,19 @@ describe("POST /api/contact", () => {
     expect(sent).toEqual([]);
   });
 
-  it.each([
-    { dryRun: false, rpc: "takeContactSlot" },
-    { dryRun: true, rpc: "contactUsage" }
-  ] as const)(
-    "answers 503 and sends nothing when the rate limiter's $rpc fails (dryRun: $dryRun)",
-    async ({ dryRun, rpc }) => {
+  it.each([false, true])(
+    "answers 503 and sends nothing when the quota can't be checked (dryRun: %s)",
+    async dryRun => {
       const failure = new Error("limiter down");
-      vi.spyOn(sharedLimiter(), rpc).mockRejectedValue(failure);
-      const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+      const unavailable = () => Effect.fail(new QuotaUnavailable({ cause: failure }));
+      // Only the call each mode should make is faked; the other would die and answer 500.
+      const layer = fakeContactQuota(dryRun ? { usage: unavailable } : { take: unavailable });
+      const logged = capturedErrors();
       const { email, sent } = recordingEmail();
       const res = await post(
         "/api/contact",
         { ...valid, dryRun },
-        { ip: "203.0.113.18", env: { email } }
+        { ip: "203.0.113.18", env: { email }, layer }
       );
       expect(res.status).toBe(503);
       expect(await errorBody(res)).toMatchObject({

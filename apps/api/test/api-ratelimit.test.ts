@@ -6,10 +6,9 @@ import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
 import {
   contactRateLimitHeaders,
   readRateLimitHeaders,
-  resetReadWindows,
-  secondsUntilUtcMidnight,
-  takeReadSlot
-} from "#src/api/ratelimit.ts";
+  secondsUntilUtcMidnight
+} from "#src/modules/rate-limit/rate-limit-headers.ts";
+import { resetReadWindows, takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
 import { fetchWorker, readJson } from "./fixtures";
 
 beforeEach(() => resetReadWindows());

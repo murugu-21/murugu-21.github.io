@@ -1,23 +1,52 @@
 # Worker
 
-`src/server.ts` is the entry point. The [public API](src/api/README.md) and the [MCP server](src/mcp/README.md) have their own READMEs.
+`src/server.ts` is the entry point. `src/app.ts` mounts each module's controller. The [public API](src/modules/api/README.md) and the [MCP server](src/modules/mcp/README.md) have their own READMEs.
 
-Cloudflare serves assets straight from the built site. The Worker only runs for the routes in `run_worker_first` in `wrangler.jsonc`, and for requests that match no file. If you add a route to `server.ts`, add it there too.
+Cloudflare serves assets straight from the built site. The Worker only runs for the routes in `run_worker_first` in `wrangler.jsonc`, and for requests that match no file. If you add a route to `app.ts`, add it there too.
 
 ## Markdown pages
 
 The Worker also runs for every page (directory) URL, such as `/about/`. A client whose `Accept` ranks `text/markdown` above HTML gets the page's `index.md`. Everyone else, and every page without an `index.md`, gets the HTML. An HTML page that has an `index.md` names it in a `Link: <…/index.md>; rel="alternate"; type="text/markdown"` header. The Worker checks for that file while it fetches the page, so the check itself adds no wait. Both answers carry `Vary: Accept`. Asset URLs all end in a filename, so they never match `/*/` and never run the Worker first.
 
-## Effect handlers
+## Layers
 
-Logic with several ways to fail is an Effect program in its own module under `src/programs/`, as contact delivery is in `src/programs/contact-delivery.ts`.
+The Worker uses NestJS's names on top of Hono, with Effect for dependency injection. A file's suffix says its role.
 
-- The program names its failures as `Data.TaggedError`s and reads services built from `env`.
-- Only `src/programs/` imports `effect`, and lint fails any other value import of it in `src/` or `test/`. Type imports are fine.
-- A route or MCP tool parses its own input, then calls `runInRequest({ env, program, render })`.
-- `render` is a plain object with a `success` function and one `failures` entry per error tag. The type check fails if an entry is missing or unknown, or if an error's `_tag` is a plain `string`. `bun run check:worker` proves it with `test/run-in-request.test-d.ts`.
-- A rejected promise the program doesn't turn into a tagged error rejects `runInRequest` too, so a route answers Hono's 500. Give every failure a caller can act on its own tag instead.
-- To add a service, give it a `static fromEnv(env)` and add it to `RequestServices` in `src/programs/run-in-request.ts`.
+| Suffix                         | Role                                                                                                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `*.controller.ts`              | A Hono router. It applies guards, pipes and middleware and turns the outcome into a response. When it needs data, it calls a service with `runInRequest`. It never calls a binding itself. |
+| `*.service.ts`                 | Business logic, as an Effect `Context.Service`. Its `layer` gets repositories, and integration services such as `MailService`, injected.                                                   |
+| `*.repository.ts`              | A `Context.Service` and the only code that reads the records in its store: posts, the dataset, R2 audio, or the contact quota Durable Object.                                              |
+| `*.guard.ts`                   | Middleware that decides whether a request may continue, and answers it when not.                                                                                                           |
+| `*.interceptor.ts`             | Middleware that wraps `next()` to change every response.                                                                                                                                   |
+| `*.pipe.ts`                    | Middleware that parses input into a typed `c.var` value, or answers the error.                                                                                                             |
+| `*.middleware.ts`              | Lower-level plumbing: CORS, body limits, 405s.                                                                                                                                             |
+| `*.filter.ts`                  | An error handler for a router: what an unhandled error answers.                                                                                                                            |
+| `*.tools.ts`, `*.resources.ts` | MCP handlers. They follow the controller rules.                                                                                                                                            |
+| `*.store.ts`                   | State held in the isolate's memory and read synchronously, like the per-edge read windows.                                                                                                 |
+| `*.client.ts`                  | Code outside Effect that calls a binding or an outside API: the static assets every controller falls back to, and adapters Durable Objects share.                                          |
+| `*.durable-object.ts`          | A Durable Object class.                                                                                                                                                                    |
+| no suffix                      | Pure functions and constants.                                                                                                                                                              |
+
+Where things go:
+
+- `src/app.module.ts` wires services to repositories and exports `runInRequest`. `src/common/di/` holds the Effect plumbing it uses: the `WorkerEnv` tag and the `Render` type.
+- `src/modules/<name>/` holds one feature. A new endpoint goes in its module's controller. An API controller is mounted in `modules/api/api.controller.ts`, which gives it the API's shared stack.
+- `src/common/` holds code that isn't one feature's, grouped by role: `interceptors/`, `pipes/`, `middleware/`, `filters/`, `http/` (responses and headers), `di/`, `content.ts` (the bundled site content) and `app-env.ts` (the Hono env types).
+- `modules/rate-limit/` owns all rate limiting, as Nest's throttler module does. The read throttle guard counts per edge in `read-quota.store.ts`, synchronously. The contact allowance is global, in the RateLimiter Durable Object behind `contact-quota.repository.ts`.
+- `modules/chat/` holds the `ChatRoom` Durable Object and the helpers it calls directly (prompt, frames, page fetching, visitor headers). They don't go through services, and its controller hands `c.env` to the agents SDK's router.
+- Repositories wrap the records the API looks up. Documents served whole, such as llms.txt and AGENTS.md, are read straight from `common/content.ts`.
+
+Services and repositories:
+
+- A controller passes `c.var.services` and a program such as `PostsService.use(posts => posts.findBySlug(slug))` to `runInRequest({ services, program, render })`. `createApp` sets `services` for every request from that request's bindings, because workerd ties a binding's I/O to the request that made it.
+- Controllers never call a repository (importing its error and record types is fine), so a service method may just forward to one.
+- A repository or integration service that needs a binding reads it from the `WorkerEnv` service in its layer.
+- To add one, give it a `static readonly layer` and list it in `app.module.ts`. A service a controller calls goes in `serviceLayers`. A repository, or a service another service depends on, goes in `providerLayers`.
+- Failures a caller can act on are `Data.TaggedError`s, declared in the file that raises them. The controller's `render` table has a `success` function and one `failures` entry per tag. The type check fails if an entry is missing or unknown, or if an error's `_tag` is a plain `string`, which `test/render.test-d.ts` proves.
+- Anything else, a defect or a rejected promise, reaches the router's exception filter. Under `/api` and `/openapi.json` that is `common/filters/api-exception.filter.ts`, which logs it and answers the documented JSON 500.
+- Only services, repositories, `app.module.ts`, `src/common/di/` and tests may import `effect` values. Lint fails any other value import of it. Type imports are fine.
+- Tests replace providers the way Nest's `overrideProvider` does. `appLayer(Layer.succeed(PostsRepository, fake))` is the real graph with one provider faked, and `fetchWorker(path, { layer })` sends a request through `createApp(layer)`. Fake a repository to test how controllers render its outcomes. Test the repository itself against its binding, as `test/contact-quota.repository.test.ts` does.
 
 ## The 404 page
 
@@ -27,7 +56,7 @@ The Worker also serves `/.well-known/api-catalog` and `/.well-known/mcp.json`, w
 
 ## Jarvis
 
-Jarvis is the chat widget on every page. The widget is in `apps/site/src/components/chat/`. Each conversation is a `ChatRoom` Durable Object (`src/chat-room.ts`), and replies come from DeepSeek.
+Jarvis is the chat widget on every page. The widget is in `apps/site/src/components/chat/`. Each conversation is a `ChatRoom` Durable Object (`src/modules/chat/chat-room.durable-object.ts`), and replies come from DeepSeek.
 
 To run it locally, put `DEEPSEEK_API_KEY=sk-...` in `apps/api/.dev.vars`, then run `bun run build && bun run preview`. Without the key, the chat turns itself off. Local chats call the real API and cost real money.
 

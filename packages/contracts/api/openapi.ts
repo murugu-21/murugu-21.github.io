@@ -180,7 +180,7 @@ const COMPONENT_SCHEMAS = {
   ...components({ ContactRequest }, "input")
 };
 
-/** Everything but `servers`, which apps/api/src/api/openapi.ts adds per request. */
+/** Everything but `servers`, which apps/api/src/modules/openapi/openapi-document.ts adds per request. */
 export const OPENAPI_DOCUMENT: Omit<OpenApiDocument, "servers"> = {
   openapi: "3.1.0",
   info: {

@@ -3,9 +3,9 @@ import { env } from "cloudflare:workers";
 import fc from "fast-check";
 import { assert, beforeEach, describe, expect, it } from "vitest";
 
-import { parseRange } from "#src/audio.ts";
-import { markdownNotFound } from "#src/not-found.ts";
-import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/visitor.ts";
+import { parseRange } from "#src/modules/audio/byte-range.ts";
+import { markdownNotFound } from "#src/modules/pages/not-found.ts";
+import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/visitor.ts";
 import worker from "#src/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,
@@ -85,7 +85,7 @@ describe("the chat-room WebSocket", () => {
 
 describe("markdownNotFound", () => {
   it("is an unindexed, uncached 404 that declares the negotiation", async () => {
-    const res = markdownNotFound("/nope", "GET");
+    const res = markdownNotFound({ pathname: "/nope", method: "GET" });
     expect(res.status).toBe(404);
     expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
     expect(res.headers.get("Vary")).toBe("Accept");
@@ -101,7 +101,7 @@ describe("markdownNotFound", () => {
   });
 
   it("sends no body for a HEAD", async () => {
-    const res = markdownNotFound("/nope", "HEAD");
+    const res = markdownNotFound({ pathname: "/nope", method: "HEAD" });
     expect(res.status).toBe(404);
     expect(await res.text()).toBe("");
   });

@@ -1,69 +1,7 @@
-import { routeAgentRequest } from "agents";
-import { Hono, type Context } from "hono";
-
-import { api, specRoutes } from "./api";
-import { audio } from "./audio";
-import { ChatRoom } from "./chat-room";
-import { mcp } from "./mcp";
-import { serveAsset } from "./not-found";
-import { servePage } from "./pages";
-import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "./visitor";
-import { RateLimiter } from "./rate-limiter";
-import { mcpManifest, wellKnown } from "./well-known";
+import { createApp } from "#src/app.ts";
+import { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
+import { RateLimiter } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 
 export { ChatRoom, RateLimiter };
 
-const app = new Hono<{ Bindings: Env }>();
-
-type AppContext = Context<{ Bindings: Env }>;
-
-// `request.cf` exists only on the edge request, so forward country and IP as
-// headers. Delete before set so a client-sent value can't pass as ours.
-function withVisitorHeaders(c: AppContext, request: Request): Request {
-  const { cf } = c.req.raw;
-  const edgeCountry =
-    cf && "country" in cf && typeof cf.country === "string" ? cf.country : undefined;
-  const country = edgeCountry ?? c.req.header("CF-IPCountry");
-  const ip = c.req.header("CF-Connecting-IP");
-
-  const headers = new Headers(request.headers);
-  headers.delete(VISITOR_COUNTRY_HEADER);
-  headers.delete(VISITOR_IP_HEADER);
-  if (country) headers.set(VISITOR_COUNTRY_HEADER, country);
-  if (ip) headers.set(VISITOR_IP_HEADER, ip);
-  return new Request(request, { headers });
-}
-
-async function chatRoom(c: AppContext): Promise<Response> {
-  const response = await routeAgentRequest(c.req.raw, c.env, {
-    onBeforeConnect: request => withVisitorHeaders(c, request)
-  });
-  return response ?? serveAsset(c);
-}
-
-// Only the chat room's socket and the history its widget loads. routeAgentRequest
-// alone would expose every Durable Object, RateLimiter included.
-app.get("/agents/chat-room/:room", c =>
-  c.req.header("Upgrade") === "websocket" ? chatRoom(c) : serveAsset(c)
-);
-app.get("/agents/chat-room/:room/get-messages", chatRoom);
-
-// Keep wrangler.jsonc's run_worker_first list in sync with these routes.
-// /api/v1 must mount before /api, the permanent unversioned alias for v1.
-app.route("/api/v1", api);
-app.route("/api", api);
-app.route("/openapi.json", specRoutes);
-
-// Manifest routes register before /mcp so /mcp.json isn't taken as JSON-RPC.
-app.route("/mcp.json", mcpManifest);
-app.route("/.well-known", wellKnown);
-app.route("/mcp", mcp);
-
-app.route("/blog/audio", audio);
-
-// Directory URLs are pages and may answer markdown (Hono routes HEAD here too).
-// Anything else is an asset or route miss: a content-negotiated 404.
-app.get("*", c => (c.req.path.endsWith("/") ? servePage(c) : serveAsset(c)));
-app.all("*", c => serveAsset(c));
-
-export default app;
+export default createApp();

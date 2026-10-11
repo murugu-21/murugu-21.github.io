@@ -6,7 +6,10 @@ import {
   CONTACT_DAILY_GLOBAL,
   CONTACT_DAILY_PER_CLIENT
 } from "@murugappan/contracts/api/contact.ts";
-import { BALANCE_RESERVE_USD, RateLimiter } from "#src/rate-limiter.ts";
+import {
+  BALANCE_RESERVE_USD,
+  RateLimiter
+} from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 
 /** Runs inside the instance, so the synchronous contact methods skip an RPC per call. */
 function inLimiter(name: string, fn: (instance: RateLimiter) => Promise<void> | void) {

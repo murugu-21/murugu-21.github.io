@@ -1,10 +1,14 @@
 // Site content comes from the real sources, bundled through virtual:content/posts as in production.
 import { env } from "cloudflare:workers";
+import { Effect, Layer } from "effect";
 import { assert, expect, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
-import { globalLimiter } from "#src/api/ratelimit.ts";
-import type { ChatRoom } from "#src/chat-room.ts";
+import { appLayer, type AppLayer } from "#src/app.module.ts";
+import { createApp } from "#src/app.ts";
+import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
+import { ContactQuotaRepository } from "#src/modules/rate-limit/contact-quota.repository.ts";
+import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
 import worker from "#src/server.ts";
 
 /** The site's styled 404 page (404.html in the build). */
@@ -99,6 +103,24 @@ export function testEnv(options: TestEnvOptions = {}): Env {
   };
 }
 
+/** Silences `console.error` for this test and records what it was called with. */
+export function capturedErrors() {
+  const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+  onTestFinished(() => spy.mockRestore());
+  return spy;
+}
+
+/**
+ * The app's services with the contact quota answering from `quota`, as Nest's overrideProvider
+ * does. A quota call the test leaves out fails it.
+ */
+export function fakeContactQuota(quota: Partial<ContactQuotaRepository["Service"]>): AppLayer {
+  const unexpected = () => Effect.die(new Error("this test did not fake that quota call"));
+  return appLayer(
+    Layer.succeed(ContactQuotaRepository, { take: unexpected, usage: unexpected, ...quota })
+  );
+}
+
 /**
  * The RateLimiter stub every request in this test reaches, so a test can spy on its RPCs. Every
  * mock, including the test's own spies, is restored when the test finishes.
@@ -116,16 +138,22 @@ export async function readJson<S extends z.ZodType>(res: Response, schema: S): P
   return schema.parse(await res.json());
 }
 
-export type FetchOptions = RequestInit & { ip?: string; env?: TestEnvOptions };
+export type FetchOptions = RequestInit & {
+  ip?: string;
+  env?: TestEnvOptions;
+  /** The app's services with some providers faked, from a helper such as `fakeContactQuota`. */
+  layer?: AppLayer;
+};
 
 /** Sends a request through the worker entry; a bare path resolves against the site. */
 export async function fetchWorker(
   path: string,
-  { ip, env: envOptions, ...init }: FetchOptions = {}
+  { ip, env: envOptions, layer, ...init }: FetchOptions = {}
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   if (ip) headers.set("CF-Connecting-IP", ip);
-  return worker.fetch(
+  const app = layer ? createApp(layer) : worker;
+  return app.fetch(
     new Request(new URL(path, "https://murugappan.dev"), { ...init, headers }),
     testEnv(envOptions)
   );

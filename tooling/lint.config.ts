@@ -44,7 +44,7 @@ const LAYERS: Record<LayerName, Layer> = {
         regex: "^effect($|/)",
         allowTypeImports: true,
         message:
-          "Effect runs only in apps/api/src/programs/ (type imports are fine). Put the logic there and call it with runInRequest (apps/api/README.md › Effect handlers)."
+          "Effect runs only in services, repositories, the DI wiring and tests (type imports are fine). Put the logic in a *.service.ts or *.repository.ts and call it from the controller with runInRequest (apps/api/README.md › Layers)."
       }
     ]
   },
@@ -183,8 +183,18 @@ export default {
     ...LAYER_NAMES.map(name =>
       restrict([`${LAYERS[name].dir}**`], [...layerPatterns(name), ...(LAYERS[name].also ?? [])])
     ),
-    // After the layers, so programs/ gets the api patterns without the `effect` ban.
-    restrict(["apps/api/src/programs/**"], layerPatterns("api")),
+    // After the layers, so these get the api patterns without the `effect` ban.
+    restrict(
+      [
+        "apps/api/src/**/*.service.ts",
+        "apps/api/src/**/*.repository.ts",
+        "apps/api/src/common/di/**",
+        "apps/api/src/app.module.ts",
+        // Tests provide fake services and repositories as layers.
+        "apps/api/test/**"
+      ],
+      layerPatterns("api")
+    ),
     // Shared code serves every page, so it can't reach into a page area's folder.
     restrict(
       [
