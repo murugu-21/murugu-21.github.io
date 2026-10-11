@@ -20,6 +20,12 @@ const n = 3;
   <code>Remaining</code>.
 </p>
 <p>{n > 1 && <span> · Part-time</span>}</p>
+<p>
+  Try <b>a</b>
+  mid
+  <b>b</b>, <em> both </em>
+  {n}
+</p>
 <pre>keeps
   <code>its</code>
   whitespace</pre>`;
@@ -31,7 +37,11 @@ describe("spacingMistakes", () => {
       { line: 7, text: "documents the endpoints, and", kind: "joins words" },
       { line: 9, text: "blog", kind: "pads element" },
       { line: 9, text: "more", kind: "pads element" },
-      { line: 11, text: "before <code>", kind: "joins words" }
+      { line: 11, text: "before <code>", kind: "joins words" },
+      { line: 16, text: "mid", kind: "joins words" },
+      { line: 16, text: "mid", kind: "joins words" },
+      { line: 17, text: "both", kind: "pads element" },
+      { line: 18, text: "before <{…}>", kind: "joins words" }
     ]);
 
     const files = globSync("apps/site/src/**/*.astro", { cwd: ROOT });
