@@ -110,9 +110,7 @@ const deliveryResponses: Render<ContactUsage, ContactError, Response> = {
   }
 };
 
-export const contactController = new Hono<AppEnv>();
-
-contactController.post(
+export const contactController = new Hono<AppEnv>().post(
   "/contact",
   bodyLimitMiddleware({ maxBytes: MAX_CONTACT_BODY_BYTES, schemaName: "ContactRequest" }),
   jsonBodyPipe({ schema: ContactRequest, schemaName: "ContactRequest" }),

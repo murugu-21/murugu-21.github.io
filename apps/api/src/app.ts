@@ -17,30 +17,24 @@ import {
  * The Worker's Hono app: every module's controller, mounted. Tests build one with fake providers
  * through `layer`, the way Nest's testing module overrides a provider.
  */
-export function createApp(layer = appLayer()): Hono<AppEnv> {
-  const app = new Hono<AppEnv>();
-
-  app.use("*", async (c, next) => {
-    c.set("services", forRequest({ layer, env: c.env }));
-    await next();
-  });
-
-  app.route("/agents/chat-room", chatController);
-
-  // Keep wrangler.jsonc's run_worker_first list in sync with these routes.
-  // /api/v1 must mount before /api, the permanent unversioned alias for v1.
-  app.route("/api/v1", apiController);
-  app.route("/api", apiController);
-  app.route("/openapi.json", openapiRootController);
-
-  // Manifest routes register before /mcp so /mcp.json isn't taken as JSON-RPC.
-  app.route("/mcp.json", mcpManifestController);
-  app.route("/.well-known", wellKnownController);
-  app.route("/mcp", mcpController);
-
-  app.route("/blog/audio", audioController);
-
-  app.route("/", pagesController);
-
-  return app;
+export function createApp(layer = appLayer()) {
+  return (
+    new Hono<AppEnv>()
+      .use("*", async (c, next) => {
+        c.set("services", forRequest({ layer, env: c.env }));
+        await next();
+      })
+      .route("/agents/chat-room", chatController)
+      // Keep wrangler.jsonc's run_worker_first list in sync with these routes.
+      // /api/v1 must mount before /api, the permanent unversioned alias for v1.
+      .route("/api/v1", apiController)
+      .route("/api", apiController)
+      .route("/openapi.json", openapiRootController)
+      // Manifest routes register before /mcp so /mcp.json isn't taken as JSON-RPC.
+      .route("/mcp.json", mcpManifestController)
+      .route("/.well-known", wellKnownController)
+      .route("/mcp", mcpController)
+      .route("/blog/audio", audioController)
+      .route("/", pagesController)
+  );
 }

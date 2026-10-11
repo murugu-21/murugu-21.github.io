@@ -61,7 +61,13 @@ export default defineConfig({
         "{apps/site/src,apps/site/scripts,apps/api/src,packages,tooling}/**/*.{ts,tsx}",
         "apps/tts/*.ts"
       ],
-      exclude: ["**/*.test.ts", "**/*.d.ts", "**/fixtures.ts", "apps/api/test/**"],
+      exclude: [
+        "**/*.test.ts",
+        "**/*.test-d.ts",
+        "**/*.d.ts",
+        "**/fixtures.ts",
+        "apps/api/test/**"
+      ],
       reporter: ["text-summary", "lcov"]
     },
     projects: [
@@ -85,12 +91,15 @@ export default defineConfig({
             }
           ],
           setupFiles: ["./apps/api/test/apply-migrations.ts"],
-          include: ["apps/api/test/**/*.test.ts"]
+          // TODO: rename API tests to NestJS's convention (*.spec.ts beside the source,
+          // *.e2e-spec.ts in test/) and update this glob, the coverage excludes and the test
+          // globs in tooling/lint.config.ts.
+          include: ["apps/api/{src,test}/**/*.test.ts"]
         }
       },
-      // The site runs in the browser or at build time and the content package is pure, so neither
-      // needs workerd, and starting each file there costs far more than the tests. The scripts
-      // run on Node or Bun.
+      // The site runs in the browser or at build time and the content and utils packages are pure,
+      // so none of them needs workerd, and starting each file there costs far more than the tests.
+      // The scripts run on Node or Bun.
       {
         plugins: [contentPosts()],
         test: {
@@ -100,7 +109,8 @@ export default defineConfig({
             "tooling/**/*.test.ts",
             "apps/site/{src,scripts}/**/*.test.ts",
             "apps/tts/*.test.ts",
-            "packages/content/**/*.test.ts"
+            "packages/content/**/*.test.ts",
+            "packages/utils/**/*.test.ts"
           ]
         }
       },

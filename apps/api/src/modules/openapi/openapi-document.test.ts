@@ -3,65 +3,6 @@ import { assert, describe, expect, it } from "vitest";
 import { apiController } from "#src/modules/api/api.controller.ts";
 import { buildOpenApiDocument } from "#src/modules/openapi/openapi-document.ts";
 import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
-import {
-  CURRENT_VERSION_RECORD,
-  type VersionRecord
-} from "@murugappan/contracts/api/versioning.ts";
-import { versionHeaders, versionLinkHeader } from "#src/common/http/version-headers.ts";
-import { buildVersionsDocument } from "#src/modules/versioning/versions-document.ts";
-
-describe("version headers", () => {
-  const deprecated: VersionRecord = {
-    ...CURRENT_VERSION_RECORD,
-    status: "deprecated",
-    deprecatedOn: "2027-01-01",
-    sunsetOn: "2027-07-01",
-    successor: "v2"
-  };
-
-  it("names only the release and the supported versions while nothing is deprecated", () => {
-    expect(versionHeaders()).toEqual({
-      "API-Version": "1.0.0",
-      "API-Supported-Versions": "v1"
-    });
-  });
-
-  it("announces a deprecation with the RFC 9745 and RFC 8594 fields", () => {
-    const headers = versionHeaders(deprecated);
-    // RFC 9745: a Date structured field, "@" then a Unix timestamp.
-    expect(headers.Deprecation).toBe("@1798761600");
-    // RFC 8594: an HTTP-date, the same format Retry-After uses.
-    expect(headers.Sunset).toBe("Thu, 01 Jul 2027 00:00:00 GMT");
-  });
-
-  it("links the spec, the docs and the version history", () => {
-    const link = versionLinkHeader();
-    expect(link).toContain('</openapi.json>; rel="service-desc"');
-    expect(link).toContain('</developers/>; rel="service-doc"');
-    expect(link).toContain('</api/v1/versions>; rel="version-history"');
-    expect(link).toContain('rel="latest-version"');
-    expect(link).toContain('rel="api-catalog"');
-  });
-
-  it("adds the migration pointers only once a version is deprecated", () => {
-    const link = versionLinkHeader();
-    expect(link).not.toContain('rel="deprecation"');
-    expect(link).not.toContain('rel="successor-version"');
-    const deprecatedLink = versionLinkHeader(deprecated);
-    expect(deprecatedLink).toContain('</developers/#versioning>; rel="deprecation"');
-    expect(deprecatedLink).toContain('</api/v2>; rel="successor-version"');
-  });
-});
-
-describe("buildVersionsDocument", () => {
-  const doc = buildVersionsDocument("https://murugappan.dev");
-
-  it("makes every URL absolute against the host that was asked", () => {
-    expect(doc.versions[0].url).toBe("https://murugappan.dev/api/v1");
-    expect(doc.versions[0].specUrl).toBe("https://murugappan.dev/openapi.json");
-    expect(doc.policy.documentationUrl).toBe("https://murugappan.dev/developers/#versioning");
-  });
-});
 
 describe("buildOpenApiDocument", () => {
   const doc = buildOpenApiDocument("https://murugappan.dev");

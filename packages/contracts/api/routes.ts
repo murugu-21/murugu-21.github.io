@@ -21,4 +21,5 @@ export const API_PATHS = {
   openapiRoot: "/openapi.json"
 } as const;
 
-export const READ_METHODS = ["GET", "HEAD"];
+// Typed, not `as const`: Hono's `.on` takes a mutable array and needs the literals to type routes.
+export const READ_METHODS: ("GET" | "HEAD")[] = ["GET", "HEAD"];

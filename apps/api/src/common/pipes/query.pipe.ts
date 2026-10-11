@@ -6,7 +6,11 @@ import { apiError, fieldIssues } from "#src/common/http/api-error.ts";
 
 /** Validates the query string (first value per key) into `c.var.query`, or answers 400. */
 export const queryPipe = <S extends z.ZodType>({ schema, hint }: { schema: S; hint: string }) =>
-  createMiddleware<AppEnv & { Variables: { query: z.infer<S> } }>(async (c, next) => {
+  createMiddleware<
+    AppEnv & { Variables: { query: z.infer<S> } },
+    string,
+    { in: { query: z.input<S> } }
+  >(async (c, next) => {
     const parsed = schema.safeParse(c.req.query());
     if (!parsed.success) {
       return apiError({

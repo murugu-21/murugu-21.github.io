@@ -15,22 +15,21 @@ import { versioningController } from "#src/modules/versioning/versioning.control
  * module controller under it gets the exception filter, CORS, the read throttle, the API headers
  * and JSON 405s.
  */
-export const apiController = new Hono<ApiEnv>();
-
-useApiStack(apiController, { cors: apiCorsMiddleware, enforceReads: true });
-
-apiController.route("/", profileController);
-apiController.route("/", postsController);
-apiController.route("/", versioningController);
-apiController.route("/", openapiController);
-apiController.route("/", contactController);
-
-// methodNotAllowedMiddleware turns this into a 405 when the path exists under another method.
-apiController.all("*", c =>
-  apiError({
-    status: 404,
-    code: "not_found",
-    message: `There is no API endpoint at ${c.req.path}.`,
-    hint: "Fetch https://murugappan.dev/openapi.json for the full list of endpoints."
-  })
-);
+export const apiController = useApiStack(new Hono<ApiEnv>(), {
+  cors: apiCorsMiddleware,
+  enforceReads: true
+})
+  .route("/", profileController)
+  .route("/", postsController)
+  .route("/", versioningController)
+  .route("/", openapiController)
+  .route("/", contactController)
+  // methodNotAllowedMiddleware turns this into a 405 when the path exists under another method.
+  .all("*", c =>
+    apiError({
+      status: 404,
+      code: "not_found",
+      message: `There is no API endpoint at ${c.req.path}.`,
+      hint: "Fetch https://murugappan.dev/openapi.json for the full list of endpoints."
+    })
+  );

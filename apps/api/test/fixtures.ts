@@ -1,6 +1,7 @@
 // Site content comes from the real sources, bundled through virtual:content/posts as in production.
 import { env } from "cloudflare:workers";
 import { Effect, Layer } from "effect";
+import { testClient } from "hono/testing";
 import { assert, expect, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
@@ -134,7 +135,10 @@ export function sharedLimiter() {
   return limiter;
 }
 
-export async function readJson<S extends z.ZodType>(res: Response, schema: S): Promise<z.infer<S>> {
+/** A response from `fetchWorker` or `apiClient`. */
+export type JsonBody = { json(): Promise<unknown> };
+
+export async function readJson<S extends z.ZodType>(res: JsonBody, schema: S): Promise<z.infer<S>> {
   return schema.parse(await res.json());
 }
 
@@ -156,6 +160,24 @@ export async function fetchWorker(
   return app.fetch(
     new Request(new URL(path, "https://murugappan.dev"), { ...init, headers }),
     testEnv(envOptions)
+  );
+}
+
+/**
+ * hono/testing's typed client over `createApp(layer)`, so paths, params, queries and JSON bodies
+ * are checked against the real router. Every request gets the env `testEnv(env)` builds, and `ip`
+ * as its CF-Connecting-IP. Its base URL is fixed at http://localhost.
+ */
+export function apiClient({
+  ip,
+  env: envOptions,
+  layer
+}: Pick<FetchOptions, "ip" | "env" | "layer"> = {}) {
+  return testClient(
+    createApp(layer),
+    testEnv(envOptions),
+    undefined,
+    ip ? { headers: { "CF-Connecting-IP": ip } } : undefined
   );
 }
 

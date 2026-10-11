@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { fetchSitePage } from "#src/modules/chat/fetch-page.client.ts";
-import { fakeAssets } from "./fixtures";
+import { fakeAssets } from "#test/fixtures.ts";
 
 describe("fetchSitePage", () => {
   const REACT = "---\ntitle: React Hooks\n---\n\nAll about useEffect and friends.\n";

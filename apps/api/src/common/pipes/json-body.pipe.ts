@@ -16,7 +16,11 @@ export const jsonBodyPipe = <S extends z.ZodType>({
   schema: S;
   schemaName: string;
 }) =>
-  createMiddleware<AppEnv & { Variables: { body: z.infer<S> } }>(async (c, next) => {
+  createMiddleware<
+    AppEnv & { Variables: { body: z.infer<S> } },
+    string,
+    { in: { json: z.input<S> } }
+  >(async (c, next) => {
     const contentType = c.req.header("Content-Type") ?? "";
     if (!contentType.split(";")[0].trim().endsWith("/json")) {
       return apiError({

@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import type { z } from "zod";
 
 import {
@@ -14,19 +14,16 @@ import type { AppEnv } from "#src/common/app-env.ts";
 import { json } from "#src/common/http/json.ts";
 import { ProfileService } from "#src/modules/profile/profile.service.ts";
 
-export const profileController = new Hono<AppEnv>();
+const sliceHandler = (slice: z.ZodType) => (c: Context<AppEnv>) =>
+  runInRequest({
+    services: c.var.services,
+    program: ProfileService.use(profile => profile.slice(slice)),
+    render: { success: json, failures: {} }
+  });
 
-const sliceRoute = (path: string, slice: z.ZodType) =>
-  profileController.on(READ_METHODS, path, c =>
-    runInRequest({
-      services: c.var.services,
-      program: ProfileService.use(profile => profile.slice(slice)),
-      render: { success: json, failures: {} }
-    })
-  );
-
-sliceRoute("/profile", Profile);
-sliceRoute("/experience", ExperienceList);
-sliceRoute("/skills", SkillsResponse);
-sliceRoute("/education", EducationList);
-sliceRoute("/open-source", OpenSourceList);
+export const profileController = new Hono<AppEnv>()
+  .on(READ_METHODS, "/profile", sliceHandler(Profile))
+  .on(READ_METHODS, "/experience", sliceHandler(ExperienceList))
+  .on(READ_METHODS, "/skills", sliceHandler(SkillsResponse))
+  .on(READ_METHODS, "/education", sliceHandler(EducationList))
+  .on(READ_METHODS, "/open-source", sliceHandler(OpenSourceList));

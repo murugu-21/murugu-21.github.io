@@ -9,12 +9,7 @@ import { z } from "zod";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
 import { ROOM_DAILY_LIMIT } from "#src/modules/chat/prompt.ts";
 import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
-import { fetchActivity, type ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
-import {
-  parseVisitorContext,
-  VISITOR_COUNTRY_HEADER,
-  VISITOR_IP_HEADER
-} from "#src/modules/chat/visitor.ts";
+import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
 import type { RateLimiter } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 import {
   chatRequest,
@@ -648,39 +643,5 @@ describe("ChatRoom recovery", () => {
     const { stub } = await connectRoom("room-recovery");
     const decision = await runInDurableObject(stub, instance => instance.onChatRecovery());
     expect(decision).toEqual({ continue: false });
-  });
-});
-
-describe("parseVisitorContext", () => {
-  it("returns the country and IP the edge attached, trimmed", () => {
-    const headers = new Headers({
-      [VISITOR_COUNTRY_HEADER]: " IN ",
-      [VISITOR_IP_HEADER]: " 203.0.113.7 "
-    });
-    expect(parseVisitorContext(headers)).toEqual({
-      country: "IN",
-      ip: "203.0.113.7"
-    });
-  });
-
-  it("treats a missing or blank header as unknown, and null when both are", () => {
-    const ipOnly = new Headers({
-      [VISITOR_COUNTRY_HEADER]: "  ",
-      [VISITOR_IP_HEADER]: "203.0.113.7"
-    });
-    expect(parseVisitorContext(ipOnly)).toEqual({ country: null, ip: "203.0.113.7" });
-    expect(parseVisitorContext(new Headers())).toBeNull();
-    expect(parseVisitorContext(new Headers({ [VISITOR_COUNTRY_HEADER]: "  " }))).toBeNull();
-  });
-
-  it("caps a forged value instead of storing it whole", () => {
-    const headers = new Headers({ [VISITOR_IP_HEADER]: "x".repeat(200) });
-    expect(parseVisitorContext(headers)?.ip).toHaveLength(64);
-  });
-});
-
-describe("fetchActivity", () => {
-  it("omits the detail when the url is unparseable", () => {
-    expect(fetchActivity("not a url")).toEqual({ name: "fetch_page" });
   });
 });

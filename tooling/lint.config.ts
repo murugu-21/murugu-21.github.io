@@ -27,6 +27,12 @@ type Layer = { dir: string; pkg: string; imports?: string; uses: LayerName[]; al
 const FRAMEWORKS =
   "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)";
 
+const NO_TEST_FIXTURES: Pattern = {
+  regex: "^#test/",
+  message:
+    "Only tests import #test/ fixtures. Move what Worker code needs into apps/api/src/ (apps/api/README.md › Layers)."
+};
+
 const LAYERS: Record<LayerName, Layer> = {
   site: {
     dir: "apps/site/src/",
@@ -45,7 +51,8 @@ const LAYERS: Record<LayerName, Layer> = {
         allowTypeImports: true,
         message:
           "Effect runs only in services, repositories, the DI wiring and tests (type imports are fine). Put the logic in a *.service.ts or *.repository.ts and call it from the controller with runInRequest (apps/api/README.md › Layers)."
-      }
+      },
+      NO_TEST_FIXTURES
     ]
   },
   siteScripts: {
@@ -189,10 +196,13 @@ export default {
         "apps/api/src/**/*.service.ts",
         "apps/api/src/**/*.repository.ts",
         "apps/api/src/common/di/**",
-        "apps/api/src/app.module.ts",
-        // Tests provide fake services and repositories as layers.
-        "apps/api/test/**"
+        "apps/api/src/app.module.ts"
       ],
+      [...layerPatterns("api"), NO_TEST_FIXTURES]
+    ),
+    // Tests build fake services and repositories as Effect layers and import #test/ fixtures.
+    restrict(
+      ["apps/api/src/**/*.test.ts", "apps/api/src/**/*.test-d.ts", "apps/api/test/**"],
       layerPatterns("api")
     ),
     // Shared code serves every page, so it can't reach into a page area's folder.

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { WorkerEnv } from "#src/common/di/worker-env.ts";
 import { ContactQuotaRepository } from "#src/modules/rate-limit/contact-quota.repository.ts";
-import { sharedLimiter, testEnv } from "./fixtures";
+import { sharedLimiter, testEnv } from "#test/fixtures.ts";
 
 /** Runs a quota call against the real repository over this test's bindings, returning its failure. */
 const failureOf = <A, E>(call: (quota: ContactQuotaRepository["Service"]) => Effect.Effect<A, E>) =>

@@ -1,4 +1,4 @@
-// api-spec.test.ts checks this document against the router.
+// openapi-document.test.ts checks this document against the router.
 
 import { z } from "zod";
 

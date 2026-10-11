@@ -36,6 +36,7 @@ Where things go:
 - `modules/rate-limit/` owns all rate limiting, as Nest's throttler module does. The read throttle guard counts per edge in `read-quota.store.ts`, synchronously. The contact allowance is global, in the RateLimiter Durable Object behind `contact-quota.repository.ts`.
 - `modules/chat/` holds the `ChatRoom` Durable Object and the helpers it calls directly (prompt, frames, page fetching, visitor headers). They don't go through services, and its controller hands `c.env` to the agents SDK's router.
 - Repositories wrap the records the API looks up. Documents served whole, such as llms.txt and AGENTS.md, are read straight from `common/content.ts`.
+- A unit test sits next to the file it tests. `test/` holds the tests that send a request through the whole Worker, and the fixtures, which unit tests import as `#test/fixtures.ts`.
 
 Services and repositories:
 
@@ -43,10 +44,10 @@ Services and repositories:
 - Controllers never call a repository (importing its error and record types is fine), so a service method may just forward to one.
 - A repository or integration service that needs a binding reads it from the `WorkerEnv` service in its layer.
 - To add one, give it a `static readonly layer` and list it in `app.module.ts`. A service a controller calls goes in `serviceLayers`. A repository, or a service another service depends on, goes in `providerLayers`.
-- Failures a caller can act on are `Data.TaggedError`s, declared in the file that raises them. The controller's `render` table has a `success` function and one `failures` entry per tag. The type check fails if an entry is missing or unknown, or if an error's `_tag` is a plain `string`, which `test/render.test-d.ts` proves.
+- Failures a caller can act on are `Data.TaggedError`s, declared in the file that raises them. The controller's `render` table has a `success` function and one `failures` entry per tag. The type check fails if an entry is missing or unknown, or if an error's `_tag` is a plain `string`, which `src/common/di/render.test-d.ts` proves.
 - Anything else, a defect or a rejected promise, reaches the router's exception filter. Under `/api` and `/openapi.json` that is `common/filters/api-exception.filter.ts`, which logs it and answers the documented JSON 500.
 - Only services, repositories, `app.module.ts`, `src/common/di/` and tests may import `effect` values. Lint fails any other value import of it. Type imports are fine.
-- Tests replace providers the way Nest's `overrideProvider` does. `appLayer(Layer.succeed(PostsRepository, fake))` is the real graph with one provider faked, and `fetchWorker(path, { layer })` sends a request through `createApp(layer)`. Fake a repository to test how controllers render its outcomes. Test the repository itself against its binding, as `test/contact-quota.repository.test.ts` does.
+- Tests replace providers the way Nest's `overrideProvider` does. `appLayer(Layer.succeed(PostsRepository, fake))` is the real graph with one provider faked. A test of an API route sends it through `apiClient({ layer })`, Hono's typed `testClient` over `createApp(layer)`, so a path, query or body the router doesn't accept fails the type check. `fetchWorker(path, { layer })` sends a raw request, for what that client can't express: an unknown path, a wrong method or a malformed body. Fake a repository to test how controllers render its outcomes. Test the repository itself against its binding, as `src/modules/rate-limit/contact-quota.repository.test.ts` does.
 
 ## The 404 page
 

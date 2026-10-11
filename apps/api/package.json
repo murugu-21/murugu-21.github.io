@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "imports": {
-    "#src/*": "./src/*"
+    "#src/*": "./src/*",
+    "#test/*": "./test/*"
   },
   "scripts": {
     "dev": "vp dev",
