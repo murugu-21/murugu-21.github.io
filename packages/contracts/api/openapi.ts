@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 
+import { JsonRecord, type JsonValue } from "@murugappan/utils/json.ts";
 import { API_BASE, API_PATHS, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./routes";
 import {
   CONTACT_DAILY_GLOBAL,
@@ -37,13 +38,18 @@ import {
   VERSIONS
 } from "./versioning";
 
-type SchemaObject = {
-  $ref?: string;
-  type?: string | string[];
-  description?: string;
-  properties?: Record<string, SchemaObject>;
-  [keyword: string]: unknown;
+/** A JSON Schema object. JSON Schema allows `true`/`false` as a schema. */
+export type JsonSchema = {
+  readonly properties?: { readonly [name: string]: JsonSchema | boolean };
+  readonly [keyword: string]: JsonValue | undefined;
 };
+export const JsonSchema: z.ZodType<JsonSchema> = z.lazy(() =>
+  JsonRecord.and(
+    z.object({ properties: z.record(z.string(), z.union([JsonSchema, z.boolean()])).optional() })
+  )
+);
+
+type MediaTypes = Record<string, { schema: JsonRecord }>;
 
 type Operation = {
   operationId: string;
@@ -55,14 +61,14 @@ type Operation = {
     in: string;
     description: string;
     required?: boolean;
-    schema: z.core.JSONSchema.BaseSchema;
+    schema: JsonRecord;
   }>;
-  requestBody?: unknown;
-  responses: Record<
-    string,
-    { description: string; content?: Record<string, { schema: SchemaObject }> }
-  >;
+  requestBody?: { required: boolean; description: string; content: MediaTypes };
+  responses: Record<string, { description: string; content?: MediaTypes }>;
 };
+
+// An OpenAPI Security Requirement Object: scheme name to the scopes it needs.
+type SecurityRequirement = Record<string, string[]>;
 
 export type OpenApiDocument = {
   openapi: string;
@@ -77,11 +83,11 @@ export type OpenApiDocument = {
   servers: Array<{ url: string; description: string }>;
   externalDocs: { url: string; description: string };
   tags: Array<{ name: string; description: string }>;
-  security: unknown[];
+  security: SecurityRequirement[];
   paths: Record<string, Partial<Record<"get" | "post", Operation>>>;
   components: {
-    schemas: Record<string, z.core.JSONSchema.BaseSchema>;
-    securitySchemes: Record<string, unknown>;
+    schemas: Record<string, JsonSchema>;
+    securitySchemes: Record<string, JsonRecord>;
   };
 };
 
@@ -160,7 +166,7 @@ function components(schemas: Record<string, z.ZodType>, io: "input" | "output") 
     delete schema.$schema;
     delete schema.$id;
   }
-  return generated.schemas;
+  return z.record(z.string(), JsonSchema).parse(generated.schemas);
 }
 
 // From the schema the handler parses with, so the documented limits are the enforced ones. Output
@@ -168,9 +174,17 @@ function components(schemas: Record<string, z.ZodType>, io: "input" | "output") 
 function queryParameters(query: z.ZodObject) {
   const { properties = {}, required = [] } = z.toJSONSchema(query, { io: "output" });
   return Object.entries(properties).map(([name, property]) => {
-    if (typeof property === "boolean") throw new Error(`query parameter ${name}: boolean schema`);
+    if (property === true || property === false) {
+      throw new Error(`query parameter ${name}: boolean schema`);
+    }
     const { description = "", ...schema } = property;
-    return { name, in: "query", required: required.includes(name), description, schema };
+    return {
+      name,
+      in: "query",
+      required: required.includes(name),
+      description,
+      schema: JsonRecord.parse(schema)
+    };
   });
 }
 

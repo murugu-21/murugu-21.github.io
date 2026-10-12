@@ -79,7 +79,12 @@ describe("sending", () => {
     ]
   ])("sends %s from the site address to the configured inbox", async (_label, sendWith) => {
     const sent: unknown[] = [];
-    await sendWith({ send: async msg => void sent.push(msg) });
+    await sendWith({
+      send: async msg => {
+        sent.push(msg);
+        return { messageId: "test" };
+      }
+    });
     expect(sent).toEqual([
       expect.objectContaining({ to: "inbox@example.com", from: "chatbot@murugappan.dev" })
     ]);

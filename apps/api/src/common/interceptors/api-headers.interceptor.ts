@@ -6,7 +6,10 @@ import { defineMiddleware } from "hono/factory";
 import { CONTACT_POLICY, READ_POLICY } from "@murugappan/contracts/api/quotas.ts";
 import type { ApiEnv } from "#src/common/app-env.ts";
 import { versionHeaders, versionLinkHeader } from "#src/common/http/version-headers.ts";
-import { readRateLimitHeaders } from "#src/modules/rate-limit/rate-limit-headers.ts";
+import {
+  readRateLimitHeaders,
+  type RateLimitHeaders
+} from "#src/modules/rate-limit/rate-limit-headers.ts";
 import type { ReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
 
 function allowanceHeaders({
@@ -15,7 +18,7 @@ function allowanceHeaders({
 }: {
   isContact: boolean;
   slot: ReadSlot | null;
-}): Record<string, string> {
+}): RateLimitHeaders | Pick<RateLimitHeaders, "RateLimit-Policy"> {
   if (isContact) return { "RateLimit-Policy": CONTACT_POLICY };
   return slot ? readRateLimitHeaders(slot) : { "RateLimit-Policy": READ_POLICY };
 }

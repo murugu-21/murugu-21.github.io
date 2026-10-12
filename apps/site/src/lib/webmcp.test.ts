@@ -1,16 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const FILES: Record<string, string> = {
-  "/llms.txt": "# Murugappan M",
-  "/blog/index.md": "- [Post](https://murugappan.dev/blog/post/)",
-  "/blog/post/index.md": "# Post body"
-};
+const FILES = new Map([
+  ["/llms.txt", "# Murugappan M"],
+  ["/blog/index.md", "- [Post](https://murugappan.dev/blog/post/)"],
+  ["/blog/post/index.md", "# Post body"]
+]);
 
 async function bootPage({
   registerTool,
   supported = true
 }: {
-  registerTool?: (tool: WebMCP.ModelContextTool) => unknown;
+  registerTool?: (tool: WebMCP.ModelContextTool) => Promise<void>;
   supported?: boolean;
 }) {
   const tools = new Map<string, WebMCP.ModelContextTool>();
@@ -25,13 +25,13 @@ async function bootPage({
   vi.stubGlobal("document", supported ? { modelContext } : {});
   vi.stubGlobal("location", { assign: (path: string) => navigations.push(path) });
   vi.stubGlobal("fetch", async (path: string) => {
-    const body = FILES[path];
+    const body = FILES.get(path);
     return body === undefined ? new Response("", { status: 404 }) : new Response(body);
   });
   vi.resetModules();
   await import("./webmcp");
 
-  const run = (name: string, args: Record<string, unknown> = {}) => {
+  const run = (name: string, args: Parameters<WebMCP.ModelContextTool["execute"]>[0] = {}) => {
     const tool = tools.get(name);
     if (!tool) throw new Error(`${name} was not registered`);
     return tool.execute(args, { signal: new AbortController().signal });

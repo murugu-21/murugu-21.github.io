@@ -15,10 +15,15 @@ function sunsetFieldValue(isoDate: string): string {
   return new Date(`${isoDate}T00:00:00Z`).toUTCString();
 }
 
-export function versionHeaders(
-  record: VersionRecord = CURRENT_VERSION_RECORD
-): Record<string, string> {
-  const headers: Record<string, string> = {
+type VersionHeaders = {
+  "API-Version": string;
+  "API-Supported-Versions": string;
+  Deprecation?: string;
+  Sunset?: string;
+};
+
+export function versionHeaders(record: VersionRecord = CURRENT_VERSION_RECORD): VersionHeaders {
+  const headers: VersionHeaders = {
     "API-Version": record.release,
     "API-Supported-Versions": VERSIONS.filter(v => v.status !== "sunset")
       .map(v => v.version)

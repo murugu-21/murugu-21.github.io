@@ -1,7 +1,7 @@
 // packages/contracts/mcp.ts declares each tool's name, schemas and annotations. Anything a model
 // could fix by retrying with other arguments is an `isError` result, not a protocol error.
 
-import type { McpServer } from "@modelcontextprotocol/server";
+import type { McpServer, ToolCallback } from "@modelcontextprotocol/server";
 
 import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
 import {
@@ -12,6 +12,7 @@ import {
   type McpToolDescriptor,
   type McpToolName
 } from "@murugappan/contracts/mcp.ts";
+import type { JsonRecord } from "@murugappan/utils/json.ts";
 import { runInRequest, type RequestServices } from "#src/app.module.ts";
 import type { Render } from "#src/common/di/render.ts";
 import { ContactService, type ContactError } from "#src/modules/contact/contact.service.ts";
@@ -35,14 +36,17 @@ type ToolResult = {
   isError?: boolean;
 };
 
+// The arguments the SDK passes a tool, already checked against its `inputSchema`.
+type ToolArgs = Parameters<ToolCallback<McpToolDescriptor["inputSchema"]>>[0];
+
 type Run = (
-  args: unknown,
+  args: ToolArgs,
   ctx: ToolContext,
   tool: McpToolDescriptor
 ) => ToolResult | Promise<ToolResult>;
 
 /** The spec asks for the serialized JSON alongside structuredContent. */
-function ok(data: unknown): ToolResult {
+function ok(data: JsonRecord): ToolResult {
   return {
     content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
     structuredContent: data

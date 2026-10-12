@@ -1,9 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { postSource } from "@murugappan/content/fixtures.ts";
 import { blogPosting } from "./schema";
-
-vi.mock("astro:content", async () => (await import("./fixtures")).astroContentMock);
 
 describe("blogPosting", () => {
   it("describes a post for the blog's graph", () => {

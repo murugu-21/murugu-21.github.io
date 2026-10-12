@@ -20,6 +20,7 @@ describe("postBlocks", () => {
         <pre><code>console.log(0.1 + 0.2)</code></pre>
         <ul><li>It prints 0.30000000000000004.</li><li>Not 0.3.</li></ul>
         <p>   </p>
+        <p>🚀 ✨</p>
       </section>
     </article></body></html>`;
     expect(postBlocks({ slug: "floating-point", html })).toEqual([

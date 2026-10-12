@@ -13,8 +13,8 @@ const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 const MAX_TOOL_STEPS = 3;
 
 // 402 Insufficient Balance is authoritative; the cached balance can be stale.
-export function isInsufficientBalance(err: unknown): boolean {
-  return APICallError.isInstance(err) && err.statusCode === 402;
+export function isInsufficientBalance(cause: unknown): boolean {
+  return APICallError.isInstance(cause) && cause.statusCode === 402;
 }
 
 export function deepseek({ apiKey }: { apiKey: string }): LanguageModel {

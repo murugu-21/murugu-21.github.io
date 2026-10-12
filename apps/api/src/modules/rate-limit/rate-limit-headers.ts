@@ -19,7 +19,15 @@ function rateLimitField({ quota, remaining, resetSeconds }: Reported): string {
   return `"${quota.name}";r=${clamp(remaining)};t=${clamp(resetSeconds)}`;
 }
 
-function rateLimitHeaders(policy: string, reported: Reported): Record<string, string> {
+export type RateLimitHeaders = {
+  "RateLimit-Policy": string;
+  RateLimit: string;
+  "X-RateLimit-Limit": string;
+  "X-RateLimit-Remaining": string;
+  "X-RateLimit-Reset": string;
+};
+
+function rateLimitHeaders(policy: string, reported: Reported): RateLimitHeaders {
   return {
     "RateLimit-Policy": policy,
     RateLimit: rateLimitField(reported),
@@ -29,7 +37,7 @@ function rateLimitHeaders(policy: string, reported: Reported): Record<string, st
   };
 }
 
-export const readRateLimitHeaders = (slot: ReadSlot): Record<string, string> =>
+export const readRateLimitHeaders = (slot: ReadSlot): RateLimitHeaders =>
   rateLimitHeaders(READ_POLICY, {
     quota: READ_QUOTA,
     remaining: slot.remaining,
@@ -41,7 +49,7 @@ export function contactRateLimitHeaders(usage: {
   clientRemaining: number;
   globalRemaining: number;
   resetSeconds: number;
-}): Record<string, string> {
+}): RateLimitHeaders {
   const clientTighter = usage.clientRemaining <= usage.globalRemaining;
   return rateLimitHeaders(CONTACT_POLICY, {
     quota: clientTighter ? CONTACT_CLIENT_QUOTA : CONTACT_GLOBAL_QUOTA,

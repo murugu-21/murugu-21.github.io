@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { CONTACT_LIMITS } from "@murugappan/contracts/api/contact.ts";
+import type { JsonValue } from "@murugappan/utils/json.ts";
 import { apiClient, fetchWorker, readJson, recordingEmail, type JsonBody } from "./fixtures";
 
 let lastIp = 0;
@@ -11,7 +12,7 @@ const contactApi = (recording?: { email: SendEmail }) =>
   apiClient({ ip: nextIp(), env: { email: recording?.email } }).api.v1.contact;
 
 /** For bodies the typed client cannot send. */
-const postRaw = (body: unknown) =>
+const postRaw = (body: JsonValue) =>
   fetchWorker("/api/v1/contact", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -98,7 +99,7 @@ describe("POST /api/contact body parsing", () => {
     expect(await rejectedFields(await contactApi().$post({ json: raw }))).toEqual(fields);
   });
 
-  it.each<[string, unknown, string[]]>([
+  it.each<[string, JsonValue, string[]]>([
     ["a non-boolean dryRun", { ...valid, dryRun: "yes" }, ["dryRun"]],
     ["a string body", "hello", ["body"]],
     ["a null body", null, ["body"]],

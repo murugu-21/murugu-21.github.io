@@ -114,9 +114,11 @@ describe("the chat-room WebSocket", () => {
 
   it("replaces client-supplied visitor headers with what Cloudflare reports", async () => {
     const { stub } = await connectRoom(roomName("spoof-room-ws"), {
-      "CF-IPCountry": "IN",
-      [VISITOR_COUNTRY_HEADER]: "XX",
-      [VISITOR_IP_HEADER]: "203.0.113.66"
+      headers: {
+        "CF-IPCountry": "IN",
+        [VISITOR_COUNTRY_HEADER]: "XX",
+        [VISITOR_IP_HEADER]: "203.0.113.66"
+      }
     });
     const stored = await runInDurableObject(stub, visitorStorage);
     expect(stored.visitor_country).toBe("IN");

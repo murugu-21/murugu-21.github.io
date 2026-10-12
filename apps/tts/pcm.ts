@@ -29,13 +29,14 @@ interface BlockTiming {
   end: number;
 }
 
+interface TimedPcm {
+  pcm: Buffer;
+  timings: BlockTiming[];
+}
+
 // Joins chunks with `intra` seconds of silence and blocks with `inter`;
 // timings are per block, in seconds.
-export function assemble(
-  blocks: Buffer[][],
-  sampleRate: number,
-  gaps: Gaps
-): { pcm: Buffer; timings: BlockTiming[] } {
+export function assemble(blocks: Buffer[][], sampleRate: number, gaps: Gaps): TimedPcm {
   const parts: Buffer[] = [];
   const timings: BlockTiming[] = [];
   let samples = 0;
@@ -66,7 +67,7 @@ export function splice({
   sampleRate: number;
   blocks: BlockTiming[];
   replace: ReadonlyMap<number, Buffer>;
-}): { pcm: Buffer; timings: BlockTiming[] } {
+}): TimedPcm {
   const byteAt = (seconds: number) => Math.round(seconds * sampleRate) * 2;
   const seconds = (bytes: number) => bytes / 2 / sampleRate;
   const parts: Buffer[] = [];

@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
@@ -21,7 +22,7 @@ const live = process.argv.some(
 );
 
 const DEV_VARS = "apps/api/.dev.vars";
-function readLiveBindings(): Record<string, string> {
+function readLiveBindings() {
   const key = existsSync(DEV_VARS)
     ? parseEnv(readFileSync(DEV_VARS, "utf8")).DEEPSEEK_API_KEY
     : undefined;
@@ -69,7 +70,8 @@ export default defineConfig({
         "**/*.test-d.ts",
         "**/*.d.ts",
         "**/fixtures.ts",
-        "apps/api/test/**"
+        "apps/api/test/**",
+        "apps/site/src/test/**"
       ],
       reporter: ["text-summary", "lcov"]
     },
@@ -105,6 +107,17 @@ export default defineConfig({
       // The scripts run on Node or Bun.
       {
         plugins: [contentPosts()],
+        // Astro's virtual modules exist only inside its Vite plugin.
+        resolve: {
+          alias: {
+            "astro:content": fileURLToPath(
+              new URL("apps/site/src/test/astro-content.ts", import.meta.url)
+            ),
+            "astro:env/server": fileURLToPath(
+              new URL("apps/site/src/test/astro-env-server.ts", import.meta.url)
+            )
+          }
+        },
         test: {
           name: "node",
           environment: "node",

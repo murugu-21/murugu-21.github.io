@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 
+import type { JsonRecord } from "@murugappan/utils/json.ts";
 import { CONTACT_DAILY_PER_CLIENT, ContactAccepted, ContactRequest } from "./api/contact";
 import {
   EducationList,
@@ -43,8 +44,8 @@ export type McpToolDescriptor = {
   name: string;
   title: string;
   description: string;
-  inputSchema: z.ZodType;
-  outputSchema: z.ZodType;
+  inputSchema: z.ZodObject;
+  outputSchema: z.ZodObject & z.ZodType<JsonRecord>;
   annotations: ToolAnnotations;
 };
 
@@ -66,7 +67,7 @@ function datasetTool<const Name extends string>({
   name: Name;
   title: string;
   description: string;
-  schema: z.ZodType;
+  schema: McpToolDescriptor["outputSchema"];
 }) {
   return {
     name,

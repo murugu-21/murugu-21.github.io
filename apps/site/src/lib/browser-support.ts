@@ -21,8 +21,13 @@ export const CONTINUE_KEY = "outdatedBrowserContinue";
 // exist for, so their bodies stay ES5: var, function expressions, string concatenation, no URL
 // API. browser-support.test.ts parses the inlined scripts as ES5 to keep it that way.
 
+export interface BrowserCss {
+  supports: (property: string, value: string) => boolean;
+  registerProperty?: (definition: PropertyDefinition) => void;
+}
+
 interface BrowserHost {
-  CSS?: { supports: (property: string, value: string) => boolean; registerProperty?: unknown };
+  CSS?: BrowserCss;
   HTMLElement: { prototype: object };
   name: string;
   location: Pick<Location, "pathname" | "search" | "hash" | "replace">;
@@ -40,7 +45,7 @@ export function redirectIfOutdated(win: BrowserHost, continueKey: string): void 
     // every light/dark colour pair
     css.supports("color", "light-dark(#000, #fff)") &&
     // @property, which Tailwind 4 needs
-    typeof css.registerProperty === "function" &&
+    css.registerProperty !== undefined &&
     // the phone menu
     "popover" in win.HTMLElement.prototype;
   if (supported) return;
@@ -52,7 +57,7 @@ export function redirectIfOutdated(win: BrowserHost, continueKey: string): void 
 
 export const outdatedRedirectScript = `(${redirectIfOutdated.toString()})(window, ${JSON.stringify(CONTINUE_KEY)});`;
 
-interface NoticeLink {
+export interface NoticeLink {
   href: string;
   onclick: (() => void) | null;
 }

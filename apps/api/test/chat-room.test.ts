@@ -12,6 +12,7 @@ import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
 import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
 import type { RateLimiter } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 import {
+  activitiesIn,
   chatRequest,
   connectRoom,
   fetchWorker,
@@ -162,9 +163,7 @@ describe("a chat turn", () => {
     ]);
     expect(replyText(chunksA)).toBe("Thanks, I've passed this to Murugappan.");
     expect(replyText(chunksB)).toBe("Thanks, I've passed this to Murugappan.");
-    expect(chunksB.filter(c => c.type === "data-activity").map(c => c.data)).toEqual([
-      { name: "capture_opportunity" }
-    ]);
+    expect(activitiesIn(chunksB)).toEqual([{ name: "capture_opportunity" }]);
     expect(JSON.stringify([...a.frames, ...b.frames])).not.toContain(summary);
     expect(JSON.stringify(model.doStreamCalls[0].prompt)).toContain(
       "currently reading the blog post at https://murugappan.dev/blog/react/"
@@ -452,9 +451,7 @@ describe("a chat turn", () => {
 
     const chunks = await streamedChunks(frames, "r1");
     expect(replyText(chunks)).toBe("He built the outbox pipeline.");
-    expect(chunks.filter(c => c.type === "data-activity").map(c => c.data)).toEqual([
-      { name: "fetch_page", detail: "/resume/" }
-    ]);
+    expect(activitiesIn(chunks)).toEqual([{ name: "fetch_page", detail: "/resume/" }]);
     expect(JSON.stringify(model.doStreamCalls[1].prompt)).toContain("Built the OUTBOX-PIPELINE");
     expect(JSON.stringify(frames)).not.toContain("OUTBOX-PIPELINE");
   });
@@ -496,7 +493,7 @@ describe("a chat turn", () => {
 describe("ChatRoom storage", () => {
   it("records the visitor's country and IP, keeping first-seen across reconnects", async () => {
     const stored = async (headers: Record<string, string>) => {
-      const { stub } = await connectRoom(roomName("room-visitor"), headers);
+      const { stub } = await connectRoom(roomName("room-visitor"), { headers });
       return runInDurableObject(stub, visitorStorage);
     };
 
@@ -510,9 +507,16 @@ describe("ChatRoom storage", () => {
     expect(second.visitor_country).toBe("DE");
     expect(second.visitor_ip).toBe("203.0.113.7");
     expect(second.visitor_first_seen).toBe(first.visitor_first_seen);
-    const lastSeen = (values: Record<string, unknown>) =>
-      z.number().parse(values.visitor_last_seen);
-    expect(lastSeen(second)).toBeGreaterThanOrEqual(lastSeen(first));
+    expect(second.visitor_last_seen).toBeGreaterThanOrEqual(first.visitor_last_seen);
+  });
+
+  it("takes the country from the edge request over a CF-IPCountry header", async () => {
+    const { stub } = await connectRoom(roomName("room-edge-country"), {
+      cf: { country: "FR" },
+      headers: { "CF-IPCountry": "IN" }
+    });
+    const stored = await runInDurableObject(stub, visitorStorage);
+    expect(stored.visitor_country).toBe("FR");
   });
 
   it("mirrors one rooms row per room to D1, refreshed on reconnect", async () => {
@@ -541,11 +545,13 @@ describe("ChatRoom storage", () => {
         { timeout: 2000, interval: 5 }
       );
 
-    await connectRoom(room, { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" });
+    await connectRoom(room, {
+      headers: { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" }
+    });
     const first = await mirrored({ country: "IN", ip: "203.0.113.9" });
 
     // A reconnect without an IP must not erase the address already known.
-    await connectRoom(room, { "CF-IPCountry": "DE" });
+    await connectRoom(room, { headers: { "CF-IPCountry": "DE" } });
     const second = await mirrored({ country: "DE", ip: "203.0.113.9" });
     expect(second.first_seen).toBe(first.first_seen);
     expect(second.last_seen).toBeGreaterThanOrEqual(first.last_seen);

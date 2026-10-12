@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { jsonLdHtml } from "./schema";
+import { jsonLdHtml, knowsAbout } from "./schema";
 
 const Graph = z.object({
   "@context": z.string(),
@@ -9,6 +9,7 @@ const Graph = z.object({
 });
 
 const parseGraph = (html: string) => Graph.parse(JSON.parse(html));
+const Person = z.object({ "@type": z.literal("Person"), knowsAbout: z.array(z.string()) });
 
 describe("jsonLdHtml", () => {
   it("always carries the site and the person, and adds a WebPage node for an indexable page", () => {
@@ -38,18 +39,30 @@ describe("jsonLdHtml", () => {
     expect(graph["@graph"].map(n => n["@type"])).toEqual(["WebSite", "Person", "Blog"]);
   });
 
-  it("points a profile page at the person", () => {
-    const graph = parseGraph(
-      jsonLdHtml({
-        page: { url: "https://murugappan.dev/about/", name: "About", profilePage: true },
-        nodes: []
-      })
-    );
+  it("points a profile page at the person, and only a profile page", () => {
+    const pageNode = (profilePage: boolean) =>
+      parseGraph(
+        jsonLdHtml({
+          page: { url: "https://murugappan.dev/about/", name: "About", profilePage },
+          nodes: []
+        })
+      )["@graph"][2];
 
-    expect(graph["@graph"][2]).toMatchObject({
+    expect(pageNode(true)).toMatchObject({
       "@type": "ProfilePage",
       mainEntity: { "@id": "https://murugappan.dev/#person" }
     });
+    expect(pageNode(false)).not.toHaveProperty("mainEntity");
+  });
+
+  it("lists the resume's skills, not just the hand-written ones, in the person's knowsAbout", () => {
+    const { knowsAbout: terms } = Person.parse(
+      parseGraph(jsonLdHtml({ page: null, nodes: [] }))["@graph"][1]
+    );
+
+    expect(terms).toContain("TypeScript");
+    // Terraform comes only from the resume's skillsCategories.
+    expect(terms).toContain("Terraform");
   });
 
   it("escapes < so a post title cannot close the script block", () => {
@@ -63,25 +76,11 @@ describe("jsonLdHtml", () => {
   });
 });
 
-describe("jsonLdHtml with resume skills that repeat a hand-written term", () => {
-  afterEach(() => {
-    vi.doUnmock("@murugappan/content/portfolio.ts");
-    vi.resetModules();
-  });
+describe("knowsAbout", () => {
+  it("keeps one entry per skill, ignoring case, in the hand-written casing", () => {
+    const terms = knowsAbout([{ items: "typescript, Rust" }]);
 
-  it("keeps one entry per skill, ignoring case, in the hand-written casing", async () => {
-    const portfolio = await import("@murugappan/content/portfolio.ts");
-    vi.resetModules();
-    vi.doMock("@murugappan/content/portfolio.ts", () => ({
-      ...portfolio,
-      skillsCategories: [{ category: "Languages", items: "typescript, Rust" }]
-    }));
-    const schema = await import("./schema");
-
-    const person = parseGraph(schema.jsonLdHtml({ page: null, nodes: [] }))["@graph"][1];
-    const knowsAbout = z.array(z.string()).parse(person?.knowsAbout);
-
-    expect(knowsAbout.filter(term => term.toLowerCase() === "typescript")).toEqual(["TypeScript"]);
-    expect(knowsAbout).toContain("Rust");
+    expect(terms.filter(term => term.toLowerCase() === "typescript")).toEqual(["TypeScript"]);
+    expect(terms).toContain("Rust");
   });
 });

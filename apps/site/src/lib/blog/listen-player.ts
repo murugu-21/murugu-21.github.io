@@ -103,9 +103,10 @@ export const collectBlocks = (): Block[] => {
   if (!body) return [];
   const title = document.querySelector("[data-post-title]");
   const titled = title ? [{ el: title, text: title.textContent ?? "" }] : [];
-  return [...titled, ...speechBlocks(body)]
-    .map(b => ({ el: b.el, text: normalizeSpeechText(b.text) }))
-    .filter(b => b.text);
+  return [...titled, ...speechBlocks(body)].flatMap(b => {
+    const text = normalizeSpeechText(b.text);
+    return text ? [{ el: b.el, text }] : [];
+  });
 };
 
 const fetchTimings = async (slug: string): Promise<AudioTimings | null> => {

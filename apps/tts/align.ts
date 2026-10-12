@@ -21,7 +21,7 @@ export function whisperClient({ next, send, close }: JsonLines) {
   return {
     async transcribe(job: { id: string; wav: string; text: string }): Promise<WhisperReply> {
       send(JSON.stringify(job));
-      return WhisperReply.parse(await next());
+      return next(WhisperReply);
     },
     [Symbol.asyncDispose]: close
   };
@@ -31,10 +31,9 @@ export type WhisperClient = ReturnType<typeof whisperClient>;
 
 // A block whisper failed on, or matched poorly, keeps no `words` (paragraph
 // highlight only), and `problem` says why.
-export function alignBlock(
-  block: StoredBlock,
-  reply: WhisperReply
-): { block: StoredBlock; problem?: string } {
+type Alignment = { block: StoredBlock; problem?: string };
+
+export function alignBlock(block: StoredBlock, reply: WhisperReply): Alignment {
   const { words: _drop, ...rest } = block;
   if (reply.error) return { block: rest, problem: `whisper failed: ${reply.error}` };
   const whisperWords = reply.words ?? [];

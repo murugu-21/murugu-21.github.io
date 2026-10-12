@@ -6,7 +6,9 @@ import {
   continueLinkScript,
   outdatedRedirectScript,
   redirectIfOutdated,
-  wireContinueLink
+  wireContinueLink,
+  type BrowserCss,
+  type NoticeLink
 } from "./browser-support";
 
 type Features = { lightDark?: boolean; registerProperty?: boolean; popover?: boolean };
@@ -15,11 +17,12 @@ type Features = { lightDark?: boolean; registerProperty?: boolean; popover?: boo
 function browser({ features = {}, name = "" }: { features?: Features; name?: string } = {}) {
   const { lightDark = true, registerProperty = true, popover = true } = features;
   const redirects: string[] = [];
+  const css: BrowserCss = {
+    supports: (_property, value) => !value.startsWith("light-dark(") || lightDark
+  };
+  if (registerProperty) css.registerProperty = () => {};
   const win = {
-    CSS: {
-      supports: (_property: string, value: string) => !value.startsWith("light-dark(") || lightDark,
-      ...(registerProperty ? { registerProperty: () => {} } : {})
-    },
+    CSS: css,
     HTMLElement: { prototype: popover ? { popover: null } : {} },
     name,
     location: {
@@ -70,7 +73,7 @@ describe("wireContinueLink", () => {
   };
 
   const notice = (search: string) => {
-    const link: { href: string; onclick: (() => void) | null } = { href: "/", onclick: null };
+    const link: NoticeLink = { href: "/", onclick: null };
     const tab = {
       document: {
         getElementById: (id: string) => (id === "continue" ? link : null),

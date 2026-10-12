@@ -58,7 +58,9 @@ const over = (rgba: string, backdrop: string): string => {
 // as `rgba(...)`, whose own commas must not split the pair.
 const SIDE = String.raw`\s*((?:[^(),]|\([^)]*\))+?)\s*`;
 const LIGHT_DARK = new RegExp(String.raw`^light-dark\(${SIDE},${SIDE}\)$`);
-const lightDark = (value: string): { light: string; dark: string } => {
+type LightDark = { light: string; dark: string };
+
+const lightDark = (value: string): LightDark => {
   const m = LIGHT_DARK.exec(value);
   if (!m) throw new Error(`not a light-dark() pair: ${value}`);
   return { light: m[1], dark: m[2] };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { jsonString, lenient } from "@murugappan/utils/json.ts";
+import { JsonRecord, jsonString, lenient } from "@murugappan/utils/json.ts";
 
 describe("jsonString", () => {
   const Payload = jsonString(z.object({ n: z.number() }));
@@ -14,6 +14,24 @@ describe("jsonString", () => {
   it("reports text that is not JSON as an issue instead of throwing", () => {
     const result = Payload.safeParse("{oops");
     expect(result.error?.issues.map(i => i.message)).toEqual(["must be valid JSON"]);
+  });
+});
+
+describe("JsonRecord", () => {
+  it("accepts a JSON object whose properties may be undefined at any depth, and nothing else", () => {
+    const value = { a: undefined, b: { c: undefined, d: [1, "two", null, { e: true }] } };
+    expect(JsonRecord.parse(value)).toStrictEqual({
+      a: undefined,
+      b: { c: undefined, d: [1, "two", null, { e: true }] }
+    });
+    expect([[1], null, { d: new Date(0) }].map(v => JsonRecord.safeParse(v).success)).toEqual([
+      false,
+      false,
+      false
+    ]);
+    expect(JsonRecord.safeParse([1]).error?.issues.map(i => i.message)).toEqual([
+      "must be a JSON object"
+    ]);
   });
 });
 

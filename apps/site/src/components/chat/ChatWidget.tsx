@@ -106,9 +106,9 @@ function downloadTranscript(bubbles: Bubble[]) {
   const lines = [
     `Jarvis: ${GREETING}`,
     // The room's notices aren't part of the conversation.
-    ...bubbles
-      .filter(b => b.kind !== "system")
-      .map(b => `${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`)
+    ...bubbles.flatMap(b =>
+      b.kind === "system" ? [] : [`${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`]
+    )
   ];
   const date = new Date().toISOString().slice(0, 10);
   const body = `Chat with Jarvis on murugappan.dev\n${date}\n\n${lines.join("\n\n")}\n`;

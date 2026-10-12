@@ -4,8 +4,10 @@ import type { Lead } from "#src/modules/chat/prompt.ts";
 
 const SENDER_ADDRESS = "chatbot@murugappan.dev";
 
+type EmailContent = { subject: string; text: string };
+
 export type EmailLike = {
-  send(msg: { to: string; from: string; subject: string; text: string }): Promise<unknown>;
+  send(msg: { to: string; from: string } & EmailContent): Promise<EmailSendResult>;
 };
 
 export function contactMailer(env: Env): { email: EmailLike; inbox: string } | null {
@@ -17,10 +19,7 @@ export function contactMailer(env: Env): { email: EmailLike; inbox: string } | n
 
 const subjectName = (who: string): string => who.replaceAll(/\s+/g, " ").slice(0, 80);
 
-export function formatOpportunityEmail(
-  lead: Lead,
-  transcript: ChatHistoryEntry[]
-): { subject: string; text: string } {
+export function formatOpportunityEmail(lead: Lead, transcript: ChatHistoryEntry[]): EmailContent {
   const lines = transcript.map(m => `${m.role === "user" ? "visitor" : "assistant"}: ${m.content}`);
   return {
     subject: `New opportunity via murugappan.dev chat from ${subjectName(lead.name || lead.contact)}`,
@@ -50,10 +49,7 @@ export async function sendOpportunityEmail({
   await email.send({ to: inbox, from: SENDER_ADDRESS, subject, text });
 }
 
-export function formatContactEmail(msg: ContactMessage): {
-  subject: string;
-  text: string;
-} {
+export function formatContactEmail(msg: ContactMessage): EmailContent {
   return {
     subject: `New message via the murugappan.dev API from ${subjectName(msg.name || msg.email)}`,
     text: [

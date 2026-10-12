@@ -1,6 +1,8 @@
-import { afterEach, assert, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { blogPost, setPosts } from "#src/lib/blog/fixtures.ts";
+import { blogPost } from "#src/lib/blog/fixtures.ts";
+import { setPosts } from "#src/test/astro-content.ts";
+import { resetEnv, setEnv } from "#src/test/astro-env-server.ts";
 import { GET as aboutMarkdown } from "./about/index.md.ts";
 import { GET as blogLlmsFull } from "./blog/llms-full.txt.ts";
 import { GET as blogLlms } from "./blog/llms.txt.ts";
@@ -14,24 +16,11 @@ import { GET as homeMarkdown } from "./index.md.ts";
 import { GET as siteLlms } from "./llms.txt.ts";
 import { GET as resumeMarkdown } from "./resume/index.md.ts";
 
-vi.mock("astro:content", async () => (await import("#src/lib/blog/fixtures.ts")).astroContentMock);
-
-const buildEnv = vi.hoisted(
-  (): {
-    GITHUB_TOKEN: string;
-    REQUIRE_GITHUB_PROFILE: string;
-    RESUME_PHONE: string | undefined;
-  } => ({
-    GITHUB_TOKEN: "tok",
-    REQUIRE_GITHUB_PROFILE: "0",
-    RESUME_PHONE: undefined
-  })
-);
-vi.mock("astro:env/server", () => buildEnv);
+beforeEach(() => setEnv({ GITHUB_TOKEN: "tok" }));
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  buildEnv.RESUME_PHONE = undefined;
+  resetEnv();
 });
 
 const COIN_CHANGE_LINE =
@@ -91,7 +80,7 @@ describe("markdown renditions of the site", () => {
       "Bangalore, India | [murugu2001@gmail.com](mailto:murugu2001@gmail.com) | [www.linkedin.com/in/murugappan-m-56920a192](https://www.linkedin.com/in/murugappan-m-56920a192/) | [github.com/murugu-21](https://github.com/murugu-21) | [murugappan.dev](https://murugappan.dev)"
     );
 
-    buildEnv.RESUME_PHONE = "+91 98765 43210";
+    setEnv({ RESUME_PHONE: "+91 98765 43210" });
     expect(await contactLine()).toMatch(
       /^Bangalore, India \| \+91 98765 43210 \| \[murugu2001@gmail\.com\]/
     );

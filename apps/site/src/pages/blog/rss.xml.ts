@@ -18,12 +18,14 @@ const assets = import.meta.glob<{ default: ImageMetadata | string }>(
   "../../../../../packages/content/blog/**/*.{jpg,jpeg,png,gif,webp,svg}",
   { eager: true }
 );
+const isUrl = (asset: ImageMetadata | string): asset is string => typeof asset === "string";
+
 const ASSET_URLS = new Map(
   Object.entries(assets).map(([file, mod]) => {
     const asset = mod.default;
     return [
       file.replace("../../../../../packages/content/blog/", ""),
-      SITE_ORIGIN + (typeof asset === "string" ? asset : asset.src)
+      SITE_ORIGIN + (isUrl(asset) ? asset : asset.src)
     ];
   })
 );

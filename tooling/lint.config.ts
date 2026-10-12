@@ -132,6 +132,20 @@ const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
 });
 
 const SITE = layerPatterns("site");
+const NO_SITE_TEST_FAKES: Pattern = {
+  regex: "^#src/test/",
+  message:
+    "Only tests import the #src/test/ fakes. Production code imports the astro: module the fake stands in for."
+};
+const SITE_TESTS = ["apps/site/src/**/*.test.ts", "apps/site/src/**/*.test.tsx"];
+
+// restrict() for the site, so the layer loop below skips the site layer. Tests keep `patterns`
+// and every other file also loses the fakes: the second override wins wherever it applies, so
+// each file still gets one complete list.
+const siteRestrict = (files: string[], patterns: Pattern[]): OxlintOverride[] => [
+  restrict(files, patterns),
+  { ...restrict(files, [...patterns, NO_SITE_TEST_FAKES]), excludeFiles: SITE_TESTS }
+];
 
 type ImportPath = {
   name: string;
@@ -356,7 +370,9 @@ export default {
     "./tooling/oxlint/contracts.ts",
     "./tooling/oxlint/effect.ts",
     "./tooling/oxlint/astro.ts",
-    "./tooling/oxlint/workers.ts"
+    "./tooling/oxlint/workers.ts",
+    "./tooling/oxlint/anti-slop/index.ts",
+    "./tooling/oxlint/anti-slop/effect.ts"
   ],
   categories: { correctness: "error" },
   // oxlint takes settings only at the top level; the override below scopes the plugin.
@@ -405,17 +421,44 @@ export default {
     // `||` on strings is deliberate: a blank value counts as missing.
     "typescript/prefer-nullish-coalescing": ["error", { ignorePrimitives: { string: true } }],
     "import/no-relative-parent-imports": "error",
-    "import/no-cycle": "error"
+    "import/no-cycle": "error",
+    "oxc/no-accumulating-spread": "error",
+    // Vendored from dmmulroy/anti-slop (tooling/oxlint/anti-slop/UPSTREAM.md).
+    "anti-slop/no-array-filter-map": "error",
+    "anti-slop/no-conditional-empty-object-spread": "error",
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-module-mocking": "error",
+    "anti-slop/no-object-parameters": "error",
+    "anti-slop/no-reduce-accumulator-copy": "error",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    // A type guard is where narrowing belongs (AGENTS.md › Code style); anywhere else, parse.
+    "anti-slop/no-runtime-typeof": ["error", { allowInTypeGuards: true }],
+    "anti-slop/no-unknown-parameters": "error",
+    "anti-slop/no-unknown-returns": "error",
+    "anti-slop/no-unknown-type-aliases": "error",
+    "anti-slop/no-unsafe-dictionary-type": "error"
   },
   overrides: [
-    ...LAYER_NAMES.filter(name => name !== "api").map(name =>
-      restrict([`${LAYERS[name].dir}**`], [...layerPatterns(name), ...(LAYERS[name].also ?? [])])
-    ),
+    ...LAYER_NAMES.values()
+      .filter(name => name !== "api" && name !== "site")
+      .map(name =>
+        restrict([`${LAYERS[name].dir}**`], [...layerPatterns(name), ...(LAYERS[name].also ?? [])])
+      ),
+    ...siteRestrict([`${LAYERS.site.dir}**`], SITE),
     ...API_ROLES.map(apiRole),
     // Services log through Effect, so the log carries the span each Effect.fn method opens.
     { files: DOMAIN, rules: { "no-console": "error", "effect/use-fn": "error" } },
+    // Where Effect runs (NO_EFFECT bans it elsewhere in the Worker), so Match and Predicate are there.
+    {
+      files: [...DOMAIN, "apps/api/src/common/di/**", "apps/api/src/app.module.ts"],
+      rules: {
+        "anti-slop-effect/no-manual-tag-comparison": "error",
+        "anti-slop-effect/prefer-effect-match": "error"
+      }
+    },
     // Shared code serves every page, so it can't reach into a page area's folder.
-    restrict(
+    ...siteRestrict(
       [
         "apps/site/src/components/*",
         "apps/site/src/components/chat/**",
@@ -436,7 +479,7 @@ export default {
       ]
     ),
     // The homepage may show the blog's posts; the blog never reaches into the homepage.
-    restrict(
+    ...siteRestrict(
       [
         "apps/site/src/components/blog/**",
         "apps/site/src/lib/blog/**",

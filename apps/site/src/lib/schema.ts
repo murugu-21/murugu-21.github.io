@@ -19,10 +19,10 @@ const HAND_WRITTEN_KNOWS_ABOUT = [
 
 // The hand-written list plus the resume skills, split the way the API splits them,
 // deduped case-insensitively.
-function knowsAbout(): string[] {
+export function knowsAbout(categories: ReadonlyArray<{ items: string }>): string[] {
   const seen = new Set(HAND_WRITTEN_KNOWS_ABOUT.map(s => s.toLowerCase()));
   const extra: string[] = [];
-  for (const { items } of skillsCategories) {
+  for (const { items } of categories) {
     for (const term of splitSkillItems(items)) {
       if (seen.has(term.toLowerCase())) continue;
       seen.add(term.toLowerCase());
@@ -84,7 +84,7 @@ const person: Person = {
       url: "https://kct.ac.in"
     }
   ],
-  knowsAbout: knowsAbout(),
+  knowsAbout: knowsAbout(skillsCategories),
   sameAs,
   mainEntityOfPage: { "@id": `${SITE_ORIGIN}/about/` }
 };
@@ -107,9 +107,9 @@ export function jsonLdHtml({ page, nodes }: PageGraph): string {
       name: page.name,
       isPartOf: { "@id": WEBSITE_ID },
       about: page.about,
-      ...(page.profilePage ? { mainEntity: { "@id": PERSON_ID } } : {}),
       inLanguage: "en"
     };
+    if (page.profilePage) webPage.mainEntity = { "@id": PERSON_ID };
     graph.push(webPage);
   }
   graph.push(...nodes);

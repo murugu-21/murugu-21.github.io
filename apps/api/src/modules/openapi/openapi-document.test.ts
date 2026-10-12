@@ -18,18 +18,6 @@ describe("buildOpenApiDocument", () => {
     );
   }
 
-  function refs(node: unknown, found: string[] = []): string[] {
-    if (Array.isArray(node)) {
-      for (const item of node) refs(item, found);
-    } else if (typeof node === "object" && node !== null) {
-      for (const [key, value] of Object.entries(node)) {
-        if (key === "$ref" && typeof value === "string") found.push(value);
-        else refs(value, found);
-      }
-    }
-    return found;
-  }
-
   /* oxlint-disable tests/observe-behaviour -- relation: spec paths against the router's own table */
   it("documents exactly the paths and methods the router serves", () => {
     // ALL is middleware or the 404. An `@` method is an onError or notFound scope.
@@ -45,7 +33,7 @@ describe("buildOpenApiDocument", () => {
 
   it("gives every operation a unique operationId", () => {
     const ids = operations().map(([, op]) => op.operationId);
-    expect(ids.every(id => typeof id === "string" && id.length > 0)).toBe(true);
+    for (const id of ids) expect(id).toMatch(/\S/);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -138,7 +126,10 @@ describe("buildOpenApiDocument", () => {
 
   it("resolves every $ref against a declared component schema", () => {
     const declared = new Set(Object.keys(doc.components.schemas));
-    for (const ref of refs(doc)) {
+    // Serialised, `"$ref":"` can only open a $ref key's string value: stringify escapes quotes.
+    const refs = [...JSON.stringify(doc).matchAll(/"\$ref":"([^"]*)"/g)].map(([, ref]) => ref);
+    expect(refs).toContain("#/components/schemas/ContactRequest");
+    for (const ref of refs) {
       expect(ref.startsWith("#/components/schemas/"), ref).toBe(true);
       expect(declared, ref).toContain(ref.replace("#/components/schemas/", ""));
     }
@@ -147,7 +138,7 @@ describe("buildOpenApiDocument", () => {
   it("describes every property of every component schema", () => {
     for (const [name, { properties }] of Object.entries(doc.components.schemas)) {
       for (const [property, spec] of Object.entries(properties ?? {})) {
-        if (typeof spec === "boolean" || spec.$ref) continue;
+        if (spec === true || spec === false || spec.$ref) continue;
         expect(spec.description, `${name}.${property}`).toMatch(/\S/);
       }
     }

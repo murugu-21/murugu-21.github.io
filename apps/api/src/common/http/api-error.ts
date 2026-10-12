@@ -22,16 +22,14 @@ export function apiError(opts: {
   details?: FieldIssue[];
   headers?: Record<string, string>;
 }): Response {
-  const body: ErrorBody = {
-    error: {
-      code: opts.code,
-      message: opts.message,
-      hint: opts.hint,
-      documentation_url: DOCS_URL,
-      ...(opts.details ? { details: opts.details } : {})
-    }
+  const error: ErrorBody["error"] = {
+    code: opts.code,
+    message: opts.message,
+    hint: opts.hint,
+    documentation_url: DOCS_URL
   };
-  return new Response(JSON.stringify(body, null, 2), {
+  if (opts.details) error.details = opts.details;
+  return new Response(JSON.stringify({ error } satisfies ErrorBody, null, 2), {
     status: opts.status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",

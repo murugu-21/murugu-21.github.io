@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
+import { resetEnv, setEnv } from "#src/test/astro-env-server.ts";
+import { fetchGithubProfile, fetchPinnedRepos, formatRepoSize } from "./github";
+
 const RequestBody = z.object({ query: z.string() });
 
 type Reply = { status?: number; body: unknown } | Error;
@@ -16,32 +19,19 @@ function stubGithub(reply: Reply) {
   });
 }
 
-async function loadGithub({
-  token = "tok",
-  required = "0"
-}: {
-  token?: string;
-  required?: string;
-}) {
-  vi.resetModules();
-  vi.doMock("astro:env/server", () => ({
-    GITHUB_TOKEN: token || undefined,
-    REQUIRE_GITHUB_PROFILE: required
-  }));
-  return import("./github");
-}
-
 const sentQuery = () =>
   RequestBody.parse(JSON.parse(z.string().parse(requests[0]?.init?.body))).query;
 
 let warnings: unknown[][] = [];
 
 beforeEach(() => {
+  setEnv({ GITHUB_TOKEN: "tok" });
   warnings = [];
   vi.spyOn(console, "warn").mockImplementation((...args) => void warnings.push(args));
 });
 
 afterEach(() => {
+  resetEnv();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -49,7 +39,6 @@ afterEach(() => {
 describe("fetchGithubProfile", () => {
   it("posts the profile query with the token and returns the bio", async () => {
     stubGithub({ body: { data: { user: { bio: "Full stack engineer" } } } });
-    const { fetchGithubProfile } = await loadGithub({});
 
     expect(await fetchGithubProfile()).toEqual({ bio: "Full stack engineer" });
     expect(requests[0]?.url).toBe("https://api.github.com/graphql");
@@ -63,7 +52,7 @@ describe("fetchGithubProfile", () => {
 
   it("skips the request without a token and says why", async () => {
     stubGithub({ body: { data: { user: { bio: "never read" } } } });
-    const { fetchGithubProfile } = await loadGithub({ token: "" });
+    setEnv({ GITHUB_TOKEN: undefined });
 
     expect(await fetchGithubProfile()).toBeNull();
     expect(requests).toEqual([]);
@@ -101,7 +90,6 @@ describe("fetchGithubProfile", () => {
     "falls back to null on $name and logs why, instead of breaking the build",
     async ({ reply, warning, detail }) => {
       stubGithub(reply);
-      const { fetchGithubProfile } = await loadGithub({});
 
       expect(await fetchGithubProfile()).toBeNull();
       expect(warnings).toEqual([[warning, ...detail]]);
@@ -110,11 +98,10 @@ describe("fetchGithubProfile", () => {
 
   it("returns null when the user does not exist, unless the profile is required", async () => {
     stubGithub({ body: { data: { user: null } } });
-    const optional = await loadGithub({});
-    expect(await optional.fetchGithubProfile()).toBeNull();
+    expect(await fetchGithubProfile()).toBeNull();
 
-    const required = await loadGithub({ required: "1" });
-    await expect(required.fetchGithubProfile()).rejects.toThrow(
+    setEnv({ REQUIRE_GITHUB_PROFILE: "1" });
+    await expect(fetchGithubProfile()).rejects.toThrow(
       "[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1"
     );
   });
@@ -147,7 +134,6 @@ describe("fetchPinnedRepos", () => {
         }
       }
     });
-    const { fetchPinnedRepos } = await loadGithub({});
 
     const repos = await fetchPinnedRepos();
 
@@ -160,7 +146,6 @@ describe("fetchPinnedRepos", () => {
 
   it("is an empty list when the query fails", async () => {
     stubGithub({ status: 500, body: {} });
-    const { fetchPinnedRepos } = await loadGithub({});
 
     expect(await fetchPinnedRepos()).toEqual([]);
     expect(warnings[0]?.[0]).toBe("[github] GraphQL HTTP 500; skipping pinned repos");
@@ -172,8 +157,7 @@ describe("formatRepoSize", () => {
     [512, "512 KB"],
     [1024, "1 MB"],
     [2560, "2.5 MB"]
-  ])("formats %i KB as %s", async (kb, expected) => {
-    const { formatRepoSize } = await loadGithub({});
+  ])("formats %i KB as %s", (kb, expected) => {
     expect(formatRepoSize(kb)).toBe(expected);
   });
 });

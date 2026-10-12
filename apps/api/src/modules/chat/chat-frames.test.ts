@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import type { JsonValue } from "@murugappan/utils/json.ts";
 import { admitFrame } from "#src/modules/chat/chat-frames.ts";
 
 const stored = [{ id: "m1", role: "assistant", parts: [{ type: "text", text: "Hi" }] }];
 
-function chatRequest(body: unknown): string {
+function chatRequest(body: JsonValue): string {
   return JSON.stringify({
     type: "cf_agent_use_chat_request",
     init: { method: "POST", body: JSON.stringify(body) }

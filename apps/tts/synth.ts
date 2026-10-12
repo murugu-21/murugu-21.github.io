@@ -21,7 +21,10 @@ export function postBlocks({ slug, html }: { slug: string; html: string }): stri
   if (!body) throw new Error(`${slug}: no post body section`);
   const raw = speechBlocks(body).map(b => b.text);
   if (title) raw.unshift(title.textContent ?? "");
-  return raw.map(normalizeSpeechText).filter(t => t.length > 0);
+  return raw.flatMap(text => {
+    const spoken = normalizeSpeechText(text);
+    return spoken ? [spoken] : [];
+  });
 }
 
 export const chunkBlock = (text: string, b: number): Chunk[] =>
@@ -41,12 +44,12 @@ const JobMsg = z.union([z.object({ done: z.literal(true) }), ChunkMsg]);
 
 export function synthClient({ next, send, close }: JsonLines) {
   return {
-    ready: next().then(msg => ReadyMsg.parse(msg)),
+    ready: next(ReadyMsg),
     async runJob(jobPath: string): Promise<void> {
       send(jobPath);
       const errors: string[] = [];
       for (;;) {
-        const msg = JobMsg.parse(await next());
+        const msg = await next(JobMsg);
         if ("done" in msg) break;
         if ("error" in msg) errors.push(`${msg.id}: ${msg.error}`);
         else console.log(`  ${msg.id} ${msg.seconds.toFixed(1)}s audio in ${msg.wall}s`);

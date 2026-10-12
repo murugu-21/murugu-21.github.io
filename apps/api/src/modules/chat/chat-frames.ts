@@ -60,7 +60,7 @@ export function admitFrame({
   message: WSMessage;
   stored: readonly { id: string }[];
 }): Admission {
-  if (typeof message !== "string") return DROP;
+  if (message instanceof ArrayBuffer || ArrayBuffer.isView(message)) return DROP;
   const frame = FrameType.safeParse(message).data;
   if (frame && PASSTHROUGH_FRAMES.has(frame.type)) return { kind: "forward", frame: message };
   if (frame?.type !== "cf_agent_use_chat_request") return DROP;

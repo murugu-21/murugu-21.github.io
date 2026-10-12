@@ -3,15 +3,15 @@ import { describe, expect, it } from "vitest";
 import { modulePreloader } from "./module-preload.ts";
 
 // A built site's modules by root-relative href.
-const MODULES: Record<string, string> = {
-  "/static/page.js": 'import { a } from "./chunks/a.js";import("./lazy.js");',
-  "/static/chunks/a.js": 'import "./b.js";export { b } from "./b.js";import "./missing.js";',
-  "/static/chunks/b.js": 'import { a } from "./a.js";export const b = 1;',
-  "/static/other.js": 'import"./page.js";import{a}from"./chunks/a.js";',
-  "/static/leaf.js": "export const leaf = 1;"
-};
+const MODULES = new Map([
+  ["/static/page.js", 'import { a } from "./chunks/a.js";import("./lazy.js");'],
+  ["/static/chunks/a.js", 'import "./b.js";export { b } from "./b.js";import "./missing.js";'],
+  ["/static/chunks/b.js", 'import { a } from "./a.js";export const b = 1;'],
+  ["/static/other.js", 'import"./page.js";import{a}from"./chunks/a.js";'],
+  ["/static/leaf.js", "export const leaf = 1;"]
+]);
 
-const read = (href: string) => MODULES[href];
+const read = (href: string) => MODULES.get(href);
 
 describe("modulePreloader", () => {
   it("hints every static import the page's module scripts reach, before the first one", () => {
