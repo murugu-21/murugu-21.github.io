@@ -23,7 +23,10 @@ async function bootPage({
       })
   };
   vi.stubGlobal("document", supported ? { modelContext } : {});
-  vi.stubGlobal("location", { assign: (path: string) => navigations.push(path) });
+  vi.stubGlobal("location", {
+    origin: "https://murugappan.dev",
+    assign: (url: string) => navigations.push(url)
+  });
   vi.stubGlobal("fetch", async (path: string) => {
     const body = FILES.get(path);
     return body === undefined ? new Response("", { status: 404 }) : new Response(body);
@@ -65,16 +68,27 @@ describe("WebMCP tools", () => {
     );
   });
 
-  it("navigates to site-relative paths only", async () => {
+  it("navigates to pages on this site, given a path or a full URL, and nowhere else", async () => {
     const { run, navigations } = await bootPage({});
-    expect(await run("navigate_to", { path: "/blog/" })).toBe("Navigating to /blog/");
-    expect(await run("navigate_to", { path: "//evil.example/" })).toBe(
-      "Only site-relative paths starting with '/' are allowed."
+    expect(await run("navigate_to", { path: "/blog/" })).toBe(
+      "Navigating to https://murugappan.dev/blog/"
     );
-    expect(await run("navigate_to", { path: "https://evil.example/" })).toBe(
-      "Only site-relative paths starting with '/' are allowed."
+    expect(await run("navigate_to", { path: "https://murugappan.dev/about/" })).toBe(
+      "Navigating to https://murugappan.dev/about/"
     );
-    expect(navigations).toEqual(["/blog/"]);
+    for (const path of [
+      "//evil.example/",
+      "/\\evil.example",
+      "https://evil.example/",
+      "javascript:alert(1)",
+      "https://",
+      7
+    ]) {
+      expect(await run("navigate_to", { path })).toBe(
+        "Only pages on this site are allowed, such as '/blog/'."
+      );
+    }
+    expect(navigations).toEqual(["https://murugappan.dev/blog/", "https://murugappan.dev/about/"]);
   });
 
   it("survives a registration that rejects and reports which tool failed", async () => {

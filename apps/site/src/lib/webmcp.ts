@@ -9,9 +9,12 @@ const mc = document.modelContext;
 const isSlug = (value: unknown): value is string =>
   typeof value === "string" && /^[a-z0-9-]+$/.test(value);
 
-// Site-relative only: "//host" would be scheme-relative and leave the site.
-const isSitePath = (value: unknown): value is string =>
-  typeof value === "string" && value.startsWith("/") && !value.startsWith("//");
+// An agent may pass a full URL instead of a path, so accept both on this origin.
+// "//host", other hosts and "javascript:" resolve to another origin and fail.
+const isOnSite = (value: unknown): value is string =>
+  typeof value === "string" &&
+  URL.canParse(value, location.origin) &&
+  new URL(value, location.origin).origin === location.origin;
 
 if (mc) {
   const fetchText = async (path: string): Promise<string> => {
@@ -69,15 +72,16 @@ if (mc) {
         properties: {
           path: {
             type: "string",
-            description: "Site-relative path starting with '/'"
+            description: "A path such as '/blog/', or a full URL on this site"
           }
         },
         required: ["path"]
       },
       execute: async ({ path }) => {
-        if (!isSitePath(path)) return "Only site-relative paths starting with '/' are allowed.";
-        location.assign(path);
-        return `Navigating to ${path}`;
+        if (!isOnSite(path)) return "Only pages on this site are allowed, such as '/blog/'.";
+        const { href } = new URL(path, location.origin);
+        location.assign(href);
+        return `Navigating to ${href}`;
       }
     }
   ];
