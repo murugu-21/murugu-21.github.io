@@ -4,5 +4,10 @@ extensions = ["md"]
 # READMEs point at the dev server.
 exclude_loopback = true
 
-# Bot protection on these hosts answers 403 to any client that isn't a browser.
-exclude = ['^https://stackoverflow\.com/', '^https://medium\.com/']
+# Bot protection on these hosts answers 403 to non-browser clients or CI runner IPs.
+exclude = [
+  '^https://stackoverflow\.com/',
+  '^https://medium\.com/',
+  '^https://www\.npmjs\.com/',
+  '^https://x\.com/',
+]
