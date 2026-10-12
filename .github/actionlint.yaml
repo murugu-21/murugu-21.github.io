@@ -1,0 +1,5 @@
+self-hosted-runner:
+  # GitHub-hosted (GA since 2026-09-17), but actionlint 1.7.12 doesn't list it yet
+  # (rhysd/actionlint#743). Drop this file once a release does.
+  labels:
+    - ubuntu-26.04
