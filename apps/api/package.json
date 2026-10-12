@@ -15,20 +15,20 @@
     "types": "wrangler types --strict-vars=false"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "3.0.59",
+    "@ai-sdk/deepseek": "3.0.63",
     "@cloudflare/ai-chat": "0.12.1",
     "@modelcontextprotocol/server": "^2.3.1",
     "@murugappan/content": "workspace:*",
     "@murugappan/contracts": "workspace:*",
     "@murugappan/utils": "workspace:*",
-    "agents": "0.26.0",
-    "ai": "7.0.128",
-    "effect": "^4.0.2",
+    "agents": "0.28.0",
+    "ai": "7.0.137",
+    "effect": "^4.0.3",
     "hono": "5.0.0-rc.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "4.0.22",
+    "@ai-sdk/provider": "4.0.26",
     "@cloudflare/vite-plugin": "^1.63.1",
     "@cloudflare/vitest-plugin": "^1.4.0",
     "@modelcontextprotocol/client": "2.0.0",
