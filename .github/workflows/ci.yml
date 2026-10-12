@@ -9,7 +9,7 @@ permissions:
   contents: read
 jobs:
   checks:
-    runs-on: ubuntu-26.04-arm
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -25,7 +25,6 @@ jobs:
       - run: bun run check:effect
       - run: bun run check:py
   test-and-build:
-    # Tests and the build ran slower on arm64 (run 38265573874).
     runs-on: ubuntu-26.04
     # id-token lets the Qlty step authenticate by OIDC instead of a stored token.
     permissions:
