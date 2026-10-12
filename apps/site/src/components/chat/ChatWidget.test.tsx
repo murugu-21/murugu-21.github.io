@@ -13,25 +13,21 @@ const Frame = z.object({
   init: z.object({ body: z.string() }).optional()
 });
 
-// The Worker's ChatRoom as the widget's socket sees it: resume probes find no
+type ServerFrame =
+  | { type: "cf_agent_stream_resume_none"; probeId?: string; reason: "idle" }
+  | { type: "cf_agent_use_chat_response"; id: string; body: string; done?: true; error?: true }
+  | { type: "cf_agent_stream_resuming"; id: string };
+
+// The Worker's ChatRoom as the widget's sockets see it: resume probes find no
 // stream, and each chat request is recorded so the test can stream the reply.
-class FakeRoom extends EventTarget {
-  readonly agent = "chat-room";
+class FakeRoom {
   readonly requests: unknown[] = [];
+  readonly sockets = new Set<FakeSocket>();
   private turn = "";
 
-  constructor(
-    readonly name: string,
-    readonly host: string
-  ) {
-    super();
-  }
+  constructor(readonly name: string) {}
 
-  getHttpUrl() {
-    return `http://${this.host}/agents/chat-room/${this.name}`;
-  }
-
-  send(raw: string) {
+  receive(raw: string) {
     const frame = Frame.parse(JSON.parse(raw));
     if (frame.type === "cf_agent_stream_resume_request")
       this.push({ type: "cf_agent_stream_resume_none", probeId: frame.probeId, reason: "idle" });
@@ -39,7 +35,6 @@ class FakeRoom extends EventTarget {
       this.turn = frame.id;
       this.requests.push(JSON.parse(frame.init.body));
     }
-    return true;
   }
 
   stream(chunks: UIMessageChunk[], turn = this.turn) {
@@ -60,20 +55,55 @@ class FakeRoom extends EventTarget {
     this.push({ type: "cf_agent_stream_resuming", id: turn });
   }
 
-  private push(data: object) {
-    this.dispatchEvent(new MessageEvent("message", { data: JSON.stringify(data) }));
+  private push(frame: ServerFrame) {
+    for (const socket of this.sockets) socket.deliver(JSON.stringify(frame));
   }
 }
 
-const { rooms } = vi.hoisted(() => ({ rooms: new Map<string, FakeRoom>() }));
+const rooms = new Map<string, FakeRoom>();
 
-vi.mock("agents/react", () => ({
-  useAgent: ({ name, host }: { name: string; host: string }) => {
-    const room = rooms.get(name) ?? new FakeRoom(name, host);
-    rooms.set(name, room);
-    return room;
+// The browser's WebSocket as PartySocket drives it, connected to the FakeRoom its URL names.
+class FakeSocket extends EventTarget {
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSING = 2;
+  static readonly CLOSED = 3;
+  readonly CONNECTING = 0;
+  readonly OPEN = 1;
+  readonly CLOSING = 2;
+  readonly CLOSED = 3;
+  readyState = FakeSocket.CONNECTING;
+  binaryType: BinaryType = "blob";
+  private readonly room: FakeRoom;
+
+  constructor(url: string | URL) {
+    super();
+    const name = /^\/agents\/chat-room\/([^/]+)$/.exec(new URL(url).pathname)?.[1];
+    if (!name) throw new Error(`the widget connected to ${String(url)}, not a chat room`);
+    this.room = rooms.get(name) ?? new FakeRoom(name);
+    rooms.set(name, this.room);
+    // PartySocket attaches its listeners right after constructing the socket.
+    queueMicrotask(() => {
+      if (this.readyState !== FakeSocket.CONNECTING) return;
+      this.readyState = FakeSocket.OPEN;
+      this.room.sockets.add(this);
+      this.dispatchEvent(new Event("open"));
+    });
   }
-}));
+
+  send(data: string) {
+    this.room.receive(data);
+  }
+
+  close() {
+    this.readyState = FakeSocket.CLOSED;
+    this.room.sockets.delete(this);
+  }
+
+  deliver(data: string) {
+    this.dispatchEvent(new MessageEvent("message", { data }));
+  }
+}
 
 const LAUNCHER = "Chat with Jarvis, Murugappan's AI assistant";
 const histories = new Map<string, () => Promise<Response>>();
@@ -114,6 +144,7 @@ async function openChat() {
 }
 
 beforeEach(() => {
+  vi.stubGlobal("WebSocket", FakeSocket);
   localStorage.clear();
   rooms.clear();
   histories.clear();
@@ -134,6 +165,7 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   await page.viewport(414, 896);
   vi.useRealTimers();
   globalThis.posthog = undefined;
@@ -304,7 +336,7 @@ it("resumes a returning visitor's room with its links and notices", async () => 
   await render(<ChatWidget host="chat.example.com" />);
   await openChat();
 
-  expect(fetched).toEqual(["http://chat.example.com/agents/chat-room/returning/get-messages"]);
+  expect(fetched).toEqual(["https://chat.example.com/agents/chat-room/returning/get-messages"]);
   await expect.element(page.getByText("Any links?")).toBeVisible();
   await expect.element(page.getByText("Out of budget for now.")).toBeVisible();
   await expect

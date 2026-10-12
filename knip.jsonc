@@ -20,7 +20,11 @@
       // x-cover.html loads its font from node_modules by path.
       "ignoreDependencies": ["firacode"]
     },
-    "packages/*": {}
+    "packages/*": {},
+    "tooling": {
+      // Oxlint loads the vendored plugins by path from lint.config.ts.
+      "entry": ["oxlint/anti-slop/index.ts", "oxlint/anti-slop/effect.ts"]
+    }
   },
   "ignoreDependencies": [
     // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.

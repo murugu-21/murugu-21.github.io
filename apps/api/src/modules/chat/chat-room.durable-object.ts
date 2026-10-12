@@ -1,4 +1,9 @@
-import { AIChatAgent, type ChatResponseResult } from "@cloudflare/ai-chat";
+import {
+  AIChatAgent,
+  type ChatResponseResult,
+  type OnChatMessageOptions
+} from "@cloudflare/ai-chat";
+import type { DurableObject } from "cloudflare:workers";
 import type { Connection, ConnectionContext } from "agents";
 import {
   createUIMessageStream,
@@ -43,6 +48,7 @@ type CountRow = { n: number };
 const UNREADABLE = "Sorry, I couldn't read that message.";
 
 const RequestBody = z.object({ page: lenient(z.string()) });
+const Timestamp = z.number();
 
 // Keeps spend visible in the Worker logs, one line per model call.
 function logUsage(usage: LanguageModelUsage): void {
@@ -91,7 +97,7 @@ export class ChatRoom extends AIChatAgent<Env> {
   public messageConcurrency = "drop" as const;
 
   // Public so tests can drive `ctx.storage.sql` via `runInDurableObject`.
-  declare public ctx: DurableObjectState<Record<string, unknown>>;
+  declare public ctx: DurableObject<Env>["ctx"];
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -139,8 +145,8 @@ export class ChatRoom extends AIChatAgent<Env> {
   }
 
   public async onChatMessage(
-    _onFinish: unknown,
-    options?: { abortSignal?: AbortSignal; body?: Record<string, unknown> }
+    _onFinish: Parameters<AIChatAgent<Env>["onChatMessage"]>[0],
+    options?: OnChatMessageOptions
   ): Promise<Response> {
     try {
       // A missing key gates like an empty account; the visitor can't fix either.
@@ -161,8 +167,8 @@ export class ChatRoom extends AIChatAgent<Env> {
             this.reply({ writer, key, page, abortSignal: options?.abortSignal })
         })
       });
-    } catch (err) {
-      console.error("chat turn failed", err);
+    } catch (cause) {
+      console.error("chat turn failed", cause);
       return noticeResponse(ERROR_NOTICE);
     }
   }
@@ -178,8 +184,8 @@ export class ChatRoom extends AIChatAgent<Env> {
     let failure: Notice | null = null;
     try {
       wroteText = await this.relayModel({ writer, ...call });
-    } catch (err) {
-      failure = await this.failureNotice(err);
+    } catch (cause) {
+      failure = await this.failureNotice(cause);
     }
     // Every turn ends in prose or a notice; the widget waits for one or the other.
     // A cancelled turn still ends quietly: the SDK drops what is written after a cancel.
@@ -216,10 +222,10 @@ export class ChatRoom extends AIChatAgent<Env> {
     return wroteText;
   }
 
-  private async failureNotice(err: unknown): Promise<Notice> {
-    console.error("chat generation failed", err);
+  private async failureNotice(cause: unknown): Promise<Notice> {
+    console.error("chat generation failed", cause);
     // A 402 beats the cached balance, so gate every room until the next check.
-    if (!isInsufficientBalance(err)) return ERROR_NOTICE;
+    if (!isInsufficientBalance(cause)) return ERROR_NOTICE;
     await globalLimiter(this.env).markChatExhausted();
     return LIMIT_NOTICE;
   }
@@ -255,9 +261,9 @@ export class ChatRoom extends AIChatAgent<Env> {
         lead,
         transcript: this.history()
       });
-    } catch (err) {
+    } catch (cause) {
       // Lead is already in SQLite; losing the email must not kill the chat.
-      console.error("opportunity email failed", err);
+      console.error("opportunity email failed", cause);
       kv.delete("lead_captured");
     }
   }
@@ -268,13 +274,13 @@ export class ChatRoom extends AIChatAgent<Env> {
 
     const kv = this.ctx.storage.kv;
     const now = Date.now();
-    const knownFirstSeen = kv.get("visitor_first_seen");
-    const firstSeen = typeof knownFirstSeen === "number" ? knownFirstSeen : now;
+    const knownFirstSeen = Timestamp.safeParse(kv.get("visitor_first_seen")).data;
+    const firstSeen = knownFirstSeen ?? now;
 
     if (visitor.country !== null) kv.put("visitor_country", visitor.country);
     if (visitor.ip !== null) kv.put("visitor_ip", visitor.ip);
     kv.put("visitor_last_seen", now);
-    if (typeof knownFirstSeen !== "number") kv.put("visitor_first_seen", now);
+    if (knownFirstSeen === undefined) kv.put("visitor_first_seen", now);
 
     this.mirrorToD1(
       this.env.CHAT_DB?.prepare(
@@ -335,7 +341,7 @@ export class ChatRoom extends AIChatAgent<Env> {
   private mirrorToD1(statement: D1PreparedStatement | undefined): void {
     if (!statement) return;
     this.ctx.waitUntil(
-      statement.run().catch((err: unknown) => console.error("d1 mirror failed", err))
+      statement.run().catch((cause: unknown) => console.error("d1 mirror failed", cause))
     );
   }
 }

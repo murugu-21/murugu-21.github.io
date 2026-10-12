@@ -3,15 +3,15 @@
 // loads, failures swallowed. Event names are snake_case `<surface>_<action>`.
 // PII: never pass anything a visitor typed (chat messages, search queries).
 
-import type { CaptureResult } from "posthog-js";
+import type { CaptureResult, PostHogConfig } from "posthog-js";
 
 import { onFirstInteraction } from "./first-interaction";
 
 interface PostHog {
   capture(event: string, properties?: Record<string, string>): void;
-  captureException(error: unknown, properties?: Record<string, string>): void;
+  captureException(cause: unknown, properties?: Record<string, string>): void;
   register(properties: Record<string, string>): void;
-  init(token: string, config: Record<string, unknown>): void;
+  init(token: string, config: Partial<PostHogConfig>): void;
   startSessionRecording(): void;
 }
 
@@ -84,9 +84,9 @@ export function track(event: string, props?: Record<string, string>): void {
 }
 
 /** For errors caught on purpose; uncaught ones are captured automatically. */
-export function reportError(error: unknown, props?: Record<string, string>): void {
+export function reportError(cause: unknown, props?: Record<string, string>): void {
   const cleaned = clean(props);
-  send(ph => ph.captureException(error, cleaned));
+  send(ph => ph.captureException(cause, cleaned));
 }
 
 const TRACKED = new WeakSet<object>();
@@ -125,13 +125,16 @@ const MASKED_PARAMS = ["q", "tag"];
 const REFERRERS = ["$referrer", "$session_entry_referrer", "$initial_referrer"];
 const MASKED_IN_QUERY = new RegExp(`([?&](?:${MASKED_PARAMS.join("|")})=)[^&#]*`, "g");
 
+// A hand-written guard rather than zod, which would add itself to every page's analytics bundle.
+const isString = (value: unknown): value is string => typeof value === "string";
+
 /** Masks the blog filter params in an event's referrers, as PostHog does in its URLs. */
 export function maskReferrers(event: CaptureResult | null): CaptureResult | null {
   for (const props of [event?.properties, event?.$set_once]) {
     if (!props) continue;
     for (const key of REFERRERS) {
       const value: unknown = props[key];
-      if (typeof value === "string") props[key] = value.replace(MASKED_IN_QUERY, "$1<masked>");
+      if (isString(value)) props[key] = value.replace(MASKED_IN_QUERY, "$1<masked>");
     }
   }
   return event;
@@ -229,8 +232,12 @@ export function scheduleSdkLoad(
  * Reads config from <meta> tags (`document.currentScript` is null in Astro's
  * module scripts) and schedules the SDK. Also buffers uncaught errors until
  * the SDK boots, since its own autocapture misses everything before that.
+ * Settles once the SDK has loaded, or at once on a page without config.
  */
-export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> {
+export function bootAnalytics({
+  root,
+  load = loadSdk
+}: { root?: Document; load?: SdkLoader } = {}): Promise<void> {
   const doc: Document | undefined = root ?? globalThis.document;
   if (!doc) return Promise.resolve();
   const meta = (name: string) =>
@@ -252,8 +259,7 @@ export function bootAnalytics(root?: Document, load?: SdkLoader): Promise<void> 
       win.removeEventListener("unhandledrejection", onRejection);
     };
   }
-  // Tests drive this synchronously; the browser waits for the visitor.
-  if (root || load) return initAnalytics(token, host, load);
-  scheduleSdkLoad(() => void initAnalytics(token, host), win ?? window);
-  return Promise.resolve();
+  return new Promise(resolve =>
+    scheduleSdkLoad(() => resolve(initAnalytics(token, host, load)), win ?? window)
+  );
 }

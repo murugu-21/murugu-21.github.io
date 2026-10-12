@@ -143,7 +143,7 @@ export function registerResources(server: McpServer, { services, clientIp }: Too
   const template = new ResourceTemplate(uriTemplate, { list });
   server.registerResource(name, template, metadata, async (uri, { slug }) => {
     spendRead(clientIp);
-    if (typeof slug !== "string") throw new ResourceNotFoundError(uri.href);
+    if (slug === undefined || Array.isArray(slug)) throw new ResourceNotFoundError(uri.href);
     const markdown = await runInRequest({
       services,
       program: PostsService.use(posts => posts.findBySlug(slug)),

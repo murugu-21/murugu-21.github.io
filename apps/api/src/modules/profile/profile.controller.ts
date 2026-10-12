@@ -8,12 +8,13 @@ import {
   Profile,
   SkillsResponse
 } from "@murugappan/contracts/api/dataset.ts";
+import type { JsonRecord } from "@murugappan/utils/json.ts";
 import { runInRequest } from "#src/app.module.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
 import { json } from "#src/common/http/json.ts";
 import { ProfileService } from "#src/modules/profile/profile.service.ts";
 
-const sliceHandler = (slice: z.ZodType) => (c: Context<AppEnv>) =>
+const sliceHandler = (slice: z.ZodType<JsonRecord>) => (c: Context<AppEnv>) =>
   runInRequest({
     services: c.var.services,
     program: ProfileService.use(profile => profile.slice(slice)),

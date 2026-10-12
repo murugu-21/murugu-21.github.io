@@ -1,8 +1,10 @@
 import { Effect } from "effect";
 import {
+  type CallToolRequestParams,
   type CallToolResult,
   Client,
-  StreamableHTTPClientTransport
+  StreamableHTTPClientTransport,
+  type Tool
 } from "@modelcontextprotocol/client";
 import { assert, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -12,7 +14,7 @@ import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
 import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
 import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
 import { MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
-import { JsonObject } from "@murugappan/utils/json.ts";
+import { JsonRecord, type JsonValue } from "@murugappan/utils/json.ts";
 import { takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
 import {
   ContactLimitReached,
@@ -52,7 +54,11 @@ async function connect({ ip = CLIENT_IP, layer, ...envOptions }: ClientOptions =
 }
 
 /** Calls a tool through the SDK client, so its input and output schema checks run too. */
-async function call(name: string, args: Record<string, unknown> = {}, options?: ClientOptions) {
+async function call(
+  name: string,
+  args: CallToolRequestParams["arguments"] = {},
+  options?: ClientOptions
+) {
   return (await connect(options)).callTool({ name, arguments: args });
 }
 
@@ -86,14 +92,21 @@ function parseReply(res: Response, text: string): JsonRpcReply {
   return JsonRpcReply.parse(JSON.parse(data.slice("data: ".length)));
 }
 
-async function send(
-  body: unknown,
-  init: {
-    headers?: Record<string, string>;
-    ip?: string;
-    method?: string;
-    env?: TestEnvOptions;
-  } = {}
+type SendInit = {
+  headers?: Record<string, string>;
+  ip?: string;
+  method?: string;
+  env?: TestEnvOptions;
+};
+
+function send(body: JsonValue, init: SendInit = {}) {
+  return sendText(JSON.stringify(body), init);
+}
+
+/** Posts `text` as it is, for a body that is not JSON. */
+async function sendText(
+  text: string,
+  init: SendInit = {}
 ): Promise<{ res: Response; json: JsonRpcReply }> {
   const res = await fetchWorker("/mcp", {
     method: init.method ?? "POST",
@@ -104,12 +117,7 @@ async function send(
       Accept: "application/json, text/event-stream",
       ...init.headers
     },
-    body:
-      init.method && init.method !== "POST"
-        ? undefined
-        : typeof body === "string"
-          ? body
-          : JSON.stringify(body)
+    body: init.method && init.method !== "POST" ? undefined : text
   });
   return { res, json: parseReply(res, await res.text()) };
 }
@@ -119,20 +127,33 @@ function resultOf<S extends z.ZodType>({ json }: { json: JsonRpcReply }, schema:
   return schema.parse(json.result);
 }
 
+type McpRequestHeaders = {
+  "MCP-Protocol-Version": string;
+  "Mcp-Method": string;
+  "Mcp-Name"?: string;
+};
+
+type RequestMeta = {
+  [META]: string;
+  [INFO]: { name: string; version: string };
+  // Optional so a test can leave it out.
+  [CAPS]?: JsonRecord;
+};
+
 /** A spec-conformant modern request: `_meta` in the body, mirrored in headers. */
 function modern(
   method: string,
-  params: Record<string, unknown> = {},
+  params: Record<string, JsonValue> = {},
   overrides: { version?: string } = {}
 ) {
   const version = overrides.version ?? LATEST_PROTOCOL_VERSION;
-  const name = params.name ?? params.uri;
-  const headers: Record<string, string> = {
+  const headers: McpRequestHeaders = {
     "MCP-Protocol-Version": version,
-    "Mcp-Method": method,
-    ...(typeof name === "string" ? { "Mcp-Name": name } : {})
+    "Mcp-Method": method
   };
-  const _meta: Record<string, unknown> = {
+  const name = z.string().safeParse(params.name ?? params.uri).data;
+  if (name !== undefined) headers["Mcp-Name"] = name;
+  const _meta: RequestMeta = {
     [META]: version,
     [INFO]: { name: "TestClient", version: "1.0.0" },
     [CAPS]: {}
@@ -148,16 +169,13 @@ function modern(
   };
 }
 
-function legacy(method: string, params: Record<string, unknown> = {}) {
+function legacy(method: string, params: Record<string, JsonValue> = {}) {
   return send({ jsonrpc: "2.0", id: 1, method, params });
 }
 
-function hasRef(node: unknown): boolean {
-  if (Array.isArray(node)) return node.some(hasRef);
-  if (typeof node === "object" && node !== null)
-    return Object.entries(node).some(([k, v]) => k === "$ref" || hasRef(v));
-  return false;
-}
+// Serialised, `"$ref":` can only be a key: stringify escapes quotes inside strings.
+const hasRef = (schema: Tool["inputSchema"] | Tool["outputSchema"]): boolean =>
+  JSON.stringify(schema ?? {}).includes('"$ref":');
 
 describe("the MCP endpoint", () => {
   it.each(["GET", "DELETE"])(
@@ -210,7 +228,7 @@ describe("the MCP endpoint", () => {
   });
 
   it("rejects a body that is not JSON with a parse error", async () => {
-    const { res, json } = await send("{not json", {
+    const { res, json } = await sendText("{not json", {
       headers: {
         "MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
         "Mcp-Method": "tools/list"
@@ -229,7 +247,7 @@ describe("the MCP endpoint", () => {
 
   const ping = { jsonrpc: "2.0", id: 1, method: "ping" };
   const listTools = modern("tools/list");
-  it.each<{ label: string; body: unknown; headers: Record<string, string>; status: number }>([
+  it.each<{ label: string; body: JsonValue; headers: Record<string, string>; status: number }>([
     {
       label: "a legacy body not labelled application/json",
       body: ping,
@@ -272,7 +290,7 @@ describe("modern request validation", () => {
   it.each<{
     label: string;
     method: string;
-    params: Record<string, unknown>;
+    params: Record<string, JsonValue>;
     edits: Record<string, string | undefined>;
   }>([
     {
@@ -319,11 +337,12 @@ describe("modern request validation", () => {
     }
   ])("rejects $label with HeaderMismatch", async ({ method, params, edits }) => {
     const { body, headers } = modern(method, params);
+    const edited = new Headers(headers);
     for (const [key, value] of Object.entries(edits)) {
-      if (value === undefined) delete headers[key];
-      else headers[key] = value;
+      if (value === undefined) edited.delete(key);
+      else edited.set(key, value);
     }
-    const { res, json } = await send(body, { headers });
+    const { res, json } = await send(body, { headers: Object.fromEntries(edited) });
     expect(res.status).toBe(400);
     expect(json.error?.code).toBe(-32020);
   });
@@ -521,7 +540,7 @@ describe("legacy (initialize-based) clients", () => {
       reply,
       z.looseObject({
         protocolVersion: z.string(),
-        capabilities: JsonObject,
+        capabilities: JsonRecord,
         serverInfo: z.object({ name: z.string() }),
         instructions: z.string()
       })
@@ -623,6 +642,7 @@ describe("MCP_TOOLS definitions", () => {
   });
 
   it("lists self-contained schemas with an object output", async () => {
+    expect(hasRef({ type: "object", properties: { link: { $ref: "#/$defs/Link" } } })).toBe(true);
     const { tools } = await (await connect()).listTools();
     for (const tool of tools) {
       expect(tool.outputSchema?.type, tool.name).toBe("object");
@@ -677,7 +697,7 @@ describe("dataset tools", () => {
 });
 
 describe("search_blog_posts", () => {
-  const search = async (args: Record<string, unknown>) =>
+  const search = async (args: CallToolRequestParams["arguments"]) =>
     (await call("search_blog_posts", args)).structuredContent;
 
   it("lists every post by default and applies limit", async () => {

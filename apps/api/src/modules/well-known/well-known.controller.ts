@@ -2,6 +2,8 @@
 
 import { Hono } from "hono";
 
+import type { JsonRecord } from "@murugappan/utils/json.ts";
+
 import type { AppEnv } from "#src/common/app-env.ts";
 import { publicOrigin } from "#src/common/http/public-origin.ts";
 import { readOnlyCorsMiddleware } from "#src/common/middleware/cors.middleware.ts";
@@ -12,7 +14,7 @@ const LINKSET_MEDIA_TYPE = "application/linkset+json";
 
 const CACHE = "public, max-age=3600";
 
-function document(body: unknown, contentType: string): Response {
+function document(body: JsonRecord, contentType: string): Response {
   return new Response(JSON.stringify(body, null, 2), {
     headers: {
       "Content-Type": `${contentType}; charset=utf-8`,

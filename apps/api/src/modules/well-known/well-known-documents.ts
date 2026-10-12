@@ -20,9 +20,10 @@ type LinksetEntry = { anchor: string } & Partial<
     LinkTarget[]
   >
 >;
+type Linkset = { linkset: LinksetEntry[] };
 
 /** RFC 9727 requires `service-desc` or `service-doc` per entry. */
-export function buildApiCatalog(origin: string): { linkset: LinksetEntry[] } {
+export function buildApiCatalog(origin: string): Linkset {
   const abs = (path: string): string => `${origin}${path}`;
   const target = ({ path, type, title }: { path: string; type: string; title: string }) => ({
     href: abs(path),

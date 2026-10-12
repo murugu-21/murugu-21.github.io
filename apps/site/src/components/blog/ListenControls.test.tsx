@@ -2,6 +2,8 @@ import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
+import type { JsonValue } from "@murugappan/utils/json.ts";
+
 import { ListenControls } from "./ListenControls.tsx";
 
 const POST = `<article>
@@ -34,7 +36,7 @@ const TIMINGS = {
 };
 
 // Only /blog/audio/hello.json exists, and only when `timings` is given.
-const serveAudio = (timings?: unknown) => {
+const serveAudio = (timings?: JsonValue) => {
   const requested: string[] = [];
   vi.stubGlobal("fetch", (url: string) => {
     requested.push(url);
@@ -233,6 +235,24 @@ it("lights the word a speech boundary points at, late in a long paragraph", asyn
   speech.word(13);
   await expect.poll(ui.word).toBe("way");
   expect(ui.block()).toBe("It is a long way to go.");
+});
+
+it("skips a title or block with nothing to say aloud", async () => {
+  serveAudio();
+  const speech = fakeSpeech();
+  const ui = await mount(`<article>
+    <header><h1 data-post-title>🎉</h1></header>
+    <section data-post-body><p>First.</p><p>🚀 ✨</p><p>Last.</p></section>
+  </article>`);
+
+  await userEvent.click(ui.listen);
+  speech.start();
+  await expect.poll(ui.readout).toBe("1/2¶1×");
+  speech.end();
+  speech.start();
+  speech.end();
+  await expect.element(ui.listen).toBeVisible();
+  expect(speech.texts()).toEqual(["First.", "Last."]);
 });
 
 it("stops on a speech synthesis error and when the reader leaves the page", async () => {

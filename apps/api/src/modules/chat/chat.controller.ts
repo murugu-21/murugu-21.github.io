@@ -1,17 +1,18 @@
 import { routeAgentRequest } from "agents";
 import { Hono, type Context } from "hono";
+import { z } from "zod";
 
 import type { AppEnv } from "#src/common/app-env.ts";
 import { siteOriginGuard } from "#src/modules/chat/site-origin.guard.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/visitor.ts";
 import { serveAsset } from "#src/modules/pages/assets.client.ts";
 
+const EdgeLocation = z.object({ country: z.string() });
+
 // `request.cf` exists only on the edge request, so forward country and IP as
 // headers. Delete before set so a client-sent value can't pass as ours.
 function withVisitorHeaders(c: Context<AppEnv>, request: Request): Request {
-  const { cf } = c.req.raw;
-  const edgeCountry =
-    cf && "country" in cf && typeof cf.country === "string" ? cf.country : undefined;
+  const edgeCountry = EdgeLocation.safeParse(c.req.raw.cf).data?.country;
   const country = edgeCountry ?? c.req.header("CF-IPCountry");
   const ip = c.req.header("CF-Connecting-IP");
 

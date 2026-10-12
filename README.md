@@ -60,6 +60,7 @@ Packages import each other by name and full file path, like `@murugappan/content
 - `bun run check:effect` runs Effect's diagnostics (`@effect/tsgo`) over `apps/api`. It fails on every Effect error and warning, and the plugin entry in `apps/api/tsconfig.json` raises more rules to errors. Without that entry it checks nothing and passes.
 - Each `@effect/tsgo` release supports only the TypeScript versions its README lists, so `typescript` is pinned to one of them. Renovate bumps the two in one PR, which fails until you set `typescript` to a version the new `@effect/tsgo` lists.
 - Oxlint and oxfmt cover TypeScript, JSON and Markdown. Biome lints `.astro` templates and lints and formats CSS, which oxc can't parse (`biome.jsonc`). Prettier formats `.astro` templates and sorts their Tailwind classes until oxfmt can.
+- `tooling/oxlint/anti-slop/` is a vendored subset of [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop), owned and linted as repo code. `UPSTREAM.md` there names the commit it came from, says how to copy another rule in, and lists what differs from upstream.
 - Astro deletes a line break beside a tag or `{expression}`, so `on\n<a>` renders as `on<a>`. Write the space as `{" "}` at the end of the line. `tooling/astro-whitespace.test.ts` fails on a line break that joins two words and on a space just inside an inline element.
 - In CSS, use the `--font-fira-code` variable, never `"Fira Code"`. The build renames the font.
 

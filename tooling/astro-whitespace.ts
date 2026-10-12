@@ -53,13 +53,27 @@ const BLOCK_ELEMENTS = new Set([
 const ENDS_WITH_OPENER = /[([{“‘"'/]$/;
 const STARTS_WITH_CLOSER = /^[.,;:!?)\]}”’"'/%-]/;
 
-type Node = Record<string, unknown>;
+// The compiler's ESTree AST, as JSON.
+type AstValue = string | number | boolean | null | AstValue[] | Node;
+type Node = { [key: string]: AstValue };
 
 export type SpacingMistake = { line: number; text: string; kind: "joins words" | "pads element" };
 
 type Finding = { node: Node; kind: SpacingMistake["kind"]; label?: string };
 
-const isNode = (value: unknown): value is Node => typeof value === "object" && value !== null;
+const isNode = (value: AstValue | undefined): value is Node =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+// The node fields this file reads, with the type each holds when present.
+const FIELD_TYPES = { value: "string", name: "string", start: "number" } as const;
+type Fields = {
+  [K in keyof typeof FIELD_TYPES]: { string: string; number: number }[(typeof FIELD_TYPES)[K]];
+};
+
+const hasField = <K extends keyof Fields>(
+  node: Node | undefined,
+  key: K
+): node is Node & Pick<Fields, K> => typeof node?.[key] === FIELD_TYPES[key];
 
 const child = (node: Node | undefined, key: string): Node | undefined => {
   const value = node?.[key];
@@ -67,19 +81,19 @@ const child = (node: Node | undefined, key: string): Node | undefined => {
 };
 
 const textOf = (node: Node | undefined): string | undefined =>
-  node?.type === "JSXText" && typeof node.value === "string" ? node.value : undefined;
+  node?.type === "JSXText" && hasField(node, "value") ? node.value : undefined;
 
 const elementName = (node: Node | undefined): string | undefined => {
-  const name = child(child(node, "openingElement"), "name")?.name;
-  return typeof name === "string" ? name : undefined;
+  const name = child(child(node, "openingElement"), "name");
+  return hasField(name, "name") ? name.name : undefined;
 };
 
 /** True when the node renders beside its neighbours on the same line. */
 function isInline(node: Node | undefined): boolean {
   if (node?.type === "JSXExpressionContainer") {
     // {" "} is the explicit space that survives compression.
-    const value = child(node, "expression")?.value;
-    return !(typeof value === "string" && value.trim() === "");
+    const expression = child(node, "expression");
+    return !(hasField(expression, "value") && expression.value.trim() === "");
   }
   const name = node?.type === "JSXElement" ? elementName(node) : undefined;
   return name !== undefined && !BLOCK_ELEMENTS.has(name);
@@ -129,7 +143,7 @@ function joinedWords(kids: Node[]): Finding[] {
 }
 
 /** Walks the template AST, in source order, for padded elements and joined words. */
-function collectFindings(value: unknown, inExpression: boolean): Finding[] {
+function collectFindings(value: AstValue, inExpression: boolean): Finding[] {
   if (Array.isArray(value)) return value.flatMap(item => collectFindings(item, inExpression));
   // A <pre> keeps its whitespace.
   if (!isNode(value) || elementName(value) === "pre") return [];
@@ -148,7 +162,7 @@ function collectFindings(value: unknown, inExpression: boolean): Finding[] {
 
 function toMistake(source: string, { node, kind, label }: Finding): SpacingMistake {
   const text = textOf(node) ?? "";
-  if (typeof node.start !== "number") throw new Error(`no position for ${JSON.stringify(text)}`);
+  if (!hasField(node, "start")) throw new Error(`no position for ${JSON.stringify(text)}`);
   const firstWord = node.start + text.length - text.trimStart().length;
   const line = source.slice(0, firstWord).split("\n").length;
   return { line, text: label ?? text.trim().slice(0, 40), kind };

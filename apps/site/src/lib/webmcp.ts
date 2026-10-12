@@ -5,6 +5,14 @@ import type { WebMCP } from "webmcp-types";
 
 const mc = document.modelContext;
 
+// Arguments come from the agent, so each tool checks its own instead of trusting inputSchema.
+const isSlug = (value: unknown): value is string =>
+  typeof value === "string" && /^[a-z0-9-]+$/.test(value);
+
+// Site-relative only: "//host" would be scheme-relative and leave the site.
+const isSitePath = (value: unknown): value is string =>
+  typeof value === "string" && value.startsWith("/") && !value.startsWith("//");
+
 if (mc) {
   const fetchText = async (path: string): Promise<string> => {
     const res = await fetch(path);
@@ -43,9 +51,8 @@ if (mc) {
         },
         required: ["slug"]
       },
-      execute: async args => {
-        const slug = typeof args.slug === "string" ? args.slug : "";
-        if (!/^[a-z0-9-]+$/.test(slug)) return "Invalid slug. Call list_blog_posts to find slugs.";
+      execute: async ({ slug }) => {
+        if (!isSlug(slug)) return "Invalid slug. Call list_blog_posts to find slugs.";
         try {
           return await fetchText(`/blog/${slug}/index.md`);
         } catch {
@@ -67,11 +74,8 @@ if (mc) {
         },
         required: ["path"]
       },
-      execute: async args => {
-        const path = typeof args.path === "string" ? args.path : "";
-        // same-origin only: site-relative, and "//host" would be scheme-relative
-        if (!path.startsWith("/") || path.startsWith("//"))
-          return "Only site-relative paths starting with '/' are allowed.";
+      execute: async ({ path }) => {
+        if (!isSitePath(path)) return "Only site-relative paths starting with '/' are allowed.";
         location.assign(path);
         return `Navigating to ${path}`;
       }
@@ -84,8 +88,8 @@ if (mc) {
 
   // Tools live as long as the document, bfcache included, so none needs an abort signal.
   for (const tool of tools) {
-    register(tool).catch((error: unknown) => {
-      console.warn(`[webmcp] couldn't register ${tool.name}`, error);
+    register(tool).catch((cause: unknown) => {
+      console.warn(`[webmcp] couldn't register ${tool.name}`, cause);
     });
   }
 }

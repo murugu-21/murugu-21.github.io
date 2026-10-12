@@ -79,9 +79,11 @@ export function pendingRenders({
 }): { job: Job; variant: Variant; path: string }[] {
   return jobs.flatMap(job => {
     const lightStale = force || !isCurrent(variantPath(job, LIGHT_SVG));
-    return VARIANTS.map(variant => ({ job, variant, path: variantPath(job, variant) })).filter(
-      ({ variant, path }) =>
-        force || (variant.kind === "png" ? lightStale || !exists(path) : !isCurrent(path))
-    );
+    return VARIANTS.flatMap(variant => {
+      const path = variantPath(job, variant);
+      const pending =
+        force || (variant.kind === "png" ? lightStale || !exists(path) : !isCurrent(path));
+      return pending ? [{ job, variant, path }] : [];
+    });
   });
 }

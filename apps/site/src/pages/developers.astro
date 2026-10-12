@@ -1,5 +1,6 @@
 ---
 import type { Thing } from "schema-dts";
+import { z } from "zod";
 // Endpoint table and tool example are generated from the served OpenAPI
 // document (packages/contracts/api/openapi.ts), so they can't drift from the API.
 
@@ -11,7 +12,7 @@ import ScrollTop from "#src/components/ScrollTop.astro";
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { PERSON_ID } from "#src/lib/site.ts";
 import { socialMediaLinks } from "@murugappan/content/portfolio.ts";
-import { OPENAPI_DOCUMENT } from "@murugappan/contracts/api/openapi.ts";
+import { JsonSchema, OPENAPI_DOCUMENT } from "@murugappan/contracts/api/openapi.ts";
 import {
   CONTACT_DAILY_GLOBAL,
   CONTACT_DAILY_PER_CLIENT
@@ -53,8 +54,9 @@ const operations = Object.entries(OPENAPI_DOCUMENT.paths).flatMap(([path, item])
   }))
 );
 
-const postSlugSchema = OPENAPI_DOCUMENT.components.schemas.PostSummary.properties?.slug;
-if (!postSlugSchema) throw new Error("PostSummary has no slug property in the OpenAPI document");
+const postSlugSchema = z
+  .object({ PostSummary: z.object({ properties: z.object({ slug: JsonSchema }) }) })
+  .parse(OPENAPI_DOCUMENT.components.schemas).PostSummary.properties.slug;
 const exampleOp = operations.find(o => o.operationId === "getBlogPost");
 if (!exampleOp) throw new Error("getBlogPost is missing from the OpenAPI document");
 const toolExample = {

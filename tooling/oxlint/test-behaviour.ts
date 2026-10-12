@@ -3,6 +3,7 @@
 // independent expected value. The rule is a heuristic by design. It catches the
 // shapes syntax can decide and leaves the rest (and the documented exceptions)
 // to an `oxlint-disable` with a reason.
+import { isStringLiteral } from "./anti-slop/ast.ts";
 import type { NodeOf, Plugin, Rule } from "./plugin-types.ts";
 
 type Context = Parameters<NonNullable<Rule["create"]>>[0];
@@ -283,8 +284,7 @@ type FileModel = Facts & { subjects: Set<string> };
 
 const isLocalImport = (node: Node) =>
   node.type === "ImportExpression" &&
-  node.source.type === "Literal" &&
-  typeof node.source.value === "string" &&
+  isStringLiteral(node.source) &&
   isLocalSource(node.source.value);
 
 // `<Widget />` renders, and so calls, the component it names.
@@ -405,7 +405,7 @@ type Candidate = { assertion: Assertion; expected: Node; scope: Node; file: File
 
 // The AGENTS.md shapes of an assertion that still passes when the code under
 // test returns undefined.
-const WEAK_SHAPES: Record<string, (candidate: Candidate) => boolean> = {
+const WEAK_SHAPES = {
   // `toBeDefined()`, `not.toBe(wrong)`
   weakMatcher: ({ assertion }) => assertion.negated || !isValueMatcher(assertion),
   // `toEqual([])`, `toBe(undefined)`
@@ -416,7 +416,7 @@ const WEAK_SHAPES: Record<string, (candidate: Candidate) => boolean> = {
     isZero(expected),
   constantPin: ({ assertion, file }) => isConstantPin(assertion.subject, file),
   selfReferential: ({ expected, scope, file }) => callsSubject({ node: expected, scope, file })
-};
+} satisfies Record<string, (candidate: Candidate) => boolean>;
 
 function isStrong({ assertion, scope }: Found, file: FileModel) {
   if (assertion.onElement && !assertion.negated && RENDERED_STATE_MATCHERS.has(assertion.matcher)) {
@@ -485,9 +485,7 @@ function setAll<V>(map: Map<string, V>, entries: [string, V][]) {
 
 // `x["emailOnce"]`, a member read by a string key that has a dot form.
 function stringKeyOf({ computed, property }: NodeOf<"MemberExpression">) {
-  if (!computed || property.type !== "Literal" || typeof property.value !== "string") {
-    return undefined;
-  }
+  if (!computed || !isStringLiteral(property)) return undefined;
   // `x["content-type"]` has no dot form, so it isn't dodging `private`.
   return /^[A-Za-z_$][\w$]*$/.test(property.value) ? property.value : undefined;
 }

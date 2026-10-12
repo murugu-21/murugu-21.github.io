@@ -1,11 +1,13 @@
 // Site content comes from the real sources, bundled through virtual:content/posts as in production.
 import { env } from "cloudflare:workers";
 import { Effect, Layer } from "effect";
+import type { ClientResponse } from "hono/client";
 import { testClient } from "hono/testing";
 import { assert, expect, onTestFinished, vi } from "vitest";
 import { z } from "zod";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import type { JsonValue } from "@murugappan/utils/json.ts";
 import { appLayer, type AppLayer } from "#src/app.module.ts";
 import { createApp } from "#src/app.ts";
 import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
@@ -19,19 +21,10 @@ export const NOT_FOUND_HTML = "<!doctype html><h1>404</h1>";
 /** The blog's styled 404 page (blog/404/index.html in the build). */
 export const BLOG_NOT_FOUND_HTML = "<!doctype html><h1>SDE Journey: 404</h1>";
 
-/** Overriding a path with null makes the assets binding 404 it. */
-function siteFiles(overrides: Record<string, string | null> = {}): Record<string, string | null> {
-  return {
-    "/404": NOT_FOUND_HTML,
-    "/blog/404/": BLOG_NOT_FOUND_HTML,
-    ...overrides
-  };
-}
-
 function assetPath(input: RequestInfo | URL): string {
-  if (typeof input === "string") return new URL(input).pathname;
   if (input instanceof URL) return input.pathname;
-  return new URL(input.url).pathname;
+  if (input instanceof Request) return new URL(input.url).pathname;
+  return new URL(input).pathname;
 }
 
 /** A Fetcher binding answering with `fetch`; no test opens a socket through one. */
@@ -44,11 +37,16 @@ export function fakeFetcher(fetch: (input: RequestInfo | URL) => Promise<Respons
   };
 }
 
+/** Overriding a path with null makes the assets binding 404 it. */
 export function fakeAssets(overrides: Record<string, string | null> = {}): Fetcher {
-  const files = siteFiles(overrides);
+  const files = new Map([
+    ["/404", NOT_FOUND_HTML],
+    ["/blog/404/", BLOG_NOT_FOUND_HTML],
+    ...Object.entries(overrides)
+  ]);
   return fakeFetcher(input => {
     const path = assetPath(input);
-    const body = files[path];
+    const body = files.get(path);
     // A miss is an empty 404, which is what the real binding returns under
     // assets.not_found_handling: "none" (see wrangler.jsonc).
     if (body == null) return Promise.resolve(new Response(null, { status: 404 }));
@@ -73,7 +71,9 @@ export type TestEnvOptions = {
   email?: SendEmail;
 };
 
-export function recordingEmail(): { email: SendEmail; sent: EmailMessageBuilder[] } {
+type RecordingEmail = { email: SendEmail; sent: EmailMessageBuilder[] };
+
+export function recordingEmail(): RecordingEmail {
   const sent: EmailMessageBuilder[] = [];
   const send = async (message: EmailMessage | EmailMessageBuilder) => {
     if (!("subject" in message)) throw new Error("recordingEmail only records message builders");
@@ -83,8 +83,17 @@ export function recordingEmail(): { email: SendEmail; sent: EmailMessageBuilder[
   return { email: { send }, sent };
 }
 
-export function visitorStorage(instance: ChatRoom): Record<string, unknown> {
-  return Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" }));
+const VisitorStorage = z.object({
+  visitor_country: z.string().optional(),
+  visitor_ip: z.string().optional(),
+  visitor_first_seen: z.number(),
+  visitor_last_seen: z.number()
+});
+
+export function visitorStorage(instance: ChatRoom) {
+  return VisitorStorage.parse(
+    Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" }))
+  );
 }
 
 /** The pool's env plus the bindings apps/api/test/wrangler.jsonc leaves out. */
@@ -137,12 +146,12 @@ export function sharedLimiter() {
 }
 
 /** Every fetch answers `body`, as DeepSeek's balance endpoint would. Undo with vi.unstubAllGlobals(). */
-export function stubDeepseekBalance(body: unknown, status = 200): void {
+export function stubDeepseekBalance(body: JsonValue, status = 200): void {
   vi.stubGlobal("fetch", async () => new Response(JSON.stringify(body), { status }));
 }
 
 /** A response from `fetchWorker` or `apiClient`. */
-export type JsonBody = { json(): Promise<unknown> };
+export type JsonBody = Response | ClientResponse<unknown>;
 
 export async function readJson<S extends z.ZodType>(res: JsonBody, schema: S): Promise<z.infer<S>> {
   return schema.parse(await res.json());
@@ -194,9 +203,12 @@ export const roomName = (label: string) => label.padEnd(21, "-");
  * A real WebSocket to a chat room through the worker, from the site's own page, recording every
  * frame it receives.
  */
-export async function openRoom(room: string, headers: Record<string, string> = {}) {
+type RoomRequest = { headers?: Record<string, string>; cf?: RequestInit["cf"] };
+
+export async function openRoom(room: string, { headers, cf }: RoomRequest = {}) {
   const response = await fetchWorker(`/agents/chat-room/${room}`, {
-    headers: { Upgrade: "websocket", Origin: SITE_ORIGIN, ...headers }
+    headers: { Upgrade: "websocket", Origin: SITE_ORIGIN, ...headers },
+    cf
   });
   expect(response.status).toBe(101);
   const socket = response.webSocket;
@@ -210,8 +222,8 @@ export async function openRoom(room: string, headers: Record<string, string> = {
 }
 
 /** Connects to a room, waits for the agent to introduce itself, then hangs up. */
-export async function connectRoom(room: string, headers: Record<string, string> = {}) {
-  const { socket, frames, stub } = await openRoom(room, headers);
+export async function connectRoom(room: string, request: RoomRequest = {}) {
+  const { socket, frames, stub } = await openRoom(room, request);
   await vi.waitFor(() => assert(frames.length >= 2, "the room sent nothing"), { timeout: 2000 });
   socket.close();
   return { stub };
@@ -287,5 +299,8 @@ export async function streamedChunks(
 export const replyText = (chunks: Chunk[]) =>
   chunks.flatMap(c => (c.type === "text-delta" && c.delta ? [c.delta] : [])).join("");
 
-export const noticesIn = (chunks: Chunk[]) =>
-  chunks.filter(c => c.type === "data-notice").map(c => c.data);
+const dataOf = (type: string) => (chunks: Chunk[]) =>
+  chunks.flatMap(c => (c.type === type ? [c.data] : []));
+
+export const noticesIn = dataOf("data-notice");
+export const activitiesIn = dataOf("data-activity");

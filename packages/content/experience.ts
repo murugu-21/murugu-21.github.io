@@ -103,16 +103,14 @@ export function periodBounds(period: string): { start: YearMonth; end: YearMonth
 const isoMonth = ({ year, month }: YearMonth) =>
   `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
 
+type PeriodDates = { startDate: string | null; endDate: string | null; current: boolean };
+
 /**
  * ISO 8601 year-months for the API. A start that doesn't parse yields nulls throughout, because
  * a wrong date is worse for an agent than an absent one. Unlike periodBounds, a parsed start
  * survives an end that doesn't parse ("June 2019 – sometime" keeps 2019-06).
  */
-export function parsePeriod(period: string): {
-  startDate: string | null;
-  endDate: string | null;
-  current: boolean;
-} {
+export function parsePeriod(period: string): PeriodDates {
   const split = splitPeriod(period);
   if (!split) return { startDate: null, endDate: null, current: false };
   return {
@@ -144,9 +142,10 @@ export function formatDuration(months: number): string {
 /** Months covered by the union of the given ranges (overlaps counted once). */
 export function totalExperienceMonths(periods: string[], now: YearMonth = currentMonth()): number {
   const ranges = periods
-    .map(periodBounds)
-    .filter((b): b is NonNullable<typeof b> => b !== null)
-    .map((b): [number, number] => [toIndex(b.start), toIndex(b.end ?? now)])
+    .flatMap((period): Array<[number, number]> => {
+      const bounds = periodBounds(period);
+      return bounds ? [[toIndex(bounds.start), toIndex(bounds.end ?? now)]] : [];
+    })
     .sort((a, b) => a[0] - b[0]);
   let total = 0;
   let cur: [number, number] | null = null;

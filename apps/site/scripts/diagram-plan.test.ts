@@ -35,16 +35,14 @@ describe("diagramJobs", () => {
 
 describe("orphans", () => {
   it("lists rendered files no fence expects, in posts that have a diagrams folder", () => {
-    const listing: Record<string, string[]> = {
-      "/blog/a/diagrams": ["aaa.light.svg", "old.light.svg", "old.png"]
-    };
+    const listing = new Map([["/blog/a/diagrams", ["aaa.light.svg", "old.light.svg", "old.png"]]]);
     expect(
       orphans({
         expected: new Map([
           ["/blog/a", new Set(["/blog/a/diagrams/aaa.light.svg"])],
           ["/blog/b", new Set<string>()]
         ]),
-        listDir: dir => listing[dir] ?? []
+        listDir: dir => listing.get(dir) ?? []
       })
     ).toEqual(["/blog/a/diagrams/old.light.svg", "/blog/a/diagrams/old.png"]);
   });

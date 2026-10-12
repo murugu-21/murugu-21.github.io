@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { afterEach, assert, beforeAll, describe, expect, it, vi } from "vitest";
 import { parseHTML } from "linkedom";
+import type { PostHogConfig } from "posthog-js";
 import { z } from "zod";
 
 import {
@@ -17,8 +18,8 @@ const fakeSdk = () => {
   const sdk = {
     capture: vi.fn<(event: string, properties?: Record<string, string>) => void>(),
     register: vi.fn<(properties: Record<string, string>) => void>(),
-    captureException: vi.fn<(error: unknown, properties?: Record<string, string>) => void>(),
-    init: vi.fn<(token: string, config: Record<string, unknown>) => void>(),
+    captureException: vi.fn<(cause: unknown, properties?: Record<string, string>) => void>(),
+    init: vi.fn<(token: string, config: Partial<PostHogConfig>) => void>(),
     startSessionRecording: vi.fn<() => void>()
   };
   return { sdk, ...sdk };
@@ -302,35 +303,63 @@ describe("initAnalytics", () => {
 });
 
 describe("bootAnalytics", () => {
-  const metas = `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev">`;
   const page = (head: string) => doc(`<html><head>${head}</head><body></body></html>`);
+  const configured = () => {
+    const d = page(
+      `<meta name="ph-token" content="phc_test"><meta name="ph-host" content="https://e.example.dev/">`
+    );
+    const win = d.defaultView;
+    assert(win, "fixture page has no window");
+    return { d, win };
+  };
 
-  it("reads the token and host from the page's meta tags, and no-ops without them", async () => {
-    const { sdk, init } = fakeSdk();
+  it("keeps the SDK out of the page until the visitor's first input, then sends events", async () => {
+    const { sdk, init, capture } = fakeSdk();
+    let loads = 0;
+    const load = async () => {
+      loads++;
+      return sdk;
+    };
     const ph = await fresh();
     // local dev and CI pages carry no meta tags
-    await ph.bootAnalytics(page(""), async () => sdk);
-    await ph.bootAnalytics(page(metas), async () => sdk);
+    await ph.bootAnalytics({ root: page(""), load });
+    const { d, win } = configured();
+    // SiteScripts.astro passes no root, so the page's own document is read.
+    vi.stubGlobal("document", d);
+    try {
+      const booting = ph.bootAnalytics({ load });
+      expect(loads).toBe(0);
+      win.dispatchEvent(new win.Event("pointerdown"));
+      await booting;
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(loads).toBe(1);
     expect(init.mock.calls.map(([token, config]) => [token, config.api_host])).toEqual([
       ["phc_test", "https://e.example.dev"]
     ]);
+    ph.track("cta_click", { where: "hero" });
+    expect(capture.mock.calls).toEqual([["cta_click", { where: "hero" }]]);
   });
 
   it("buffers errors and rejections thrown before the SDK boots and replays them", async () => {
     const { sdk, captureException } = fakeSdk();
     const { promise: gate, resolve: release } = Promise.withResolvers<void>();
-    const d = page(metas);
-    const win = d.defaultView;
-    assert(win, "fixture page has no window");
+    const { d, win } = configured();
     const ph = await fresh();
-    const booting = ph.bootAnalytics(d, async () => {
-      await gate;
-      return sdk;
+    const booting = ph.bootAnalytics({
+      root: d,
+      load: async () => {
+        await gate;
+        return sdk;
+      }
     });
     const err = new Error("hydration failed");
     const reason = new Error("fetch failed");
     win.dispatchEvent(Object.assign(new win.Event("error"), { error: err }));
     win.dispatchEvent(Object.assign(new win.Event("unhandledrejection"), { reason }));
+    win.dispatchEvent(new win.Event("pointerdown"));
     release();
     await booting;
     expect(captureException.mock.calls).toEqual([
