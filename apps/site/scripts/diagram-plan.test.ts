@@ -1,6 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { ProtocolError } from "puppeteer";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { diagramJobs, orphans, pendingRenders, variantLabel, type Job } from "./diagram-plan.ts";
+import {
+  diagramJobs,
+  orphans,
+  pendingRenders,
+  retryRenders,
+  variantLabel,
+  type Job,
+  type Render
+} from "./diagram-plan.ts";
 
 describe("diagramJobs", () => {
   it("makes a job per fence and expects a light SVG, a dark SVG and a PNG for each", async () => {
@@ -92,5 +101,53 @@ describe("pendingRenders", () => {
       "dark /blog/a/diagrams/current.dark.svg",
       "png /blog/a/diagrams/current.png"
     ]);
+  });
+});
+
+describe("retryRenders", () => {
+  const job: Job = { post: "/blog/a/index.md", index: 0, source: "graph TD; A-->B", hash: "aaa" };
+  const renders: Render[] = ["a", "b", "c"].map(path => ({ job, variant: { kind: "png" }, path }));
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("retries a timed-out browser with only the renders it has not written yet", async () => {
+    const warnings: unknown[][] = [];
+    vi.spyOn(console, "warn").mockImplementation((...args) => void warnings.push(args));
+    const batches: string[][] = [];
+    await retryRenders({
+      renders,
+      attempts: 3,
+      run: async batch => {
+        batches.push(batch.renders.map(({ path }) => path));
+        if (batches.length > 1) return;
+        batch.written.add("a");
+        throw new ProtocolError("Page.captureScreenshot timed out.");
+      }
+    });
+    expect(batches).toEqual([
+      ["a", "b", "c"],
+      ["b", "c"]
+    ]);
+  });
+
+  it("fails at once on a non-browser error, and after the last attempt on a browser one", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let calls = 0;
+    const failWith = (error: Error) => async () => {
+      calls++;
+      throw error;
+    };
+    await expect(
+      retryRenders({ renders, attempts: 3, run: failWith(new Error("Parse error on line 2")) })
+    ).rejects.toThrow("Parse error on line 2");
+    expect(calls).toBe(1);
+
+    calls = 0;
+    await expect(
+      retryRenders({ renders, attempts: 3, run: failWith(new ProtocolError("timed out")) })
+    ).rejects.toThrow("timed out");
+    expect(calls).toBe(3);
   });
 });
