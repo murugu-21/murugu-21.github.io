@@ -1,6 +1,7 @@
 // Which files render-mermaid.ts should write and which it should prune: per
 // fence a light and a dark SVG, plus a light PNG for RSS.
 import { dirname, join } from "node:path";
+import { ProtocolError } from "puppeteer";
 
 import {
   DIAGRAMS_DIR,
@@ -22,6 +23,12 @@ export interface Job {
 export type Variant = { kind: "svg"; theme: DiagramTheme } | { kind: "png" };
 const LIGHT_SVG: Variant = { kind: "svg", theme: "light" };
 const VARIANTS: readonly Variant[] = [LIGHT_SVG, { kind: "svg", theme: "dark" }, { kind: "png" }];
+
+export interface Render {
+  job: Job;
+  variant: Variant;
+  path: string;
+}
 
 const variantPath = (job: Job, variant: Variant) =>
   join(
@@ -76,7 +83,7 @@ export function pendingRenders({
   force: boolean;
   isCurrent: (path: string) => boolean;
   exists: (path: string) => boolean;
-}): { job: Job; variant: Variant; path: string }[] {
+}): Render[] {
   return jobs.flatMap(job => {
     const lightStale = force || !isCurrent(variantPath(job, LIGHT_SVG));
     return VARIANTS.flatMap(variant => {
@@ -86,4 +93,30 @@ export function pendingRenders({
       return pending ? [{ job, variant, path }] : [];
     });
   });
+}
+
+// Retries only a ProtocolError (a browser call that timed out or a browser that died), each
+// time with the renders not yet written, so a Mermaid syntax error still fails at once.
+export async function retryRenders({
+  renders,
+  attempts,
+  run
+}: {
+  renders: Render[];
+  attempts: number;
+  run: (batch: { renders: Render[]; written: Set<string> }) => Promise<void>;
+}): Promise<void> {
+  const written = new Set<string>();
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await run({ renders: renders.filter(({ path }) => !written.has(path)), written });
+      return;
+    } catch (cause) {
+      if (attempt >= attempts || !(cause instanceof ProtocolError)) throw cause;
+      console.warn(
+        `render-mermaid: ${cause.message.split("\n")[0]} Retrying in a fresh browser ` +
+          `(attempt ${attempt + 1} of ${attempts}).`
+      );
+    }
+  }
 }

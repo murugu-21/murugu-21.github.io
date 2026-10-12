@@ -21,7 +21,15 @@ import { jsonString } from "@murugappan/utils/json.ts";
 import { FIRA_CODE_FEATURES, FIRA_CODE_VF } from "./fira-code-subset.ts";
 import { launchBrowser } from "./launch-browser.ts";
 import { DIAGRAMS_DIR, type DiagramTheme } from "#src/lib/blog/mermaid-diagrams.ts";
-import { type Job, diagramJobs, orphans, pendingRenders, variantLabel } from "./diagram-plan.ts";
+import {
+  type Job,
+  type Render,
+  diagramJobs,
+  orphans,
+  pendingRenders,
+  retryRenders,
+  variantLabel
+} from "./diagram-plan.ts";
 import {
   THEMES,
   cssUrl,
@@ -72,6 +80,10 @@ const isCurrent = (path: string) =>
   existsSync(path) && stampOf(readFileSync(path, "utf8")) === STAMP;
 
 const RENDER_WORKERS = 4;
+// On CI, Chrome sometimes stops answering (a screenshot that never returns) and stalls the
+// renders behind it, which take 1-3 s each, so time out early and retry in a fresh browser.
+const PROTOCOL_TIMEOUT_MS = 30_000;
+const RENDER_ATTEMPTS = 3;
 // 2x for high-density screens; wider than any diagram so none is scaled down
 const PNG_VIEWPORT = { width: 4000, height: 900, deviceScaleFactor: 2 };
 // mermaid-cli shrinks the viewport to the diagram's right edge, ignoring the
@@ -126,6 +138,35 @@ async function renderPng({ browser, job }: { browser: Browser; job: Job }): Prom
     .toBuffer();
 }
 
+async function renderAll({
+  renders,
+  written
+}: {
+  renders: Render[];
+  written: Set<string>;
+}): Promise<void> {
+  await using browser = await launchBrowser("render-mermaid", {
+    protocolTimeout: PROTOCOL_TIMEOUT_MS
+  });
+  // Each render opens its own page, so a few workers share one queue.
+  const queue = renders.values();
+  const worker = async () => {
+    for (const { job, variant, path } of queue) {
+      const file =
+        variant.kind === "svg"
+          ? await renderSvg({ browser, job, theme: variant.theme })
+          : await renderPng({ browser, job });
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, file);
+      written.add(path);
+      console.log(
+        `rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${variantLabel(variant)})`
+      );
+    }
+  };
+  await Promise.all(Array.from({ length: RENDER_WORKERS }, worker));
+}
+
 async function main(): Promise<void> {
   const posts = globSync("**/index.md", { cwd: CONTENT_DIR })
     .sort()
@@ -151,23 +192,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  await using browser = await launchBrowser("render-mermaid");
-  // Each render opens its own page, so a few workers share one queue.
-  const queue = missing.values();
-  const worker = async () => {
-    for (const { job, variant, path } of queue) {
-      const file =
-        variant.kind === "svg"
-          ? await renderSvg({ browser, job, theme: variant.theme })
-          : await renderPng({ browser, job });
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, file);
-      console.log(
-        `rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${variantLabel(variant)})`
-      );
-    }
-  };
-  await Promise.all(Array.from({ length: RENDER_WORKERS }, worker));
+  await retryRenders({ renders: missing, attempts: RENDER_ATTEMPTS, run: renderAll });
   console.log(`render-mermaid: ${missing.length} files written for ${jobs.length} diagrams`);
 }
 
