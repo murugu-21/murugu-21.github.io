@@ -46,8 +46,8 @@
     "@commitlint/cli": "^21.2.3",
     "@effect/tsgo": "0.51.1",
     "@types/node": "^26.6.5",
-    "@vitest/browser-playwright": "5.0.3",
-    "@vitest/coverage-istanbul": "5.0.3",
+    "@vitest/browser-playwright": "5.0.4",
+    "@vitest/coverage-istanbul": "5.0.4",
     "jiti": "^2.7.0",
     "knip": "^6.41.0",
     "oxlint-tailwindcss": "^1.16.0",
@@ -58,11 +58,11 @@
     "typescript": "7.1.0-dev.20261006.1",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
     "vite-plus": "1.1.0",
-    "vitest": "5.0.3",
+    "vitest": "5.0.4",
     "yaml": "^2.9.1"
   },
   "overrides": {
     "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
-    "vitest": "5.0.3"
+    "vitest": "5.0.4"
   }
 }

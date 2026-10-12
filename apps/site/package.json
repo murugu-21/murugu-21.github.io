@@ -58,7 +58,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/sanitize-html": "^2.16.2",
-    "@vitest/browser-playwright": "5.0.3",
+    "@vitest/browser-playwright": "5.0.4",
     "eslint": "^10.12.0",
     "fast-check": "^4.10.2",
     "firacode": "6.2.0",
@@ -71,7 +71,7 @@
     "subset-font": "^2.9.0",
     "tailwindcss": "^4.3.3",
     "vfile": "^6.0.3",
-    "vitest": "5.0.3",
+    "vitest": "5.0.4",
     "vitest-browser-react": "^2.3.0",
     "webmcp-types": "^0.1.10"
   }
