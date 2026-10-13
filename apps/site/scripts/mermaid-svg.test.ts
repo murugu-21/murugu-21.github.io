@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { cssUrl, finishSvg, renderOptions, stampOf, usedText } from "./mermaid-svg.ts";
 

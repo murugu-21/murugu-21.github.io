@@ -8,6 +8,11 @@
       "groupName": "typescript"
     },
     {
+      "description": "Temporary until TypeScript 7.1 is released. The 7.1 nightlies move daily and @effect/tsgo accepts only the nightlies it lists, so pin typescript by hand to one of those when an @effect/tsgo update lands.",
+      "matchPackageNames": ["typescript"],
+      "enabled": false
+    },
+    {
       "description": "Insiders build for tailwindlabs/prettier-plugin-tailwindcss#473 (prettier-plugin-astro 1). Allow only a stable release above 0.8.1, which lacks it.",
       "matchPackageNames": ["prettier-plugin-tailwindcss"],
       "allowedVersions": ">0.8.1"
@@ -17,12 +22,22 @@
       "groupName": "astro compiler"
     },
     {
+      "description": "agents depends on exactly @modelcontextprotocol/client 2.0.0. Bump it by hand when an agents release moves that pin.",
+      "matchPackageNames": ["@modelcontextprotocol/client"],
+      "enabled": false
+    },
+    {
       "matchPackageNames": ["ai", "@ai-sdk/*"],
       "groupName": "ai sdk"
     },
     {
-      "matchPackageNames": ["vite-plus", "@voidzero-dev/vite-plus-core", "vitest", "@vitest/*"],
+      "matchPackageNames": ["vite-plus", "@voidzero-dev/vite-plus-core"],
       "groupName": "vite-plus"
+    },
+    {
+      "description": "vite-plus bundles an exact vitest and fails on a mismatched @vitest/* package. Run vp migrate on each vite-plus update to realign the catalog.",
+      "matchPackageNames": ["vitest", "@vitest/*"],
+      "enabled": false
     }
   ]
 }

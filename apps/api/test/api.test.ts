@@ -1,6 +1,6 @@
 import { Effect, Layer } from "effect";
 import type { ClientResponse } from "hono/client";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { z } from "zod";
 
 import {

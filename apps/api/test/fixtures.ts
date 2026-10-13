@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import { Effect, Layer } from "effect";
 import type { ClientResponse } from "hono/client";
 import { testClient } from "hono/testing";
-import { assert, expect, onTestFinished, vi } from "vitest";
+import { assert, expect, onTestFinished, vi } from "vite-plus/test";
 import { z } from "zod";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { Dataset } from "@murugappan/contracts/api/dataset.ts";
 import { buildDataset, splitSkillItems, type DatasetInput } from "./dataset.ts";

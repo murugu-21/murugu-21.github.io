@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { parseEnv } from "node:util";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
-import { playwright } from "@vitest/browser-playwright";
+import { playwright } from "vite-plus/test/browser-playwright";
 import { defineConfig } from "vite-plus";
 
 import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";

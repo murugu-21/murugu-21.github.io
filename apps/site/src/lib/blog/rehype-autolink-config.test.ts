@@ -1,6 +1,6 @@
 import type { Root } from "hast";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { autolinkConfig } from "./rehype-autolink-config";
 

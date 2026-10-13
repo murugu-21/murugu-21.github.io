@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import tag from "#src/components/blog/Tag.astro?raw";
 import searchBar from "#src/components/blog/SearchBar.astro?raw";

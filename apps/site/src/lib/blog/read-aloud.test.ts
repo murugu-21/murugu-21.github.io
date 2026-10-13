@@ -1,4 +1,4 @@
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vite-plus/test";
 import { parseHTML } from "linkedom";
 
 import { blockAt, matchBlocks, scrollTarget, WORD_BAND } from "./audio-sync";

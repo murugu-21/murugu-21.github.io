@@ -3,7 +3,7 @@ import { env } from "cloudflare:workers";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { afterEach, assert, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, describe, expect, it, vi } from "vite-plus/test";
 import { z } from "zod";
 
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";

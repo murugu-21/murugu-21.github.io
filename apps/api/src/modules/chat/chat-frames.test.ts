@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import type { JsonValue } from "@murugappan/utils/json.ts";
 import { admitFrame } from "#src/modules/chat/chat-frames.ts";

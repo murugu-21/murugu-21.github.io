@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { VFile } from "vfile";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { diagramFile, diagramHash } from "./mermaid-diagrams";
 import remarkMermaid from "./remark-mermaid";

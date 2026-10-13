@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { z } from "zod";
 
 import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";

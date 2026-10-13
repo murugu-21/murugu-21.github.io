@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { fetchSitePage } from "#src/modules/chat/fetch-page.client.ts";
 import { fakeAssets } from "#test/fixtures.ts";

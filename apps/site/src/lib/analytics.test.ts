@@ -1,5 +1,5 @@
 import fc from "fast-check";
-import { afterEach, assert, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { parseHTML } from "linkedom";
 import type { PostHogConfig } from "posthog-js";
 import { z } from "zod";

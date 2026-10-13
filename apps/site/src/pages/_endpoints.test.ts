@@ -1,4 +1,4 @@
-import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { blogPost } from "#src/lib/blog/fixtures.ts";
 import { setPosts } from "#src/test/astro-content.ts";

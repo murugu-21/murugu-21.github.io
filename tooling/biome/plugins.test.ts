@@ -3,7 +3,7 @@ import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vite-plus/test";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 const BIOME = join(ROOT, "node_modules/.bin/biome");

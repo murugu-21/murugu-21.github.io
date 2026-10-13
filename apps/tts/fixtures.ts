@@ -5,7 +5,7 @@
 import { Buffer } from "node:buffer";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { onTestFinished, vi } from "vitest";
+import { onTestFinished, vi } from "vite-plus/test";
 import { z } from "zod";
 
 import { JsonRecord, jsonString } from "@murugappan/utils/json.ts";

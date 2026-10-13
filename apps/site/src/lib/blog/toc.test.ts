@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { TOC_LINE_SLACK, activeIndex, tocEntries } from "./toc";
 

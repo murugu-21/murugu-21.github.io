@@ -2,9 +2,9 @@
 // `html.dark-mode`, global.css turns that into `color-scheme`, and a
 // `light-dark()` colour follows. The root vite.config.ts routes `.tsx` tests (this
 // one has no JSX) to the browser project.
-/// <reference types="@vitest/browser-playwright" />
-import { afterEach, expect, it } from "vitest";
-import { cdp } from "vitest/browser";
+/// <reference types="vite-plus/test/browser-playwright" />
+import { afterEach, expect, it } from "vite-plus/test";
+import { cdp } from "vite-plus/test/browser";
 
 import { bootstrapTheme } from "#src/lib/theme.ts";
 

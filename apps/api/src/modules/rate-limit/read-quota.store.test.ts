@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 
 import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
 import { resetReadWindows, takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";

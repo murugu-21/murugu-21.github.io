@@ -1,5 +1,5 @@
 import { Effect, Layer } from "effect";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { WorkerEnv } from "#src/common/di/worker-env.ts";
 import { ContactQuotaRepository } from "#src/modules/rate-limit/contact-quota.repository.ts";

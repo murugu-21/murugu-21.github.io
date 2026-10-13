@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { buildApiCatalog, buildMcpManifest } from "#src/modules/well-known/well-known-documents.ts";
 

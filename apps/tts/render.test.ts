@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 import { mkdtempDisposableSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { fakeDeps, fakeSynth, refusingSynth, writePost } from "./fixtures.ts";
 import { patchPost, renderPost } from "./render.ts";

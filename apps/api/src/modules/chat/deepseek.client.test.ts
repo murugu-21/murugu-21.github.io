@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { z } from "zod";
 
 import { deepseek, fetchDeepseekBalance } from "#src/modules/chat/deepseek.client.ts";

@@ -1,4 +1,4 @@
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vite-plus/test";
 
 import { apiController } from "#src/modules/api/api.controller.ts";
 import { buildOpenApiDocument } from "#src/modules/openapi/openapi-document.ts";

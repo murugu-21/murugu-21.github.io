@@ -1,6 +1,6 @@
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { assert, beforeEach, describe, expect, it } from "vitest";
+import { assert, beforeEach, describe, expect, it } from "vite-plus/test";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/visitor.ts";

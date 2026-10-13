@@ -2,7 +2,7 @@ import { Buffer } from "node:buffer";
 import { mkdtempDisposableSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { alignBlock, alignPost, whisperClient } from "./align.ts";
 import { fakeDeps, fakeWhisper, startOnFakes } from "./fixtures.ts";

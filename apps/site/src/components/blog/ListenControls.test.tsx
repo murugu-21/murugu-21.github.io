@@ -1,5 +1,5 @@
-import { afterEach, beforeAll, expect, it, vi } from "vitest";
-import { userEvent } from "vitest/browser";
+import { afterEach, beforeAll, expect, it, vi } from "vite-plus/test";
+import { userEvent } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 
 import type { JsonValue } from "@murugappan/utils/json.ts";

@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vite-plus/test";
 import { render } from "vitest-browser-react";
 
 import { ActivityRow } from "./ActivityRow.tsx";

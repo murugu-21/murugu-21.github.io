@@ -6,7 +6,7 @@ import {
   StreamableHTTPClientTransport,
   type Tool
 } from "@modelcontextprotocol/client";
-import { assert, describe, expect, it } from "vitest";
+import { assert, describe, expect, it } from "vite-plus/test";
 import { z } from "zod";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";

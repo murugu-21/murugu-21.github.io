@@ -23,6 +23,10 @@ tester.run("anti-slop/no-module-mocking", noModuleMockingRule, {
       errors: [error]
     },
     {
+      code: "import { vi as testApi } from 'vite-plus/test'; testApi.mock('./user-store');",
+      errors: [error]
+    },
+    {
       code: "import { jest } from '@jest/globals'; jest.mock('./user-store');",
       errors: [error]
     }

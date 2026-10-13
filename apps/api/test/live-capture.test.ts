@@ -1,7 +1,7 @@
 // Lead capture against the real model, from the visitor's socket to the owner's email.
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { z } from "zod";
 
 import {
