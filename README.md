@@ -41,6 +41,7 @@ Things that will trip you up:
 - `dev` and `preview` both use port 8787. Stop one before starting the other.
 - In `dev`, the Worker can't see the built pages, so the chat's page fetching and the 404 page don't work there. Use `preview` for those.
 - To use the chat from `:4399`, add `PUBLIC_CHAT_HOST=localhost:8787` to `apps/site/.env`.
+- Read-aloud audio in `dev` and `preview` comes from the Worker's local R2, which starts empty, so the Listen button falls back to the browser voice. Copy a post's `.mp3` and `.json` from `blog/breeze/` with `bunx wrangler r2 object get --remote`, then `put --local --persist-to .wrangler/state` from `apps/api`.
 - `preview` runs the built Worker, so rebuild after changing `apps/api/src/` or `packages/content/`.
 - Local settings go in `apps/site/.env` (site) and `apps/api/.dev.vars` (Worker).
 

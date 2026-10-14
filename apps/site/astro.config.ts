@@ -326,6 +326,9 @@ export default defineConfig({
     buildArtifacts()
   ],
   vite: {
+    // The read-aloud player fetches audio from its own origin, but in `bun run dev`
+    // only the Worker (apps/api) serves /blog/audio.
+    server: { proxy: { "/blog/audio/": "http://localhost:8787" } },
     build: {
       // CSS gets the vendor prefixes and fallbacks the supported browsers need. JS isn't
       // lowered: Astro pins the client build to esnext.
