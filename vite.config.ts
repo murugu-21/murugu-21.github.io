@@ -139,7 +139,10 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: true,
-            provider: playwright(),
+            // copy-code.test.tsx reads back what the copy button wrote.
+            provider: playwright({
+              contextOptions: { permissions: ["clipboard-read", "clipboard-write"] }
+            }),
             instances: [{ browser: "chromium" }]
           }
         }

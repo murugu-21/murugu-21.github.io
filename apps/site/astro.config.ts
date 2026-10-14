@@ -16,6 +16,7 @@ import { autolinkConfig } from "./src/lib/blog/rehype-autolink-config";
 import remarkMermaid from "./src/lib/blog/remark-mermaid";
 import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
 import { NIGHT_OWL } from "./src/lib/blog/code-themes";
+import { copyButton } from "./src/lib/blog/shiki-copy-button";
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
@@ -79,6 +80,16 @@ function mermaidProblem({ slug, document, source }: Post) {
   );
 }
 
+function copyButtonProblem({ slug, document }: Post) {
+  const fences = document.querySelectorAll("pre.astro-code").length;
+  const wrapped = document.querySelectorAll("figure[data-code-block] > pre.astro-code").length;
+  if (fences === wrapped) return;
+  return (
+    `${slug} has ${fences - wrapped} code fence(s) without a copy button. ` +
+    "Clear node_modules/.astro, which caches the stale render."
+  );
+}
+
 // What search engines read from each post's head, checked against literals
 // rather than the constants that produced it: one canonical URL, and a
 // BlogPosting whose author resolves to the Person in the same @graph.
@@ -110,12 +121,13 @@ function authorProblem({ slug, document }: Post) {
 
 // A markdown render error doesn't fail the build. The glob loader logs it,
 // caches the empty result in node_modules/.astro and ships a blank article.
-// So check every post has a body, a title and one figure per ```mermaid fence
-// (which also catches a stale cached render), then check its head.
+// So check every post has a body, a title, one figure per ```mermaid fence and a
+// copy button per code fence (the last two also catch a stale cached render), then its head.
 const POST_CHECKS = [
   emptyBodyProblem,
   titleProblem,
   mermaidProblem,
+  copyButtonProblem,
   canonicalProblem,
   authorProblem
 ];
@@ -348,6 +360,6 @@ export default defineConfig({
     // Both themes ride on each span as --shiki-light / --shiki-dark;
     // apps/site/src/styles/blog/code.css picks one per site theme.
     syntaxHighlight: "shiki",
-    shikiConfig: { themes: NIGHT_OWL, defaultColor: false }
+    shikiConfig: { themes: NIGHT_OWL, defaultColor: false, transformers: [copyButton] }
   }
 });

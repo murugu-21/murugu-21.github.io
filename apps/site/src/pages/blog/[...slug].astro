@@ -141,6 +141,13 @@ const description = postDescription(source);
 </script>
 
 <script>
+  import { installCopyCode } from "#src/lib/blog/copy-code.ts";
+
+  const body = document.querySelector("[data-post-body]");
+  if (body) installCopyCode(body);
+</script>
+
+<script>
   // Image zoom, loaded on hover/click. Scoped to the body <section> to skip the Bio avatar.
   const imgs = document.querySelectorAll<HTMLImageElement>("[data-post-body] img");
   if (imgs.length > 0) {

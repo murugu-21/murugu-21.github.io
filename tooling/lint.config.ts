@@ -376,7 +376,10 @@ export default {
   ],
   categories: { correctness: "error" },
   // oxlint takes settings only at the top level; the override below scopes the plugin.
-  settings: { tailwindcss: { entryPoint: "apps/site/src/styles/global.css" } },
+  // variablePatterns adds to the plugin's defaults (className, classes, styles).
+  settings: {
+    tailwindcss: { entryPoint: "apps/site/src/styles/global.css", variablePatterns: ["Classes$"] }
+  },
   rules: {
     "no-irregular-whitespace": ["error", { skipComments: true }],
     "react/no-deriving-state-in-effects": "error",
