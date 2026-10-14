@@ -74,6 +74,8 @@ These env vars change the build. All are optional locally.
 - `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID`: upload source maps for error tracking.
 - `RESUME_PHONE`: adds a phone number to the resume.
 
+`bun run build` is cached. The site build sees only the variables listed under `cache.env` in `apps/site/vite.config.ts`, so add a new one there too. A cached build keeps the GitHub card it fetched. Run `bunx vp cache clean` to fetch it again.
+
 ## Browser support
 
 Chrome and Edge 123+, Firefox 128+ and Safari 17.5+, including iOS. Older browsers get sent to a notice page. Open `/outdated/?from=/about/` to see it.

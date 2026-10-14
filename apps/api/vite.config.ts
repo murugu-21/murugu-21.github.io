@@ -21,11 +21,6 @@ export default defineConfig({
   },
   build: { outDir: "dist-worker" },
   server: { port: 8787, strictPort: true },
-  // The Worker serves the site's build as its assets, so the site builds first. Uncached: the
-  // output feeds a deploy.
-  run: {
-    tasks: {
-      build: { command: "vp build", dependsOn: ["@murugappan/site#build"], cache: false }
-    }
-  }
+  // The Worker serves the site's build as its assets, so the site builds first.
+  run: { tasks: { build: { command: "vp build", dependsOn: ["@murugappan/site#build"] } } }
 });

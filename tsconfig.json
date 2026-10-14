@@ -6,7 +6,8 @@
     "apps/tts/*.ts",
     "apps/brand/*.ts",
     "vite.config.ts",
-    "apps/api/vite.config.ts"
+    "apps/api/vite.config.ts",
+    "apps/site/vite.config.ts"
   ],
   // `?raw` imports in the content package.
   "compilerOptions": { "types": ["node", "vite/client"] }
