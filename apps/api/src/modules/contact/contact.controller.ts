@@ -9,12 +9,14 @@ import { apiError } from "#src/common/http/api-error.ts";
 import { bodyLimitMiddleware } from "#src/common/middleware/body-limit.middleware.ts";
 import { jsonBodyPipe } from "#src/common/pipes/json-body.pipe.ts";
 import { ContactService, type ContactError } from "#src/modules/contact/contact.service.ts";
-import type { QuotaUnavailable } from "#src/modules/rate-limit/contact-quota.repository.ts";
+import type {
+  ContactUsage,
+  QuotaUnavailable
+} from "#src/modules/rate-limit/contact-quota.repository.ts";
 import {
   contactRateLimitHeaders,
   secondsUntilUtcMidnight
 } from "#src/modules/rate-limit/rate-limit-headers.ts";
-import type { ContactUsage } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 
 const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 

@@ -2,10 +2,12 @@ import { Context, Data, Effect, Layer } from "effect";
 
 import { WorkerEnv } from "#src/common/di/worker-env.ts";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
-import type {
-  ContactSlot,
-  ContactUsage
-} from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
+
+/** What is left of each contact tier today, after the reporting call. */
+export type ContactUsage = { clientRemaining: number; globalRemaining: number };
+
+export type ContactSlot = ContactUsage &
+  ({ allowed: true } | { allowed: false; scope: "client" | "global" });
 
 export class ContactLimitReached extends Data.TaggedError("ContactLimitReached")<{
   readonly scope: "client" | "global";

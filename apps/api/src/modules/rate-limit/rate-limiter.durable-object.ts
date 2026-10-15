@@ -2,6 +2,10 @@ import { DurableObject } from "cloudflare:workers";
 import { z } from "zod";
 
 import { fetchDeepseekBalance, type DeepseekBalance } from "#src/modules/chat/deepseek.client.ts";
+import type {
+  ContactSlot,
+  ContactUsage
+} from "#src/modules/rate-limit/contact-quota.repository.ts";
 // Limits live in api/contact.ts so the Astro bundle can quote them without
 // importing `cloudflare:workers`.
 import {
@@ -27,12 +31,6 @@ type CachedBalance = z.infer<typeof CachedBalance>;
 
 const hasFunds = ({ available, totalUsd }: DeepseekBalance): boolean =>
   available && totalUsd > BALANCE_RESERVE_USD;
-
-/** What is left of each contact tier today, after the reporting call. */
-export type ContactUsage = { clientRemaining: number; globalRemaining: number };
-
-export type ContactSlot = ContactUsage &
-  ({ allowed: true } | { allowed: false; scope: "client" | "global" });
 
 // One fixed-name instance ("global") shared by every ChatRoom, so the balance
 // is checked once and one room's 402 gates the whole site.

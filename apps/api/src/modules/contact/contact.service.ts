@@ -9,9 +9,9 @@ import {
 import {
   ContactQuotaRepository,
   type ContactLimitReached,
+  type ContactUsage,
   type QuotaUnavailable
 } from "#src/modules/rate-limit/contact-quota.repository.ts";
-import type { ContactUsage } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 
 export type ContactError =
   | DeliveryNotConfigured

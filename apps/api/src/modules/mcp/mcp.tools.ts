@@ -18,8 +18,10 @@ import type { Render } from "#src/common/di/render.ts";
 import { ContactService, type ContactError } from "#src/modules/contact/contact.service.ts";
 import { PostsService } from "#src/modules/posts/posts.service.ts";
 import { ProfileService } from "#src/modules/profile/profile.service.ts";
-import type { ContactLimitReached } from "#src/modules/rate-limit/contact-quota.repository.ts";
-import type { ContactUsage } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
+import type {
+  ContactLimitReached,
+  ContactUsage
+} from "#src/modules/rate-limit/contact-quota.repository.ts";
 import { READ_LIMIT_MESSAGE, takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
 
 export type ToolContext = {
