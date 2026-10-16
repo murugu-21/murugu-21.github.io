@@ -1,0 +1,7 @@
+# Formatting-only sweeps. Pass this file to git blame with --ignore-revs-file.
+# style: reformat blog source to the repo formatter config
+df996d0963ba3535a59f7714568626aef941ff40
+# style: reformat .astro files with prettier-plugin-astro v1
+db2013a1908ace3639f162af5aeef79d97887e1f
+# style: add bracket spacing, widen print width to 100
+1286d846198b50a4f34a32af11a01487baf0445e

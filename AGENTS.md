@@ -53,6 +53,10 @@ Think about readability and elegance before writing, not after. Every rule a lin
 
 Agents tend to hand-roll what a library or platform feature already does. Before building a new feature or module, adding a dependency, or writing a utility more than a few lines long, look up the current best practice and the maintained options (including what the repo already depends on), then bring the user a short recommendation with alternatives and wait for approval before writing it.
 
+## Git history
+
+History starts at the Astro migration. Run `git blame --ignore-revs-file .git-blame-ignore-revs` so formatting sweeps don't hide the commit that changed a line.
+
 ## Ask first
 
 - Anything that costs money or is hard to undo: new paid services or plans, deploys, `wrangler` commands against remote resources (`--remote`, deploy, secrets), D1 migrations, R2 writes.
