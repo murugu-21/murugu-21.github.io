@@ -241,7 +241,7 @@ it("keeps one room per page load, and can start over, when the browser blocks st
   await page.getByRole("menuitem", { name: "Start over" }).click();
   await page.getByRole("button", { name: "Start over" }).click();
   await expect.element(page.getByText("Hello.")).not.toBeInTheDocument();
-  expect(rooms.size).toBe(2);
+  await expect.poll(() => rooms.size).toBe(2);
 });
 
 it("a starter question sends itself and the starters give way to the conversation", async () => {
@@ -528,7 +528,7 @@ it("starting over moves to a new room once confirmed", async () => {
 
   await expect.element(page.getByText("Old question")).not.toBeInTheDocument();
   await expect.element(sendButton()).toBeEnabled();
-  expect(rooms.size).toBe(2);
+  await expect.poll(() => rooms.size).toBe(2);
   expect(localStorage.getItem("chatRoomId")).toBe(lastRoom().name);
   expect(events).toEqual(["chat_open", "chat_message_sent", "chat_restart"]);
 });

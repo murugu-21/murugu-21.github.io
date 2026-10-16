@@ -7,7 +7,7 @@
     "astro.config.ts",
     "../../packages/content/posts-module.d.ts"
   ],
-  "exclude": ["dist"],
+  "exclude": ["dist", "**/lint-fixture-*/**"],
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "react"

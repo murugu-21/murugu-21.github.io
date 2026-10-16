@@ -38,3 +38,4 @@ jobs:
       - run: bun run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: bun run test:e2e

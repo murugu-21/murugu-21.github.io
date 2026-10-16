@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { parseArgs } from "node:util";
 import { preview } from "astro";
 import { PDFParse } from "pdf-parse";
 
@@ -7,7 +8,8 @@ import { launchBrowser } from "./launch-browser.ts";
 import { ATS_REQUIRED_TOKENS, resumeProblems } from "./resume-gate.ts";
 import { ROOT, SITE_DIR } from "./site-dir.ts";
 
-const DIST_DIR = resolve(process.argv[2] ?? SITE_DIR);
+const { positionals } = parseArgs({ allowPositionals: true });
+const DIST_DIR = resolve(positionals[0] ?? SITE_DIR);
 const OUT_PATH = join(DIST_DIR, "resume.pdf");
 const PREVIEW_PORT = 4398;
 

@@ -34,5 +34,9 @@
     "../../packages/content/**/*.ts",
     "worker-configuration.d.ts"
   ],
-  "exclude": ["../../packages/content/vite/**"]
+  "exclude": [
+    "../../packages/content/vite/**",
+    "**/lint-fixture-*/**",
+    "../../packages/**/lint-fixture-*/**"
+  ]
 }

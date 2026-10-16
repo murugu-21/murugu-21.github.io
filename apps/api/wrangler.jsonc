@@ -22,8 +22,7 @@
     // content-negotiate the 404; "404-page" would answer every miss with 404.html.
     "not_found_handling": "none",
     // Routes the Worker must answer even where an asset would win (JSON errors
-    // for /api/*, host-aware generated docs, markdown pages). Keep in sync with
-    // apps/api/src/app.ts.
+    // for /api/*, host-aware generated docs, markdown pages).
     "run_worker_first": [
       // Pages, so `Accept: text/markdown` gets their index.md. Every page URL ends
       // in "/" and no asset's does, so assets stay off the Worker.
@@ -39,7 +38,6 @@
       "/blog/audio/*"
     ]
   },
-  // Keep these Durable Object bindings and exports in sync with apps/api/test/wrangler.jsonc.
   "durable_objects": {
     "bindings": [
       { "name": "ChatRoom", "class_name": "ChatRoom" },
@@ -53,7 +51,6 @@
     "ChatRoom": { "type": "durable-object", "storage": "sqlite" },
     "RateLimiter": { "type": "durable-object", "storage": "sqlite" }
   },
-  // The EMAIL lock and this var must name the same address.
   "vars": { "OPPORTUNITY_INBOX": "murugu2001@gmail.com" },
   "send_email": [{ "name": "EMAIL", "destination_address": "murugu2001@gmail.com" }],
   // Deploy fails while it is unset.

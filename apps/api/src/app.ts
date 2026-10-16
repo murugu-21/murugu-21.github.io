@@ -21,7 +21,6 @@ export function createApp(layer = appLayer()) {
         await next();
       })
       .route("/agents/chat-room", chatController)
-      // Keep wrangler.jsonc's run_worker_first list in sync with these routes.
       // /api/v1 must mount before /api, the permanent unversioned alias for v1.
       .route("/api/v1", apiController)
       .route("/api", apiController)

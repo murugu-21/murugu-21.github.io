@@ -1,6 +1,21 @@
-import type { OxlintConfig, OxlintOverride } from "vite-plus/lint";
+import type { OxlintConfig } from "vite-plus/lint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
+type ImportPath = {
+  name: string;
+  importNames: string[];
+  allowTypeImports?: boolean;
+  message: string;
+};
+type Property = { object?: string; property?: string; message: string };
+type Global = { name: string; message: string };
+
+type ImportRules = {
+  "no-restricted-imports": ["error", { paths?: ImportPath[]; patterns: Pattern[] }];
+};
+type PropertyRules = { "no-restricted-properties": ["error", ...Property[]] };
+type GlobalRules = { "no-restricted-globals": ["error", ...Global[]] };
+type Scope = { files: string[]; excludeFiles?: string[] };
 
 const LAYER_NAMES = [
   "site",
@@ -35,7 +50,7 @@ const LAYERS: Record<LayerName, Layer> = {
     uses: ["content", "contracts", "utils"]
   },
   api: {
-    dir: "apps/api/{src,test}/",
+    dir: "apps/api/{src,test,e2e}/",
     pkg: "@murugappan/api",
     imports: "#src/",
     uses: ["content", "contracts", "utils"]
@@ -117,10 +132,26 @@ function layerPatterns(name: LayerName): Pattern[] {
 
 // A file gets the options of the last override that matches it, so each one carries every
 // pattern that applies to its files.
-const restrict = (files: string[], patterns: Pattern[]): OxlintOverride => ({
-  files,
+const restrict = (scope: Scope, patterns: Pattern[]): Scope & { rules: ImportRules } => ({
+  ...scope,
   rules: { "no-restricted-imports": ["error", { patterns }] }
 });
+const restrictGlobals = (scope: Scope, globals: Global[]): Scope & { rules: GlobalRules } => ({
+  ...scope,
+  rules: { "no-restricted-globals": ["error", ...globals] }
+});
+const restrictProperties = (
+  scope: Scope,
+  properties: Property[]
+): Scope & { rules: PropertyRules } => ({
+  ...scope,
+  rules: { "no-restricted-properties": ["error", ...properties] }
+});
+// no-restricted-globals sees only the bare name, so the same ban goes on each object it hangs off.
+const onObjects = (globals: Global[], objects: string[]): Property[] =>
+  objects.flatMap(object =>
+    globals.map(({ name, message }) => ({ object, property: name, message }))
+  );
 
 const SITE = layerPatterns("site");
 const NO_SITE_TEST_FAKES: Pattern = {
@@ -130,18 +161,52 @@ const NO_SITE_TEST_FAKES: Pattern = {
 };
 const SITE_TESTS = ["apps/site/src/**/*.test.ts", "apps/site/src/**/*.test.tsx"];
 
-const siteRestrict = (files: string[], patterns: Pattern[]): OxlintOverride[] => [
-  restrict(files, patterns),
-  { ...restrict(files, [...patterns, NO_SITE_TEST_FAKES]), excludeFiles: SITE_TESTS }
+const AREA_IMPORTS = {
+  blog: "^#src/(.*/)?blog/|^#src/layouts/BlogLayout|^\\./blog/|^\\./BlogLayout",
+  home: "^#src/(.*/)?home/|^\\./home/"
+};
+const BLOG_AREA = ["apps/site/src/**/blog/**", "apps/site/src/layouts/BlogLayout.astro"];
+const HOME_AREA = ["apps/site/src/**/home/**", "apps/site/src/pages/index.astro"];
+const NO_BLOG_OR_HOME: Pattern = {
+  regex: `${AREA_IMPORTS.blog}|${AREA_IMPORTS.home}`,
+  message:
+    "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (apps/site/src/README.md › Folders)."
+};
+const NO_HOME: Pattern = {
+  regex: AREA_IMPORTS.home,
+  message:
+    "Blog code can't import homepage components. Move a component both use to the root of apps/site/src/components (apps/site/src/README.md › Folders)."
+};
+const siteSources = (files: string[], patterns: Pattern[]) =>
+  restrict({ files, excludeFiles: SITE_TESTS }, [...SITE, NO_SITE_TEST_FAKES, ...patterns]);
+const SITE_OVERRIDES = [
+  restrict({ files: ["apps/site/src/**"] }, SITE),
+  siteSources(["apps/site/src/**"], [NO_BLOG_OR_HOME]),
+  siteSources(BLOG_AREA, [NO_HOME]),
+  siteSources(HOME_AREA, [])
 ];
 
-type ImportPath = {
-  name: string;
-  importNames: string[];
-  allowTypeImports?: boolean;
-  message: string;
+const PROCESS_ARGV: Property = {
+  object: "process",
+  property: "argv",
+  message:
+    "Read the command line with parseArgs from node:util, which takes process.argv by default and validates the options (Node.js › util.parseArgs)."
 };
-type Property = { object?: string; property: string; message: string };
+const PROCESS_ENV: Property = {
+  object: "process",
+  property: "env",
+  message:
+    "process.env is read in one place: apps/site/build-env.ts for the site build, and the vars and bindings in apps/api/wrangler.jsonc for the Worker. Declare the variable there (README.md › Build settings)."
+};
+const STORAGE: Global[] = ["localStorage", "sessionStorage"].map(name => ({
+  name,
+  message:
+    "Storage throws where the browser blocks it. Go through readStored and writeStored in apps/site/src/lib/storage.ts, which catch that."
+}));
+const STORAGE_CALLERS: Scope = {
+  files: ["apps/site/src/**"],
+  excludeFiles: ["apps/site/src/lib/storage.ts", ...SITE_TESTS]
+};
 
 const WORKER_PROPERTIES: Property[] = [
   {
@@ -183,6 +248,11 @@ const HONO_CONTEXT: ImportPath = {
 const EFFECT_SCHEMA_MESSAGE =
   "Validate with zod from @murugappan/contracts, which the site shares, not effect/Schema (apps/api/README.md › Layers).";
 
+const NO_WORKER_ENV: Pattern = {
+  regex: "/di/worker-env\\.ts$",
+  message:
+    "Bindings reach Effect only through repositories and integration services (apps/api/README.md › Layers)."
+};
 const HTTP_IMPORTS: Pattern[] = [
   {
     regex: "\\.repository\\.ts$",
@@ -196,11 +266,31 @@ const HTTP_IMPORTS: Pattern[] = [
     message:
       "Reach a Durable Object through its repository or client, not from the HTTP layer. Type imports are fine (apps/api/README.md › Layers)."
   },
+  NO_WORKER_ENV
+];
+const ROLE_SUFFIXES = [
+  "controller",
+  "tools",
+  "resources",
+  "guard",
+  "pipe",
+  "interceptor",
+  "middleware",
+  "filter",
+  "service",
+  "repository",
+  "store",
+  "client",
+  "durable-object"
+];
+const PURE_IMPORTS: Pattern[] = [
   {
-    regex: "/di/worker-env\\.ts$",
+    regex: `\\.(${ROLE_SUFFIXES.join("|")})\\.ts$|^#src/app\\.module\\.ts$`,
+    allowTypeImports: true,
     message:
-      "Bindings reach Effect only through repositories and integration services (apps/api/README.md › Layers)."
-  }
+      "A file with no role suffix holds pure functions and constants, so it imports no file that has one (type imports are fine). Give it the suffix of the role it plays, or move the call into that role (apps/api/README.md › Layers)."
+  },
+  NO_WORKER_ENV
 ];
 const PLUMBING_IMPORTS: Pattern[] = [
   {
@@ -266,6 +356,12 @@ const BINDINGS: Property = {
   message:
     "Only *.client.ts files, and repositories through WorkerEnv, read bindings. Move the call there (apps/api/README.md › Layers)."
 };
+const ENV_BINDINGS: Property = { object: "env", message: BINDINGS.message };
+const FETCH: Global = {
+  name: "fetch",
+  message:
+    "Only a *.client.ts calls fetch. Put the call in a client and reach it through a repository or integration service (apps/api/README.md › Layers)."
+};
 
 const bySuffix = (...suffixes: string[]) => suffixes.map(s => `apps/api/src/**/*.${s}.ts`);
 const DOMAIN = bySuffix("service", "repository");
@@ -274,30 +370,54 @@ const PLUMBING = bySuffix("guard", "pipe", "interceptor", "middleware", "filter"
 
 // An override replaces a rule's options rather than adding to them, so each list is whole.
 // Later roles win, so the most specific comes last.
-type ApiRole = {
-  files: string[];
+type ApiRole = Scope & {
   patterns: Pattern[];
   paths: ImportPath[];
   properties: Property[];
+  globals: Global[];
 };
+const DECODES_ENTITIES_TO_TEXT = ["apps/api/src/modules/chat/fetch-page.client.ts"];
+const SHIPS_SCHEMAS_WITHOUT_ZOD = ["apps/site/src/lib/webmcp.ts"];
+const SHOWS_A_CONVERTED_SCHEMA = ["apps/site/src/pages/developers.astro"];
+const VENDORED_RULES = ["tooling/oxlint/anti-slop/**"];
+
+const WORKER_ENTRY_POINTS = [
+  "apps/api/src/app.ts",
+  "apps/api/src/app.module.ts",
+  "apps/api/src/server.ts"
+];
+
+const PURE_ROLE: ApiRole = {
+  files: ["apps/api/src/**/*.ts"],
+  excludeFiles: [...bySuffix(...ROLE_SUFFIXES), ...WORKER_ENTRY_POINTS],
+  patterns: [...NO_EFFECT, NO_TEST_FIXTURES, ...PURE_IMPORTS],
+  paths: [ROUTE_AGENT],
+  properties: [...RUN_EFFECT, BINDINGS, ENV_BINDINGS],
+  globals: [FETCH]
+};
+
 const API_ROLES: ApiRole[] = [
   {
-    files: ["apps/api/{src,test}/**"],
+    files: ["apps/api/{src,test,e2e}/**"],
     patterns: [...NO_EFFECT, NO_TEST_FIXTURES],
     paths: [ROUTE_AGENT],
-    properties: RUN_EFFECT
+    properties: RUN_EFFECT,
+    globals: []
   },
+  PURE_ROLE,
   {
     files: ["apps/api/src/common/di/**"],
     patterns: [NO_TEST_FIXTURES],
     paths: [ROUTE_AGENT],
-    properties: RUN_EFFECT
+    properties: RUN_EFFECT,
+    globals: []
   },
   {
     files: ["apps/api/src/app.module.ts"],
     patterns: [NO_TEST_FIXTURES],
     paths: [ROUTE_AGENT],
-    properties: []
+    properties: [],
+    globals: []
   },
   {
     files: DOMAIN,
@@ -306,41 +426,67 @@ const API_ROLES: ApiRole[] = [
       ROUTE_AGENT,
       { name: "effect", importNames: ["Schema"], message: EFFECT_SCHEMA_MESSAGE }
     ],
-    properties: [...RUN_EFFECT, ...SWALLOW_DEFECTS, BINDINGS]
+    properties: [...RUN_EFFECT, ...SWALLOW_DEFECTS, BINDINGS],
+    globals: [FETCH]
   },
   {
     files: HTTP,
     patterns: [...NO_EFFECT, NO_TEST_FIXTURES, ...HTTP_IMPORTS],
     paths: [ROUTE_AGENT, HONO_CONTEXT],
-    properties: [...RUN_EFFECT, BINDINGS]
+    properties: [...RUN_EFFECT, BINDINGS],
+    globals: [FETCH]
   },
   {
     files: PLUMBING,
     patterns: [...NO_EFFECT, NO_TEST_FIXTURES, ...HTTP_IMPORTS, ...PLUMBING_IMPORTS],
     paths: [ROUTE_AGENT],
-    properties: [...RUN_EFFECT, BINDINGS]
+    properties: [...RUN_EFFECT, BINDINGS],
+    globals: [FETCH]
   },
   {
     files: ["apps/api/src/modules/chat/chat.controller.ts"],
     patterns: [...NO_EFFECT, NO_TEST_FIXTURES, ...HTTP_IMPORTS],
     paths: [HONO_CONTEXT],
-    properties: [...RUN_EFFECT, BINDINGS]
+    properties: [...RUN_EFFECT, BINDINGS],
+    globals: [FETCH]
   },
   // Last, so a test beside its source drops that role's bans: tests build fakes as Effect layers,
   // run them, and import #test/ fixtures.
   {
-    files: ["apps/api/src/**/*.test.ts", "apps/api/src/**/*.test-d.ts", "apps/api/test/**"],
+    files: [
+      "apps/api/src/**/*.test.ts",
+      "apps/api/src/**/*.test-d.ts",
+      "apps/api/test/**",
+      "apps/api/e2e/**"
+    ],
     patterns: [],
     paths: [ROUTE_AGENT],
-    properties: []
+    properties: [],
+    globals: []
   }
 ];
 
-const apiRole = ({ files, patterns, paths, properties }: ApiRole): OxlintOverride => ({
+const apiRole = ({
   files,
+  excludeFiles = [],
+  patterns,
+  paths,
+  properties,
+  globals
+}: ApiRole): Scope & { rules: ImportRules & PropertyRules & GlobalRules } => ({
+  files,
+  excludeFiles,
   rules: {
     "no-restricted-imports": ["error", { paths, patterns: [...API, ...patterns] }],
-    "no-restricted-properties": ["error", ...WORKER_PROPERTIES, ...properties]
+    "no-restricted-properties": [
+      "error",
+      PROCESS_ARGV,
+      PROCESS_ENV,
+      ...WORKER_PROPERTIES,
+      ...properties,
+      ...onObjects(globals, ["globalThis"])
+    ],
+    "no-restricted-globals": ["error", ...globals]
   }
 });
 
@@ -354,6 +500,7 @@ export default {
     "./tooling/oxlint/effect.ts",
     "./tooling/oxlint/astro.ts",
     "./tooling/oxlint/workers.ts",
+    "./tooling/oxlint/primitives.ts",
     "./tooling/oxlint/anti-slop/index.ts",
     "./tooling/oxlint/anti-slop/effect.ts"
   ],
@@ -365,6 +512,8 @@ export default {
   },
   rules: {
     "no-irregular-whitespace": ["error", { skipComments: true }],
+    "no-restricted-properties": ["error", PROCESS_ARGV],
+    "primitives/json-schema-literal": "error",
     "react/no-deriving-state-in-effects": "error",
     "react/no-unstable-nested-components": "error",
     "react/exhaustive-effect-dependencies": "error",
@@ -427,9 +576,33 @@ export default {
     ...LAYER_NAMES.values()
       .filter(name => name !== "api" && name !== "site")
       .map(name =>
-        restrict([`${LAYERS[name].dir}**`], [...layerPatterns(name), ...(LAYERS[name].also ?? [])])
+        restrict({ files: [`${LAYERS[name].dir}**`] }, [
+          ...layerPatterns(name),
+          ...(LAYERS[name].also ?? [])
+        ])
       ),
-    ...siteRestrict([`${LAYERS.site.dir}**`], SITE),
+    ...SITE_OVERRIDES,
+    restrictProperties({ files: ["apps/site/src/**", "packages/**"] }, [PROCESS_ARGV, PROCESS_ENV]),
+    restrictProperties(STORAGE_CALLERS, [
+      PROCESS_ARGV,
+      PROCESS_ENV,
+      ...onObjects(STORAGE, ["window", "globalThis"])
+    ]),
+    restrictGlobals(STORAGE_CALLERS, STORAGE),
+    {
+      files: ["apps/site/src/**", "apps/api/src/**", "packages/**"],
+      excludeFiles: ["**/*.test.{ts,tsx}", ...DECODES_ENTITIES_TO_TEXT],
+      rules: { "primitives/html-entity-literal": "error" }
+    },
+    {
+      files: [
+        ...SHIPS_SCHEMAS_WITHOUT_ZOD,
+        ...SHOWS_A_CONVERTED_SCHEMA,
+        ...VENDORED_RULES,
+        "**/*.test.{ts,tsx}"
+      ],
+      rules: { "primitives/json-schema-literal": "off" }
+    },
     ...API_ROLES.map(apiRole),
     { files: DOMAIN, rules: { "no-console": "error", "effect/use-fn": "error" } },
     {
@@ -439,42 +612,6 @@ export default {
         "anti-slop-effect/prefer-effect-match": "error"
       }
     },
-    ...siteRestrict(
-      [
-        "apps/site/src/components/*",
-        "apps/site/src/components/chat/**",
-        "apps/site/src/components/ui/**",
-        "apps/site/src/layouts/Layout.astro",
-        "apps/site/src/lib/*",
-        "apps/site/src/data/**",
-        "apps/site/src/directives/**"
-      ],
-      [
-        ...SITE,
-        {
-          regex:
-            "^#src/(components|lib|styles)/(blog|home)/|^#src/layouts/BlogLayout|^\\./(blog|home)/|^\\./BlogLayout",
-          message:
-            "Shared code can't import from a blog/ or home/ folder. Move the module to the shared folder, or the importer into that area (apps/site/src/README.md › Folders)."
-        }
-      ]
-    ),
-    ...siteRestrict(
-      [
-        "apps/site/src/components/blog/**",
-        "apps/site/src/lib/blog/**",
-        "apps/site/src/styles/blog/**",
-        "apps/site/src/layouts/BlogLayout.astro"
-      ],
-      [
-        ...SITE,
-        {
-          regex: "^#src/components/home/",
-          message:
-            "Blog code can't import homepage components. Move a component both use to the root of apps/site/src/components (apps/site/src/README.md › Folders)."
-        }
-      ]
-    ),
     // Effect's Service.use and Hono's useApiStack aren't hooks, so React's naming rule stays on
     // the site. oxlint files it under pedantic, which the correctness category leaves off.
     { files: ["apps/site/src/**"], rules: { "react/rules-of-hooks": "error" } },
@@ -499,17 +636,17 @@ export default {
         "typescript/explicit-member-accessibility": [
           "error",
           { accessibility: "explicit", overrides: { constructors: "no-public" } }
-        ],
-        "no-restricted-globals": [
-          "error",
-          ...["setTimeout", "setInterval"].map(name => ({
-            name,
-            message:
-              "Timers keep a Durable Object from hibernating. Schedule the work with an alarm or the agents SDK's this.schedule() (Cloudflare Durable Objects best practices)."
-          }))
         ]
       }
     },
+    restrictGlobals(
+      { files: ["apps/api/src/**/*.durable-object.ts"] },
+      ["setTimeout", "setInterval"].map(name => ({
+        name,
+        message:
+          "Timers keep a Durable Object from hibernating. Schedule the work with an alarm or the agents SDK's this.schedule() (Cloudflare Durable Objects best practices)."
+      }))
+    ),
     {
       files: ["apps/site/src/**/*.{ts,tsx}"],
       jsPlugins: ["oxlint-tailwindcss"],

@@ -26,7 +26,7 @@ const WORKER = join(import.meta.dirname, "synth.py");
 const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
 const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
 
-const options = audioArgs(process.argv.slice(2));
+const options = audioArgs();
 const r2 = r2Store(options.local ? "local" : "remote");
 const deps: RenderDeps = {
   r2,

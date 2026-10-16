@@ -2,7 +2,7 @@
 
 `src/server.ts` is the entry point. `src/app.ts` mounts each module's controller. The [public API](src/modules/api/README.md) and the [MCP server](src/modules/mcp/README.md) have their own READMEs.
 
-Cloudflare serves assets straight from the built site. The Worker only runs for the routes in `run_worker_first` in `wrangler.jsonc`, and for requests that match no file. If you add a route to `app.ts`, add it there too.
+Cloudflare serves assets straight from the built site. The Worker only runs for the routes in `run_worker_first` in `wrangler.jsonc`, and for requests that match no file. If you add a route to `app.ts`, add it there too; `test/wrangler.test.ts` fails until you do.
 
 ## Markdown pages
 
@@ -47,7 +47,7 @@ Services and repositories:
 - Failures a caller can act on are `Data.TaggedError`s, declared in the file that raises them. The controller's `render` table has a `success` function and one `failures` entry per tag. The type check fails if an entry is missing or unknown, or if an error's `_tag` is a plain `string`, which `src/common/di/render.test-d.ts` proves.
 - Anything else, a defect or a rejected promise, reaches the router's exception filter. Under `/api` and `/openapi.json` that is `common/filters/api-exception.filter.ts`, which logs it and answers the documented JSON 500.
 - Only services, repositories, `app.module.ts`, `src/common/di/` and tests may import `effect` values. Lint fails any other value import of it. Type imports are fine.
-- Lint enforces each suffix's role (`API_ROLES` in `tooling/lint.config.ts`). Only `app.module.ts` and tests run an Effect. Services and repositories import nothing from Hono or the HTTP layer, log through Effect, and don't swallow defects. Guards, pipes, interceptors, middleware and filters call no service. Controllers, MCP handlers, plumbing, services and repositories don't read `c.env`. The one exception is `chat.controller.ts`, the only caller of `routeAgentRequest`, which hands it the bindings with a disable comment saying why.
+- Lint enforces each suffix's role (`API_ROLES` in `tooling/lint.config.ts`). Only `app.module.ts` and tests run an Effect. Services and repositories import nothing from Hono or the HTTP layer, log through Effect, and don't swallow defects. Guards, pipes, interceptors, middleware and filters call no service. Controllers, MCP handlers, plumbing, services and repositories don't read `c.env` or call `fetch`. A file with no suffix is pure: it reads no binding, runs no Effect and imports no file that has a suffix (type imports are fine). The one exception is `chat.controller.ts`, the only caller of `routeAgentRequest`, which hands it the bindings with a disable comment saying why.
 - Module-scope state lives only in a `*.store.ts`. Anywhere else, a top-level `let` or a mutable `Map` or `Set` fails lint; type a constant one `ReadonlySet` or `ReadonlyMap`.
 - Tests replace providers the way Nest's `overrideProvider` does. `appLayer(Layer.succeed(PostsRepository, fake))` is the real graph with one provider faked. A test of an API route sends it through `apiClient({ layer })`, Hono's typed `testClient` over `createApp(layer)`, so a path, query or body the router doesn't accept fails the type check. `fetchWorker(path, { layer })` sends a raw request, for what that client can't express: an unknown path, a wrong method or a malformed body. Fake a repository to test how controllers render its outcomes. Test the repository itself against its binding, as `src/modules/rate-limit/contact-quota.repository.test.ts` does.
 

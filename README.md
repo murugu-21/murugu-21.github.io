@@ -54,6 +54,7 @@ Packages import each other by name and full file path, like `@murugappan/content
 `.githooks/pre-push` runs every check CI runs. Both call `bun run check:static` for the format, lint and typecheck gates. It regenerates the Worker types from `wrangler.jsonc` first, because lint and the typechecks read bindings from them. It needs two tools from Homebrew: `brew install typos-cli uv`.
 
 - Run tests with `bun run test`. `bun test` starts Bun's own test runner, which is the wrong one.
+- `bun run test:e2e` runs `apps/api/e2e/` against `bun run build`'s output: it boots the built Worker in wrangler's dev runtime on a port wrangler picks and checks the served media types, Link headers, markdown negotiation, the links in the agent documents and the home page's JavaScript budget. Build first.
 - Before the first run, install Chromium with `bunx playwright install --only-shell chromium` and set up Python with `uv sync --locked --project apps/tts`.
 - `bun run test:live` runs the tests that call the real DeepSeek API. They cost money, so the normal run skips them.
 - Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
@@ -92,7 +93,7 @@ The build settings live in the Cloudflare dashboard, not in this repo:
 - Build env vars: the ones above, plus `BUN_VERSION` (match `packageManager` in `package.json`) and `REQUIRE_GITHUB_PROFILE=1` to fail the build if the GitHub card can't load.
 - The Worker secret `DEEPSEEK_API_KEY`. Set it with `bunx wrangler secret put DEEPSEEK_API_KEY` from `apps/api`.
 
-The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/wrangler.jsonc`. The `EMAIL` binding's `destination_address` must be the same address, so change both together.
+The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/wrangler.jsonc`. The `EMAIL` binding's `destination_address` must be the same address, so change both together; `apps/api/test/wrangler.test.ts` checks that they match.
 
 ## Credits
 

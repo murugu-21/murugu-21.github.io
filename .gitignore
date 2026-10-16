@@ -25,6 +25,8 @@ __pycache__/
 
 coverage/
 
+lint-fixture-*/
+
 __screenshots__/
 .vitest/
 

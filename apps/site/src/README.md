@@ -16,7 +16,7 @@ styles/       global.css (Tailwind), resume.css, and blog/
 data/         logo images for packages/content/profile.json
 ```
 
-Put a file in the narrowest folder that covers everything that imports it. Shared code can't import from `home/` or `blog/`, and lint enforces that. The homepage may import blog code, because it shows featured posts.
+Put a file in the narrowest folder that covers everything that imports it. Every file outside a `blog/` or `home/` folder is shared, `pages/` included, and shared code can't import from `home/` or `blog/`; lint enforces that without a list of shared folders. `pages/index.astro` counts as home and `BlogLayout.astro` as blog. The homepage may import blog code, because it shows featured posts. A test may read any area.
 
 ## Analytics
 

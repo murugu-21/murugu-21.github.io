@@ -11,7 +11,7 @@ const COMMON_OPTIONS = {
   local: { type: "boolean", default: false }
 } as const;
 
-export function audioArgs(args: string[]) {
+export function audioArgs(args?: string[]) {
   const { values, positionals } = parseArgs({
     args,
     allowPositionals: true,
@@ -25,7 +25,7 @@ export function audioArgs(args: string[]) {
   return { ...values, slugs: positionals };
 }
 
-export function alignArgs(args: string[]) {
+export function alignArgs(args?: string[]) {
   const { values, positionals } = parseArgs({
     args,
     allowPositionals: true,

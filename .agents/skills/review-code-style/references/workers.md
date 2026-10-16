@@ -10,7 +10,7 @@ Workers:
 - **CF-4.** Log one object per call with an `event` field, for example `console.error({ event: "contact email failed", err })`. Workers Logs indexes object fields, not text inside a message. Never log secrets, API keys, visitor IPs or a lead's contact details.
 - **CF-5.** Read secrets only from `env`, declared in `secrets.required`. Never put a secret in `vars`. Run `bun run types` after any `wrangler.jsonc` change.
 - **CF-6.** When the diff bumps `compatibility_date`, it names which flags between the old and new dates affect the Worker.
-- **CF-7.** `apps/api/test/wrangler.jsonc` matches `apps/api/wrangler.jsonc` in date, Durable Object bindings and `exports`.
+- **CF-7.** `apps/api/test/wrangler.jsonc` matches `apps/api/wrangler.jsonc` in date, Durable Object bindings and `exports`; `apps/api/test/wrangler.test.ts` enforces it.
 - **CF-8.** Compare secrets or tokens with `crypto.subtle.timingSafeEqual` over fixed-length digests.
 
 Durable Objects:

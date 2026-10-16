@@ -18,7 +18,7 @@ import { alignPost, whisperClient } from "./align.ts";
 
 const WORKER = join(import.meta.dirname, "whisper.py");
 
-const options = alignArgs(process.argv.slice(2));
+const options = alignArgs();
 const r2 = r2Store(options.local ? "local" : "remote");
 
 requirePython("mlx_whisper");

@@ -1,23 +1,31 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { parseEnv } from "node:util";
+import { parseArgs, parseEnv } from "node:util";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "vite-plus/test/browser-playwright";
-import { defineConfig } from "vite-plus";
+import { configDefaults, defineConfig } from "vite-plus";
 
+import { readWranglerConfigs } from "@murugappan/api/read-wrangler-config.ts";
 import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
 import fmt from "@murugappan/tooling/fmt.config.ts";
 import lint from "@murugappan/tooling/lint.config.ts";
 
 const d1Migrations = await readD1Migrations("./apps/api/migrations");
 
+const TEST_WRANGLER_CONFIG = "./apps/api/test/wrangler.jsonc";
+const wranglerConfigs = readWranglerConfigs({
+  production: "./apps/api/wrangler.jsonc",
+  test: TEST_WRANGLER_CONFIG
+});
+
 // Tests tagged "live" bill the DeepSeek API, so only `bun run test:live` runs them, and only
 // that run hands the pool the key.
-const live = process.argv.some(
-  (arg, i, argv) =>
-    arg === "--tags-filter=live" || (arg === "--tags-filter" && argv[i + 1] === "live")
-);
+const { values: testArgs } = parseArgs({
+  options: { "tags-filter": { type: "string" } },
+  strict: false
+});
+const live = testArgs["tags-filter"] === "live";
 
 const DEV_VARS = "apps/api/.dev.vars";
 function readLiveBindings() {
@@ -46,6 +54,7 @@ export default defineConfig({
     "*.py": ["bun run --silent py ruff check --fix", "bun run --silent py ruff format"]
   },
   test: {
+    exclude: [...configDefaults.exclude, "**/lint-fixture-*/**"],
     // 0 stops truncating values in failure messages.
     chaiConfig: { truncateThreshold: 0 },
     // Keeps `$field` values in it.each titles whole. 0 doesn't switch the limit off: it still
@@ -76,11 +85,14 @@ export default defineConfig({
     },
     projects: [
       {
-        define: { __D1_MIGRATIONS__: JSON.stringify(d1Migrations) },
+        define: {
+          __D1_MIGRATIONS__: JSON.stringify(d1Migrations),
+          __WRANGLER_CONFIGS__: JSON.stringify(wranglerConfigs)
+        },
         plugins: [
           contentPosts(),
           cloudflareTest({
-            wrangler: { configPath: "./apps/api/test/wrangler.jsonc" },
+            wrangler: { configPath: TEST_WRANGLER_CONFIG },
             miniflare: { bindings: liveBindings }
           })
         ],
@@ -138,6 +150,14 @@ export default defineConfig({
             }),
             instances: [{ browser: "chromium" }]
           }
+        }
+      },
+      {
+        test: {
+          name: "e2e",
+          environment: "node",
+          include: ["apps/api/e2e/**/*.test.ts"],
+          globalSetup: ["apps/api/e2e/setup.ts"]
         }
       }
     ]

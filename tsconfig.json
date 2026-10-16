@@ -7,8 +7,10 @@
     "apps/brand/*.ts",
     "vite.config.ts",
     "apps/api/vite.config.ts",
+    "apps/api/e2e/**/*",
     "apps/site/vite.config.ts"
   ],
+  "exclude": ["**/lint-fixture-*/**"],
   // `?raw` imports in the content package.
   "compilerOptions": { "types": ["node", "vite/client"] }
 }
