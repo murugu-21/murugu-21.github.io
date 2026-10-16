@@ -20,7 +20,6 @@ import {
 
 const MAX_CONTACT_BODY_BYTES = 16 * 1024;
 
-/** Never cached: the body confirms a side effect and the headers are a snapshot. */
 function contactResponse(
   status: 200 | 202,
   body: { status: string; message: string },
@@ -117,11 +116,9 @@ export const contactController = new Hono<AppEnv>().post(
   bodyLimitMiddleware({ maxBytes: MAX_CONTACT_BODY_BYTES, schemaName: "ContactRequest" }),
   jsonBodyPipe({ schema: ContactRequest, schemaName: "ContactRequest" }),
   c => {
-    // `dryRun` sits beside the payload so the email formatter never sees it.
     const { dryRun, ...message } = c.var.body;
     const client = c.req.header("CF-Connecting-IP") ?? "unknown";
 
-    // Reports the real allowance, which is how a client sizes a real send.
     if (dryRun) {
       return runInRequest({
         services: c.var.services,

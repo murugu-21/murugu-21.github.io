@@ -1,6 +1,3 @@
-// Renders the X profile banners from x-cover.html: both themes, 1x (1500x500) and 2x.
-//
-//   bun run banners
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -21,7 +18,6 @@ for (const theme of THEMES) {
     await page.goto(`${pathToFileURL(SOURCE).href}?theme=${theme}`, {
       waitUntil: "networkidle0"
     });
-    // wait for the webfont, or the shot uses the fallback face
     await page.evaluate(() => document.fonts.ready);
     const out = join(import.meta.dirname, `x-cover-${theme}${suffix}.png`);
     await page.screenshot({ path: out });

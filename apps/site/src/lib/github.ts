@@ -35,16 +35,13 @@ async function postQuery<T extends z.ZodType>({
   return data.data;
 }
 
-/** Build-time GraphQL query; logs and returns null on any failure so the build never breaks. */
 async function queryGithub<T extends z.ZodType>({
   query,
   schema,
   fallback
 }: {
   query: string;
-  /** The shape of the reply's `data`. */
   schema: T;
-  /** What the page does instead, for the log line. */
   fallback: string;
 }): Promise<z.infer<T> | null> {
   if (!GITHUB_TOKEN) {
@@ -94,7 +91,6 @@ export type GithubRepo = Omit<z.infer<typeof PinnedRepoNode>, "repositoryTopics"
   topics: string[];
 };
 
-/** GitHub's diskUsage is in KB. */
 export function formatRepoSize(kb: number): string {
   if (kb < 1024) return `${kb} KB`;
   return `${parseFloat((kb / 1024).toFixed(1))} MB`;
@@ -128,7 +124,6 @@ export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
 
 type DescribedRepo = GithubRepo & { description: string };
 
-/** The pinned repos the resume lists: those with a description to show. */
 export async function fetchResumeProjects(): Promise<DescribedRepo[]> {
   return (await fetchPinnedRepos()).filter(
     (repo): repo is DescribedRepo => (repo.description ?? "") !== ""

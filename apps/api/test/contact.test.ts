@@ -11,7 +11,6 @@ const nextIp = () => `203.0.113.${100 + ++lastIp}`;
 const contactApi = (recording?: { email: SendEmail }) =>
   apiClient({ ip: nextIp(), env: { email: recording?.email } }).api.v1.contact;
 
-/** For bodies the typed client cannot send. */
 const postRaw = (body: JsonValue) =>
   fetchWorker("/api/v1/contact", {
     method: "POST",

@@ -61,7 +61,6 @@ describe("jsonLdHtml", () => {
     );
 
     expect(terms).toContain("TypeScript");
-    // Terraform comes only from the resume's skillsCategories.
     expect(terms).toContain("Terraform");
   });
 

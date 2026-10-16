@@ -16,16 +16,12 @@ import { socialMediaLinks } from "@murugappan/content/portfolio.ts";
 
 export interface Props {
   title?: string;
-  // og:title and twitter:title, when they drop the <title>'s suffix.
   socialTitle?: string;
-  // Defaults to the section's pitch; pages not about the person need their own.
   description?: string;
   noindex?: boolean;
-  // the canonical entity page (/about)
   profilePage?: boolean;
   section?: Section;
   article?: { published: Date; tags: string[] };
-  // The page's own schema.org nodes, merged into the site-wide @graph.
   graph?: Thing[];
 }
 
@@ -35,7 +31,6 @@ export interface Section {
   ogImage: string;
   metaDescription: string;
   socialDescription: string;
-  // What the section's WebPage nodes are about; blog posts are about their topic.
   pageAbout?: { "@id": string };
 }
 
@@ -65,13 +60,8 @@ const socialDescription = pageDescription ?? section.socialDescription;
 // X reads twitter:creator as "@username".
 const twitterHandle = new URL(socialMediaLinks.twitter).pathname.replace(/^\//, "@");
 
-// Canonical on the custom domain, so other hosts (workers.dev previews) consolidate to it.
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
 
-// Page chrome per section. The portfolio's 80px scroll padding clears its fixed
-// header; the blog has none, and its headings carry their own scroll-margin. The
-// blog overrides the base layer's 19px/23px body type and dims the stars, which look
-// like stray bullets between words.
 type PerKind = Record<Section["kind"], string>;
 const chrome = {
   html: cva("scroll-smooth motion-reduce:scroll-auto", {
@@ -104,14 +94,12 @@ const jsonLdScript = jsonLdHtml({
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    {/* First, so a browser below the floor leaves before anything renders. */}
     {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/browser-support.ts, inlined unbundled so it runs before paint */}
     <script is:inline set:html={outdatedRedirectScript} />
     <title>{title}</title>
     <meta name="description" content={pageMetaDescription} />
     {noindex && <meta name="robots" content="noindex" />}
     {!noindex && <link rel="canonical" href={canonicalUrl} />}
-    {/* the entity page, kept out of the human nav */}
     <link rel="author" href="/about/" />
     <link
       rel="service-desc"

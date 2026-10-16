@@ -21,7 +21,6 @@ Do not use it as a general search engine, a resume parser or a job-matching serv
 
 Resources expose the same content as documents you can attach directly: the site summary (llms.txt), the agent instructions (AGENTS.md), the OpenAPI specification, and every blog post's markdown. Everything here is also plain HTTP. See https://murugappan.dev/openapi.json. This server's own manifest (server.json) is at https://murugappan.dev/.well-known/mcp.json.`;
 
-// Results only change on deploy; both fields are advisory.
 const LIST_CACHE: CacheHint = { ttlMs: 3_600_000, cacheScope: "public" };
 
 function buildServer(ctx: ToolContext): McpServer {

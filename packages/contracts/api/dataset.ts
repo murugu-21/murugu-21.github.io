@@ -1,6 +1,3 @@
-// The dataset the API serves, built by packages/content/dataset.ts from the same sources the site
-// renders, so the API cannot drift from the site.
-
 import { z } from "zod";
 
 import { nullableText, text } from "./fields";
@@ -112,7 +109,6 @@ export const Dataset = z.object({
 });
 export type Dataset = z.infer<typeof Dataset>;
 
-// Response bodies of the dataset endpoints and tools: each is a slice of the dataset.
 export const Profile = Dataset.pick({ person: true, links: true }).meta({
   title: "Profile",
   description: "Response body of getProfile."

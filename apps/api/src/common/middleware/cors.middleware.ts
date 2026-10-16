@@ -5,7 +5,6 @@ import { RATE_LIMIT_EXPOSED_HEADERS } from "#src/modules/rate-limit/rate-limit-h
 
 const DAY_SECONDS = 86400;
 
-// A browser-side agent needs the signalling headers to self-throttle.
 const exposeHeaders = [...RATE_LIMIT_EXPOSED_HEADERS, ...META_EXPOSED_HEADERS];
 
 export const apiCorsMiddleware = cors({

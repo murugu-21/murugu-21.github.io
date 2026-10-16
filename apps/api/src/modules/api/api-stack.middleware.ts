@@ -6,11 +6,7 @@ import { apiHeadersInterceptor } from "#src/common/interceptors/api-headers.inte
 import { methodNotAllowedMiddleware } from "#src/common/middleware/method-not-allowed.middleware.ts";
 import { readThrottleGuard } from "#src/modules/rate-limit/read-throttle.guard.ts";
 
-/**
- * Installs what every API router runs, in Nest's order: the exception filter, CORS, the read
- * throttle guard, the API headers interceptor, then JSON 405s. Call it before adding routes, and
- * chain them onto the router it returns.
- */
+// Call it before adding routes, and chain them onto the router it returns.
 export function useApiStack<R extends Hono<ApiEnv>>(
   router: R,
   { cors, enforceReads }: { cors: MiddlewareHandler; enforceReads: boolean }

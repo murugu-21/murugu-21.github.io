@@ -1,6 +1,4 @@
 ---
-// One blog index entry. `data-search` and `data-tags` feed PostList.astro's
-// filter script; keywords are in the haystack so SEO terms stay searchable.
 import { formatReadingTime, type SerializedPost } from "#src/lib/blog/posts.ts";
 
 interface Props {
@@ -24,7 +22,6 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
         {post.dateFormatted}
         {` • ${formatReadingTime(post.minutes)}`}
       </small>
-      {/* flex-wrap: an unwrapped row overflowed the page at phone width. */}
       <div class="flex flex-row flex-wrap gap-2.5">
         {post.tags.map(tag => (
           // The inline-block label stops Chrome painting a line-end selection

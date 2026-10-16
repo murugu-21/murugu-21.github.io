@@ -15,7 +15,6 @@ type Send = (message: ContactMessage) => Effect.Effect<void, DeliveryFailed>;
 export class MailService extends Context.Service<
   MailService,
   {
-    /** The only way to get a `Send`, so nothing can send on a deployment that has no inbox. */
     readonly sender: Effect.Effect<Send, DeliveryNotConfigured>;
   }
 >()("@murugappan/api/MailService") {

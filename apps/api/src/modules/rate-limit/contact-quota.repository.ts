@@ -3,7 +3,6 @@ import { Context, Data, Effect, Layer } from "effect";
 import { WorkerEnv } from "#src/common/di/worker-env.ts";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
 
-/** What is left of each contact tier today, after the reporting call. */
 export type ContactUsage = { clientRemaining: number; globalRemaining: number };
 
 export type ContactSlot = ContactUsage &
@@ -18,7 +17,6 @@ export class QuotaUnavailable extends Data.TaggedError("QuotaUnavailable")<{
   readonly cause: unknown;
 }> {}
 
-/** The daily contact allowance, counted in the shared RateLimiter Durable Object. */
 export class ContactQuotaRepository extends Context.Service<
   ContactQuotaRepository,
   {

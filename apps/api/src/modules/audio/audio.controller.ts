@@ -1,4 +1,3 @@
-// Read-only blog audio. Supports Range because <audio> seeks with it.
 import { Hono } from "hono";
 
 import { runInRequest } from "#src/app.module.ts";
@@ -56,7 +55,6 @@ audioController.get("/:file", async c => {
   const extension = audioExtension(file);
   if (!extension) return serveAsset(c);
 
-  // A miss falls back to the asset 404, which is async, so the table's output is too.
   const render: Render<AudioReply, AudioNotFound, Response | Promise<Response>> = {
     success: audioResponse,
     failures: { AudioNotFound: () => serveAsset(c) }

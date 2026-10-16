@@ -6,7 +6,6 @@ import { ProfileRepository } from "#src/modules/profile/profile.repository.ts";
 export class ProfileService extends Context.Service<
   ProfileService,
   {
-    /** The part of the dataset `schema` picks; parsing drops the other keys. */
     slice<S extends z.ZodType>(schema: S): Effect.Effect<z.infer<S>>;
   }
 >()("@murugappan/api/ProfileService") {

@@ -10,8 +10,6 @@ import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
 import fmt from "@murugappan/tooling/fmt.config.ts";
 import lint from "@murugappan/tooling/lint.config.ts";
 
-// The pool's D1 starts empty; apps/api/test/apply-migrations.ts applies these
-// per test file.
 const d1Migrations = await readD1Migrations("./apps/api/migrations");
 
 // Tests tagged "live" bill the DeepSeek API, so only `bun run test:live` runs them, and only
@@ -34,7 +32,6 @@ const liveBindings = live ? readLiveBindings() : {};
 export default defineConfig({
   lint,
   fmt,
-  // The flag keeps a commit that only touches ignored files (apps/site/public) from failing.
   staged: {
     "*.{js,mjs,jsx,ts,tsx}": [
       "vp lint --fix --no-error-on-unmatched-pattern",
@@ -54,7 +51,6 @@ export default defineConfig({
     // Keeps `$field` values in it.each titles whole. 0 doesn't switch the limit off: it still
     // clips the last character of a string.
     taskTitleValueFormatTruncate: Number.MAX_SAFE_INTEGER,
-    // Random file and test order surfaces tests that lean on state an earlier test left.
     // Each run prints its seed. Pass --sequence.seed=<seed> to replay that order.
     sequence: { shuffle: true },
     // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
@@ -101,15 +97,11 @@ export default defineConfig({
             }
           ],
           setupFiles: ["./apps/api/test/apply-migrations.ts"],
-          // TODO: rename API tests to NestJS's convention (*.spec.ts beside the source,
-          // *.e2e-spec.ts in test/) and update this glob, the coverage excludes and the test
-          // globs in tooling/lint.config.ts.
+          // TODO: rename API tests to NestJS's convention (*.spec.ts, *.e2e-spec.ts) and update this
+          // glob, the coverage excludes and the test globs in tooling/lint.config.ts.
           include: ["apps/api/{src,test}/**/*.test.ts"]
         }
       },
-      // The site runs in the browser or at build time and the content and utils packages are pure,
-      // so none of them needs workerd, and starting each file there costs far more than the tests.
-      // The scripts run on Node or Bun.
       {
         plugins: [contentPosts()],
         // Astro's virtual modules exist only inside its Vite plugin.
@@ -135,8 +127,6 @@ export default defineConfig({
           ]
         }
       },
-      // React islands and the stylesheet test need a real DOM, media elements and
-      // layout, which workerd lacks.
       {
         test: {
           name: "browser",
@@ -144,7 +134,6 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: true,
-            // copy-code.test.tsx reads back what the copy button wrote.
             provider: playwright({
               contextOptions: { permissions: ["clipboard-read", "clipboard-write"] }
             }),

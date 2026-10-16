@@ -2,7 +2,6 @@ import { COPY_LABEL } from "./shiki-copy-button";
 
 const COPIED_MS = 2000;
 
-/** Wires every copy button under `root` (shiki-copy-button.ts) through one click listener. */
 export function installCopyCode(root: Element): void {
   const resets = new WeakMap<Element, ReturnType<typeof setTimeout>>();
   // Screen readers don't reliably announce an aria-label change. The region sits outside

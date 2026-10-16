@@ -1,6 +1,3 @@
-// Pure half of the Mermaid pipeline, free of Node APIs. apps/site/scripts/render-mermaid.ts
-// writes a light and dark SVG per fence at build time, named by hash; remark-mermaid.ts
-// and the RSS route swap fences for them.
 import { fromMarkdown } from "mdast-util-from-markdown";
 import type { Code, Parent } from "mdast";
 
@@ -10,16 +7,10 @@ export const DIAGRAMS_DIR = "diagrams";
 export type DiagramTheme = "light" | "dark";
 export const DIAGRAM_THEMES: readonly DiagramTheme[] = ["light", "dark"];
 
-// Folded into every hash. Bump when render output changes in a way the mermaid
-// version stamp doesn't capture (theme, font, embedded style).
 const RENDERER_VERSION = "4";
 
 interface MermaidFence {
-  // Diagram source exactly as the markdown parser hands it to the build:
-  // container indentation (a fence inside a list item) already stripped.
   source: string;
-  // Offsets into the markdown of the whole fence, opening line through closing
-  // line (exclusive end; no trailing newline).
   start: number;
   end: number;
 }
@@ -30,7 +21,6 @@ interface MermaidNode {
   index: number;
 }
 
-// Walks the tree in document order so fence numbering matches the page.
 export function collectMermaidNodes(parent: Parent): MermaidNode[] {
   return parent.children.flatMap((child, index) => {
     if (child.type === "code" && child.lang === "mermaid") return [{ node: child, parent, index }];
@@ -38,8 +28,6 @@ export function collectMermaidNodes(parent: Parent): MermaidNode[] {
   });
 }
 
-// Same CommonMark parser as Astro's remark pipeline, so fence detection and
-// `value` (hence hashes and file names) match the build exactly.
 export function findMermaidFences(markdown: string): MermaidFence[] {
   return collectMermaidNodes(fromMarkdown(markdown)).map(({ node }) => {
     if (node.position?.start.offset === undefined) {
@@ -67,8 +55,6 @@ export const diagramRaster = (hash: string) => `${DIAGRAMS_DIR}/${hash}.png`;
 
 export const diagramAlt = (index: number) => `Diagram ${index + 1}`;
 
-// Raw-markdown counterpart of the remark plugin for the RSS route
-// (markdown-it): each fence becomes a post-relative image of the light PNG.
 export async function replaceMermaidFences(markdown: string): Promise<string> {
   const fences = findMermaidFences(markdown);
   if (fences.length === 0) return markdown;

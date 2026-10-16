@@ -1,5 +1,3 @@
-// Oxlint JS plugin for apps/api/README.md › Layers: every method a service or repository layer
-// provides is an Effect.fn, so each call gets a span named after the method.
 import type { NodeOf, Plugin } from "./plugin-types.ts";
 
 type ObjectExpression = NodeOf<"ObjectExpression">;
@@ -11,8 +9,6 @@ const isFunction = (node: Node) =>
 
 const LAYER_CONSTRUCTORS = new Set(["effect", "succeed", "sync"]);
 
-// `Layer.effect(Service, …)`, `Layer.succeed(Service, …)` or `Layer.sync(Service, …)`. A service
-// that isn't a plain identifier is skipped, since the message has no name to give the span.
 function layerService(call: CallExpression): string | undefined {
   const { callee, arguments: args } = call;
   if (callee.type !== "MemberExpression" || callee.property.type !== "Identifier") return undefined;
@@ -21,7 +17,6 @@ function layerService(call: CallExpression): string | undefined {
   return args[0]?.type === "Identifier" ? args[0].name : undefined;
 }
 
-// The function whose result `node` is: an arrow's expression body, or a `return` argument.
 function returnedFrom(node: Node): Node | undefined {
   const { parent } = node;
   if (parent?.type === "ArrowFunctionExpression") return parent.body === node ? parent : undefined;
@@ -32,9 +27,6 @@ function returnedFrom(node: Node): Node | undefined {
   return undefined;
 }
 
-// The service whose layer provides `node`: the implementation passed to a Layer constructor,
-// or what a build function passed to it returns, as in
-// `Layer.effect(S, Effect.gen(function* () { return { … } }))` or `Layer.sync(S, () => ({ … }))`.
 function providedBy(node: Node): string | undefined {
   const { parent } = node;
   if (parent?.type === "CallExpression" && parent.arguments[1] === node) {

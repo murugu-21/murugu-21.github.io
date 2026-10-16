@@ -10,20 +10,14 @@ export const FIRA_CODE_VF = fileURLToPath(
   import.meta.resolve("firacode/distr/woff2/FiraCode-VF.woff2")
 );
 
-// fontsource's latin range plus U+2190-2193.
 const UNICODE_RANGE =
   "U+0020-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329," +
   "U+2000-206F,U+20AC,U+2122,U+2190-2193,U+2212,U+2215,U+FEFF,U+FFFD";
 
-// The site only toggles calt (code ligatures); the rest keep marks and
-// fractions shaping. Dropping the cv/ss variants saves about 10 KB.
 export const FIRA_CODE_FEATURES = ["calt", "ccmp", "dnom", "frac", "numr", "mark", "mkmk"];
 
-// Generated at config setup rather than committed, so every dev, build or
-// check run rewrites it (about 260 ms).
 export const FIRA_CODE_SUBSET = join(ROOT, "node_modules/.cache/fira-code/fira-code.woff2");
 
-// Every character a CSS unicode-range list ("U+0020-007E,U+00A9") covers.
 export const unicodeRangeText = (ranges: string) =>
   ranges
     .split(",")

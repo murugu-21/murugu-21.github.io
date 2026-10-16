@@ -1,6 +1,3 @@
-// Theme for both apps: class `html.dark-mode`, localStorage "isDark" ("true" or
-// "false"), set through `window.__setPreferredTheme`.
-
 export type Theme = "light" | "dark";
 
 interface ThemeHost extends Pick<Window, "addEventListener" | "dispatchEvent"> {
@@ -10,20 +7,14 @@ interface ThemeHost extends Pick<Window, "addEventListener" | "dispatchEvent"> {
   __setPreferredTheme: (theme: Theme) => void;
 }
 
-/**
- * Applies the stored choice, else the OS's, before first paint, then owns
- * every later change: `__setPreferredTheme` for the toggle, an OS flip (which
- * drops the stored choice, so the site follows the OS again), and a bfcache
- * restore (which skips inline scripts). Layout.astro inlines its source as
- * `themeBootstrapScript`, so it must not reference anything outside itself.
- */
+// Layout.astro inlines this via toString() as themeBootstrapScript, so it must not reference
+// anything outside itself.
 export function bootstrapTheme(win: ThemeHost): void {
   const key = "isDark";
   const root = win.document.documentElement;
   const os = win.matchMedia("(prefers-color-scheme: dark)");
   const osTheme = (): Theme => (os.matches ? "dark" : "light");
 
-  // Any other stored value, or blocked storage, falls through to the OS preference.
   const storedThemes = new Map<string | null, Theme>([
     ["true", "dark"],
     ["false", "light"]
@@ -43,11 +34,12 @@ export function bootstrapTheme(win: ThemeHost): void {
     apply(theme);
     win.dispatchEvent(new Event("themechange"));
   };
-  // storage blocked (private mode): the class still applies this visit
   const store = (write: () => void) => {
     try {
       write();
-    } catch {}
+    } catch {
+      // Storage blocked (private mode): the class still applies this visit.
+    }
   };
 
   win.__setPreferredTheme = theme => {

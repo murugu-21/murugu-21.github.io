@@ -4,7 +4,6 @@ import { z } from "zod";
 import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
 import { jsonString, lenient } from "@murugappan/utils/json.ts";
 
-// Frames that can't start a model call or touch stored messages, passed through as sent.
 const PASSTHROUGH_FRAMES: ReadonlySet<string> = new Set([
   "cf_agent_stream_resume_request",
   "cf_agent_stream_resume_ack",
@@ -21,10 +20,8 @@ const ChatRequest = jsonString(
       method: z.literal("POST"),
       body: jsonString(
         z.object({
-          // Only the newest message is read; the room's stored history replaces the rest.
           messages: z.array(z.unknown()).min(1),
           trigger: z.literal("submit-message"),
-          // The visitor's current site path; never persisted. A malformed one is dropped.
           page: lenient(z.string().regex(/^\/[^\s]{0,199}$/))
         })
       )
@@ -40,7 +37,6 @@ const UserMessage = z.object({
   ])
 });
 
-/** What the room does with an incoming socket frame. */
 export type Admission =
   | { kind: "forward"; frame: string }
   | { kind: "reject"; id: string }

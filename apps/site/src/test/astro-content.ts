@@ -1,4 +1,3 @@
-// `astro:content` in the node tests. A test fills the collection with setPosts.
 import type { CollectionEntry, CollectionKey } from "astro:content";
 
 export { defineCollection } from "astro/content/config";

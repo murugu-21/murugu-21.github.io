@@ -1,5 +1,3 @@
-// Serves the published posts as `virtual:content/posts`, so the site and the Worker read one
-// parse of packages/content/blog. Both builds are Vite, and each loads this plugin.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,7 +11,6 @@ const BLOG_DIR = fileURLToPath(new URL("../blog/", import.meta.url));
 const MODULE_ID = "virtual:content/posts";
 const RESOLVED_ID = `\0${MODULE_ID}`;
 
-// The same split as Astro's glob loader, so `body` matches the content collection's.
 const FRONTMATTER = /^---(\n[\s\S]*?\n)---/;
 
 export function parsePost({ slug, markdown }: { slug: string; markdown: string }): ContentPost {
@@ -26,7 +23,6 @@ export function parsePost({ slug, markdown }: { slug: string; markdown: string }
 
 const postFile = (slug: string) => path.join(BLOG_DIR, slug, "index.md");
 
-/** Each blog/<slug>/index.md. Drafts sit one level deeper, under draft/, so they never match. */
 export const readPosts = (): ContentPost[] =>
   fs
     .readdirSync(BLOG_DIR)

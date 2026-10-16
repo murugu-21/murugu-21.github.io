@@ -27,7 +27,6 @@ describe("fetchSitePage", () => {
     });
     expect(await fetchSitePage(assets, "https://murugappan.dev/about/")).toBe(ABOUT);
     expect(await fetchSitePage(assets, "/blog/react")).toBe(REACT);
-    // llms.txt links the blog without the slash, and Jarvis passes URLs on as written.
     expect(await fetchSitePage(assets, "https://murugappan.dev/blog")).toBe(BLOG_INDEX);
   });
 

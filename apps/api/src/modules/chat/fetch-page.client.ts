@@ -1,6 +1,3 @@
-// Reads only through the ASSETS binding, so it cannot reach other hosts. Errors are tool-result
-// strings phrased for the model.
-
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 
 type AssetsLike = { fetch(input: string): Promise<Response> };
@@ -47,7 +44,6 @@ export async function fetchSitePage(assets: AssetsLike, rawUrl: string): Promise
     return `Only pages on ${SITE_HOST} can be fetched.`;
   }
 
-  // A page's index.md is its markdown rendition, cleaner than text stripped from the HTML.
   const markdown = await readAsset(assets, `${url.pathname.replace(/\/$/, "")}/index.md`);
   if (markdown) return markdown.slice(0, MAX_CHARS);
 

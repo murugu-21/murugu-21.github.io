@@ -1,11 +1,7 @@
-// The published quotas, advertised as a draft-ietf-httpapi-ratelimit-headers field (RFC 9651):
-//   RateLimit-Policy: "name";q=<quota>;w=<window seconds>   (a list)
-// Reads count per edge in apps/api/src/modules/rate-limit/read-quota.store.ts, contact in the RateLimiter DO.
-
+// Spec: draft-ietf-httpapi-ratelimit-headers (RateLimit-Policy as an RFC 9651 structured field).
 import { CONTACT_DAILY_GLOBAL, CONTACT_DAILY_PER_CLIENT } from "./contact";
 
 export type Quota = {
-  /** Policy name, quoted verbatim in both header fields. */
   name: string;
   quota: number;
   windowSeconds: number;
@@ -32,7 +28,5 @@ export const CONTACT_GLOBAL_QUOTA: Quota = {
 const policyField = (quotas: readonly Quota[]): string =>
   quotas.map(q => `"${q.name}";q=${q.quota};w=${q.windowSeconds}`).join(", ");
 
-/** The `RateLimit-Policy` value on read responses. */
 export const READ_POLICY = policyField([READ_QUOTA]);
-/** The `RateLimit-Policy` value on contact responses, client tier first. */
 export const CONTACT_POLICY = policyField([CONTACT_CLIENT_QUOTA, CONTACT_GLOBAL_QUOTA]);

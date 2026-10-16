@@ -1,5 +1,3 @@
-// The 404 bodies: markdown for agents and curl, the site's HTML page for browsers.
-
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
 
@@ -26,7 +24,6 @@ const PAGES: ReadonlyArray<[string, string]> = [
 const list = (entries: ReadonlyArray<[string, string]>): string =>
   entries.map(([path, what]) => `- ${what}: ${SITE_ORIGIN}${path}`).join("\n");
 
-/** Absolute URLs, so the body is useful when quoted. */
 function notFoundMarkdown(pathname: string): string {
   return `# 404 Not Found
 
@@ -66,7 +63,6 @@ export function markdownNotFound({
     status: 404,
     headers: {
       "Content-Type": "text/markdown; charset=utf-8",
-      // The same URL answers HTML for a browser, so caches must key on Accept.
       Vary: "Accept",
       "Cache-Control": "no-store",
       "X-Robots-Tag": "noindex",
@@ -75,7 +71,6 @@ export function markdownNotFound({
   });
 }
 
-/** Falls back to markdown if the 404 page is missing from the build. */
 export function htmlNotFound(request: Request, response: Response): Response {
   if (!(response.headers.get("Content-Type") ?? "").startsWith("text/html"))
     return markdownNotFound({ pathname: new URL(request.url).pathname, method: request.method });

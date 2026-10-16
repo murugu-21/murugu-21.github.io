@@ -17,7 +17,6 @@ function isAllowedOrigin(origin: string | null): boolean {
   }
 }
 
-/** Answers a JSON-RPC 403, since only the MCP endpoint uses it. */
 export const webOriginGuard = defineMiddleware<AppEnv>(async (c, next) => {
   if (!isAllowedOrigin(c.req.header("Origin") ?? null)) {
     return c.json(

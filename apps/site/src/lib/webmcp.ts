@@ -1,5 +1,4 @@
-// WebMCP (https://webmachinelearning.github.io/webmcp/): site actions as tools
-// for in-browser agents via document.modelContext. No-op without the API.
+// WebMCP: https://webmachinelearning.github.io/webmcp/
 
 import type { WebMCP } from "webmcp-types";
 
@@ -9,8 +8,6 @@ const mc = document.modelContext;
 const isSlug = (value: unknown): value is string =>
   typeof value === "string" && /^[a-z0-9-]+$/.test(value);
 
-// An agent may pass a full URL instead of a path, so accept both on this origin.
-// "//host", other hosts and "javascript:" resolve to another origin and fail.
 const isOnSite = (value: unknown): value is string =>
   typeof value === "string" &&
   URL.canParse(value, location.origin) &&
@@ -90,7 +87,6 @@ if (mc) {
   // throwing here, which would stop the analytics bundled into the same script.
   const register = async (tool: WebMCP.ModelContextTool) => mc.registerTool(tool);
 
-  // Tools live as long as the document, bfcache included, so none needs an abort signal.
   for (const tool of tools) {
     register(tool).catch((cause: unknown) => {
       console.warn(`[webmcp] couldn't register ${tool.name}`, cause);

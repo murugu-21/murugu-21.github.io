@@ -1,4 +1,3 @@
-// Resume content lives in profile.json; this file adds the site-only copy around it.
 import { Profile } from "@murugappan/contracts/profile.ts";
 import profileJson from "./profile.json";
 
@@ -8,7 +7,6 @@ export const { workExperiences, skillsCategories, educationInfo, openSourceContr
 
 export const greeting = {
   username: "Murugappan M",
-  // short, candid form used only by the hero line ("I'm Muru")
   nickname: "Muru",
   subTitle: profile.summary,
   resumePath: "/resume.pdf",
@@ -32,7 +30,6 @@ export const socialMediaLinks = {
 
 export const currentEmployer = { name: "MedMe Health", url: "https://www.medmehealth.com" };
 
-/** The about page's link row. Site paths are relative. */
 export const aboutLinks = [
   { label: "GitHub", href: socialMediaLinks.github },
   { label: "LinkedIn", href: socialMediaLinks.linkedin },
@@ -42,7 +39,6 @@ export const aboutLinks = [
   { label: `Email: ${socialMediaLinks.gmail}`, href: `mailto:${socialMediaLinks.gmail}` }
 ];
 
-// schema.org Person.sameAs.
 export const sameAs = [
   socialMediaLinks.github,
   socialMediaLinks.linkedin,
@@ -57,7 +53,6 @@ export const skillsSection = {
     "⚡ Design distributed, event-driven systems on AWS with Kafka, SQS and CDC",
     "⚡ Ship with observability and security built in: OpenTelemetry, Grafana, SOC 2 & HIPAA compliance"
   ],
-  // iconName is a <symbol id> in apps/site/src/assets/icons.svg
   softwareSkills: [
     { skillName: "TypeScript", iconName: "typescript" },
     { skillName: "React", iconName: "react" },
@@ -74,7 +69,6 @@ export const skillsSection = {
   ]
 };
 
-// progressPercentage feeds the dataset API's `level`; the site doesn't show it.
 export const techStack = {
   experience: [
     {
@@ -128,8 +122,6 @@ export const techStack = {
   ]
 };
 
-// Pinned GitHub repos, fetched at build time; the section renders only when
-// some exist.
 export const projectsSection = {
   title: "Projects 🛠️",
   subtitle: "A few things I've built, pinned from my GitHub."
@@ -144,7 +136,6 @@ export const blogSection = {
   title: "Blogs",
   subtitle:
     "I write about real-world software engineering: distributed systems, cloud architecture, and lessons from production.",
-  // Follows the featured posts (packages/content/blog, `featured: true`).
   blogIndexCard: {
     url: "/blog/",
     title: "SDE Journey, my technical blog",

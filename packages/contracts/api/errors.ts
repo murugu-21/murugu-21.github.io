@@ -1,5 +1,3 @@
-// The JSON error envelope for every /api/* failure.
-
 import { z } from "zod";
 
 import { text } from "./fields";

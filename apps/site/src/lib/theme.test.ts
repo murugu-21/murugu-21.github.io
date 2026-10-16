@@ -9,7 +9,6 @@ class FakeQuery extends EventTarget {
   }
 }
 
-// A page as the bootstrap sees it, with `isDark` and the OS preference preset.
 class FakePage extends EventTarget {
   document = parseHTML("<html><body></body></html>").document;
   stored = new Map<string, string>();

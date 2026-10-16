@@ -8,7 +8,6 @@ const MAX_HISTORY_MESSAGES = 20;
 export const ROOM_DAILY_LIMIT = 40;
 
 const LeadInput = z.object({
-  // A non-string name is dropped; the lead is still worth sending.
   name: lenient(z.string()).describe("The visitor's name, if they shared it."),
   contact: z.string().describe("How to reach the visitor: email, LinkedIn URL, or phone."),
   summary: z
@@ -17,7 +16,6 @@ const LeadInput = z.object({
 });
 export type Lead = z.infer<typeof LeadInput>;
 
-/** Jarvis's tools; the caller supplies what each one does. */
 export function jarvisTools({
   fetchPage,
   captureLead
@@ -95,8 +93,6 @@ export function buildMessages(
   ];
   if (!page) return messages;
 
-  // Ephemeral, never persisted, so "this page" resolves without splitting the
-  // conversation per page. "this post" binds to the page only on a post.
   const url = `https://murugappan.dev${page}`;
   const isPost = /^\/blog\/.+/.test(page);
   messages.push({

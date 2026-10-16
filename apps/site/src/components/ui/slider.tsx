@@ -1,5 +1,4 @@
-// shadcn/ui slider (new-york, Tailwind v4), vendored; uses the scoped
-// @radix-ui package, vertical orientation trimmed, aria-label forwarded to the thumb.
+// Vendored shadcn/ui slider; unlike upstream, aria-label is forwarded to the thumb.
 import * as React from "react";
 import * as SliderPrimitive from "@radix-ui/react-slider";
 

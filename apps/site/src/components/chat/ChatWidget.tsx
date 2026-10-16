@@ -40,22 +40,18 @@ import { readStored, writeStored } from "#src/lib/storage.ts";
 const ROOM_KEY = "chatRoomId";
 const TOOLTIP_KEY = "chatTooltipSeen";
 
-// Each steers Jarvis toward a strong grounded answer without selling.
 const STARTERS = [
   "What's the most impactful thing he's shipped?",
   "How has he used LLMs in production?",
   "Summarize his experience in 30 seconds"
 ];
 
-/** What the panel waits on. Only an idle room takes a message. */
 type Phase =
   | { kind: "loading" }
   | { kind: "idle" }
-  // Before the reply's prose, or on a tool step after it; null until a tool starts.
   | { kind: "working"; activity: Activity | null }
   | { kind: "replying" };
 
-// The room's data parts arrive over the network, so they're parsed, not trusted.
 const DATA_SCHEMAS = {
   activity: z.object({
     name: z.enum(["fetch_page", "capture_opportunity"]),
@@ -64,7 +60,6 @@ const DATA_SCHEMAS = {
   notice: z.object({ kind: z.enum(["limit", "error"]), text: z.string() })
 };
 
-// A running turn shows its latest tool step or prose, whichever came last.
 function turnPhase(last: JarvisMessage | undefined): Phase {
   if (last?.role !== "assistant") return { kind: "working", activity: null };
   const tail = last.parts.findLast(
@@ -105,7 +100,6 @@ function downloadTranscript(bubbles: Bubble[]) {
   track("chat_transcript_download");
   const lines = [
     `Jarvis: ${GREETING}`,
-    // The room's notices aren't part of the conversation.
     ...bubbles.flatMap(b =>
       b.kind === "system" ? [] : [`${b.kind === "user" ? "You" : "Jarvis"}: ${b.text}`]
     )
@@ -120,10 +114,8 @@ function downloadTranscript(bubbles: Bubble[]) {
   URL.revokeObjectURL(url);
 }
 
-// Below Tailwind's sm breakpoint the panel fills the screen.
 const isPhone = () => window.matchMedia("(max-width: 639px)").matches;
 
-// Focus is in the chat, or nowhere in particular (Escape also closes it from anywhere on the page).
 function focusInChat(launcher: HTMLElement | null): boolean {
   const active = document.activeElement;
   return (
@@ -134,7 +126,6 @@ function focusInChat(launcher: HTMLElement | null): boolean {
   );
 }
 
-// Radix triggers wrap it with asChild, so every prop (ref included) passes through.
 function HeaderButton(props: ComponentProps<typeof Button>) {
   return (
     <Button
@@ -146,7 +137,6 @@ function HeaderButton(props: ComponentProps<typeof Button>) {
   );
 }
 
-// Until the visitor says anything; the greeting doesn't count.
 const startersShown = (bubbles: Bubble[], phase: Phase) =>
   phase.kind === "idle" && bubbles.every(b => b.kind !== "user");
 
@@ -158,7 +148,6 @@ type PanelProps = {
 };
 
 function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
-  // Read once: a resize must not change how this panel took focus.
   const [phone] = useState(isPhone);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -168,8 +157,6 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
     onSend(text);
   };
 
-  // Stick to the bottom, except while the starter chips show: the greeting above them
-  // must stay visible.
   useEffect(() => {
     const v = viewportRef.current;
     if (!v) return;
@@ -184,9 +171,7 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
       <DialogOverlay />
       <DialogContent
         asChild
-        // The page stays usable beside the desktop panel, so clicking it doesn't close the chat.
         onInteractOutside={e => e.preventDefault()}
-        // Desktop: the composer takes focus. Phone: Radix moves focus into the modal.
         onOpenAutoFocus={e => {
           if (!phone) e.preventDefault();
         }}
@@ -304,7 +289,6 @@ type SessionProps = {
   onRestart: () => void;
 };
 
-// Owns the room's socket, so it stays mounted while the panel is closed.
 function ChatSession({ room, host, open, onRestart }: SessionProps) {
   const [awaitingReply, setAwaitingReply] = useState(false);
   const agent = useAgent({ agent: "chat-room", name: room, host });
@@ -313,12 +297,9 @@ function ChatSession({ room, host, open, onRestart }: SessionProps) {
       agent,
       dataPartSchemas: DATA_SCHEMAS,
       getInitialMessages: loadHistory,
-      // The room ignores client-sent history anyway.
       syncMessagesToServer: false,
-      // `page` lets "this post"/"this page" resolve.
       body: () => ({ page: window.location.pathname }),
       onData: part => {
-        // PII: never send message text to PostHog.
         if (part.type === "data-notice")
           track(part.data.kind === "limit" ? "chat_limit" : "chat_error");
       },
@@ -329,9 +310,6 @@ function ChatSession({ room, host, open, onRestart }: SessionProps) {
     }
   );
 
-  // On a fresh socket the hook's resume probe can mark the chat ready while this
-  // tab's first message is in flight, until the reply's first part streams in.
-  // isServerStreaming covers a turn another tab started.
   const last = messages.at(-1);
   const replyStarted = last?.role === "assistant" && last.parts.length > 0;
   const busy =
@@ -345,6 +323,7 @@ function ChatSession({ room, host, open, onRestart }: SessionProps) {
 
   const onSend = (text: string) => {
     setAwaitingReply(true);
+    // PII: never send message text to PostHog.
     track("chat_message_sent");
     void sendMessage({ text });
   };
@@ -360,12 +339,10 @@ function ChatSession({ room, host, open, onRestart }: SessionProps) {
   );
 }
 
-// `host` is PUBLIC_CHAT_HOST; unset means the page's own origin.
 export function ChatWidget({ host }: { host?: string }) {
   const [open, setOpen] = useState(false);
   // Fixed while open: Radix remounts the panel when `modal` flips, which would drop the draft.
   const [modal, setModal] = useState(false);
-  // Read from localStorage on first open, so the server render never needs it.
   const [room, setRoom] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<"hidden" | "shown" | "fading">("hidden");
   const launcherRef = useRef<HTMLButtonElement | null>(null);
@@ -386,7 +363,6 @@ export function ChatWidget({ host }: { host?: string }) {
     if (refocus) requestAnimationFrame(() => launcherRef.current?.focus());
   };
 
-  // A fresh room rather than clearing this one, so the old conversation stays intact for the owner.
   const restart = () => {
     track("chat_restart");
     const next = nanoid();
@@ -394,7 +370,6 @@ export function ChatWidget({ host }: { host?: string }) {
     setRoom(next);
   };
 
-  // Honour a launcher tap recorded by src/directives/interaction.ts while this bundle loaded.
   const openOnHydrate = useEffectEvent(() => {
     const island = launcherRef.current?.closest("astro-island");
     if (!(island instanceof HTMLElement) || !island.dataset.openOnHydrate) return;
@@ -406,9 +381,7 @@ export function ChatWidget({ host }: { host?: string }) {
   useEffect(() => {
     if (readStored(TOOLTIP_KEY)) return;
     writeStored({ key: TOOLTIP_KEY, value: "1" });
-    // setState-in-effect on purpose: a lazy initializer reading localStorage
-    // would make the server and hydration renders disagree.
-    // oxlint-disable-next-line react/set-state-in-effect
+    // oxlint-disable-next-line react/set-state-in-effect -- localStorage is client-only, so reading it during render would break hydration
     setTooltip("shown");
     const fade = setTimeout(() => setTooltip("fading"), 5000);
     const gone = setTimeout(() => setTooltip("hidden"), 5700);
@@ -423,7 +396,6 @@ export function ChatWidget({ host }: { host?: string }) {
   );
 
   return (
-    // Modal only while the panel fills a phone screen.
     <Dialog open={open} onOpenChange={next => (next ? openPanel() : closePanel())} modal={modal}>
       <DialogTrigger asChild>
         <Button

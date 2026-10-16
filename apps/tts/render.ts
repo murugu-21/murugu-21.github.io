@@ -1,5 +1,3 @@
-// One post's read-aloud audio for generate-audio.ts: a full render, or a patch
-// that splices re-synthesized blocks into the MP3 already in R2.
 import type { Buffer } from "node:buffer";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -26,7 +24,6 @@ export interface RenderDeps {
   ffmpeg: Ffmpeg;
   blogDist: string;
   tmpRoot: string;
-  // `tempo` 1 skips the atempo pass, `postfx` null the loudness pass.
   settings: { tempo: number; postfx: string | null };
 }
 
@@ -35,7 +32,6 @@ export interface Reference {
   text: string;
 }
 
-// Null in place of a Synth means a dry run.
 export interface Synth {
   worker: Pick<SynthClient, "runJob">;
   reference: Reference;
@@ -53,7 +49,6 @@ function upload(
 const extractBlocks = ({ blogDist }: RenderDeps, slug: string) =>
   postBlocks({ slug, html: readFileSync(join(blogDist, slug, "index.html"), "utf8") });
 
-// Applies tempo per chunk, so the timings measured afterwards are exact.
 function tempoChunk(
   { ffmpeg, settings }: RenderDeps,
   { outDir, id, sampleRate }: { outDir: string; id: string; sampleRate: number }
@@ -103,7 +98,6 @@ export async function renderPost(
   );
   if (!synth) return;
 
-  // Nothing deletes this dir, so you can push a failed upload by hand.
   const tmp = mkdtempSync(join(tmpRoot, `audio-${slug}-`));
   console.log(`${slug}: rendering in ${tmp}`);
   const { sampleRate } = synth;
@@ -120,7 +114,6 @@ export async function renderPost(
     spans: timings
   });
 
-  // Neither loudnorm nor the encode changes timing.
   const full = join(tmp, `${slug}.pcm`);
   const mp3 = join(tmp, `${slug}.mp3`);
   writeFileSync(full, pcm);
@@ -132,8 +125,8 @@ export async function renderPost(
   console.log(`${slug}: uploaded ${(duration / 60).toFixed(1)} min`);
 }
 
-// Mono 16-bit PCM. ffmpeg drops the encoder delay, so the length must match the
-// timings; a mismatch would shift every splice point.
+// ffmpeg drops the encoder delay, so the length must match the timings; a mismatch
+// would shift every splice point.
 function decodeMp3(
   ffmpeg: Ffmpeg,
   { mp3, sampleRate, duration }: { mp3: string; sampleRate: number; duration: number }
@@ -149,8 +142,6 @@ function decodeMp3(
   return pcm;
 }
 
-// The full render levels the whole post at once; a patched block is levelled
-// on its own so it sits at the same loudness as the rest.
 function levelBlock(
   { ffmpeg, settings: { postfx } }: RenderDeps,
   { tmp, id, pcm, sampleRate }: { tmp: string; id: string; pcm: Buffer; sampleRate: number }
@@ -164,8 +155,6 @@ function levelBlock(
   return readFileSync(dst);
 }
 
-// Re-synthesizes only the blocks whose text changed and splices them into the
-// stored MP3. The patched blocks lose their words until the next align.
 export async function patchPost(
   deps: RenderDeps,
   { slug, synth }: { slug: string; synth: Synth | null }
@@ -220,7 +209,6 @@ export async function patchPost(
   const full = join(tmp, `${slug}.pcm`);
   const mp3 = join(tmp, `${slug}.mp3`);
   writeFileSync(full, spliced.pcm);
-  // No loudnorm here: the untouched audio is already levelled.
   ffmpeg([...pcmFormat(sampleRate), "-i", full, "-b:a", "64k", mp3]);
   const duration = round3(pcmSeconds(spliced.pcm, sampleRate));
   decodeMp3(ffmpeg, { mp3, sampleRate, duration });

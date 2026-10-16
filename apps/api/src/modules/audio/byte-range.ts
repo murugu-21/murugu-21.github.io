@@ -1,7 +1,5 @@
 export type ByteRange = { offset: number; length: number };
 
-// Single-range "bytes=a-b" / "bytes=a-" / "bytes=-n". null when absent or
-// malformed.
 export function parseRange(
   header: string | null,
   size: number

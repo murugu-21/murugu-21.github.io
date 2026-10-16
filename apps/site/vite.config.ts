@@ -1,4 +1,3 @@
-// Holds only the vp task. Astro reads astro.config.ts and ignores this file.
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({

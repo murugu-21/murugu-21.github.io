@@ -1,14 +1,3 @@
-// Renders each published post to MP3 with per-paragraph timings and uploads
-// both to R2. Runs locally:
-//
-//   bun run build                # the built site (apps/site/dist) must be current
-//   bun run audio                # every post whose spoken text changed
-//   bun run audio first-post     # one post
-//   bun run audio --force        # regenerate even if unchanged
-//   bun run audio --local        # target the local R2 that `bun run preview` serves
-//   bun run audio --dry-run      # extract + hash only, no synthesis/upload
-//   bun run audio --patch react  # re-synthesize only the changed paragraphs
-//   bun run audio --upload-voice # push .voice/* to R2 once
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -28,10 +17,6 @@ import { VOICE_PREFIX, r2Store } from "./r2.ts";
 import { type Reference, type RenderDeps, type Synth, patchPost, renderPost } from "./render.ts";
 import { synthClient } from "./synth.ts";
 
-// Env overrides are for A/B renders, not production.
-//   AUDIO_VOICE_DIR   directory holding reference.wav + reference.txt
-//   AUDIO_TEMPO       atempo factor, "1" disables the pass
-//   AUDIO_LOUDNORM    "0" disables the loudness pass
 const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   ? resolve(process.env.AUDIO_VOICE_DIR)
   : join(import.meta.dirname, ".voice");
@@ -39,7 +24,6 @@ const VOICE_WAV = join(VOICE_DIR, "reference.wav");
 const VOICE_TXT = join(VOICE_DIR, "reference.txt");
 const WORKER = join(import.meta.dirname, "synth.py");
 const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
-// Loudness only. Breeze is ~-60 dBFS between words, so no denoise or gate.
 const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
 
 const options = audioArgs(process.argv.slice(2));

@@ -4,7 +4,6 @@ interface Props {
   href: string;
   download?: string;
   newTab?: boolean;
-  /* PostHog event name, captured by the delegated listener in ../lib/analytics.ts */
   event?: string;
 }
 const { text, href, download, newTab, event } = Astro.props;

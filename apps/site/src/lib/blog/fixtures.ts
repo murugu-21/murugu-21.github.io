@@ -1,5 +1,3 @@
-// Entries of the `blog` content collection, for tests to load with setPosts from
-// #src/test/astro-content.ts.
 import { postSource, type PostFields } from "@murugappan/content/fixtures.ts";
 import type { Post } from "./posts";
 

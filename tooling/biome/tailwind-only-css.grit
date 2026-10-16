@@ -1,8 +1,6 @@
 language css;
 
-// Stylesheets hold Tailwind configuration, not hand-written rules, and .astro <style> blocks hold
-// neither. A style rule may only sit inside @utility, @theme (keyframes), @custom-variant or, in
-// global.css, `@layer base`. @font-face and @page are allowed because Tailwind can't write them.
+// @font-face and @page are allowed because Tailwind can't write them.
 predicate use_tailwind($span) {
   register_diagnostic(span=$span, message="Style with Tailwind: utilities in the markup, or an @utility or @theme token in apps/site/src/styles/global.css.")
 }

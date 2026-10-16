@@ -9,13 +9,10 @@ import { buildOpenApiDocument } from "#src/modules/openapi/openapi-document.ts";
 
 const specResponse = (requestUrl: string) => json(buildOpenApiDocument(publicOrigin(requestUrl)));
 
-/** /api/openapi.json, inside the API router. */
 export const openapiController = new Hono<AppEnv>().get("/openapi.json", c =>
   specResponse(c.req.url)
 );
 
-/** /openapi.json lives outside /api, so it gets its own router and stack. */
-// A throttled client must still reach the spec, so reads are counted but not enforced.
 export const openapiRootController = useApiStack(new Hono<ApiEnv>(), {
   cors: specCorsMiddleware,
   enforceReads: false

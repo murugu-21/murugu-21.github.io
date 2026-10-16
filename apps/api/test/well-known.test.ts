@@ -3,7 +3,6 @@ import { z } from "zod";
 
 import { fetchWorker, readJson } from "./fixtures";
 
-// Hono answers HEAD from the GET route.
 describe("HEAD on the discovery documents", () => {
   it.each(["/.well-known/api-catalog", "/.well-known/mcp.json", "/mcp.json"])(
     "answers HEAD %s with GET's status and Content-Type and no body",
@@ -41,7 +40,6 @@ describe("/.well-known/api-catalog", () => {
 });
 
 describe("the MCP manifest endpoint", () => {
-  // /mcp.json must not be mistaken for a JSON-RPC call to /mcp.
   it.each(["/.well-known/mcp.json", "/mcp.json"])("is served at %s", async path => {
     const res = await fetchWorker(path);
     expect(res.status).toBe(200);

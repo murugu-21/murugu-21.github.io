@@ -1,6 +1,3 @@
-// Word-level timing for the read-aloud highlight: maps whisper's words onto
-// a block's known text. The page's player maps DOM spans to these times
-// (apps/site/src/lib/blog/audio-words.ts).
 import type { TimedWord } from "@murugappan/contracts/audio-timings.ts";
 import { tokenize } from "@murugappan/content/speech.ts";
 
@@ -10,11 +7,8 @@ export interface WhisperWord {
   end: number;
 }
 
-// Matching key: lowercase letters and digits only, so "Don't" ≈ "don't" ≈
-// "dont" and "fine." ≈ "fine".
 const key = (token: string) => token.toLowerCase().replaceAll(/[^\p{L}\p{N}]/gu, "");
 
-// Longest common subsequence over match keys, as pairs of [textIndex, whisperIndex].
 function lcsPairs(a: string[], b: string[]): Array<[number, number]> {
   const n = a.length;
   const m = b.length;
@@ -43,10 +37,6 @@ function lcsPairs(a: string[], b: string[]): Array<[number, number]> {
 
 const MIN_MATCH_RATIO = 0.6;
 
-// Times every token of `text` from whisper's words: matched tokens take
-// whisper's times, unmatched runs are spread evenly between their neighbours.
-// Absolute, clamped to the block and monotonic. Null below MIN_MATCH_RATIO,
-// so the caller keeps the paragraph highlight.
 export function alignWords(
   text: string,
   whisper: WhisperWord[],
@@ -76,8 +66,6 @@ export function alignWords(
       i++;
       continue;
     }
-    // A run of unmatched tokens [i, j): spread between the previous anchor's
-    // end (or 0) and the next anchor's start (or the block length).
     let j = i;
     while (j < tokens.length && !anchors.has(j)) j++;
     const from = i > 0 ? out[i - 1].e : 0;

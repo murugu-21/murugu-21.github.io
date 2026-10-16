@@ -38,8 +38,6 @@ async function chatRoom(c: Context<AppEnv>): Promise<Response> {
  */
 export const chatController = new Hono<AppEnv>();
 
-// The widget names a room with nanoid(): 21 characters of A-Za-z0-9_-. Any other name falls
-// through to the 404.
 const ROOM = "/:room{[\\w-]{21}}";
 
 chatController.get(ROOM, siteOriginGuard, c =>

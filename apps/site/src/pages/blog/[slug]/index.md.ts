@@ -1,4 +1,3 @@
-// Each published post's markdown source, frontmatter included. Drafts are not in the module.
 import type { APIRoute, GetStaticPaths, InferGetStaticPropsType } from "astro";
 import { posts } from "virtual:content/posts";
 

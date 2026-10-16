@@ -35,7 +35,6 @@ afterEach(() => {
   delete globalThis.posthog;
 });
 
-// The module keeps state (booted SDK, buffer), so SDK tests need a fresh copy.
 const fresh = async () => {
   vi.resetModules();
   return import("./analytics");
@@ -321,10 +320,8 @@ describe("bootAnalytics", () => {
       return sdk;
     };
     const ph = await fresh();
-    // local dev and CI pages carry no meta tags
     await ph.bootAnalytics({ root: page(""), load });
     const { d, win } = configured();
-    // SiteScripts.astro passes no root, so the page's own document is read.
     vi.stubGlobal("document", d);
     try {
       const booting = ph.bootAnalytics({ load });
@@ -366,7 +363,6 @@ describe("bootAnalytics", () => {
       [err, undefined],
       [reason, undefined]
     ]);
-    // detached once PostHog's autocapture takes over, so nothing doubles
     win.dispatchEvent(new win.Event("error"));
     expect(captureException.mock.calls).toHaveLength(2);
   });

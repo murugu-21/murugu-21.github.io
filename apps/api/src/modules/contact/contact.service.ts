@@ -19,7 +19,6 @@ export type ContactError =
   | DeliveryFailed
   | QuotaUnavailable;
 
-/** Delivery for POST /api/contact and the MCP send_message tool, so both share one allowance. */
 export class ContactService extends Context.Service<
   ContactService,
   {
@@ -36,8 +35,8 @@ export class ContactService extends Context.Service<
       const mail = yield* MailService;
       const quota = yield* ContactQuotaRepository;
       return {
-        // The sender comes first so an unconfigured deployment never spends a slot.
         deliver: Effect.fn("ContactService.deliver")(function* ({ client, message }) {
+          // The sender comes first so an unconfigured deployment never spends a slot.
           const send = yield* mail.sender;
           const usage = yield* quota.take(client);
           yield* send(message);

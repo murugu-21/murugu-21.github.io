@@ -1,6 +1,3 @@
-// The timing JSON stored next to each post's MP3 in R2 (@murugappan/contracts/audio-timings.ts).
-// A full render writes version 1; align-audio.ts adds `words` as version 2, and a patch
-// keeps whichever version it found.
 import { z } from "zod";
 
 import { AudioTimings, TimedBlock } from "@murugappan/contracts/audio-timings.ts";
@@ -13,7 +10,6 @@ interface Span {
   end: number;
 }
 
-// The page's schema made loose, so every field this code doesn't touch round-trips untouched.
 export const StoredTimings = jsonString(
   z.looseObject({
     ...AudioTimings.shape,
@@ -62,8 +58,6 @@ export function renderedTimings({
   } satisfies StoredTimings;
 }
 
-// The blocks whose text changed, which a patch re-synthesizes. A patch needs
-// the stored paragraph count, since every block keeps its slot in the MP3.
 export function changedBlocks({
   slug,
   stored,
@@ -81,8 +75,6 @@ export function changedBlocks({
   return texts.flatMap((text, i) => (stored.blocks[i].text === text ? [] : [i]));
 }
 
-// `duration` is already rounded. Patched blocks lose their words until
-// `bun run audio:align` re-times them; the others keep theirs, moved with the block.
 export function patchedTimings({
   stored,
   texts,

@@ -7,7 +7,6 @@ import { Textarea } from "#src/components/ui/textarea.tsx";
 
 type ComposerProps = { disabled: boolean; autoFocus: boolean; onSend: (text: string) => void };
 
-/** The message box. A draft it can't send yet, while a turn runs, stays put. */
 export function Composer({ disabled, autoFocus, onSend }: ComposerProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -46,7 +45,6 @@ export function Composer({ disabled, autoFocus, onSend }: ComposerProps) {
           e.preventDefault();
           submit();
         }}
-        // Textarea's field-sizing-content grows it with the text; max-h-30 caps it at ~5 lines.
         className="max-h-30 min-h-0 resize-none overflow-x-hidden bg-secondary"
       />
       <Button type="submit" size="icon" aria-label="Send" disabled={disabled}>

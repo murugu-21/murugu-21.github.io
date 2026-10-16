@@ -10,11 +10,6 @@ import { postsController } from "#src/modules/posts/posts.controller.ts";
 import { profileController } from "#src/modules/profile/profile.controller.ts";
 import { versioningController } from "#src/modules/versioning/versioning.controller.ts";
 
-/**
- * The public API, mounted at /api/v1 and /api. The shared stack is installed once here, so every
- * module controller under it gets the exception filter, CORS, the read throttle, the API headers
- * and JSON 405s.
- */
 export const apiController = useApiStack(new Hono<ApiEnv>(), {
   cors: apiCorsMiddleware,
   enforceReads: true
@@ -24,7 +19,6 @@ export const apiController = useApiStack(new Hono<ApiEnv>(), {
   .route("/", versioningController)
   .route("/", openapiController)
   .route("/", contactController)
-  // methodNotAllowedMiddleware turns this into a 405 when the path exists under another method.
   .all("*", c =>
     apiError({
       status: 404,

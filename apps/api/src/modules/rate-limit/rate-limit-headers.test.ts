@@ -58,7 +58,6 @@ describe("contactRateLimitHeaders", () => {
 describe("secondsUntilUtcMidnight", () => {
   it("is the whole day at the start of one, and never zero at the end", () => {
     expect(secondsUntilUtcMidnight(new Date("2026-08-25T00:00:00Z"))).toBe(86_400);
-    // Never 0, so Retry-After always asks for a real wait.
     expect(secondsUntilUtcMidnight(new Date("2026-08-25T23:59:59.999Z"))).toBe(1);
   });
 });

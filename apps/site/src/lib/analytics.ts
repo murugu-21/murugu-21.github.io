@@ -1,6 +1,3 @@
-// PostHog events and error tracking for both apps. Every export is safe to
-// call unconditionally: no-op without config (dev, CI), buffered while the SDK
-// loads, failures swallowed. Event names are snake_case `<surface>_<action>`.
 // PII: never pass anything a visitor typed (chat messages, search queries).
 
 import type { CaptureResult, PostHogConfig } from "posthog-js";
@@ -16,7 +13,6 @@ interface PostHog {
 }
 
 declare global {
-  // The PostHog snippet and toolbar share this global; anything may sit there.
   var posthog: unknown;
 }
 
@@ -28,19 +24,14 @@ const isPostHog = (p: unknown): p is PostHog =>
   "register" in p &&
   typeof p.register === "function";
 
-/** Injectable for tests. */
 type SdkLoader = () => Promise<PostHog>;
 
 const loadSdk: SdkLoader = () => import("posthog-js").then(m => m.default);
 
-// Checked before the global in case something reassigns window.posthog.
 let sdk: PostHog | null = null;
 
-// Non-null only while the SDK is loading, so nothing accumulates in dev/CI.
 let pending: Array<(ph: PostHog) => void> | null = null;
 
-// Detaches bootAnalytics' pre-SDK error listeners; PostHog's autocapture
-// takes over once initAnalytics settles.
 let stopEarlyErrors: (() => void) | null = null;
 
 const stopEarlyErrorCapture = () => {
@@ -66,13 +57,11 @@ const send = (fn: (ph: PostHog) => void): void => {
   }
 };
 
-// Blank values carry no signal and clutter PostHog's property list.
 const clean = (props?: Record<string, string>): Record<string, string> | undefined => {
   const kept = Object.entries(props ?? {}).filter(([, v]) => v.trim());
   return kept.length ? Object.fromEntries(kept) : undefined;
 };
 
-/** Super property, not person property: visitors are anonymous. */
 export function tag(key: string, value: string): void {
   if (!value.trim()) return;
   send(ph => ph.register({ [key]: value }));
@@ -83,7 +72,6 @@ export function track(event: string, props?: Record<string, string>): void {
   send(ph => ph.capture(event, cleaned));
 }
 
-/** For errors caught on purpose; uncaught ones are captured automatically. */
 export function reportError(cause: unknown, props?: Record<string, string>): void {
   const cleaned = clean(props);
   send(ph => ph.captureException(cause, cleaned));
@@ -95,10 +83,6 @@ const TRACKED = new WeakSet<object>();
 const isElement = (target: EventTarget | null): target is Element =>
   target !== null && "closest" in target && typeof target.closest === "function";
 
-/**
- * Delegated click tracking via `data-ph-event`, plus optional `data-ph-prop` /
- * `data-ph-value`. One listener per document, so later-rendered islands work.
- */
 export function initClickTracking(root?: Document): void {
   // lib.dom types this as always defined; it is undefined outside a browser
   const doc: Document | undefined = root ?? globalThis.document;
@@ -128,7 +112,6 @@ const MASKED_IN_QUERY = new RegExp(`([?&](?:${MASKED_PARAMS.join("|")})=)[^&#]*`
 // A hand-written guard rather than zod, which would add itself to every page's analytics bundle.
 const isString = (value: unknown): value is string => typeof value === "string";
 
-/** Masks the blog filter params in an event's referrers, as PostHog does in its URLs. */
 export function maskReferrers(event: CaptureResult | null): CaptureResult | null {
   for (const props of [event?.properties, event?.$set_once]) {
     if (!props) continue;
@@ -140,7 +123,6 @@ export function maskReferrers(event: CaptureResult | null): CaptureResult | null
   return event;
 }
 
-/** No-ops without token/host; replays anything buffered during the load. */
 export async function initAnalytics(
   token: string | undefined,
   host: string | undefined,
@@ -154,8 +136,8 @@ export async function initAnalytics(
       api_host: host.trim().replace(/\/$/, ""),
       // the toolbar needs PostHog's real domain, not the proxy
       ui_host: "https://us.posthog.com",
-      // Replay starts on first interaction (below) to keep the heavy recorder
-      // out of Lighthouse's blocking time.
+      // Replay starts on first interaction (below) to keep the heavy recorder out of
+      // Lighthouse's blocking time.
       disable_session_recording: true,
       session_recording: {
         maskAllInputs: true,
@@ -165,10 +147,7 @@ export async function initAnalytics(
       // unused extensions the SDK would otherwise fetch after boot
       disable_surveys: true,
       capture_dead_clicks: false,
-      // bootAnalytics' listeners cover the window before this; they are
-      // detached below so nothing is captured twice.
       capture_exceptions: true,
-      // PII: masks MASKED_PARAMS and ad click ids in every captured page URL.
       mask_personal_data_properties: true,
       custom_personal_data_properties: MASKED_PARAMS,
       before_send: maskReferrers
@@ -197,20 +176,17 @@ export async function initAnalytics(
       }
     }
   } catch {
-    // SDK chunk blocked or offline: stop buffering and let calls no-op.
     stopEarlyErrorCapture();
     pending = null;
   }
 }
 
-// Long enough to land outside Lighthouse's trace, short enough to count readers
-// who never interact.
+// Long enough to land outside Lighthouse's trace, short enough to count readers who never
+// interact.
 const SDK_LOAD_FALLBACK_MS = 10_000;
 
-/**
- * Run `load` once, on first input or after `fallbackMs`. Loading on idle put
- * the ~90 KB SDK inside Lighthouse's measured window.
- */
+// Loads on first input or after `fallbackMs`, not on idle: idle loading put the ~90 KB SDK
+// inside Lighthouse's measured window.
 export function scheduleSdkLoad(
   load: () => void,
   target: EventTarget,
@@ -228,12 +204,6 @@ export function scheduleSdkLoad(
   const timer = setTimeout(once, fallbackMs);
 }
 
-/**
- * Reads config from <meta> tags (`document.currentScript` is null in Astro's
- * module scripts) and schedules the SDK. Also buffers uncaught errors until
- * the SDK boots, since its own autocapture misses everything before that.
- * Settles once the SDK has loaded, or at once on a page without config.
- */
 export function bootAnalytics({
   root,
   load = loadSdk
@@ -248,7 +218,6 @@ export function bootAnalytics({
   if (!token || !host) return Promise.resolve();
   const win = doc.defaultView;
   if (win && !stopEarlyErrors) {
-    // Buffering must start now: onError pushes straight into pending.
     pending ??= [];
     const onError = (event: ErrorEvent) => reportError(event.error ?? new Error(event.message));
     const onRejection = (event: PromiseRejectionEvent) => reportError(event.reason);

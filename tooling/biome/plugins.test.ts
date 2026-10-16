@@ -12,7 +12,6 @@ const BIOME = join(ROOT, "node_modules/.bin/biome");
 const work = realpathSync(mkdtempSync(join(tmpdir(), "biome-plugins-")));
 afterAll(() => rmSync(work, { recursive: true, force: true }));
 
-/** Lints the given files with the repo's biome.jsonc and plugins, laid out as in the repo. */
 function lint(files: Record<string, string>): string[] {
   const dir = mkdtempSync(join(work, "case-"));
   cpSync(join(ROOT, "biome.jsonc"), join(dir, "biome.jsonc"));

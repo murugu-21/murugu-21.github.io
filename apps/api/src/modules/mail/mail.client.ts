@@ -11,8 +11,6 @@ export type EmailLike = {
 };
 
 export function contactMailer(env: Env): { email: EmailLike; inbox: string } | null {
-  // wrangler.jsonc always sets both. The check stays so a misconfigured
-  // env answers "not configured" instead of throwing.
   const inbox = env.OPPORTUNITY_INBOX?.trim();
   return env.EMAIL && inbox ? { email: env.EMAIL, inbox } : null;
 }

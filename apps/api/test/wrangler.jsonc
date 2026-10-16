@@ -1,5 +1,3 @@
-// The production Worker minus what the pool can't reach (ASSETS, EMAIL, vars
-// and secrets come from testEnv in fixtures.ts), with its own D1 and R2.
 {
   "name": "murugappan-dev-test",
   "main": "../src/server.ts",

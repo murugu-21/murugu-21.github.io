@@ -2,7 +2,6 @@ import { bodyLimit } from "hono/body-limit";
 
 import { apiError } from "#src/common/http/api-error.ts";
 
-/** 413 in the API's error shape. Runs before the JSON body pipe, so size wins over media type. */
 export const bodyLimitMiddleware = ({
   maxBytes,
   schemaName

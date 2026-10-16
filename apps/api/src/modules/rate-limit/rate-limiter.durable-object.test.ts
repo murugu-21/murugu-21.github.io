@@ -12,7 +12,6 @@ import {
 } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 import { stubDeepseekBalance } from "#test/fixtures.ts";
 
-/** Runs inside the instance, so the synchronous contact methods skip an RPC per call. */
 function inLimiter(name: string, fn: (instance: RateLimiter) => Promise<void> | void) {
   const stub = env.RateLimiter.get(env.RateLimiter.idFromName(name));
   return runInDurableObject(stub, fn);
@@ -30,7 +29,6 @@ describe("chatAvailable", () => {
     await inLimiter("bal-ok", async instance => {
       stubDeepseekBalance(usd("1.99"));
       expect(await instance.chatAvailable("sk-test")).toBe(true);
-      // The second answer comes from the cache, not this empty account.
       stubDeepseekBalance(usd("0", false));
       expect(await instance.chatAvailable("sk-test")).toBe(true);
     });
@@ -62,7 +60,6 @@ describe("chatAvailable", () => {
     await inLimiter("bal-402", async instance => {
       expect(await instance.chatAvailable("sk-test")).toBe(true);
       await instance.markChatExhausted();
-      // Gated even though the balance still reads funded: the 402 settled it.
       expect(await instance.chatAvailable("sk-test")).toBe(false);
     });
   });
@@ -138,7 +135,6 @@ describe("contact slots", () => {
         clientRemaining: 2,
         globalRemaining: 19
       });
-      // Another client shares the site-wide tier but has its own.
       expect(instance.contactUsage("7.7.7.7")).toEqual({
         clientRemaining: 3,
         globalRemaining: 19

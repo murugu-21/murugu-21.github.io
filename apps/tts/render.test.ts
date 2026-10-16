@@ -16,9 +16,7 @@ afterEach(() => {
 
 const JSON_KEY = "blog/breeze/fakes.json";
 const MP3_KEY = "blog/breeze/fakes.mp3";
-// spokenHash of the fakes post below.
 const HASH = "870db11971f499c2f6585e4f6ae3fa1bcc06ce28b41aa7ef9f27e5dcee8e4970";
-// Two 180-character sentences, so two chunks.
 const LONG = `${"Ab ".repeat(60).trim()}. ${"Cd ".repeat(60).trim()}.`;
 
 describe("renderPost", () => {
@@ -34,8 +32,6 @@ describe("renderPost", () => {
 
     await renderPost(deps, { slug: "fakes", synth: fakeSynth(), force: false });
 
-    // 0.45 s between blocks, 0.15 s between the long block's two chunks. Leaves out
-    // `voice`, which changes only when every post is re-rendered on purpose.
     expect(r2.json(JSON_KEY)).toMatchObject({
       version: 1,
       slug: "fakes",
@@ -94,7 +90,6 @@ describe("renderPost", () => {
 });
 
 describe("patchPost", () => {
-  // Aligned audio of "Fakes", "Hello there world." and "Goodbye now." at 1000 Hz.
   const stored = JSON.stringify({
     version: 2,
     slug: "fakes",
@@ -144,7 +139,6 @@ describe("patchPost", () => {
     expect(String(r2.get(JSON_KEY))).toBe(stored);
     expect(r2.get(MP3_KEY)?.length).toBe(8800);
 
-    // 1.2 s of audio replaces 1.8 s.
     page("Hello world.");
     await patchPost(deps, { slug: "fakes", synth: fakeSynth() });
     expect(r2.json(JSON_KEY)).toEqual({
@@ -171,7 +165,6 @@ describe("patchPost", () => {
     expect(r2.get(MP3_KEY)?.length).toBe(7600);
   });
 
-  // A stored MP3 that decodes shorter than its timings would shift every splice point.
   it("refuses to patch an MP3 whose length disagrees with its timings", async () => {
     using root = mkdtempDisposableSync(join(tmpdir(), "patch-"));
     const { r2, deps } = fakeDeps(root.path);

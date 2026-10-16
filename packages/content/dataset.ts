@@ -1,6 +1,3 @@
-// Builds the dataset in packages/contracts/api/dataset.ts from portfolio.ts and resume.ts.
-// Input is typed structurally so a test can build a small one.
-
 import type { Dataset, ExperienceEntry } from "@murugappan/contracts/api/dataset.ts";
 import { parsePeriod } from "./experience.ts";
 import * as portfolio from "./portfolio.ts";
@@ -58,7 +55,6 @@ export type DatasetInput = {
   isHireable: boolean;
 };
 
-// Commas inside parentheses do not split: "(AWS SQS, EventBridge)" stays one item.
 export function splitSkillItems(items: string): string[] {
   return items
     .split(/;|—|,(?![^()]*\))/)
@@ -109,7 +105,6 @@ export function buildDataset(input: DatasetInput): Dataset {
             since: currentJob.startDate
           }
         : null,
-      // The site prefixes each statement with a "⚡" bullet for display.
       focus: skillsSection.skills.map(s => s.replace(/^[\s⚡•-]+/, "").trim())
     },
     links: [
@@ -134,7 +129,6 @@ export function buildDataset(input: DatasetInput): Dataset {
     })),
     proficiencies: techStack.experience.map(e => ({
       area: e.stack,
-      // Names only: the icon keys are a rendering concern.
       tools: e.tools.map(t => t.name),
       level: Number.parseInt(e.progressPercentage, 10)
     })),
@@ -151,7 +145,6 @@ export function buildDataset(input: DatasetInput): Dataset {
         highlights: school.descBullets
       };
     }),
-    // Drops the card image, which only the homepage shows.
     openSource: openSourceContributions.map(({ project, role, description, links }) => ({
       project,
       role,

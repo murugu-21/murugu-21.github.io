@@ -1,7 +1,3 @@
-// Fakes for the per-post tests: R2 in memory, an ffmpeg that copies its input
-// to its output, a synth whose chunks last 0.1 s per character, and a whisper
-// that hears every word. Bytes flow through the real pipeline, so timings stay
-// consistent with the audio. Also starts the real Python processes on the MLX fakes.
 import { Buffer } from "node:buffer";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -53,7 +49,6 @@ export function fakeDeps(root: string) {
   };
 }
 
-// 1000 Hz, 100 samples (0.1 s) per character.
 export const fakeSynth = (): Synth => ({
   worker: {
     runJob: jobPath => {
@@ -74,7 +69,6 @@ export const refusingSynth = (): Synth => ({
   worker: { runJob: () => Promise.reject(new Error("must not synthesize")) }
 });
 
-// Hears each word of the block's text, `secondsPerWord` apart from the slice start.
 export const fakeWhisper = (secondsPerWord: number) => ({
   transcribe: ({ text }: { text: string }) =>
     Promise.resolve({
@@ -106,7 +100,6 @@ export function writePost({
   );
 }
 
-/** synth.py or whisper.py running on the MLX fakes (fakes/README.md). */
 export function startOnFakes(script: "synth.py" | "whisper.py"): JsonLines {
   requirePython("numpy");
   vi.stubEnv("PYTHONPATH", join(import.meta.dirname, "fakes"));

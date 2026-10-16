@@ -18,7 +18,6 @@ import { ListenControls } from "#src/components/blog/ListenControls.tsx";
 import TableOfContents from "#src/components/blog/TableOfContents.astro";
 import Prose from "#src/components/Prose.astro";
 
-// previous is the older post, next the newer one; the list is newest first.
 export const getStaticPaths = (async () => {
   const posts = await getPublishedPosts();
   return posts.map((post, index) => ({
@@ -33,8 +32,6 @@ export const getStaticPaths = (async () => {
 
 type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 const { post, previous, next } = Astro.props;
-// rehypeHeadingIds runs in astro.config before the autolink plugin; Astro's own
-// pass afterwards keeps those ids, so `headings` matches the anchors.
 const { Content, headings } = await render(post);
 
 const source = toPostSource(post);
@@ -47,8 +44,6 @@ const description = postDescription(source);
   description={description}
   article={{ published: post.data.date, tags: postKeywords(source) }}
 >
-  {/* data-speaking marks the block being read aloud (listen-player.ts); the
-       scroll margin clears the 12+58px pinned read-aloud bar. */}
   <Prose
     as="article"
     class="**:data-speaking:scroll-mt-20 **:data-speaking:rounded-sm **:data-speaking:bg-amber/14 **:data-speaking:ring-6 **:data-speaking:ring-amber/14 **:data-speaking:transition motion-reduce:**:data-speaking:transition-none dark:**:data-speaking:bg-box-dark/14 dark:**:data-speaking:ring-box-dark/14 prose-img:cursor-zoom-in"
@@ -59,7 +54,6 @@ const description = postDescription(source);
         {formatDate(post.data.date)}
         {` • ${formatReadingTime(timeToRead(source.body))}`}
       </p>
-      {/* Each tag links to /blog/?tag=…, the URL the index's own chips write. */}
       <div class="not-prose mb-4 flex flex-row flex-wrap gap-2.5">
         {post.data.tags.map(tag => (
           <a
@@ -74,17 +68,15 @@ const description = postDescription(source);
         ))}
       </div>
     </header>
-    {/* The read-aloud island ships disabled at full size, and pt-3 is always there,
-         so hydration never shifts layout. It is a direct child of the article
-         because a sticky element only moves within its parent. */}
     <div class="-mb-px h-px" aria-hidden="true" data-listen-sentinel></div>
+    {/* A direct child of the article because a sticky element only moves within its
+         parent. */}
     <div
       class="not-prose mb-4 ui-island pt-3 data-listening:sticky data-listening:top-0 data-listening:z-30 data-listening:data-pinned:bg-nav-scrolled data-listening:data-pinned:backdrop-blur-lg dark:data-listening:data-pinned:bg-nav-scrolled-dark print:hidden"
       data-listen-island
     >
-      {/* client:interaction, not client:idle: idle can fire before first paint
-          and charge ~100 KB to FCP/LCP. Trade-off: a first-touch tap on Play
-          lands on the disabled button. */}
+      {/* client:interaction, not client:idle: idle can fire before first paint and charge ~100 KB
+          to FCP/LCP. Trade-off: a first-touch tap on Play lands on the disabled button. */}
       <ListenControls client:interaction slug={post.id} />
     </div>
     <section data-post-body>
@@ -95,7 +87,6 @@ const description = postDescription(source);
       <Bio />
     </footer>
   </Prose>
-  {/* After the article, not inside it: see the component header. */}
   <TableOfContents headings={headings} />
   <nav aria-label="Previous and next posts">
     <ul class="m-0 flex list-none flex-wrap justify-between p-0">
@@ -126,8 +117,6 @@ const description = postDescription(source);
 </BlogLayout>
 
 <script>
-  // Sets `data-pinned` once the sentinel scrolls off the top of the viewport, which
-  // paints the frosted band behind the docked bar's gap. Styling only.
   const sentinel = document.querySelector<HTMLElement>("[data-listen-sentinel]");
   const island = document.querySelector<HTMLElement>("[data-listen-island]");
   if (sentinel && island) {
@@ -148,7 +137,6 @@ const description = postDescription(source);
 </script>
 
 <script>
-  // Image zoom, loaded on hover/click. Scoped to the body <section> to skip the Bio avatar.
   const imgs = document.querySelectorAll<HTMLImageElement>("[data-post-body] img");
   if (imgs.length > 0) {
     let zoomPromise: Promise<ReturnType<typeof import("medium-zoom").default>> | null = null;

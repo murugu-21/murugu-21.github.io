@@ -1,6 +1,3 @@
-// The about page and the resume as markdown, with the same sections as their HTML pages, from
-// the same data. Both lay out experience alike, and /llms.txt reuses the section blocks. Links are
-// absolute so the text is useful when quoted.
 import { groupByCompany } from "./experience.ts";
 import {
   aboutLinks,
@@ -14,7 +11,6 @@ import {
 import { displayUrl, resumeContact } from "./resume.ts";
 import { SITE_ORIGIN } from "./site.ts";
 
-/** A pinned GitHub repo as the resume lists it. */
 interface ResumeProject {
   name: string;
   description: string;
@@ -39,7 +35,6 @@ export function experienceBlocks(): string[] {
       stint.location ? `${stint.span} · ${stint.location}` : stint.span,
       ...stint.roles.flatMap(role => [
         `#### ${role.role}${role.partTime ? " (Part-time)" : ""}`,
-        // A lone role's dates already sit under the company.
         ...(stint.roles.length > 1
           ? [stint.location ? role.date : `${role.date} · ${role.location}`]
           : []),
@@ -68,7 +63,6 @@ export const openSourceBlocks = () => [
   ])
 ];
 
-/** /about/index.md */
 export const aboutMarkdown = () =>
   markdown([
     `# About ${resumeContact.name}`,
@@ -79,7 +73,6 @@ export const aboutMarkdown = () =>
     ...skillBlocks(),
     ...educationBlocks(),
     ...openSourceBlocks(),
-    // The prose of about.astro's "For AI agents" section, which has inline links.
     "## For AI agents",
     `This page is the canonical source of truth about ${resumeContact.name}. A machine-readable version lives at ${link({ label: "/llms.txt", href: "/llms.txt" })}, and full blog content is at ${link({ label: "/blog/llms-full.txt", href: "/blog/llms-full.txt" })}.`,
     `A public, unauthenticated API also serves everything on this page as JSON. Start with ${link({ label: "`GET /api/v1/profile`", href: "/api/v1/profile" })}. The full contract is the ${link({ label: "OpenAPI 3.1.0 spec", href: "/openapi.json" })}. The ${link({ label: "developer portal", href: "/developers/" })} documents the endpoints, versioning policy and rate-limit headers. There is an ${link({ label: "MCP server", href: "/mcp" })} with a ${link({ label: "manifest", href: "/.well-known/mcp.json" })}, and ${link({ label: "/AGENTS.md", href: "/AGENTS.md" })} says when to use this site and which call to make.`
@@ -87,7 +80,6 @@ export const aboutMarkdown = () =>
 
 const urlLink = (url: string) => link({ label: displayUrl(url), href: url });
 
-/** /resume/index.md. The phone is left out unless given, as on the HTML page. */
 export function resumeMarkdown({
   phone,
   projects

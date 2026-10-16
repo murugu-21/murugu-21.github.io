@@ -1,6 +1,3 @@
-// MCP resources. The URIs are `https://` because each is also a public URL a
-// client can GET directly. Reads accept only the allowlist or a validated blog slug.
-
 import {
   ProtocolError,
   ResourceNotFoundError,
@@ -43,7 +40,6 @@ const forAssistant = (priority: number): ResourceAnnotations => ({
   priority
 });
 
-// In preference order.
 const STATIC_RESOURCES: Array<ResourceDescriptor & { text: () => string }> = [
   {
     uri: `${SITE_ORIGIN}/llms.txt`,

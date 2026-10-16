@@ -24,7 +24,6 @@ export function fetchRendition({
   return c.env.ASSETS.fetch(request);
 }
 
-/** A 404 gets markdown unless `Accept` ranks HTML or XHTML highest. */
 export async function serveAsset(c: Context<AppEnv>): Promise<Response> {
   const request = c.req.raw;
   const response = await c.env.ASSETS.fetch(request);

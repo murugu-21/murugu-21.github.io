@@ -1,6 +1,5 @@
-// Oxlint JS plugin for .astro frontmatter (Astro's TypeScript guide): a component that reads
-// Astro.props declares their shape as `Props`. Type-aware lint doesn't run on .astro files, so an
-// untyped prop would reach the template as `any` with nothing to catch it.
+// Type-aware lint doesn't run on .astro files, so an untyped prop would reach the template as
+// `any` with nothing to catch it.
 import type { NodeOf, Plugin } from "./plugin-types.ts";
 
 type MemberExpression = NodeOf<"MemberExpression">;

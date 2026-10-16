@@ -54,8 +54,6 @@ const over = (rgba: string, backdrop: string): string => {
   );
 };
 
-// One side of `light-dark(<light>, <dark>)`: a bare colour or one function such
-// as `rgba(...)`, whose own commas must not split the pair.
 const SIDE = String.raw`\s*((?:[^(),]|\([^)]*\))+?)\s*`;
 const LIGHT_DARK = new RegExp(String.raw`^light-dark\(${SIDE},${SIDE}\)$`);
 type LightDark = { light: string; dark: string };
@@ -66,9 +64,6 @@ const lightDark = (value: string): LightDark => {
   return { light: m[1], dark: m[2] };
 };
 
-// The sky's stops, sorted by luminance: `deep` is the stop under the right edge
-// of the page (the gradient runs `to left`), `mid` the body of the page, `warm`
-// the horizon glow under the hero.
 const sky = (() => {
   const m = /--background-image-page:\s*linear-gradient\(([^\n]+)\)/.exec(css);
   if (!m) throw new Error("no --background-image-page gradient in global.css");
@@ -79,8 +74,6 @@ const sky = (() => {
 })();
 const stops = [sky.deep, sky.mid, sky.warm];
 
-// The dusk-white card surface (glow-card) that most body-level light-theme text
-// actually sits on, composited over the darkest sky it can float above.
 const card = (() => {
   const m = /@utility glow-card \{[\s\S]*?background-color:\s*([^;]+);/.exec(css);
   if (!m) throw new Error("no glow-card background-color in global.css");
@@ -89,7 +82,6 @@ const card = (() => {
 
 const ink = (name: string) => token(`color-${name}`);
 
-// `dark:bg-blue/15` in a component's source as 0.15.
 const utilityAlpha = ({ source, utility }: { source: string; utility: string }): number => {
   const alpha = source
     .split(/[\s"'`]+/)
@@ -106,7 +98,6 @@ const rgba = (name: string, alpha: number): string => {
 };
 
 describe("blue-hour light palette", () => {
-  // Body copy can cross any part of the sky, including its deepest stop.
   it.each(["text", "title", "subtitle", "text-light"])(
     "keeps --color-%s readable on the sky's deep stop",
     name => {
@@ -114,24 +105,18 @@ describe("blue-hour light palette", () => {
     }
   );
 
-  // The .accent word is bold display type in every heading (>= 24px), so it
-  // answers to the large-text bar on the sky, and to normal text on the card,
-  // where the hover accents live. It also lands on the sky's WARM end, and every
-  // link hovers to it at 16px, so the horizon needs the normal-text bar.
+  // The .accent word is bold display type (>= 24px), so the deep stop takes the large-text
+  // bar; links hover to it at 16px, so the mid and warm stops take the normal-text bar.
   it("keeps --color-amber-ink legible as the accent word (>= 3:1 on the sky)", () => {
     expect(contrast(ink("amber-ink"), sky.deep)).toBeGreaterThanOrEqual(3);
     expect(contrast(ink("amber-ink"), sky.mid)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(ink("amber-ink"), sky.warm)).toBeGreaterThanOrEqual(4.5);
   });
 
-  // The brighter amber is graphics-only (chip outlines, glows, the starfield's
-  // close stars): it must at least separate from the sky it is drawn on.
   it("shows --color-amber graphics against the sky (>= 3:1)", () => {
     expect(contrast(ink("amber"), sky.mid)).toBeGreaterThanOrEqual(3);
   });
 
-  // The blog cards' hover wipe (Blogs.astro) is the dusk violet, and both the
-  // card title (white) and its description (80% white) sit on it mid-hover.
   it("keeps text readable on the dusk-violet interactive fill (>= 4.5:1)", () => {
     const fill = ink("dusk-violet");
     expect(contrast("#ffffff", fill)).toBeGreaterThanOrEqual(4.5);
@@ -144,7 +129,6 @@ describe("blue-hour light palette", () => {
     }
   });
 
-  // Separators are WCAG-exempt; 2:1 keeps them reading as lines.
   it("keeps the blog's rules visible on every sky stop (>= 2:1)", () => {
     for (const stop of stops) {
       expect(contrast(over(token("color-accent-grey"), stop), stop)).toBeGreaterThanOrEqual(2);
@@ -165,8 +149,6 @@ describe("blue-hour light palette", () => {
     }
   });
 
-  // Below this the card stops reading as a panel; its border (not asserted)
-  // carries the rest.
   it("separates the card surface from the sky it sits on (>= 1.8:1)", () => {
     expect(contrast(card, sky.deep)).toBeGreaterThanOrEqual(1.8);
   });
@@ -177,8 +159,6 @@ describe("blue-hour light palette", () => {
     }
   });
 
-  // The rail is pinned to the right edge, which is the sky's deep stop (the
-  // gradient runs `to left`), so only that stop is checked.
   it("keeps the ToC labels readable on the frosted surface (>= 4.5:1)", () => {
     const surface = over(token("color-nav-scrolled"), sky.deep);
     for (const name of ["text-light", "title"]) {
@@ -187,8 +167,6 @@ describe("blue-hour light palette", () => {
   });
 });
 
-// The night gradient's stops are close in luminance, so every guard runs on
-// each stop rather than picking a deepest one.
 const night = (() => {
   const m = /--background-image-page-dark:\s*linear-gradient\(([^\n]+)\)/.exec(css);
   if (!m) throw new Error("no --background-image-page-dark gradient in global.css");
@@ -202,8 +180,6 @@ describe("night palette", () => {
     for (const stop of night) expect(contrast(ink(name), stop)).toBeGreaterThanOrEqual(4.5);
   });
 
-  // --color-blue is under 4.5:1 at night, so it is only for large text (the
-  // .accent heading word, the 404 heading) and icons; smaller text uses blue-light.
   it("keeps --color-blue legible as night large text and graphics (>= 3:1)", () => {
     for (const stop of night) expect(contrast(ink("blue"), stop)).toBeGreaterThanOrEqual(3);
   });
@@ -274,7 +250,6 @@ describe("night palette", () => {
     }
   });
 
-  // accent-grey-dark is also the blog's dark hr and table rule, so this covers those.
   it("shows the ToC bars against the night canvas (>= 3:1)", () => {
     for (const stop of night) {
       expect(contrast(ink("accent-grey-dark"), stop)).toBeGreaterThanOrEqual(3);
@@ -318,7 +293,6 @@ describe("prose colours", () => {
     }
   );
 
-  // A plain fence (not Shiki's, which brings its own colours) on its panel.
   it("keeps fence text readable on the fence background (>= 4.5:1)", () => {
     const text = pair("pre-code");
     const bg = pair("pre-bg");

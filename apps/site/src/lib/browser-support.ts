@@ -1,5 +1,3 @@
-// The supported browser versions, in one place. README.md, "Browser support", explains the floor.
-
 export const MIN_VERSIONS = {
   chrome: "123",
   edge: "123",
@@ -8,18 +6,15 @@ export const MIN_VERSIONS = {
   ios: "17.5"
 } as const;
 
-/** Vite's target names, e.g. "safari17.5". */
 export const BROWSER_TARGETS = Object.entries(MIN_VERSIONS).map(
   ([browser, version]) => `${browser}${version}`
 );
 
-/** The tab's window.name once the visitor chose "continue anyway". Browsers clear it when the tab
- * leaves the site, so it lasts until then or until the tab closes. */
+// Stored in window.name, which browsers clear when the tab leaves the site.
 export const CONTINUE_KEY = "outdatedBrowserContinue";
 
-// Both functions below are inlined into pages via toString() and run in the old browsers they
-// exist for, so their bodies stay ES5: var, function expressions, string concatenation, no URL
-// API. browser-support.test.ts parses the inlined scripts as ES5 to keep it that way.
+// Both functions below are inlined via toString() into pages old browsers load, so each body is
+// self-contained ES5 (browser-support.test.ts parses them as ES5).
 
 export interface BrowserCss {
   supports: (property: string, value: string) => boolean;
@@ -33,20 +28,14 @@ interface BrowserHost {
   location: Pick<Location, "pathname" | "search" | "hash" | "replace">;
 }
 
-/**
- * Sends a browser below MIN_VERSIONS to /outdated/ before first paint, by checking the features
- * that set each floor rather than the user agent. It must not reference anything outside itself.
- */
 export function redirectIfOutdated(win: BrowserHost, continueKey: string): void {
   if (win.name === continueKey) return;
   var css = win.CSS;
   var supported =
     css !== undefined &&
-    // every light/dark colour pair
     css.supports("color", "light-dark(#000, #fff)") &&
     // @property, which Tailwind 4 needs
     css.registerProperty !== undefined &&
-    // the phone menu
     "popover" in win.HTMLElement.prototype;
   if (supported) return;
   var where = win.location;
@@ -71,10 +60,6 @@ interface NoticeHost {
   name: string;
 }
 
-/**
- * Points the notice's "continue anyway" link back at the page the visitor asked for, and skips
- * the check in this tab once they follow it. It must not reference anything outside itself.
- */
 export function wireContinueLink(win: NoticeHost, continueKey: string): void {
   var link = win.document.getElementById("continue");
   if (!link) return;

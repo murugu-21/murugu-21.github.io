@@ -5,8 +5,6 @@ import { newestFirst, type PostSource } from "@murugappan/content/posts.ts";
 
 export type Post = CollectionEntry<"blog">;
 
-// What the blog index hands PostList/Post. `description` stays undefined when
-// absent so search falls back to the excerpt.
 export interface SerializedPost {
   href: string;
   title: string;
@@ -18,7 +16,6 @@ export interface SerializedPost {
   excerpt: string;
 }
 
-// Newest first. Drafts (packages/content/blog/draft/**) are excluded in production.
 export async function getPublishedPosts(): Promise<Post[]> {
   const posts = await getCollection(
     "blog",
@@ -35,10 +32,8 @@ export const toPostSource = ({ id, data, body }: Post): PostSource => ({
 
 export const getPostSources = async () => (await getPublishedPosts()).map(toPostSource);
 
-// Same URL the index's chips write (PostList.astro), so both land on one view.
 export const tagPath = (tag: string) => `/blog/?tag=${encodeURIComponent(tag)}`;
 
-// "MMMM DD, YYYY", e.g. "August 09, 2021".
 export function formatDate(date: Date): string {
   return date.toLocaleDateString("en-US", {
     month: "long",
@@ -48,8 +43,6 @@ export function formatDate(date: Date): string {
   });
 }
 
-// Tags + keywords are one SEO vocabulary (`keywords` keeps precise terms off
-// the filter chips); JSON-LD, OG article:tag and index search use the union.
 export const postKeywords = (post: PostSource): string[] => [
   ...post.data.tags,
   ...post.data.keywords

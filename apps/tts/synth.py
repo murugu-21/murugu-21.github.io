@@ -1,14 +1,3 @@
-"""Long-lived Breeze TTS 2 worker for apps/tts/generate-audio.ts.
-
-Reads job-file paths from stdin, one per line. For each job, synthesises every
-chunk to <outDir>/<id>.wav as a plain clone of the voice reference and reports
-one JSON line per chunk plus a final {"done": true} line.
-
-Plain clone on purpose. The reference was already designed (design-voice.py),
-and an instruction here doubles the cost (CFG runs the backbone twice) and lets
-delivery drift. 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
-"""
-
 import json
 import sys
 import time
@@ -19,6 +8,7 @@ import numpy as np
 
 from wavfile import write_wav
 
+# 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"
 SAMPLE_RATE = 24000
 MAX_TOKENS = 1500  # 120 s at 12.5 frames/s; chunks are at most 300 chars (~30 s)
@@ -36,6 +26,8 @@ def emit(obj: dict[str, object]) -> None:
     PROTOCOL.flush()
 
 
+# A plain clone, no instruction: the reference is already designed (design-voice.py), and an
+# instruction doubles the cost (CFG runs the backbone twice) and lets delivery drift.
 def synthesize(model, text: str, reference: dict[str, str]) -> np.ndarray:
     parts = []
     for chunk in model.generate(

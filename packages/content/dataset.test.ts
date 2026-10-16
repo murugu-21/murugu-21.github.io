@@ -66,8 +66,6 @@ const DATASET_INPUT: DatasetInput = {
   isHireable: true
 };
 
-// The site fixture plus a finished role, a grade and a skill category
-// with a parenthesised group, so every branch of the projection runs.
 const input: DatasetInput = {
   ...DATASET_INPUT,
   workExperiences: [
@@ -100,7 +98,6 @@ describe("splitSkillItems", () => {
 describe("buildDataset", () => {
   const dataset = buildDataset(input);
 
-  // The Worker parses it at startup, so a rejected dataset fails the deploy.
   it("builds a document the contract's schema accepts", () => {
     expect(Dataset.safeParse(dataset).success).toBe(true);
   });
@@ -186,7 +183,6 @@ describe("buildDataset", () => {
         highlights: ["Distributed systems."]
       }
     ]);
-    // The shared fixture's school entry has no grade.
     expect(buildDataset(DATASET_INPUT).education[0].grade).toBeNull();
   });
 

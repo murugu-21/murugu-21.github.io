@@ -116,7 +116,6 @@ describe("wrapWords", () => {
     );
     const words = wrapWords(p);
     expect(texts(words)).toEqual(["SiteGPT’s", "founder", "said", "place.", "Done"]);
-    // the straddling words are made of two spans each, one per text node
     expect(words[0].length).toBe(2);
     expect(words[3].length).toBe(2);
     expect(words[1].length).toBe(1);
@@ -162,9 +161,6 @@ describe("matchWordSpans", () => {
     expect(matchWordSpans(words, timed.slice(0, 1))).toBeNull();
   });
 
-  // The generator speaks 0.30000000000000004 as "0.3, then zero repeated 15
-  // times, then 4": one rendered word, eight timed words. The rendered word
-  // is highlighted for the whole run.
   it("maps one rendered word onto the several timed words it expands to", () => {
     const words = [[span("equals")], [span("0.30000000000000004")], [span("here")]];
     const timed = [
@@ -184,7 +180,6 @@ describe("matchWordSpans", () => {
       ...Array<HTMLElement[]>(8).fill(words[1]),
       words[2]
     ]);
-    // the expansion must agree with the timings word for word
     const misheard = timed.map(t => (t.w === "zero" ? { ...t, w: "nine" } : t));
     expect(matchWordSpans(words, misheard)).toBeNull();
   });

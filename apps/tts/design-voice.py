@@ -1,19 +1,3 @@
-"""Design the read-aloud voice once from a persona prompt (Breeze TTS 2 voice design).
-
-  bun run py python apps/tts/design-voice.py [count]
-
-Writes <count> candidates (default 3) to apps/tts/.voice/candidates/<k>.wav plus
-the sentence they speak in apps/tts/.voice/candidates/reference.txt. Listen, then promote
-the one you like:
-
-  cp apps/tts/.voice/candidates/1.wav apps/tts/.voice/reference.wav
-  cp apps/tts/.voice/candidates/reference.txt apps/tts/.voice/reference.txt
-  bun run audio --upload-voice
-
-Posts are plain clones of that clip (synth.py), which keeps the voice fixed
-across paragraphs. Design is sampled, so candidates differ.
-"""
-
 import contextlib
 import sys
 import time
@@ -35,7 +19,6 @@ PERSONA = (
     "on key terms, brief pauses between ideas."
 )
 
-# About 10 s spoken, long enough to anchor a clone and short enough to design fast.
 SENTENCE = (
     "Hey there, if you are reading this in a desktop, press ctrl + shift + i and "
     "open console and paste the below code."

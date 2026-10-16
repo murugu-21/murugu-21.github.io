@@ -44,8 +44,6 @@ describe("tocEntries", () => {
 });
 
 describe("activeIndex", () => {
-  // Prose.astro stops a jumped-to heading 80px from the top; the active line sits
-  // TOC_LINE_SLACK below that.
   const LINE = 80 + TOC_LINE_SLACK;
 
   it("is nothing before the first heading reaches the line", () => {

@@ -32,15 +32,14 @@ type CachedBalance = z.infer<typeof CachedBalance>;
 const hasFunds = ({ available, totalUsd }: DeepseekBalance): boolean =>
   available && totalUsd > BALANCE_RESERVE_USD;
 
-// One fixed-name instance ("global") shared by every ChatRoom, so the balance
-// is checked once and one room's 402 gates the whole site.
+// One fixed-name instance ("global") shared by every ChatRoom, so the balance is checked once
+// and one room's 402 gates the whole site.
 export class RateLimiter extends DurableObject<Env> {
   private sql: SqlStorage;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     this.sql = ctx.storage.sql;
-    // Keyed "<day>:global" / "<day>:client:<ip>" so stale days are easy to purge.
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS contact_counters (
         key TEXT PRIMARY KEY,
@@ -74,8 +73,6 @@ export class RateLimiter extends DurableObject<Env> {
     }
   }
 
-  // Parks the cache as exhausted; it expires normally, so a top-up is picked
-  // up at the next TTL boundary.
   public async markChatExhausted(): Promise<void> {
     await this.ctx.storage.put(BALANCE_KEY, {
       available: false,
@@ -112,7 +109,6 @@ export class RateLimiter extends DurableObject<Env> {
     };
   }
 
-  /** Remaining allowance without spending any, for a dry run. */
   public contactUsage(client: string): ContactUsage {
     const day = this.today();
     return this.remaining({

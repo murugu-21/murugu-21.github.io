@@ -1,4 +1,3 @@
-// One line of the chat transcript, from a visitor, Jarvis or the room.
 import { cva } from "class-variance-authority";
 import { Fragment } from "react";
 
@@ -7,7 +6,6 @@ import { messageText } from "@murugappan/utils/ui-message.ts";
 
 export type Bubble = { id: string; kind: "user" | "assistant" | "system"; text: string };
 
-// The room's `notice` parts (the spend limit, a failure) render as system lines.
 export function toBubbles(messages: JarvisMessage[]): Bubble[] {
   return messages.flatMap(message => {
     const text = messageText(message);
@@ -23,7 +21,7 @@ export function toBubbles(messages: JarvisMessage[]): Bubble[] {
   });
 }
 
-// Split keeps captured URLs at odd indexes; trailing punctuation stays outside the link.
+// Split keeps captured URLs at odd indexes.
 const URL_SPLIT = /(https?:\/\/[^\s]+)/;
 
 // The prompt forbids markdown but [label](url) still slips through; flatten to "label: url".

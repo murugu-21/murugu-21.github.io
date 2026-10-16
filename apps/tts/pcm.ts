@@ -1,9 +1,5 @@
-// Raw 16-bit mono PCM helpers: sample-accurate joins and timings, instead of
-// trusting ffmpeg's rounded durations.
 import { Buffer } from "node:buffer";
 
-// ffmpeg flags for headerless signed 16-bit little-endian mono PCM: before `-i`
-// they describe the input, before the output path they describe the output.
 export const pcmFormat = (sampleRate: number) => [
   "-f",
   "s16le",
@@ -34,8 +30,6 @@ interface TimedPcm {
   timings: BlockTiming[];
 }
 
-// Joins chunks with `intra` seconds of silence and blocks with `inter`;
-// timings are per block, in seconds.
 export function assemble(blocks: Buffer[][], sampleRate: number, gaps: Gaps): TimedPcm {
   const parts: Buffer[] = [];
   const timings: BlockTiming[] = [];
@@ -56,7 +50,6 @@ export function assemble(blocks: Buffer[][], sampleRate: number, gaps: Gaps): Ti
   return { pcm: Buffer.concat(parts), timings };
 }
 
-// `replace` is keyed by block index. The gaps between blocks are kept.
 export function splice({
   pcm,
   sampleRate,

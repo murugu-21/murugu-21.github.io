@@ -30,9 +30,8 @@ const POST_DATES: Record<string, string> = Object.fromEntries(
 );
 const NEWEST_POST = Object.values(POST_DATES).sort().pop();
 
-// @astrojs/sitemap writes an index plus numbered chunks, but robots.txt,
-// apps/api/src/modules/pages/not-found.ts and the api-catalog all name /sitemap.xml. Collapse the
-// single chunk onto it.
+// @astrojs/sitemap writes an index plus numbered chunks, but robots.txt, not-found.ts and the
+// api-catalog all name /sitemap.xml. Collapse the single chunk onto it.
 function singleFileSitemap(): AstroIntegration {
   return {
     name: "single-file-sitemap",
@@ -64,7 +63,6 @@ function emptyBodyProblem({ slug, document }: Post) {
   );
 }
 
-// The read-aloud player and the audio generator find the title by its data-post-title attribute.
 function titleProblem({ slug, document }: Post) {
   if (document.querySelector("h1[data-post-title]")) return;
   return `blog/${slug}/index.html has no <h1 data-post-title>, so read-aloud would skip the title`;
@@ -90,9 +88,6 @@ function copyButtonProblem({ slug, document }: Post) {
   );
 }
 
-// What search engines read from each post's head, checked against literals
-// rather than the constants that produced it: one canonical URL, and a
-// BlogPosting whose author resolves to the Person in the same @graph.
 const jsonLdGraph = z.object({
   "@graph": z.array(z.record(z.string(), z.unknown()))
 });
@@ -119,10 +114,8 @@ function authorProblem({ slug, document }: Post) {
   return `${slug}'s BlogPosting author doesn't resolve to the Person "Murugappan M" in its @graph`;
 }
 
-// A markdown render error doesn't fail the build. The glob loader logs it,
-// caches the empty result in node_modules/.astro and ships a blank article.
-// So check every post has a body, a title, one figure per ```mermaid fence and a
-// copy button per code fence (the last two also catch a stale cached render), then its head.
+// A markdown render error doesn't fail the build: the glob loader caches the empty result and ships
+// a blank article. These checks catch that, and the fence counts also catch a stale cached render.
 const POST_CHECKS = [
   emptyBodyProblem,
   titleProblem,
@@ -159,8 +152,6 @@ function blogPostChecks(): AstroIntegration {
   };
 }
 
-// Hooked into `astro build` itself so deploy tools that run it directly don't
-// skip these steps.
 function buildArtifacts(): AstroIntegration {
   const run = (command: string, args: string[]) => {
     const result = spawnSync(command, args, { stdio: "inherit" });
@@ -175,7 +166,6 @@ function buildArtifacts(): AstroIntegration {
       // sync, but posts cached in node_modules/.astro skip it.
       "astro:build:start": () =>
         run("bun", [fileURLToPath(new URL("scripts/render-mermaid.ts", import.meta.url))]),
-      // Registered last, so the site it prints from is final.
       "astro:build:done": ({ dir }) =>
         run("node", [
           fileURLToPath(new URL("scripts/generate-resume.ts", import.meta.url)),
@@ -185,8 +175,7 @@ function buildArtifacts(): AstroIntegration {
   };
 }
 
-// Writes the font file the `fonts` entry below reads. config:setup runs before
-// the Fonts API resolves its sources, in dev and build alike.
+// config:setup runs before the Fonts API resolves its sources, in dev and build alike.
 function firaCodeSubset(): AstroIntegration {
   return {
     name: "fira-code-subset",
@@ -194,7 +183,6 @@ function firaCodeSubset(): AstroIntegration {
   };
 }
 
-// Registers `client:interaction`, which hydrates on first input (src/directives/interaction.ts).
 function clientInteractionDirective(): AstroIntegration {
   return {
     name: "client-interaction-directive",
@@ -236,14 +224,12 @@ function modulePreloadHints(): AstroIntegration {
   };
 }
 
-// PostHog source maps are uploaded then deleted, so no .map is served. Workers
-// Builds sets these env vars only in production.
+// Workers Builds sets these env vars only in production.
 const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
 
 export default defineConfig({
   site: SITE_ORIGIN,
-  // Validated at build, so a malformed value fails the build instead of shipping.
   env: {
     schema: {
       PUBLIC_CHAT_HOST: envField.string({ context: "client", access: "public", optional: true }),
@@ -261,7 +247,6 @@ export default defineConfig({
         url: true
       }),
       GITHUB_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
-      // "1" fails the build instead of falling back when the profile fetch fails.
       REQUIRE_GITHUB_PROFILE: envField.enum({
         context: "server",
         access: "public",
@@ -271,14 +256,13 @@ export default defineConfig({
       RESUME_PHONE: envField.string({ context: "server", access: "secret", optional: true })
     }
   },
-  // Also generates a fallback sized to Fira Code's metrics (local Courier New),
-  // so the swap to Fira Code doesn't rewrap text; global.css's metric fallback
-  // covers platforms without Courier New.
   fonts: [
     {
       provider: fontProviders.local(),
       name: "Fira Code",
       cssVariable: "--font-fira-code",
+      // Astro adds a Courier New fallback sized to Fira Code so the swap doesn't rewrap text;
+      // "Fira Code metric fallback" (global.css) covers platforms without Courier New.
       fallbacks: [
         "Fira Code metric fallback",
         "ui-monospace",
@@ -295,8 +279,8 @@ export default defineConfig({
   server: { port: 4399 },
   build: {
     assets: "static",
-    // An external sheet cost a render-blocking round trip (~150 ms mobile
-    // FCP); inlining adds ~14 KB gzipped per page, which is cheaper.
+    // An external sheet cost a render-blocking round trip (~150 ms mobile FCP); inlining adds
+    // ~14 KB gzipped per page, which is cheaper.
     inlineStylesheets: "always"
   },
   integrations: [
@@ -305,16 +289,13 @@ export default defineConfig({
     clientInteractionDirective(),
     modulePreloadHints(),
     sitemap({
-      // only a top-level /404 is auto-excluded; /outdated/ is for old browsers, not search
       filter: page => !/\/(404|outdated)\/?$/.test(page),
       serialize(item) {
         const { pathname } = new URL(item.url);
-        // Matched before the strip below, which turns /blog/ into "", not "blog".
         if (pathname === "/blog/") {
           item.lastmod = NEWEST_POST;
           return item;
         }
-        // portfolio pages get no <lastmod>, since nothing tracks their edits
         const slug = pathname.replace(/^\/blog\//, "").replace(/\/$/, "");
         const lastmod = POST_DATES[slug];
         if (lastmod) item.lastmod = lastmod;
@@ -323,11 +304,10 @@ export default defineConfig({
     }),
     singleFileSitemap(),
     blogPostChecks(),
+    // Last, so the site the resume prints from is final.
     buildArtifacts()
   ],
   vite: {
-    // The read-aloud player fetches audio from its own origin, but in `bun run dev`
-    // only the Worker (apps/api) serves /blog/audio.
     server: { proxy: { "/blog/audio/": "http://localhost:8787" } },
     build: {
       // CSS gets the vendor prefixes and fallbacks the supported browsers need. JS isn't
@@ -341,7 +321,6 @@ export default defineConfig({
     plugins: [
       contentPosts(),
       tailwindcss(),
-      // the default host (us.i.posthog.com) matches the SDK's US project
       ...(POSTHOG_API_KEY && POSTHOG_PROJECT_ID
         ? [
             posthog({
@@ -355,7 +334,6 @@ export default defineConfig({
   },
   markdown: {
     // Astro 7's default satteri processor doesn't run unified plugins.
-    // remarkMermaid swaps fences for the build-rendered SVGs; no diagram code ships.
     processor: unified({
       remarkPlugins: [remarkMermaid],
       rehypePlugins: [rehypeHeadingIds, [rehypeAutolinkHeadings, autolinkConfig]]

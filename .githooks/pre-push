@@ -1,5 +1,4 @@
 #!/bin/sh
-# Mirrors the CI jobs.
 set -e
 
 # Bindings come from wrangler.jsonc, so the typechecks below must not read stale ones.

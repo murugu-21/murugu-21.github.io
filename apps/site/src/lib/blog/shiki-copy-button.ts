@@ -7,8 +7,6 @@ export const COPY_LABEL = "Copy code";
 // variants sort after `.prose`. The pre's right padding keeps code clear of the button.
 const figureClasses = "group relative in-[.prose]:my-6 [:is(hr,h2,h3,h4)+&]:mt-0 [&>pre]:pr-12";
 
-// Hover devices see it on hover or focus, touch devices always. It needs JS, so it hides
-// without scripting.
 const buttonClasses =
   "absolute top-2 right-2 cursor-pointer rounded-md border border-border-soft bg-surface p-1.5 text-subtitle opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 hover:text-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current data-copied:opacity-100 motion-reduce:transition-none dark:border-fence-edge-dark dark:bg-dark-base dark:text-text-dark dark:hover:text-blue-light print:hidden noscript:hidden [@media(hover:none)]:opacity-100";
 
@@ -74,10 +72,7 @@ const copyButtonNode = () =>
     ]
   });
 
-/**
- * Wraps each fence in a figure beside a copy button, outside `<pre>` so it doesn't scroll away.
- * A figure because read-aloud (packages/content/speech.ts) skips figures but reads divs.
- */
+// A figure because read-aloud (packages/content/speech.ts) skips figures but reads divs.
 export const copyButton: ShikiTransformer = {
   name: "copy-button",
   root(root) {

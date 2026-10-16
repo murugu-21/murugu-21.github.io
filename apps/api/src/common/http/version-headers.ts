@@ -49,7 +49,6 @@ export function versionLinkHeader(record: VersionRecord = CURRENT_VERSION_RECORD
   return links.join(", ");
 }
 
-/** Exposed via CORS so browser clients can read them. */
 export const META_EXPOSED_HEADERS: readonly string[] = [
   "API-Version",
   "API-Supported-Versions",

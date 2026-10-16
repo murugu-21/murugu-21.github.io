@@ -4,11 +4,6 @@ import type { AppEnv } from "#src/common/app-env.ts";
 import { ranksAbove } from "#src/common/http/accept.ts";
 import { fetchRendition, serveAsset } from "#src/modules/pages/assets.client.ts";
 
-/**
- * A page answers with its markdown rendition (the `index.md` beside it) when `Accept`
- * ranks markdown above HTML, and with the HTML page otherwise, including when it has no
- * rendition. An HTML page that has one names it in a `Link: rel="alternate"` header.
- */
 async function servePage(c: Context<AppEnv>): Promise<Response> {
   const renditionUrl = new URL("index.md", c.req.url);
   if (prefersMarkdown(c)) {
@@ -54,10 +49,7 @@ function varyOnAccept(response: Response): Response {
   return copy;
 }
 
-/** Mounted last: whatever no other controller claimed. */
 export const pagesController = new Hono<AppEnv>();
 
-// Directory URLs are pages and may answer markdown (Hono routes HEAD here too).
-// Anything else is an asset or route miss: a content-negotiated 404.
 pagesController.get("*", c => (c.req.path.endsWith("/") ? servePage(c) : serveAsset(c)));
 pagesController.all("*", c => serveAsset(c));

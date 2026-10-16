@@ -1,6 +1,5 @@
-// shadcn/ui dialog (new-york, Tailwind v4), vendored and trimmed to what the chat widget uses.
-// No portal, so the .ui-island tokens still apply, and no layout or overlay styling: the
-// chat panel positions itself.
+// No portal, so the .ui-island tokens still apply.
+
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 

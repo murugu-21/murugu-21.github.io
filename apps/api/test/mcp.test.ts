@@ -40,7 +40,6 @@ const CLIENT_IP = "203.0.113.70";
 
 type ClientOptions = TestEnvOptions & Pick<FetchOptions, "ip" | "layer">;
 
-/** An SDK client pinned to the current revision, posting through the worker as `ip`. */
 async function connect({ ip = CLIENT_IP, layer, ...envOptions }: ClientOptions = {}) {
   const client = new Client(
     { name: "TestClient", version: "1.0.0" },
@@ -53,7 +52,6 @@ async function connect({ ip = CLIENT_IP, layer, ...envOptions }: ClientOptions =
   return client;
 }
 
-/** Calls a tool through the SDK client, so its input and output schema checks run too. */
 async function call(
   name: string,
   args: CallToolRequestParams["arguments"] = {},
@@ -81,7 +79,6 @@ const JsonRpcReply = z.object({
 });
 type JsonRpcReply = z.infer<typeof JsonRpcReply>;
 
-/** Parses a JSON reply, or the last `data:` line of a legacy request's SSE stream. */
 function parseReply(res: Response, text: string): JsonRpcReply {
   if (!text) return {};
   if (!res.headers.get("Content-Type")?.startsWith("text/event-stream")) {
@@ -103,7 +100,6 @@ function send(body: JsonValue, init: SendInit = {}) {
   return sendText(JSON.stringify(body), init);
 }
 
-/** Posts `text` as it is, for a body that is not JSON. */
 async function sendText(
   text: string,
   init: SendInit = {}
@@ -136,11 +132,9 @@ type McpRequestHeaders = {
 type RequestMeta = {
   [META]: string;
   [INFO]: { name: string; version: string };
-  // Optional so a test can leave it out.
   [CAPS]?: JsonRecord;
 };
 
-/** A spec-conformant modern request: `_meta` in the body, mirrored in headers. */
 function modern(
   method: string,
   params: Record<string, JsonValue> = {},
@@ -286,7 +280,6 @@ describe("modern request validation", () => {
   const getProfile = { name: "get_profile", arguments: {} };
   const readLlms = { uri: `${SITE_ORIGIN}/llms.txt` };
 
-  // undefined deletes the header.
   it.each<{
     label: string;
     method: string;
@@ -455,7 +448,6 @@ describe("tools over HTTP", () => {
     expect(json.error?.code).toBe(-32602);
   });
 
-  // Keyed on CF-Connecting-IP, so this also guards the transport's IP wiring.
   it("spends the per-client contact allowance shared with the REST endpoint", async () => {
     const args = {
       name: "send_message",
@@ -691,7 +683,6 @@ describe("dataset tools", () => {
     expect(result.isError).toBeUndefined();
     expect(Object.keys(result.structuredContent ?? {})).toEqual(keys);
     expect(result.structuredContent).toHaveProperty(path, value);
-    // The spec asks for the serialized JSON in a text block too.
     expect(JSON.parse(textOf(result))).toEqual(result.structuredContent);
   });
 });

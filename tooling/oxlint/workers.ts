@@ -1,4 +1,3 @@
-// Oxlint JS plugin for Cloudflare's Workers and D1 best practices, as apps/api applies them.
 import type { NodeOf, Plugin } from "./plugin-types.ts";
 
 type VariableDeclaration = NodeOf<"VariableDeclaration">;
@@ -7,13 +6,11 @@ type Declarator = VariableDeclaration["declarations"][number];
 const MUTABLE = new Set(["Map", "Set", "WeakMap", "WeakSet", "Array"]);
 const READONLY = new Set(["ReadonlyMap", "ReadonlySet", "ReadonlyArray"]);
 
-// `new Map()` and the like, which any request could change for every later one.
 function mutableKind({ init }: Declarator): string | undefined {
   if (init?.type !== "NewExpression" || init.callee.type !== "Identifier") return undefined;
   return MUTABLE.has(init.callee.name) ? init.callee.name : undefined;
 }
 
-// `ReadonlySet<string>`, `readonly string[]` and the like.
 function typedReadonly({ id }: Declarator): boolean {
   const type = id.typeAnnotation?.typeAnnotation;
   if (type?.type === "TSTypeOperator") return type.operator === "readonly";

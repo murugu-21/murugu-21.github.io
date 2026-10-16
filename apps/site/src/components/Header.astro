@@ -3,8 +3,6 @@ import { greeting } from "@murugappan/content/portfolio.ts";
 import ThemeToggle from "./ThemeToggle.astro";
 import { cn } from "#src/lib/utils.ts";
 
-// Root-relative so the links work from other pages. /about is deliberately left out
-// (machine entity page, linked via sitemap/llms.txt/rel=author).
 const links = [
   { href: "/#skills", label: "Skills" },
   { href: "/#experience", label: "Work Experiences" },
@@ -16,18 +14,13 @@ const links = [
 ];
 ---
 
-{/* The bar is transparent at rest and blurs once the script below sets `data-scrolled`.
-   Below lg it is always solid, because the menu sheet continues its surface. */}
 <header
   class={cn(
     "group fixed inset-x-0 top-0 z-30 mx-auto max-w-full bg-transparent px-5 py-2.5 transition-all duration-300 ease-out not-print:data-scrolled:backdrop-blur-lg motion-reduce:transition-none max-lg:not-print:bg-surface max-lg:not-print:shadow-md lg:flex lg:items-center lg:justify-between lg:not-print:data-scrolled:bg-nav-scrolled lg:not-print:data-scrolled:shadow-lg dark:max-lg:bg-dark-base dark:lg:data-scrolled:bg-nav-scrolled-dark print:absolute",
-    // The nav text and logo don't fit one row below 2xl, so the type steps down in two bands.
     "lg:max-xl:text-sm xl:max-2xl:text-base"
   )}
   id="site-header"
 >
-  {/* The logo, the theme toggle and the hamburger share a phone's row, so the
-     logo is smaller there; mt-4 levels it with the hamburger. */}
   <a
     href="/"
     class="float-left mt-4 block flex-none text-base no-underline sm:text-xl lg:mt-0 2xl:text-3xl"
@@ -36,17 +29,14 @@ const links = [
     <span class="px-1 font-bold text-navy sm:px-2.5 dark:text-white">Murugappan M</span>
     <span class="text-subtitle-muted">/&gt;</span>
   </a>
-  {/* Without the Popover API (Safari < 17, Firefox < 125) the phone nav is
-     unavailable, so the button is hidden instead of doing nothing. */}
   <button
     type="button"
     class="float-right cursor-pointer px-5 py-7 not-supports-[selector(:popover-open)]:hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy lg:hidden print:hidden"
     popovertarget="site-menu"
   >
     <span class="sr-only">Menu</span>
-    {/* The middle bar is the span and the outer bars are its ::before and ::after.
-       While the menu is open, they cross into an X. Write each variant out in full
-       because Tailwind scans this file as text. */}
+    {/* The span and its ::before and ::after cross into an X while the menu is open. Write each
+       variant out in full because Tailwind scans this file as text. */}
     <span class="relative block h-1 w-6 rounded-full bg-navy transition-colors duration-200 ease-out group-has-open:bg-transparent before:absolute before:top-2 before:block before:size-full before:rounded-full before:bg-navy before:transition-all before:duration-200 before:ease-out group-has-open:before:top-0 group-has-open:before:-rotate-45 after:absolute after:-top-2 after:block after:size-full after:rounded-full after:bg-navy after:transition-all after:duration-200 after:ease-out group-has-open:after:top-0 group-has-open:after:rotate-45 dark:bg-blue dark:before:bg-blue dark:after:bg-blue"></span>
   </button>
   <nav aria-label="Main" class="lg:ml-auto">
@@ -58,10 +48,7 @@ const links = [
       popover
       class={cn(
         "m-0 size-auto list-none border-0 p-0",
-        // On desktop lg:block shows the list inline, and the script keeps the popover closed.
         "lg:static lg:block lg:overflow-visible lg:bg-transparent",
-        // Below lg the list is a top-layer sheet that overlaps the bar's content edge
-        // (10px padding plus the 60px button) by 2px. max-h-120 clears the seven links.
         "max-lg:fixed max-lg:inset-x-0 max-lg:top-17 max-lg:bottom-auto max-lg:bg-surface max-lg:px-5 max-lg:pb-2.5 dark:max-lg:bg-dark-base",
         "max-lg:max-h-0 max-lg:overflow-hidden max-lg:shadow-md max-lg:open:max-h-120",
         // The sheet slides max-height up from 0 and back. display and overlay are discrete,
@@ -74,7 +61,6 @@ const links = [
     >
       {links.map(l => (
         <li class="lg:float-left">
-          {/* Below 2xl the padding tightens with the type, and the underline's inset follows. */}
           <a
             href={l.href}
             data-ph-event={l.event}
@@ -86,7 +72,6 @@ const links = [
       ))}
     </ul>
   </nav>
-  {/* Outside the menu so it stays in the bar, level with the hamburger. */}
   <div class="absolute top-10 right-22 -translate-y-1/2 lg:static lg:ml-1 lg:translate-y-0">
     <ThemeToggle />
   </div>
@@ -102,7 +87,6 @@ const links = [
   const menu = document.getElementById("site-menu");
   if (!menu) throw new Error("Header: #site-menu is missing");
 
-  // Without the Popover API the button is hidden and there is nothing to close.
   if ("hidePopover" in menu) {
     // Light dismiss ignores taps inside the popover, and a same-page hash link
     // never navigates away, so a chosen link closes the menu itself.

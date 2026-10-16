@@ -16,8 +16,6 @@ import {
   visitorStorage
 } from "./fixtures";
 
-// Every response from this ASSETS stub is marked, proving whether a request
-// fell through to assets or was claimed by the worker.
 function envWithAssets(onFetch: (request: Request) => void): Env {
   return {
     ...testEnv(),
@@ -69,7 +67,6 @@ describe("the chat-room WebSocket", () => {
     expect(await upgrade("/agents/rate-limiter/global")).toBe(404);
     expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT/sub/chat-room/other")).toBe(404);
     expect((await fetchWorker("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT")).status).toBe(404);
-    // The widget mints 21 characters of A-Za-z0-9_-.
     expect(await upgrade("/agents/chat-room/short")).toBe(404);
     expect(await upgrade(`/agents/chat-room/${"a".repeat(22)}`)).toBe(404);
     expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B.myT")).toBe(404);
@@ -122,7 +119,6 @@ describe("the chat-room WebSocket", () => {
     });
     const stored = await runInDurableObject(stub, visitorStorage);
     expect(stored.visitor_country).toBe("IN");
-    // Cloudflare sent no IP, so the forged one must not survive either.
     expect(stored.visitor_ip).toBeUndefined();
   });
 });
@@ -136,16 +132,13 @@ describe("asset requests", () => {
 
   it.each([
     [null, "text/markdown"],
-    // curl and the fetch default send */*.
     ["*/*", "text/markdown"],
     ["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "text/html"],
     ["application/xhtml+xml", "text/html"],
     ["text/markdown, text/html;q=0.5", "text/markdown"],
     ["text/markdown;q=0.5, text/html", "text/html"],
-    // Equal q: header order decides.
     ["text/html, text/markdown", "text/html"],
     ["text/html;q=0", "text/markdown"],
-    // The any-type range ranks markdown too, above the lower q HTML has here.
     ["text/html;q=0.5, */*", "text/markdown"],
     ["TEXT/MARKDOWN", "text/markdown"],
     ["application/json", "text/markdown"],
@@ -218,17 +211,14 @@ describe("pages", () => {
     ["text/markdown", MARKDOWN, "# About\n"],
     ["text/markdown, text/html;q=0.5", MARKDOWN, "# About\n"],
     ["text/markdown;q=0.5, text/html", HTML, "<!doctype html><h1>About</h1>"],
-    // Equal q: header order decides.
     ["text/html, text/markdown", HTML, "<!doctype html><h1>About</h1>"],
     ["text/markdown;q=0, */*", HTML, "<!doctype html><h1>About</h1>"],
-    // A type takes the q of the most specific range that matches it.
     ["text/markdown;q=0.5, */*", HTML, "<!doctype html><h1>About</h1>"],
     ["text/html;q=0, text/*", MARKDOWN, "# About\n"],
     ["text/*;q=0.9, text/markdown;q=0.8, text/html;q=0.1", MARKDOWN, "# About\n"],
     ["*/*", HTML, "<!doctype html><h1>About</h1>"],
     ["text/*", HTML, "<!doctype html><h1>About</h1>"],
     [null, HTML, "<!doctype html><h1>About</h1>"],
-    // What Claude Code sends.
     ["text/markdown, text/html, */*", MARKDOWN, "# About\n"],
     [
       "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -272,7 +262,6 @@ describe("pages", () => {
       home: '</index.md>; rel="alternate"; type="text/markdown"',
       developers: null
     });
-    // The 404 keeps its own Link header, without an alternate.
     expect((await link("/no-such-page/"))?.includes("index.md")).toBe(false);
   });
 
@@ -295,7 +284,6 @@ describe("pages", () => {
 
   it.each([
     ["text/markdown", MARKDOWN, "# 404 Not Found"],
-    // The blog's own 404 page, not the site's.
     ["text/html", HTML, BLOG_NOT_FOUND_HTML]
   ])("answers a missing page with Accept: %s as a %s 404", async (accept, type, start) => {
     const res = await page("/blog/no-such-post/", { headers: { Accept: accept } });

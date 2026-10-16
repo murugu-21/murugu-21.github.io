@@ -14,7 +14,6 @@ import {
   totalExperienceMonths
 } from "@murugappan/content/experience.ts";
 
-// Ongoing durations are recomputed in the browser (script below) to stay current.
 const now = currentMonth();
 const ym = (v: { year: number; month: number }) => `${v.year}-${String(v.month).padStart(2, "0")}`;
 const duration = (period: string) => {
@@ -34,7 +33,6 @@ const stints = groupByCompany(workExperiences).map(stint => ({
   partTime: stint.roles.every(r => r.partTime),
   roles: stint.roles.map(role => ({ ...role, duration: duration(role.date) }))
 }));
-// Part-time roles are shown but excluded from the total and the company count.
 const allPeriods = workExperiences.filter(w => !w.partTime).map(w => w.date);
 const total = formatDuration(totalExperienceMonths(allPeriods, now));
 const companyCount = countCompanies(stints.filter(s => !s.partTime));
@@ -59,7 +57,6 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
       {stints.map(stint => (
         <li class="glow-card px-7 py-6 text-text hover:transform-none max-md:px-4 max-md:py-5 dark:text-white">
           <header class="mb-5 flex items-center gap-5">
-            {/* Rendered at 4.5rem (3rem on phones), so 72px + 2x instead of the 256px source. */}
             <Image
               class="alt-fallback size-12 flex-none rounded-full object-cover shadow-lg shadow-shadow-darker md:size-18"
               src={stint.logo}
@@ -94,7 +91,6 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
               <li class="relative before:absolute before:top-2.5 before:-left-6 before:size-2.5 before:rounded-full before:bg-navy before:ring-3 before:ring-navy/20 after:absolute after:top-5 after:-bottom-5 after:-left-5 after:w-0.5 after:bg-navy/25 last:after:hidden dark:before:bg-blue dark:before:ring-blue/20 dark:after:bg-blue/30">
                 <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                   <h4 class="text-lg font-bold md:text-xl">{role.role}</h4>
-                  {/* a lone role's date already sits in the card header */}
                   {stint.roles.length > 1 && (
                     <p class="text-sm whitespace-nowrap text-subtitle-muted max-md:whitespace-normal">
                       {role.date}
@@ -115,7 +111,6 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
                 </div>
                 <p class="mt-1.5 mb-0 text-base/normal">{role.desc}</p>
                 {role.descBullets?.length ? (
-                  /* `group` drives the chevron's group-open:rotate-45 */
                   <details class="group mt-2">
                     <summary class="inline-flex cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-navy select-none hover:text-amber-ink focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-ink dark:text-blue-light dark:hover:text-white dark:focus-visible:outline-blue [&::-webkit-details-marker]:hidden">
                       <span

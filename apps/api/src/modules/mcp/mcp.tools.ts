@@ -1,6 +1,3 @@
-// packages/contracts/mcp.ts declares each tool's name, schemas and annotations. Anything a model
-// could fix by retrying with other arguments is an `isError` result, not a protocol error.
-
 import type { McpServer, ToolCallback } from "@modelcontextprotocol/server";
 
 import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
@@ -26,7 +23,6 @@ import { READ_LIMIT_MESSAGE, takeReadSlot } from "#src/modules/rate-limit/read-q
 
 export type ToolContext = {
   services: RequestServices;
-  /** Keys the read window and the send_message allowance. */
   clientIp: string | undefined;
 };
 
@@ -38,7 +34,6 @@ type ToolResult = {
   isError?: boolean;
 };
 
-// The arguments the SDK passes a tool, already checked against its `inputSchema`.
 type ToolArgs = Parameters<ToolCallback<McpToolDescriptor["inputSchema"]>>[0];
 
 type Run = (
@@ -97,18 +92,12 @@ const fromDataset: Run = (_args, { services }, tool) =>
     render: { success: ok, failures: {} }
   });
 
-/**
- * Spends one read from the client's REST read window, which the spec's rate limit on tool calls
- * and resource reads asks for. Like the REST guard, it counts nothing without a client address.
- * Returns why the read is refused, or null when it may go ahead.
- */
 export function refusedRead(clientIp: string | undefined): string | null {
   const slot = clientIp ? takeReadSlot(clientIp) : null;
   if (!slot || slot.allowed) return null;
   return `${READ_LIMIT_MESSAGE} Wait ${slot.resetSeconds} seconds, then try again.`;
 }
 
-// send_message has its own allowance, so only the read tools are wrapped.
 const readLimited =
   (run: Run): Run =>
   (args, ctx, tool) => {
@@ -116,7 +105,6 @@ const readLimited =
     return refused ? fail(refused) : run(args, ctx, tool);
   };
 
-// Keyed by name, so a tool in the catalogue without a handler fails to compile.
 const RUN: Record<McpToolName, Run> = {
   get_profile: fromDataset,
   list_experience: fromDataset,
@@ -158,7 +146,6 @@ const RUN: Record<McpToolName, Run> = {
     return runInRequest({
       services: ctx.services,
       program: ContactService.use(contact =>
-        // Callers without an address share one allowance.
         contact.deliver({ client: ctx.clientIp ?? "unknown", message })
       ),
       render: sendMessageResults

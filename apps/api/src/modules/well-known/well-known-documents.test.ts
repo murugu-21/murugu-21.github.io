@@ -19,7 +19,6 @@ describe("buildApiCatalog", () => {
   });
 
   it("names the product in every service link title, so a name search finds it", () => {
-    // `author` names the person; every other relation names the product.
     for (const { anchor: _anchor, author: _author, ...relations } of catalog.linkset) {
       for (const [relation, targets] of Object.entries(relations)) {
         for (const target of targets ?? []) {

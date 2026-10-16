@@ -1,7 +1,3 @@
-// The theme mechanism end to end in a real browser: the toggle sets
-// `html.dark-mode`, global.css turns that into `color-scheme`, and a
-// `light-dark()` colour follows. The root vite.config.ts routes `.tsx` tests (this
-// one has no JSX) to the browser project.
 /// <reference types="vite-plus/test/browser-playwright" />
 import { afterEach, expect, it } from "vite-plus/test";
 import { cdp } from "vite-plus/test/browser";

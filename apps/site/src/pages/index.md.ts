@@ -1,4 +1,3 @@
-// Homepage as markdown; reuses the llms.txt summary.
 import { siteLlmsText } from "@murugappan/content/llms.ts";
 import { posts } from "virtual:content/posts";
 

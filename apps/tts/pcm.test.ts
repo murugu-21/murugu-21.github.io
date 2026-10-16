@@ -17,7 +17,6 @@ describe("assemble", () => {
       intra: 0.5,
       inter: 1
     });
-    // 1 + 0.5 + 1 = 2.5 s, a 1 s gap, then 2 s: no gap trails the last block
     expect(pcm.length).toBe(SR * 5.5 * 2);
     expect(pcm.subarray(SR * 2.5 * 2, SR * 3.5 * 2).every(b => b === 0)).toBe(true);
     expect(timings).toEqual([
@@ -37,7 +36,6 @@ describe("splice", () => {
     Array.from({ length: pcm.length / 2 }, (_, i) => pcm.readInt16LE(i * 2));
 
   it("replaces blocks with longer or shorter audio, keeps the gaps and shifts later blocks", () => {
-    // 1000 Hz, so a millisecond is one sample.
     const { pcm, timings } = splice({
       pcm: samples(0, 1, 2, 3, 4, 5, 6, 7, 8, 9),
       sampleRate: 1000,

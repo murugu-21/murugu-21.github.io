@@ -13,7 +13,6 @@ function collectInferTypeParameterNames(
   }
 }
 
-// Type parameters in scope here shadow a module alias of the same name.
 export function lexicalTypeParameterNames(
   node: ESTree.Node,
   visitorKeys: VisitorKeys

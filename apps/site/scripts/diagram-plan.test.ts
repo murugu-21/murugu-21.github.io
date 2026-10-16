@@ -25,7 +25,6 @@ describe("diagramJobs", () => {
       { post: "/blog/a/index.md", index: 0, source: "graph TD; A-->B" },
       { post: "/blog/a/index.md", index: 1, source: "graph LR; C-->D" }
     ]);
-    // Names each file by the fence whose hash it carries.
     const fenceOf = new Map(jobs.map(({ hash, index }) => [hash, `fence${index}`]));
     const byFence = (files = new Set<string>()) =>
       [...files].map(file => file.replace(/[0-9a-f]{12}/, hash => fenceOf.get(hash) ?? hash));
@@ -60,7 +59,6 @@ describe("orphans", () => {
 describe("pendingRenders", () => {
   const job = (hash: string): Job => ({ post: "/blog/a/index.md", index: 0, source: "", hash });
   const jobs = [job("current"), job("darkstale"), job("lightstale"), job("nopng")];
-  // Up to date: SVGs stamped by this mermaid. On disk: any file, stamped or not.
   const upToDate = new Set([
     "/blog/a/diagrams/current.light.svg",
     "/blog/a/diagrams/current.dark.svg",

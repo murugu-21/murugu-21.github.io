@@ -1,6 +1,3 @@
-// `astro:env/server` in the node tests. A test sets it with setEnv and resets it with resetEnv.
-
-// Nothing calls getSecret, which reads variables the env schema doesn't declare.
 type Env = Omit<typeof import("astro:env/server"), "getSecret">;
 
 const BUILD_WITHOUT_SECRETS: Env = {

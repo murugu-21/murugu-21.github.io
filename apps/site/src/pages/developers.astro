@@ -1,8 +1,6 @@
 ---
 import type { Thing } from "schema-dts";
 import { z } from "zod";
-// Endpoint table and tool example are generated from the served OpenAPI
-// document (packages/contracts/api/openapi.ts), so they can't drift from the API.
 
 import Layout from "#src/layouts/Layout.astro";
 import Header from "#src/components/Header.astro";
@@ -164,7 +162,6 @@ const machineFiles = [
     what: "ATS-parseable resume, generated from the same data this API serves."
   }
 ];
-// So API searches resolve to this page rather than the pages about the person.
 const apiGraph: Thing[] = [
   {
     "@type": "WebAPI",

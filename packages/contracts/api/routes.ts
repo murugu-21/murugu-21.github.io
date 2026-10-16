@@ -1,5 +1,3 @@
-// The API's paths. Unversioned `/api/...` is a permanent alias for v1.
-
 export const CURRENT_API_VERSION = "v1";
 
 export const API_BASE = "/api";
@@ -14,9 +12,7 @@ export const API_PATHS = {
   posts: `${VERSIONED_API_BASE}/posts`,
   post: `${VERSIONED_API_BASE}/posts/{slug}`,
   contact: `${VERSIONED_API_BASE}/contact`,
-  // Every version serves the same catalogue of all versions.
   versions: `${VERSIONED_API_BASE}/versions`,
   openapi: `${VERSIONED_API_BASE}/openapi.json`,
-  // Agents probe the site root for the spec. Not in the spec's own `paths`.
   openapiRoot: "/openapi.json"
 } as const;

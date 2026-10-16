@@ -35,7 +35,6 @@ const TIMINGS = {
   ]
 };
 
-// Only /blog/audio/hello.json exists, and only when `timings` is given.
 const serveAudio = (timings?: JsonValue) => {
   const requested: string[] = [];
   vi.stubGlobal("fetch", (url: string) => {
@@ -46,7 +45,6 @@ const serveAudio = (timings?: JsonValue) => {
   return requested;
 };
 
-// A speechSynthesis that records utterances; the test fires their events.
 // Like Chrome, cancel() errors the utterance it cuts off, synchronously.
 const fakeSpeech = () => {
   const spoken: SpeechSynthesisUtterance[] = [];
@@ -79,7 +77,6 @@ const fakeSpeech = () => {
   };
 };
 
-// An <audio> that plays instantly; the test moves its playhead.
 const audios: FakeAudio[] = [];
 class FakeAudio extends EventTarget {
   #time = 0;
@@ -116,8 +113,6 @@ const lastAudio = () => {
   return audio;
 };
 
-// An <audio> whose source fails: the error event fires, then play() rejects.
-// Each rejection, once settled, is pushed to `rejections`.
 const brokenAudio = (rejections: Promise<void>[] = []) =>
   class extends FakeAudio {
     override play() {
@@ -128,8 +123,6 @@ const brokenAudio = (rejections: Promise<void>[] = []) =>
     }
   };
 
-// The speed outlives a mount, so a test that fails mid-way must not leave the
-// next one at its speed. Set by each mount, run after each test.
 let resetRate: (() => Promise<void>) | null = null;
 
 const mount = async (html = POST) => {
@@ -153,9 +146,7 @@ const mount = async (html = POST) => {
     island,
     listen: screen.getByRole("button", { name: "Listen" }),
     pause: screen.getByRole("button", { name: "Pause" }),
-    // Elapsed, total and the speed pill, as the reader sees them.
     readout: () => island.textContent,
-    // The page docks the bar while this attribute is set.
     listening: () => island.hasAttribute("data-listening"),
     block: () => read("[data-speaking]"),
     word: () => read("[data-current-word]"),
@@ -196,7 +187,6 @@ it("reads the post block by block with speech synthesis when it has no audio", a
   expect(ui.block()).toBe("Hello big world.");
   expect(ui.word()).toBe("big");
 
-  // Resuming restarts the paragraph that was cut off.
   await userEvent.click(ui.pause);
   await expect.element(ui.listen).toHaveAttribute("aria-pressed", "false");
   expect(ui.readout()).toBe("2/3¶1×");
@@ -329,7 +319,6 @@ it("falls back to speech synthesis when the audio fails to load", async () => {
 
   await userEvent.click(ui.listen);
   await expect.element(ui.pause).toBeVisible();
-  // The rejected play() settles after the fallback took over.
   await Promise.all(rejections);
   await expect.element(ui.pause).toBeVisible();
   speech.start();

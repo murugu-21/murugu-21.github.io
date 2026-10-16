@@ -2,7 +2,6 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { modulePreloader } from "./module-preload.ts";
 
-// A built site's modules by root-relative href.
 const MODULES = new Map([
   ["/static/page.js", 'import { a } from "./chunks/a.js";import("./lazy.js");'],
   ["/static/chunks/a.js", 'import "./b.js";export { b } from "./b.js";import "./missing.js";'],

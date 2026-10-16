@@ -1,7 +1,4 @@
 ---
-// The blog index's searchable, tag-filterable post list. Plain script, no
-// React island: hydration cost ~70 KB ahead of LCP on mobile. Filter state
-// mirrors into the URL (`?q=`, one `?tag=` per chip), which wins on load.
 import type { SerializedPost } from "#src/lib/blog/posts.ts";
 import SearchBar from "./SearchBar.astro";
 import Tag, { type TagCount } from "./Tag.astro";
@@ -12,7 +9,6 @@ interface Props {
 }
 const { posts } = Astro.props;
 
-// Most-used first, ties alphabetical.
 const totals = new Map<string, number>();
 for (const post of posts) {
   for (const tag of post.tags) totals.set(tag, (totals.get(tag) ?? 0) + 1);
@@ -65,8 +61,6 @@ const tags: TagCount[] = [...totals]
       if (empty) empty.hidden = shown > 0;
     };
 
-    // Other params (utm_*) are preserved. replaceState so typing doesn't pile
-    // up history entries.
     const syncUrl = () => {
       const params = new URLSearchParams(location.search);
       const query = search?.value ?? "";

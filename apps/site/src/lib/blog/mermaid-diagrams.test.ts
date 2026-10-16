@@ -38,8 +38,6 @@ const postFences = findMermaidFences(post);
 
 describe("findMermaidFences", () => {
   it("finds only top-level mermaid fences, in order, with the body trimmed", () => {
-    // A naive regex would also match the "```mermaid" inside the js fence and
-    // the ````md sample.
     expect(postFences.map(f => f.source)).toEqual([
       "flowchart LR\n    A --> B",
       "sequenceDiagram\n    A->>B: hi"
@@ -64,8 +62,6 @@ describe("findMermaidFences", () => {
   });
 
   it("finds fences nested in a list item or blockquote, with the container indent stripped", () => {
-    // Same parser as the build, so the source (and hash) match what
-    // remark-mermaid sees for the same fence.
     const md =
       "- step\n\n  ```mermaid\n  flowchart LR\n    A --> B\n  ```\n\n> ```mermaid\n> flowchart TD\n>   X --> Y\n> ```\n";
     expect(findMermaidFences(md).map(f => f.source)).toEqual([
@@ -76,8 +72,6 @@ describe("findMermaidFences", () => {
 });
 
 describe("diagramHash", () => {
-  // The hash names the rendered PNG, so it must change with the diagram and
-  // with nothing else, or reformatting a post would re-render its diagrams.
   it.each([
     ["the source", "flowchart LR\n  A --> B"],
     ["surrounding whitespace", "\n  flowchart LR\n  A --> B  \n\n"],

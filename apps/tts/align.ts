@@ -1,5 +1,3 @@
-// align-audio.ts's side of whisper.py, what each reply does to a block, and
-// the pass that adds word timings to one post's JSON in R2.
 import { mkdtempDisposableSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -29,8 +27,6 @@ export function whisperClient({ next, send, close }: JsonLines) {
 
 export type WhisperClient = ReturnType<typeof whisperClient>;
 
-// A block whisper failed on, or matched poorly, keeps no `words` (paragraph
-// highlight only), and `problem` says why.
 type Alignment = { block: StoredBlock; problem?: string };
 
 export function alignBlock(block: StoredBlock, reply: WhisperReply): Alignment {

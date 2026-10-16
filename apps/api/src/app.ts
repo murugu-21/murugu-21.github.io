@@ -13,10 +13,6 @@ import {
   wellKnownController
 } from "#src/modules/well-known/well-known.controller.ts";
 
-/**
- * The Worker's Hono app: every module's controller, mounted. Tests build one with fake providers
- * through `layer`, the way Nest's testing module overrides a provider.
- */
 export function createApp(layer = appLayer()) {
   return (
     new Hono<AppEnv>()

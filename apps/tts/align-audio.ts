@@ -1,13 +1,5 @@
-// Adds word-level timings to the read-aloud JSON in R2. Runs after
-// `bun run audio`; never re-synthesises:
-//
-//   bun run audio:align              # every post whose JSON is still version 1
-//   bun run audio:align first-post   # one post
-//   bun run audio:align --force      # re-align version 2 posts too
-//   bun run audio:align --local      # target the local R2 that `bun run preview` serves
-//
-// Poorly aligned blocks keep no `words` (paragraph highlight only).
 // Don't run alongside `bun run audio`: both want the GPU.
+
 import { join } from "node:path";
 
 import {

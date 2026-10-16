@@ -29,7 +29,6 @@
   }
 }
 
-/* Night Owl's own selection: the light-mode blue would drown its pale tokens. */
 .astro-code ::selection {
   background: light-dark(#b3d4fc, #1d3b53);
 }

@@ -1,4 +1,3 @@
-/** Decodes a JSON string array stamped into a data attribute; anything else reads as empty. */
 export function parseStringArray(json: string): string[] {
   let value: unknown;
   try {

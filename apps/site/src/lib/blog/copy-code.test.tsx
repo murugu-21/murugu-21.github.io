@@ -1,4 +1,3 @@
-// A real browser for the clipboard. vite.config.ts grants the page clipboard access.
 import { afterEach, expect, it, vi } from "vite-plus/test";
 import { page, userEvent } from "vite-plus/test/browser";
 import { codeToHtml } from "shiki";
@@ -19,8 +18,6 @@ const renderPost = async (fences: string[]) => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 };
 
-// Waits out the click handlers' clipboard writes, so an assertion can't pass on the state
-// from before the click.
 const clipboardSettled = (write: { mock: { results: { value: unknown }[] } }) =>
   Promise.allSettled(write.mock.results.map(result => result.value));
 

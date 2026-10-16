@@ -1,12 +1,9 @@
-// Shared CLI helpers for generate-audio.ts and align-audio.ts.
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-// The uv project in this folder (pyproject.toml); `uv sync` creates it.
 export const PYTHON = join(import.meta.dirname, ".venv", "bin", "python");
-// The blog pages `bun run build` writes to the site's dist/.
 export const BLOG_DIST = join(import.meta.dirname, "..", "site", "dist", "blog");
 
 const COMMON_OPTIONS = {
@@ -14,7 +11,6 @@ const COMMON_OPTIONS = {
   local: { type: "boolean", default: false }
 } as const;
 
-// `bun run audio [slug…] [flags]`; apps/tts/generate-audio.ts lists the flags.
 export function audioArgs(args: string[]) {
   const { values, positionals } = parseArgs({
     args,
@@ -29,7 +25,6 @@ export function audioArgs(args: string[]) {
   return { ...values, slugs: positionals };
 }
 
-// `bun run audio:align [slug…] [--force] [--local]`
 export function alignArgs(args: string[]) {
   const { values, positionals } = parseArgs({
     args,
@@ -68,7 +63,6 @@ export function ffmpeg(args: string[]): void {
 
 export type Ffmpeg = typeof ffmpeg;
 
-// Post dirs under the built blog; the post-body check skips the blog's 404.
 export function publishedSlugs(blogDist: string): string[] {
   if (!existsSync(blogDist)) throw new Error(`${blogDist} missing; run \`bun run build\` first`);
   return readdirSync(blogDist, { withFileTypes: true })
@@ -83,7 +77,6 @@ export function publishedSlugs(blogDist: string): string[] {
     .map(d => d.name);
 }
 
-// Logs failures instead of stopping; returns the failed slugs.
 export async function runEach(
   slugs: string[],
   fn: (slug: string) => Promise<void>

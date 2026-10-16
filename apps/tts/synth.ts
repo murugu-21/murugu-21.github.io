@@ -1,5 +1,3 @@
-// The generator's side of synth.py, plus how a post's text becomes the chunks
-// it renders.
 import { parseHTML } from "linkedom";
 import { z } from "zod";
 
@@ -33,8 +31,6 @@ export const chunkBlock = (text: string, b: number): Chunk[] =>
     text: chunkText
   }));
 
-// synth.py replies: one after model load (with the rate every chunk is written at), one
-// per chunk, `done` per job.
 const ReadyMsg = z.object({ loadSeconds: z.number(), sampleRate: z.number().int().positive() });
 const ChunkMsg = z.union([
   z.object({ id: z.string(), error: z.string() }),

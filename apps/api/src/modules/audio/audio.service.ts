@@ -11,7 +11,6 @@ export type AudioReply =
   | { kind: "unsatisfiable"; meta: AudioMeta }
   | { kind: "content"; meta: AudioMeta; body: ReadableStream; range: ByteRange | null };
 
-/** Decides how to answer a request for one audio file: 304, 416, a byte range, or all of it. */
 export class AudioService extends Context.Service<
   AudioService,
   {

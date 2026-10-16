@@ -26,7 +26,6 @@ jobs:
       - run: bun run check:py
   test-and-build:
     runs-on: ubuntu-26.04
-    # id-token lets the Qlty step authenticate by OIDC instead of a stored token.
     permissions:
       contents: read
       id-token: write
@@ -35,9 +34,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup
-      # The read-aloud contract tests run in this venv (apps/tts/fakes/README.md).
       - run: uv sync --locked --project apps/tts
-      # The headless shell is all the "browser" Vitest project needs.
       - run: bunx playwright install --with-deps --only-shell chromium
       # Not `bun test`, which is Bun's own runner, not Vitest.
       - run: bun run test --coverage
@@ -45,7 +42,6 @@ jobs:
         with:
           oidc: true
           files: coverage/lcov.info
-      # The whole site, resume PDF included (astro.config.ts build-artifacts).
       - run: bun run build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

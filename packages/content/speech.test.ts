@@ -11,7 +11,6 @@ describe("normalizeSpeechText", () => {
     expect(normalizeSpeechText(input)).toBe(spoken);
   });
 
-  // LLM-style TTS (Breeze) loops on long runs of one digit; spell them out.
   it("describes a long run of one digit in a decimal instead of listing it", () => {
     expect(normalizeSpeechText("0.1 + 0.2 = 0.30000000000000004 in JS")).toBe(
       "0.1 + 0.2 = 0.3, then zero repeated 15 times, then 4 in JS"
@@ -26,7 +25,6 @@ describe("normalizeSpeechText", () => {
   });
 });
 
-// Duck-typed DOM: speechBlocks only reads tagName, textContent and children.
 type FakeNode = { tagName: string; textContent: string | null; children: FakeNode[] };
 const el = (tagName: string, textContent: string, children: FakeNode[] = []): FakeNode => ({
   tagName,

@@ -1,11 +1,6 @@
-// Groups the most-recent-first workExperiences into stints by *consecutive*
-// company, so a return to a former employer is its own stint.
-
 interface Stint<T> {
   company: string;
-  /** "oldest start – newest end", or the role's own date for a single role. */
   span: string;
-  /** Shared location when every role agrees, otherwise null (shown per role). */
   location: string | null;
   roles: T[];
 }
@@ -48,9 +43,6 @@ export function groupByCompany<T extends RoleLike>(roles: T[]): Stint<T>[] {
   return stints;
 }
 
-// Ranges are "Month YYYY – Month YYYY" or "Month YYYY – Present". Months count
-// inclusively (LinkedIn's convention): "April 2025 – December 2025" is 9.
-
 interface YearMonth {
   year: number;
   month: number; // 1-12
@@ -92,7 +84,6 @@ function splitPeriod(
   return { start, end: parseMonth(parts[1]), openEnded: false };
 }
 
-/** null when either end fails to parse; `end` is null only for an open-ended period. */
 export function periodBounds(period: string): { start: YearMonth; end: YearMonth | null } | null {
   const split = splitPeriod(period);
   if (!split) return null;
@@ -105,11 +96,6 @@ const isoMonth = ({ year, month }: YearMonth) =>
 
 type PeriodDates = { startDate: string | null; endDate: string | null; current: boolean };
 
-/**
- * ISO 8601 year-months for the API. A start that doesn't parse yields nulls throughout, because
- * a wrong date is worse for an agent than an absent one. Unlike periodBounds, a parsed start
- * survives an end that doesn't parse ("June 2019 – sometime" keeps 2019-06).
- */
 export function parsePeriod(period: string): PeriodDates {
   const split = splitPeriod(period);
   if (!split) return { startDate: null, endDate: null, current: false };
@@ -126,6 +112,7 @@ export function currentMonth(now = new Date()): YearMonth {
 
 const toIndex = (ym: YearMonth) => ym.year * 12 + (ym.month - 1);
 
+// Months count inclusively (LinkedIn's convention): "April 2025 – December 2025" is 9.
 export function monthsBetween({ start, end }: { start: YearMonth; end: YearMonth }): number {
   return Math.max(0, toIndex(end) - toIndex(start) + 1);
 }
@@ -139,7 +126,6 @@ export function formatDuration(months: number): string {
   return parts.join(" ");
 }
 
-/** Months covered by the union of the given ranges (overlaps counted once). */
 export function totalExperienceMonths(periods: string[], now: YearMonth = currentMonth()): number {
   const ranges = periods
     .flatMap((period): Array<[number, number]> => {
@@ -161,7 +147,6 @@ export function totalExperienceMonths(periods: string[], now: YearMonth = curren
   return total;
 }
 
-/** De-duplicates by name: a return to a former employer is two stints. */
 export function countCompanies(stints: ReadonlyArray<{ company: string }>): number {
   return new Set(stints.map(s => s.company)).size;
 }

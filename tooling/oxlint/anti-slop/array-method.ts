@@ -30,7 +30,6 @@ function isArrayAnnotation(type: ESTree.TSType): boolean {
   );
 }
 
-// Only local evidence counts: unknown receivers and iterator pipelines are deliberately not arrays.
 export function isKnownArrayExpression(
   sourceCode: SourceCode,
   node: ESTree.Node,

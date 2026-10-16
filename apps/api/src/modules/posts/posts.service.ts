@@ -9,7 +9,6 @@ import {
 
 type PostList = { posts: PostSummary[]; count: number };
 
-/** Case-insensitive substring match on title and description, then the first `limit`. */
 function searchPosts({
   posts,
   query,

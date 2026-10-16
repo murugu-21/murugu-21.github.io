@@ -1,6 +1,4 @@
 ---
-// Canonical entity page (schema.org ProfilePage), sourced only from
-// packages/content/portfolio.ts + resume.ts.
 import Layout from "#src/layouts/Layout.astro";
 import Header from "#src/components/Header.astro";
 import LinkRow from "#src/components/LinkRow.astro";
@@ -18,7 +16,6 @@ import {
 import { resumeContact } from "@murugappan/content/resume.ts";
 import { groupByCompany } from "@murugappan/content/experience.ts";
 
-// Groups by *consecutive* company, so returning to an employer stays two entries.
 const stints = groupByCompany(workExperiences);
 ---
 
@@ -52,7 +49,6 @@ const stints = groupByCompany(workExperiences);
                 {job.role}
                 {job.partTime && " (Part-time)"}
               </h4>
-              {/* a lone role's dates already sit under the company name */}
               {stint.roles.length > 1 && (
                 <p class="text-subtitle-muted">
                   {job.date}

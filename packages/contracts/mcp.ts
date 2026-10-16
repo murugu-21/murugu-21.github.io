@@ -1,6 +1,3 @@
-// The MCP server's public surface: protocol versions, identity and tool catalogue.
-// apps/api/src/modules/mcp/ serves it, and /developers/ and the server.json manifest list it.
-
 import { z } from "zod";
 
 import type { JsonRecord } from "@murugappan/utils/json.ts";
@@ -15,7 +12,6 @@ import {
 import { Post, PostList, POSTS_LIMIT_MAX, PostsLimit, PostsSearchText, SLUG } from "./api/posts";
 
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";
-// Newest first. `initialize` falls back to the first entry.
 export const LEGACY_PROTOCOL_VERSIONS: readonly string[] = [
   "2025-11-25",
   "2025-06-18",
@@ -79,7 +75,6 @@ function datasetTool<const Name extends string>({
   };
 }
 
-// The Worker re-parses each call with these, after the SDK has checked them, to type `args`.
 export const SearchArgs = z.strictObject({
   query: PostsSearchText.optional().meta({
     description:

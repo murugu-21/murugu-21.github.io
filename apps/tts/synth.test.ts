@@ -46,7 +46,6 @@ describe("chunkBlock", () => {
   });
 });
 
-/** A WAV's rate and length from the header synth.py writes, plus its first sample. */
 function wavInfo(path: string) {
   const wav = readFileSync(path);
   return {
@@ -66,8 +65,6 @@ describe("synth.py through synthClient", () => {
       writeFileSync(path, JSON.stringify({ outDir: join(dir.path, slug), reference, chunks }));
       return path;
     };
-    // The fakes print while loading and generating, as mlx-audio does, so a stray
-    // stdout line would break the JSON protocol here.
     await using synth = synthClient(startOnFakes("synth.py"));
     expect((await synth.ready).sampleRate).toBe(24000);
 
@@ -86,7 +83,6 @@ describe("synth.py through synthClient", () => {
         "b001-c01: RuntimeError: model produced no audio"
     );
     expect(readdirSync(join(dir.path, "react"))).toEqual(["b000-c00.wav"]);
-    // 12 characters at 10 ms each, at 0.5 amplitude.
     expect(wavInfo(join(dir.path, "react", "b000-c00.wav"))).toEqual({
       sampleRate: 24000,
       frames: 2880,

@@ -1,4 +1,3 @@
-// shadcn/ui textarea (new-york, Tailwind v4), vendored.
 import * as React from "react";
 
 import { cn } from "#src/lib/utils.ts";

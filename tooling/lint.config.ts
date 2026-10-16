@@ -1,11 +1,7 @@
-// The root vite.config.ts loads this, so every path in it is relative to the repo root.
 import type { OxlintConfig, OxlintOverride } from "vite-plus/lint";
 
 type Pattern = { regex: string; message: string; allowTypeImports?: boolean };
 
-// Each layer is a folder in a workspace package (README.md › Imports). It imports itself and the
-// layers in `uses`: inside its own package by the subpath import in `imports`, from another
-// package by name. import/no-relative-parent-imports stops `../` from going around them.
 const LAYER_NAMES = [
   "site",
   "api",
@@ -20,10 +16,8 @@ const LAYER_NAMES = [
   "utils"
 ] as const;
 type LayerName = (typeof LAYER_NAMES)[number];
-// `imports` is left out for a layer nothing imports.
 type Layer = { dir: string; pkg: string; imports?: string; uses: LayerName[]; also?: Pattern[] };
 
-// Contracts and content reach both the browser bundle and the Worker, so they take no framework.
 const FRAMEWORKS =
   "^(astro|@astrojs/|hono|agents|ai$|@ai-sdk/|@cloudflare/|cloudflare:|node:|react|@modelcontextprotocol/)";
 
@@ -97,9 +91,6 @@ const LAYERS: Record<LayerName, Layer> = {
   }
 };
 
-// How `from` names `to`: by subpath import inside one package, by package name across two.
-// A library's folders keep their own prefix (@murugappan/content/vite/), which already is one.
-// A layer without `imports` has no name inside its own package.
 function specifier({ from, to }: { from: LayerName; to: LayerName }): string[] {
   const { pkg, imports } = LAYERS[to];
   if (imports?.startsWith("@")) return [imports];
@@ -139,9 +130,6 @@ const NO_SITE_TEST_FAKES: Pattern = {
 };
 const SITE_TESTS = ["apps/site/src/**/*.test.ts", "apps/site/src/**/*.test.tsx"];
 
-// restrict() for the site, so the layer loop below skips the site layer. Tests keep `patterns`
-// and every other file also loses the fakes: the second override wins wherever it applies, so
-// each file still gets one complete list.
 const siteRestrict = (files: string[], patterns: Pattern[]): OxlintOverride[] => [
   restrict(files, patterns),
   { ...restrict(files, [...patterns, NO_SITE_TEST_FAKES]), excludeFiles: SITE_TESTS }
@@ -169,8 +157,6 @@ const WORKER_PROPERTIES: Property[] = [
   }
 ];
 
-// The Worker's roles, by file suffix (apps/api/README.md › Layers). They replace the api layer's
-// override, so the layer loop below skips it.
 const API = layerPatterns("api");
 const NO_EFFECT: Pattern[] = [
   {
@@ -286,9 +272,8 @@ const DOMAIN = bySuffix("service", "repository");
 const HTTP = bySuffix("controller", "tools", "resources");
 const PLUMBING = bySuffix("guard", "pipe", "interceptor", "middleware", "filter");
 
-// What sets one role apart. apiRole adds the api layer's patterns and the Workers bans, and
-// each rule's list is whole, since an override replaces a rule's options rather than adding to
-// them. Later roles win, so the most specific comes last.
+// An override replaces a rule's options rather than adding to them, so each list is whole.
+// Later roles win, so the most specific comes last.
 type ApiRole = {
   files: string[];
   patterns: Pattern[];
@@ -308,7 +293,6 @@ const API_ROLES: ApiRole[] = [
     paths: [ROUTE_AGENT],
     properties: RUN_EFFECT
   },
-  // The edge that runs every program.
   {
     files: ["apps/api/src/app.module.ts"],
     patterns: [NO_TEST_FIXTURES],
@@ -336,7 +320,6 @@ const API_ROLES: ApiRole[] = [
     paths: [ROUTE_AGENT],
     properties: [...RUN_EFFECT, BINDINGS]
   },
-  // The one caller of routeAgentRequest. Its c.env read stays banned and is disabled with the reason.
   {
     files: ["apps/api/src/modules/chat/chat.controller.ts"],
     patterns: [...NO_EFFECT, NO_TEST_FIXTURES, ...HTTP_IMPORTS],
@@ -426,7 +409,6 @@ export default {
     "import/no-relative-parent-imports": "error",
     "import/no-cycle": "error",
     "oxc/no-accumulating-spread": "error",
-    // Vendored from dmmulroy/anti-slop (tooling/oxlint/anti-slop/UPSTREAM.md).
     "anti-slop/no-array-filter-map": "error",
     "anti-slop/no-conditional-empty-object-spread": "error",
     "anti-slop/no-known-value-widening": "error",
@@ -435,7 +417,6 @@ export default {
     "anti-slop/no-reduce-accumulator-copy": "error",
     "anti-slop/no-reflect-apply": "error",
     "anti-slop/no-reflect-get": "error",
-    // A type guard is where narrowing belongs (AGENTS.md › Code style); anywhere else, parse.
     "anti-slop/no-runtime-typeof": ["error", { allowInTypeGuards: true }],
     "anti-slop/no-unknown-parameters": "error",
     "anti-slop/no-unknown-returns": "error",
@@ -450,9 +431,7 @@ export default {
       ),
     ...siteRestrict([`${LAYERS.site.dir}**`], SITE),
     ...API_ROLES.map(apiRole),
-    // Services log through Effect, so the log carries the span each Effect.fn method opens.
     { files: DOMAIN, rules: { "no-console": "error", "effect/use-fn": "error" } },
-    // Where Effect runs (NO_EFFECT bans it elsewhere in the Worker), so Match and Predicate are there.
     {
       files: [...DOMAIN, "apps/api/src/common/di/**", "apps/api/src/app.module.ts"],
       rules: {
@@ -460,7 +439,6 @@ export default {
         "anti-slop-effect/prefer-effect-match": "error"
       }
     },
-    // Shared code serves every page, so it can't reach into a page area's folder.
     ...siteRestrict(
       [
         "apps/site/src/components/*",
@@ -481,7 +459,6 @@ export default {
         }
       ]
     ),
-    // The homepage may show the blog's posts; the blog never reaches into the homepage.
     ...siteRestrict(
       [
         "apps/site/src/components/blog/**",
@@ -514,7 +491,6 @@ export default {
       files: ["apps/api/src/**"],
       rules: { "workers/no-module-state": "error", "workers/sql-bindings": "error" }
     },
-    // A store is the one place per-isolate state lives (apps/api/README.md › Layers).
     { files: ["apps/api/src/**/*.store.ts"], rules: { "workers/no-module-state": "off" } },
     {
       files: ["apps/api/src/**/*.durable-object.ts"],
@@ -534,10 +510,6 @@ export default {
         ]
       }
     },
-    // oxlint-tailwindcss's recommended set (its README › Setup) plus two rules, all at error.
-    // prefer-scale-token turns px into scale steps. no-arbitrary-value keeps values on
-    // Tailwind's scale and the theme's tokens; where Tailwind has no default for a value,
-    // disable it on that line with the reason. Class order comes from oxfmt (sortTailwindcss).
     {
       files: ["apps/site/src/**/*.{ts,tsx}"],
       jsPlugins: ["oxlint-tailwindcss"],
@@ -560,7 +532,6 @@ export default {
         "tailwindcss/no-unnecessary-whitespace": "error",
         "tailwindcss/no-hardcoded-colors": "error",
         "tailwindcss/no-arbitrary-value": "error",
-        // This rule is experimental. It flags a plain element that rebuilds a shadcn primitive from its classes.
         "tailwindcss/no-borrowed-component-styles": [
           "error",
           { components: ["apps/site/src/components/ui"] }

@@ -48,7 +48,6 @@ describe("remarkMermaid", () => {
     });
   });
 
-  // Lazy loading plus display:none stops the browser fetching the other theme's SVG.
   it("shows the light image by day and the dark one at night, hiding the other", async () => {
     const { file } = await renderedPost({ viewBox: "0 0 400 200" });
     const tree = fromMarkdown(`\`\`\`mermaid\n${FENCE}\n\`\`\`\n`);
@@ -58,7 +57,6 @@ describe("remarkMermaid", () => {
     const images = [...JSON.stringify(tree.children[0]).matchAll(/"class":"([^"]*)"/g)].map(m =>
       m[1].split(" ")
     );
-    // Whether an image displays under Tailwind's `hidden`, `dark:hidden` and `dark:block`.
     const shownByDay = (cls: string[]) => !cls.includes("hidden");
     const shownAtNight = (cls: string[]) =>
       cls.includes("dark:block") || (shownByDay(cls) && !cls.includes("dark:hidden"));

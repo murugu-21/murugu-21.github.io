@@ -1,11 +1,8 @@
-// What render-mermaid.ts asks mermaid-cli for, and what it adds to each SVG:
-// a stamp naming the mermaid that rendered it and an embedded Fira Code subset.
 import type { Buffer } from "node:buffer";
 import type { ParseMDDOptions } from "@mermaid-js/mermaid-cli";
 
 import type { DiagramTheme } from "#src/lib/blog/mermaid-diagrams.ts";
 
-// Background matches the card remark-mermaid.ts puts the <img> on (dark is --color-dark-bg).
 export const THEMES: Record<DiagramTheme, { mermaid: "neutral" | "dark"; background: string }> = {
   light: { mermaid: "neutral", background: "#fff" },
   dark: { mermaid: "dark", background: "#282c35" }
@@ -35,13 +32,9 @@ export const renderOptions = ({
       fontFamily: "Fira Code, ui-monospace, monospace"
     },
     customFontCSS: [{ cssUrl: pageFont }],
-    // The id lands in the SVG and its stylesheet, so it derives from the hash (not
-    // a counter) to keep re-renders byte-identical. Ids needn't be unique across files.
     svgId: `m-${hash}-${theme}`
   }) satisfies ParseMDDOptions;
 
-// Text between tags, minus the inline stylesheet (whose selectors would bloat
-// the subset). A small superset of the labels is fine.
 export function usedText(svg: string): string {
   const text = svg
     .replaceAll(/<style\b[^>]*>[\s\S]*?<\/style>/g, " ")

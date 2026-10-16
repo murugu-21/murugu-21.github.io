@@ -29,7 +29,6 @@ type ResolvedType = {
 
 type Resolution = {
   readonly substitutions: Substitutions;
-  // Aliases already being expanded on this path, so a recursive alias stops instead of looping.
   readonly resolvingAliases: ReadonlySet<string>;
 };
 

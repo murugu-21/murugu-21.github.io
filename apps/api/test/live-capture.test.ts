@@ -1,4 +1,3 @@
-// Lead capture against the real model, from the visitor's socket to the owner's email.
 import { runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vite-plus/test";
@@ -16,12 +15,10 @@ import {
   userMessage
 } from "./fixtures";
 
-// The root vite.config.ts binds these only for bun run test:live.
 const LiveEnv = z.object({ LIVE_DEEPSEEK_API_KEY: z.string() });
 
 const CONTACT = "dana.okafor@northlane.io";
 
-// An obvious lead: intent, then specifics, then contact.
 const VISITOR_TURNS = [
   "hey, are you available for contract work?",
   "we need a senior TS/Node engineer for a 3 month contract, starting October, remote.",
@@ -56,7 +53,6 @@ describe("lead capture against the live model", { tags: ["live"] }, () => {
       sent.map(m => m.to),
       report
     ).toEqual(["inbox@example.com"]);
-    // The email's transcript quotes the visitor too, so only the Contact line shows what was captured.
     const contactLine = sent[0]?.text?.split("\n").find(line => line.startsWith("Contact:"));
     expect(contactLine, report).toContain(CONTACT);
   });

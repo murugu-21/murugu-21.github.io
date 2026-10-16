@@ -1,10 +1,8 @@
-// The root vite.config.ts loads this, so every path in it is relative to the repo root.
 import type { OxfmtConfig } from "vite-plus/fmt";
 
 const tailwindFunctions = ["cn", "cva"];
 
 export default {
-  // Biome formats stylesheets (biome.jsonc).
   ignorePatterns: ["apps/site/public/**", "apps/site/src/**/*.css"],
   trailingComma: "none",
   arrowParens: "avoid",

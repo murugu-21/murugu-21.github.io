@@ -7,7 +7,6 @@ const STATIC_IMPORT = /\b(?:from|import)\s*"(\.\/[^"]+\.js)"/g;
 const MODULE_SCRIPT = /<script type="module" src="(\/[^"]+\.js)"/g;
 const MODULE_SCRIPT_TAG = '<script type="module" src="';
 
-// Every module the entries reach through static imports, minus the entries themselves.
 function transitiveImports(entries: string[], importsOf: (href: string) => string[]) {
   const deps = new Set<string>();
   const walk = (href: string) => {
@@ -21,9 +20,6 @@ function transitiveImports(entries: string[], importsOf: (href: string) => strin
   return deps;
 }
 
-// `readModule` returns a built module's source by its root-relative href, or
-// undefined when there's no such file. The returned function gives a page's
-// HTML with the hints added, or undefined when it has nothing to hint.
 export function modulePreloader(readModule: (href: string) => string | undefined) {
   const imports = new Map<string, string[]>();
   const importsOf = (href: string) => {
@@ -40,7 +36,6 @@ export function modulePreloader(readModule: (href: string) => string | undefined
     const deps = transitiveImports(entries, importsOf);
     if (!deps.size) return undefined;
     const links = Array.from(deps, d => `<link rel="modulepreload" href="${d}">`).join("");
-    // before the first module script, so the preload scanner sees them together
     const at = html.indexOf(MODULE_SCRIPT_TAG);
     return html.slice(0, at) + links + html.slice(at);
   };

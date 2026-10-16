@@ -1,7 +1,3 @@
-// The spoken text of a post. The audio generator (apps/tts) and the page's
-// player both derive it here, so block texts match the timing JSON. DOM access
-// is typed structurally so tests can use plain objects on Node (no DOM).
-
 interface BlockLike<C> {
   tagName: string;
   textContent: string | null;
@@ -13,9 +9,7 @@ interface SpeechBlock<T> {
   text: string;
 }
 
-// Code, mermaid source and tables are noise when read aloud.
 const SKIPPED_TAGS = new Set(["PRE", "FIGURE", "TABLE", "HR", "SCRIPT", "STYLE"]);
-// Read lists item by item so the highlight and resume point stay fine-grained.
 const SPLIT_TAGS = new Set(["UL", "OL"]);
 
 const clean = (text: string | null) => (text ?? "").replaceAll(/\s+/g, " ").trim();
@@ -36,11 +30,8 @@ export function speechBlocks<T extends BlockLike<T>>(root: BlockLike<T>): Speech
   return out;
 }
 
-// Emoji, pictographs and their modifiers. Punctuation is kept.
 const SYMBOLS = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE0F}\u{200D}]/gu;
 
-// Five or more of one fractional digit (0.30000000000000004): LLM-style TTS
-// models loop on these, so the run is described instead.
 const LONG_DIGIT_RUN = /(\d+\.\d*?)((\d)\3{4,})\d*/g;
 const DIGIT_NAMES = [
   "zero",
@@ -70,7 +61,6 @@ export function normalizeSpeechText(text: string): string {
     .trim();
 }
 
-// Punctuation stays attached to its word so tokens map 1:1 onto rendered text.
 export function tokenize(text: string): string[] {
   return text.split(/\s+/).filter(t => t.length > 0);
 }

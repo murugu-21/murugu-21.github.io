@@ -26,13 +26,8 @@ function throttled(slot: ReadSlot): Response {
   });
 }
 
-/**
- * Counts every API read against the client's window. `enforce` is false for the OpenAPI
- * document, because a throttled client must still be able to learn why.
- */
 export const readThrottleGuard = ({ enforce }: { enforce: boolean }) =>
   defineMiddleware<ApiEnv>(async (c, next) => {
-    // Path within the mount, so /api/contact and /api/v1/contact both match.
     const isContact = c.req.path.slice(basePath(c).length) === "/contact";
     const isRead = c.req.method === "GET" || c.req.method === "HEAD";
     // Without a client address every caller would share one window, so nothing is counted.

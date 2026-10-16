@@ -52,7 +52,6 @@ describe("takeReadSlot", () => {
     const flood = Array.from({ length: 20_002 }, (_, i) => `flood-${i}`);
     for (const client of flood) takeReadSlot(client, now);
 
-    // flood-0 was dropped, so it starts over; flood-20001 is still counting.
     expect(takeReadSlot("flood-0", now).remaining).toBe(599);
     expect(takeReadSlot("flood-20001", now).remaining).toBe(598);
   });

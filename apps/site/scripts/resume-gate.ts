@@ -1,5 +1,3 @@
-// The build fails unless the printed resume passes these: an ATS must find each
-// token in the PDF's extracted text, and it must fit on MAX_PAGES.
 const MAX_PAGES = 2;
 
 export const ATS_REQUIRED_TOKENS = [
@@ -14,7 +12,6 @@ export const ATS_REQUIRED_TOKENS = [
   "$300k"
 ];
 
-// Returns what keeps the resume from shipping, empty when it passes.
 export function resumeProblems({ text, pageCount }: { text: string; pageCount: number }) {
   const problems: string[] = [];
   const missing = ATS_REQUIRED_TOKENS.filter(token => !text.includes(token));

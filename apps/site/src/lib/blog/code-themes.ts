@@ -2,7 +2,6 @@ import type { ThemeRegistration } from "shiki";
 import nightOwl from "shiki/themes/night-owl.mjs";
 import nightOwlLight from "shiki/themes/night-owl-light.mjs";
 
-// WCAG AA for normal text: fences are body-size code.
 const AA = 4.5;
 const BLACK = [0, 0, 0];
 const WHITE = [255, 255, 255];
@@ -53,7 +52,6 @@ const withoutItalic = (fontStyle: string): string =>
     .filter(word => word && word !== "italic")
     .join(" ");
 
-/** A copy of `theme` with no italics and every text colour at AA on its editor background. */
 export function readable(theme: ThemeRegistration): ThemeRegistration {
   const background = theme.colors?.["editor.background"];
   if (!background) throw new Error(`readable: ${theme.name} has no editor.background`);

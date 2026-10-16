@@ -4,8 +4,6 @@ import SocialMedia from "./SocialMedia.astro";
 import Button from "./Button.astro";
 import Typewriter from "./Typewriter.astro";
 import { Image } from "astro:assets";
-// Portrait art from soumyajit4419/Portfolio (home-main.svg), recolored; credited
-// in the README's Credits section as its license asks.
 import portrait from "#src/assets/images/portrait.webp";
 import Section from "./Section.astro";
 ---
@@ -25,7 +23,6 @@ import Section from "./Section.astro";
             I'm <span class="accent">{greeting.nickname}</span>
           </span>
         </h1>
-        {/* min-h reserves the line while the roles type/delete */}
         <p class="mt-3 mb-5 min-h-lh text-center text-xl md:text-start md:text-2xl xl:text-4xl">
           <Typewriter roles={typewriterRoles} />
         </p>
@@ -33,7 +30,6 @@ import Section from "./Section.astro";
           {greeting.subTitle}
         </p>
         <SocialMedia />
-        {/* Button.astro has no margin-right below md, so the gap keeps wrapped buttons apart */}
         <div class="mt-10 flex max-md:flex-wrap max-md:justify-around max-md:gap-3">
           <Button text="Contact me" href="#contact" event="contact_click" />
           <Button
@@ -46,9 +42,6 @@ import Section from "./Section.astro";
       </div>
     </div>
     <div class="mb-8 flex flex-1 items-center justify-center">
-      {/* 448px wide (240px on phones), so the srcset lets phones take the 480px
-          file. It loads eagerly because it's above the fold on every screen.
-          box-content puts the 6px ring outside the 448px. */}
       <Image
         class="alt-fallback box-content aspect-square w-full max-w-md rounded-full border-6 border-navy object-cover shadow-glow max-md:max-w-60 dark:border-blue dark:shadow-glow-dark"
         src={portrait}

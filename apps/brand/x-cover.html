@@ -6,8 +6,6 @@
     <title>X cover for Murugappan M</title>
     <link rel="icon" href="data:," />
     <style>
-      /* The site's one text face: Fira Code 6.2, the full variable font the
-         site's subset is cut from (apps/site/scripts/fira-code-subset.ts). */
       @font-face {
         font-family: "Fira Code";
         font-style: normal;
@@ -17,8 +15,6 @@
           format("woff2-variations");
       }
 
-      /* Both skies are the site's own tokens (apps/site/src/styles/global.css).
-         Night keeps the blue identity; blue hour takes the ambers. */
       :root[data-theme="dark"] {
         --sky: linear-gradient(to left, rgb(30, 33, 48), rgb(20, 22, 34));
         --name: #ffffff;
@@ -51,7 +47,6 @@
         height: 500px;
         background: var(--sky);
         font-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
-        /* prose keeps ligatures off on the site (global.css base body) */
         font-feature-settings: "calt" 0;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -75,7 +70,6 @@
         fill: var(--star-close);
       }
 
-      /* The header lockup: muted < />, bold name (Header.astro) */
       .lockup {
         position: absolute;
         top: 132px;
@@ -188,7 +182,6 @@
     </div>
 
     <script>
-      // ?theme=light renders blue hour; anything else is the night sky.
       const theme =
         new URLSearchParams(location.search).get("theme") === "light" ? "light" : "dark";
       document.documentElement.dataset.theme = theme;

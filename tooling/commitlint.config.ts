@@ -4,7 +4,6 @@ export default {
   extends: ["@commitlint/config-conventional"],
   rules: {
     "scope-case": [RuleConfigSeverity.Error, "always", "lower-case"],
-    // Subjects often start with proper nouns (Jarvis, DeepSeek, WebMCP).
     "subject-case": [RuleConfigSeverity.Disabled],
     "type-enum": [
       RuleConfigSeverity.Error,
@@ -13,7 +12,6 @@ export default {
         "build",
         "chore",
         "ci",
-        // Site copy: bio, experience entries, blog posts.
         "content",
         "docs",
         "feat",

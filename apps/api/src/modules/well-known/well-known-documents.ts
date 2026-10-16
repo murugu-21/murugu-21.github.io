@@ -1,6 +1,4 @@
-// The RFC 9727 api-catalog and the MCP server.json, built per request so their URLs name the
-// host that answered.
-
+// Spec: RFC 9727 api-catalog.
 import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
 import { API_VERSION } from "@murugappan/contracts/api/versioning.ts";
 import {

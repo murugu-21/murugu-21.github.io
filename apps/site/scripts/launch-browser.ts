@@ -1,6 +1,5 @@
 import puppeteer, { type Browser, type LaunchOptions, ProtocolError } from "puppeteer";
 
-// Headless Chrome for the renderers (diagrams, resume PDF).
 // --no-sandbox because CI AppArmor blocks Chrome's sandbox; it's safe for our own pages.
 const LAUNCH_ARGS = ["--no-sandbox", "--disable-setuid-sandbox"];
 
@@ -11,7 +10,6 @@ export async function launchBrowser(
   try {
     return await puppeteer.launch({ headless: true, args: LAUNCH_ARGS, protocolTimeout });
   } catch (err) {
-    // A timed-out launch is the caller's to retry, not a sign that Chrome's libraries are missing.
     if (err instanceof ProtocolError) throw err;
     // Workers Builds' image lacks Chrome's system libraries (libatk etc.);
     // @sparticuz/chromium bundles them.

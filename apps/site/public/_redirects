@@ -15,7 +15,6 @@
 /toolbox /blog/toolbox/ 301
 /toolbox/ /blog/toolbox/ 301
 
-# Aliases agents and people guess before /developers/: a 301, not a 404 to recover from.
 /docs /developers/ 301
 /docs/ /developers/ 301
 /api-docs /developers/ 301

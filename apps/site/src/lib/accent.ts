@@ -1,19 +1,22 @@
-// Wraps the last letter-bearing word of a heading in <span class="accent">,
-// skipping trailing emoji like "🛠️".
+interface AccentedTitle {
+  before: string;
+  accent: string;
+  after: string;
+}
 
-const escapeHtml = (s: string) =>
-  s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-
-export function accentTitle(title: string): string {
+export function accentTitle(title: string): AccentedTitle {
   const words = title.trim().split(/\s+/);
-  let idx = -1;
-  for (let i = words.length - 1; i >= 0; i--) {
-    if (/\p{L}/u.test(words[i])) {
-      idx = i;
-      break;
-    }
-  }
-  return words
-    .map((w, i) => (i === idx ? `<span class="accent">${escapeHtml(w)}</span>` : escapeHtml(w)))
-    .join(" ");
+  const idx = words.findLastIndex(word => /\p{L}/u.test(word));
+  if (idx === -1) return { before: words.join(" "), accent: "", after: "" };
+  return {
+    before: words
+      .slice(0, idx)
+      .map(word => `${word} `)
+      .join(""),
+    accent: words[idx],
+    after: words
+      .slice(idx + 1)
+      .map(word => ` ${word}`)
+      .join("")
+  };
 }

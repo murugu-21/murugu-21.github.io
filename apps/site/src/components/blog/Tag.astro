@@ -1,7 +1,6 @@
 ---
 import { cn } from "#src/lib/utils.ts";
 
-// A tag filter chip. PostList.astro's script reads its checkbox `[data-tag]` on `change`.
 export interface TagCount {
   name: string;
   count: number;
@@ -16,11 +15,9 @@ const { tag } = Astro.props;
 <label
   class={cn(
     "group relative mt-3.5 mr-3 flex cursor-pointer items-center rounded-sm hover:shadow-md hover:shadow-chip-outline hover:outline-none has-checked:bg-navy has-checked:text-white dark:hover:shadow-chip-outline-dark dark:has-checked:bg-box-dark",
-    // The rings are solid because a half-alpha ring misses the 3:1 a focus indicator needs.
     "has-focus-visible:ring-2 has-focus-visible:ring-amber-ink dark:has-focus-visible:ring-blue-light"
   )}
 >
-  {/* Visually hidden but focusable, and the source of the label's state styles. */}
   <input class="sr-only" data-tag type="checkbox" value={tag.name} />
   {/* Inline-block text spans: on a padded flex item, Chrome paints a
       line-end selection marker out to the cell's edge. An atomic inline
@@ -28,9 +25,8 @@ const { tag } = Astro.props;
   <span class="rounded-l-sm border border-chip-outline px-2 dark:border-chip-outline-dark">
     <span class="inline-block">{tag.name}</span>
   </span>
-  {/* Badge alphas are tuned for AA (palette.test.ts guards night). Not a flex
-      box, which would blockify the span and bring the selection marker back;
-      `content-center` centres the numeral instead. */}
+  {/* Not a flex box, which would blockify the span and bring the selection marker
+      back; `content-center` centres the numeral instead. */}
   <div class="content-center self-stretch rounded-r-sm bg-navy/10 px-2 text-xs text-navy group-has-checked:bg-white/10 group-has-checked:text-white dark:bg-blue-light/12 dark:text-blue-light">
     <span class="inline-block">{tag.count}</span>
   </div>

@@ -1,6 +1,3 @@
-// Version, Link and rate-limit headers for every API response, applied here so no endpoint can
-// be added without them.
-
 import { defineMiddleware } from "hono/factory";
 
 import { CONTACT_POLICY, READ_POLICY } from "@murugappan/contracts/api/quotas.ts";
@@ -23,7 +20,6 @@ function allowanceHeaders({
   return slot ? readRateLimitHeaders(slot) : { "RateLimit-Policy": READ_POLICY };
 }
 
-/** Runs after `readThrottleGuard`, which leaves `readSlot` and `isContact` for it. */
 export const apiHeadersInterceptor = defineMiddleware<ApiEnv>(async (c, next) => {
   await next();
 
@@ -31,7 +27,6 @@ export const apiHeadersInterceptor = defineMiddleware<ApiEnv>(async (c, next) =>
   for (const [name, value] of Object.entries(versionHeaders())) headers.set(name, value);
   if (!headers.has("Link")) headers.set("Link", versionLinkHeader());
 
-  // POST /api/contact reports the allowance it just spent; don't overwrite it.
   if (headers.has("RateLimit-Policy")) return;
   const allowance = allowanceHeaders({ isContact: c.var.isContact, slot: c.var.readSlot });
   for (const [name, value] of Object.entries(allowance)) headers.set(name, value);

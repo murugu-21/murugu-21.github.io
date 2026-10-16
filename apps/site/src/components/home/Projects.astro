@@ -7,7 +7,6 @@ import SectionTitle from "./SectionTitle.astro";
 
 let repos = await fetchPinnedRepos();
 
-// Dev-only sample card for when no repos are pinned (or no token); never ships.
 const SAMPLE_REPO: GithubRepo = {
   name: "eventform",
   description:
@@ -44,7 +43,6 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
           data-ph-value={repo.name}
         >
           <div class="flex items-center">
-            {/* no fill utility in light mode: the path keeps the SVG default (black) */}
             <svg
               class="mr-2 min-w-4 dark:fill-white"
               aria-hidden="true"

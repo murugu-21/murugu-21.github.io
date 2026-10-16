@@ -1,6 +1,6 @@
 ---
-// Where redirectIfOutdated (src/lib/browser-support.ts) sends old browsers. Plain HTML without
-// Layout, so it renders in them and the check can't redirect to itself.
+// Where redirectIfOutdated sends old browsers. Plain HTML without Layout, so it renders in them
+// and the check can't redirect to itself.
 import { MIN_VERSIONS, continueLinkScript } from "#src/lib/browser-support.ts";
 ---
 
@@ -39,7 +39,6 @@ import { MIN_VERSIONS, continueLinkScript } from "#src/lib/browser-support.ts";
         display: inline-block;
         margin-top: 1rem;
       }
-      /* Last, so it overrides the light colours above. */
       @media screen and (prefers-color-scheme: dark) {
         :root {
           color: #e8e6f0;

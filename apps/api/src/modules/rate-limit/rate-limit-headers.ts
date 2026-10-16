@@ -1,6 +1,4 @@
-// Writes the draft RateLimit fields plus the de-facto X-RateLimit-* trio most tooling reads (`-Reset` is delta-seconds).
-//   RateLimit: "name";r=<remaining>;t=<seconds to reset>  (the policy closest to exhaustion)
-
+// Spec: draft-ietf-httpapi-ratelimit-headers, plus the de-facto X-RateLimit-* trio (`-Reset` is delta-seconds).
 import {
   CONTACT_CLIENT_QUOTA,
   CONTACT_GLOBAL_QUOTA,
@@ -44,7 +42,6 @@ export const readRateLimitHeaders = (slot: ReadSlot): RateLimitHeaders =>
     resetSeconds: slot.resetSeconds
   });
 
-/** Reports whichever tier has less left: that is the one that stops the next request. */
 export function contactRateLimitHeaders(usage: {
   clientRemaining: number;
   globalRemaining: number;
@@ -63,7 +60,6 @@ export function secondsUntilUtcMidnight(now = new Date()): number {
   return Math.max(1, Math.ceil((midnight - now.getTime()) / 1000));
 }
 
-/** Exposed via CORS so a page-side agent can read them. */
 export const RATE_LIMIT_EXPOSED_HEADERS: readonly string[] = [
   "RateLimit",
   "RateLimit-Policy",

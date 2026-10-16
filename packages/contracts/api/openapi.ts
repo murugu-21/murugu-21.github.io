@@ -1,5 +1,3 @@
-// openapi-document.test.ts checks this document against the router.
-
 import { z } from "zod";
 
 import { JsonRecord, type JsonValue } from "@murugappan/utils/json.ts";
@@ -38,7 +36,6 @@ import {
   VERSIONS
 } from "./versioning";
 
-/** A JSON Schema object. JSON Schema allows `true`/`false` as a schema. */
 export type JsonSchema = {
   readonly properties?: { readonly [name: string]: JsonSchema | boolean };
   readonly [keyword: string]: JsonValue | undefined;
@@ -67,7 +64,6 @@ type Operation = {
   responses: Record<string, { description: string; content?: MediaTypes }>;
 };
 
-// An OpenAPI Security Requirement Object: scheme name to the scopes it needs.
 type SecurityRequirement = Record<string, string[]>;
 
 export type OpenApiDocument = {
@@ -130,7 +126,6 @@ const readFailures = {
   "500": errorResponse("Unexpected server error.")
 };
 
-// Schemas as the API emits them, each a named component; nesting becomes a `$ref`.
 const OUTPUT_SCHEMAS = {
   Error: ErrorBody,
   FieldIssue,
@@ -169,8 +164,6 @@ function components(schemas: Record<string, z.ZodType>, io: "input" | "output") 
   return z.record(z.string(), JsonSchema).parse(generated.schemas);
 }
 
-// From the schema the handler parses with, so the documented limits are the enforced ones. Output
-// types, since a parameter documents the parsed value (`limit` an integer, not its query text).
 function queryParameters(query: z.ZodObject) {
   const { properties = {}, required = [] } = z.toJSONSchema(query, { io: "output" });
   return Object.entries(properties).map(([name, property]) => {
@@ -188,13 +181,11 @@ function queryParameters(query: z.ZodObject) {
   });
 }
 
-// Requests are described as clients send them, before ContactRequest's trimming and defaults.
 const COMPONENT_SCHEMAS = {
   ...components(OUTPUT_SCHEMAS, "output"),
   ...components({ ContactRequest }, "input")
 };
 
-/** Everything but `servers`, which apps/api/src/modules/openapi/openapi-document.ts adds per request. */
 export const OPENAPI_DOCUMENT: Omit<OpenApiDocument, "servers"> = {
   openapi: "3.1.0",
   info: {

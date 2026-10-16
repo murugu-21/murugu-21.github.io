@@ -19,7 +19,6 @@
   Cache-Control: public, max-age=3600
   Link: </openapi.json>; rel="service-desc"; type="application/json", </developers/>; rel="service-doc"; type="text/html", </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"
 
-# Like the resume page, which duplicates the homepage.
 /resume/index.md
   X-Robots-Tag: noindex
 

@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import { text } from "./fields";
 
-// Also published as the slug `pattern` in the OpenAPI document and the MCP tool schema.
 export const SLUG_PATTERN = "^[a-z0-9]+(?:-[a-z0-9]+)*$";
 export const SLUG = new RegExp(SLUG_PATTERN);
 
@@ -11,13 +10,11 @@ const SEARCH_TEXT_MAX = 200;
 
 const LIMIT_ISSUE = `must be an integer between 1 and ${POSTS_LIMIT_MAX}`;
 
-// The list filters, shared by the REST query below and the MCP tool's SearchArgs.
 export const PostsSearchText = z
   .string()
   .max(SEARCH_TEXT_MAX, { error: `must be at most ${SEARCH_TEXT_MAX} characters` });
 export const PostsLimit = z.int({ error: LIMIT_ISSUE }).min(1).max(POSTS_LIMIT_MAX);
 
-// Query values arrive as text, so `limit` is coerced before PostsLimit checks it.
 export const PostsQuery = z.object({
   q: PostsSearchText.optional().meta({
     description: "Case-insensitive substring matched against post titles and summaries."

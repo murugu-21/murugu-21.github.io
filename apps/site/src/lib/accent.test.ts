@@ -3,19 +3,31 @@ import { describe, expect, it } from "vite-plus/test";
 import { accentTitle } from "./accent";
 
 describe("accentTitle", () => {
-  it("wraps the last word in the accent span", () => {
-    expect(accentTitle("Work Experience")).toBe('Work <span class="accent">Experience</span>');
+  it("accents the last word", () => {
+    expect(accentTitle("Work Experience")).toEqual({
+      before: "Work ",
+      accent: "Experience",
+      after: ""
+    });
+  });
+
+  it("keeps every earlier word, single-spaced, before the accent", () => {
+    expect(accentTitle("  Reach Out to me! ")).toEqual({
+      before: "Reach Out to ",
+      accent: "me!",
+      after: ""
+    });
   });
 
   it("skips trailing emoji to accent the last word with letters", () => {
-    expect(accentTitle("Open Source 🛠️")).toBe('Open <span class="accent">Source</span> 🛠️');
+    expect(accentTitle("Open Source 🛠️")).toEqual({
+      before: "Open ",
+      accent: "Source",
+      after: " 🛠️"
+    });
   });
 
-  it("escapes HTML in every word", () => {
-    expect(accentTitle("R&D <b>")).toBe('R&amp;D <span class="accent">&lt;b&gt;</span>');
-  });
-
-  it("leaves a title without letters unwrapped", () => {
-    expect(accentTitle("2024")).toBe("2024");
+  it("leaves a title without letters unaccented", () => {
+    expect(accentTitle("2024")).toEqual({ before: "2024", accent: "", after: "" });
   });
 });

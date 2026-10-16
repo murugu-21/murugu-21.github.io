@@ -1,6 +1,4 @@
 ---
-// A homepage section's heading, with accentTitle's highlighted word. `class`
-// adds to it or overrides it.
 import { accentTitle } from "#src/lib/accent.ts";
 import { cn } from "#src/lib/utils.ts";
 
@@ -9,13 +7,16 @@ interface Props {
   class?: string;
 }
 const { title, class: className } = Astro.props;
+const { before, accent, after } = accentTitle(title);
 ---
 
-{/* biome-ignore lint/nursery/noAstroSetHtmlDirective: accentTitle escapes the title and adds only its own <span class="accent"> */}
 <h2
   class={cn(
     "my-8 text-center text-3xl font-normal md:text-start md:text-4xl xl:text-6xl dark:text-white",
     className
   )}
-  set:html={accentTitle(title)}
-/>
+>
+  {before}
+  {accent && <span class="accent">{accent}</span>}
+  {after}
+</h2>

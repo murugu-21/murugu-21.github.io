@@ -1,8 +1,3 @@
-// The two read-aloud backends behind ListenControls. Pre-rendered audio from
-// /blog/audio/<slug>.{json,mp3} (apps/tts/generate-audio.ts) is preferred;
-// browser speech synthesis takes over when that is missing (new post, astro dev
-// has no Worker) or fails.
-
 import { AudioTimings, type TimedWord } from "@murugappan/contracts/audio-timings.ts";
 import { normalizeSpeechText, speechBlocks, tokenize } from "@murugappan/content/speech.ts";
 import { tag, track } from "#src/lib/analytics.ts";
@@ -17,7 +12,6 @@ export interface Block {
 
 export type Status = "idle" | "loading" | "speaking" | "paused";
 
-// Audio counts seconds and can seek; speech synthesis counts blocks.
 export interface Progress {
   unit: "none" | "seconds" | "blocks";
   position: number;
@@ -31,11 +25,9 @@ export interface Player {
   seek?(seconds: number): void;
 }
 
-// The controls a player reports to; they own the visible state.
 export interface PlayerHost {
   setStatus(status: Exclude<Status, "loading">): void;
   setProgress(progress: Progress): void;
-  // The audio player hands over to speech synthesis when the MP3 fails.
   handOver(player: Player | null): void;
 }
 
@@ -47,8 +39,6 @@ const follow = (el: Element, band?: ScrollBand) => {
   if (block) el.scrollIntoView({ block, behavior: "smooth" });
 };
 
-// Marks the block being read (data-speaking) and its current word (data-current-word).
-// A word is one or more spans, since it may straddle an inline element.
 class Highlighter {
   #block: Element | null = null;
   #word: HTMLElement[] | null = null;
@@ -66,7 +56,6 @@ class Highlighter {
     this.#word?.forEach(p => p.removeAttribute("data-current-word"));
     this.#word = pieces;
     pieces?.forEach(p => p.setAttribute("data-current-word", ""));
-    // Inside a paragraph taller than the reading band, follow the word.
     if (pieces?.length) follow(pieces[0], WORD_BAND);
   }
 
@@ -76,8 +65,6 @@ class Highlighter {
   }
 }
 
-// The rendered spans of the word at `at` (seconds, or a character offset for
-// speech), wrapped and matched on first use. Null when the words disagree.
 const wordFinder = (el: Element, words: TimedWord[]) => {
   let spans: HTMLElement[][] | null | undefined;
   return (at: number): HTMLElement[] | null => {
@@ -86,7 +73,6 @@ const wordFinder = (el: Element, words: TimedWord[]) => {
   };
 };
 
-// Speech boundary events report character offsets into the block text.
 const wordsByOffset = (text: string): TimedWord[] => {
   let offset = 0;
   return tokenize(text).map(w => {
@@ -96,8 +82,6 @@ const wordsByOffset = (text: string): TimedWord[] => {
   });
 };
 
-// Same extraction and normalisation as the generator, so texts line up with
-// the timing JSON. The title is read first.
 export const collectBlocks = (): Block[] => {
   const body = document.querySelector("[data-post-body]");
   if (!body) return [];
@@ -212,8 +196,6 @@ function audioPlayer(options: AudioPlayerOptions): Player {
     const el = matched[i];
     return el && b.words ? wordFinder(el, b.words) : () => null;
   });
-  // In a gap between blocks keep the previous highlight in place. A block
-  // whose text no longer matches clears it.
   const syncHighlight = (t: number) => {
     const i = blockAt(timings.blocks, t);
     if (i < 0) return;
@@ -227,7 +209,6 @@ function audioPlayer(options: AudioPlayerOptions): Player {
       length: timings.duration || audio.duration || 0
     });
 
-  // The bar follows timeupdate (about 4 Hz); the highlight gets every frame.
   let raf = 0;
   const tick = () => {
     syncHighlight(audio.currentTime);
@@ -282,7 +263,6 @@ function audioPlayer(options: AudioPlayerOptions): Player {
   };
 }
 
-// The rate is read after the timings arrive, so a speed picked while loading applies.
 export async function loadPlayer({
   slug,
   blocks,

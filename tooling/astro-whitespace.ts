@@ -1,11 +1,10 @@
 import { parse } from "@astrojs/compiler-rs";
 
+// jsx-child-element-spacing checks only inline HTML elements, not expressions or components, and
+// oxlint won't port it, so this extends the same idea.
 // Astro's default compressHTML ("jsx") deletes whitespace holding a newline beside a tag or an
 // expression and keeps other whitespace, so a line break can join words and a space can pad a link.
-// eslint-plugin-react's jsx-child-element-spacing checks only inline HTML elements, not
-// expressions or components, and oxlint won't port it, so this extends the same idea.
 
-// Elements that start a new line anyway, so whitespace beside them never shows.
 const BLOCK_ELEMENTS = new Set([
   "address",
   "article",
@@ -49,11 +48,9 @@ const BLOCK_ELEMENTS = new Set([
   "ul"
 ]);
 
-// No space is wanted after an opening bracket or quote, or before closing punctuation.
 const ENDS_WITH_OPENER = /[([{“‘"'/]$/;
 const STARTS_WITH_CLOSER = /^[.,;:!?)\]}”’"'/%-]/;
 
-// The compiler's ESTree AST, as JSON.
 type AstValue = string | number | boolean | null | AstValue[] | Node;
 type Node = { [key: string]: AstValue };
 
@@ -64,7 +61,6 @@ type Finding = { node: Node; kind: SpacingMistake["kind"]; label?: string };
 const isNode = (value: AstValue | undefined): value is Node =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-// The node fields this file reads, with the type each holds when present.
 const FIELD_TYPES = { value: "string", name: "string", start: "number" } as const;
 type Fields = {
   [K in keyof typeof FIELD_TYPES]: { string: string; number: number }[(typeof FIELD_TYPES)[K]];
@@ -88,7 +84,6 @@ const elementName = (node: Node | undefined): string | undefined => {
   return hasField(name, "name") ? name.name : undefined;
 };
 
-/** True when the node renders beside its neighbours on the same line. */
 function isInline(node: Node | undefined): boolean {
   if (node?.type === "JSXExpressionContainer") {
     // {" "} is the explicit space that survives compression.
@@ -99,7 +94,6 @@ function isInline(node: Node | undefined): boolean {
   return name !== undefined && !BLOCK_ELEMENTS.has(name);
 }
 
-/** Text that opens or closes an inline element with a space, which compression keeps. */
 function paddedEdges(kids: Node[]): Finding[] {
   const first = kids[0];
   const last = kids.at(-1);
@@ -107,14 +101,12 @@ function paddedEdges(kids: Node[]): Finding[] {
   const padsEnd = /\S[ \t]+$/.test(textOf(last) ?? "");
   const found: Finding[] = [];
   if (first && padsStart) found.push({ node: first, kind: "pads element" });
-  // A lone child padded at both ends is one mistake.
   if (last && padsEnd && !(last === first && padsStart)) {
     found.push({ node: last, kind: "pads element" });
   }
   return found;
 }
 
-/** Text whose line break beside an inline neighbour is deleted, running words together. */
 function joinedWords(kids: Node[]): Finding[] {
   const isProse = kids.some(kid => textOf(kid)?.trim());
   const found: Finding[] = [];
@@ -126,7 +118,6 @@ function joinedWords(kids: Node[]): Finding[] {
     const breakBeforeNext = isInline(next) && /\n\s*$/.test(text);
     const words = text.trim();
     if (words === "") {
-      // Two inline elements on separate lines run together in a sentence.
       if (isProse && breakAfterPrevious && breakBeforeNext) {
         found.push({ node, kind: "joins words", label: `before <${elementName(next) ?? "{…}"}>` });
       }
@@ -142,20 +133,15 @@ function joinedWords(kids: Node[]): Finding[] {
   return found;
 }
 
-/** Walks the template AST, in source order, for padded elements and joined words. */
 function collectFindings(value: AstValue, inExpression: boolean): Finding[] {
   if (Array.isArray(value)) return value.flatMap(item => collectFindings(item, inExpression));
-  // A <pre> keeps its whitespace.
   if (!isNode(value) || elementName(value) === "pre") return [];
   const isExpression = value.type === "JSXExpressionContainer";
   const nested = Object.entries(value).flatMap(([key, v]) =>
     key === "frontmatter" ? [] : collectFindings(v, inExpression || isExpression)
   );
-  // Text directly inside {…} is JavaScript, not page text.
   if (isExpression || !Array.isArray(value.children)) return nested;
   const kids = value.children.filter(isNode);
-  // Markup inside {…} is JSX, where a space beside a tag on the same line is meant, so only
-  // template markup can be padded by mistake.
   const padded = !inExpression && isInline(value) ? paddedEdges(kids) : [];
   return [...padded, ...joinedWords(kids), ...nested];
 }

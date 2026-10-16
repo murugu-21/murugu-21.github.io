@@ -10,7 +10,6 @@ export type Post = PostSummary & { markdown: string };
 export class PostsRepository extends Context.Service<
   PostsRepository,
   {
-    /** Newest first. */
     readonly all: Effect.Effect<PostSummary[]>;
     findBySlug(slug: string): Effect.Effect<Post, PostNotFound>;
   }

@@ -1,8 +1,3 @@
-// Oxlint JS plugin for the AGENTS.md "Test behaviour, not implementation" rule.
-// A test must call the code under test and compare what it observes against an
-// independent expected value. The rule is a heuristic by design. It catches the
-// shapes syntax can decide and leaves the rest (and the documented exceptions)
-// to an `oxlint-disable` with a reason.
 import { isStringLiteral } from "./anti-slop/ast.ts";
 import type { NodeOf, Plugin, Rule } from "./plugin-types.ts";
 
@@ -14,7 +9,6 @@ type Identifier = Extract<Node, { type: "Identifier" }>;
 const TEST_FNS = new Set(["it", "test"]);
 const TEST_MODIFIERS = new Set(["only", "concurrent", "sequential", "fails"]);
 const TABLE_MODIFIERS = new Set(["each", "for"]);
-// Imports that are test scaffolding rather than the code under test.
 const HELPER_SOURCE = /(^|\/)(fixtures|helpers?|test-utils?|apply-migrations)(\.ts)?$/;
 const COMPARISONS = new Set([
   "toBeGreaterThan",
@@ -41,7 +35,6 @@ const VALUE_MATCHERS = new Set([
   "toMatchInlineSnapshot",
   ...COMPARISONS
 ]);
-// Value matchers that compare what `expect.element(locator)` finds once it renders.
 const ELEMENT_VALUE_MATCHERS = new Set([
   "toHaveTextContent",
   "toHaveAttribute",
@@ -49,7 +42,6 @@ const ELEMENT_VALUE_MATCHERS = new Set([
   "toHaveValue",
   "toHaveAccessibleName"
 ]);
-// On `expect.element(locator)` these fail when the component renders nothing.
 const RENDERED_STATE_MATCHERS = new Set([
   "toBeVisible",
   "toBeInTheDocument",
@@ -58,10 +50,8 @@ const RENDERED_STATE_MATCHERS = new Set([
   "toBeChecked"
 ]);
 
-// `harness` is `cloudflare:test`, whose SELF and env are how tests reach the Worker.
 type ImportKind = "subject" | "helper" | "harness";
 
-// The repo's own code: relative paths, subpath imports and the workspace packages.
 const isLocalSource = (source: string) =>
   source.startsWith(".") ||
   source.startsWith("#") ||
@@ -94,7 +84,6 @@ function containsNode(node: Node, match: (node: Node, key: string) => boolean, k
   return children(node).some(({ child, key: childKey }) => containsNode(child, match, childKey));
 }
 
-// The root identifier of `a.b.c` or `a().b`, which is `a`.
 function rootName(node: Node): string | undefined {
   if (node.type === "Identifier") return node.name;
   if (node.type === "MemberExpression") return rootName(node.object);
@@ -114,20 +103,17 @@ function enclosingFunctionBody(node: Node): Node | undefined {
   return undefined;
 }
 
-// The slots where an identifier names a member (`x.name`, `{ name: … }`) unless computed.
 const MEMBER_NAME_SLOTS = new Map([
   ["property", "MemberExpression"],
   ["key", "Property"]
 ]);
 
-// An identifier in a value position, which reads a variable.
 function isReference(node: Node, key: string): node is Identifier {
   if (node.type !== "Identifier") return false;
   const { parent } = node;
   return MEMBER_NAME_SLOTS.get(key) !== parent.type || ("computed" in parent && parent.computed);
 }
 
-// The names a declaration or assignment target binds: `x`, `{ a, b: c }`, `[d, ...e]`.
 function boundNames(target: Node, key = ""): string[] {
   if (isReference(target, key)) return [target.name];
   return children(target)
@@ -135,7 +121,6 @@ function boundNames(target: Node, key = ""): string[] {
     .flatMap(({ child, key: childKey }) => boundNames(child, childKey));
 }
 
-// The initialiser of `const name = …` declared anywhere inside `scope`.
 function declaredIn(scope: Node, name: string): Node | undefined {
   let init: Node | undefined;
   containsNode(scope, n => {
@@ -148,17 +133,14 @@ function declaredIn(scope: Node, name: string): Node | undefined {
 }
 
 const isTestFn = (node: Node) => node.type === "Identifier" && TEST_FNS.has(node.name);
-// `it.only` or `test.each`, a test function with a modifier from `names`.
 const isModified = (node: Node, names: Set<string>) =>
   node.type === "MemberExpression" &&
   isTestFn(node.object) &&
   node.property.type === "Identifier" &&
   names.has(node.property.name);
 
-// `table` is the rows of `it.each(table)(…)`, which may hold the calls.
 type Test = { node: CallExpression; callback: Node; table?: Node };
 
-// A test from `it(…)`, `it.only(…)` or `it.each(table)(…)`.
 function testAt(call: CallExpression): Test | undefined {
   const { callee } = call;
   const isTable = callee.type === "CallExpression" && isModified(callee.callee, TABLE_MODIFIERS);
@@ -186,7 +168,6 @@ function expectVariant(callee: Node): "expect" | "poll" | "element" | undefined 
   return name === "poll" || name === "element" ? name : undefined;
 }
 
-// What `expect.poll(() => x)` observes: x, when the callback only returns it.
 function polledValue(fn: Node): Node {
   if (fn.type !== "ArrowFunctionExpression" && fn.type !== "FunctionExpression") return fn;
   const { body } = fn;
@@ -198,7 +179,6 @@ function polledValue(fn: Node): Node {
     : fn;
 }
 
-// Parses `expect(x).not.resolves.toBe(y)` into { subject: x, matcher: "toBe", negated, args: [y] }.
 function assertionAt(call: CallExpression): Assertion | undefined {
   const { callee } = call;
   if (callee.type !== "MemberExpression" || callee.property.type !== "Identifier") return undefined;
@@ -222,7 +202,6 @@ function assertionAt(call: CallExpression): Assertion | undefined {
   };
 }
 
-// `null`, `undefined`, `[]` and `{}`, the shapes that also match "returned nothing".
 function isEmptyValue(node: Node): boolean {
   if (node.type === "Literal") return node.value === null;
   if (node.type === "Identifier") return node.name === "undefined";
@@ -239,7 +218,6 @@ const expectedOf = ({ matcher, args }: Assertion): Node | undefined =>
 const isValueMatcher = ({ matcher, onElement }: Assertion) =>
   VALUE_MATCHERS.has(matcher) || (onElement && ELEMENT_VALUE_MATCHERS.has(matcher));
 
-// `TOOLS.map(…)` reads TOOLS as data. `api.request(…)` calls into the code under test.
 const DATA_METHODS = new Set([
   "at",
   "concat",
@@ -259,7 +237,6 @@ const DATA_METHODS = new Set([
   "values"
 ]);
 
-// `f(…)` or `x.method(…)`, where `n` is `f` or `x` and the method isn't a DATA_METHOD.
 function isCalled(n: Node, key: string): boolean {
   const parent: Node | null = n.parent;
   if (!parent) return false;
@@ -274,12 +251,7 @@ function isCalled(n: Node, key: string): boolean {
   );
 }
 
-// What the visitors collect from one file. `locals` maps each local name to
-// what it holds: a function's body, a declaration's initialiser, or the setup
-// that assigned it.
 type Facts = { imports: Map<string, ImportKind>; locals: Map<string, Node>; tests: Test[] };
-// `subjects` is every import plus every local that leads back to one. Helper
-// imports count too: `fetchWorker` from ./fixtures is how a test drives the Worker.
 type FileModel = Facts & { subjects: Set<string> };
 
 const isLocalImport = (node: Node) =>
@@ -287,7 +259,6 @@ const isLocalImport = (node: Node) =>
   isStringLiteral(node.source) &&
   isLocalSource(node.source.value);
 
-// `<Widget />` renders, and so calls, the component it names.
 const rendersSubject = (node: Node, names: Set<string>) =>
   node.type === "JSXOpeningElement" &&
   node.name.type === "JSXIdentifier" &&
@@ -317,8 +288,6 @@ function modelOf(facts: Facts): FileModel {
 const callsInto = (node: Node, file: FileModel) =>
   isCall(node) && file.subjects.has(rootName(node.callee) ?? "");
 
-// `toBe(f(a))`, `toBe(buildUrl(…))`, or `toBe(want)` after `const want = f(a)`
-// in the same test. In each, the code under test computes the expected value.
 function callsSubject({
   node,
   scope,
@@ -335,7 +304,6 @@ function callsSubject({
   });
 }
 
-// `expect(LIMITS.maxTools)` or `expect(env.INBOX)` reads a value without running anything.
 function isConstantPin(node: Node, file: FileModel) {
   const kind = file.imports.get(rootName(node) ?? "");
   return (
@@ -344,8 +312,6 @@ function isConstantPin(node: Node, file: FileModel) {
   );
 }
 
-// The identifiers `node` reads as data. Calls into the subject are
-// observations, so their arguments are input, not data.
 function dataReferences(node: Node, file: FileModel, key = ""): Identifier[] {
   if (isReference(node, key)) return isCalled(node, key) ? [] : [node];
   const observes = callsInto(node, file);
@@ -354,7 +320,6 @@ function dataReferences(node: Node, file: FileModel, key = ""): Identifier[] {
     .flatMap(({ child, key: childKey }) => dataReferences(child, file, childKey));
 }
 
-// The subject import an expected value reads as data, directly or through a const.
 function subjectSource({
   expected,
   scope,
@@ -381,8 +346,6 @@ function subjectSource({
 
 type Found = { node: CallExpression; assertion: Assertion; scope: Node };
 
-// Every assertion in a test, following calls into local helpers, so
-// `check(1, 2)` counts when `check` holds the `expect`.
 function assertionsIn(body: Node, file: FileModel, seen = new Set<string>()): Found[] {
   const out: Found[] = [];
   containsNode(body, node => {
@@ -403,14 +366,9 @@ function assertionsIn(body: Node, file: FileModel, seen = new Set<string>()): Fo
 
 type Candidate = { assertion: Assertion; expected: Node; scope: Node; file: FileModel };
 
-// The AGENTS.md shapes of an assertion that still passes when the code under
-// test returns undefined.
 const WEAK_SHAPES = {
-  // `toBeDefined()`, `not.toBe(wrong)`
   weakMatcher: ({ assertion }) => assertion.negated || !isValueMatcher(assertion),
-  // `toEqual([])`, `toBe(undefined)`
   emptyExpected: ({ expected }) => isEmptyValue(expected),
-  // `toHaveLength(0)`, `toBeGreaterThan(0)`
   zeroBound: ({ assertion, expected }) =>
     (assertion.matcher === "toHaveLength" || COMPARISONS.has(assertion.matcher)) &&
     isZero(expected),
@@ -427,9 +385,7 @@ function isStrong({ assertion, scope }: Found, file: FileModel) {
   return !Object.values(WEAK_SHAPES).some(weak => weak({ assertion, expected, scope, file }));
 }
 
-// The subject import an assertion's expected value restates, if any.
 function expectedFromSubject({ assertion, scope }: Found, file: FileModel) {
-  // `toThrow(SubjectError)` names the error class; it computes nothing.
   if (assertion.matcher.startsWith("toThrow") || !isValueMatcher(assertion)) {
     return undefined;
   }
@@ -472,8 +428,6 @@ const functionBindings = ({ id, body }: NodeOf<"FunctionDeclaration">): [string,
 const declaratorBindings = ({ id, init }: NodeOf<"VariableDeclarator">): [string, Node][] =>
   init ? boundNames(id).map(name => [name, init]) : [];
 
-// In `let x; beforeAll(() => { …subject…; x = … })`, x carries whatever the
-// enclosing setup ran, not only its right-hand side.
 function assignmentBindings(node: NodeOf<"AssignmentExpression">): [string, Node][] {
   const scope = enclosingFunctionBody(node) ?? node.right;
   return boundNames(node.left).map(name => [name, scope]);
@@ -483,10 +437,8 @@ function setAll<V>(map: Map<string, V>, entries: [string, V][]) {
   for (const [key, value] of entries) map.set(key, value);
 }
 
-// `x["emailOnce"]`, a member read by a string key that has a dot form.
 function stringKeyOf({ computed, property }: NodeOf<"MemberExpression">) {
   if (!computed || !isStringLiteral(property)) return undefined;
-  // `x["content-type"]` has no dot form, so it isn't dodging `private`.
   return /^[A-Za-z_$][\w$]*$/.test(property.value) ? property.value : undefined;
 }
 
@@ -523,8 +475,6 @@ export default {
             const test = testAt(node);
             if (test) facts.tests.push(test);
           },
-          // Checked once the whole file is collected, so helpers declared below
-          // a test still count.
           "Program:exit": () => reportTests(context, facts)
         };
       }

@@ -8,12 +8,10 @@ describe("parseRange", () => {
     ["bytes=0-9", { offset: 0, length: 10 }],
     ["bytes=90-", { offset: 90, length: 10 }],
     ["bytes=-5", { offset: 95, length: 5 }],
-    // An end past the object is clamped to it.
     ["bytes=95-500", { offset: 95, length: 5 }],
     ["bytes=100-", "unsatisfiable"],
     ["bytes=-0", "unsatisfiable"],
     ["bytes=50-20", "unsatisfiable"],
-    // A suffix longer than the object is the whole object.
     ["bytes=-500", { offset: 0, length: 100 }],
     ["bytes=-", null],
     ["items=0-1", null],

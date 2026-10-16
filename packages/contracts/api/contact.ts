@@ -1,12 +1,8 @@
-// The request and response of POST /api/contact, the HTTP twin of Jarvis's capture_opportunity
-// tool. fieldIssues in apps/api/src/common/http/api-error.ts names each rejected field so a model
-// can repair its arguments.
-
 import { z } from "zod";
 
 import { text } from "./fields";
 
-// Daily allowances enforced by the RateLimiter DO; small on purpose so this is not a mailer.
+// Small on purpose, so this is not a mailer.
 export const CONTACT_DAILY_GLOBAL = 20;
 export const CONTACT_DAILY_PER_CLIENT = 3;
 
@@ -27,7 +23,6 @@ export type ContactMessage = {
 // Deliberately loose: stricter patterns reject deliverable addresses.
 const EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
-// Blank after trimming counts as absent.
 const optionalText = ({ max, description }: { max: number; description: string }) =>
   z
     .string({ error: "must be a string" })
@@ -43,13 +38,11 @@ const INVALID_EMAIL = { error: "must be a valid email address" };
 const MESSAGE = CONTACT_LIMITS.message;
 const MESSAGE_LENGTH = { error: `must be between ${MESSAGE.min} and ${MESSAGE.max} characters` };
 
-// Key order is the order issues are reported in. Its shape is also send_message's input.
 export const ContactRequest = z
   .object(
     {
       name: optionalText({ max: CONTACT_LIMITS.name, description: "Who the message is from." }),
       email: requiredText
-        // abort: one issue per field, even when the address is both too long and malformed
         .max(CONTACT_LIMITS.email, { ...INVALID_EMAIL, abort: true })
         .regex(EMAIL, INVALID_EMAIL)
         .meta({

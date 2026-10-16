@@ -1,5 +1,3 @@
-// /.well-known/api-catalog (RFC 9727) and the MCP server.json, also at /mcp.json.
-
 import { Hono } from "hono";
 
 import type { JsonRecord } from "@murugappan/utils/json.ts";
@@ -36,7 +34,6 @@ const manifestResponse = (requestUrl: string) =>
 
 wellKnownController.get("/mcp.json", c => manifestResponse(c.req.url));
 
-/** The same manifest at the site root, where clients look first. */
 export const mcpManifestController = new Hono<AppEnv>();
 
 mcpManifestController.use("*", readOnlyCorsMiddleware);

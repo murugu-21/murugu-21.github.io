@@ -1,7 +1,4 @@
-// Version catalogue and deprecation policy; apps/api/src/common/http/version-headers.ts sends the headers.
-// Standards: URL path versioning, RFC 9745 `Deprecation`, RFC 8594 `Sunset`, RFC 8288 Link
-// relations.
-
+// Spec: RFC 9745 Deprecation, RFC 8594 Sunset, RFC 8288 Link relations.
 import { z } from "zod";
 
 import { nullableText, text } from "./fields";
@@ -10,7 +7,6 @@ import { API_PATHS, API_BASE, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./
 /** Also the value of the `API-Version` header. */
 export const API_VERSION = "1.0.0";
 
-/** Minimum notice between a version being marked deprecated and its sunset. */
 export const DEPRECATION_NOTICE_DAYS = 180;
 
 const nullableDate = (description: string) => nullableText(description, { format: "date" });
@@ -47,7 +43,6 @@ export const ApiVersionRecord = z
     description: "One version of this API and where it is in its lifecycle."
   });
 
-/** A catalogue entry before its URLs are made absolute; `specUrl` is site-relative here. */
 export type VersionRecord = Omit<z.infer<typeof ApiVersionRecord>, "url">;
 
 export const ApiVersionPolicy = z
@@ -92,7 +87,6 @@ export const ApiVersions = z
   })
   .meta({ title: "ApiVersions", description: "Response body of getApiVersions." });
 
-/** Newest first. Headers, `/api/versions` and the OpenAPI document all read from this. */
 export const VERSIONS: readonly VersionRecord[] = [
   {
     version: CURRENT_API_VERSION,

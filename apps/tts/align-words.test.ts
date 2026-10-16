@@ -49,7 +49,6 @@ describe("alignWords", () => {
       block
     );
     expect(words?.map(w => w.w)).toEqual(["one", "two", "three", "four", "five"]);
-    // the gap 1..3 is split evenly between the two unmatched words
     expect(words?.[1]).toEqual({ w: "two", s: 11, e: 12 });
     expect(words?.[2]).toEqual({ w: "three", s: 12, e: 13 });
   });
@@ -92,7 +91,6 @@ describe("alignWords", () => {
     const heardAt = fc
       .tuple(time, time)
       .map(([a, b]) => ({ start: Math.min(a, b), end: Math.max(a, b) }));
-    // Whisper keeps at least three in five of the text's words, in order, and may add its own.
     const row = fc.record({
       word,
       kept: fc.boolean(),

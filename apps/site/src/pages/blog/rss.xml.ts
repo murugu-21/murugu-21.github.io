@@ -9,7 +9,6 @@ import { getPostSources } from "#src/lib/blog/posts.ts";
 import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
 import { BLOG_URL } from "#src/lib/site.ts";
 
-// html: true so inline HTML in a post (<sup>) reaches readers; sanitize-html drops the unsafe tags.
 const parser = new MarkdownIt({ html: true });
 
 // Feed readers need absolute image URLs; importing post images here yields
@@ -30,7 +29,6 @@ const ASSET_URLS = new Map(
   })
 );
 
-// Rewrites relative <img src> only; absolute, root-relative and anchor URLs pass through.
 function absolutizeAssets(html: string, postId: string): string {
   return html.replaceAll(
     /(<img\b[^>]*?\bsrc=")([^"]+)(?=")/gi,

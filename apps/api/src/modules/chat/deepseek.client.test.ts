@@ -48,7 +48,6 @@ describe("fetchDeepseekBalance", () => {
       ]
     });
     const balance = await fetchDeepseekBalance("sk-test");
-    // total_balance is a decimal string in the API response, not a number.
     expect(balance).toEqual({ available: true, totalUsd: 1.99 });
   });
 

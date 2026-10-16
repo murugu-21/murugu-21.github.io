@@ -13,7 +13,6 @@ import {
 
 type Features = { lightDark?: boolean; registerProperty?: boolean; popover?: boolean };
 
-/** A window with the floor's features, minus any switched off, that records redirects. */
 function browser({ features = {}, name = "" }: { features?: Features; name?: string } = {}) {
   const { lightDark = true, registerProperty = true, popover = true } = features;
   const redirects: string[] = [];
@@ -58,7 +57,6 @@ describe("redirectIfOutdated", () => {
 });
 
 describe("wireContinueLink", () => {
-  // An <a> resolves an href with the URL parser, as the browser's own does.
   const anchor = () => {
     let resolved = "";
     return {
@@ -116,7 +114,6 @@ describe("wireContinueLink", () => {
   });
 });
 
-// They run in browsers far older than the floor, where newer syntax would stop them silently.
 describe("the inlined scripts", () => {
   const es5Errors = (code: string) =>
     new Linter()

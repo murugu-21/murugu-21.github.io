@@ -18,8 +18,6 @@ type ServerFrame =
   | { type: "cf_agent_use_chat_response"; id: string; body: string; done?: true; error?: true }
   | { type: "cf_agent_stream_resuming"; id: string };
 
-// The Worker's ChatRoom as the widget's sockets see it: resume probes find no
-// stream, and each chat request is recorded so the test can stream the reply.
 class FakeRoom {
   readonly requests: unknown[] = [];
   readonly sockets = new Set<FakeSocket>();
@@ -50,7 +48,6 @@ class FakeRoom {
     this.push({ type: "cf_agent_use_chat_response", id: this.turn, body: "boom", error: true });
   }
 
-  // A turn another tab started, which this socket only observes.
   resumeElsewhere(turn: string) {
     this.push({ type: "cf_agent_stream_resuming", id: turn });
   }
@@ -62,7 +59,6 @@ class FakeRoom {
 
 const rooms = new Map<string, FakeRoom>();
 
-// The browser's WebSocket as PartySocket drives it, connected to the FakeRoom its URL names.
 class FakeSocket extends EventTarget {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
@@ -130,7 +126,6 @@ const lastRoom = () => {
 const input = () => page.getByRole("textbox", { name: "Your message" });
 const sendButton = () => page.getByRole("button", { name: "Send" });
 
-// A returning visitor's room whose empty history arrives only once the test calls release().
 function holdHistory() {
   localStorage.setItem("chatRoomId", "slow");
   let release = () => {};
@@ -188,7 +183,6 @@ it("sends a question with Enter and streams the reply after the tool step", asyn
   await expect.element(sendButton()).toBeDisabled();
   await expect.element(page.getByText("Jarvis is typing")).toBeInTheDocument();
 
-  // A second message is refused while the turn runs, and stays in the composer.
   await userEvent.type(input(), "And before that?{Enter}");
   await expect.element(input()).toHaveValue("And before that?");
 
@@ -279,8 +273,6 @@ function transcriptScroll(): "fits" | "top" | "bottom" | "between" {
 }
 
 it("follows the loading dots, keeps the greeting in view above the starters, then follows the reply to its end", async () => {
-  // Vitest loads no Tailwind, so the panel has no height of its own. Give the transcript
-  // one that the greeting and the loading dots overflow.
   const short = document.createElement("style");
   short.textContent = '[data-slot="scroll-area-viewport"] { height: 30px; }';
   document.head.append(short);
@@ -482,7 +474,6 @@ it("waits while another tab's turn streams into the same room", async () => {
   await expect.element(sendButton()).toBeEnabled();
 });
 
-// Desktop: on a phone the modal panel covers the launcher and hides it from assistive tech.
 it("closing by button, launcher or Escape keeps the conversation, and focus returns to the launcher", async () => {
   await page.viewport(1024, 768);
   await render(<ChatWidget />);
@@ -527,7 +518,6 @@ it("starting over moves to a new room once confirmed", async () => {
   await expect.element(page.getByText("Start a new conversation?")).not.toBeInTheDocument();
   await expect.element(page.getByText("Old question")).toBeVisible();
 
-  // Sending instead of answering dismisses the question.
   await restart();
   await userEvent.type(input(), "One more thing{Enter}");
   await expect.element(page.getByText("Start a new conversation?")).not.toBeInTheDocument();
@@ -649,8 +639,6 @@ it("introduces the launcher once, then fades the hint away", async () => {
 
   await first.unmount();
   await render(<ChatWidget />);
-  // Checked synchronously after two frames, by which the hint's effect would
-  // have committed: a polling matcher would wait out the hint's own fade.
   await new Promise(requestAnimationFrame);
   await new Promise(requestAnimationFrame);
   expect(page.getByRole("button", { name: LAUNCHER }).query()).not.toBeNull();

@@ -1,5 +1,3 @@
-// A long-lived child process that talks JSON lines. Each `send` writes one
-// line to stdin, and `next` parses the stdout lines with a schema in FIFO order.
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
@@ -20,7 +18,6 @@ export function jsonLines({
 }) {
   const lines = createInterface({ input: stdout })[Symbol.asyncIterator]();
   return {
-    // Arrow properties, because callers destructure these off the returned object.
     next: async <S extends z.ZodType>(schema: S): Promise<z.infer<S>> => {
       const { value, done } = await lines.next();
       // stdout can end before "exit" fires; let the exit handler report the code.

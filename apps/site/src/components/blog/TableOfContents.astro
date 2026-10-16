@@ -1,9 +1,4 @@
 ---
-// Notion-style rail of bars on the right edge, one per h2/h3, expanding into
-// the heading list on hover or keyboard focus (the toc-shown and toc-collapsed
-// variants in global.css). Mounted after `</article>` so the prose styles
-// don't apply, the article's links come first in tab order, and the
-// medium-zoom overlay still paints over it.
 import type { MarkdownHeading } from "astro";
 import { cva } from "class-variance-authority";
 import { tocEntries, type TocEntry } from "#src/lib/blog/toc.ts";
@@ -15,7 +10,6 @@ interface Props {
 const { headings } = Astro.props;
 const entries = tocEntries(headings);
 
-// h3s indent under their h2, as in Notion's open list, and get the shorter bar.
 type PerDepth = Record<TocEntry["depth"], string>;
 // Collapsed links are clipped, not display:none, so they keep their name and tab stop.
 const tocLink = cva(
@@ -26,7 +20,6 @@ const tocLink = cva(
     }
   }
 );
-// Hover or focus opens the panel before a mouse click lands, so the bars are only decoration.
 const tocBar = cva(
   "hidden h-0.5 rounded-xs bg-toc-bar peer-aria-[current]:bg-title dark:bg-accent-grey-dark dark:peer-aria-[current]:bg-heading-dark toc-collapsed:block",
   {
@@ -43,10 +36,8 @@ const tocBar = cva(
     aria-label="On this page"
     data-toc
   >
-    {/* The nav's padding is the hover target around the 2px bars and keeps the
-        growing panel under the pointer. It anchors with `right`, not `100vw`,
-        because a fixed element's containing block stops short of a classic
-        scrollbar. */}
+    {/* The nav anchors with `right`, not `100vw`, because a fixed element's containing
+        block stops short of a classic scrollbar. */}
     {/* biome-ignore lint/nursery/noTailwindArbitraryValue: viewport minus a length has no default */}
     <ol class="m-0 max-h-[calc(100vh-12rem)] max-w-80 list-none overflow-y-auto rounded-xl bg-nav-scrolled px-4 py-3 shadow-glow backdrop-blur-lg transition duration-150 motion-reduce:transition-none dark:bg-nav-scrolled-dark dark:shadow-glow-dark toc-collapsed:overflow-visible toc-collapsed:bg-transparent toc-collapsed:p-0 toc-collapsed:shadow-none toc-collapsed:backdrop-filter-none">
       {entries.map(entry => (
@@ -63,12 +54,10 @@ const tocBar = cva(
 )}
 
 <script>
-  // Scroll spy: re-measure headings once per frame on scroll and resize. Not
-  // an IntersectionObserver: it fires on a heading's bottom edge, so after a
-  // hash jump parked a heading on the line nothing fired. Listeners live as
-  // long as the page.
   import { TOC_LINE_SLACK, activeIndex } from "#src/lib/blog/toc.ts";
 
+  // Not an IntersectionObserver: it fires on a heading's bottom edge, so after a hash jump parked
+  // a heading on the line nothing fired.
   const nav = document.querySelector<HTMLElement>("nav[data-toc]");
   if (nav) {
     const pairs = [...nav.querySelectorAll<HTMLAnchorElement>("a[href^='#']")].flatMap(link => {
@@ -76,7 +65,6 @@ const tocBar = cva(
       return heading ? [{ link, heading }] : [];
     });
 
-    // Read the scroll margin from the live heading; Prose.astro owns the value.
     const scrollMargin = pairs.length
       ? parseFloat(getComputedStyle(pairs[0].heading).scrollMarginTop) || 0
       : 0;
@@ -100,7 +88,6 @@ const tocBar = cva(
       });
     };
 
-    // Escape collapses a keyboard-opened panel.
     nav.addEventListener("keydown", event => {
       const focused = document.activeElement;
       if (event.key === "Escape" && focused instanceof HTMLElement && nav.contains(focused)) {

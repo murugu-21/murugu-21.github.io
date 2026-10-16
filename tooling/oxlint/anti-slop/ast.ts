@@ -8,7 +8,6 @@ export const isStringLiteral = (
   node: ESTree.Node | null | undefined
 ): node is ESTree.StringLiteral => node?.type === "Literal" && typeof node.value === "string";
 
-// `a.b` and `a["b"]` name the same member; any other computed key is unknown until runtime.
 export function staticPropertyName(member: ESTree.MemberExpression): string | undefined {
   const { computed, property } = member;
   if (computed) return isStringLiteral(property) ? property.value : undefined;
@@ -19,7 +18,6 @@ export function typeReferenceName(type: ESTree.TSTypeReference): string | null {
   return type.typeName.type === "Identifier" ? type.typeName.name : null;
 }
 
-// Strips the wrappers that leave an expression's runtime value unchanged.
 export function unwrapExpression(node: ESTree.Node): ESTree.Node {
   while (
     node.type === "ParenthesizedExpression" ||

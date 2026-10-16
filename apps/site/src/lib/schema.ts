@@ -1,4 +1,3 @@
-// The schema.org nodes every page shares.
 import type { Graph, Person, Thing, WebPage, WebSite } from "schema-dts";
 import { sameAs, skillsCategories, socialMediaLinks } from "@murugappan/content/portfolio.ts";
 import { splitSkillItems } from "@murugappan/content/dataset.ts";
@@ -17,8 +16,6 @@ const HAND_WRITTEN_KNOWS_ABOUT = [
   "HIPAA"
 ];
 
-// The hand-written list plus the resume skills, split the way the API splits them,
-// deduped case-insensitively.
 export function knowsAbout(categories: ReadonlyArray<{ items: string }>): string[] {
   const seen = new Set(HAND_WRITTEN_KNOWS_ABOUT.map(s => s.toLowerCase()));
   const extra: string[] = [];
@@ -47,7 +44,6 @@ const person: Person = {
   "@id": PERSON_ID,
   name: AUTHOR.name,
   givenName: "Murugappan",
-  // helps entity resolvers connect the sameAs profiles
   alternateName: ["murugu-21", "murugu21"],
   email: `mailto:${socialMediaLinks.gmail}`,
   address: {
@@ -90,13 +86,10 @@ const person: Person = {
 };
 
 interface PageGraph {
-  // null for noindex pages, which get no WebPage node.
   page: { url: string; name: string; about?: { "@id": string }; profilePage: boolean } | null;
   nodes: Thing[];
 }
 
-// The page's <script type="application/ld+json"> body: one @graph, so crawlers
-// resolve every @id within the page.
 export function jsonLdHtml({ page, nodes }: PageGraph): string {
   const graph: Thing[] = [website, person];
   if (page) {

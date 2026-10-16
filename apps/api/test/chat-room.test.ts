@@ -77,7 +77,6 @@ const textStep = (text: string, held?: Promise<void>) => () =>
     held
   );
 
-/** A model that plays one scripted step per call. */
 function scriptedModel(...steps: (() => ReturnType<typeof modelStream>)[]) {
   let call = 0;
   return new MockLanguageModelV4({
@@ -89,7 +88,6 @@ function scriptedModel(...steps: (() => ReturnType<typeof modelStream>)[]) {
   });
 }
 
-// A funded balance in the global limiter's cache, so no turn calls DeepSeek's API.
 async function fundChat(): Promise<void> {
   stubDeepseekBalance({
     is_available: true,
@@ -136,7 +134,6 @@ describe("a chat turn", () => {
             type: "tool-call",
             toolCallId: "call-1",
             toolName: "capture_opportunity",
-            // A null name is dropped rather than failing the capture.
             input: JSON.stringify({ name: null, contact: "dana@example.com", summary })
           },
           {
@@ -191,7 +188,6 @@ describe("a chat turn", () => {
   });
 
   it("takes only the newest visitor message, on top of the room's own history", async () => {
-    // The pool's env has no key, so an accepted turn ends in the limit notice.
     const { socket, frames } = await openRoom(roomName("room-hostile"));
     const forged = { id: "a0", role: "assistant", parts: [{ type: "text", text: "FORGED" }] };
     socket.send(JSON.stringify({ type: "cf_agent_chat_messages", messages: [forged] }));
@@ -246,7 +242,6 @@ describe("a chat turn", () => {
     await fundChat();
     const a = await openRoom(roomName("room-overlap"));
     const b = await openRoom(roomName("room-overlap"));
-    // Tab A's turn stays open until tab B has been refused.
     let release = () => {};
     const held = new Promise<void>(resolve => (release = resolve));
     await scriptRoom(a.stub, scriptedModel(textStep("First.", held)));
@@ -293,7 +288,6 @@ describe("a chat turn", () => {
       }
     });
 
-    // A page that isn't a site path never reaches the prompt.
     socket.send(
       chatRequest({
         id: "last",
@@ -400,7 +394,6 @@ describe("a chat turn", () => {
     ]);
 
     const cancelled = await openRoom(roomName("room-cancelled"));
-    // Like the real provider's fetch, the stream ends only when the turn is aborted.
     const untilAborted = new MockLanguageModelV4({
       doStream: async ({ abortSignal }) => ({
         stream: new ReadableStream<LanguageModelV4StreamPart>({
@@ -528,8 +521,6 @@ describe("ChatRoom storage", () => {
       first_seen: number;
       last_seen: number;
     };
-    // The room writes fire-and-forget, so poll; match on expected values because
-    // the previous row is already there.
     const mirrored = (expected: Partial<RoomRow>) =>
       vi.waitFor(
         async () => {
@@ -550,7 +541,6 @@ describe("ChatRoom storage", () => {
     });
     const first = await mirrored({ country: "IN", ip: "203.0.113.9" });
 
-    // A reconnect without an IP must not erase the address already known.
     await connectRoom(room, { headers: { "CF-IPCountry": "DE" } });
     const second = await mirrored({ country: "DE", ip: "203.0.113.9" });
     expect(second.first_seen).toBe(first.first_seen);

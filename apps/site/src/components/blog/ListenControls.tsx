@@ -1,5 +1,3 @@
-// Read-aloud controls for a blog post: the visible player state and the
-// remembered speed. The backends live in #src/lib/blog/listen-player.ts.
 import { useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import { Loader2, Pause, Play, type LucideIcon } from "lucide-react";
 
@@ -34,8 +32,6 @@ const formatTime = (seconds: number) => {
 
 const RATE_KEY = "listenRate";
 
-// An external store: reading localStorage during hydration would mismatch the
-// server HTML. Held in memory too so the picker works when storage is blocked.
 let currentRate: SpeechRate | null = null;
 const rateListeners = new Set<() => void>();
 
@@ -87,7 +83,6 @@ const TOGGLE: Record<Status, ToggleLook> = {
   speaking: { label: "Pause", Icon: Pause, filled: false }
 };
 
-// Elapsed and total, either side of the seek bar.
 const READOUT: Record<Progress["unit"], (p: Progress) => [string, string]> = {
   none: () => ["0:00", ""],
   seconds: p => [formatTime(p.position), formatTime(p.length)],
@@ -95,11 +90,10 @@ const READOUT: Record<Progress["unit"], (p: Progress) => [string, string]> = {
 };
 
 export function ListenControls({ slug }: { slug: string }) {
-  // The island root, held in state (not a ref) because it is read during
-  // render as the dropdown's portal container.
+  // The island root, held in state (not a ref) because it is read during render as the
+  // dropdown's portal container.
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const blocksRef = useRef<Block[]>([]);
-  // False until mount finds something to read and a backend to read it with.
   const [supported, setSupported] = useState(false);
   const [{ status, progress }, dispatch] = useReducer(reduce, INITIAL);
   const rate = useSyncExternalStore(subscribeRate, getRate, getServerRate);
@@ -114,8 +108,6 @@ export function ListenControls({ slug }: { slug: string }) {
     return () => window.removeEventListener("pagehide", onPageHide);
   }, []);
 
-  // Dock the transport bar while a session is live, including loading and
-  // pauses; apps/site/src/pages/blog/[...slug].astro styles `data-listening`.
   useEffect(() => {
     const island = root?.closest("[data-listen-island]");
     island?.toggleAttribute("data-listening", status !== "idle");
@@ -166,8 +158,6 @@ export function ListenControls({ slug }: { slug: string }) {
   const [elapsed, total] = READOUT[progress.unit](progress);
   const seekable = progress.unit === "seconds";
 
-  // Card surface: a translucent fill vanished into the gradient canvas. At
-  // night the island --border (16%) is too faint, hence white/40.
   return (
     <div
       ref={setRoot}
@@ -175,8 +165,6 @@ export function ListenControls({ slug }: { slug: string }) {
     >
       <Button
         onClick={() => void onToggle()}
-        // Rendered full-size but disabled until mount confirms a backend, so
-        // hydration causes no layout shift.
         disabled={status === "loading" || !supported}
         aria-label={toggle.label}
         aria-pressed={status === "speaking"}
@@ -196,8 +184,6 @@ export function ListenControls({ slug }: { slug: string }) {
         {elapsed}
       </span>
 
-      {/* Track at 30%/40% foreground: the primitive's 15% vanished on the
-          card. Tuned here so the vendored slider keeps shadcn's styling. */}
       <Slider
         className="min-w-0 flex-1 **:data-[slot=slider-thumb]:opacity-0 focus-within:**:data-[slot=slider-thumb]:opacity-100 hover:**:data-[slot=slider-thumb]:opacity-100 **:data-[slot=slider-track]:h-1 **:data-[slot=slider-track]:bg-foreground/30 dark:**:data-[slot=slider-track]:bg-foreground/40"
         value={[progress.position]}
@@ -206,7 +192,6 @@ export function ListenControls({ slug }: { slug: string }) {
         disabled={!seekable}
         aria-label="Seek"
         onValueChange={([v]) => playerRef.current?.seek?.(v)}
-        // One event per scrub, not per drag tick.
         onValueCommit={() => track("listen_seek")}
       />
 
@@ -220,8 +205,8 @@ export function ListenControls({ slug }: { slug: string }) {
             disabled={!supported}
             // Starts with the visible rate (e.g. "1×") so voice control can target it (WCAG 2.5.3).
             aria-label={`${rate}× playback speed`}
-            // w-14 (not auto): a stored 1.25x would otherwise widen the pill
-            // after hydration and nudge the row.
+            // w-14 (not auto): a stored 1.25x would otherwise widen the pill after hydration and nudge
+            // the row.
             className="h-7 w-14 shrink-0 rounded-full px-2.5 text-xs font-semibold tabular-nums"
           >
             {rate}×

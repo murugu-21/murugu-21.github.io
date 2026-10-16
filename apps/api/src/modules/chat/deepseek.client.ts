@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import { lenient } from "@murugappan/utils/json.ts";
 
-// Always the current Flash generation. After changing it, run `bun run test:live` before pushing,
-// because some models narrate a lead capture without calling capture_opportunity and lose the lead.
+// After changing it, run `bun run test:live` before pushing: some models narrate a lead capture
+// without calling capture_opportunity and lose the lead.
 const DEEPSEEK_MODEL = "deepseek-flash";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
@@ -33,7 +33,6 @@ export function jarvisCall<Tools extends ToolSet>({
   return {
     model,
     messages,
-    // buildMessages puts the page note after the history, where it binds "this page".
     allowSystemInMessages: true,
     tools,
     // A retry bills the turn again.

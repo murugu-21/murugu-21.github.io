@@ -1,4 +1,3 @@
-// Site content comes from the real sources, bundled through virtual:content/posts as in production.
 import { env } from "cloudflare:workers";
 import { Effect, Layer } from "effect";
 import type { ClientResponse } from "hono/client";
@@ -15,10 +14,8 @@ import { ContactQuotaRepository } from "#src/modules/rate-limit/contact-quota.re
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
 import worker from "#src/server.ts";
 
-/** The site's styled 404 page (404.html in the build). */
 export const NOT_FOUND_HTML = "<!doctype html><h1>404</h1>";
 
-/** The blog's styled 404 page (blog/404/index.html in the build). */
 export const BLOG_NOT_FOUND_HTML = "<!doctype html><h1>SDE Journey: 404</h1>";
 
 function assetPath(input: RequestInfo | URL): string {
@@ -27,7 +24,6 @@ function assetPath(input: RequestInfo | URL): string {
   return new URL(input).pathname;
 }
 
-/** A Fetcher binding answering with `fetch`; no test opens a socket through one. */
 export function fakeFetcher(fetch: (input: RequestInfo | URL) => Promise<Response>): Fetcher {
   return {
     fetch,
@@ -37,7 +33,6 @@ export function fakeFetcher(fetch: (input: RequestInfo | URL) => Promise<Respons
   };
 }
 
-/** Overriding a path with null makes the assets binding 404 it. */
 export function fakeAssets(overrides: Record<string, string | null> = {}): Fetcher {
   const files = new Map([
     ["/404", NOT_FOUND_HTML],
@@ -66,7 +61,6 @@ export function fakeAssets(overrides: Record<string, string | null> = {}): Fetch
 
 export type TestEnvOptions = {
   assets?: Record<string, string | null>;
-  /** "" leaves the inbox unconfigured. */
   inbox?: string;
   email?: SendEmail;
 };
@@ -96,7 +90,6 @@ export function visitorStorage(instance: ChatRoom) {
   );
 }
 
-/** The pool's env plus the bindings apps/api/test/wrangler.jsonc leaves out. */
 export function testEnv(options: TestEnvOptions = {}): Env {
   // Named rather than spread: `env` is typed as the full Env, so a binding added to
   // ../wrangler.jsonc fails to type-check here until testEnv supplies it.
@@ -108,23 +101,17 @@ export function testEnv(options: TestEnvOptions = {}): Env {
     RateLimiter,
     ASSETS: fakeAssets(options.assets),
     OPPORTUNITY_INBOX: options.inbox ?? "inbox@example.com",
-    // Env requires it; empty means no key, as in local dev without the secret
     DEEPSEEK_API_KEY: "",
     EMAIL: options.email ?? recordingEmail().email
   };
 }
 
-/** Silences `console.error` for this test and records what it was called with. */
 export function capturedErrors() {
   const spy = vi.spyOn(console, "error").mockImplementation(() => {});
   onTestFinished(() => spy.mockRestore());
   return spy;
 }
 
-/**
- * The app's services with the contact quota answering from `quota`, as Nest's overrideProvider
- * does. A quota call the test leaves out fails it.
- */
 export function fakeContactQuota(quota: Partial<ContactQuotaRepository["Service"]>): AppLayer {
   const unexpected = () => Effect.die(new Error("this test did not fake that quota call"));
   return appLayer(
@@ -132,10 +119,6 @@ export function fakeContactQuota(quota: Partial<ContactQuotaRepository["Service"
   );
 }
 
-/**
- * The RateLimiter stub every request in this test reaches, so a test can spy on its RPCs. Every
- * mock, including the test's own spies, is restored when the test finishes.
- */
 export function sharedLimiter() {
   onTestFinished(() => {
     vi.restoreAllMocks();
@@ -145,12 +128,10 @@ export function sharedLimiter() {
   return limiter;
 }
 
-/** Every fetch answers `body`, as DeepSeek's balance endpoint would. Undo with vi.unstubAllGlobals(). */
 export function stubDeepseekBalance(body: JsonValue, status = 200): void {
   vi.stubGlobal("fetch", async () => new Response(JSON.stringify(body), { status }));
 }
 
-/** A response from `fetchWorker` or `apiClient`. */
 export type JsonBody = Response | ClientResponse<unknown>;
 
 export async function readJson<S extends z.ZodType>(res: JsonBody, schema: S): Promise<z.infer<S>> {
@@ -160,11 +141,9 @@ export async function readJson<S extends z.ZodType>(res: JsonBody, schema: S): P
 export type FetchOptions = RequestInit & {
   ip?: string;
   env?: TestEnvOptions;
-  /** The app's services with some providers faked, from a helper such as `fakeContactQuota`. */
   layer?: AppLayer;
 };
 
-/** Sends a request through the worker entry; a bare path resolves against the site. */
 export async function fetchWorker(
   path: string,
   { ip, env: envOptions, layer, ...init }: FetchOptions = {}
@@ -178,11 +157,6 @@ export async function fetchWorker(
   );
 }
 
-/**
- * hono/testing's typed client over `createApp(layer)`, so paths, params, queries and JSON bodies
- * are checked against the real router. Every request gets the env `testEnv(env)` builds, and `ip`
- * as its CF-Connecting-IP. Its base URL is fixed at http://localhost.
- */
 export function apiClient({
   ip,
   env: envOptions,
@@ -196,13 +170,8 @@ export function apiClient({
   );
 }
 
-/** A room name the Worker accepts: 21 characters, like the widget's nanoid(). */
 export const roomName = (label: string) => label.padEnd(21, "-");
 
-/**
- * A real WebSocket to a chat room through the worker, from the site's own page, recording every
- * frame it receives.
- */
 type RoomRequest = { headers?: Record<string, string>; cf?: RequestInit["cf"] };
 
 export async function openRoom(room: string, { headers, cf }: RoomRequest = {}) {
@@ -221,7 +190,6 @@ export async function openRoom(room: string, { headers, cf }: RoomRequest = {}) 
   return { socket, frames, stub: env.ChatRoom.get(env.ChatRoom.idFromName(room)) };
 }
 
-/** Connects to a room, waits for the agent to introduce itself, then hangs up. */
 export async function connectRoom(room: string, request: RoomRequest = {}) {
   const { socket, frames, stub } = await openRoom(room, request);
   await vi.waitFor(() => assert(frames.length >= 2, "the room sent nothing"), { timeout: 2000 });
@@ -267,7 +235,6 @@ export function chatRequest({
   });
 }
 
-/** One request's response frames on a socket, once its terminal frame has arrived. */
 export function responseFrames(
   frames: unknown[],
   id: string,

@@ -7,7 +7,6 @@ import {
   type FieldIssue
 } from "@murugappan/contracts/api/errors.ts";
 
-/** One entry per zod issue, named by the top-level field it is about. */
 export const fieldIssues = (error: z.ZodError): FieldIssue[] =>
   error.issues.map(issue => ({
     field: issue.path.length > 0 ? String(issue.path[0]) : "body",

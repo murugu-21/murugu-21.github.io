@@ -3,7 +3,6 @@
 // bundled module script.
 import { POST_HOG_TOKEN, POST_HOG_URL } from "astro:env/server";
 
-// Either unset (dev, CI) disables analytics.
 const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 ---
 
@@ -22,7 +21,6 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
   // Must run first: tags/events sent before it are dropped, not buffered.
   bootAnalytics();
 
-  // Deferred, so the layout's inline theme bootstrap has already run.
   initClickTracking();
   tag("theme", currentTheme());
   window.addEventListener("themechange", () => tag("theme", currentTheme()));

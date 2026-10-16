@@ -1,5 +1,3 @@
-// Set on the WebSocket upgrade by chat.controller.ts, which strips client-sent copies,
-// because a Durable Object never sees `request.cf`.
 export const VISITOR_COUNTRY_HEADER = "x-visitor-country";
 export const VISITOR_IP_HEADER = "x-visitor-ip";
 

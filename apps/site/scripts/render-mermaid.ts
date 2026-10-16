@@ -40,16 +40,6 @@ import {
   usedText
 } from "./mermaid-svg.ts";
 
-// Renders every ```mermaid fence under packages/content/blog to
-// <slug>/diagrams/<hash>.<theme>.svg plus a light <hash>.png for RSS (feed
-// mirrors can't draw the SVGs), and prunes orphans. The output is gitignored:
-// `astro build` runs this first, and remark-mermaid.ts runs it when a fence has
-// no rendering (an edited diagram in `astro dev`).
-//
-//   bun run diagrams           render what is missing or rendered by another
-//                              mermaid version, prune orphans
-//   bun run diagrams --force   re-render everything
-//
 // An SVG in <img> can't reach page fonts, so each embeds a Fira Code subset;
 // otherwise a substitute face's widths make labels overrun their boxes.
 
@@ -68,13 +58,9 @@ const MERMAID_VERSION = jsonString(z.object({ version: z.string() })).parse(
     "utf8"
   )
 ).version;
-// The full font: each SVG embeds its own subset, so no latin cut is needed here.
 const FONT = readFileSync(FIRA_CODE_VF);
-// The page measures labels in exactly the face the SVG embeds a subset of.
 const PAGE_FONT = cssUrl(fontFace(FONT));
 
-// A file stamped with another mermaid version counts as missing, so a local
-// copy re-renders after an upgrade.
 const STAMP = `mermaid@${MERMAID_VERSION}`;
 const isCurrent = (path: string) =>
   existsSync(path) && stampOf(readFileSync(path, "utf8")) === STAMP;
@@ -84,12 +70,10 @@ const RENDER_WORKERS = 4;
 // renders behind it, which take 1-3 s each, so time out early and retry in a fresh browser.
 const PROTOCOL_TIMEOUT_MS = 30_000;
 const RENDER_ATTEMPTS = 3;
-// 2x for high-density screens; wider than any diagram so none is scaled down
 const PNG_VIEWPORT = { width: 4000, height: 900, deviceScaleFactor: 2 };
 // mermaid-cli shrinks the viewport to the diagram's right edge, ignoring the
 // body's right margin, so the 100%-wide SVG would draw that much narrower.
 const NO_BODY_MARGIN = cssUrl("body{margin:0}");
-// Matches the 12px card that remark-mermaid.ts puts the <img> on, doubled for the 2x scale.
 const PNG_PADDING = 24;
 
 const { values: options } = parseArgs({ options: { force: { type: "boolean" } } });
@@ -119,7 +103,6 @@ async function renderSvg({
   return finishSvg({ svg, stamp: STAMP, subset });
 }
 
-// Palette-quantized, since line art compresses far smaller with no visible loss.
 async function renderPng({ browser, job }: { browser: Browser; job: Job }): Promise<Buffer> {
   const { data } = await renderMermaid(browser, job.source, "png", {
     ...renderOptions({ hash: job.hash, theme: "light", pageFont: PAGE_FONT }),
@@ -148,7 +131,6 @@ async function renderAll({
   await using browser = await launchBrowser("render-mermaid", {
     protocolTimeout: PROTOCOL_TIMEOUT_MS
   });
-  // Each render opens its own page, so a few workers share one queue.
   const queue = renders.values();
   const worker = async () => {
     for (const { job, variant, path } of queue) {

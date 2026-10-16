@@ -139,7 +139,6 @@ export function visibleTypeAlias(
   return bindings.length === 1 ? (bindings[0]?.alias ?? null) : null;
 }
 
-/** Return whether a local declaration shadows a built-in type at this use. */
 export function hasVisibleTypeBinding(
   name: string,
   use: ESTree.Node,

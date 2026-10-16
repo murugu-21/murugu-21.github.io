@@ -318,8 +318,6 @@ describe("the OpenAPI spec", () => {
     expect((await readJson(res, z.object({ openapi: z.string() }))).openapi).toBe("3.1.0");
   });
 
-  // The server URL follows the host that was asked, upgraded to https except
-  // on a local dev origin, where https would make the spec unusable.
   it.each([
     ["https://preview.example", "https://preview.example"],
     ["http://murugappan.dev", "https://murugappan.dev"],
@@ -567,7 +565,6 @@ describe("POST /api/contact", () => {
     async dryRun => {
       const failure = new Error("limiter down");
       const unavailable = () => Effect.fail(new QuotaUnavailable({ cause: failure }));
-      // Only the call each mode should make is faked; the other would die and answer 500.
       const layer = fakeContactQuota(dryRun ? { usage: unavailable } : { take: unavailable });
       const logged = capturedErrors();
       const { email, sent } = recordingEmail();

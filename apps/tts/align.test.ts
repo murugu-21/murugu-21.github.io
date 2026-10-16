@@ -53,7 +53,6 @@ describe("alignBlock", () => {
 describe("whisper.py through whisperClient", () => {
   it("times the words it hears, retries unprompted when the prompt swallowed them, and reports a failed job", async () => {
     using dir = mkdtempDisposableSync(join(tmpdir(), "whisper-"));
-    // The fake hears whatever <wav>.txt says (fakes/README.md).
     const slice = ({ name, heard }: { name: string; heard: string }) => {
       const wav = join(dir.path, name);
       writeFileSync(`${wav}.txt`, heard);
@@ -70,7 +69,6 @@ describe("whisper.py through whisperClient", () => {
 
     const clean = slice({ name: "b0.wav", heard: text });
     expect(await whisper.transcribe({ id: "b0", wav: clean, text })).toEqual({ words });
-    // Prompted, an "echo" slice hears only "Thanks.", under 60% of the 4 expected words.
     const echoed = slice({ name: "b1-echo.wav", heard: text });
     expect(await whisper.transcribe({ id: "b1", wav: echoed, text })).toEqual({ words });
     const missing = join(dir.path, "b2.wav");

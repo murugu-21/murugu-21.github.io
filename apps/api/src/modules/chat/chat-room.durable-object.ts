@@ -50,7 +50,6 @@ const UNREADABLE = "Sorry, I couldn't read that message.";
 const RequestBody = z.object({ page: lenient(z.string()) });
 const Timestamp = z.number();
 
-// Keeps spend visible in the Worker logs, one line per model call.
 function logUsage(usage: LanguageModelUsage): void {
   console.log(
     "deepseek usage",
@@ -73,8 +72,6 @@ type TurnCall = {
   abortSignal?: AbortSignal;
 };
 
-// A tool call is sent as it is parsed, before the tool runs: a page fetch is a turn's longest
-// silence.
 function streamChunk(
   part: TextStreamPart<ReturnType<typeof jarvisTools>>
 ): InferUIMessageChunk<JarvisMessage> | null {
@@ -93,7 +90,6 @@ function streamChunk(
 
 export class ChatRoom extends AIChatAgent<Env> {
   public maxPersistedMessages = 200;
-  // A message sent while a turn runs (another tab, say) is refused, so turns never interleave.
   public messageConcurrency = "drop" as const;
 
   // Public so tests can drive `ctx.storage.sql` via `runInDurableObject`.
@@ -149,7 +145,6 @@ export class ChatRoom extends AIChatAgent<Env> {
     options?: OnChatMessageOptions
   ): Promise<Response> {
     try {
-      // A missing key gates like an empty account; the visitor can't fix either.
       const key = this.deepseekKey();
       if (
         this.userMessagesSince(Date.now() - DAY_MS) >= ROOM_DAILY_LIMIT ||
@@ -187,18 +182,16 @@ export class ChatRoom extends AIChatAgent<Env> {
     } catch (cause) {
       failure = await this.failureNotice(cause);
     }
-    // Every turn ends in prose or a notice; the widget waits for one or the other.
-    // A cancelled turn still ends quietly: the SDK drops what is written after a cancel.
     const notice = failure ?? (wroteText ? null : ERROR_NOTICE);
     if (notice) writer.write({ type: "data-notice", data: notice });
     writer.write({ type: "finish" });
   }
 
-  // Only prose and the running tool's name reach the client: tool inputs hold contact
-  // details, and outputs hold whole pages.
+  // Only prose and the running tool's name reach the client: tool inputs hold contact details,
+  // and outputs hold whole pages.
   private async relayModel({ writer, key, page, abortSignal }: TurnCall): Promise<boolean> {
-    // Root llms.txt (~900 tokens) lists every post with its title, summary and link.
-    // blog/llms-full.txt costs ~20x the tokens and grows per post.
+    // Root llms.txt (~900 tokens) lists every post with its summary and link; blog/llms-full.txt
+    // costs ~20x the tokens and grows per post.
     const result = streamText({
       ...jarvisCall({
         model: this.languageModel(key),
@@ -224,13 +217,11 @@ export class ChatRoom extends AIChatAgent<Env> {
 
   private async failureNotice(cause: unknown): Promise<Notice> {
     console.error("chat generation failed", cause);
-    // A 402 beats the cached balance, so gate every room until the next check.
     if (!isInsufficientBalance(cause)) return ERROR_NOTICE;
     await globalLimiter(this.env).markChatExhausted();
     return LIMIT_NOTICE;
   }
 
-  // Tests swap in a scripted model here.
   protected languageModel(key: string): LanguageModel {
     return deepseek({ apiKey: key });
   }
@@ -319,7 +310,6 @@ export class ChatRoom extends AIChatAgent<Env> {
       .one().n;
   }
 
-  // The rows exist only to count today's messages, so each insert drops those past the window.
   private recordUserMessage(): void {
     const now = Date.now();
     this.ctx.storage.sql.exec(`DELETE FROM user_messages WHERE created_at <= ?`, now - DAY_MS);
@@ -346,7 +336,6 @@ export class ChatRoom extends AIChatAgent<Env> {
   }
 }
 
-// Only a page fetch has a detail. A capture's input is the visitor's name and contact details.
 export function fetchActivity(url: string): Activity {
   try {
     return { name: "fetch_page", detail: new URL(url).pathname };

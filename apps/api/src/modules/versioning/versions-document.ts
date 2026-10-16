@@ -13,7 +13,6 @@ import {
   VERSIONS
 } from "@murugappan/contracts/api/versioning.ts";
 
-/** URLs are absolute against the host that was asked. */
 export function buildVersionsDocument(origin: string): z.infer<typeof ApiVersions> {
   return {
     current: CURRENT_API_VERSION,

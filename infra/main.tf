@@ -12,8 +12,6 @@ resource "cloudflare_email_routing_address" "opportunity_inbox" {
 # Email Routing writes return 403 for this account-owned token. Recreate it
 # via Email -> Email Routing -> Routing rules -> Create address.
 
-# Private bucket for blog audio (blog/*, served by the Worker's /blog/audio/*)
-# and the voice reference (voice/*, never served).
 resource "cloudflare_r2_bucket" "blog_audio" {
   account_id = var.account_id
   name       = "murugappan-dev-audio"

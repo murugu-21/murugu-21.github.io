@@ -14,15 +14,6 @@ import {
   type DiagramTheme
 } from "./mermaid-diagrams";
 
-// Build-time half of the Mermaid pipeline (see mermaid-diagrams.ts): each
-// ```mermaid fence becomes a <figure data-mermaid> with a light and
-// a dark <img>, one shown per theme. Post-relative mdast images let
-// Astro's image pipeline and the RSS absolutizer treat them like any post
-// image. A missing rendering (a new or edited fence) runs the renderer; one it
-// can't produce fails the build rather than shipping broken.
-
-// Intrinsic size from the viewBox: reserves layout space and gives medium-zoom
-// its natural dimensions.
 function svgSize(svg: string): { width: number; height: number } | undefined {
   const viewBox = svg.match(/\bviewBox="([^"]+)"/);
   if (!viewBox) return undefined;
@@ -32,18 +23,13 @@ function svgSize(svg: string): { width: number; height: number } | undefined {
     : undefined;
 }
 
-// The hidden theme is display:none, so its lazy image is never fetched. The
-// white or dark card sits behind any label that falls outside a node box
-// (render-mermaid.ts).
 const themeClass = {
   light: "mx-auto rounded-lg bg-white p-3 dark:hidden",
   dark: "mx-auto hidden rounded-lg bg-dark-bg p-3 dark:block"
 } satisfies Record<DiagramTheme, string>;
 
-// An absolute path, so rendering works whichever directory astro runs from.
 const RENDER_SCRIPT = fileURLToPath(new URL("../../../scripts/render-mermaid.ts", import.meta.url));
 
-// Renders every missing diagram, not just this post's; a no-op when none are.
 function renderMissing(): void {
   const result = spawnSync("bun", [RENDER_SCRIPT], { stdio: "inherit" });
   if (result.status !== 0)
@@ -59,7 +45,6 @@ export default function remarkMermaid() {
     }
     const postDir = dirname(file.path);
 
-    // One-for-one replacement, so sibling indexes stay valid.
     for (const [i, { node, parent, index }] of fences.entries()) {
       const hash = await diagramHash(node.value);
       const pathOf = (theme: DiagramTheme) => join(postDir, diagramFile(hash, theme));

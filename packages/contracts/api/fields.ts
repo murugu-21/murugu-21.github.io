@@ -1,6 +1,3 @@
-// Described string fields for the API's zod schemas. The descriptions are the API's
-// documentation: openapi.ts and the MCP tool schemas are generated from them.
-
 import { z } from "zod";
 
 type Extra = Omit<z.GlobalMeta, "description">;

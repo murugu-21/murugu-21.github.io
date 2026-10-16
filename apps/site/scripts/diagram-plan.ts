@@ -1,5 +1,3 @@
-// Which files render-mermaid.ts should write and which it should prune: per
-// fence a light and a dark SVG, plus a light PNG for RSS.
 import { dirname, join } from "node:path";
 import { ProtocolError } from "puppeteer";
 
@@ -13,13 +11,12 @@ import {
 } from "#src/lib/blog/mermaid-diagrams.ts";
 
 export interface Job {
-  post: string; // path of index.md
+  post: string;
   index: number;
   source: string;
   hash: string;
 }
 
-// The PNG can't carry the stamp; it is current exactly when the light SVG is.
 export type Variant = { kind: "svg"; theme: DiagramTheme } | { kind: "png" };
 const LIGHT_SVG: Variant = { kind: "svg", theme: "light" };
 const VARIANTS: readonly Variant[] = [LIGHT_SVG, { kind: "svg", theme: "dark" }, { kind: "png" }];
@@ -38,7 +35,6 @@ const variantPath = (job: Job, variant: Variant) =>
 
 export const variantLabel = (variant: Variant) => (variant.kind === "png" ? "png" : variant.theme);
 
-// The expected files are keyed by post directory.
 export async function diagramJobs(
   posts: { path: string; markdown: string }[]
 ): Promise<{ jobs: Job[]; expected: Map<string, Set<string>> }> {
@@ -56,7 +52,6 @@ export async function diagramJobs(
   return { jobs, expected };
 }
 
-// `listDir` returns a directory's file names, or none when it doesn't exist.
 export function orphans({
   expected,
   listDir
@@ -72,7 +67,6 @@ export function orphans({
   });
 }
 
-// `isCurrent` says whether an SVG exists and carries the current stamp.
 export function pendingRenders({
   jobs,
   force,
@@ -95,8 +89,6 @@ export function pendingRenders({
   });
 }
 
-// Retries only a ProtocolError (a browser call that timed out or a browser that died), each
-// time with the renders not yet written, so a Mermaid syntax error still fails at once.
 export async function retryRenders({
   renders,
   attempts,

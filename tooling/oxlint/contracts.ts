@@ -1,5 +1,3 @@
-// Oxlint JS plugin for README.md › Imports: packages/contracts/ exports shapes (schemas, types and
-// constants), never behaviour. Logic lives in the layer that runs it.
 import type { NodeOf, Plugin } from "./plugin-types.ts";
 
 type Node = NodeOf<"ExportNamedDeclaration">["parent"];
@@ -13,7 +11,6 @@ const BEHAVIOUR = new Set([
   "ClassExpression"
 ]);
 
-// `export const a = …`, `export function f() {}` and `export class C {}`.
 function declaredExports(node: NodeOf<"ExportNamedDeclaration">): Export[] {
   const { declaration } = node;
   if (declaration?.type === "VariableDeclaration") {
@@ -27,7 +24,6 @@ function declaredExports(node: NodeOf<"ExportNamedDeclaration">): Export[] {
   return declaration.id ? [{ node, value: declaration, name: declaration.id.name }] : [];
 }
 
-// `export { a, b as c }`. A re-export from another module is that module's to check.
 function specifiedExports(node: NodeOf<"ExportNamedDeclaration">): Export[] {
   if (node.source) return [];
   return node.specifiers.flatMap(({ local }) =>
@@ -56,7 +52,6 @@ export default {
         }
       },
       create(context) {
-        // Names bound to a function or class, and the names exported, in any order.
         const behaviour = new Set<string>();
         const exported: Export[] = [];
 

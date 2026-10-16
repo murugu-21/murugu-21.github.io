@@ -22,9 +22,8 @@
           "preset": "recommended",
           "nursery": {
             "noDuplicateSelectors": "error",
-            // Baseline 2024 is the nearest year to the browser floor (README.md › Browser
-            // support). The allowed features are newer but degrade gracefully: older
-            // browsers keep their default scrollbar and selection colours.
+            // Baseline 2024 is nearest the browser floor (README.md › Browser support). The allowed
+            // newer features degrade gracefully to the default scrollbar and selection colours.
             "useBaseline": {
               "level": "error",
               "options": {
