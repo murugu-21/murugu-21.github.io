@@ -23,7 +23,8 @@ Lint can't see these, so check each one against the diff:
 - No `as` beyond `as const`. Look in `.astro` frontmatter and scripts too, where type-aware lint doesn't run.
 - No `any` leaks: `res.json<T>()` and `storage.get<T>()` are casts. Take `unknown` and parse it.
 - No duplicated logic, and no options, layers or config for needs that don't exist yet.
-- A new dependency, module or utility longer than a few lines came with research and the user's approval (AGENTS.md › Research before building). If the diff hand-rolls something a dependency the repo already has does, that's a finding.
+- A new dependency, module or utility longer than a few lines came with research and the user's approval (AGENTS.md › Research before building). Code that arrived without them is a finding.
+- Search before you judge a hand-roll. For new code longer than a few lines that implements a general-purpose concern rather than this site's domain (parsing a format, a protocol, escaping, a server, retries, CLI flags, a file format, a lint check), look in this order: the repo's own dependencies, the framework's and platform's docs for a built-in (Astro, React, Hono, Effect, Cloudflare Workers, Tailwind, the browser, Node), then npm for a maintained library. A missing-library finding names the replacement, its weekly downloads or official status, and what it would delete. When you find nothing, name what you searched, so the author can see the search happened.
 - An import that lint blocks was moved to the right layer, not worked around (README.md › Imports).
 - Tests follow AGENTS.md › Tests. The QA reviewer judges what they cover. You judge their shape.
 

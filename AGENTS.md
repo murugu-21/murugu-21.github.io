@@ -51,7 +51,7 @@ Think about readability and elegance before writing, not after. Every rule a lin
 
 ## Research before building
 
-Agents tend to hand-roll what a library or platform feature already does. Before building a new feature or module, adding a dependency, or writing a utility more than a few lines long, look up the current best practice and the maintained options (including what the repo already depends on), then bring the user a short recommendation with alternatives and wait for approval before writing it.
+Agents tend to hand-roll what a library or platform feature already does. Before building a new feature or module, adding a dependency, or writing a utility more than a few lines long, look up the current best practice and the maintained options (including what the repo already depends on), then bring the user a short recommendation with alternatives and wait for approval before writing it. The recommendation names what you searched (the repo's dependencies, the framework's and platform's docs, then npm), what you would pick and why the others lost, so the search is visible before any code exists. A reviewer only sees a hand-roll in the diff, after the work is done.
 
 ## Git history
 
@@ -69,7 +69,7 @@ History starts at the Astro migration. Run `git blame --ignore-revs-file .git-bl
 
 ## Definition of done
 
-Never call a task complete until both of the following have happened.
+Never call a task complete until all of the following have happened.
 
 1. `.githooks/pre-push` passes (format, lint, typechecks, tests, site build). For UI changes, also check the page in the browser in both light and dark themes, following `.agents/skills/verify-murugappan-dev/SKILL.md`. It rebuilds the site and the Worker, runs its own Worker on a separate port and state directory, and lists how to drive each feature.
 2. Two independent reviewers (separate subagents, each starting fresh with only the diff, these rules and its skill) have reviewed the change:
@@ -77,3 +77,5 @@ Never call a task complete until both of the following have happened.
    - **Code-style reviewer.** Follows `.agents/skills/review-code-style/SKILL.md`. Checks the diff against every rule in this file, the lint config, and the framework references that skill picks for the paths the diff touches.
 
    Fix what they find, or explain why a finding doesn't apply, before reporting the task as done.
+
+3. **Comment Sicko** has hunted the diff's comments. Spawn a third fresh subagent whose prompt is `.agents/skills/comment-sicko/SKILL.md` verbatim followed by the diff, after the reviewers' fixes land. Keep its deletions unless one removes a comment the "Comments" rules above protect, and restore those with the reason. For each `MUST KILL` flag, make the code say it (rename, extract, a type) or explain why it can't.
