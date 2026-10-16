@@ -17,8 +17,8 @@
       "groupName": "astro compiler"
     },
     {
-      "description": "agents depends on exactly @modelcontextprotocol/client 2.0.0. Bump it by hand when an agents release moves that pin.",
-      "matchPackageNames": ["@modelcontextprotocol/client"],
+      "description": "agents peers on exact @modelcontextprotocol/client and /server versions. Bump both by hand to match when an agents release moves those pins.",
+      "matchPackageNames": ["@modelcontextprotocol/client", "@modelcontextprotocol/server"],
       "enabled": false
     },
     {
