@@ -57,7 +57,7 @@
   "vars": { "OPPORTUNITY_INBOX": "murugu2001@gmail.com" },
   "send_email": [{ "name": "EMAIL", "destination_address": "murugu2001@gmail.com" }],
   // Deploy fails while it is unset.
-  "secrets": { "required": ["DEEPSEEK_API_KEY"] },
+  "secrets": { "required": ["DEEPSEEK_API_KEY", "POSTHOG_PROJECT_TOKEN"] },
   // A mirror of each chat room for browsing in the dashboard; ChatRoom's SQLite stays the
   // source of truth. The Worker creates no tables, so run `bun run db:migrate` first, or
   // every write fails with only a "d1 mirror failed" log line.

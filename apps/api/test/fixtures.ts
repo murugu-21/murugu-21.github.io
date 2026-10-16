@@ -63,6 +63,7 @@ export type TestEnvOptions = {
   assets?: Record<string, string | null>;
   inbox?: string;
   email?: SendEmail;
+  posthogToken?: string;
 };
 
 type RecordingEmail = { email: SendEmail; sent: EmailMessageBuilder[] };
@@ -102,7 +103,8 @@ export function testEnv(options: TestEnvOptions = {}): Env {
     ASSETS: fakeAssets(options.assets),
     OPPORTUNITY_INBOX: options.inbox ?? "inbox@example.com",
     DEEPSEEK_API_KEY: "",
-    EMAIL: options.email ?? recordingEmail().email
+    EMAIL: options.email ?? recordingEmail().email,
+    POSTHOG_PROJECT_TOKEN: options.posthogToken ?? ""
   };
 }
 
@@ -142,18 +144,20 @@ export type FetchOptions = RequestInit & {
   ip?: string;
   env?: TestEnvOptions;
   layer?: AppLayer;
+  ctx?: ExecutionContext;
 };
 
 export async function fetchWorker(
   path: string,
-  { ip, env: envOptions, layer, ...init }: FetchOptions = {}
+  { ip, env: envOptions, layer, ctx, ...init }: FetchOptions = {}
 ): Promise<Response> {
   const headers = new Headers(init.headers);
   if (ip) headers.set("CF-Connecting-IP", ip);
   const app = layer ? createApp(layer) : worker;
   return app.fetch(
     new Request(new URL(path, SITE_ORIGIN), { ...init, headers }),
-    testEnv(envOptions)
+    testEnv(envOptions),
+    ctx
   );
 }
 

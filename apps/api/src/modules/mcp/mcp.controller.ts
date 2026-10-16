@@ -11,6 +11,7 @@ import type { AppEnv } from "#src/common/app-env.ts";
 import { mcpCorsMiddleware } from "#src/common/middleware/cors.middleware.ts";
 import { registerResources } from "#src/modules/mcp/mcp.resources.ts";
 import { registerTools, type ToolContext } from "#src/modules/mcp/mcp.tools.ts";
+import { mcpAnalytics } from "#src/modules/mcp/posthog.client.ts";
 import { webOriginGuard } from "#src/modules/mcp/web-origin.guard.ts";
 
 const INSTRUCTIONS = `This server answers questions about one person: Murugappan M, a full stack engineer (TypeScript, Node.js, React, event-driven AWS) based in Bangalore, India, currently at MedMe Health.
@@ -53,11 +54,20 @@ mcpController.all("*", webOriginGuard, async c => {
     services: c.var.services,
     clientIp: c.req.header("CF-Connecting-IP")
   };
+  const analytics = mcpAnalytics(c);
   // A handler per request: the SDK's factory sees the Request but not this request's services and
   // client IP, which the tools read.
-  return createMcpHandler(() => buildServer(ctx), {
-    // The SDK reports its internal 500s only here. 4xx rejections arrive too and are logged on
-    // purpose: telling them apart would mean matching the SDK's message strings.
-    onerror: error => console.error("mcp handler error", error)
-  }).fetch(c.req.raw);
+  const response = await createMcpHandler(
+    () => {
+      const server = buildServer(ctx);
+      analytics?.instrument(server);
+      return server;
+    },
+    {
+      // The SDK reports its internal 500s only here. 4xx rejections arrive too and are logged on
+      // purpose: telling them apart would mean matching the SDK's message strings.
+      onerror: error => console.error("mcp handler error", error)
+    }
+  ).fetch(c.req.raw);
+  return analytics ? analytics.flushAfterBody(response) : response;
 });

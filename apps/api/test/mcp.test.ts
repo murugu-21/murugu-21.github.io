@@ -1,3 +1,4 @@
+import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { Effect } from "effect";
 import {
   type CallToolRequestParams,
@@ -6,7 +7,7 @@ import {
   StreamableHTTPClientTransport,
   type Tool
 } from "@modelcontextprotocol/client";
-import { assert, describe, expect, it } from "vite-plus/test";
+import { assert, describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { z } from "zod";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
@@ -94,6 +95,7 @@ type SendInit = {
   ip?: string;
   method?: string;
   env?: TestEnvOptions;
+  ctx?: ExecutionContext;
 };
 
 function send(body: JsonValue, init: SendInit = {}) {
@@ -108,6 +110,7 @@ async function sendText(
     method: init.method ?? "POST",
     ip: init.ip ?? CLIENT_IP,
     env: init.env,
+    ctx: init.ctx,
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json, text/event-stream",
@@ -923,5 +926,95 @@ describe("resources/read", () => {
       .parse(JSON.parse(content.text));
     expect(doc.openapi).toBe("3.1.0");
     expect(doc.servers[0].url).toBe("https://murugappan.dev");
+  });
+});
+
+const PostHogBatch = z.object({
+  batch: z.array(z.object({ event: z.string(), properties: z.record(z.string(), z.unknown()) }))
+});
+
+async function requestText(init: RequestInit | undefined): Promise<string> {
+  const body = new Response(init?.body);
+  const gzipped = new Headers(init?.headers).get("Content-Encoding") === "gzip";
+  if (!gzipped) return body.text();
+  return new Response(body.body?.pipeThrough(new DecompressionStream("gzip"))).text();
+}
+
+function recordPostHog() {
+  const urls: string[] = [];
+  const events: z.infer<typeof PostHogBatch>["batch"] = [];
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+    urls.push(new Request(input).url);
+    events.push(...PostHogBatch.parse(JSON.parse(await requestText(init))).batch);
+    return Response.json({ status: 1 });
+  });
+  onTestFinished(() => {
+    vi.unstubAllGlobals();
+  });
+  const toolCall = (tool: string) =>
+    events.find(e => e.event === "$mcp_tool_call" && e.properties.$mcp_tool_name === tool)
+      ?.properties;
+  return { urls, events, toolCall };
+}
+
+async function sendAndWait(request: { body: JsonValue; headers: Record<string, string> }) {
+  const ctx = createExecutionContext();
+  const reply = await send(request.body, {
+    headers: request.headers,
+    env: { posthogToken: "phc_test" },
+    ctx
+  });
+  await waitOnExecutionContext(ctx);
+  return reply;
+}
+
+describe("PostHog analytics", () => {
+  const params = { name: "list_skills", arguments: {} };
+  it.each([
+    { era: "2026-07-28", request: modern("tools/call", params) },
+    {
+      era: "legacy, streamed",
+      request: { body: { jsonrpc: "2.0", id: 1, method: "tools/call", params }, headers: {} }
+    }
+  ])("sends the tool call event before the request's work ends ($era)", async ({ request }) => {
+    const { urls, toolCall } = recordPostHog();
+
+    await sendAndWait(request);
+
+    expect(toolCall("list_skills")).toMatchObject({ $mcp_server_name: "murugappan.dev" });
+    expect(new Set(urls.map(url => new URL(url).origin))).toEqual(
+      new Set(["https://us.i.posthog.com"])
+    );
+  });
+
+  it("keeps a read tool's arguments and leaves out what a visitor typed into send_message", async () => {
+    const { toolCall } = recordPostHog();
+    const message = {
+      name: "Ada Lovelace",
+      email: "ada@example.com",
+      message: "Hiring.",
+      dryRun: true
+    };
+
+    await sendAndWait(
+      modern("tools/call", { name: "search_blog_posts", arguments: { query: "dp" } })
+    );
+    await sendAndWait(modern("tools/call", { name: "send_message", arguments: message }));
+
+    expect(toolCall("search_blog_posts")).toMatchObject({
+      $mcp_parameters: { request: { params: { arguments: { query: "dp" } } } }
+    });
+    expect(JSON.stringify(toolCall("send_message"))).not.toContain("ada@example.com");
+    expect(toolCall("send_message")).toMatchObject({ $mcp_tool_name: "send_message" });
+  });
+
+  it("sends nothing without a project token", async () => {
+    const { events } = recordPostHog();
+
+    const reply = await call("list_skills");
+
+    expect(reply.isError).not.toBe(true);
+    expect(textOf(reply)).toContain('"category": "Languages"');
+    expect(events).toEqual([]);
   });
 });
