@@ -21,9 +21,8 @@ How to call this site, cheapest first:
   to validate without sending. Limited to 3 per client IP per UTC day.
 - Using an MCP client: add the server `https://murugappan.dev/mcp` (Streamable
   HTTP, no auth). Manifest: `https://murugappan.dev/.well-known/mcp.json`.
-  Tools: get_profile, list_experience, list_skills, list_education,
-  list_open_source, search_blog_posts, get_blog_post, send_message. Resources:
-  llms.txt, AGENTS.md, openapi.json, and every post's markdown.
+  Tools: {{mcp.toolNames}}.
+  Resources: {{mcp.resources}}, and every post's markdown.
 - A conversation instead of a payload: the Jarvis assistant on any page. Its
   WebSocket is private to the chat widget, so programs should use the API or MCP.
 
@@ -68,12 +67,5 @@ markdown pointing at the sitemap and the entry points above.
 - [GitHub](https://github.com/murugu-21)
 - [LinkedIn](https://www.linkedin.com/in/murugappan-m-56920a192/)
 
-## Machine-readable feeds
-- [Blog RSS](https://murugappan.dev/blog/rss.xml)
-- [Sitemap](https://murugappan.dev/sitemap.xml)
-- [Full blog content for LLMs](https://murugappan.dev/blog/llms-full.txt)
-- [Agent instructions](https://murugappan.dev/AGENTS.md)
-- [OpenAPI specification](https://murugappan.dev/openapi.json)
-- [API catalog (RFC 9727 link set)](https://murugappan.dev/.well-known/api-catalog)
-- [MCP server manifest (server.json)](https://murugappan.dev/.well-known/mcp.json)
-- [API version and deprecation policy](https://murugappan.dev/api/v1/versions)
+## Discovery documents
+{{surface.entryPoints}}

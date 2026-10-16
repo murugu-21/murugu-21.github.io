@@ -7,6 +7,8 @@ import {
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import type { PostSummary } from "@murugappan/contracts/api/posts.ts";
+import { MCP_RESOURCES, type McpResourceKey } from "@murugappan/contracts/mcp.ts";
+import { DOCUMENTS } from "@murugappan/contracts/surface.ts";
 import { runInRequest } from "#src/app.module.ts";
 import { AGENTS_MD, LLMS_FULL_TXT, LLMS_TXT } from "#src/common/content.ts";
 import type { Render } from "#src/common/di/render.ts";
@@ -40,48 +42,34 @@ const forAssistant = (priority: number): ResourceAnnotations => ({
   priority
 });
 
-const STATIC_RESOURCES: Array<ResourceDescriptor & { text: () => string }> = [
-  {
-    uri: `${SITE_ORIGIN}/llms.txt`,
+type StaticResource = { text: () => string; description: string; priority: number };
+
+const STATIC_RESOURCES: Record<McpResourceKey, StaticResource> = {
+  llms: {
     text: () => LLMS_TXT,
-    name: "llms.txt",
-    title: "Site summary for LLMs",
     description:
       "One page covering the whole site: who Murugappan M is, when to reach for this site, how to call its API, his experience, skills and every blog post with a summary. The cheapest single document to ground on.",
-    mimeType: "text/plain",
-    annotations: forAssistant(0.9)
+    priority: 0.9
   },
-  {
-    uri: `${SITE_ORIGIN}/AGENTS.md`,
+  agentGuide: {
     text: () => AGENTS_MD,
-    name: "AGENTS.md",
-    title: "Agent instructions",
     description:
       "When to use this site and when not to, which call to make for which question, the rate limits, and the error format. Written for agents rather than for people.",
-    mimeType: "text/markdown",
-    annotations: forAssistant(0.8)
+    priority: 0.8
   },
-  {
-    uri: `${SITE_ORIGIN}/openapi.json`,
+  openapi: {
     text: () => JSON.stringify(buildOpenApiDocument(SITE_ORIGIN), null, 2),
-    name: "openapi.json",
-    title: "OpenAPI 3.1.0 specification",
     description:
       "The full machine-readable contract for the site's REST API: every operation with a unique operationId, typed parameters and response schemas. Convertible directly into function-calling tool definitions.",
-    mimeType: "application/json",
-    annotations: forAssistant(0.7)
+    priority: 0.7
   },
-  {
-    uri: `${SITE_ORIGIN}/blog/llms-full.txt`,
+  llmsFull: {
     text: () => LLMS_FULL_TXT,
-    name: "llms-full.txt",
-    title: "Full text of every blog post",
     description:
       "The complete body of every post on the SDE Journey blog in one file. It is large, so prefer search_blog_posts and get_blog_post unless you want everything.",
-    mimeType: "text/plain",
-    annotations: forAssistant(0.5)
+    priority: 0.5
   }
-];
+};
 
 const BLOG_POST_TEMPLATE = {
   uriTemplate: `${SITE_ORIGIN}/blog/{slug}/index.md`,
@@ -122,10 +110,15 @@ const markdownOrNull: Render<Post, PostNotFound, string | null> = {
 // A missing post throws ResourceNotFoundError, which the SDK answers with -32602; the spec forbids
 // an empty contents array.
 export function registerResources(server: McpServer, { services, clientIp }: ToolContext): void {
-  for (const { text, uri, name, ...metadata } of STATIC_RESOURCES) {
+  for (const key of MCP_RESOURCES) {
+    const { path, title, type: mimeType } = DOCUMENTS[key];
+    const { text, description, priority } = STATIC_RESOURCES[key];
+    const uri = `${SITE_ORIGIN}${path}`;
+    const name = path.slice(path.lastIndexOf("/") + 1);
+    const metadata = { title, description, mimeType, annotations: forAssistant(priority) };
     server.registerResource(name, uri, metadata, () => {
       spendRead(clientIp);
-      return contents({ uri, mimeType: metadata.mimeType, text: text() });
+      return contents({ uri, mimeType, text: text() });
     });
   }
 

@@ -2,12 +2,12 @@
 
 `apps/api/src/modules/mcp/README.md` describes the server. The tool descriptors live in `packages/contracts/mcp.ts`.
 
-**Lint and types cover.** The `McpToolDescriptor` type requires `inputSchema`, `outputSchema` and `annotations`. MCP handlers follow the controller rules in [hono.md](hono.md), including the import bans.
+**Lint and types cover.** The `McpToolDescriptor` type requires `kind`, `inputSchema` and `outputSchema`, and `TOOL_ANNOTATIONS` must describe every `ToolKind`. MCP handlers follow the controller rules in [hono.md](hono.md), including the import bans.
 
 Rules lint can't check:
 
 - **MCP-1.** Declare each tool's name, zod `inputSchema` and `outputSchema` in `packages/contracts/mcp.ts`, with a `.meta({ description })` on every field. A tool with no arguments uses `NO_ARGS`.
-- **MCP-2.** Annotations match the behaviour. `readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint` are what a client uses to decide whether to ask the user.
+- **MCP-2.** `kind` matches the behaviour: `read` for a tool that only reads, `write` for one that changes anything outside the server. It picks the annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint` and `openWorldHint`, what a client uses to decide whether to ask the user), the read throttle and whether PostHog keeps the arguments.
 - **MCP-3.** Return anything the model could fix or retry as an `isError` result with text that says what to change. Throw a protocol error only for a malformed request or an unknown resource. Don't re-`parse` arguments the SDK already validated, because a mismatch then throws instead of returning `isError`.
 - **MCP-4.** Return `structuredContent` that matches `outputSchema` and its JSON as text, through `ok()`.
 - **MCP-5.** Every tool and resource read is rate-limited, not only `send_message`. The spec requires it.

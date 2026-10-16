@@ -1,5 +1,6 @@
 import type { Blog, BlogPosting } from "schema-dts";
-import { BLOG_DESCRIPTION, BLOG_TITLE } from "@murugappan/content/site.ts";
+import { BLOG_DESCRIPTION } from "@murugappan/content/site.ts";
+import { BLOG_TITLE } from "@murugappan/contracts/blog.ts";
 import { BLOG_ID, BLOG_URL, PERSON_ID, WEBSITE_ID } from "#src/lib/site.ts";
 import { postDescription, postUrl, type PostSource } from "@murugappan/content/posts.ts";
 import { postKeywords } from "./posts";

@@ -1,17 +1,6 @@
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { entryPoints, linkHeader } from "@murugappan/content/surface.ts";
 import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
-
-const ENTRY_POINTS: ReadonlyArray<[string, string]> = [
-  ["/sitemap.xml", "Every indexable URL on this site"],
-  ["/llms.txt", "One-page summary of the whole site, for LLMs"],
-  ["/AGENTS.md", "Agent instructions: when to use this site, and how"],
-  ["/developers/", "Developer portal with the murugappan.dev API documentation"],
-  ["/openapi.json", "OpenAPI 3.1.0 specification for the API"],
-  ["/.well-known/api-catalog", "API catalogue (RFC 9727 linkset)"],
-  ["/.well-known/mcp.json", "MCP server manifest (server.json)"],
-  ["/mcp", "MCP server, Streamable HTTP, no auth"],
-  ["/blog/llms-full.txt", "Full text of every blog post"]
-];
 
 const PAGES: ReadonlyArray<[string, string]> = [
   ["/", "Portfolio"],
@@ -22,7 +11,7 @@ const PAGES: ReadonlyArray<[string, string]> = [
 ];
 
 const list = (entries: ReadonlyArray<[string, string]>): string =>
-  entries.map(([path, what]) => `- ${what}: ${SITE_ORIGIN}${path}`).join("\n");
+  entries.map(([path, what]) => `- [${what}](${SITE_ORIGIN}${path})`).join("\n");
 
 function notFoundMarkdown(pathname: string): string {
   return `# 404 Not Found
@@ -31,7 +20,8 @@ function notFoundMarkdown(pathname: string): string {
 
 ## Where to look next
 
-${list(ENTRY_POINTS)}
+${entryPoints()}
+- [MCP server, Streamable HTTP, no auth](${SITE_ORIGIN}/mcp)
 
 ## Pages that do exist
 
@@ -43,13 +33,7 @@ Every endpoint under \`${VERSIONED_API_BASE}\` answers JSON and never HTML, incl
 `;
 }
 
-const LINK_HEADER = [
-  `<${API_PATHS.openapiRoot}>; rel="service-desc"; type="application/json"`,
-  `</developers/>; rel="service-doc"; type="text/html"`,
-  `</llms.txt>; rel="describedby"; type="text/plain"`,
-  `</sitemap.xml>; rel="index"; type="application/xml"`,
-  `</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"`
-].join(", ");
+const LINK_HEADER = linkHeader("notFound");
 
 export function markdownNotFound({
   pathname,

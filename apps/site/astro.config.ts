@@ -20,6 +20,7 @@ import { copyButton } from "./src/lib/blog/shiki-copy-button";
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
+import { headersFile } from "./src/lib/headers";
 import { modulePreloader } from "./scripts/module-preload";
 import { ENV_SCHEMA, sourceMapUpload } from "./build-env";
 import { contentPosts, readPosts } from "@murugappan/content/vite/posts-plugin.ts";
@@ -48,6 +49,18 @@ function singleFileSitemap(): AstroIntegration {
         fs.renameSync(chunk, new URL("sitemap.xml", dir));
         fs.rmSync(new URL("sitemap-index.xml", dir), { force: true });
         logger.info(`\`sitemap.xml\` created at \`${fileURLToPath(dir)}\``);
+      }
+    }
+  };
+}
+
+function headersFileIntegration(): AstroIntegration {
+  return {
+    name: "headers-file",
+    hooks: {
+      "astro:build:done": ({ dir, logger }) => {
+        fs.writeFileSync(new URL("_headers", dir), headersFile());
+        logger.info(`\`_headers\` created at \`${fileURLToPath(dir)}\``);
       }
     }
   };
@@ -277,6 +290,7 @@ export default defineConfig({
       }
     }),
     singleFileSitemap(),
+    headersFileIntegration(),
     blogPostChecks(),
     // Last, so the site the resume prints from is final.
     buildArtifacts()

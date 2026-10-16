@@ -1,6 +1,7 @@
 // Spec: RFC 9727 api-catalog.
 import { API_PATHS, VERSIONED_API_BASE } from "@murugappan/contracts/api/routes.ts";
 import { API_VERSION } from "@murugappan/contracts/api/versioning.ts";
+import { developersSection } from "@murugappan/content/surface.ts";
 import {
   LATEST_PROTOCOL_VERSION,
   MCP_SERVER_NAME,
@@ -8,6 +9,7 @@ import {
   MCP_TOOLS,
   SERVER_NAME
 } from "@murugappan/contracts/mcp.ts";
+import { DOCUMENTS, type SurfaceDocument } from "@murugappan/contracts/surface.ts";
 
 const MCP_REPOSITORY = "https://github.com/murugu-21/murugu-21.github.io";
 
@@ -23,71 +25,39 @@ type Linkset = { linkset: LinksetEntry[] };
 /** RFC 9727 requires `service-desc` or `service-doc` per entry. */
 export function buildApiCatalog(origin: string): Linkset {
   const abs = (path: string): string => `${origin}${path}`;
-  const target = ({ path, type, title }: { path: string; type: string; title: string }) => ({
+  const target = ({ path, type, title }: SurfaceDocument): LinkTarget => ({
     href: abs(path),
     type,
     title
   });
-  const agentInstructions = target({
-    path: "/AGENTS.md",
-    type: "text/markdown",
-    title: "Agent instructions for murugappan.dev"
-  });
-  const author = { href: abs("/about/"), title: "Murugappan M" };
 
   return {
     linkset: [
       {
         anchor: abs(VERSIONED_API_BASE),
-        "service-desc": [
-          target({
-            path: API_PATHS.openapiRoot,
-            type: "application/json",
-            title: "OpenAPI 3.1.0 specification for the murugappan.dev API"
-          })
-        ],
-        "service-doc": [
-          target({
-            path: "/developers/",
-            type: "text/html",
-            title: "Developer portal for the murugappan.dev API"
-          })
-        ],
-        "service-meta": [
-          target({
-            path: API_PATHS.versions,
-            type: "application/json",
-            title: "Version and deprecation policy for the murugappan.dev API"
-          })
-        ],
-        describedby: [agentInstructions],
+        "service-desc": [target(DOCUMENTS.openapi)],
+        "service-doc": [target(DOCUMENTS.developers)],
+        "service-meta": [target(DOCUMENTS.versions)],
+        describedby: [target(DOCUMENTS.agentGuide)],
         status: [
           target({
-            path: "/developers/#versioning",
-            type: "text/html",
+            ...developersSection("versioning"),
             title: "Versioning and deprecation status for the murugappan.dev API"
           })
         ],
-        author: [author]
+        author: [target(DOCUMENTS.about)]
       },
       {
         anchor: abs("/mcp"),
-        "service-desc": [
-          target({
-            path: "/.well-known/mcp.json",
-            type: "application/json",
-            title: "server.json manifest for the murugappan.dev MCP server"
-          })
-        ],
+        "service-desc": [target(DOCUMENTS.mcpManifest)],
         "service-doc": [
           target({
-            path: "/developers/#mcp",
-            type: "text/html",
+            ...developersSection("mcp"),
             title: "Documentation for the murugappan.dev MCP server"
           })
         ],
-        describedby: [agentInstructions],
-        author: [author]
+        describedby: [target(DOCUMENTS.agentGuide)],
+        author: [target(DOCUMENTS.about)]
       }
     ]
   };

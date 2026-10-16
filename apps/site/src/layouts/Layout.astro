@@ -3,7 +3,8 @@ import { Font } from "astro:assets";
 import { cva } from "class-variance-authority";
 import type { Thing } from "schema-dts";
 import { jsonLdHtml } from "#src/lib/schema.ts";
-import { BLOG_TITLE, SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { linkedDocuments } from "@murugappan/content/surface.ts";
 import { PERSON_ID, SITE_DESCRIPTION } from "#src/lib/site.ts";
 import { outdatedRedirectScript } from "#src/lib/browser-support.ts";
 import { themeBootstrapScript } from "#src/lib/theme.ts";
@@ -87,6 +88,7 @@ const jsonLdScript = jsonLdHtml({
   page: noindex ? null : { url: canonicalUrl, name: title, about: section.pageAbout, profilePage },
   nodes: pageGraph
 });
+const siteWideLinks = linkedDocuments("/");
 ---
 
 <!doctype html>
@@ -100,27 +102,9 @@ const jsonLdScript = jsonLdHtml({
     <meta name="description" content={pageMetaDescription} />
     {noindex && <meta name="robots" content="noindex" />}
     {!noindex && <link rel="canonical" href={canonicalUrl} />}
-    <link rel="author" href="/about/" />
-    <link
-      rel="service-desc"
-      type="application/json"
-      href="/openapi.json"
-      title="OpenAPI 3.1.0 description of the murugappan.dev API"
-    />
-    <link rel="service-doc" type="text/html" href="/developers/" />
-    <link
-      rel="api-catalog"
-      type="application/linkset+json"
-      href="/.well-known/api-catalog"
-      title="murugappan.dev API catalogue (RFC 9727)"
-    />
-    <link rel="describedby" type="text/plain" href="/llms.txt" title="Site summary for LLMs" />
-    <link
-      rel="alternate"
-      type="application/rss+xml"
-      title={`${BLOG_TITLE} RSS Feed`}
-      href="/blog/rss.xml"
-    />
+    {siteWideLinks.map(({ rel, type, path, title }) => (
+      <link rel={rel} type={type} href={path} title={title} />
+    ))}
 
     <meta property="og:type" content={article ? "article" : "website"} />
     {!noindex && <meta property="og:url" content={canonicalUrl} />}

@@ -4,7 +4,8 @@ import MarkdownIt from "markdown-it";
 import sanitizeHtml from "sanitize-html";
 
 import { postDescription, postUrl } from "@murugappan/content/posts.ts";
-import { BLOG_DESCRIPTION, BLOG_TITLE, SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { BLOG_DESCRIPTION, SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { DOCUMENTS } from "@murugappan/contracts/surface.ts";
 import { getPostSources } from "#src/lib/blog/posts.ts";
 import { replaceMermaidFences } from "#src/lib/blog/mermaid-diagrams.ts";
 import { BLOG_URL } from "#src/lib/site.ts";
@@ -62,7 +63,7 @@ export async function GET() {
   );
 
   return rss({
-    title: `${BLOG_TITLE} RSS Feed`,
+    title: DOCUMENTS.rss.title,
     description: BLOG_DESCRIPTION,
     site: BLOG_URL,
     items

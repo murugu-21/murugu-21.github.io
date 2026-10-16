@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Rules for coding agents working in this repo. The agent guide that the site serves at `/AGENTS.md` is a different file, `packages/content/agent-guide.md`. `README.md` covers the architecture and tooling. Read it before changing the build, the Worker or the dev setup, and read the feature `README.md` for the area you touch (listed under "Where things are" there).
+Rules for coding agents working in this repo. The agent guide that the site serves at `/AGENTS.md` is a different file, the template `packages/content/agent-guide.md`. `packages/content/agent-docs.ts` fills its `{{placeholders}}` from `packages/contracts/mcp.ts` and from `packages/content/generated/`, which `apps/api/test/mcp.test.ts` writes (refresh with `bun run test -u`). `README.md` covers the architecture and tooling. Read it before changing the build, the Worker or the dev setup, and read the feature `README.md` for the area you touch (listed under "Where things are" there).
 
 ## Comments
 

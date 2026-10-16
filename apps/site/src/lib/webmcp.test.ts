@@ -56,14 +56,14 @@ describe("WebMCP tools", () => {
 
   it("reads a post by slug, and explains a slug that does not exist or is malformed", async () => {
     const { run } = await bootPage({});
-    expect(await run("read_blog_post", { slug: "post" })).toBe("# Post body");
-    expect(await run("read_blog_post", { slug: "missing" })).toBe(
+    expect(await run("get_blog_post", { slug: "post" })).toBe("# Post body");
+    expect(await run("get_blog_post", { slug: "missing" })).toBe(
       "No post found for slug 'missing'. Call list_blog_posts to see what exists."
     );
-    expect(await run("read_blog_post", { slug: "../etc/passwd" })).toBe(
+    expect(await run("get_blog_post", { slug: "../etc/passwd" })).toBe(
       "Invalid slug. Call list_blog_posts to find slugs."
     );
-    expect(await run("read_blog_post", { slug: 7 })).toBe(
+    expect(await run("get_blog_post", { slug: 7 })).toBe(
       "Invalid slug. Call list_blog_posts to find slugs."
     );
   });

@@ -7,7 +7,8 @@ import Header from "#src/components/Header.astro";
 import LinkRow from "#src/components/LinkRow.astro";
 import Prose from "#src/components/Prose.astro";
 import ScrollTop from "#src/components/ScrollTop.astro";
-import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { andList, SITE_ORIGIN } from "@murugappan/content/site.ts";
+import MCP_VALIDATION_ERROR from "@murugappan/content/generated/mcp-validation-error.txt?raw";
 import { PERSON_ID } from "#src/lib/site.ts";
 import { socialMediaLinks } from "@murugappan/content/portfolio.ts";
 import { JsonSchema, OPENAPI_DOCUMENT } from "@murugappan/contracts/api/openapi.ts";
@@ -20,8 +21,10 @@ import {
   LEGACY_PROTOCOL_VERSIONS,
   MCP_SERVER_NAME,
   MCP_SERVER_SCHEMA,
-  MCP_TOOLS
+  MCP_TOOLS,
+  type McpToolName
 } from "@murugappan/contracts/mcp.ts";
+import { WEBMCP_TOOL_NAMES } from "@murugappan/contracts/webmcp.ts";
 import {
   API_BASE,
   API_PATHS,
@@ -88,18 +91,20 @@ const errorExample = `{
     "documentation_url": "https://murugappan.dev/developers/"
   }
 }`;
+const exampleTool = "get_profile" satisfies McpToolName;
+const webMcpToolList = andList.formatToParts(WEBMCP_TOOL_NAMES);
 const mcpExample = `curl -s ${SITE_ORIGIN}/mcp \\
   -H 'Content-Type: application/json' \\
   -H 'Accept: application/json, text/event-stream' \\
   -H 'MCP-Protocol-Version: ${LATEST_PROTOCOL_VERSION}' \\
   -H 'Mcp-Method: tools/call' \\
-  -H 'Mcp-Name: get_profile' \\
+  -H 'Mcp-Name: ${exampleTool}' \\
   -d '{
     "jsonrpc": "2.0",
     "id": 1,
     "method": "tools/call",
     "params": {
-      "name": "get_profile",
+      "name": "${exampleTool}",
       "arguments": {},
       "_meta": {
         "io.modelcontextprotocol/protocolVersion": "${LATEST_PROTOCOL_VERSION}",
@@ -535,7 +540,7 @@ Retry-After: 39122</code></pre>
         anything else. Recoverable problems such as an unknown slug, a bad email or a spent
         allowance come back as tool execution errors (<code>isError</code>), not as protocol errors.
         Arguments that fail a tool's <code>inputSchema</code> are reported field by field, for
-        example <code>#/email: String does not match format "email"</code>.
+        example <code>{MCP_VALIDATION_ERROR}</code>.
       </p>
       <pre><code>{mcpExample}</code></pre>
       <h3 id="mcp-manifest">Manifest</h3>
@@ -572,9 +577,10 @@ Retry-After: 39122</code></pre>
       <p>
         Every page registers tools on <code>document.modelContext</code> when the browser supports
         the <a href="https://webmachinelearning.github.io/webmcp/">WebMCP</a> draft:{" "}
-        <code>get_profile</code>, <code>list_blog_posts</code>, <code>read_blog_post</code> and{" "}
-        <code>navigate_to</code>. A browser agent already on the page can call those without any
-        HTTP of its own.
+        {webMcpToolList.map(part =>
+          part.type === "element" ? <code>{part.value}</code> : part.value
+        )}
+        . A browser agent already on the page can call those without any HTTP of its own.
       </p>
     </section>
 

@@ -6,6 +6,7 @@ import {
   PostArgs,
   SearchArgs,
   SendMessageArgs,
+  TOOL_ANNOTATIONS,
   type McpToolDescriptor,
   type McpToolName
 } from "@murugappan/contracts/mcp.ts";
@@ -155,7 +156,7 @@ const RUN: Record<McpToolName, Run> = {
 
 export function registerTools(server: McpServer, ctx: ToolContext): void {
   for (const tool of MCP_TOOLS) {
-    const run = tool.annotations.readOnlyHint ? readLimited(RUN[tool.name]) : RUN[tool.name];
+    const run = tool.kind === "read" ? readLimited(RUN[tool.name]) : RUN[tool.name];
     server.registerTool(
       tool.name,
       {
@@ -163,7 +164,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
         description: tool.description,
         inputSchema: tool.inputSchema,
         outputSchema: tool.outputSchema,
-        annotations: tool.annotations
+        annotations: TOOL_ANNOTATIONS[tool.kind]
       },
       args => run(args, ctx, tool)
     );

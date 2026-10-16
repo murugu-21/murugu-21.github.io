@@ -31,6 +31,11 @@ describe("buildOpenApiDocument", () => {
   });
   /* oxlint-enable tests/observe-behaviour */
 
+  it("describes the MCP server with the registry's protocol revision and tool count", () => {
+    expect(doc.info.description).toContain("protocol revision 2026-07-28");
+    expect(doc.info.description).toContain("8 tools (`get_profile`, `list_experience`");
+  });
+
   it("gives every operation a unique operationId", () => {
     const ids = operations().map(([, op]) => op.operationId);
     for (const id of ids) expect(id).toMatch(/\S/);

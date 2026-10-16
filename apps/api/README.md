@@ -55,7 +55,7 @@ Services and repositories:
 
 A browser gets the normal 404 page. Anything else, like curl or an AI agent, gets a short markdown guide to the site. Both get a real 404 status.
 
-The Worker also serves `/.well-known/api-catalog` and `/.well-known/mcp.json`, which tell agents where the API and the MCP server are.
+The Worker also serves `/.well-known/api-catalog` and `/.well-known/mcp.json`, which tell agents where the API and the MCP server are. The documents these, the 404 and the `Link` headers point at come from `packages/contracts/surface.ts`.
 
 ## Jarvis
 

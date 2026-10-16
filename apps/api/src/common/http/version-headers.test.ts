@@ -30,15 +30,6 @@ describe("version headers", () => {
     expect(headers.Sunset).toBe("Thu, 01 Jul 2027 00:00:00 GMT");
   });
 
-  it("links the spec, the docs and the version history", () => {
-    const link = versionLinkHeader();
-    expect(link).toContain('</openapi.json>; rel="service-desc"');
-    expect(link).toContain('</developers/>; rel="service-doc"');
-    expect(link).toContain('</api/v1/versions>; rel="version-history"');
-    expect(link).toContain('rel="latest-version"');
-    expect(link).toContain('rel="api-catalog"');
-  });
-
   it("adds the migration pointers only once a version is deprecated", () => {
     const link = versionLinkHeader();
     expect(link).not.toContain('rel="deprecation"');

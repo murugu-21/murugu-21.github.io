@@ -646,11 +646,22 @@ describe("MCP_TOOLS definitions", () => {
     }
   });
 
-  it("marks the read tools read-only and the write tool not", () => {
-    for (const tool of MCP_TOOLS) {
-      expect(tool.annotations.readOnlyHint, tool.name).toBe(tool.name !== "send_message");
-      expect(tool.annotations.destructiveHint, tool.name).toBe(false);
-    }
+  it("serves the annotations each tool's kind stands for", async () => {
+    const { tools } = await (await connect()).listTools();
+    const annotationsOf = (name: string) => tools.find(tool => tool.name === name)?.annotations;
+
+    expect(annotationsOf("get_blog_post")).toEqual({
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false
+    });
+    expect(annotationsOf("send_message")).toEqual({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true
+    });
   });
 });
 
@@ -749,6 +760,8 @@ describe("send_message", () => {
     expect(sent).toEqual([]);
   });
 
+  const ERROR_TEXT_THE_DOCS_QUOTE = "../../../packages/content/generated/mcp-validation-error.txt";
+
   it("reports every invalid field, with the contact endpoint's rules, in one result", async () => {
     const result = await call(
       "send_message",
@@ -756,9 +769,7 @@ describe("send_message", () => {
       { ip: "198.51.100.62" }
     );
     expect(result.isError).toBe(true);
-    expect(textOf(result)).toBe(
-      "Input validation error: Invalid arguments for tool send_message: email: must be a valid email address, message: must be between 20 and 4000 characters"
-    );
+    await expect(textOf(result)).toMatchFileSnapshot(ERROR_TEXT_THE_DOCS_QUOTE);
   });
 
   it("rejects an argument the tool does not take", async () => {
@@ -890,6 +901,21 @@ describe("resources/read", () => {
     expect(content?.text).toMatch(start);
   });
 
+  it.each([
+    {
+      path: "/AGENTS.md",
+      fact: "| `send_message`      | Email him (`email`, `message`, optional `dryRun`)"
+    },
+    {
+      path: "/llms.txt",
+      fact: "get_profile, list_experience, list_skills, list_education, list_open_source, search_blog_posts, get_blog_post, send_message"
+    }
+  ])("serves $path with its facts rendered", async ({ path, fact }) => {
+    const [content] = Contents.parse(await read(`https://murugappan.dev${path}`));
+    expect(content?.text).toContain(fact);
+    expect(content?.text).not.toContain("{{");
+  });
+
   it.each<{ label: string; uri: string }>([
     { label: "an unpublished post", uri: `${SITE_ORIGIN}/blog/ghost/index.md` },
     { label: "a draft", uri: `${SITE_ORIGIN}/blog/js-closure/index.md` },
@@ -987,7 +1013,7 @@ describe("PostHog analytics", () => {
     );
   });
 
-  it("keeps a read tool's arguments and leaves out what a visitor typed into send_message", async () => {
+  it("keeps only a read tool's arguments: not send_message's, nor an unknown tool's", async () => {
     const { toolCall } = recordPostHog();
     const message = {
       name: "Ada Lovelace",
@@ -1000,12 +1026,28 @@ describe("PostHog analytics", () => {
       modern("tools/call", { name: "search_blog_posts", arguments: { query: "dp" } })
     );
     await sendAndWait(modern("tools/call", { name: "send_message", arguments: message }));
+    await sendAndWait(
+      modern("tools/call", { name: "not_a_tool", arguments: { email: "ada@example.com" } })
+    );
 
     expect(toolCall("search_blog_posts")).toMatchObject({
       $mcp_parameters: { request: { params: { arguments: { query: "dp" } } } }
     });
-    expect(JSON.stringify(toolCall("send_message"))).not.toContain("ada@example.com");
-    expect(toolCall("send_message")).toMatchObject({ $mcp_tool_name: "send_message" });
+    for (const tool of ["send_message", "not_a_tool"]) {
+      expect(toolCall(tool), tool).toMatchObject({ $mcp_tool_name: tool });
+      expect(Object.keys(toolCall(tool) ?? {}), tool).not.toContain("$mcp_parameters");
+      expect(JSON.stringify(toolCall(tool)), tool).not.toContain("ada@example.com");
+    }
+  });
+
+  it("keeps a resource read's parameters, which carry no visitor data", async () => {
+    const { events } = recordPostHog();
+
+    await sendAndWait(modern("resources/read", { uri: "https://murugappan.dev/llms.txt" }));
+
+    expect(events.find(e => e.event === "$mcp_resource_read")?.properties).toMatchObject({
+      $mcp_parameters: { request: { params: { uri: "https://murugappan.dev/llms.txt" } } }
+    });
   });
 
   it("sends nothing without a project token", async () => {

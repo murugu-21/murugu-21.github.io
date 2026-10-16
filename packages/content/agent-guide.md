@@ -4,10 +4,12 @@ Agent instructions for murugappan.dev, the personal site and public API of
 **Murugappan M**, a full stack engineer (TypeScript, Node.js, React, AWS) based
 in Bangalore, India, currently at MedMe Health.
 
-Canonical machine-readable contract: <https://murugappan.dev/openapi.json>
-Human documentation: <https://murugappan.dev/developers/>
-API catalogue (RFC 9727): <https://murugappan.dev/.well-known/api-catalog>
-MCP server manifest: <https://murugappan.dev/.well-known/mcp.json>
+## Discovery documents
+
+Each is one unauthenticated `GET`. Probe the catalogue first if you know nothing
+else about this site.
+
+{{surface.entryPoints}}
 
 ## When to use this site
 
@@ -49,31 +51,21 @@ https://murugappan.dev/mcp
 ```
 
 Streamable HTTP, `POST` only, no authentication, no session. Protocol revision
-`2026-07-28`, with backward compatibility for the `initialize`-based revisions
-(`2025-11-25`, `2025-06-18`, `2025-03-26`). `server/discover` (sent with
-`2026-07-28` `_meta`) lists the per-request revision; the older ones are
+`{{mcp.protocolVersion}}`, with backward compatibility for the `initialize`-based revisions
+({{mcp.legacyVersions}}). `server/discover` (sent with
+`{{mcp.protocolVersion}}` `_meta`) lists the per-request revision; the older ones are
 negotiated by `initialize`. Every `POST` needs
 `Content-Type: application/json`; `initialize`-era messages also
 need `Accept: application/json, text/event-stream`, because their replies
 arrive as a one-event SSE stream. Arguments that fail a tool's `inputSchema`
 come back as an `isError` result naming each bad field (for example
-`#/email: String does not match format "email"`), so fix them and call again.
-Eight tools, each with a typed `outputSchema`:
+`{{mcp.validationError}}`), so fix them and call again.
+{{mcp.toolCount}} tools, each with a typed `outputSchema`:
 
-| Tool                | What it does                                                      |
-| ------------------- | ----------------------------------------------------------------- |
-| `get_profile`       | Who he is: pitch, current role, location, links. Call this first. |
-| `list_experience`   | Dated roles with per-role achievements                            |
-| `list_skills`       | Typed skill categories and proficiencies                          |
-| `list_education`    | Degrees                                                           |
-| `list_open_source`  | Contributions with links to the merged PRs                        |
-| `search_blog_posts` | Search titles and summaries (`query`, `limit`)                    |
-| `get_blog_post`     | One post's full markdown (`slug`)                                 |
-| `send_message`      | Email him (`email`, `message`, optional `dryRun`)                 |
+{{mcp.toolTable}}
 
 It also serves resources, for clients that attach documents as context rather
-than calling tools: `https://murugappan.dev/llms.txt`, `/AGENTS.md`,
-`/openapi.json`, `/blog/llms-full.txt`, and every post's markdown at
+than calling tools: {{mcp.resources}}, and every post's markdown at
 `https://murugappan.dev/blog/{slug}/index.md`.
 
 If your client installs servers from a manifest rather than a pasted URL, the
@@ -210,8 +202,8 @@ array naming each bad field and what it must satisfy.
 **Off the API**, a path that does not exist answers a real `404`, never a
 `200` with an app shell. The body depends on the `Accept` header. Ask for HTML
 and you get the styled page; ask for anything else (or send no `Accept` at all)
-and you get a short markdown body listing the sitemap, this file, the developer
-portal, the OpenAPI document, the API catalogue and the MCP manifest.
+and you get a short markdown body listing the same discovery documents as this
+file, and naming the MCP endpoint.
 
 ## Function calling
 
@@ -225,22 +217,16 @@ into tool definitions. Use the `operationId` as the tool name.
 - **Conversation.** An AI assistant ("Jarvis") is on every page, grounded on
   this same content. Its WebSocket is private to the chat widget and has no
   published protocol, so programs should use the REST API or MCP.
-- **In-browser tools.** Every page registers `get_profile`, `list_blog_posts`,
-  `read_blog_post` and `navigate_to` on `document.modelContext`
-  ([WebMCP](https://webmachinelearning.github.io/webmcp/)) where the browser
-  supports it.
+- **In-browser tools.** Every page registers {{webmcp.toolNames}} on
+  `document.modelContext` ([WebMCP](https://webmachinelearning.github.io/webmcp/))
+  where the browser supports it.
 - **Markdown.** The home, about, resume and blog pages and every post have a
   markdown version at `index.md` under the page's path, such as
   `/about/index.md`. The page's own URL returns the same markdown when `Accept`
   ranks `text/markdown` above `text/html`, by q-value and then by order. Other
   pages and other `Accept` headers get the HTML, whose `Link` header names the
-  markdown version as `rel="alternate"` when there is one.
-- **Bulk text.** `/llms.txt` (site summary + every post),
-  `/blog/llms-full.txt` (full post text), `/sitemap.xml`, `/resume.pdf`.
-- **Discovery documents.** `/.well-known/api-catalog` (RFC 9727 link set naming
-  every API here and where each is described) and `/.well-known/mcp.json` (this
-  site's MCP `server.json`). Probe the catalogue first if you know nothing else
-  about this site.
+  markdown version as `rel="alternate"` when there is one. The resume is also a
+  PDF at `/resume.pdf`.
 
 ## Crawling and reuse
 

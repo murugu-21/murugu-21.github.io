@@ -1,7 +1,6 @@
 // The llms.txt format: https://llmstxt.org
-// The preamble is a ?raw .txt because it contains backticks.
 
-import LLMS_PREAMBLE from "./llms-preamble.txt?raw";
+import { llmsPreamble } from "./agent-docs.ts";
 import { greeting } from "./portfolio.ts";
 import { newestFirst, oneLineDescription, postUrl, type PostSource } from "./posts.ts";
 import {
@@ -11,7 +10,8 @@ import {
   skillBlocks
 } from "./profile-markdown.ts";
 import { resumeContact } from "./resume.ts";
-import { AUTHOR, BLOG_DESCRIPTION, BLOG_TITLE } from "./site.ts";
+import { BLOG_TITLE } from "@murugappan/contracts/blog.ts";
+import { AUTHOR, BLOG_DESCRIPTION } from "./site.ts";
 
 const postLines = (posts: PostSource[]): string[] =>
   newestFirst(posts).map(post => {
@@ -24,7 +24,7 @@ export const siteLlmsText = (posts: PostSource[]) =>
   `${[
     `# ${resumeContact.name}, ${resumeContact.title}`,
     `> ${greeting.subTitle}`,
-    LLMS_PREAMBLE.trimEnd(),
+    llmsPreamble().trimEnd(),
     ...experienceBlocks(),
     ...skillBlocks(),
     ...educationBlocks(),

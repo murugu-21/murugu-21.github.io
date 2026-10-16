@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const BLOG_TITLE = "SDE Journey";
+
 const BLOG_TAGS = [
   "ai",
   "algorithms",

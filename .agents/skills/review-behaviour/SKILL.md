@@ -14,15 +14,15 @@ Read AGENTS.md › Tests first. Use [verify-murugappan-dev](../verify-murugappan
 1. Write the change's claim in one line. Then list every other claim the diff makes: commit body, README edits, `packages/content/agent-guide.md`, OpenAPI descriptions, test names. Each claim needs evidence by the end.
 2. Tag each changed file with its surface and the check that proves it.
 
-   | Changed                                                                            | Proven by                                                                                                          |
-   | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-   | React island, `apps/site/src/**/*.tsx`                                             | `browser` test project, plus a verify browser recipe                                                               |
-   | `.astro` page or layout, `global.css`                                              | the build, plus a verify browser recipe in both themes. No test renders `.astro`.                                  |
-   | Worker route, guard, pipe or middleware, `apps/api/src/**`                         | `workers` project through `apiClient` or `fetchWorker`, plus a verify curl recipe                                  |
-   | Durable Object (`*.durable-object.ts`)                                             | `workers` project with `runInDurableObject`. Treat it as stateful and timed.                                       |
-   | `packages/contracts/**`                                                            | both apps, `/openapi.json` and the MCP tool schemas                                                                |
-   | `packages/content/**`                                                              | pages, `/api/v1/*`, MCP resources, `index.md`, `llms.txt`, chat grounding, and the verify recipes' expected counts |
-   | `apps/site/public/_headers`, `astro.config.ts`, `wrangler.jsonc`, `vite.config.ts` | every page or route. No test covers `_headers`.                                                                    |
+   | Changed                                                           | Proven by                                                                                                                                             |
+   | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | React island, `apps/site/src/**/*.tsx`                            | `browser` test project, plus a verify browser recipe                                                                                                  |
+   | `.astro` page or layout, `global.css`                             | the build, plus a verify browser recipe in both themes. No test renders `.astro`.                                                                     |
+   | Worker route, guard, pipe or middleware, `apps/api/src/**`        | `workers` project through `apiClient` or `fetchWorker`, plus a verify curl recipe                                                                     |
+   | Durable Object (`*.durable-object.ts`)                            | `workers` project with `runInDurableObject`. Treat it as stateful and timed.                                                                          |
+   | `packages/contracts/**`                                           | both apps, `/openapi.json` and the MCP tool schemas                                                                                                   |
+   | `packages/content/**`                                             | pages, `/api/v1/*`, MCP resources, `index.md`, `llms.txt`, chat grounding, and the verify recipes' expected counts                                    |
+   | `_headers`, `astro.config.ts`, `wrangler.jsonc`, `vite.config.ts` | every page or route. `_headers` is generated from `packages/contracts/surface.ts` by `apps/site/src/lib/headers.ts`, and `headers.test.ts` covers it. |
 
 3. Find the blast radius with grep, not by guessing. List the consumers of every changed export, constant and CSS token. `Layout.astro`, `global.css`, `browser-support.ts`, the theme bootstrap and the middleware in `app.ts` reach every page or route.
 4. Spend effort on the highest risk first. High impact here means it bills DeepSeek, sends email, writes durable state (D1, Durable Object storage), changes a public contract (`/api/v1`, `/mcp`, `/openapi.json`, `/.well-known/*`, markdown pages), or runs on every page load.

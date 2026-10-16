@@ -1,0 +1,1 @@
+Input validation error: Invalid arguments for tool send_message: email: must be a valid email address, message: must be between 20 and 4000 characters

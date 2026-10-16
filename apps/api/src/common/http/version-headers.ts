@@ -1,4 +1,5 @@
-import { API_BASE, API_PATHS } from "@murugappan/contracts/api/routes.ts";
+import { developersSection, linkHeader, linkValue } from "@murugappan/content/surface.ts";
+import { API_BASE } from "@murugappan/contracts/api/routes.ts";
 import {
   CURRENT_VERSION_RECORD,
   VERSIONS,
@@ -35,16 +36,12 @@ export function versionHeaders(record: VersionRecord = CURRENT_VERSION_RECORD): 
 }
 
 export function versionLinkHeader(record: VersionRecord = CURRENT_VERSION_RECORD): string {
-  const links = [
-    `<${API_PATHS.openapiRoot}>; rel="service-desc"; type="application/json"`,
-    `</developers/>; rel="service-doc"; type="text/html"`,
-    `<${API_PATHS.versions}>; rel="version-history"; type="application/json"`,
-    `<${CURRENT_VERSION_RECORD.basePath}>; rel="latest-version"`,
-    `</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"`
-  ];
+  const links = [linkHeader("api")];
   if (record.deprecatedOn) {
-    links.push(`</developers/#versioning>; rel="deprecation"; type="text/html"`);
-    if (record.successor) links.push(`<${API_BASE}/${record.successor}>; rel="successor-version"`);
+    links.push(linkValue({ ...developersSection("versioning"), rel: "deprecation" }));
+    if (record.successor) {
+      links.push(linkValue({ path: `${API_BASE}/${record.successor}`, rel: "successor-version" }));
+    }
   }
   return links.join(", ");
 }

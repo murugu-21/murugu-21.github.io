@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { LATEST_PROTOCOL_VERSION, MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
 import { JsonRecord, type JsonValue } from "@murugappan/utils/json.ts";
 import { API_BASE, API_PATHS, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./routes";
 import {
@@ -103,7 +104,7 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 
 **Errors.** Every failure, including a 404 on an unknown \`${API_BASE}/*\` path, returns the \`Error\` schema below: a stable \`code\`, a human \`message\`, a \`hint\` describing the fix, and \`documentation_url\`. Nothing under \`${API_BASE}\` serves an HTML error page. Off the API, a request for a path that does not exist gets a real \`404\` whose body is short markdown pointing at the sitemap and these entry points, so an agent can recover without parsing a styled page.
 
-**MCP.** The same content is served as a Model Context Protocol server (Streamable HTTP) at \`POST /mcp\`, protocol revision 2026-07-28 with backward compatibility for the \`initialize\`-based revisions. Eight tools (\`get_profile\`, \`list_experience\`, \`list_skills\`, \`list_education\`, \`list_open_source\`, \`search_blog_posts\`, \`get_blog_post\`, \`send_message\`) plus resources for the site's documents and every blog post. Add it to an MCP client as \`https://murugappan.dev/mcp\`. No auth is needed. Its manifest (\`server.json\`) is at \`https://murugappan.dev/.well-known/mcp.json\`.
+**MCP.** The same content is served as a Model Context Protocol server (Streamable HTTP) at \`POST /mcp\`, protocol revision ${LATEST_PROTOCOL_VERSION} with backward compatibility for the \`initialize\`-based revisions. ${MCP_TOOLS.length} tools (${MCP_TOOLS.map(tool => `\`${tool.name}\``).join(", ")}) plus resources for the site's documents and every blog post. Add it to an MCP client as \`https://murugappan.dev/mcp\`. No auth is needed. Its manifest (\`server.json\`) is at \`https://murugappan.dev/.well-known/mcp.json\`.
 
 **Conversation.** The site also runs an AI assistant ("Jarvis") in the chat widget on every page. Its WebSocket is private to the widget and has no published protocol, so programs should use this API or the MCP server.
 
