@@ -13,7 +13,7 @@ Rules lint can't check:
 - **ASTRO-7.** A component's script handles every instance on the page: `querySelectorAll`, a custom element, or `data-*` attributes for server values. A page-wide `getElementById` is fine only for a component rendered once.
 - **ASTRO-8.** Pages with `getStaticPaths` type it with `satisfies GetStaticPaths` and read props with `InferGetStaticPropsType`.
 - **ASTRO-9.** Collections live in `src/content.config.ts` with a loader and a zod schema. Sort and filter query results yourself, because `getCollection` order isn't stable.
-- **ASTRO-10.** Read configuration through `astro:env` fields declared in `astro.config.ts`. Only `import.meta.env.DEV` and `PROD` are read directly.
+- **ASTRO-10.** Read configuration through `astro:env` fields declared in `apps/site/build-env.ts`. Only `import.meta.env.DEV` and `PROD` are read directly.
 - **ASTRO-11.** Don't add `<ClientRouter />`, prefetch or server islands without a measured need. Native `@view-transition` comes first, and server islands need an adapter this static site doesn't have.
 - **ASTRO-12.** Every control's accessible name starts with its visible text (WCAG 2.5.3). A placeholder isn't a label.
 - **ASTRO-13.** Shared code doesn't reach into a page area's folder (`apps/site/src/README.md` › Folders). Lint blocks the import, so check that a moved file landed where its consumers say it belongs.

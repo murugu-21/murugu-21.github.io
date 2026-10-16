@@ -122,8 +122,7 @@ export default defineConfig({
             "tooling/**/*.test.ts",
             "apps/site/{src,scripts}/**/*.test.ts",
             "apps/tts/*.test.ts",
-            "packages/content/**/*.test.ts",
-            "packages/utils/**/*.test.ts"
+            "packages/**/*.test.ts"
           ]
         }
       },

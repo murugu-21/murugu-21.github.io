@@ -1,4 +1,5 @@
 import { defineConfig } from "vite-plus";
+import { BUILD_ENV_NAMES } from "./build-env";
 
 export default defineConfig({
   run: {
@@ -23,16 +24,7 @@ export default defineConfig({
           output: ["dist/**"],
           // The task sees only these and vp's passthrough. The GitHub card is fetched, so a hit
           // keeps the card it was cached with.
-          env: [
-            "GITHUB_TOKEN",
-            "POST_HOG_TOKEN",
-            "POST_HOG_URL",
-            "POSTHOG_API_KEY",
-            "POSTHOG_PROJECT_ID",
-            "PUBLIC_CHAT_HOST",
-            "REQUIRE_GITHUB_PROFILE",
-            "RESUME_PHONE"
-          ]
+          env: BUILD_ENV_NAMES
         }
       }
     }

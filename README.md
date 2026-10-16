@@ -51,7 +51,7 @@ Packages import each other by name and full file path, like `@murugappan/content
 
 ## Tests and checks
 
-`.githooks/pre-push` runs every check CI runs. It needs two tools from Homebrew: `brew install typos-cli uv`.
+`.githooks/pre-push` runs every check CI runs. Both call `bun run check:static` for the format, lint and typecheck gates. It regenerates the Worker types from `wrangler.jsonc` first, because lint and the typechecks read bindings from them. It needs two tools from Homebrew: `brew install typos-cli uv`.
 
 - Run tests with `bun run test`. `bun test` starts Bun's own test runner, which is the wrong one.
 - Before the first run, install Chromium with `bunx playwright install --only-shell chromium` and set up Python with `uv sync --locked --project apps/tts`.
@@ -74,7 +74,7 @@ These env vars change the build. All are optional locally.
 - `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID`: upload source maps for error tracking.
 - `RESUME_PHONE`: adds a phone number to the resume.
 
-`bun run build` is cached. The site build sees only the variables listed under `cache.env` in `apps/site/vite.config.ts`, so add a new one there too. A cached build keeps the GitHub card it fetched. Run `bunx vp cache clean` to fetch it again.
+`bun run build` is cached, and the site build sees only the variables in `apps/site/build-env.ts`, so declare a new one there. A cached build keeps the GitHub card it fetched. Run `bunx vp cache clean` to fetch it again.
 
 ## Browser support
 

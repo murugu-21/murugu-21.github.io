@@ -1,42 +1,21 @@
 #!/bin/sh
 set -e
 
-# Bindings come from wrangler.jsonc, so the typechecks below must not read stale ones.
-echo "pre-push 1/11: worker types"
-bun run --silent types >/dev/null
-
-echo "pre-push 2/11: format"
 command -v uv >/dev/null || { echo "uv is not installed: brew install uv"; exit 1; }
-bun run --silent check-format
-
-echo "pre-push 3/11: spelling"
 command -v typos >/dev/null || { echo "typos is not installed: brew install typos-cli"; exit 1; }
+
+echo "pre-push 1/4: spelling"
 typos
 
-echo "pre-push 4/11: lint"
-bun run --silent lint
+echo "pre-push 2/4: types, format, lint, unused code and typechecks"
+bun run --silent check:static
 
-echo "pre-push 5/11: unused files, exports and dependencies"
-bun run --silent knip
-
-echo "pre-push 6/11: site, packages and config typecheck"
-bun run --silent check:src
-
-echo "pre-push 7/11: worker typecheck"
-bun run --silent check:worker
-
-echo "pre-push 8/11: Effect diagnostics"
-bun run --silent check:effect
-
-echo "pre-push 9/11: python typecheck"
-bun run --silent check:py
-
-echo "pre-push 10/11: unit tests"
+echo "pre-push 3/4: unit tests"
 bun run --silent test
 
 # Last, because it rewrites apps/site/dist/ and apps/api/dist-worker/, which `bun run preview`
 # serves.
-echo "pre-push 11/11: site and Worker build"
+echo "pre-push 4/4: site and Worker build"
 bun run --silent build
 
 echo "pre-push: all gates green"

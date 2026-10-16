@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-// Keep in sync with "Tag vocabulary" in packages/content/blog/README.md.
 const BLOG_TAGS = [
   "ai",
   "algorithms",

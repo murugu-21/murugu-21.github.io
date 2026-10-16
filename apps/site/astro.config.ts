@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
-import { defineConfig, envField, fontProviders } from "astro/config";
+import { defineConfig, fontProviders } from "astro/config";
 import { rehypeHeadingIds, unified } from "@astrojs/markdown-remark";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
@@ -21,6 +21,7 @@ import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
 import { modulePreloader } from "./scripts/module-preload";
+import { ENV_SCHEMA, sourceMapUpload } from "./build-env";
 import { contentPosts, readPosts } from "@murugappan/content/vite/posts-plugin.ts";
 
 const POSTS = readPosts();
@@ -224,38 +225,11 @@ function modulePreloadHints(): AstroIntegration {
   };
 }
 
-// Workers Builds sets these env vars only in production.
-const POSTHOG_API_KEY = process.env.POSTHOG_API_KEY?.trim();
-const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID?.trim();
+const { personalApiKey, projectId } = sourceMapUpload;
 
 export default defineConfig({
   site: SITE_ORIGIN,
-  env: {
-    schema: {
-      PUBLIC_CHAT_HOST: envField.string({ context: "client", access: "public", optional: true }),
-      // A public project key (phc_), written into meta tags at build; never the personal phx_ key.
-      POST_HOG_TOKEN: envField.string({
-        context: "server",
-        access: "public",
-        optional: true,
-        startsWith: "phc_"
-      }),
-      POST_HOG_URL: envField.string({
-        context: "server",
-        access: "public",
-        optional: true,
-        url: true
-      }),
-      GITHUB_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
-      REQUIRE_GITHUB_PROFILE: envField.enum({
-        context: "server",
-        access: "public",
-        values: ["0", "1"],
-        default: "0"
-      }),
-      RESUME_PHONE: envField.string({ context: "server", access: "secret", optional: true })
-    }
-  },
+  env: { schema: ENV_SCHEMA },
   fonts: [
     {
       provider: fontProviders.local(),
@@ -321,11 +295,11 @@ export default defineConfig({
     plugins: [
       contentPosts(),
       tailwindcss(),
-      ...(POSTHOG_API_KEY && POSTHOG_PROJECT_ID
+      ...(personalApiKey && projectId
         ? [
             posthog({
-              personalApiKey: POSTHOG_API_KEY,
-              projectId: POSTHOG_PROJECT_ID,
+              personalApiKey,
+              projectId,
               sourcemaps: { enabled: true, deleteAfterUpload: true }
             })
           ]
