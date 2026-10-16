@@ -3,7 +3,9 @@
   "workspaces": {
     ".": {
       // The husky plugin parses any hook script; ours live in .githooks (core.hooksPath).
-      "husky": { "config": [".githooks/*"] }
+      "husky": { "config": [".githooks/*"] },
+      // oxfmt needs it to format .astro but declares it only as an optional peer.
+      "ignoreDependencies": ["@astrojs/compiler-rs"]
     },
     "apps/site": {
       // Files loaded by path, which no plugin parses: the client directive and the resume

@@ -1,6 +1,17 @@
 {
   // apps/site/src/styles/*.css are Tailwind 4: @source, @theme and @custom-variant are
   // unknown to vscode-css-language-server, which otherwise flags each one.
+  // Zed's bundled Prettier would format .astro with its defaults, which check-format rejects.
+  "languages": {
+    "Astro": {
+      "formatter": {
+        "external": {
+          "command": "node_modules/.bin/vp",
+          "arguments": ["fmt", "--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    }
+  },
   "lsp": {
     "vscode-css-language-server": {
       "settings": {

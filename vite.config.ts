@@ -42,7 +42,10 @@ export default defineConfig({
     ],
     "*.{json,jsonc,md}": "vp fmt --no-error-on-unmatched-pattern",
     "*.css": "biome check --write --no-errors-on-unmatched",
-    "*.astro": ["biome lint --write --no-errors-on-unmatched", "prettier --write"],
+    "*.astro": [
+      "biome lint --write --no-errors-on-unmatched",
+      "vp fmt --no-error-on-unmatched-pattern"
+    ],
     "*.py": ["bun run --silent py ruff check --fix", "bun run --silent py ruff format"]
   },
   test: {
@@ -87,6 +90,8 @@ export default defineConfig({
         ],
         test: {
           name: "workers",
+          // workerd can't read Vitest's module cache until cloudflare/workers-sdk#16163 lands.
+          fsModuleCache: false,
           tags: [
             {
               name: "live",

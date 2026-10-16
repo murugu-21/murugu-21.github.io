@@ -1,6 +1,6 @@
 # Astro
 
-**Lint covers.** Biome's full a11y set and its Astro rules on templates (`biome.jsonc` › `**/*.astro`), `set:html` (each use needs a `biome-ignore` with its reason), `client:only` naming its framework, inline styles, `javascript:` URLs, and `astro/typed-props` (a component that reads `Astro.props` declares `Props`). Oxlint reads frontmatter and `<script>` bodies but not the template, and its type-aware rules don't run in `.astro` at all. Prettier sorts classes. `tooling/astro-whitespace.test.ts` catches joined words.
+**Lint covers.** Biome's full a11y set and its Astro rules on templates (`biome.jsonc` › `**/*.astro`), `set:html` (each use needs a `biome-ignore` with its reason), `client:only` naming its framework, inline styles, `javascript:` URLs, and `astro/typed-props` (a component that reads `Astro.props` declares `Props`). Oxlint reads frontmatter and `<script>` bodies but not the template, and its type-aware rules don't run in `.astro` at all. Oxfmt sorts classes. `tooling/astro-whitespace.test.ts` catches joined words.
 
 Rules lint can't check:
 

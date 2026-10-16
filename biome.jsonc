@@ -5,8 +5,7 @@
   "files": { "includes": ["apps/site/src/**/*.astro", "apps/site/src/**/*.css"] },
   "formatter": { "indentStyle": "space", "lineWidth": 100 },
   "css": { "parser": { "tailwindDirectives": true } },
-  // Biome's formatter breaks lines where Astro then drops spaces, so Prettier formats .astro
-  // until oxfmt does (oxc-project/oxc#27386).
+  // Biome's formatter breaks lines where Astro then drops spaces, so oxfmt formats .astro instead.
   "html": { "experimentalFullSupportEnabled": true, "formatter": { "enabled": false } },
   "assist": { "enabled": false },
   "plugins": ["./tooling/biome/cn-variants.grit"],
