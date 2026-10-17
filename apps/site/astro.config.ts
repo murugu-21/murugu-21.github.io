@@ -10,6 +10,7 @@ import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import posthog from "@posthog/rollup-plugin";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeExternalLinks, { type Options as ExternalLinksOptions } from "rehype-external-links";
 import { parseHTML } from "linkedom";
 import { z } from "zod";
 import { autolinkConfig } from "./src/lib/blog/rehype-autolink-config";
@@ -324,7 +325,19 @@ export default defineConfig({
     // Astro 7's default satteri processor doesn't run unified plugins.
     processor: unified({
       remarkPlugins: [remarkMermaid],
-      rehypePlugins: [rehypeHeadingIds, [rehypeAutolinkHeadings, autolinkConfig]]
+      rehypePlugins: [
+        rehypeHeadingIds,
+        [rehypeAutolinkHeadings, autolinkConfig],
+        [
+          rehypeExternalLinks,
+          {
+            target: "_blank",
+            rel: ["noopener", "noreferrer"],
+            test: ({ properties: { href } }) =>
+              URL.parse(String(href), SITE_ORIGIN)?.origin !== SITE_ORIGIN
+          } satisfies ExternalLinksOptions
+        ]
+      ]
     }),
     // Both themes ride on each span as --shiki-light / --shiki-dark;
     // apps/site/src/styles/blog/code.css picks one per site theme.

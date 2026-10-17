@@ -231,6 +231,14 @@
          Chrome ignores them wherever scrollbar-color applies, mixing two styles. */
       scrollbar-color: var(--color-blue-light) var(--color-dark-base);
     }
+    a[target="_blank"]:not(:empty, :has(*))::after {
+      content: "↗" / " (opens in new tab)";
+      display: inline-block;
+      margin-inline-start: 0.125rem;
+      font-size: 0.7em;
+      /* vertical-align: super does nothing in the flex chips, so offset it instead. */
+      translate: 0 -0.6em;
+    }
   }
 }
 

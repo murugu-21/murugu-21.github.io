@@ -4,12 +4,7 @@ import { cdp } from "vite-plus/test/browser";
 
 import { bootstrapTheme } from "#src/lib/theme.ts";
 
-import css from "./global.css?raw";
-
-// Unprocessed Tailwind at-rules (@import, @theme, @utility) are ignored by the
-// browser, which leaves the plain rules this test needs: the `color-scheme`
-// pair on html. The imports are cut so the browser doesn't try to fetch them.
-const plain = (sheet: string) => sheet.replaceAll(/@import [^;]+;/g, "");
+import { plainGlobalCss } from "./plain-global-css.ts";
 
 const mounted: Element[] = [];
 afterEach(async () => {
@@ -22,7 +17,7 @@ afterEach(async () => {
 
 const mountProbe = () => {
   const style = document.createElement("style");
-  style.textContent = plain(css);
+  style.textContent = plainGlobalCss;
   const probe = document.createElement("div");
   probe.style.color = "light-dark(rgb(1, 2, 3), rgb(4, 5, 6))";
   document.head.append(style);
