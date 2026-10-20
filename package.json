@@ -47,7 +47,7 @@
     "@biomejs/biome": "2.5.15",
     "@cloudflare/vitest-plugin": "^1.4.3",
     "@commitlint/cli": "^21.2.3",
-    "@effect/tsgo": "0.53.1",
+    "@effect/tsgo": "0.55.0",
     "@types/node": "^26.6.5",
     "@vitest/browser-playwright": "5.0.5",
     "@vitest/coverage-istanbul": "5.0.5",
