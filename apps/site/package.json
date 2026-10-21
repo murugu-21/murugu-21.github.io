@@ -11,7 +11,7 @@
     "diagrams": "bun scripts/render-mermaid.ts"
   },
   "dependencies": {
-    "@ai-sdk/react": "4.0.146",
+    "@ai-sdk/react": "4.0.152",
     "@astrojs/markdown-remark": "^7.3.3",
     "@astrojs/react": "^7.1.0",
     "@astrojs/rss": "^4.0.19",
@@ -26,7 +26,7 @@
     "@radix-ui/react-slider": "^1.6.1",
     "@radix-ui/react-slot": "^1.5.0",
     "agents": "0.28.1",
-    "ai": "7.0.142",
+    "ai": "7.0.148",
     "astro": "^7.4.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",

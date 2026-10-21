@@ -15,7 +15,7 @@
     "types": "wrangler types --strict-vars=false"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "3.0.66",
+    "@ai-sdk/deepseek": "3.0.70",
     "@cloudflare/ai-chat": "0.12.1",
     "@modelcontextprotocol/server": "2.3.1",
     "@murugappan/content": "workspace:*",
@@ -23,14 +23,14 @@
     "@murugappan/utils": "workspace:*",
     "@posthog/mcp": "0.22.3",
     "agents": "0.28.1",
-    "ai": "7.0.142",
+    "ai": "7.0.148",
     "effect": "^4.0.5",
     "hono": "5.0.0-rc.1",
     "posthog-node": "5.56.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "4.0.28",
+    "@ai-sdk/provider": "4.0.31",
     "@cloudflare/vite-plugin": "^1.64.0",
     "@cloudflare/vitest-plugin": "^1.4.3",
     "@modelcontextprotocol/client": "2.3.1",
