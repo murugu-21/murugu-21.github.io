@@ -712,7 +712,7 @@ it("reconnects with a fresh Turnstile token while the conversation and the compo
   await render(<ChatWidget turnstileSiteKey="site-key" />);
   await openWithTurnstile(pendingSolves);
   await expect.element(sendButton()).toBeEnabled();
-  expect(tokens()).toEqual(["site-key-token-1"]);
+  await expect.poll(tokens).toEqual(["site-key-token-1"]);
 
   await userEvent.type(input(), "Hi{Enter}");
   await expect.poll(() => lastRoom().requests).toHaveLength(1);
@@ -781,7 +781,7 @@ it("keeps retrying a refused socket after each successful open", async () => {
   lastRoom().dropSockets();
   await expect.element(sendButton()).toBeDisabled();
   await expect.element(sendButton()).toBeEnabled();
-  expect(tokens()).toEqual(Array.from({ length: 9 }, (_, i) => `token-${i + 1}`));
+  await expect.poll(tokens).toEqual(Array.from({ length: 9 }, (_, i) => `token-${i + 1}`));
   await expect.element(page.getByText("Something went wrong on my end.")).not.toBeInTheDocument();
 });
 
@@ -792,7 +792,7 @@ it("retries each refusal with a fresh token while Turnstile is slow to solve", a
   await page.getByRole("button", { name: LAUNCHER }).click();
 
   await expect.element(sendButton(), { timeout: 20_000 }).toBeEnabled();
-  expect(tokens()).toEqual(["token-1", "token-2", "token-3"]);
+  await expect.poll(tokens).toEqual(["token-1", "token-2", "token-3"]);
 });
 
 it("gives up on a socket the Worker keeps refusing, says chat is unavailable and reports it once", async () => {
@@ -889,7 +889,7 @@ it("shows Turnstile's interactive check inside the phone's modal panel and waits
 
   await humanCheck().click();
   await expect.element(sendButton()).toBeEnabled();
-  expect(tokens()).toEqual(["solved-1"]);
+  await expect.poll(tokens).toEqual(["solved-1"]);
   await expect.element(checkStatus()).toHaveTextContent("");
   await expect.element(input()).not.toHaveFocus();
 });
@@ -930,7 +930,7 @@ it("times out 15 s after a clicked check goes quiet, then asks again", async () 
   await expect.poll(tokens).toEqual([null]);
   await humanCheck().click();
   await expect.element(sendButton()).toBeEnabled();
-  expect(tokens()).toEqual([null, "solved-2"]);
+  await expect.poll(tokens).toEqual([null, "solved-2"]);
 });
 
 it("clears the check line when the check fails and the retry passes unseen", async () => {
@@ -945,7 +945,7 @@ it("clears the check line when the check fails and the retry passes unseen", asy
   await humanCheck().click();
 
   await expect.element(sendButton()).toBeEnabled();
-  expect(tokens()).toEqual([null, "solved-2"]);
+  await expect.poll(tokens).toEqual([null, "solved-2"]);
   await expect.element(checkStatus()).toHaveTextContent("");
 });
 
@@ -961,7 +961,7 @@ it("asks for the check again when the visitor closes the panel mid-check and reo
 
   await humanCheck().click();
   await expect.element(sendButton()).toBeEnabled();
-  expect(tokens()).toEqual(["solved-2"]);
+  await expect.poll(tokens).toEqual(["solved-2"]);
 });
 
 it("waits for the panel to reopen before fetching a token for a socket that dropped while closed", async () => {
@@ -980,7 +980,7 @@ it("waits for the panel to reopen before fetching a token for a socket that drop
   await expect.poll(() => pendingSolves).toHaveLength(2);
   pendingSolves[1]?.();
   await expect.element(sendButton()).toBeEnabled();
-  expect(tokens()).toEqual(["site-key-token-1", "site-key-token-2"]);
+  await expect.poll(tokens).toEqual(["site-key-token-1", "site-key-token-2"]);
 });
 
 it("gives up on a Turnstile that never answers after 15 s and retries with a fresh token", async () => {
