@@ -1,9 +1,9 @@
-import { runInDurableObject } from "cloudflare:test";
+import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
-import { afterEach, assert, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { z } from "zod";
 
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
@@ -562,8 +562,38 @@ describe("opening a chat socket", () => {
   });
 });
 
+const RoomRow = z.object({
+  country: z.string().nullable(),
+  ip: z.string().nullable(),
+  visitor_key: z.string().nullable(),
+  first_seen: z.number(),
+  last_seen: z.number()
+});
+type RoomRow = z.infer<typeof RoomRow>;
+
+async function roomRow(room: string): Promise<RoomRow | undefined> {
+  const found = await env.CHAT_DB.prepare(
+    `SELECT country, ip, visitor_key, first_seen, last_seen FROM rooms WHERE room_id = ?`
+  )
+    .bind(room)
+    .first();
+  return found === null ? undefined : RoomRow.parse(found);
+}
+
+function mirroredRoom(room: string, expected: Partial<RoomRow>): Promise<RoomRow> {
+  return vi.waitFor(
+    async () => {
+      const found = await roomRow(room);
+      assert(found, "no rooms row yet");
+      expect(found).toMatchObject(expected);
+      return found;
+    },
+    { timeout: 2000, interval: 5 }
+  );
+}
+
 describe("ChatRoom storage", () => {
-  it("records the visitor's country and IP, keeping first-seen across reconnects", async () => {
+  it("records the visitor's country, IP and key, keeping first-seen across reconnects", async () => {
     const stored = async (headers: Record<string, string>) => {
       const { stub } = await connectRoom(roomName("room-visitor"), { headers });
       return runInDurableObject(stub, visitorStorage);
@@ -572,7 +602,8 @@ describe("ChatRoom storage", () => {
     const first = await stored({ "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.7" });
     expect(first).toMatchObject({
       visitor_country: "IN",
-      visitor_ip: "203.0.113.7"
+      visitor_ip: "203.0.113.7",
+      visitor_key: "203.0.113.7"
     });
 
     const second = await stored({ "CF-IPCountry": "DE" });
@@ -580,6 +611,19 @@ describe("ChatRoom storage", () => {
     expect(second.visitor_ip).toBe("203.0.113.7");
     expect(second.visitor_first_seen).toBe(first.visitor_first_seen);
     expect(second.visitor_last_seen).toBeGreaterThanOrEqual(first.visitor_last_seen);
+  });
+
+  it("keys an IPv6 visitor on their /64, in the room and in D1", async () => {
+    const room = roomName("room-visitor-v6");
+    const { stub } = await connectRoom(room, {
+      headers: { "CF-Connecting-IP": "2001:DB8:0:A::1" }
+    });
+
+    expect(await runInDurableObject(stub, visitorStorage)).toMatchObject({
+      visitor_ip: "2001:DB8:0:A::1",
+      visitor_key: "2001:db8:0:a::/64"
+    });
+    await mirroredRoom(room, { ip: "2001:DB8:0:A::1", visitor_key: "2001:db8:0:a::/64" });
   });
 
   it("takes the country from the edge request over a CF-IPCountry header", async () => {
@@ -594,36 +638,176 @@ describe("ChatRoom storage", () => {
   it("mirrors one rooms row per room to D1, refreshed on reconnect", async () => {
     const room = roomName("room-mirror");
 
-    type RoomRow = {
-      country: string | null;
-      ip: string | null;
-      first_seen: number;
-      last_seen: number;
-    };
-    const mirrored = (expected: Partial<RoomRow>) =>
-      vi.waitFor(
-        async () => {
-          const found = await env.CHAT_DB.prepare(
-            `SELECT country, ip, first_seen, last_seen FROM rooms WHERE room_id = ?`
-          )
-            .bind(room)
-            .first<RoomRow>();
-          assert(found, "no rooms row yet");
-          expect(found).toMatchObject(expected);
-          return found;
-        },
-        { timeout: 2000, interval: 5 }
-      );
-
     await connectRoom(room, {
       headers: { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" }
     });
-    const first = await mirrored({ country: "IN", ip: "203.0.113.9" });
+    const first = await mirroredRoom(room, {
+      country: "IN",
+      ip: "203.0.113.9",
+      visitor_key: "203.0.113.9"
+    });
 
     await connectRoom(room, { headers: { "CF-IPCountry": "DE" } });
-    const second = await mirrored({ country: "DE", ip: "203.0.113.9" });
+    const second = await mirroredRoom(room, {
+      country: "DE",
+      ip: "203.0.113.9",
+      visitor_key: "203.0.113.9"
+    });
     expect(second.first_seen).toBe(first.first_seen);
     expect(second.last_seen).toBeGreaterThanOrEqual(first.last_seen);
+  });
+});
+
+describe("ChatRoom raw IP retention", () => {
+  const DAY = 86_400_000;
+  // 2100-01-01T00:00:00Z: a date ahead of the real clock, so workerd never fires the alarms
+  // on its own and only runDurableObjectAlarm runs them.
+  const T0 = 4_102_444_800_000;
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(T0);
+  });
+  afterEach(() => vi.useRealTimers());
+
+  const pendingErases = (stub: DurableObjectStub<ChatRoom>) =>
+    runInDurableObject(stub, async instance =>
+      (await instance.listSchedules()).map(({ callback, time }) => ({ callback, time }))
+    );
+
+  async function alarmAt(stub: DurableObjectStub<ChatRoom>, time: number): Promise<void> {
+    vi.setSystemTime(time);
+    await runDurableObjectAlarm(stub);
+  }
+
+  it("erases the IP and key 30 days after the visitor was last seen, keeping the rest", async () => {
+    const room = roomName("room-erase");
+    const { stub } = await connectRoom(room, {
+      headers: { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" }
+    });
+    await mirroredRoom(room, { ip: "203.0.113.9" });
+
+    await alarmAt(stub, T0 + 30 * DAY - 1000);
+    expect(await runInDurableObject(stub, visitorStorage)).toMatchObject({
+      visitor_ip: "203.0.113.9",
+      visitor_key: "203.0.113.9"
+    });
+
+    await alarmAt(stub, T0 + 30 * DAY);
+    expect(await runInDurableObject(stub, visitorStorage)).toEqual({
+      visitor_country: "IN",
+      visitor_first_seen: T0,
+      visitor_last_seen: T0
+    });
+    expect(await roomRow(room)).toEqual({
+      country: "IN",
+      ip: null,
+      visitor_key: null,
+      first_seen: T0,
+      last_seen: T0
+    });
+    expect(await pendingErases(stub)).toEqual([]);
+  });
+
+  it("moves the erase to 30 days after a reconnect, keeping one pending", async () => {
+    const room = roomName("room-erase-later");
+    const headers = { "CF-Connecting-IP": "2001:db8::1" };
+    const { stub } = await connectRoom(room, { headers });
+    // Off the whole second, so the erase lands on the next one rather than a second early.
+    vi.setSystemTime(T0 + 20 * DAY + 500);
+    await connectRoom(room, { headers });
+    await mirroredRoom(room, { last_seen: T0 + 20 * DAY + 500 });
+
+    expect(await pendingErases(stub)).toEqual([
+      { callback: "eraseVisitorIp", time: (T0 + 30 * DAY) / 1000 }
+    ]);
+
+    await alarmAt(stub, T0 + 30 * DAY);
+    expect(await runInDurableObject(stub, visitorStorage)).toMatchObject({
+      visitor_ip: "2001:db8::1",
+      visitor_key: "2001:db8:0:0::/64"
+    });
+    expect(await pendingErases(stub)).toEqual([
+      { callback: "eraseVisitorIp", time: (T0 + 50 * DAY) / 1000 + 1 }
+    ]);
+
+    await alarmAt(stub, T0 + 50 * DAY + 1000);
+    expect(await runInDurableObject(stub, visitorStorage)).toEqual({
+      visitor_first_seen: T0,
+      visitor_last_seen: T0 + 20 * DAY + 500
+    });
+    expect(await roomRow(room)).toMatchObject({ ip: null, visitor_key: null });
+  });
+
+  it("keeps the IP and key of a reconnect that lands while the erase writes to D1", async () => {
+    const room = roomName("room-erase-race");
+    const { stub } = await connectRoom(room, { headers: { "CF-Connecting-IP": "203.0.113.9" } });
+    await mirroredRoom(room, { ip: "203.0.113.9" });
+
+    // The held write polls the room's own state: a promise resolved from the test's context
+    // would resume the erase there, where workerd refuses the room's binding.
+    let eraseReachedD1 = false;
+    await runInDurableObject(stub, instance => {
+      const db = instance.env.CHAT_DB;
+      const kv = instance.ctx.storage.kv;
+      const prepare = (query: string) => {
+        if (!query.startsWith("UPDATE rooms SET ip = NULL")) return db.prepare(query);
+        return {
+          bind: (...values: unknown[]) => ({
+            run: async () => {
+              eraseReachedD1 = true;
+              while (kv.get("visitor_last_seen") === T0) {
+                await new Promise(resolve => setTimeout(resolve, 5));
+              }
+              return db
+                .prepare(query)
+                .bind(...values)
+                .run();
+            }
+          })
+        };
+      };
+      Object.assign(instance, { env: { ...instance.env, CHAT_DB: { prepare } } });
+    });
+
+    vi.setSystemTime(T0 + 30 * DAY);
+    const alarm = runDurableObjectAlarm(stub);
+    await vi.waitFor(() => assert(eraseReachedD1, "the erase hasn't reached D1"), {
+      timeout: 2000
+    });
+    // vi.waitFor moves the fake clock, so set it again before the reconnect.
+    vi.setSystemTime(T0 + 31 * DAY);
+    await connectRoom(room, { headers: { "CF-Connecting-IP": "198.51.100.7" } });
+    await alarm;
+
+    expect(await runInDurableObject(stub, visitorStorage)).toMatchObject({
+      visitor_ip: "198.51.100.7",
+      visitor_key: "198.51.100.7"
+    });
+    expect(
+      await mirroredRoom(room, { ip: "198.51.100.7", visitor_key: "198.51.100.7" })
+    ).toMatchObject({
+      last_seen: T0 + 31 * DAY
+    });
+    expect(await pendingErases(stub)).toEqual([
+      { callback: "eraseVisitorIp", time: (T0 + 61 * DAY) / 1000 }
+    ]);
+  });
+
+  it("erases on its next wake the IP a room stored before it scheduled erases", async () => {
+    const stub = env.ChatRoom.get(env.ChatRoom.idFromName(roomName("room-erase-old")));
+    await runInDurableObject(stub, async instance => {
+      instance.ctx.storage.kv.put("visitor_ip", "203.0.113.9");
+      instance.ctx.storage.kv.put("visitor_first_seen", T0 - 45 * DAY);
+      instance.ctx.storage.kv.put("visitor_last_seen", T0 - 40 * DAY);
+      await instance.onStart();
+    });
+
+    await alarmAt(stub, T0);
+    expect(await runInDurableObject(stub, visitorStorage)).toEqual({
+      visitor_first_seen: T0 - 45 * DAY,
+      visitor_last_seen: T0 - 40 * DAY
+    });
   });
 });
 

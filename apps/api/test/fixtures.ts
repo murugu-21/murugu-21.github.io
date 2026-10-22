@@ -87,6 +87,7 @@ export function recordingEmail(): RecordingEmail {
 const VisitorStorage = z.object({
   visitor_country: z.string().optional(),
   visitor_ip: z.string().optional(),
+  visitor_key: z.string().optional(),
   visitor_first_seen: z.number(),
   visitor_last_seen: z.number()
 });

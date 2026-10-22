@@ -35,9 +35,16 @@ import { buildMessages, jarvisTools, type Lead } from "#src/modules/chat/prompt.
 import { parseVisitorContext, type VisitorContext } from "#src/modules/chat/visitor.ts";
 import { contactMailer, sendOpportunityEmail } from "#src/modules/mail/mail.client.ts";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
-import { UNKNOWN_VISITOR, VisitorKey, visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
+import { parseVisitor, UNKNOWN_VISITOR, VisitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 const UNREADABLE = "Sorry, I couldn't read that message.";
+
+const IP_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Rounded up to a whole second: the scheduler rounds down, which would fire the erase early.
+function ipEraseTime(lastSeen: number): number {
+  return Math.ceil((lastSeen + IP_RETENTION_MS) / 1000) * 1000;
+}
 
 const RequestBody = z.object({ page: lenient(z.string()) });
 const Timestamp = z.number();
@@ -85,8 +92,10 @@ export class ChatRoom extends AIChatAgent<Env> {
   public maxPersistedMessages = 200;
   public messageConcurrency = "drop" as const;
 
-  // Public so tests can drive `ctx.storage.sql` via `runInDurableObject`.
+  // Public so tests can drive `ctx.storage.sql` and wrap the room's own bindings via
+  // `runInDurableObject`.
   declare public ctx: DurableObject<Env>["ctx"];
+  declare public env: Env;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -111,7 +120,7 @@ export class ChatRoom extends AIChatAgent<Env> {
     );
   }
 
-  public onStart(): void {
+  public async onStart(): Promise<void> {
     this.ctx.storage.sql.exec(
       `CREATE TABLE IF NOT EXISTS leads (
          id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -123,12 +132,57 @@ export class ChatRoom extends AIChatAgent<Env> {
        -- Rooms made before the per-visitor bucket still hold this table, and nothing else drops it.
        DROP TABLE IF EXISTS user_messages;`
     );
+    await this.scheduleIpErase({ idempotent: true });
   }
 
-  public onConnect(connection: Connection, ctx: ConnectionContext): void {
+  public async onConnect(connection: Connection, ctx: ConnectionContext): Promise<void> {
     const visitor = parseVisitorContext(ctx.request.headers);
-    connection.setState({ visitor: visitorKey(visitor?.ip) });
-    if (visitor) this.recordVisitor(visitor);
+    const key = parseVisitor(visitor?.ip);
+    connection.setState({ visitor: key ?? UNKNOWN_VISITOR });
+    if (!visitor) return;
+    this.recordVisitor({ visitor, key });
+    await this.scheduleIpErase({ idempotent: true });
+  }
+
+  // Public because schedule() only takes public method names. A sighting while an erase is
+  // pending moves only last-seen, so the erase checks it and sets a fresh one when not yet due.
+  public async eraseVisitorIp(): Promise<void> {
+    const lastSeen = this.ipLastSeen();
+    if (lastSeen === undefined) return;
+    if (ipEraseTime(lastSeen) > Date.now()) {
+      await this.scheduleIpErase({ idempotent: false });
+      return;
+    }
+    // Awaited, so a failure leaves the kv copy for the scheduler's retry or the next wake.
+    await this.env.CHAT_DB?.prepare(
+      `UPDATE rooms SET ip = NULL, visitor_key = NULL WHERE room_id = ? AND last_seen <= ?`
+    )
+      .bind(this.name, lastSeen)
+      .run();
+    // A reconnect during the await stored a fresh IP and key, which stay.
+    if (this.ipLastSeen() !== lastSeen) {
+      await this.scheduleIpErase({ idempotent: false });
+      return;
+    }
+    const kv = this.ctx.storage.kv;
+    kv.delete("visitor_ip");
+    kv.delete("visitor_key");
+  }
+
+  // Idempotent except from inside eraseVisitorIp: its own job still counts as pending until it
+  // returns, so an idempotent schedule there would match that job and be dropped with it.
+  private async scheduleIpErase({ idempotent }: { idempotent: boolean }): Promise<void> {
+    const lastSeen = this.ipLastSeen();
+    if (lastSeen === undefined) return;
+    await this.schedule(new Date(ipEraseTime(lastSeen)), "eraseVisitorIp", undefined, {
+      idempotent
+    });
+  }
+
+  private ipLastSeen(): number | undefined {
+    const kv = this.ctx.storage.kv;
+    if (kv.get("visitor_ip") === undefined) return undefined;
+    return Timestamp.safeParse(kv.get("visitor_last_seen")).data;
   }
 
   // An interrupted turn is dropped rather than retried, since a retry bills the model again.
@@ -262,7 +316,13 @@ export class ChatRoom extends AIChatAgent<Env> {
     return ConnectionVisitor.safeParse(state).data?.visitor ?? UNKNOWN_VISITOR;
   }
 
-  private recordVisitor(visitor: VisitorContext): void {
+  private recordVisitor({
+    visitor,
+    key
+  }: {
+    visitor: VisitorContext;
+    key: VisitorKey | null;
+  }): void {
     const kv = this.ctx.storage.kv;
     const now = Date.now();
     const knownFirstSeen = Timestamp.safeParse(kv.get("visitor_first_seen")).data;
@@ -270,18 +330,20 @@ export class ChatRoom extends AIChatAgent<Env> {
 
     if (visitor.country !== null) kv.put("visitor_country", visitor.country);
     if (visitor.ip !== null) kv.put("visitor_ip", visitor.ip);
+    if (key !== null) kv.put("visitor_key", key);
     kv.put("visitor_last_seen", now);
     if (knownFirstSeen === undefined) kv.put("visitor_first_seen", now);
 
     this.mirrorToD1(
       this.env.CHAT_DB?.prepare(
-        `INSERT INTO rooms (room_id, country, ip, first_seen, last_seen)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO rooms (room_id, country, ip, visitor_key, first_seen, last_seen)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (room_id) DO UPDATE SET
            country = COALESCE(excluded.country, rooms.country),
            ip = COALESCE(excluded.ip, rooms.ip),
+           visitor_key = COALESCE(excluded.visitor_key, rooms.visitor_key),
            last_seen = excluded.last_seen`
-      ).bind(this.name, visitor.country, visitor.ip, firstSeen, now)
+      ).bind(this.name, visitor.country, visitor.ip, key, firstSeen, now)
     );
   }
 
