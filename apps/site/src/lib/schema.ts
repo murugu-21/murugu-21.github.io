@@ -1,5 +1,10 @@
 import type { Graph, Person, Thing, WebPage, WebSite } from "schema-dts";
-import { sameAs, skillsCategories, socialMediaLinks } from "@murugappan/content/portfolio.ts";
+import {
+  currentEmployer,
+  sameAs,
+  skillsCategories,
+  socialMediaLinks
+} from "@murugappan/content/portfolio.ts";
 import { splitSkillItems } from "@murugappan/content/dataset.ts";
 import { AUTHOR, SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { PERSON_ID, SITE_DESCRIPTION, WEBSITE_ID } from "#src/lib/site.ts";
@@ -60,8 +65,7 @@ const person: Person = {
   description: SITE_DESCRIPTION,
   worksFor: {
     "@type": "Organization",
-    name: "MedMe Health",
-    url: "https://www.medmehealth.com"
+    ...currentEmployer
   },
   alumniOf: [
     {

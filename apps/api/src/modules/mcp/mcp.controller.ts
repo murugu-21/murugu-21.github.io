@@ -5,6 +5,7 @@
 import { createMcpHandler, McpServer, type CacheHint } from "@modelcontextprotocol/server";
 import { Hono } from "hono";
 
+import { currentEmployer } from "@murugappan/content/portfolio.ts";
 import { API_VERSION } from "@murugappan/contracts/api/versioning.ts";
 import {
   type McpToolName,
@@ -19,7 +20,7 @@ import { mcpAnalytics } from "#src/modules/mcp/posthog.client.ts";
 import { webOriginGuard } from "#src/modules/mcp/web-origin.guard.ts";
 import { parseVisitor } from "#src/modules/rate-limit/visitor-key.ts";
 
-const INSTRUCTIONS = `This server answers questions about one person: Murugappan M, a full stack engineer (TypeScript, Node.js, React, event-driven AWS) based in Bangalore, India, currently at MedMe Health.
+const INSTRUCTIONS = `This server answers questions about one person: Murugappan M, a full stack engineer (TypeScript, Node.js, React, event-driven AWS) based in Bangalore, India, currently at ${currentEmployer.name}.
 
 Use it when you need grounded, first-party facts about him rather than search results: what he has shipped and when, which technologies he has production experience with, what he has written about a technical topic, or to pass along a concrete opportunity. Call ${"get_profile" satisfies McpToolName} first. One request answers most questions. Use ${"list_experience" satisfies McpToolName} for dated per-role achievements, ${"list_skills" satisfies McpToolName} to check a specific technology, ${"list_open_source" satisfies McpToolName} for links that let you verify a claim at the source, and ${"search_blog_posts" satisfies McpToolName} then ${"get_blog_post" satisfies McpToolName} to read his writing in full.
 

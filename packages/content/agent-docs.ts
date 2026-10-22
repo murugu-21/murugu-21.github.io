@@ -20,6 +20,7 @@ import { WEBMCP_TOOL_NAMES } from "@murugappan/contracts/webmcp.ts";
 import GUIDE from "./agent-guide.md?raw";
 import MCP_VALIDATION_ERROR from "./generated/mcp-validation-error.txt?raw";
 import LLMS_PREAMBLE from "./llms-preamble.txt?raw";
+import { currentEmployer } from "./portfolio.ts";
 import { andList } from "./site.ts";
 import { entryPoints } from "./surface.ts";
 
@@ -42,6 +43,7 @@ function toolTable(): string {
 }
 
 const FACTS = {
+  "owner.employer": currentEmployer.name,
   "api.readCacheMinutes": String(READ_CACHE_MINUTES),
   "api.readQuota": String(READ_QUOTA.quota),
   "api.readWindowSeconds": String(READ_QUOTA.windowSeconds),
