@@ -2,13 +2,13 @@ import { Suspense, useEffect, useEffectEvent, useRef, useState, type ComponentPr
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { useAgent } from "agents/react";
 import { safeValidateUIMessages } from "ai";
-import { z } from "zod";
 import { nanoid } from "nanoid";
 import { Download, EllipsisVertical, MessageCircle, RotateCcw, X } from "lucide-react";
 
 import {
   ERROR_NOTICE,
   GREETING,
+  JARVIS_DATA_SCHEMAS,
   TURNSTILE_TOKEN_PARAM,
   type Activity,
   type JarvisMessage
@@ -60,14 +60,6 @@ type Phase =
   | { kind: "working"; activity: Activity | null }
   | { kind: "replying" };
 
-const DATA_SCHEMAS = {
-  activity: z.object({
-    name: z.enum(["fetch_page", "capture_opportunity"]),
-    detail: z.string().optional()
-  }),
-  notice: z.object({ kind: z.enum(["limit", "error"]), text: z.string() })
-};
-
 function turnPhase(last: JarvisMessage | undefined): Phase {
   if (last?.role !== "assistant") return { kind: "working", activity: null };
   const tail = last.parts.findLast(
@@ -88,7 +80,7 @@ async function loadHistory({ url }: { url?: string }): Promise<JarvisMessage[]> 
     if (!res.ok) return [];
     const parsed = await safeValidateUIMessages<JarvisMessage>({
       messages: await res.json(),
-      dataSchemas: DATA_SCHEMAS
+      dataSchemas: JARVIS_DATA_SCHEMAS
     });
     return parsed.success ? parsed.data : [];
   } catch {
@@ -403,7 +395,7 @@ function RoomConnection({
   const { messages, sendMessage, status, isServerStreaming } = useAgentChat<unknown, JarvisMessage>(
     {
       agent,
-      dataPartSchemas: DATA_SCHEMAS,
+      dataPartSchemas: JARVIS_DATA_SCHEMAS,
       getInitialMessages: loadHistory,
       syncMessagesToServer: false,
       body: () => ({ page: window.location.pathname }),

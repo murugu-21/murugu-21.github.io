@@ -1,4 +1,5 @@
 import type { UIMessage } from "ai";
+import { z } from "zod";
 
 export const MAX_MESSAGE_LENGTH = 1000;
 
@@ -11,11 +12,14 @@ export const GREETING =
 
 export type ChatHistoryEntry = { role: "user" | "assistant"; content: string };
 
-export type ToolName = "fetch_page" | "capture_opportunity";
+const ToolName = z.enum(["fetch_page", "capture_opportunity"]);
+export type ToolName = z.infer<typeof ToolName>;
 
-export type Activity = { name: ToolName; detail?: string };
+const Activity = z.object({ name: ToolName, detail: z.string().optional() });
+export type Activity = z.infer<typeof Activity>;
 
-export type Notice = { kind: "limit" | "error"; text: string };
+const Notice = z.object({ kind: z.enum(["limit", "error"]), text: z.string() });
+export type Notice = z.infer<typeof Notice>;
 
 export const LIMIT_NOTICE: Notice = {
   kind: "limit",
@@ -28,5 +32,7 @@ export const ERROR_NOTICE: Notice = {
   kind: "error",
   text: "Something went wrong on my end. Please try again."
 };
+
+export const JARVIS_DATA_SCHEMAS = { activity: Activity, notice: Notice };
 
 export type JarvisMessage = UIMessage<unknown, { activity: Activity; notice: Notice }>;

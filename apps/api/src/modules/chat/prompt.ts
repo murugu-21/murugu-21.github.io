@@ -1,6 +1,7 @@
-import { tool, type ModelMessage } from "ai";
+import { tool, type ModelMessage, type Tool } from "ai";
 import { z } from "zod";
 
+import type { ToolName } from "@murugappan/contracts/chat.ts";
 import { lenient } from "@murugappan/utils/json.ts";
 
 const MAX_HISTORY_MESSAGES = 20;
@@ -44,7 +45,7 @@ export function jarvisTools({
       }),
       execute: ({ url }) => fetchPage(url)
     })
-  };
+  } satisfies Record<ToolName, Tool>;
 }
 
 function buildSystemPrompt(grounding: string): string {
