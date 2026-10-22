@@ -45,6 +45,7 @@ import {
   READ_POLICY,
   READ_QUOTA
 } from "@murugappan/contracts/api/quotas.ts";
+import { rateLimitField } from "@murugappan/content/rate-limit.ts";
 
 const operations = Object.entries(OPENAPI_DOCUMENT.paths).flatMap(([path, item]) =>
   Object.entries(item).map(([method, { operationId, summary, description }]) => ({
@@ -383,8 +384,12 @@ Link: &lt;/developers/#versioning&gt;; rel="deprecation", &lt;{API_BASE}/v2&gt;;
         <code>Retry-After</code>.
       </p>
       <pre><code>RateLimit-Policy: {READ_POLICY}
-RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
-          READ_QUOTA.windowSeconds
+RateLimit: {
+          rateLimitField({
+            quota: READ_QUOTA,
+            remaining: READ_QUOTA.quota - 1,
+            resetSeconds: READ_QUOTA.windowSeconds
+          })
         }</code></pre>
       <p>
         <strong>Reads</strong> are effectively unmetered. The fair-use ceiling is {READ_QUOTA.quota}{" "}
@@ -405,7 +410,7 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
         the tier that ran out:
       </p>
       <pre><code>RateLimit-Policy: {CONTACT_POLICY}
-RateLimit: "{CONTACT_CLIENT_QUOTA.name}";r=0;t=39122
+RateLimit: {rateLimitField({ quota: CONTACT_CLIENT_QUOTA, remaining: 0, resetSeconds: 39122 })}
 Retry-After: 39122</code></pre>
       <p>
         A rejected request never spends a slot, and neither does a dry run. A dry run still reports

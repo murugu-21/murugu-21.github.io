@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { CONTACT_POLICY, READ_POLICY } from "@murugappan/contracts/api/quotas.ts";
 import { LATEST_PROTOCOL_VERSION, MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
 import { WEBMCP_TOOL_NAMES } from "@murugappan/contracts/webmcp.ts";
 import GUIDE from "./agent-guide.md?raw";
 import { agentGuide, llmsPreamble, render } from "./agent-docs.ts";
 import MCP_VALIDATION_ERROR from "./generated/mcp-validation-error.txt?raw";
 import LLMS_PREAMBLE from "./llms-preamble.txt?raw";
+import { currentEmployer } from "./portfolio.ts";
 
 describe("render", () => {
   it("fills every placeholder from the facts", () => {
@@ -56,7 +58,10 @@ describe("agentGuide", () => {
     expect(guide).toContain("Limits: 3 per client IP per UTC day, 20 site-wide.");
     expect(guide).toContain("At least 180 days pass");
     expect(guide).toContain("Read endpoints are cached\n5 minutes.");
-    expect(llmsPreamble()).toContain("Reads are fair-use (600 per 60s per client)");
+    expect(guide).toContain(
+      '`RateLimit-Policy: "contact-client";q=3;w=86400, "contact-site";q=20;w=86400`.'
+    );
+    expect(guide).toContain("in Bangalore, India, currently at MedMe Health.");
   });
 });
 
@@ -65,6 +70,10 @@ describe("llmsPreamble", () => {
     expect(llmsPreamble()).toContain(
       "## Discovery documents\n- [Every indexable URL on this site](https://murugappan.dev/sitemap.xml)\n"
     );
+  });
+
+  it("states the read quota from the API contract", () => {
+    expect(llmsPreamble()).toContain("Reads are fair-use (600 per 60s per client)");
   });
 });
 
@@ -76,7 +85,15 @@ describe("agent documents", () => {
       document: "the agent guide",
       template: GUIDE,
       rendered: agentGuide(),
-      facts: [LATEST_PROTOCOL_VERSION, MCP_VALIDATION_ERROR, ...toolNames, ...WEBMCP_TOOL_NAMES]
+      facts: [
+        LATEST_PROTOCOL_VERSION,
+        MCP_VALIDATION_ERROR,
+        ...toolNames,
+        ...WEBMCP_TOOL_NAMES,
+        READ_POLICY,
+        CONTACT_POLICY,
+        currentEmployer.name
+      ]
     },
     {
       document: "the llms preamble",

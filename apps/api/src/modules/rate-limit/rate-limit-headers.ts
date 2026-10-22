@@ -4,18 +4,12 @@ import {
   CONTACT_GLOBAL_QUOTA,
   CONTACT_POLICY,
   READ_POLICY,
-  READ_QUOTA,
-  type Quota
+  READ_QUOTA
 } from "@murugappan/contracts/api/quotas.ts";
+import { rateLimitField, type Reported } from "@murugappan/content/rate-limit.ts";
 import type { ReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
 
 const clamp = (n: number) => Math.max(0, Math.floor(n));
-
-type Reported = { quota: Quota; remaining: number; resetSeconds: number };
-
-function rateLimitField({ quota, remaining, resetSeconds }: Reported): string {
-  return `"${quota.name}";r=${clamp(remaining)};t=${clamp(resetSeconds)}`;
-}
 
 export type RateLimitHeaders = {
   "RateLimit-Policy": string;
@@ -26,12 +20,14 @@ export type RateLimitHeaders = {
 };
 
 function rateLimitHeaders(policy: string, reported: Reported): RateLimitHeaders {
+  const remaining = clamp(reported.remaining);
+  const resetSeconds = clamp(reported.resetSeconds);
   return {
     "RateLimit-Policy": policy,
-    RateLimit: rateLimitField(reported),
+    RateLimit: rateLimitField({ quota: reported.quota, remaining, resetSeconds }),
     "X-RateLimit-Limit": String(reported.quota.quota),
-    "X-RateLimit-Remaining": String(clamp(reported.remaining)),
-    "X-RateLimit-Reset": String(clamp(reported.resetSeconds))
+    "X-RateLimit-Remaining": String(remaining),
+    "X-RateLimit-Reset": String(resetSeconds)
   };
 }
 

@@ -1,4 +1,4 @@
-import type { UIMessage } from "ai";
+import type { InferUIDataParts, UIMessage } from "ai";
 import { z } from "zod";
 
 export const MAX_MESSAGE_LENGTH = 1000;
@@ -35,4 +35,4 @@ export const ERROR_NOTICE: Notice = {
 
 export const JARVIS_DATA_SCHEMAS = { activity: Activity, notice: Notice };
 
-export type JarvisMessage = UIMessage<unknown, { activity: Activity; notice: Notice }>;
+export type JarvisMessage = UIMessage<unknown, InferUIDataParts<typeof JARVIS_DATA_SCHEMAS>>;

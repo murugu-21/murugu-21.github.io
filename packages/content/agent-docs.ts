@@ -21,6 +21,7 @@ import GUIDE from "./agent-guide.md?raw";
 import MCP_VALIDATION_ERROR from "./generated/mcp-validation-error.txt?raw";
 import LLMS_PREAMBLE from "./llms-preamble.txt?raw";
 import { currentEmployer } from "./portfolio.ts";
+import { rateLimitField } from "./rate-limit.ts";
 import { andList } from "./site.ts";
 import { entryPoints } from "./surface.ts";
 
@@ -48,7 +49,11 @@ const FACTS = {
   "api.readQuota": String(READ_QUOTA.quota),
   "api.readWindowSeconds": String(READ_QUOTA.windowSeconds),
   "api.readPolicy": READ_POLICY,
-  "api.readRateLimit": `"${READ_QUOTA.name}";r=${READ_QUOTA.quota - 1};t=${READ_QUOTA.windowSeconds}`,
+  "api.readRateLimit": rateLimitField({
+    quota: READ_QUOTA,
+    remaining: READ_QUOTA.quota - 1,
+    resetSeconds: READ_QUOTA.windowSeconds
+  }),
   "api.contactPerClient": String(CONTACT_DAILY_PER_CLIENT),
   "api.contactSiteWide": String(CONTACT_DAILY_GLOBAL),
   "api.contactPolicy": CONTACT_POLICY,
