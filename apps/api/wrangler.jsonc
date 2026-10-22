@@ -10,6 +10,7 @@
   // site, while keeping version preview URLs.
   "workers_dev": false,
   "preview_urls": true,
+  "triggers": { "crons": ["0 3 * * *"] },
   "observability": {
     "enabled": true,
     // Spans count toward the Workers Logs event quota, so trace a sample.

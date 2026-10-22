@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { createApp } from "#src/app.ts";
+import worker from "#src/server.ts";
 import { SharedWithTest, type WranglerConfigsRead } from "#test/wrangler-config.ts";
 
 declare const __WRANGLER_CONFIGS__: WranglerConfigsRead;
@@ -43,6 +44,13 @@ describe("apps/api/wrangler.jsonc", () => {
       production.send_email.map(binding => binding.destination_address),
       "vars.OPPORTUNITY_INBOX and send_email[].destination_address in apps/api/wrangler.jsonc must name the same address. Change both together."
     ).toEqual([production.vars.OPPORTUNITY_INBOX]);
+  });
+
+  it("has a scheduled handler exactly when it declares a cron trigger", () => {
+    expect(
+      production.triggers.crons.length > 0,
+      "triggers.crons in apps/api/wrangler.jsonc runs the `scheduled` export of apps/api/src/server.ts. Add or remove both together."
+    ).toBe("scheduled" in worker);
   });
 
   it("shares production's compatibility date and Durable Objects", () => {

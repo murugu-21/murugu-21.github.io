@@ -9,6 +9,7 @@ export const SharedWithTest = z.object({
 export const WranglerConfigs = z.object({
   production: SharedWithTest.extend({
     assets: z.object({ run_worker_first: z.array(z.string()) }),
+    triggers: z.object({ crons: z.array(z.string()) }),
     vars: z.object({ OPPORTUNITY_INBOX: z.email() }),
     send_email: z.array(z.object({ destination_address: z.string() }))
   }),

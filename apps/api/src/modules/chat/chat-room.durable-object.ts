@@ -32,18 +32,20 @@ import { admitFrame } from "#src/modules/chat/chat-frames.ts";
 import { deepseek, isInsufficientBalance, jarvisCall } from "#src/modules/chat/deepseek.client.ts";
 import { fetchSitePage } from "#src/modules/chat/fetch-page.client.ts";
 import { buildMessages, jarvisTools, type Lead } from "#src/modules/chat/prompt.ts";
-import { parseVisitorContext, type VisitorContext } from "#src/modules/chat/visitor.ts";
+import {
+  CONVERSATION_RETENTION_MS,
+  parseVisitorContext,
+  type VisitorContext
+} from "#src/modules/chat/visitor.ts";
 import { contactMailer, sendOpportunityEmail } from "#src/modules/mail/mail.client.ts";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
 import { parseVisitor, UNKNOWN_VISITOR, VisitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 const UNREADABLE = "Sorry, I couldn't read that message.";
 
-const IP_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-
-// Rounded up to a whole second: the scheduler rounds down, which would fire the erase early.
-function ipEraseTime(lastSeen: number): number {
-  return Math.ceil((lastSeen + IP_RETENTION_MS) / 1000) * 1000;
+// Rounded up to a whole second: the scheduler rounds down, which would fire the expiry early.
+function expiryTime(lastSeen: number): number {
+  return Math.ceil((lastSeen + CONVERSATION_RETENTION_MS) / 1000) * 1000;
 }
 
 const RequestBody = z.object({ page: lenient(z.string()) });
@@ -132,7 +134,19 @@ export class ChatRoom extends AIChatAgent<Env> {
        -- Rooms made before the per-visitor bucket still hold this table, and nothing else drops it.
        DROP TABLE IF EXISTS user_messages;`
     );
-    await this.scheduleIpErase({ idempotent: true });
+    const lastSeen = this.lastSeen();
+    if (lastSeen === undefined) return;
+    if (expiryTime(lastSeen) > Date.now()) {
+      await this.scheduleExpiry({ idempotent: true });
+      return;
+    }
+    // Every job the room holds is an expiry, so a pending one is due and the alarm that woke the
+    // room runs it next.
+    if ((await this.listSchedules()).length > 0) return;
+    await this.deleteConversation(lastSeen);
+    // destroy() aborts the room only on the next tick, so the request that woke it mustn't go on
+    // to read the wiped storage.
+    throw new Error("conversation expired");
   }
 
   public async onConnect(connection: Connection, ctx: ConnectionContext): Promise<void> {
@@ -141,48 +155,60 @@ export class ChatRoom extends AIChatAgent<Env> {
     connection.setState({ visitor: key ?? UNKNOWN_VISITOR });
     if (!visitor) return;
     this.recordVisitor({ visitor, key });
-    await this.scheduleIpErase({ idempotent: true });
+    await this.scheduleExpiry({ idempotent: true });
   }
 
-  // Public because schedule() only takes public method names. A sighting while an erase is
-  // pending moves only last-seen, so the erase checks it and sets a fresh one when not yet due.
+  // Public because schedule() only takes public method names. A sighting while an expiry is
+  // pending moves only last-seen, so the expiry checks it and sets a fresh one when not yet due.
+  public async expireConversation(): Promise<void> {
+    const lastSeen = this.lastSeen();
+    if (lastSeen === undefined) return;
+    if (expiryTime(lastSeen) > Date.now()) {
+      await this.scheduleExpiry({ idempotent: false });
+      return;
+    }
+    await this.deleteConversation(lastSeen);
+  }
+
+  // Jobs that earlier deploys stored call this name. Each is due within 30 days of this deploy.
   public async eraseVisitorIp(): Promise<void> {
-    const lastSeen = this.ipLastSeen();
-    if (lastSeen === undefined) return;
-    if (ipEraseTime(lastSeen) > Date.now()) {
-      await this.scheduleIpErase({ idempotent: false });
-      return;
-    }
-    // Awaited, so a failure leaves the kv copy for the scheduler's retry or the next wake.
-    await this.env.CHAT_DB?.prepare(
-      `UPDATE rooms SET ip = NULL, visitor_key = NULL WHERE room_id = ? AND last_seen <= ?`
-    )
-      .bind(this.name, lastSeen)
-      .run();
-    // A reconnect during the await stored a fresh IP and key, which stay.
-    if (this.ipLastSeen() !== lastSeen) {
-      await this.scheduleIpErase({ idempotent: false });
-      return;
-    }
-    const kv = this.ctx.storage.kv;
-    kv.delete("visitor_ip");
-    kv.delete("visitor_key");
+    await this.scheduleExpiry({ idempotent: true });
   }
 
-  // Idempotent except from inside eraseVisitorIp: its own job still counts as pending until it
-  // returns, so an idempotent schedule there would match that job and be dropped with it.
-  private async scheduleIpErase({ idempotent }: { idempotent: boolean }): Promise<void> {
-    const lastSeen = this.ipLastSeen();
+  private async deleteConversation(lastSeen: number): Promise<void> {
+    const db = this.env.CHAT_DB;
+    await db?.batch([
+      db
+        .prepare(
+          `DELETE FROM messages WHERE room_id = ?1
+           AND NOT EXISTS (SELECT 1 FROM rooms WHERE room_id = ?1 AND last_seen > ?2)`
+        )
+        .bind(this.name, lastSeen),
+      db
+        .prepare(`DELETE FROM rooms WHERE room_id = ?1 AND last_seen <= ?2`)
+        .bind(this.name, lastSeen)
+    ]);
+    // A reconnect during the await keeps the conversation going, though D1 loses its copy if the
+    // batch reached D1 before the reconnect's own write.
+    if (this.lastSeen() !== lastSeen) {
+      await this.scheduleExpiry({ idempotent: false });
+      return;
+    }
+    await this.destroy();
+  }
+
+  // Idempotent except from inside expireConversation: its own job still counts as pending until
+  // it returns, so an idempotent schedule there would match that job and be dropped with it.
+  private async scheduleExpiry({ idempotent }: { idempotent: boolean }): Promise<void> {
+    const lastSeen = this.lastSeen();
     if (lastSeen === undefined) return;
-    await this.schedule(new Date(ipEraseTime(lastSeen)), "eraseVisitorIp", undefined, {
+    await this.schedule(new Date(expiryTime(lastSeen)), "expireConversation", undefined, {
       idempotent
     });
   }
 
-  private ipLastSeen(): number | undefined {
-    const kv = this.ctx.storage.kv;
-    if (kv.get("visitor_ip") === undefined) return undefined;
-    return Timestamp.safeParse(kv.get("visitor_last_seen")).data;
+  private lastSeen(): number | undefined {
+    return Timestamp.safeParse(this.ctx.storage.kv.get("visitor_last_seen")).data;
   }
 
   // An interrupted turn is dropped rather than retried, since a retry bills the model again.

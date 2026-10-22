@@ -1,6 +1,6 @@
-import { runInDurableObject } from "cloudflare:test";
+import { createScheduledController, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
-import { assert, beforeEach, describe, expect, it } from "vite-plus/test";
+import { assert, beforeEach, describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { TURNSTILE_TOKEN_PARAM } from "@murugappan/contracts/chat.ts";
@@ -386,4 +386,73 @@ describe("GET /blog/audio/:file", () => {
       expect(res.headers.get("Content-Type")).toContain("text/markdown");
     }
   );
+});
+
+describe("the daily cron", () => {
+  it("deletes every conversation last seen at least 30 days ago, with its messages", async () => {
+    const DAY = 86_400_000;
+    const now = 1_000_000_000_000;
+    const room = env.CHAT_DB.prepare(
+      "INSERT INTO rooms (room_id, country, ip, visitor_key, first_seen, last_seen) VALUES (?, ?, ?, ?, ?, ?)"
+    );
+    const message = env.CHAT_DB.prepare(
+      "INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)"
+    );
+    await env.CHAT_DB.batch([
+      room.bind("cron-expired", "IN", "203.0.113.9", "203.0.113.9", now - 40 * DAY, now - 31 * DAY),
+      room.bind("cron-boundary", null, "198.51.100.7", null, now - 40 * DAY, now - 30 * DAY),
+      room.bind("cron-recent", "US", "2001:db8::1", "2001:db8::", now - 40 * DAY, now - 29 * DAY),
+      message.bind("cron-expired", "user", "hi", now - 31 * DAY),
+      message.bind("cron-expired", "assistant", "hello", now - 31 * DAY),
+      message.bind("cron-boundary", "user", "hey", now - 30 * DAY),
+      message.bind("cron-recent", "user", "still here", now - 40 * DAY)
+    ]);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    onTestFinished(() => log.mockRestore());
+
+    await worker.scheduled(createScheduledController({ scheduledTime: now }), env);
+
+    const rooms = await env.CHAT_DB.prepare(
+      "SELECT room_id FROM rooms WHERE room_id LIKE 'cron-%'"
+    ).all();
+    const messages = await env.CHAT_DB.prepare(
+      "SELECT room_id, content FROM messages WHERE room_id LIKE 'cron-%'"
+    ).all();
+    expect(rooms.results).toEqual([{ room_id: "cron-recent" }]);
+    expect(messages.results).toEqual([{ room_id: "cron-recent", content: "still here" }]);
+    expect(log).toHaveBeenCalledWith({ event: "expired conversations deleted", rooms: 2 });
+  });
+
+  it("keeps the messages when deleting their room fails", async () => {
+    const DAY = 86_400_000;
+    const now = 1_000_000_000_000;
+    await env.CHAT_DB.batch([
+      env.CHAT_DB.prepare(
+        "INSERT INTO rooms (room_id, first_seen, last_seen) VALUES ('cron-atomic', ?, ?)"
+      ).bind(now - 40 * DAY, now - 31 * DAY),
+      env.CHAT_DB.prepare(
+        "INSERT INTO messages (room_id, role, content, created_at) VALUES ('cron-atomic', 'user', 'hi', ?)"
+      ).bind(now - 31 * DAY),
+      env.CHAT_DB.prepare(
+        `CREATE TRIGGER refuse_room_delete BEFORE DELETE ON rooms
+         BEGIN SELECT RAISE(ABORT, 'held'); END`
+      )
+    ]);
+    onTestFinished(async () => {
+      await env.CHAT_DB.batch([
+        env.CHAT_DB.prepare("DROP TRIGGER refuse_room_delete"),
+        env.CHAT_DB.prepare("DELETE FROM messages WHERE room_id = 'cron-atomic'"),
+        env.CHAT_DB.prepare("DELETE FROM rooms WHERE room_id = 'cron-atomic'")
+      ]);
+    });
+
+    await expect(
+      worker.scheduled(createScheduledController({ scheduledTime: now }), env)
+    ).rejects.toThrow("held");
+
+    const { results } = await env.CHAT_DB.prepare(
+      "SELECT (SELECT count(*) FROM rooms WHERE room_id = 'cron-atomic') AS rooms, (SELECT count(*) FROM messages WHERE room_id = 'cron-atomic') AS messages"
+    ).all();
+    expect(results).toEqual([{ rooms: 1, messages: 1 }]);
+  });
 });

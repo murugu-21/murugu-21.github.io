@@ -84,6 +84,8 @@ curl -sS -X POST http://localhost:8791/cdn-cgi/local/explorer/api/local/observab
   -d '{"sql":"SELECT name, outcome, duration_ms FROM spans WHERE parent_id IS NULL ORDER BY rowid DESC LIMIT 20"}'
 ```
 
+`curl -sS http://localhost:8791/cdn-cgi/local/scheduled` runs the Worker's daily cron once. Its log line lands in `$RUN/worker.log`.
+
 ## Evidence
 
 Everything goes under `$RUN/evidence/<feature>/`, named `<sub-feature-id>.<ext>`, for example `theme-toggle.png`.

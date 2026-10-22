@@ -1,6 +1,8 @@
 export const VISITOR_COUNTRY_HEADER = "x-visitor-country";
 export const VISITOR_IP_HEADER = "x-visitor-ip";
 
+export const CONVERSATION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 export type VisitorContext = { country: string | null; ip: string | null };
 
 export function parseVisitorContext(headers: Headers): VisitorContext | null {

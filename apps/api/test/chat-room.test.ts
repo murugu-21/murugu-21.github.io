@@ -1,4 +1,4 @@
-import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
+import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError } from "ai";
@@ -658,7 +658,7 @@ describe("ChatRoom storage", () => {
   });
 });
 
-describe("ChatRoom raw IP retention", () => {
+describe("ChatRoom conversation expiry", () => {
   const DAY = 86_400_000;
   // 2100-01-01T00:00:00Z: a date ahead of the real clock, so workerd never fires the alarms
   // on its own and only runDurableObjectAlarm runs them.
@@ -670,7 +670,7 @@ describe("ChatRoom raw IP retention", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  const pendingErases = (stub: DurableObjectStub<ChatRoom>) =>
+  const pendingJobs = (stub: DurableObjectStub<ChatRoom>) =>
     runInDurableObject(stub, async instance =>
       (await instance.listSchedules()).map(({ callback, time }) => ({ callback, time }))
     );
@@ -680,99 +680,155 @@ describe("ChatRoom raw IP retention", () => {
     await runDurableObjectAlarm(stub);
   }
 
-  it("erases the IP and key 30 days after the visitor was last seen, keeping the rest", async () => {
-    const room = roomName("room-erase");
+  // destroy() aborts the room from a timer, where the error would fail the test run, so the room
+  // records the abort instead and the test then aborts it from inside runInDurableObject.
+  async function recordAborts(stub: DurableObjectStub<ChatRoom>): Promise<(string | undefined)[]> {
+    const reasons: (string | undefined)[] = [];
+    await runInDurableObject(stub, instance => {
+      Object.assign(instance.ctx, { abort: (reason?: string) => reasons.push(reason) });
+    });
+    return reasons;
+  }
+
+  async function expiringAlarmAt(stub: DurableObjectStub<ChatRoom>, time: number): Promise<void> {
+    const aborts = await recordAborts(stub);
+    vi.setSystemTime(time);
+    await runDurableObjectAlarm(stub);
+    await vi.waitFor(() => expect(aborts).toEqual(["destroyed"]));
+    await abortRoom(stub);
+  }
+
+  async function abortRoom(stub: DurableObjectStub<ChatRoom>): Promise<void> {
+    await expect(
+      runInDurableObject(stub, instance => {
+        Reflect.deleteProperty(instance.ctx, "abort");
+        instance.ctx.abort("destroyed");
+      })
+    ).rejects.toThrow("destroyed");
+  }
+
+  async function conversation(room: string) {
+    // Read first: the request starts the room, which creates its leads table.
+    const history = (await storedMessages(room)).map(m => m.role);
+    const stub = env.ChatRoom.get(env.ChatRoom.idFromName(room));
+    const stored = await runInDurableObject(stub, instance => ({
+      visitor: Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" })),
+      leads: instance.ctx.storage.sql.exec("SELECT contact FROM leads").toArray()
+    }));
+    const { results: mirrored } = await env.CHAT_DB.prepare(
+      "SELECT role, content FROM messages WHERE room_id = ?"
+    )
+      .bind(room)
+      .all();
+    return {
+      history,
+      ...stored,
+      row: await roomRow(room),
+      mirrored
+    };
+  }
+
+  const EXPIRED = { history: [], visitor: {}, leads: [], row: undefined, mirrored: [] };
+
+  async function startConversation(room: string): Promise<DurableObjectStub<ChatRoom>> {
     const { stub } = await connectRoom(room, {
       headers: { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" }
     });
+    await runInDurableObject(stub, async instance => {
+      await instance.persistMessages([
+        { id: "u1", role: "user" as const, parts: [{ type: "text" as const, text: "hi" }] }
+      ]);
+      instance.ctx.storage.sql.exec(
+        "INSERT INTO leads (contact, summary, created_at) VALUES ('ada@example.com', 'hiring', ?)",
+        T0
+      );
+    });
+    await env.CHAT_DB.prepare(
+      "INSERT INTO messages (room_id, role, content, created_at) VALUES (?, 'user', 'hi', ?)"
+    )
+      .bind(room, T0)
+      .run();
     await mirroredRoom(room, { ip: "203.0.113.9" });
+    return stub;
+  }
+
+  it("deletes the whole conversation 30 days after the visitor was last seen, not before", async () => {
+    const room = roomName("room-expire");
+    const stub = await startConversation(room);
 
     await alarmAt(stub, T0 + 30 * DAY - 1000);
-    expect(await runInDurableObject(stub, visitorStorage)).toMatchObject({
-      visitor_ip: "203.0.113.9",
-      visitor_key: "203.0.113.9"
+    expect(await conversation(room)).toEqual({
+      history: ["user"],
+      visitor: {
+        visitor_country: "IN",
+        visitor_ip: "203.0.113.9",
+        visitor_key: "203.0.113.9",
+        visitor_first_seen: T0,
+        visitor_last_seen: T0
+      },
+      leads: [{ contact: "ada@example.com" }],
+      row: {
+        country: "IN",
+        ip: "203.0.113.9",
+        visitor_key: "203.0.113.9",
+        first_seen: T0,
+        last_seen: T0
+      },
+      mirrored: [{ role: "user", content: "hi" }]
     });
 
-    await alarmAt(stub, T0 + 30 * DAY);
-    expect(await runInDurableObject(stub, visitorStorage)).toEqual({
-      visitor_country: "IN",
-      visitor_first_seen: T0,
-      visitor_last_seen: T0
-    });
-    expect(await roomRow(room)).toEqual({
-      country: "IN",
-      ip: null,
-      visitor_key: null,
-      first_seen: T0,
-      last_seen: T0
-    });
-    expect(await pendingErases(stub)).toEqual([]);
+    // An evicted room, as a month-old one is, wakes for the alarm.
+    await evictDurableObject(stub);
+    await expiringAlarmAt(stub, T0 + 30 * DAY);
+    expect(await conversation(room)).toEqual(EXPIRED);
   });
 
-  it("moves the erase to 30 days after a reconnect, keeping one pending", async () => {
-    const room = roomName("room-erase-later");
-    const headers = { "CF-Connecting-IP": "2001:db8::1" };
-    const { stub } = await connectRoom(room, { headers });
-    // Off the whole second, so the erase lands on the next one rather than a second early.
+  it("moves the expiry to 30 days after a reconnect", async () => {
+    const room = roomName("room-expire-later");
+    const stub = await startConversation(room);
+    // Off the whole second, so the expiry lands on the next one rather than a second early.
     vi.setSystemTime(T0 + 20 * DAY + 500);
-    await connectRoom(room, { headers });
+    await connectRoom(room, { headers: { "CF-Connecting-IP": "203.0.113.9" } });
     await mirroredRoom(room, { last_seen: T0 + 20 * DAY + 500 });
 
-    expect(await pendingErases(stub)).toEqual([
-      { callback: "eraseVisitorIp", time: (T0 + 30 * DAY) / 1000 }
-    ]);
-
     await alarmAt(stub, T0 + 30 * DAY);
-    expect(await runInDurableObject(stub, visitorStorage)).toMatchObject({
-      visitor_ip: "2001:db8::1",
-      visitor_key: "2001:db8:0:0::/64"
+    expect(await conversation(room)).toMatchObject({
+      history: ["user"],
+      mirrored: [{ role: "user", content: "hi" }]
     });
-    expect(await pendingErases(stub)).toEqual([
-      { callback: "eraseVisitorIp", time: (T0 + 50 * DAY) / 1000 + 1 }
+    expect(await pendingJobs(stub)).toEqual([
+      { callback: "expireConversation", time: (T0 + 50 * DAY) / 1000 + 1 }
     ]);
 
-    await alarmAt(stub, T0 + 50 * DAY + 1000);
-    expect(await runInDurableObject(stub, visitorStorage)).toEqual({
-      visitor_first_seen: T0,
-      visitor_last_seen: T0 + 20 * DAY + 500
-    });
-    expect(await roomRow(room)).toMatchObject({ ip: null, visitor_key: null });
+    await expiringAlarmAt(stub, T0 + 50 * DAY + 1000);
+    expect(await conversation(room)).toEqual(EXPIRED);
   });
 
-  it("keeps the IP and key of a reconnect that lands while the erase writes to D1", async () => {
-    const room = roomName("room-erase-race");
-    const { stub } = await connectRoom(room, { headers: { "CF-Connecting-IP": "203.0.113.9" } });
-    await mirroredRoom(room, { ip: "203.0.113.9" });
+  it("keeps the conversation of a reconnect that lands while the expiry writes to D1", async () => {
+    const room = roomName("room-expire-race");
+    const stub = await startConversation(room);
 
     // The held write polls the room's own state: a promise resolved from the test's context
-    // would resume the erase there, where workerd refuses the room's binding.
-    let eraseReachedD1 = false;
+    // would resume the expiry there, where workerd refuses the room's binding.
+    let expiryReachedD1 = false;
     await runInDurableObject(stub, instance => {
       const db = instance.env.CHAT_DB;
       const kv = instance.ctx.storage.kv;
-      const prepare = (query: string) => {
-        if (!query.startsWith("UPDATE rooms SET ip = NULL")) return db.prepare(query);
-        return {
-          bind: (...values: unknown[]) => ({
-            run: async () => {
-              eraseReachedD1 = true;
-              while (kv.get("visitor_last_seen") === T0) {
-                await new Promise(resolve => setTimeout(resolve, 5));
-              }
-              return db
-                .prepare(query)
-                .bind(...values)
-                .run();
-            }
-          })
-        };
+      const batch = async (statements: D1PreparedStatement[]) => {
+        expiryReachedD1 = true;
+        while (kv.get("visitor_last_seen") === T0) {
+          await new Promise(resolve => setTimeout(resolve, 5));
+        }
+        return db.batch(statements);
       };
-      Object.assign(instance, { env: { ...instance.env, CHAT_DB: { prepare } } });
+      Object.assign(instance, {
+        env: { ...instance.env, CHAT_DB: { prepare: (query: string) => db.prepare(query), batch } }
+      });
     });
 
     vi.setSystemTime(T0 + 30 * DAY);
     const alarm = runDurableObjectAlarm(stub);
-    await vi.waitFor(() => assert(eraseReachedD1, "the erase hasn't reached D1"), {
+    await vi.waitFor(() => assert(expiryReachedD1, "the expiry hasn't reached D1"), {
       timeout: 2000
     });
     // vi.waitFor moves the fake clock, so set it again before the reconnect.
@@ -780,34 +836,81 @@ describe("ChatRoom raw IP retention", () => {
     await connectRoom(room, { headers: { "CF-Connecting-IP": "198.51.100.7" } });
     await alarm;
 
-    expect(await runInDurableObject(stub, visitorStorage)).toMatchObject({
-      visitor_ip: "198.51.100.7",
-      visitor_key: "198.51.100.7"
+    expect(await conversation(room)).toMatchObject({
+      history: ["user"],
+      visitor: { visitor_ip: "198.51.100.7", visitor_last_seen: T0 + 31 * DAY },
+      leads: [{ contact: "ada@example.com" }],
+      mirrored: [{ role: "user", content: "hi" }]
     });
-    expect(
-      await mirroredRoom(room, { ip: "198.51.100.7", visitor_key: "198.51.100.7" })
-    ).toMatchObject({
-      last_seen: T0 + 31 * DAY
-    });
-    expect(await pendingErases(stub)).toEqual([
-      { callback: "eraseVisitorIp", time: (T0 + 61 * DAY) / 1000 }
+    await mirroredRoom(room, { ip: "198.51.100.7", last_seen: T0 + 31 * DAY });
+    expect(await pendingJobs(stub)).toEqual([
+      { callback: "expireConversation", time: (T0 + 61 * DAY) / 1000 }
     ]);
   });
 
-  it("erases on its next wake the IP a room stored before it scheduled erases", async () => {
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName(roomName("room-erase-old")));
+  async function scheduleOldJob(stub: DurableObjectStub<ChatRoom>): Promise<void> {
     await runInDurableObject(stub, async instance => {
-      instance.ctx.storage.kv.put("visitor_ip", "203.0.113.9");
-      instance.ctx.storage.kv.put("visitor_first_seen", T0 - 45 * DAY);
-      instance.ctx.storage.kv.put("visitor_last_seen", T0 - 40 * DAY);
-      await instance.onStart();
+      for (const { id } of await instance.listSchedules()) await instance.cancelSchedule(id);
+      await instance.schedule(new Date(T0 + 30 * DAY), "eraseVisitorIp");
     });
+  }
 
-    await alarmAt(stub, T0);
-    expect(await runInDurableObject(stub, visitorStorage)).toEqual({
-      visitor_first_seen: T0 - 45 * DAY,
-      visitor_last_seen: T0 - 40 * DAY
+  it("runs a job the room scheduled under its old name", async () => {
+    const room = roomName("room-expire-old-job");
+    const stub = await startConversation(room);
+    await scheduleOldJob(stub);
+
+    await alarmAt(stub, T0 + 30 * DAY);
+    expect(await pendingJobs(stub)).toEqual([
+      { callback: "expireConversation", time: (T0 + 30 * DAY) / 1000 }
+    ]);
+    await expiringAlarmAt(stub, T0 + 30 * DAY);
+    expect(await conversation(room)).toEqual(EXPIRED);
+  });
+
+  it("keeps one pending job when a visitor returns to a room holding a job under the old name", async () => {
+    const room = roomName("room-old-job-later");
+    const stub = await startConversation(room);
+    await scheduleOldJob(stub);
+    vi.setSystemTime(T0 + 20 * DAY);
+    await connectRoom(room, { headers: { "CF-Connecting-IP": "203.0.113.9" } });
+
+    await alarmAt(stub, T0 + 30 * DAY);
+    expect(await pendingJobs(stub)).toEqual([
+      { callback: "expireConversation", time: (T0 + 50 * DAY) / 1000 }
+    ]);
+  });
+
+  it("schedules its expiry when a history read wakes a room that holds no job", async () => {
+    const room = roomName("room-expire-wake");
+    const stub = await startConversation(room);
+    await runInDurableObject(stub, async instance => {
+      for (const { id } of await instance.listSchedules()) await instance.cancelSchedule(id);
     });
+    await evictDurableObject(stub);
+
+    vi.setSystemTime(T0 + 10 * DAY);
+    expect((await storedMessages(room)).map(m => m.role)).toEqual(["user"]);
+    expect(await pendingJobs(stub)).toEqual([
+      { callback: "expireConversation", time: (T0 + 30 * DAY) / 1000 }
+    ]);
+  });
+
+  it("expires on its next wake a conversation whose job never ran", async () => {
+    const room = roomName("room-expire-dormant");
+    const stub = await startConversation(room);
+    await runInDurableObject(stub, async instance => {
+      for (const { id } of await instance.listSchedules()) await instance.cancelSchedule(id);
+    });
+    await evictDurableObject(stub);
+    const aborts = await recordAborts(stub);
+
+    vi.setSystemTime(T0 + 31 * DAY);
+    const wake = await fetchWorker(`/agents/chat-room/${room}/get-messages`);
+    expect(wake.status).toBe(500);
+    await vi.waitFor(() => expect(aborts).toEqual(["destroyed"]));
+    await abortRoom(stub);
+    expect(await conversation(room)).toEqual(EXPIRED);
   });
 });
 
