@@ -26,7 +26,7 @@ import {
 } from "./dataset";
 import { ErrorBody, FieldIssue } from "./errors";
 import { Post, PostList, PostsQuery, PostSummary, SLUG_PATTERN } from "./posts";
-import { CONTACT_POLICY, READ_POLICY, READ_QUOTA } from "./quotas";
+import { CONTACT_POLICY, READ_CACHE_MINUTES, READ_POLICY, READ_QUOTA } from "./quotas";
 import {
   API_VERSION,
   ApiVersionPolicy,
@@ -94,7 +94,7 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 
 **When not to use it.** It is not a general-purpose search, resume-parsing or job-matching service, and it holds data about exactly one person.
 
-**Authentication.** None. Every endpoint is public and unauthenticated; no key, token or signup is required. Read endpoints are cached for 5 minutes.
+**Authentication.** None. Every endpoint is public and unauthenticated; no key, token or signup is required. Read endpoints are cached for ${READ_CACHE_MINUTES} minutes.
 
 **Versioning.** The version is a path segment, \`${VERSIONED_API_BASE}/…\`. The unversioned \`${API_BASE}/…\` prefix is a permanent alias for \`${CURRENT_API_VERSION}\` and is never repointed at a later major version, so either form is safe to hard-code. Additive changes ship inside a version without notice, so ignore response fields you do not recognise. Breaking changes only ever ship as a new path version. Every response carries \`API-Version\` and \`API-Supported-Versions\`; \`GET ${API_PATHS.versions}\` is the machine-readable policy.
 

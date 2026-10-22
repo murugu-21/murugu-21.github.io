@@ -1,4 +1,15 @@
 import {
+  CONTACT_DAILY_GLOBAL,
+  CONTACT_DAILY_PER_CLIENT
+} from "@murugappan/contracts/api/contact.ts";
+import {
+  CONTACT_POLICY,
+  READ_CACHE_MINUTES,
+  READ_POLICY,
+  READ_QUOTA
+} from "@murugappan/contracts/api/quotas.ts";
+import { DEPRECATION_NOTICE_DAYS } from "@murugappan/contracts/api/versioning.ts";
+import {
   LATEST_PROTOCOL_VERSION,
   LEGACY_PROTOCOL_VERSIONS,
   MCP_RESOURCES,
@@ -31,6 +42,15 @@ function toolTable(): string {
 }
 
 const FACTS = {
+  "api.readCacheMinutes": String(READ_CACHE_MINUTES),
+  "api.readQuota": String(READ_QUOTA.quota),
+  "api.readWindowSeconds": String(READ_QUOTA.windowSeconds),
+  "api.readPolicy": READ_POLICY,
+  "api.readRateLimit": `"${READ_QUOTA.name}";r=${READ_QUOTA.quota - 1};t=${READ_QUOTA.windowSeconds}`,
+  "api.contactPerClient": String(CONTACT_DAILY_PER_CLIENT),
+  "api.contactSiteWide": String(CONTACT_DAILY_GLOBAL),
+  "api.contactPolicy": CONTACT_POLICY,
+  "api.deprecationDays": String(DEPRECATION_NOTICE_DAYS),
   "mcp.protocolVersion": LATEST_PROTOCOL_VERSION,
   "mcp.legacyVersions": LEGACY_PROTOCOL_VERSIONS.map(code).join(", "),
   "mcp.toolCount": String(MCP_TOOLS.length),

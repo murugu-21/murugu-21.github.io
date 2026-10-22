@@ -78,7 +78,7 @@ remote pointing at `https://murugappan.dev/mcp`.
 
 Base URL `https://murugappan.dev/api/v1`. **No authentication, no API key, no
 signup.** JSON in, JSON out, permissive CORS. Read endpoints are cached
-5 minutes.
+{{api.readCacheMinutes}} minutes.
 
 | Need                | Call                                               |
 | ------------------- | -------------------------------------------------- |
@@ -114,7 +114,7 @@ Content-Type: application/json
 
 `dryRun: true` validates the payload and sends nothing (200,
 `status: "validated"`) and costs no allowance. Drop the flag to deliver (202,
-`status: "accepted"`). Limits: 3 per client IP per UTC day, 20 site-wide.
+`status: "accepted"`). Limits: {{api.contactPerClient}} per client IP per UTC day, {{api.contactSiteWide}} site-wide.
 `email` must be an address a human reads; that is where the reply goes. Include
 who you are writing for and what decision is needed.
 
@@ -137,7 +137,7 @@ version query parameter.
   rel="version-history"`.
 - A deprecated version answers every request with `Deprecation` (RFC 9745) and
   `Sunset` (RFC 8594) headers and `Link` relations `deprecation` and
-  `successor-version`. At least 180 days pass between the first `Deprecation`
+  `successor-version`. At least {{api.deprecationDays}} days pass between the first `Deprecation`
   header and the sunset date; after sunset the version answers `410`.
 
 `GET /api/v1/versions` (also `/api/versions`) is this policy as data. Read it
@@ -153,19 +153,18 @@ exhaustion (`r` = remaining, `t` = seconds to reset). The de-facto
 same numbers, and a `429` adds `Retry-After`.
 
 ```
-RateLimit-Policy: "reads";q=600;w=60
-RateLimit: "reads";r=599;t=60
+RateLimit-Policy: {{api.readPolicy}}
+RateLimit: {{api.readRateLimit}}
 ```
 
-- **Reads** have a fair-use ceiling of 600 requests per 60 seconds per client
+- **Reads** have a fair-use ceiling of {{api.readQuota}} requests per {{api.readWindowSeconds}} seconds per client
   address, and every IPv6 address in one /64 counts as one client. Each edge
   location counts separately, so the advertised number is a floor rather than a
   cap. The MCP server's read tools and resource reads spend the same allowance.
   Past it, a read tool returns `isError` and a resource read fails with JSON-RPC
   error `-32000`, both saying how many seconds to wait.
-- **`POST /api/v1/contact`** allows 3 per client IP per UTC day, 20 site-wide,
-  `RateLimit-Policy: "contact-client";q=3;w=86400,
-  "contact-site";q=20;w=86400`. A rejected request spends nothing, and neither
+- **`POST /api/v1/contact`** allows {{api.contactPerClient}} per client IP per UTC day, {{api.contactSiteWide}} site-wide,
+  `RateLimit-Policy: {{api.contactPolicy}}`. A rejected request spends nothing, and neither
   does a dry run. A dry run still reports the allowance, so use it to size a
   real send.
 
@@ -175,7 +174,7 @@ browser-side agent can read them too.
 ## Webhooks
 
 There are none; this API has no events to push. Poll instead: read endpoints
-are cacheable for five minutes, `GET /api/v1/posts` is one cheap call, and
+are cacheable for {{api.readCacheMinutes}} minutes, `GET /api/v1/posts` is one cheap call, and
 `/blog/rss.xml` announces new posts. `POST /api/v1/contact` delivers by email
 and returns no callback.
 

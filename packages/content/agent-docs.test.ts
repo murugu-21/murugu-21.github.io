@@ -46,6 +46,18 @@ describe("agentGuide", () => {
       "calling tools: `/llms.txt`, `/AGENTS.md`, `/openapi.json`, `/blog/llms-full.txt`, and every post's markdown"
     );
   });
+
+  it("states the rate limits, cache time and deprecation notice from the API contract", () => {
+    const guide = agentGuide();
+
+    expect(guide).toContain(
+      'RateLimit-Policy: "reads";q=600;w=60\nRateLimit: "reads";r=599;t=60\n'
+    );
+    expect(guide).toContain("Limits: 3 per client IP per UTC day, 20 site-wide.");
+    expect(guide).toContain("At least 180 days pass");
+    expect(guide).toContain("Read endpoints are cached\n5 minutes.");
+    expect(llmsPreamble()).toContain("Reads are fair-use (600 per 60s per client)");
+  });
 });
 
 describe("llmsPreamble", () => {

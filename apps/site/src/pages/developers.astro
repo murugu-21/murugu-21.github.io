@@ -41,6 +41,7 @@ import {
 import {
   CONTACT_CLIENT_QUOTA,
   CONTACT_POLICY,
+  READ_CACHE_MINUTES,
   READ_POLICY,
   READ_QUOTA
 } from "@murugappan/contracts/api/quotas.ts";
@@ -319,7 +320,8 @@ curl -s {SITE_ORIGIN}{VERSIONED_API_BASE}/posts/cloud-agnostic-rate-limiting</co
       <p>
         <strong>There are none, by design.</strong> Every endpoint is public and unauthenticated: no
         API key, no token, no signup, nothing to rotate. If a client asks you for credentials for
-        this API, it is misconfigured. Read endpoints are cached for five minutes at the edge.
+        this API, it is misconfigured. Read endpoints are cached for {READ_CACHE_MINUTES} minutes at
+        the edge.
       </p>
     </section>
 
@@ -389,9 +391,9 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
         requests per {READ_QUOTA.windowSeconds} seconds per client address, counted in the edge
         location that serves you. Every IPv6 address in one /64 counts as one client. A client
         spread across several locations gets that allowance in each, so the advertised number is a
-        floor, not a cap. Read responses are cacheable for five minutes, so a cached response may
-        carry a stale <code>RateLimit</code> snapshot; treat it as advisory and trust the freshest
-        one you have.
+        floor, not a cap. Read responses are cacheable for {READ_CACHE_MINUTES} minutes, so a cached
+        response may carry a stale <code>RateLimit</code> snapshot; treat it as advisory and trust
+        the freshest one you have.
       </p>
       <p>
         <strong>
@@ -459,8 +461,8 @@ Retry-After: 39122</code></pre>
       <h2 id="webhooks">Webhooks &amp; callbacks</h2>
       <p>
         There are none, and that is deliberate. This API has no events to push. Content changes when
-        the site redeploys, so poll instead. Read endpoints are cacheable for five minutes, the{" "}
-        <a href="/blog/rss.xml">blog RSS feed</a> announces new posts, and{" "}
+        the site redeploys, so poll instead. Read endpoints are cacheable for {READ_CACHE_MINUTES}{" "}
+        minutes, the <a href="/blog/rss.xml">blog RSS feed</a> announces new posts, and{" "}
         <code>GET {API_PATHS.posts}</code> is one cheap call. <code>POST {API_PATHS.contact}</code>{" "}
         delivers by email and returns no callback; Murugappan replies to the address you supply.
       </p>

@@ -18,7 +18,7 @@ How to call this site, cheapest first:
   `GET /api/v1/posts/{slug}` for a post's full markdown.
 - Relaying one concrete opportunity on a human's behalf:
   `POST /api/v1/contact` with `{"email","message"}`. Send `"dryRun": true` first
-  to validate without sending. Limited to 3 per client IP per UTC day.
+  to validate without sending. Limited to {{api.contactPerClient}} per client IP per UTC day.
 - Using an MCP client: add the server `https://murugappan.dev/mcp` (Streamable
   HTTP, no auth). Manifest: `https://murugappan.dev/.well-known/mcp.json`.
   Tools: {{mcp.toolNames}}.
@@ -50,11 +50,11 @@ Authentication: none. Versioning: URL path, `/api/v1/…`; the unversioned
 `/api/…` prefix is a permanent alias for v1 and is never repointed at a later
 major version. Breaking changes only ever ship as a new path version, and the
 API announces deprecations with `Deprecation` (RFC 9745) and `Sunset`
-(RFC 8594) headers at least 180 days ahead. Rate limits: every response carries
+(RFC 8594) headers at least {{api.deprecationDays}} days ahead. Rate limits: every response carries
 `RateLimit-Policy` and `RateLimit` (the IETF RateLimit header fields), mirrored
 as `X-RateLimit-Limit`/`-Remaining`/`-Reset`, with `Retry-After` on a 429.
-Reads are fair-use (600 per 60s per client); `POST /api/v1/contact` allows 3 per
-client IP per UTC day and 20 site-wide. Webhooks: none. Poll the read
+Reads are fair-use ({{api.readQuota}} per {{api.readWindowSeconds}}s per client); `POST /api/v1/contact` allows {{api.contactPerClient}} per
+client IP per UTC day and {{api.contactSiteWide}} site-wide. Webhooks: none. Poll the read
 endpoints or the blog RSS feed. Errors: one JSON envelope with a stable
 `error.code`; a path that does not exist returns a real 404 whose body is short
 markdown pointing at the sitemap and the entry points above.

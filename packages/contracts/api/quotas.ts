@@ -7,6 +7,8 @@ export type Quota = {
   windowSeconds: number;
 };
 
+export const READ_CACHE_MINUTES = 5;
+
 export const READ_QUOTA: Quota = {
   name: "reads",
   quota: 600,
