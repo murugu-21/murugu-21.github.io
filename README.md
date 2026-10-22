@@ -60,7 +60,7 @@ Packages import each other by name and full file path, like `@murugappan/content
 - Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
 - The type checker is a TypeScript 7 nightly. Point your editor at the TypeScript 7 language service.
 - `bun run check:effect` runs Effect's diagnostics (`@effect/tsgo`) over `apps/api`. It fails on every Effect error and warning, and the plugin entry in `apps/api/tsconfig.json` raises more rules to errors. Without that entry it checks nothing and passes.
-- Each `@effect/tsgo` release supports only the TypeScript versions its README lists, so `typescript` is pinned to one of them. Renovate bumps the two in one PR, which fails until you set `typescript` to a version the new `@effect/tsgo` lists.
+- Each `@effect/tsgo` release supports only the TypeScript versions its README lists, so `typescript` is pinned to one of them. Renovate doesn't bump `typescript` (`renovate.json`), so Renovate's `@effect/tsgo` PR fails until you set `typescript` to a version the new `@effect/tsgo` lists.
 - Oxlint and oxfmt cover TypeScript, JSON and Markdown. Oxfmt also formats `.astro` templates and sorts their Tailwind classes. Biome lints `.astro` templates and lints and formats CSS, which oxc can't parse (`biome.jsonc`).
 - `tooling/oxlint/anti-slop/` is a vendored subset of [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop), owned and linted as repo code. `UPSTREAM.md` there names the commit it came from, says how to copy another rule in, and lists what differs from upstream.
 - Astro deletes a line break beside a tag or `{expression}`, so `on\n<a>` renders as `on<a>`. Write the space as `{" "}` at the end of the line. `tooling/astro-whitespace.test.ts` fails on a line break that joins two words and on a space just inside an inline element.
@@ -92,7 +92,7 @@ The build settings live in the Cloudflare dashboard, not in this repo:
 
 - Build command `bun run build`. Deploy command `bun run deploy`, which applies D1 migrations before it deploys.
 - Build env vars: the ones above, plus `BUN_VERSION` (match `packageManager` in `package.json`) and `REQUIRE_GITHUB_PROFILE=1` to fail the build if the GitHub card can't load.
-- The Worker secret `DEEPSEEK_API_KEY`. Set it with `bunx wrangler secret put DEEPSEEK_API_KEY` from `apps/api`.
+- The Worker secrets listed in `secrets.required` in `apps/api/wrangler.jsonc`. Set each with `bunx wrangler secret put <NAME>` from `apps/api`.
 
 The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/wrangler.jsonc`. The `EMAIL` binding's `destination_address` must be the same address, so change both together; `apps/api/test/wrangler.test.ts` checks that they match.
 

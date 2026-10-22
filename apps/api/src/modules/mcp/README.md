@@ -2,7 +2,7 @@
 
 The site's content as an [MCP](https://modelcontextprotocol.io) server at `https://murugappan.dev/mcp`. No auth, no sessions, `POST` only.
 
-- It uses the official SDK. A new server is built for each request, because the tools need that request's client IP.
+- It uses the official SDK. A new server is built for each request, because the tools read that request's services and visitor.
 - The tool list is `MCP_TOOLS` in `packages/contracts/mcp.ts`. Each tool needs a handler in `mcp.tools.ts`, or the type check fails. The `/developers` page lists tools from the same list. A tool's `kind` (`read` or `write`) picks its annotations from `TOOL_ANNOTATIONS`, whether the read throttle wraps it, and whether analytics keeps its arguments.
 - Tools and resources call the same services as the REST API (`PostsService`, `ProfileService`, `ContactService`) through `runInRequest`. `send_message` shares `POST /api/v1/contact`'s daily limit that way. Its text for each outcome is in `mcp.tools.ts`.
 - The spec requires rate limits, so each read tool call and resource read spends the client's REST read window (`read-quota.store.ts`). A refused tool call is an `isError` result; a refused resource read is JSON-RPC error `-32000`.

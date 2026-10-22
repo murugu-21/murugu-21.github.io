@@ -30,7 +30,7 @@
       "groupName": "vite-plus"
     },
     {
-      "description": "vite-plus bundles an exact vitest and fails on a mismatched @vitest/* package. Run vp migrate on each vite-plus update to realign the catalog.",
+      "description": "vite-plus bundles an exact vitest and fails on a mismatched @vitest/* package. On each vite-plus update, set vitest (devDependencies and overrides) and every @vitest/* package to the version it bundles.",
       "matchPackageNames": ["vitest", "@vitest/*"],
       "enabled": false
     }
