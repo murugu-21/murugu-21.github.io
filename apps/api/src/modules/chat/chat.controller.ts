@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { AppEnv } from "#src/common/app-env.ts";
 import { siteOriginGuard } from "#src/modules/chat/site-origin.guard.ts";
+import { turnstileGuard } from "#src/modules/chat/turnstile.guard.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/visitor.ts";
 import { serveAsset } from "#src/modules/pages/assets.client.ts";
 
@@ -40,7 +41,10 @@ export const chatController = new Hono<AppEnv>();
 
 const ROOM = "/:room{[\\w-]{21}}";
 
-chatController.get(ROOM, siteOriginGuard, c =>
+chatController.get(ROOM, siteOriginGuard, turnstileGuard, c =>
   c.req.header("Upgrade") === "websocket" ? chatRoom(c) : serveAsset(c)
 );
-chatController.get(`${ROOM}/get-messages`, chatRoom);
+// The room accepts an upgrade on any sub-path, so this one must refuse it or skip both guards.
+chatController.get(`${ROOM}/get-messages`, c =>
+  c.req.header("Upgrade") ? c.notFound() : chatRoom(c)
+);

@@ -3,12 +3,14 @@ import { env } from "cloudflare:workers";
 import { assert, beforeEach, describe, expect, it } from "vite-plus/test";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { TURNSTILE_TOKEN_PARAM } from "@murugappan/contracts/chat.ts";
 import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/visitor.ts";
 import worker from "#src/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,
   connectRoom,
   fakeFetcher,
+  fakeSiteverify,
   fetchWorker,
   NOT_FOUND_HTML,
   roomName,
@@ -59,14 +61,21 @@ describe("routing", () => {
 
 describe("the chat-room WebSocket", () => {
   it("is the only agent route: no other Durable Object, sub-path or room name upgrades", async () => {
+    fakeSiteverify();
     const upgrade = (path: string) =>
-      fetchWorker(path, { headers: { Upgrade: "websocket", Origin: SITE_ORIGIN } }).then(
-        r => r.status
-      );
+      fetchWorker(`${path}?${TURNSTILE_TOKEN_PARAM}=token`, {
+        headers: { Upgrade: "websocket", Origin: SITE_ORIGIN }
+      }).then(r => r.status);
     expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT")).toBe(101);
     expect(await upgrade("/agents/rate-limiter/global")).toBe(404);
     expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT/sub/chat-room/other")).toBe(404);
     expect((await fetchWorker("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT")).status).toBe(404);
+    expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B-myT/get-messages")).toBe(404);
+    const historyUpgrade = await fetchWorker(
+      "/agents/chat-room/V1StGXR8_Z5jdHi6B-myT/get-messages",
+      { headers: { Upgrade: "websocket" } }
+    );
+    expect(historyUpgrade.status).toBe(404);
     expect(await upgrade("/agents/chat-room/short")).toBe(404);
     expect(await upgrade(`/agents/chat-room/${"a".repeat(22)}`)).toBe(404);
     expect(await upgrade("/agents/chat-room/V1StGXR8_Z5jdHi6B.myT")).toBe(404);
@@ -103,9 +112,13 @@ describe("the chat-room WebSocket", () => {
       status: 403
     }
   ])("upgrades a socket from $from with $status", async ({ site, origin, status }) => {
+    fakeSiteverify();
     const headers = new Headers({ Upgrade: "websocket" });
     if (origin) headers.set("Origin", origin);
-    const res = await fetchWorker(`${site}/agents/chat-room/V1StGXR8_Z5jdHi6B-myT`, { headers });
+    const res = await fetchWorker(
+      `${site}/agents/chat-room/V1StGXR8_Z5jdHi6B-myT?${TURNSTILE_TOKEN_PARAM}=token`,
+      { headers }
+    );
     expect(res.status).toBe(status);
   });
 

@@ -16,7 +16,7 @@ Workers:
 Durable Objects:
 
 - **DO-1.** Keep a read-check-write path synchronous (`sql.exec`, `ctx.storage.kv`), so the input gate makes it atomic. Don't make `takeContactSlot` async.
-- **DO-2.** After any `await` of non-storage I/O inside a Durable Object (fetch, RPC, email, D1), re-read state before writing, as `chatAvailable` does, or claim first and roll back on failure, as `emailLeadOnce` does.
+- **DO-2.** After any `await` of non-storage I/O inside a Durable Object (fetch, RPC, email, D1), re-read state before writing, as `RateLimiter.chatFunded` does, or claim first and roll back on failure, as `emailLeadOnce` does.
 - **DO-3.** Use `blockConcurrencyWhile` only in a constructor, inside try/catch, with no I/O.
 - **DO-4.** Change a table only through a versioned migration. `CREATE TABLE IF NOT EXISTS` never alters an existing table.
 - **DO-5.** Index every column a query filters on in each request.

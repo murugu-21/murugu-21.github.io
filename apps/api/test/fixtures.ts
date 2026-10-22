@@ -6,10 +6,12 @@ import { assert, expect, onTestFinished, vi } from "vite-plus/test";
 import { z } from "zod";
 
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
+import { TURNSTILE_TOKEN_PARAM } from "@murugappan/contracts/chat.ts";
 import type { JsonValue } from "@murugappan/utils/json.ts";
 import { appLayer, type AppLayer } from "#src/app.module.ts";
 import { createApp } from "#src/app.ts";
 import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
+import { SITEVERIFY_URL } from "#src/modules/chat/turnstile.client.ts";
 import { ContactQuotaRepository } from "#src/modules/rate-limit/contact-quota.repository.ts";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
 import worker from "#src/server.ts";
@@ -64,7 +66,11 @@ export type TestEnvOptions = {
   inbox?: string;
   email?: SendEmail;
   posthogToken?: string;
+  turnstileSecret?: string;
 };
+
+export const TURNSTILE_PASSING_SECRET = "1x0000000000000000000000000000000AA";
+export const TURNSTILE_FAILING_SECRET = "2x0000000000000000000000000000000AA";
 
 type RecordingEmail = { email: SendEmail; sent: EmailMessageBuilder[] };
 
@@ -104,7 +110,8 @@ export function testEnv(options: TestEnvOptions = {}): Env {
     OPPORTUNITY_INBOX: options.inbox ?? "inbox@example.com",
     DEEPSEEK_API_KEY: "",
     EMAIL: options.email ?? recordingEmail().email,
-    POSTHOG_PROJECT_TOKEN: options.posthogToken ?? ""
+    POSTHOG_PROJECT_TOKEN: options.posthogToken ?? "",
+    TURNSTILE_SECRET_KEY: options.turnstileSecret ?? TURNSTILE_PASSING_SECRET
   };
 }
 
@@ -176,13 +183,55 @@ export function apiClient({
 
 export const roomName = (label: string) => label.padEnd(21, "-");
 
-type RoomRequest = { headers?: Record<string, string>; cf?: RequestInit["cf"] };
+const SiteverifyCall = z.object({
+  secret: z.string(),
+  response: z.string(),
+  remoteip: z.string().nullable()
+});
+type SiteverifyCall = z.infer<typeof SiteverifyCall>;
 
-export async function openRoom(room: string, { headers, cf }: RoomRequest = {}) {
-  const response = await fetchWorker(`/agents/chat-room/${room}`, {
-    headers: { Upgrade: "websocket", Origin: SITE_ORIGIN, ...headers },
-    cf
+export function fakeSiteverify({ down = false }: { down?: boolean } = {}) {
+  const calls: SiteverifyCall[] = [];
+  const realFetch = globalThis.fetch;
+  const spy = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const request = new Request(input, init);
+    if (request.url !== SITEVERIFY_URL) return realFetch(input, init);
+    if (down) throw new TypeError("network connection lost");
+    const form = await request.formData();
+    const call = SiteverifyCall.parse({
+      secret: form.get("secret"),
+      response: form.get("response"),
+      remoteip: form.get("remoteip")
+    });
+    calls.push(call);
+    return Response.json({ success: call.secret === TURNSTILE_PASSING_SECRET });
   });
+  onTestFinished(() => spy.mockRestore());
+  return { calls, restore: () => spy.mockRestore() };
+}
+
+type RoomRequest = {
+  headers?: Record<string, string>;
+  cf?: RequestInit["cf"];
+  turnstileToken?: string | null;
+  env?: TestEnvOptions;
+};
+
+export function upgradeRoom(
+  room: string,
+  { headers, cf, turnstileToken = "turnstile-token", env: envOptions }: RoomRequest = {}
+) {
+  const query = turnstileToken === null ? "" : `?${TURNSTILE_TOKEN_PARAM}=${turnstileToken}`;
+  return fetchWorker(`/agents/chat-room/${room}${query}`, {
+    headers: { Upgrade: "websocket", Origin: SITE_ORIGIN, ...headers },
+    cf,
+    env: envOptions
+  });
+}
+
+export async function openRoom(room: string, request: RoomRequest = {}) {
+  const siteverify = fakeSiteverify();
+  const response = await upgradeRoom(room, request).finally(siteverify.restore);
   expect(response.status).toBe(101);
   const socket = response.webSocket;
   assert(socket, "no WebSocket on the upgrade response");

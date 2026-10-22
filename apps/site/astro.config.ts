@@ -23,7 +23,7 @@ import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
 import { headersFile } from "./src/lib/headers";
 import { modulePreloader } from "./scripts/module-preload";
-import { ENV_SCHEMA, sourceMapUpload } from "./build-env";
+import { ENV_SCHEMA, requireDeployEnv, sourceMapUpload } from "./build-env";
 import { contentPosts, readPosts } from "@murugappan/content/vite/posts-plugin.ts";
 
 const POSTS = readPosts();
@@ -238,6 +238,8 @@ function modulePreloadHints(): AstroIntegration {
     }
   };
 }
+
+requireDeployEnv(process.env);
 
 const { personalApiKey, projectId } = sourceMapUpload;
 

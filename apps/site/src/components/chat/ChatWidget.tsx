@@ -9,12 +9,14 @@ import { Download, EllipsisVertical, MessageCircle, RotateCcw, X } from "lucide-
 import {
   ERROR_NOTICE,
   GREETING,
+  TURNSTILE_TOKEN_PARAM,
   type Activity,
   type JarvisMessage
 } from "@murugappan/contracts/chat.ts";
 import { ActivityRow } from "./ActivityRow";
 import { BubbleView, toBubbles, type Bubble } from "./Bubble";
 import { Composer } from "./Composer";
+import { turnstileChallenge, type TurnstileChallenge } from "./turnstile";
 import { Button } from "#src/components/ui/button.tsx";
 import { Card, CardFooter, CardHeader } from "#src/components/ui/card.tsx";
 import {
@@ -38,7 +40,11 @@ import { track, reportError } from "#src/lib/analytics.ts";
 import { readStored, writeStored } from "#src/lib/storage.ts";
 
 const ROOM_KEY = "chatRoomId";
+// useAgent drops the cached token whenever the socket closes, so a reconnect always asks
+// Turnstile again. A shorter TTL would also replace an open socket each time it lapsed.
+const TOKEN_CACHE_MS = 24 * 60 * 60 * 1000;
 const TOOLTIP_KEY = "chatTooltipSeen";
+const MAX_FAILED_CONNECTS = 5;
 
 const STARTERS = [
   "What's the most impactful thing he's shipped?",
@@ -48,6 +54,8 @@ const STARTERS = [
 
 type Phase =
   | { kind: "loading" }
+  | { kind: "reconnecting" }
+  | { kind: "unavailable" }
   | { kind: "idle" }
   | { kind: "working"; activity: Activity | null }
   | { kind: "replying" };
@@ -138,16 +146,27 @@ function HeaderButton(props: ComponentProps<typeof Button>) {
 }
 
 const startersShown = (bubbles: Bubble[], phase: Phase) =>
-  phase.kind === "idle" && bubbles.every(b => b.kind !== "user");
+  (phase.kind === "idle" || phase.kind === "reconnecting") && bubbles.every(b => b.kind !== "user");
 
 type PanelProps = {
   bubbles: Bubble[];
   phase: Phase;
+  challengeRef: TurnstileChallenge["ref"] | null;
+  interactiveCheck: boolean;
+  composerFocusRequests: number;
   onSend: (text: string) => void;
   onRestart: () => void;
 };
 
-function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
+function ChatPanel({
+  bubbles,
+  phase,
+  challengeRef,
+  interactiveCheck,
+  composerFocusRequests,
+  onSend,
+  onRestart
+}: PanelProps) {
   const [phone] = useState(isPhone);
   const [confirmRestart, setConfirmRestart] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -175,8 +194,8 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
         onOpenAutoFocus={e => {
           if (!phone) e.preventDefault();
         }}
-        // The loading panel's content unmounts while the chat stays open, and Radix would
-        // move focus to the launcher then; closePanel returns focus itself.
+        // Start over remounts the panel while the chat stays open, and Radix would move focus
+        // to the launcher then; closePanel returns focus itself.
         onCloseAutoFocus={e => e.preventDefault()}
       >
         <Card
@@ -258,6 +277,7 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
                       key={q}
                       variant="outline"
                       size="sm"
+                      disabled={phase.kind !== "idle"}
                       className="h-auto rounded-full border-primary/40 px-3 py-1.5 text-left text-xs font-normal whitespace-normal text-foreground hover:border-primary"
                       onClick={() => {
                         track("chat_starter_click");
@@ -272,9 +292,26 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
             </div>
           </ScrollArea>
 
+          {challengeRef && (
+            <div
+              data-interactive={interactiveCheck || undefined}
+              className="flex flex-col items-center data-interactive:gap-2 data-interactive:border-t data-interactive:px-3 data-interactive:py-2"
+            >
+              <output className="text-xs text-muted-foreground">
+                {interactiveCheck && "Quick check before we chat"}
+              </output>
+              <div ref={challengeRef} />
+            </div>
+          )}
+
           <CardFooter className="border-t p-2.5">
-            {/* oxlint-disable-next-line jsx-a11y/no-autofocus -- the visitor opened the panel to type into it. Not on phones: focusing pops the keyboard over the greeting. */}
-            <Composer disabled={phase.kind !== "idle"} autoFocus={!phone} onSend={send} />
+            <Composer
+              focusRequests={composerFocusRequests}
+              disabled={phase.kind !== "idle"}
+              // oxlint-disable-next-line jsx-a11y/no-autofocus -- the visitor opened the panel to type into it. Not on phones: focusing pops the keyboard over the greeting.
+              autoFocus={!phone}
+              onSend={send}
+            />
           </CardFooter>
         </Card>
       </DialogContent>
@@ -282,16 +319,87 @@ function ChatPanel({ bubbles, phase, onSend, onRestart }: PanelProps) {
   );
 }
 
-type SessionProps = {
+type RoomChat = Pick<
+  ReturnType<typeof useAgentChat<unknown, JarvisMessage>>,
+  "messages" | "status" | "isServerStreaming" | "sendMessage"
+>;
+
+function connectFailures() {
+  let count = 0;
+  let tokenError: Error | undefined;
+  return {
+    tokenFailed: (err: Error) => {
+      tokenError = err;
+    },
+    shouldRetryAfterClose: () => {
+      count += 1;
+      return count < MAX_FAILED_CONNECTS;
+    },
+    opened: () => {
+      count = 0;
+      tokenError = undefined;
+    },
+    reportableCause: (connectionError: Error) => tokenError ?? connectionError
+  };
+}
+
+type ConnectFailures = ReturnType<typeof connectFailures>;
+
+type ConnectionProps = {
   room: string;
   host: string;
-  open: boolean;
-  onRestart: () => void;
+  challenge: TurnstileChallenge | null;
+  failures: ConnectFailures;
+  onChat: (chat: RoomChat) => void;
+  onReconnectingChange: (reconnecting: boolean) => void;
+  onUnavailable: () => void;
 };
 
-function ChatSession({ room, host, open, onRestart }: SessionProps) {
-  const [awaitingReply, setAwaitingReply] = useState(false);
-  const agent = useAgent({ agent: "chat-room", name: room, host });
+// Renders nothing, so when a reconnect suspends it on a fresh Turnstile token the panel, which
+// lives outside its Suspense boundary, stays on screen with the last messages and the focus.
+function RoomConnection({
+  room,
+  host,
+  challenge,
+  failures,
+  onChat,
+  onReconnectingChange,
+  onUnavailable
+}: ConnectionProps) {
+  const agent = useAgent({
+    agent: "chat-room",
+    name: room,
+    host,
+    // Never rejects: the hook would throw into the island. Without a token the Worker refuses
+    // the socket, and the hook's reconnect asks again.
+    query: async (): Promise<Record<string, string>> => {
+      if (!challenge) return {};
+      try {
+        return { [TURNSTILE_TOKEN_PARAM]: await challenge.token() };
+      } catch (err) {
+        if (err instanceof Error) failures.tokenFailed(err);
+        return {};
+      }
+    },
+    cacheTtl: TOKEN_CACHE_MS,
+    // useAgent restarts PartySocket for each fresh token, which resets its retry count, so
+    // maxRetries never trips.
+    shouldReconnectOnClose: failures.shouldRetryAfterClose,
+    onConnectionError: err => {
+      reportError(failures.reportableCause(err), { surface: "chat" });
+      onUnavailable();
+    },
+    onOpen: () => {
+      failures.opened();
+      onReconnectingChange(false);
+    },
+    onClose: () => {
+      // Cancels PartySocket's own retry, which would reuse the spent token while this component
+      // is suspended on a fresh one. useAgent reconnects once that token arrives.
+      agent.close();
+      onReconnectingChange(true);
+    }
+  });
   const { messages, sendMessage, status, isServerStreaming } = useAgentChat<unknown, JarvisMessage>(
     {
       agent,
@@ -310,6 +418,43 @@ function ChatSession({ room, host, open, onRestart }: SessionProps) {
     }
   );
 
+  useEffect(
+    () => onChat({ messages, status, isServerStreaming, sendMessage }),
+    [onChat, messages, status, isServerStreaming, sendMessage]
+  );
+  return null;
+}
+
+type SessionProps = {
+  room: string;
+  host: string;
+  turnstileSiteKey?: string;
+  open: boolean;
+  onRestart: () => void;
+};
+
+type RoomState = {
+  chat: RoomChat | null;
+  reconnecting: boolean;
+  unavailable: boolean;
+  awaitingReply: boolean;
+};
+
+const errorBubble: Bubble = { id: "error", kind: "system", text: ERROR_NOTICE.text };
+
+function roomView({
+  chat,
+  reconnecting,
+  unavailable,
+  awaitingReply
+}: RoomState): Pick<PanelProps, "bubbles" | "phase"> {
+  if (unavailable)
+    return {
+      bubbles: [...toBubbles(chat?.messages ?? []), errorBubble],
+      phase: { kind: "unavailable" }
+    };
+  if (!chat) return { bubbles: [], phase: { kind: "loading" } };
+  const { messages, status, isServerStreaming } = chat;
   const last = messages.at(-1);
   const replyStarted = last?.role === "assistant" && last.parts.length > 0;
   const busy =
@@ -319,27 +464,70 @@ function ChatSession({ room, host, open, onRestart }: SessionProps) {
     (awaitingReply && status !== "error" && !replyStarted);
 
   const bubbles = toBubbles(messages);
-  if (status === "error") bubbles.push({ id: "error", kind: "system", text: ERROR_NOTICE.text });
+  if (status === "error") bubbles.push(errorBubble);
+  const restingPhase: Phase = reconnecting ? { kind: "reconnecting" } : { kind: "idle" };
+  return { bubbles, phase: busy ? turnPhase(last) : restingPhase };
+}
+
+function ChatSession({ room, host, turnstileSiteKey, open, onRestart }: SessionProps) {
+  const [chat, setChat] = useState<RoomChat | null>(null);
+  const [reconnecting, setReconnecting] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+  const [awaitingReply, setAwaitingReply] = useState(false);
+  const [interactiveCheck, setInteractiveCheck] = useState(false);
+  // Owned here because RoomConnection's first render suspends and React discards its state.
+  const [failures] = useState(connectFailures);
+  const [composerFocusRequests, setComposerFocusRequests] = useState(0);
+  const [challenge] = useState(() =>
+    turnstileChallenge({
+      siteKey: turnstileSiteKey,
+      onInteractiveChange: setInteractiveCheck,
+      onFocusLost: () => setComposerFocusRequests(n => n + 1)
+    })
+  );
+  useEffect(() => () => challenge?.close(), [challenge]);
 
   const onSend = (text: string) => {
     setAwaitingReply(true);
     // PII: never send message text to PostHog.
     track("chat_message_sent");
-    void sendMessage({ text });
+    void chat?.sendMessage({ text });
   };
 
-  if (!open) return null;
   return (
-    <ChatPanel
-      bubbles={bubbles}
-      phase={busy ? turnPhase(last) : { kind: "idle" }}
-      onSend={onSend}
-      onRestart={onRestart}
-    />
+    <>
+      <Suspense fallback={null}>
+        <RoomConnection
+          room={room}
+          host={host}
+          challenge={challenge}
+          failures={failures}
+          onChat={setChat}
+          onReconnectingChange={setReconnecting}
+          onUnavailable={() => setUnavailable(true)}
+        />
+      </Suspense>
+      {open && (
+        <ChatPanel
+          {...roomView({ chat, reconnecting, unavailable, awaitingReply })}
+          challengeRef={challenge?.ref ?? null}
+          interactiveCheck={interactiveCheck}
+          composerFocusRequests={composerFocusRequests}
+          onSend={onSend}
+          onRestart={onRestart}
+        />
+      )}
+    </>
   );
 }
 
-export function ChatWidget({ host }: { host?: string }) {
+export function ChatWidget({
+  host,
+  turnstileSiteKey
+}: {
+  host?: string;
+  turnstileSiteKey?: string;
+}) {
   const [open, setOpen] = useState(false);
   // Fixed while open: Radix remounts the panel when `modal` flips, which would drop the draft.
   const [modal, setModal] = useState(false);
@@ -391,10 +579,6 @@ export function ChatWidget({ host }: { host?: string }) {
     };
   }, []);
 
-  const loadingPanel = (
-    <ChatPanel bubbles={[]} phase={{ kind: "loading" }} onSend={() => {}} onRestart={restart} />
-  );
-
   return (
     <Dialog open={open} onOpenChange={next => (next ? openPanel() : closePanel())} modal={modal}>
       <DialogTrigger asChild>
@@ -419,16 +603,14 @@ export function ChatWidget({ host }: { host?: string }) {
       )}
 
       {room && (
-        // The hook suspends while it loads the room's history.
-        <Suspense fallback={open && loadingPanel}>
-          <ChatSession
-            key={room}
-            room={room}
-            host={host || window.location.host}
-            open={open}
-            onRestart={restart}
-          />
-        </Suspense>
+        <ChatSession
+          key={room}
+          room={room}
+          host={host || window.location.host}
+          turnstileSiteKey={turnstileSiteKey}
+          open={open}
+          onRestart={restart}
+        />
       )}
     </Dialog>
   );

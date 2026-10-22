@@ -19,12 +19,13 @@ Never use `bun run preview`. It binds `:8787` and `apps/api/.wrangler/state`, wh
 cd "$(git rev-parse --show-toplevel)"
 RUN="${SCRATCHPAD:-${TMPDIR:-/tmp}}/verify-murugappan-dev/$(date +%Y%m%dT%H%M%S)"
 mkdir -p "$RUN/evidence"
-PUBLIC_CHAT_HOST= POST_HOG_TOKEN= bun run build > "$RUN/build.log" 2>&1 || { tail -40 "$RUN/build.log"; exit 1; }
+PUBLIC_CHAT_HOST= POST_HOG_TOKEN= PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA bun run build > "$RUN/build.log" 2>&1 || { tail -40 "$RUN/build.log"; exit 1; }
 (cd apps/api && node ../../node_modules/wrangler/bin/wrangler.js d1 migrations apply jarvis-chats \
   --local --persist-to "$RUN/state" > "$RUN/migrate.log" 2>&1) || { tail -20 "$RUN/migrate.log"; exit 1; }
 (cd apps/api && exec nohup node ../../node_modules/wrangler/bin/wrangler.js dev \
   --port 8791 --inspector-port 9291 --local-upstream localhost:8791 \
   --persist-to "$RUN/state" --show-interactive-dev-session=false \
+  --var TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA \
   > "$RUN/worker.log" 2>&1) &
 echo $! > "$RUN/worker.pid"
 for i in $(seq 60); do grep -q 'Ready on http://localhost:8791' "$RUN/worker.log" && break; sleep 0.5; done
@@ -34,7 +35,7 @@ echo "RUN=$RUN"
 
 Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`. Set `SCRATCHPAD` to your session scratchpad if your harness names one. Run wrangler with `node`, never `bun` or `bunx`, because under Bun it reports ready but never answers.
 
-The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going. Both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics.
+The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going. Both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics. The Turnstile site key and the `--var` secret are Cloudflare's always-passing test pair, so the chat socket opens without a real challenge. To drive the interactive check, build with the site key `3x00000000000000000000FF` instead. The checkbox then shows above the composer and the socket opens once it's clicked.
 
 The Worker creates no D1 tables, so Launch applies `apps/api/migrations/` to the fresh state first. Without them the chat logs `d1 mirror failed ... no such table: rooms`.
 

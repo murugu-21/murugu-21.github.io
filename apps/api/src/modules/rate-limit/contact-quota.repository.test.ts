@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { WorkerEnv } from "#src/common/di/worker-env.ts";
 import { ContactQuotaRepository } from "#src/modules/rate-limit/contact-quota.repository.ts";
+import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 import { sharedLimiter, testEnv } from "#test/fixtures.ts";
 
 const failureOf = <A, E>(call: (quota: ContactQuotaRepository["Service"]) => Effect.Effect<A, E>) =>
@@ -23,7 +24,7 @@ describe("ContactQuotaRepository", () => {
       clientRemaining: 3,
       globalRemaining: 0
     });
-    const failure = await failureOf(quota => quota.take("203.0.113.30"));
+    const failure = await failureOf(quota => quota.take(visitorKey("203.0.113.30")));
     expect(failure).toMatchObject({
       _tag: "ContactLimitReached",
       scope: "global",
@@ -37,7 +38,9 @@ describe("ContactQuotaRepository", () => {
       const cause = new Error("limiter down");
       vi.spyOn(sharedLimiter(), rpc).mockRejectedValue(cause);
       const failure = await failureOf(quota =>
-        rpc === "takeContactSlot" ? quota.take("203.0.113.31") : quota.usage("203.0.113.31")
+        rpc === "takeContactSlot"
+          ? quota.take(visitorKey("203.0.113.31"))
+          : quota.usage(visitorKey("203.0.113.31"))
       );
       expect(failure).toMatchObject({ _tag: "QuotaUnavailable", cause });
     }

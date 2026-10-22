@@ -13,6 +13,7 @@ import type {
   ContactUsage,
   QuotaUnavailable
 } from "#src/modules/rate-limit/contact-quota.repository.ts";
+import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 import {
   contactRateLimitHeaders,
   secondsUntilUtcMidnight
@@ -117,7 +118,7 @@ export const contactController = new Hono<AppEnv>().post(
   jsonBodyPipe({ schema: ContactRequest, schemaName: "ContactRequest" }),
   c => {
     const { dryRun, ...message } = c.var.body;
-    const client = c.req.header("CF-Connecting-IP") ?? "unknown";
+    const client = visitorKey(c.req.header("CF-Connecting-IP"));
 
     if (dryRun) {
       return runInRequest({

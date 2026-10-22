@@ -7,14 +7,18 @@ import { afterEach, assert, describe, expect, it, vi } from "vite-plus/test";
 import { z } from "zod";
 
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
-import { ROOM_DAILY_LIMIT } from "#src/modules/chat/prompt.ts";
+import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
 import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
-import type { RateLimiter } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
+import {
+  BALANCE_KEY,
+  type RateLimiter
+} from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 import {
   activitiesIn,
   chatRequest,
   connectRoom,
+  fakeSiteverify,
   fetchWorker,
   noticesIn,
   stubDeepseekBalance,
@@ -26,7 +30,10 @@ import {
   roomName,
   streamedChunks,
   testEnv,
+  TURNSTILE_FAILING_SECRET,
+  TURNSTILE_PASSING_SECRET,
   type TestEnvOptions,
+  upgradeRoom,
   userMessage,
   visitorStorage
 } from "./fixtures";
@@ -97,13 +104,43 @@ async function fundChat(): Promise<void> {
     await runInDurableObject(
       globalLimiter(testEnv()),
       async (limiter: RateLimiter, state: DurableObjectState) => {
-        await state.storage.deleteAll();
-        await limiter.chatAvailable("sk-test");
+        // deleteAll would drop the tables the constructor made, so empty them instead.
+        state.storage.sql.exec(`DELETE FROM chat_buckets; DELETE FROM chat_daily_turns`);
+        await state.storage.delete(BALANCE_KEY);
+        await limiter.admitChatTurn({ visitor: visitorKey("192.0.2.255"), apiKey: "sk-test" });
       }
     );
   } finally {
     vi.unstubAllGlobals();
   }
+}
+
+const answersOk = () => new MockLanguageModelV4({ doStream: async () => textStep("ok")() });
+
+async function spendTurns({ ip, turns }: { ip: string; turns: number }): Promise<void> {
+  await runInDurableObject(globalLimiter(testEnv()), async (limiter: RateLimiter) => {
+    for (let i = 0; i < turns; i++) {
+      await limiter.admitChatTurn({ visitor: visitorKey(ip), apiKey: "sk-test" });
+    }
+  });
+}
+
+async function turnReply({
+  room,
+  ip,
+  text = "hi"
+}: {
+  room: string;
+  ip: string;
+  text?: string;
+}): Promise<{ reply: string; notices: unknown[] }> {
+  const { socket, frames, stub } = await openRoom(roomName(room), {
+    headers: { "CF-Connecting-IP": ip }
+  });
+  await scriptRoom(stub, answersOk());
+  socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text })] }));
+  const chunks = await streamedChunks(frames, "r1");
+  return { reply: replyText(chunks), notices: noticesIn(chunks) };
 }
 
 async function scriptRoom(
@@ -264,80 +301,21 @@ describe("a chat turn", () => {
     const { socket, frames, stub } = await openRoom(roomName("room-grounding"));
     const model = scriptedModel(textStep("One."));
     await scriptRoom(stub, model);
-    socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "one" })] }));
+    socket.send(
+      chatRequest({
+        id: "r1",
+        messages: [userMessage({ id: "u1", text: "one" })],
+        page: "https://evil.example/x"
+      })
+    );
     expect(replyText(await streamedChunks(frames, "r1"))).toBe("One.");
+    expect(JSON.stringify(model.doStreamCalls[0].prompt)).not.toContain("evil.example");
 
     const system = JSON.stringify(model.doStreamCalls[0]?.prompt[0]);
     expect(system).toContain("# Murugappan M, Full Stack Engineer");
     expect(system).toContain(
       "[Coin Change Problem](https://murugappan.dev/blog/coin-change-problem/)"
     );
-  });
-
-  it("answers a room's last message of the day, then gates the next one", async () => {
-    await fundChat();
-    const { socket, frames, stub } = await openRoom(roomName("room-daily"));
-    const model = scriptedModel(textStep("Sure."));
-    await scriptRoom(stub, model);
-    await runInDurableObject(stub, instance => {
-      for (let i = 1; i < ROOM_DAILY_LIMIT; i++) {
-        instance.ctx.storage.sql.exec(
-          `INSERT INTO user_messages (created_at) VALUES (?)`,
-          Date.now()
-        );
-      }
-    });
-
-    socket.send(
-      chatRequest({
-        id: "last",
-        messages: [userMessage({ id: "u1", text: "one more" })],
-        page: "https://evil.example/x"
-      })
-    );
-    expect(replyText(await streamedChunks(frames, "last"))).toBe("Sure.");
-    expect(JSON.stringify(model.doStreamCalls[0].prompt)).not.toContain("evil.example");
-
-    socket.send(
-      chatRequest({ id: "over", messages: [userMessage({ id: "u2", text: "and another" })] })
-    );
-    expect(noticesIn(await streamedChunks(frames, "over"))).toEqual([
-      { kind: "limit", text: LIMIT_TEXT }
-    ]);
-  });
-
-  it("forgets the daily count of a message past the window but keeps it in the conversation", async () => {
-    await fundChat();
-    const room = roomName("room-prune");
-    const { socket, frames, stub } = await openRoom(room);
-    await scriptRoom(stub, scriptedModel(textStep("Sure."), textStep("Again.")));
-    const earlier = userMessage({ id: "u1", text: "earlier" });
-    socket.send(chatRequest({ id: "earlier", messages: [earlier] }));
-    expect(replyText(await streamedChunks(frames, "earlier"))).toBe("Sure.");
-
-    const twoDaysAgo = Date.now() - 2 * 24 * 60 * 60 * 1000;
-    await runInDurableObject(stub, instance => {
-      instance.ctx.storage.sql.exec(`UPDATE user_messages SET created_at = ?`, twoDaysAgo);
-    });
-    const now = userMessage({ id: "u2", text: "now" });
-    socket.send(chatRequest({ id: "now", messages: [earlier, now] }));
-    expect(replyText(await streamedChunks(frames, "now"))).toBe("Again.");
-
-    const counts = await runInDurableObject(stub, instance =>
-      instance.ctx.storage.sql
-        .exec<{ total: number; old: number }>(
-          `SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE created_at <= ?) AS old FROM user_messages`,
-          twoDaysAgo
-        )
-        .one()
-    );
-    expect(counts).toEqual({ total: 1, old: 0 });
-    expect(await storedMessages(room)).toEqual([
-      { role: "user", parts: [{ type: "text", text: "earlier" }] },
-      { role: "assistant", parts: [{ type: "text", text: "Sure.", state: "done" }] },
-      { role: "user", parts: [{ type: "text", text: "now" }] },
-      { role: "assistant", parts: [{ type: "text", text: "Again.", state: "done" }] }
-    ]);
   });
 
   it("gates every room once DeepSeek answers 402, and reports other failures", async () => {
@@ -480,6 +458,107 @@ describe("a chat turn", () => {
     } finally {
       await env.CHAT_DB.exec("ALTER TABLE messages_away RENAME TO messages");
     }
+  });
+});
+
+describe("chat limits", () => {
+  it("stops one visitor after ten turns across two rooms, while another visitor still chats", async () => {
+    await fundChat();
+    const headers = { "CF-Connecting-IP": "198.51.100.40" };
+    const rooms = [
+      await openRoom(roomName("room-spend-a"), { headers }),
+      await openRoom(roomName("room-spend-b"), { headers })
+    ];
+    for (const room of rooms) await scriptRoom(room.stub, answersOk());
+
+    const replies = [];
+    for (let turn = 0; turn < 11; turn++) {
+      const { socket, frames } = rooms[turn % 2];
+      socket.send(
+        chatRequest({ id: `t${turn}`, messages: [userMessage({ id: `u${turn}`, text: "hi" })] })
+      );
+      const chunks = await streamedChunks(frames, `t${turn}`);
+      replies.push(replyText(chunks) || noticesIn(chunks));
+    }
+    expect(replies).toEqual([
+      ...Array.from({ length: 10 }, () => "ok"),
+      [{ kind: "limit", text: LIMIT_TEXT }]
+    ]);
+
+    expect(await turnReply({ room: "room-spend-other", ip: "198.51.100.41" })).toEqual({
+      reply: "ok",
+      notices: []
+    });
+  });
+
+  it("counts every address in an IPv6 /64 as one visitor", async () => {
+    await fundChat();
+    await spendTurns({ ip: "2001:db8:5::1", turns: 10 });
+
+    expect(await turnReply({ room: "room-v6-same", ip: "2001:DB8:5:0:abcd::9" })).toEqual({
+      reply: "",
+      notices: [{ kind: "limit", text: LIMIT_TEXT }]
+    });
+    expect(await turnReply({ room: "room-v6-other", ip: "2001:db8:5:1::1" })).toEqual({
+      reply: "ok",
+      notices: []
+    });
+  });
+
+  it("turns away a fresh visitor once the site's daily turns are spent", async () => {
+    await fundChat();
+    for (let visitor = 0; visitor < 40; visitor++) {
+      await spendTurns({ ip: `10.3.0.${visitor}`, turns: 10 });
+    }
+
+    expect(await turnReply({ room: "room-site-cap", ip: "198.51.100.42" })).toEqual({
+      reply: "",
+      notices: [{ kind: "limit", text: LIMIT_TEXT }]
+    });
+  });
+});
+
+describe("opening a chat socket", () => {
+  it("opens for a token siteverify accepts, sending it the token and the visitor's address", async () => {
+    const { calls } = fakeSiteverify();
+    const response = await upgradeRoom(roomName("room-turnstile-ok"), {
+      turnstileToken: "token-1",
+      headers: { "CF-Connecting-IP": "203.0.113.5" }
+    });
+    response.webSocket?.accept();
+    response.webSocket?.close();
+
+    expect(response.status).toBe(101);
+    expect(calls).toEqual([
+      { secret: TURNSTILE_PASSING_SECRET, response: "token-1", remoteip: "203.0.113.5" }
+    ]);
+  });
+
+  it.each([
+    { label: "without a token", turnstileToken: null, env: {}, down: false },
+    {
+      label: "when siteverify rejects the token",
+      turnstileToken: "token-1",
+      env: { turnstileSecret: TURNSTILE_FAILING_SECRET },
+      down: false
+    },
+    {
+      label: "when the Worker has no Turnstile secret",
+      turnstileToken: "token-1",
+      env: { turnstileSecret: "" },
+      down: false
+    },
+    { label: "when siteverify can't be reached", turnstileToken: "token-1", env: {}, down: true }
+  ])("refuses the socket $label", async ({ turnstileToken, env: envOptions, down }) => {
+    fakeSiteverify({ down });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const response = await upgradeRoom(roomName("room-turnstile-no"), {
+      turnstileToken,
+      env: envOptions
+    });
+
+    expect(response.status).toBe(403);
+    expect(await response.text()).toBe("Forbidden");
   });
 });
 

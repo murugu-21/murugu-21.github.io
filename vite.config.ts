@@ -132,6 +132,7 @@ export default defineConfig({
           environment: "node",
           include: [
             "tooling/**/*.test.ts",
+            "apps/site/*.test.ts",
             "apps/site/{src,scripts}/**/*.test.ts",
             "apps/tts/*.test.ts",
             "packages/**/*.test.ts"

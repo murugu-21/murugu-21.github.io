@@ -2,6 +2,9 @@ import type { UIMessage } from "ai";
 
 export const MAX_MESSAGE_LENGTH = 1000;
 
+// Browsers can't set headers on a WebSocket, so the widget sends its Turnstile token in the query.
+export const TURNSTILE_TOKEN_PARAM = "cf-turnstile-response";
+
 export const GREETING =
   "Hi, I'm Jarvis, Murugappan's AI assistant. Ask me about his experience, " +
   "projects, or blog posts, or tell me about an opportunity for him.";

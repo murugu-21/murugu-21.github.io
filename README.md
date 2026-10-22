@@ -74,6 +74,7 @@ These env vars change the build. All are optional locally.
 - `POST_HOG_TOKEN` and `POST_HOG_URL`: turn on analytics.
 - `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID`: upload source maps for error tracking.
 - `RESUME_PHONE`: adds a phone number to the resume.
+- `PUBLIC_TURNSTILE_SITE_KEY`: the Turnstile site key the chat widget passes before it connects. A build in Workers Builds fails without it, because the deployed chat would refuse every visitor. See [the Worker's README](apps/api/README.md#jarvis).
 
 `bun run build` is cached, and the site build sees only the variables in `apps/site/build-env.ts`, so declare a new one there. A cached build keeps the GitHub card it fetched. Run `bunx vp cache clean` to fetch it again.
 

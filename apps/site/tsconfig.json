@@ -5,6 +5,7 @@
     "src/**/*",
     "scripts/**/*",
     "astro.config.ts",
+    "build-env.test.ts",
     "../../packages/content/posts-module.d.ts"
   ],
   "exclude": ["dist", "**/lint-fixture-*/**"],

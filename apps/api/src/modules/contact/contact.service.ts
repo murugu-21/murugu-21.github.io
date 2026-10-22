@@ -12,6 +12,7 @@ import {
   type ContactUsage,
   type QuotaUnavailable
 } from "#src/modules/rate-limit/contact-quota.repository.ts";
+import type { VisitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 export type ContactError =
   | DeliveryNotConfigured
@@ -23,10 +24,10 @@ export class ContactService extends Context.Service<
   ContactService,
   {
     deliver(input: {
-      client: string;
+      client: VisitorKey;
       message: ContactMessage;
     }): Effect.Effect<ContactUsage, ContactError>;
-    usage(client: string): Effect.Effect<ContactUsage, QuotaUnavailable>;
+    usage(client: VisitorKey): Effect.Effect<ContactUsage, QuotaUnavailable>;
   }
 >()("@murugappan/api/ContactService") {
   static readonly layer = Layer.effect(

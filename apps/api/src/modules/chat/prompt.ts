@@ -4,8 +4,6 @@ import { z } from "zod";
 import { lenient } from "@murugappan/utils/json.ts";
 
 const MAX_HISTORY_MESSAGES = 20;
-// Per-room cap over a rolling 24h; the only pacing on spend.
-export const ROOM_DAILY_LIMIT = 40;
 
 const LeadInput = z.object({
   name: lenient(z.string()).describe("The visitor's name, if they shared it."),

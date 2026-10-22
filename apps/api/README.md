@@ -61,14 +61,23 @@ The Worker also serves `/.well-known/api-catalog` and `/.well-known/mcp.json`, w
 
 Jarvis is the chat widget on every page. The widget is in `apps/site/src/components/chat/`. Each conversation is a `ChatRoom` Durable Object (`src/modules/chat/chat-room.durable-object.ts`), and replies come from DeepSeek.
 
-To run it locally, put `DEEPSEEK_API_KEY=sk-...` in `apps/api/.dev.vars`, then run `bun run build && bun run preview`. Without the key, the chat turns itself off. Local chats call the real API and cost real money.
+To run it locally, put these in `apps/api/.dev.vars`:
+
+```bash
+DEEPSEEK_API_KEY=sk-...
+# Cloudflare's test secret that accepts every Turnstile token.
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+```
+
+Then run `bun run build && bun run preview`. A build takes its Turnstile site key from `PUBLIC_TURNSTILE_SITE_KEY`, so put Cloudflare's always-passing visible test key, `PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA`, in `apps/site/.env`. `bun run dev` uses that key when none is set. To see the interactive check, use `3x00000000000000000000FF`, which always asks for a click. Without the DeepSeek key, the chat turns itself off. Local chats call the real API and cost real money.
 
 Things to know:
 
 - After changing `DEEPSEEK_MODEL`, run `bun run test:live` before pushing. It checks that the new model really emails a lead instead of only saying it did.
 - The socket opens only for a room name shaped like the widget's (21 characters from nanoid) and an `Origin` on the site itself, or any local page in local dev. CORS doesn't cover WebSockets, so without that check another site's page could spend the chat budget.
+- The socket also needs a Turnstile token, which the widget gets from a Turnstile widget and sends as the `cf-turnstile-response` query parameter. `turnstile.guard.ts` checks it with Cloudflare's siteverify and refuses the upgrade with a 403 when the token is missing or rejected, when siteverify can't be reached, or when `TURNSTILE_SECRET_KEY` is unset. A token works once, so every reconnect fetches a new one. The widget renders inside the open chat panel with `appearance: "interaction-only"`, so it shows only when Cloudflare wants a click, with a line saying so. A reconnect while the panel is closed waits for it to reopen. Production needs a Turnstile widget in Managed mode for `murugappan.dev`, its secret as the `TURNSTILE_SECRET_KEY` secret, and its site key as `PUBLIC_TURNSTILE_SITE_KEY` in the production build.
 - `ChatRoom` only accepts a small set of message types from the browser.
-- Chat stops when the DeepSeek balance runs low. Each room also has a daily message limit.
+- Chat stops when the DeepSeek balance runs low. The RateLimiter Durable Object also gives each visitor a bucket of 10 turns that refills one every 5 minutes, and caps the whole site at 400 turns per UTC day (`modules/rate-limit/chat-quota.ts`). A visitor is their IPv4 address or their IPv6 /64 (`visitor-key.ts`), whichever room they chat in. The contact allowance keys on the same visitor. The daily cap bounds spend, but every visitor shares it, so someone with about 40 IPv4 addresses or IPv6 /64s can use it up and turn chat off for everyone until UTC midnight.
 - `agents` and `@cloudflare/ai-chat` are pinned to exact versions because minor releases break them. Read their changelogs before upgrading.
 - Don't put `OPPORTUNITY_INBOX` in `.dev.vars`. It overrides the real value, and the email binding only sends to that one address.
 - The widget downloads on the visitor's first input, so a page that's only loaded never fetches it.

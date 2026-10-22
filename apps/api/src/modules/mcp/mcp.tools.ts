@@ -21,6 +21,7 @@ import type {
   ContactUsage
 } from "#src/modules/rate-limit/contact-quota.repository.ts";
 import { READ_LIMIT_MESSAGE, takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
+import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 export type ToolContext = {
   services: RequestServices;
@@ -147,7 +148,7 @@ const RUN: Record<McpToolName, Run> = {
     return runInRequest({
       services: ctx.services,
       program: ContactService.use(contact =>
-        contact.deliver({ client: ctx.clientIp ?? "unknown", message })
+        contact.deliver({ client: visitorKey(ctx.clientIp), message })
       ),
       render: sendMessageResults
     });

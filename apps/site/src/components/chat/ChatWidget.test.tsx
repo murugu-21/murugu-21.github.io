@@ -52,12 +52,18 @@ class FakeRoom {
     this.push({ type: "cf_agent_stream_resuming", id: turn });
   }
 
+  dropSockets() {
+    for (const socket of this.sockets) socket.drop();
+  }
+
   private push(frame: ServerFrame) {
     for (const socket of this.sockets) socket.deliver(JSON.stringify(frame));
   }
 }
 
 const rooms = new Map<string, FakeRoom>();
+const connections: URL[] = [];
+let refusals = 0;
 
 class FakeSocket extends EventTarget {
   static readonly CONNECTING = 0;
@@ -74,6 +80,7 @@ class FakeSocket extends EventTarget {
 
   constructor(url: string | URL) {
     super();
+    connections.push(new URL(url));
     const name = /^\/agents\/chat-room\/([^/]+)$/.exec(new URL(url).pathname)?.[1];
     if (!name) throw new Error(`the widget connected to ${String(url)}, not a chat room`);
     this.room = rooms.get(name) ?? new FakeRoom(name);
@@ -81,6 +88,11 @@ class FakeSocket extends EventTarget {
     // PartySocket attaches its listeners right after constructing the socket.
     queueMicrotask(() => {
       if (this.readyState !== FakeSocket.CONNECTING) return;
+      if (refusals > 0) {
+        refusals -= 1;
+        this.refuse();
+        return;
+      }
       this.readyState = FakeSocket.OPEN;
       this.room.sockets.add(this);
       this.dispatchEvent(new Event("open"));
@@ -98,6 +110,18 @@ class FakeSocket extends EventTarget {
 
   deliver(data: string) {
     this.dispatchEvent(new MessageEvent("message", { data }));
+  }
+
+  drop() {
+    this.close();
+    this.dispatchEvent(new CloseEvent("close", { code: 1006 }));
+  }
+
+  // A browser reports a refused upgrade as an error, then a 1006 close.
+  private refuse() {
+    this.readyState = FakeSocket.CLOSED;
+    this.dispatchEvent(new Event("error"));
+    this.dispatchEvent(new CloseEvent("close", { code: 1006 }));
   }
 }
 
@@ -128,9 +152,9 @@ const sendButton = () => page.getByRole("button", { name: "Send" });
 
 function holdHistory() {
   localStorage.setItem("chatRoomId", "slow");
-  let release = () => {};
-  histories.set("slow", () => new Promise(resolve => (release = () => resolve(Response.json([])))));
-  return () => release();
+  const { promise, resolve } = Promise.withResolvers<void>();
+  histories.set("slow", () => promise.then(() => Response.json([])));
+  return () => resolve();
 }
 
 async function openChat() {
@@ -142,6 +166,8 @@ beforeEach(() => {
   vi.stubGlobal("WebSocket", FakeSocket);
   localStorage.clear();
   rooms.clear();
+  connections.length = 0;
+  refusals = 0;
   histories.clear();
   fetched.length = 0;
   events.length = 0;
@@ -380,6 +406,7 @@ it("holds the composer and the starters until the room's history arrives", async
   await render(<ChatWidget />);
   await page.getByRole("button", { name: LAUNCHER }).click();
   await expect.element(page.getByRole("dialog")).toBeVisible();
+  await expect.poll(() => fetched).toHaveLength(1);
   await expect.element(sendButton()).toBeDisabled();
   expect(starter.query()).toBeNull();
 
@@ -643,4 +670,332 @@ it("introduces the launcher once, then fades the hint away", async () => {
   await new Promise(requestAnimationFrame);
   expect(page.getByRole("button", { name: LAUNCHER }).query()).not.toBeNull();
   expect(hint.query()).toBeNull();
+});
+
+function stubSolvingTurnstile(solveMs: number) {
+  let issued = 0;
+  vi.stubGlobal("turnstile", {
+    render: (_: HTMLElement, options: { callback: (token: string) => void }) => {
+      issued += 1;
+      const token = `token-${issued}`;
+      setTimeout(() => options.callback(token), solveMs);
+      return token;
+    },
+    remove: () => {}
+  });
+}
+
+const tokens = () => connections.map(url => url.searchParams.get("cf-turnstile-response"));
+
+function stubManualTurnstile() {
+  const pendingSolves: (() => void)[] = [];
+  vi.stubGlobal("turnstile", {
+    render: (_: HTMLElement, options: { sitekey: string; callback: (token: string) => void }) => {
+      const token = `${options.sitekey}-token-${pendingSolves.length + 1}`;
+      pendingSolves.push(() => options.callback(token));
+      return `widget-${pendingSolves.length}`;
+    },
+    remove: () => {}
+  });
+  return pendingSolves;
+}
+
+async function openWithTurnstile(pendingSolves: (() => void)[]) {
+  await page.getByRole("button", { name: LAUNCHER }).click();
+  await expect.poll(() => pendingSolves).toHaveLength(1);
+  pendingSolves[0]?.();
+}
+
+it("reconnects with a fresh Turnstile token while the conversation and the composer stay put", async () => {
+  await page.viewport(1024, 768);
+  const pendingSolves = stubManualTurnstile();
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await openWithTurnstile(pendingSolves);
+  await expect.element(sendButton()).toBeEnabled();
+  expect(tokens()).toEqual(["site-key-token-1"]);
+
+  await userEvent.type(input(), "Hi{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+  lastRoom().stream(reply("Hello."));
+  lastRoom().finish();
+  await expect.element(page.getByText("Hello.")).toBeVisible();
+  await userEvent.type(input(), "Still there?");
+
+  lastRoom().dropSockets();
+  await expect.poll(() => pendingSolves).toHaveLength(2);
+  await expect.element(page.getByText("Hello.")).toBeVisible();
+  await expect.element(input()).toHaveFocus();
+  await expect.element(sendButton()).toBeDisabled();
+  await userEvent.keyboard("{Enter}");
+  await expect.element(input()).toHaveValue("Still there?");
+
+  pendingSolves[1]?.();
+  await expect.poll(tokens).toEqual(["site-key-token-1", "site-key-token-2"]);
+  await expect.element(sendButton()).toBeEnabled();
+  await expect.element(page.getByText("Hello.")).toBeVisible();
+  await expect.element(input()).toHaveFocus();
+  await userEvent.keyboard("{Enter}");
+  await expect.poll(() => lastRoom().requests).toHaveLength(2);
+  expect(lastRoom().requests[1]).toMatchObject({
+    messages: [{}, {}, { role: "user", parts: [{ type: "text", text: "Still there?" }] }]
+  });
+});
+
+it("keeps a fresh conversation's starters on screen, but not clickable, while it reconnects", async () => {
+  const pendingSolves = stubManualTurnstile();
+  const starter = page.getByRole("button", { name: "How has he used LLMs in production?" });
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await openWithTurnstile(pendingSolves);
+  await expect.element(starter).toBeEnabled();
+
+  lastRoom().dropSockets();
+  await expect.poll(() => pendingSolves).toHaveLength(2);
+  await expect.element(starter).toBeDisabled();
+
+  pendingSolves[1]?.();
+  await starter.click();
+  await expect.poll(() => lastRoom().requests).toHaveLength(1);
+});
+
+it("loads Turnstile only once the visitor opens the chat", async () => {
+  const appended: string[] = [];
+  vi.spyOn(document.head, "append").mockImplementation((...nodes) => {
+    for (const node of nodes) if (node instanceof HTMLScriptElement) appended.push(node.src);
+  });
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  expect(appended).toEqual([]);
+
+  await page.getByRole("button", { name: LAUNCHER }).click();
+  await expect
+    .poll(() => appended)
+    .toEqual(["https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"]);
+});
+
+it("keeps retrying a refused socket after each successful open", async () => {
+  stubSolvingTurnstile(0);
+  refusals = 4;
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await openChat();
+
+  refusals = 3;
+  lastRoom().dropSockets();
+  await expect.element(sendButton()).toBeDisabled();
+  await expect.element(sendButton()).toBeEnabled();
+  expect(tokens()).toEqual(Array.from({ length: 9 }, (_, i) => `token-${i + 1}`));
+  await expect.element(page.getByText("Something went wrong on my end.")).not.toBeInTheDocument();
+});
+
+it("retries each refusal with a fresh token while Turnstile is slow to solve", async () => {
+  stubSolvingTurnstile(4000);
+  refusals = 2;
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+
+  await expect.element(sendButton(), { timeout: 20_000 }).toBeEnabled();
+  expect(tokens()).toEqual(["token-1", "token-2", "token-3"]);
+});
+
+it("gives up on a socket the Worker keeps refusing, says chat is unavailable and reports it once", async () => {
+  refusals = Number.POSITIVE_INFINITY;
+  vi.stubGlobal("turnstile", {
+    render: (_: HTMLElement, options: { "error-callback": (code: string) => void }) => {
+      options["error-callback"]("110200");
+      return "widget";
+    },
+    remove: () => {}
+  });
+  const reported: string[] = [];
+  globalThis.posthog = {
+    capture: () => {},
+    captureException: (err: Error) => reported.push(err.message),
+    register: () => {}
+  };
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+
+  await expect
+    .element(page.getByText("Something went wrong on my end. Please try again."))
+    .toBeVisible();
+  await expect.element(sendButton()).toBeDisabled();
+  expect(connections).toHaveLength(5);
+  // Outlasts the 3 s first retry PartySocket would schedule if the connection hadn't stopped.
+  await new Promise(resolve => setTimeout(resolve, 4000));
+  expect(connections).toHaveLength(5);
+  expect(reported).toEqual(["Turnstile failed with 110200"]);
+});
+
+type ChallengeOptions = {
+  appearance: string;
+  callback: (token: string) => void;
+  "error-callback": (code: string) => void;
+  "before-interactive-callback": () => void;
+  "after-interactive-callback": () => void;
+};
+
+type CheckOutcome = (options: ChallengeOptions, token: string) => void;
+const PASSES_WITHOUT_A_CLICK = "passes without a click";
+
+const solves: CheckOutcome = (options, token) => {
+  options["after-interactive-callback"]();
+  options.callback(token);
+};
+
+function stubChallengingTurnstile(
+  outcomes: (CheckOutcome | typeof PASSES_WITHOUT_A_CLICK)[] = [solves]
+) {
+  const appearances: string[] = [];
+  const checkboxes = new Map<string, HTMLInputElement>();
+  let rendered = 0;
+  vi.stubGlobal("turnstile", {
+    render: (container: HTMLElement, options: ChallengeOptions) => {
+      appearances.push(options.appearance);
+      const outcome = outcomes[rendered] ?? solves;
+      rendered += 1;
+      const token = `solved-${rendered}`;
+      if (outcome === PASSES_WITHOUT_A_CLICK) {
+        options.callback(token);
+        return token;
+      }
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.setAttribute("aria-label", "Verify you are human");
+      checkbox.addEventListener("change", () => outcome(options, token));
+      container.append(checkbox);
+      checkboxes.set(token, checkbox);
+      options["before-interactive-callback"]();
+      return token;
+    },
+    remove: (widgetId: string) => checkboxes.get(widgetId)?.remove()
+  });
+  return appearances;
+}
+
+const panel = () => page.getByRole("dialog", { name: "Chat with Jarvis" });
+const humanCheck = () => panel().getByRole("checkbox", { name: "Verify you are human" });
+const checkStatus = () => panel().getByRole("status");
+
+it("shows Turnstile's interactive check inside the phone's modal panel and waits for the visitor", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  const appearances = stubChallengingTurnstile();
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+
+  await expect.element(checkStatus()).toHaveTextContent("Quick check before we chat");
+  await expect.element(humanCheck()).toBeVisible();
+  expect(appearances).toEqual(["interaction-only"]);
+  await vi.advanceTimersByTimeAsync(60_000);
+  await expect.element(humanCheck()).toBeVisible();
+  await expect.element(sendButton()).toBeDisabled();
+
+  await humanCheck().click();
+  await expect.element(sendButton()).toBeEnabled();
+  expect(tokens()).toEqual(["solved-1"]);
+  await expect.element(checkStatus()).toHaveTextContent("");
+  await expect.element(input()).not.toHaveFocus();
+});
+
+it("hands focus back to the composer only when a solved check on the desktop panel held it", async () => {
+  await page.viewport(1024, 768);
+  stubChallengingTurnstile([solves, PASSES_WITHOUT_A_CLICK]);
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+
+  await expect.element(humanCheck()).toBeVisible();
+  humanCheck().element().focus();
+  await expect.element(humanCheck()).toHaveFocus();
+  await humanCheck().click();
+
+  await expect.element(sendButton()).toBeEnabled();
+  await expect.element(input()).toHaveFocus();
+
+  const options = page.getByRole("button", { name: "Conversation options" });
+  options.element().focus();
+  lastRoom().dropSockets();
+  await expect.poll(tokens).toEqual(["solved-1", "solved-2"]);
+  await expect.element(sendButton()).toBeEnabled();
+  await expect.element(options).toHaveFocus();
+});
+
+it("times out 15 s after a clicked check goes quiet, then asks again", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  stubChallengingTurnstile([options => options["after-interactive-callback"]()]);
+  refusals = 1;
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+  await humanCheck().click();
+
+  await vi.advanceTimersByTimeAsync(14_000);
+  expect(connections).toEqual([]);
+  await vi.advanceTimersByTimeAsync(1_000);
+  await expect.poll(tokens).toEqual([null]);
+  await humanCheck().click();
+  await expect.element(sendButton()).toBeEnabled();
+  expect(tokens()).toEqual([null, "solved-2"]);
+});
+
+it("clears the check line when the check fails and the retry passes unseen", async () => {
+  stubChallengingTurnstile([
+    options => options["error-callback"]("600010"),
+    PASSES_WITHOUT_A_CLICK
+  ]);
+  refusals = 1;
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+  await expect.element(checkStatus()).toHaveTextContent("Quick check before we chat");
+  await humanCheck().click();
+
+  await expect.element(sendButton()).toBeEnabled();
+  expect(tokens()).toEqual([null, "solved-2"]);
+  await expect.element(checkStatus()).toHaveTextContent("");
+});
+
+it("asks for the check again when the visitor closes the panel mid-check and reopens it", async () => {
+  stubChallengingTurnstile();
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+  await expect.element(humanCheck()).toBeVisible();
+
+  await userEvent.keyboard("{Escape}");
+  await expect.element(panel()).not.toBeInTheDocument();
+  await page.getByRole("button", { name: LAUNCHER }).click();
+
+  await humanCheck().click();
+  await expect.element(sendButton()).toBeEnabled();
+  expect(tokens()).toEqual(["solved-2"]);
+});
+
+it("waits for the panel to reopen before fetching a token for a socket that dropped while closed", async () => {
+  const pendingSolves = stubManualTurnstile();
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await openWithTurnstile(pendingSolves);
+  await expect.element(sendButton()).toBeEnabled();
+  await userEvent.keyboard("{Escape}");
+  await expect.element(panel()).not.toBeInTheDocument();
+
+  lastRoom().dropSockets();
+  await new Promise(resolve => setTimeout(resolve, 500));
+  expect(pendingSolves).toHaveLength(1);
+
+  await page.getByRole("button", { name: LAUNCHER }).click();
+  await expect.poll(() => pendingSolves).toHaveLength(2);
+  pendingSolves[1]?.();
+  await expect.element(sendButton()).toBeEnabled();
+  expect(tokens()).toEqual(["site-key-token-1", "site-key-token-2"]);
+});
+
+it("gives up on a Turnstile that never answers after 15 s and retries with a fresh token", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  const pendingSolves = stubManualTurnstile();
+  refusals = 1;
+  await render(<ChatWidget turnstileSiteKey="site-key" />);
+  await page.getByRole("button", { name: LAUNCHER }).click();
+
+  await vi.advanceTimersByTimeAsync(14_999);
+  await expect.element(sendButton()).toBeDisabled();
+  expect(pendingSolves).toHaveLength(1);
+  await vi.advanceTimersByTimeAsync(1);
+  await expect.poll(() => pendingSolves).toHaveLength(2);
+  pendingSolves[1]?.();
+  await expect.poll(tokens).toEqual([null, "site-key-token-2"]);
+  await expect.element(sendButton()).toBeEnabled();
 });

@@ -2,6 +2,7 @@ import { Context, Data, Effect, Layer } from "effect";
 
 import { WorkerEnv } from "#src/common/di/worker-env.ts";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
+import type { VisitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 export type ContactUsage = { clientRemaining: number; globalRemaining: number };
 
@@ -20,8 +21,8 @@ export class QuotaUnavailable extends Data.TaggedError("QuotaUnavailable")<{
 export class ContactQuotaRepository extends Context.Service<
   ContactQuotaRepository,
   {
-    take(client: string): Effect.Effect<ContactUsage, ContactLimitReached | QuotaUnavailable>;
-    usage(client: string): Effect.Effect<ContactUsage, QuotaUnavailable>;
+    take(client: VisitorKey): Effect.Effect<ContactUsage, ContactLimitReached | QuotaUnavailable>;
+    usage(client: VisitorKey): Effect.Effect<ContactUsage, QuotaUnavailable>;
   }
 >()("@murugappan/api/ContactQuotaRepository") {
   static readonly layer = Layer.effect(

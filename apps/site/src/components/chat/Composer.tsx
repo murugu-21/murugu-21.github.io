@@ -5,9 +5,14 @@ import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
 import { Button } from "#src/components/ui/button.tsx";
 import { Textarea } from "#src/components/ui/textarea.tsx";
 
-type ComposerProps = { disabled: boolean; autoFocus: boolean; onSend: (text: string) => void };
+type ComposerProps = {
+  disabled: boolean;
+  autoFocus: boolean;
+  focusRequests: number;
+  onSend: (text: string) => void;
+};
 
-export function Composer({ disabled, autoFocus, onSend }: ComposerProps) {
+export function Composer({ disabled, autoFocus, focusRequests, onSend }: ComposerProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const submit = () => {
@@ -21,6 +26,10 @@ export function Composer({ disabled, autoFocus, onSend }: ComposerProps) {
   useEffect(() => {
     if (autoFocus) inputRef.current?.focus();
   }, [autoFocus]);
+
+  useEffect(() => {
+    if (autoFocus && focusRequests > 0) inputRef.current?.focus();
+  }, [autoFocus, focusRequests]);
 
   return (
     <form

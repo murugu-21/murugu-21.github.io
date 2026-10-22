@@ -89,6 +89,19 @@ describe("contact limiting through the worker", () => {
     });
   });
 
+  it("counts every address in an IPv6 /64 as one client", async () => {
+    const post = (ip: string) =>
+      apiClient({ ip })
+        .api.v1.contact.$post({ json: validMessage })
+        .then(res => res.status);
+    const statuses = [];
+    for (const ip of ["2001:db8:7::1", "2001:db8:7::2", "2001:DB8:7:0:ffff::3", "2001:db8:7::4"]) {
+      statuses.push(await post(ip));
+    }
+    statuses.push(await post("2001:db8:7:1::1"));
+    expect(statuses).toEqual([202, 202, 202, 429, 202]);
+  });
+
   it("does not spend a slot on an invalid request", async () => {
     const { contact } = apiClient({ ip: "198.51.100.8" }).api.v1;
     for (let i = 0; i < CONTACT_DAILY_PER_CLIENT + 1; i++) {

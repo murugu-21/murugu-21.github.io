@@ -1,7 +1,7 @@
 export const VISITOR_COUNTRY_HEADER = "x-visitor-country";
 export const VISITOR_IP_HEADER = "x-visitor-ip";
 
-type VisitorContext = { country: string | null; ip: string | null };
+export type VisitorContext = { country: string | null; ip: string | null };
 
 export function parseVisitorContext(headers: Headers): VisitorContext | null {
   const country = cleanHeader(headers.get(VISITOR_COUNTRY_HEADER));

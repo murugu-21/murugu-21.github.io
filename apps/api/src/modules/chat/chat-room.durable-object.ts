@@ -4,7 +4,7 @@ import {
   type OnChatMessageOptions
 } from "@cloudflare/ai-chat";
 import type { DurableObject } from "cloudflare:workers";
-import type { Connection, ConnectionContext } from "agents";
+import { getCurrentAgent, type Connection, type ConnectionContext } from "agents";
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
@@ -31,24 +31,17 @@ import { LLMS_TXT } from "#src/common/content.ts";
 import { admitFrame } from "#src/modules/chat/chat-frames.ts";
 import { deepseek, isInsufficientBalance, jarvisCall } from "#src/modules/chat/deepseek.client.ts";
 import { fetchSitePage } from "#src/modules/chat/fetch-page.client.ts";
-import {
-  buildMessages,
-  jarvisTools,
-  ROOM_DAILY_LIMIT,
-  type Lead
-} from "#src/modules/chat/prompt.ts";
-import { parseVisitorContext } from "#src/modules/chat/visitor.ts";
+import { buildMessages, jarvisTools, type Lead } from "#src/modules/chat/prompt.ts";
+import { parseVisitorContext, type VisitorContext } from "#src/modules/chat/visitor.ts";
 import { contactMailer, sendOpportunityEmail } from "#src/modules/mail/mail.client.ts";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-type CountRow = { n: number };
+import { VisitorKey, visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 const UNREADABLE = "Sorry, I couldn't read that message.";
 
 const RequestBody = z.object({ page: lenient(z.string()) });
 const Timestamp = z.number();
+const ConnectionVisitor = z.object({ visitor: VisitorKey });
 
 function logUsage(usage: LanguageModelUsage): void {
   console.log(
@@ -120,19 +113,22 @@ export class ChatRoom extends AIChatAgent<Env> {
 
   public onStart(): void {
     this.ctx.storage.sql.exec(
-      `CREATE TABLE IF NOT EXISTS user_messages (created_at INTEGER NOT NULL);
-       CREATE TABLE IF NOT EXISTS leads (
+      `CREATE TABLE IF NOT EXISTS leads (
          id INTEGER PRIMARY KEY AUTOINCREMENT,
          name TEXT,
          contact TEXT NOT NULL,
          summary TEXT NOT NULL,
          created_at INTEGER NOT NULL
-       );`
+       );
+       -- Rooms made before the per-visitor bucket still hold this table, and nothing else drops it.
+       DROP TABLE IF EXISTS user_messages;`
     );
   }
 
-  public onConnect(_connection: Connection, ctx: ConnectionContext): void {
-    this.recordVisitor(ctx.request);
+  public onConnect(connection: Connection, ctx: ConnectionContext): void {
+    const visitor = parseVisitorContext(ctx.request.headers);
+    connection.setState({ visitor: visitorKey(visitor?.ip) });
+    if (visitor) this.recordVisitor(visitor);
   }
 
   // An interrupted turn is dropped rather than retried, since a retry bills the model again.
@@ -146,14 +142,16 @@ export class ChatRoom extends AIChatAgent<Env> {
   ): Promise<Response> {
     try {
       const key = this.deepseekKey();
-      if (
-        this.userMessagesSince(Date.now() - DAY_MS) >= ROOM_DAILY_LIMIT ||
-        !key ||
-        !(await globalLimiter(this.env).chatAvailable(key))
-      ) {
+      if (!key) return noticeResponse(LIMIT_NOTICE);
+      const admission = await globalLimiter(this.env).admitChatTurn({
+        visitor: this.turnVisitor(),
+        apiKey: key
+      });
+      if (!admission.allowed) {
+        console.log({ event: "chat turn refused", reason: admission.reason });
         return noticeResponse(LIMIT_NOTICE);
       }
-      this.recordUserMessage();
+      this.mirrorLatestUserMessage();
 
       const { page } = RequestBody.parse(options?.body ?? {});
       return createUIMessageStreamResponse({
@@ -259,10 +257,12 @@ export class ChatRoom extends AIChatAgent<Env> {
     }
   }
 
-  private recordVisitor(request: Request): void {
-    const visitor = parseVisitorContext(request.headers);
-    if (!visitor) return;
+  private turnVisitor(): VisitorKey {
+    const state = getCurrentAgent().connection?.state;
+    return ConnectionVisitor.safeParse(state).data?.visitor ?? visitorKey(null);
+  }
 
+  private recordVisitor(visitor: VisitorContext): void {
     const kv = this.ctx.storage.kv;
     const now = Date.now();
     const knownFirstSeen = Timestamp.safeParse(kv.get("visitor_first_seen")).data;
@@ -304,16 +304,7 @@ export class ChatRoom extends AIChatAgent<Env> {
     });
   }
 
-  private userMessagesSince(cutoff: number): number {
-    return this.ctx.storage.sql
-      .exec<CountRow>(`SELECT COUNT(*) AS n FROM user_messages WHERE created_at > ?`, cutoff)
-      .one().n;
-  }
-
-  private recordUserMessage(): void {
-    const now = Date.now();
-    this.ctx.storage.sql.exec(`DELETE FROM user_messages WHERE created_at <= ?`, now - DAY_MS);
-    this.ctx.storage.sql.exec(`INSERT INTO user_messages (created_at) VALUES (?)`, now);
+  private mirrorLatestUserMessage(): void {
     const latest = this.messages.findLast(m => m.role === "user");
     if (latest) this.mirrorMessage("user", messageText(latest));
   }
