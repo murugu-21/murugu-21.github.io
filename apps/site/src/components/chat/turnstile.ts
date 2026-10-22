@@ -1,34 +1,22 @@
+/// <reference types="cloudflare-turnstile" />
+
 const SCRIPT_URL = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
 // Turnstile calls neither callback when its iframe is blocked.
 const TOKEN_TIMEOUT_MS = 15_000;
 
 export const ALWAYS_PASSING_TEST_SITE_KEY = "1x00000000000000000000AA";
 
-type RenderOptions = {
-  sitekey: string;
-  appearance: "interaction-only";
-  callback: (token: string) => void;
-  "error-callback": (code: string) => void;
-  "before-interactive-callback": () => void;
-  "after-interactive-callback": () => void;
-};
-
-type Turnstile = {
-  render: (container: HTMLElement, options: RenderOptions) => string | undefined;
-  remove: (widgetId: string) => void;
-};
-
 declare global {
   interface Window {
-    turnstile?: Turnstile;
+    turnstile?: Turnstile.Turnstile;
   }
 }
 
-let loading: Promise<Turnstile> | null = null;
+let loading: Promise<Turnstile.Turnstile> | null = null;
 
-function loadTurnstile(): Promise<Turnstile> {
+function loadTurnstile(): Promise<Turnstile.Turnstile> {
   if (window.turnstile) return Promise.resolve(window.turnstile);
-  loading ??= new Promise<Turnstile>((resolve, reject) => {
+  loading ??= new Promise<Turnstile.Turnstile>((resolve, reject) => {
     const script = document.createElement("script");
     script.src = SCRIPT_URL;
     const forgetFailedLoad = () => {
@@ -54,7 +42,7 @@ type CheckCallbacks = {
 
 type RenderRequest = Host &
   CheckCallbacks & {
-    turnstile: Turnstile;
+    turnstile: Turnstile.Turnstile;
     siteKey: string;
   };
 
@@ -66,7 +54,7 @@ async function renderToken({
   onInteractiveChange,
   onFocusLost
 }: RenderRequest): Promise<string> {
-  let widgetId: string | undefined;
+  let widgetId: ReturnType<Turnstile.Turnstile["render"]>;
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const settled = new AbortController();
   try {
