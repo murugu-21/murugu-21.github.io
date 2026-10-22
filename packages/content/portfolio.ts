@@ -1,4 +1,5 @@
 import { Profile } from "@murugappan/contracts/profile.ts";
+import { parsePeriod } from "./experience.ts";
 import profileJson from "./profile.json";
 
 const profile = Profile.parse(profileJson);
@@ -28,7 +29,11 @@ export const socialMediaLinks = {
   rss: "https://murugappan.dev/blog/rss.xml"
 };
 
-export const currentEmployer = { name: "MedMe Health", url: "https://www.medmehealth.com" };
+const currentRole = workExperiences.find(job => parsePeriod(job.date).current);
+if (!currentRole)
+  throw new Error("profile.json has no open-ended role to name as the current employer");
+
+export const currentEmployer = { name: currentRole.company, url: "https://www.medmehealth.com" };
 
 export const aboutLinks = [
   { label: "GitHub", href: socialMediaLinks.github },

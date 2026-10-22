@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { Dataset } from "@murugappan/contracts/api/dataset.ts";
-import { buildDataset, siteDataset, splitSkillItems, type DatasetInput } from "./dataset.ts";
-import { currentEmployer } from "./portfolio.ts";
+import { buildDataset, splitSkillItems, type DatasetInput } from "./dataset.ts";
 
 const DATASET_INPUT: DatasetInput = {
   greeting: {
@@ -202,12 +201,5 @@ describe("buildDataset", () => {
         links: [{ label: "Image paste", url: "https://gh.example/1" }]
       }
     ]);
-  });
-});
-
-describe("siteDataset", () => {
-  it("names the same current employer as the profile's open-ended role", () => {
-    // oxlint-disable-next-line tests/observe-behaviour -- relation test: currentEmployer must name the open-ended role in profile.json
-    expect(siteDataset().person.currentRole?.company).toBe(currentEmployer.name);
   });
 });
