@@ -17,6 +17,7 @@ import { registerResources } from "#src/modules/mcp/mcp.resources.ts";
 import { registerTools, type ToolContext } from "#src/modules/mcp/mcp.tools.ts";
 import { mcpAnalytics } from "#src/modules/mcp/posthog.client.ts";
 import { webOriginGuard } from "#src/modules/mcp/web-origin.guard.ts";
+import { parseVisitor } from "#src/modules/rate-limit/visitor-key.ts";
 
 const INSTRUCTIONS = `This server answers questions about one person: Murugappan M, a full stack engineer (TypeScript, Node.js, React, event-driven AWS) based in Bangalore, India, currently at MedMe Health.
 
@@ -56,11 +57,11 @@ mcpController.use("*", mcpCorsMiddleware);
 mcpController.all("*", webOriginGuard, async c => {
   const ctx: ToolContext = {
     services: c.var.services,
-    clientIp: c.req.header("CF-Connecting-IP")
+    visitor: parseVisitor(c.req.header("CF-Connecting-IP"))
   };
   const analytics = mcpAnalytics(c);
   // A handler per request: the SDK's factory sees the Request but not this request's services and
-  // client IP, which the tools read.
+  // visitor, which the tools read.
   const response = await createMcpHandler(
     () => {
       const server = buildServer(ctx);

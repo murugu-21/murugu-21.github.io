@@ -42,6 +42,16 @@ describe("read limiting through the worker", () => {
     expect(body.error.hint).toContain("RateLimit");
   });
 
+  it("counts every address in an IPv6 /64 as one reader", async () => {
+    const read = (ip: string) =>
+      apiClient({ ip })
+        .api.v1.profile.$get()
+        .then(res => res.status);
+    for (let i = 0; i < READ_QUOTA.quota; i++) await read(`2001:db8:8::${(i % 16).toString(16)}`);
+    expect(await read("2001:DB8:8:0:ffff::1")).toBe(429);
+    expect(await read("2001:db8:8:1::1")).toBe(200);
+  });
+
   it("keeps the spec reachable for a client that has been throttled", async () => {
     const client = apiClient({ ip: "198.51.100.4" });
     for (let i = 0; i < READ_QUOTA.quota + 5; i++) await client.api.v1.profile.$get();

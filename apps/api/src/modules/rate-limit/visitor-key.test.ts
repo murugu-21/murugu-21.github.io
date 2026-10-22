@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
+import { parseVisitor, visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 describe("visitorKey", () => {
   it.each([
@@ -27,5 +27,15 @@ describe("visitorKey", () => {
     { ip: undefined, key: "unknown" }
   ])("keys $ip as $key", ({ ip, key }) => {
     expect(visitorKey(ip)).toBe(key);
+  });
+});
+
+describe("parseVisitor", () => {
+  it("leaves a client without a usable address unkeyed instead of sharing one key", () => {
+    expect([
+      parseVisitor("2001:db8::2"),
+      parseVisitor("not an ip"),
+      parseVisitor(undefined)
+    ]).toEqual(["2001:db8:0:0::/64", null, null]);
   });
 });

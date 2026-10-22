@@ -387,10 +387,11 @@ RateLimit: "{READ_QUOTA.name}";r={READ_QUOTA.quota - 1};t={
       <p>
         <strong>Reads</strong> are effectively unmetered. The fair-use ceiling is {READ_QUOTA.quota}{" "}
         requests per {READ_QUOTA.windowSeconds} seconds per client address, counted in the edge
-        location that serves you. A client spread across several locations gets that allowance in
-        each, so the advertised number is a floor, not a cap. Read responses are cacheable for five
-        minutes, so a cached response may carry a stale <code>RateLimit</code> snapshot; treat it as
-        advisory and trust the freshest one you have.
+        location that serves you. Every IPv6 address in one /64 counts as one client. A client
+        spread across several locations gets that allowance in each, so the advertised number is a
+        floor, not a cap. Read responses are cacheable for five minutes, so a cached response may
+        carry a stale <code>RateLimit</code> snapshot; treat it as advisory and trust the freshest
+        one you have.
       </p>
       <p>
         <strong>

@@ -21,11 +21,11 @@ import type {
   ContactUsage
 } from "#src/modules/rate-limit/contact-quota.repository.ts";
 import { READ_LIMIT_MESSAGE, takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
-import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
+import { UNKNOWN_VISITOR, type VisitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 export type ToolContext = {
   services: RequestServices;
-  clientIp: string | undefined;
+  visitor: VisitorKey | null;
 };
 
 type ToolTextContent = { type: "text"; text: string };
@@ -94,8 +94,8 @@ const fromDataset: Run = (_args, { services }, tool) =>
     render: { success: ok, failures: {} }
   });
 
-export function refusedRead(clientIp: string | undefined): string | null {
-  const slot = clientIp ? takeReadSlot(clientIp) : null;
+export function refusedRead(visitor: VisitorKey | null): string | null {
+  const slot = visitor ? takeReadSlot(visitor) : null;
   if (!slot || slot.allowed) return null;
   return `${READ_LIMIT_MESSAGE} Wait ${slot.resetSeconds} seconds, then try again.`;
 }
@@ -103,7 +103,7 @@ export function refusedRead(clientIp: string | undefined): string | null {
 const readLimited =
   (run: Run): Run =>
   (args, ctx, tool) => {
-    const refused = refusedRead(ctx.clientIp);
+    const refused = refusedRead(ctx.visitor);
     return refused ? fail(refused) : run(args, ctx, tool);
   };
 
@@ -148,7 +148,7 @@ const RUN: Record<McpToolName, Run> = {
     return runInRequest({
       services: ctx.services,
       program: ContactService.use(contact =>
-        contact.deliver({ client: visitorKey(ctx.clientIp), message })
+        contact.deliver({ client: ctx.visitor ?? UNKNOWN_VISITOR, message })
       ),
       render: sendMessageResults
     });

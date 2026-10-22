@@ -10,6 +10,7 @@ import {
   takeReadSlot,
   type ReadSlot
 } from "#src/modules/rate-limit/read-quota.store.ts";
+import { parseVisitor } from "#src/modules/rate-limit/visitor-key.ts";
 
 function throttled(slot: ReadSlot): Response {
   return apiError({
@@ -32,9 +33,9 @@ export const readThrottleGuard = ({ enforce }: { enforce: boolean }) =>
     const isRead = c.req.method === "GET" || c.req.method === "HEAD";
     // Without a client address every caller would share one window, so nothing is counted.
     // Cloudflare always sets this header in production.
-    const client = c.req.header("CF-Connecting-IP");
+    const visitor = parseVisitor(c.req.header("CF-Connecting-IP"));
 
-    const slot = isRead && !isContact && client ? takeReadSlot(client) : null;
+    const slot = isRead && !isContact && visitor ? takeReadSlot(visitor) : null;
     if (slot && enforce && !slot.allowed) return throttled(slot);
 
     c.set("readSlot", slot);

@@ -16,6 +16,7 @@ import { refusedRead, type ToolContext } from "#src/modules/mcp/mcp.tools.ts";
 import { buildOpenApiDocument } from "#src/modules/openapi/openapi-document.ts";
 import type { Post, PostNotFound } from "#src/modules/posts/posts.repository.ts";
 import { PostsService } from "#src/modules/posts/posts.service.ts";
+import type { VisitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 type ResourceAnnotations = {
   audience: Array<"user" | "assistant">;
@@ -97,8 +98,8 @@ const contents = (content: ResourceContents) => ({ contents: [content] });
 // JSON-RPC leaves -32000 to -32099 to the server; resources have no isError result.
 const RATE_LIMITED = -32000;
 
-function spendRead(clientIp: string | undefined): void {
-  const refused = refusedRead(clientIp);
+function spendRead(visitor: VisitorKey | null): void {
+  const refused = refusedRead(visitor);
   if (refused) throw new ProtocolError(RATE_LIMITED, refused);
 }
 
@@ -109,7 +110,7 @@ const markdownOrNull: Render<Post, PostNotFound, string | null> = {
 
 // A missing post throws ResourceNotFoundError, which the SDK answers with -32602; the spec forbids
 // an empty contents array.
-export function registerResources(server: McpServer, { services, clientIp }: ToolContext): void {
+export function registerResources(server: McpServer, { services, visitor }: ToolContext): void {
   for (const key of MCP_RESOURCES) {
     const { path, title, type: mimeType } = DOCUMENTS[key];
     const { text, description, priority } = STATIC_RESOURCES[key];
@@ -117,7 +118,7 @@ export function registerResources(server: McpServer, { services, clientIp }: Too
     const name = path.slice(path.lastIndexOf("/") + 1);
     const metadata = { title, description, mimeType, annotations: forAssistant(priority) };
     server.registerResource(name, uri, metadata, () => {
-      spendRead(clientIp);
+      spendRead(visitor);
       return contents({ uri, mimeType, text: text() });
     });
   }
@@ -131,7 +132,7 @@ export function registerResources(server: McpServer, { services, clientIp }: Too
     });
   const template = new ResourceTemplate(uriTemplate, { list });
   server.registerResource(name, template, metadata, async (uri, { slug }) => {
-    spendRead(clientIp);
+    spendRead(visitor);
     if (slug === undefined || Array.isArray(slug)) throw new ResourceNotFoundError(uri.href);
     const markdown = await runInRequest({
       services,

@@ -35,7 +35,7 @@ import { buildMessages, jarvisTools, type Lead } from "#src/modules/chat/prompt.
 import { parseVisitorContext, type VisitorContext } from "#src/modules/chat/visitor.ts";
 import { contactMailer, sendOpportunityEmail } from "#src/modules/mail/mail.client.ts";
 import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
-import { VisitorKey, visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
+import { UNKNOWN_VISITOR, VisitorKey, visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 const UNREADABLE = "Sorry, I couldn't read that message.";
 
@@ -259,7 +259,7 @@ export class ChatRoom extends AIChatAgent<Env> {
 
   private turnVisitor(): VisitorKey {
     const state = getCurrentAgent().connection?.state;
-    return ConnectionVisitor.safeParse(state).data?.visitor ?? visitorKey(null);
+    return ConnectionVisitor.safeParse(state).data?.visitor ?? UNKNOWN_VISITOR;
   }
 
   private recordVisitor(visitor: VisitorContext): void {

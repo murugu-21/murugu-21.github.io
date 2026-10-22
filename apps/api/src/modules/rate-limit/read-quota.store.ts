@@ -1,4 +1,5 @@
 import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
+import type { VisitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
 export type ReadSlot = {
   allowed: boolean;
@@ -12,7 +13,7 @@ export const READ_LIMIT_MESSAGE = `More than ${READ_QUOTA.quota} read requests i
 
 // Fixed windows in the isolate, not a DO, because a cross-region round trip per read costs more
 // than the limit is worth. So the ceiling is per edge location, as /developers/ documents.
-const windows = new Map<string, Window>();
+const windows = new Map<VisitorKey, Window>();
 
 const MAX_TRACKED_CLIENTS = 20_000;
 
@@ -29,13 +30,13 @@ function prune(now: number): void {
   }
 }
 
-export function takeReadSlot(client: string, now = Date.now()): ReadSlot {
+export function takeReadSlot(visitor: VisitorKey, now = Date.now()): ReadSlot {
   const windowMs = READ_QUOTA.windowSeconds * 1000;
-  let window = windows.get(client);
+  let window = windows.get(visitor);
   if (!window || window.resetAt <= now) {
     prune(now);
     window = { resetAt: now + windowMs, used: 0 };
-    windows.set(client, window);
+    windows.set(visitor, window);
   }
   const resetSeconds = Math.ceil((window.resetAt - now) / 1000);
   if (window.used >= READ_QUOTA.quota) return { allowed: false, remaining: 0, resetSeconds };

@@ -17,6 +17,7 @@ import { LATEST_PROTOCOL_VERSION } from "@murugappan/contracts/mcp.ts";
 import { MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
 import { JsonRecord, type JsonValue } from "@murugappan/utils/json.ts";
 import { takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
+import { UNKNOWN_VISITOR } from "#src/modules/rate-limit/visitor-key.ts";
 import {
   ContactLimitReached,
   QuotaUnavailable
@@ -495,8 +496,17 @@ describe("the read limit", () => {
     expect(sent.structuredContent).toHaveProperty("status", "validated");
   });
 
+  it("shares one window across an IPv6 /64", async () => {
+    for (let i = 0; i < READ_QUOTA.quota; i++) {
+      await fetchWorker("/api/v1/profile", { ip: "2001:db8:9::1" });
+    }
+    const read = await call("get_profile", {}, { ip: "2001:db8:9::2" });
+    expect(read.isError).toBe(true);
+    expect(textOf(read)).toMatch(/^More than 600 read requests in 60 seconds from this client\./);
+  });
+
   it("never refuses a client without an address, as the REST guard doesn't count one", async () => {
-    for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot("unknown");
+    for (let i = 0; i < READ_QUOTA.quota; i++) takeReadSlot(UNKNOWN_VISITOR);
     const result = await call("get_profile", {}, { ip: "" });
     expect(result.isError).toBeUndefined();
     expect(result.structuredContent).toHaveProperty("person.name", "Murugappan M");
