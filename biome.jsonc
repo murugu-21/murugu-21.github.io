@@ -20,7 +20,7 @@
       "linter": {
         "rules": {
           "preset": "recommended",
-          "nursery": {
+          "suspicious": {
             "noDuplicateSelectors": "error",
             // Baseline 2024 is nearest the browser floor (README.md › Browser support). The allowed
             // newer features degrade gracefully to the default scrollbar and selection colours.
@@ -41,17 +41,16 @@
       "linter": {
         "rules": {
           "a11y": { "preset": "all" },
-          "security": { "noScriptUrl": "error" },
+          "security": { "noScriptUrl": "error", "useIframeSandbox": "error" },
+          "style": { "noInlineStyles": "error" },
           "nursery": {
             "noNonScalableViewport": "error",
             "noObsoleteTags": "error",
             "noMisplacedListElements": "error",
             "useControlLabel": "error",
-            "useIframeSandbox": "error",
             "noAstroConflictingSetDirectives": "error",
             "noAstroSetHtmlDirective": "error",
             "useAstroClientOnlyDirectiveValue": "error",
-            "noInlineStyles": "error",
             "noTailwindArbitraryValue": "error",
             "noTailwindRawColors": "error",
             "useTailwindShorthandClasses": "error"

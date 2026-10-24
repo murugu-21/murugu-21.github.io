@@ -54,8 +54,8 @@ function describeDigitRun(match: string, head: string, run: string): string {
 
 export function normalizeSpeechText(text: string): string {
   return text
-    .replace(SYMBOLS, "")
-    .replace(LONG_DIGIT_RUN, describeDigitRun)
+    .replaceAll(SYMBOLS, "")
+    .replaceAll(LONG_DIGIT_RUN, describeDigitRun)
     .replaceAll(/([?!.])[?!.]+/g, "$1")
     .replaceAll(/\s+/g, " ")
     .trim();

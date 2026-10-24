@@ -28,7 +28,7 @@ const URL_SPLIT = /(https?:\/\/[^\s]+)/;
 const MD_LINK = /\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g;
 
 function renderWithLinks(raw: string) {
-  const text = raw.replace(MD_LINK, (_m, label: string, url: string) =>
+  const text = raw.replaceAll(MD_LINK, (_m, label: string, url: string) =>
     label ? `${label}: ${url}` : url
   );
   return text.split(URL_SPLIT).map((part, i) => {

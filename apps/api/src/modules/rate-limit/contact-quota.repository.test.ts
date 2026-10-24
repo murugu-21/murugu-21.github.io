@@ -22,7 +22,8 @@ describe("ContactQuotaRepository", () => {
       allowed: false,
       scope: "global",
       clientRemaining: 3,
-      globalRemaining: 0
+      globalRemaining: 0,
+      [Symbol.dispose]: () => undefined
     });
     const failure = await failureOf(quota => quota.take(visitorKey("203.0.113.30")));
     expect(failure).toMatchObject({

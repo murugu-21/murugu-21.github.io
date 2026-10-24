@@ -8,7 +8,7 @@
       "groupName": "typescript"
     },
     {
-      "description": "Temporary until TypeScript 7.1 is released. The 7.1 nightlies move daily and @effect/tsgo accepts only the nightlies it lists, so pin typescript by hand to one of those when an @effect/tsgo update lands.",
+      "description": "Temporary until TypeScript 7.1 is released. typescript is on a 7.1 prerelease, and @effect/tsgo accepts only the prereleases it lists, so pin typescript by hand to one of those when an @effect/tsgo update lands.",
       "matchPackageNames": ["typescript"],
       "enabled": false
     },

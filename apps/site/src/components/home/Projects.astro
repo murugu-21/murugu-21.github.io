@@ -74,12 +74,12 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
               {repo.primaryLanguage && (
                 <span class="mr-3 flex items-center">
                   {repo.primaryLanguage.color && (
-                    /* biome-ignore-start lint/nursery/noInlineStyles: GitHub's language colour arrives as data at build time */
+                    /* biome-ignore-start lint/style/noInlineStyles: GitHub's language colour arrives as data at build time */
                     <div
                       class="mr-1 size-2.5 rounded-full bg-(--lang)"
                       style={`--lang:${repo.primaryLanguage.color}`}
                     />
-                    /* biome-ignore-end lint/nursery/noInlineStyles: see above */
+                    /* biome-ignore-end lint/style/noInlineStyles: see above */
                   )}
                   <p class="m-0">{repo.primaryLanguage.name}</p>
                 </span>

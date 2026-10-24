@@ -117,7 +117,7 @@ export function maskReferrers(event: CaptureResult | null): CaptureResult | null
     if (!props) continue;
     for (const key of REFERRERS) {
       const value: unknown = props[key];
-      if (isString(value)) props[key] = value.replace(MASKED_IN_QUERY, "$1<masked>");
+      if (isString(value)) props[key] = value.replaceAll(MASKED_IN_QUERY, "$1<masked>");
     }
   }
   return event;

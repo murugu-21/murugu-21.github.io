@@ -58,7 +58,7 @@ Packages import each other by name and full file path, like `@murugappan/content
 - Before the first run, install Chromium with `bunx playwright install --only-shell chromium` and set up Python with `uv sync --locked --project apps/tts`.
 - `bun run test:live` runs the tests that call the real DeepSeek API. They cost money, so the normal run skips them.
 - Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
-- The type checker is a TypeScript 7 nightly. Point your editor at the TypeScript 7 language service.
+- The type checker is a TypeScript 7.1 prerelease. Point your editor at the TypeScript 7 language service.
 - `bun run check:effect` runs Effect's diagnostics (`@effect/tsgo`) over `apps/api`. It fails on every Effect error and warning, and the plugin entry in `apps/api/tsconfig.json` raises more rules to errors. Without that entry it checks nothing and passes.
 - Each `@effect/tsgo` release supports only the TypeScript versions its README lists, so `typescript` is pinned to one of them. Renovate doesn't bump `typescript` (`renovate.json`), so Renovate's `@effect/tsgo` PR fails until you set `typescript` to a version the new `@effect/tsgo` lists.
 - Oxlint and oxfmt cover TypeScript, JSON and Markdown. Oxfmt also formats `.astro` templates and sorts their Tailwind classes. Biome lints `.astro` templates and lints and formats CSS, which oxc can't parse (`biome.jsonc`).
