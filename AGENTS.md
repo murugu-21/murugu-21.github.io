@@ -1,81 +1,26 @@
 # AGENTS.md
 
-Rules for coding agents working in this repo. The agent guide that the site serves at `/AGENTS.md` is a different file, the template `packages/content/agent-guide.md`. `packages/content/agent-docs.ts` fills its `{{placeholders}}` from `packages/contracts/mcp.ts` and from `packages/content/generated/`, which `apps/api/test/mcp.test.ts` writes (refresh with `bun run test -u`). `README.md` covers the architecture and tooling. Read it before changing the build, the Worker or the dev setup, and read the feature `README.md` for the area you touch (listed under "Where things are" there).
+To change the site's public `/AGENTS.md`, edit `packages/content/agent-guide.md`, not this file.
 
-## Comments
-
-- Don't restate what the code already says. No `// increment counter` above `count++`.
-- Comment the _why_ only when it isn't obvious from the code: a workaround, a constraint, a surprising choice. One or two lines.
-- Drop historical context ("used to be X", "changed in PR #12", "moved from Y") once it no longer explains the current code. Git history keeps it.
-
-## Tests
-
-- Prefer end-to-end and integration tests that exercise critical user-facing behaviour over many small unit tests.
-- When you touch an area, delete tests there that have become redundant, including ones that duplicate another test's coverage.
-
-### Test behaviour, not implementation
-
-A test calls the code the way its users do and asserts the result they observe against a literal expected value. A test that only asserts which calls the code made, or restates a constant from it, observes nothing.
-
-**The check.** Before you keep a test, ask whether it would still pass if every function it imports returned `undefined`. If yes, it cannot fail for a defect. It costs CI time and review attention and catches nothing. Rewrite the assertion or delete the test. A constant pin also fails when someone edits the constant or prompt it restates, so it blocks that edit.
-
-Five shapes that still pass when every imported function returns `undefined`:
-
-1. **Weak or no assertion.** No `expect`, or only `toBeDefined`, `toBeTruthy`, `not.toThrow`, `toBeInstanceOf`, `toBeGreaterThan(0)`.
-2. **Mock or absence only.** Only `toHaveBeenCalled`, `not.toHaveBeenCalled`, `toBeNull`, `toBeUndefined`, `toEqual([])`, `toHaveLength(0)`, `not.toBe(wrongValue)`.
-3. **Self-referential.** The expected value comes from the code under test: `expect(f(a)).toBe(f(a))`, `expect(parsed.url).toBe(buildUrl(…))`.
-4. **Constant pin.** The assertion restates a hand-maintained constant, config default, table row or prompt: `expect(LIMITS.maxTools).toBe(8)`, `expect(PROMPT).toContain("You are")`.
-5. **Fixture asserts fixture.** The assertion reads data the test built, and the code under test never runs.
-
-**The fix.** Call the subject with one concrete input and assert the literal output or the observable effect: `expect(slugify("Hello, World!")).toBe("hello-world")`.
-
-- For an absence, assert the presence on another input in the same test.
-- For a constant, test the mechanism that reads it with one input instead of restating the value.
-- For a mock, assert the payload it received or the state after the call, not that it was called.
-- When no such assertion exists, delete the test.
-
-Keep a test of a relation across a table's rows (a key present in two tables, a parent that exists), and a compile-time check in a `*.test-d.ts` file.
-
-`tests/observe-behaviour` (`tooling/oxlint/test-behaviour.ts`) flags the direct forms of each shape. Per test, it flags shapes 1 to 3, a constant read straight into `expect` and a test that never touches the code under test. Per assertion, it flags an expected value built from data the code under test exports, such as `toBe(LIMIT)` or `toEqual(TOOLS.map(…))`. It also flags a member read by string key (`instance["privateMethod"]`), which skips `private`. Drive the code through its public API instead. In a browser test, rendering `<Component />` counts as calling it, and a positive state matcher on `expect.element(locator)` (`toBeVisible`, `toBeEnabled` and the like) counts as an observation, since it fails when nothing renders. Because a helper import counts as touching the code, a fixture built by a helper slips through. For a relation test or a false positive, disable the rule with a reason, on the reported line (`// oxlint-disable-next-line tests/observe-behaviour -- <why>`) or around the whole test (`/* oxlint-disable tests/observe-behaviour -- <why> */` … `/* oxlint-enable tests/observe-behaviour */`). The reviewers check what it can't see.
-
-## Code style
-
-Think about readability and elegance before writing, not after. Every rule a linter can check lives in `tooling/lint.config.ts` (or, for `.astro` templates and stylesheets, `biome.jsonc` and its plugins in `tooling/biome/`) and `bun run lint` enforces it; read those files rather than relying on memory. Styles are Tailwind only, and lint rejects hand-written CSS. On top of those:
-
-- Write new code in TypeScript.
-- **Guard clauses.** Return or throw early on edge cases so the main path isn't nested inside `if`/`else`.
-- **Named parameters (an options object).** Lint caps functions at 3 parameters. Below that, a new or changed function whose parameters share a type also takes a single destructured object (`fn({ from, to })`, not `fn(from, to)`) so call sites can't silently swap them.
-- **No `as` casts** (lint allows only `as const`). Fix the type instead: `satisfies` to check a value against a type without widening it, a type guard or `in` check to narrow, zod for parsed or untrusted data.
-- **No `any` leaks.** Type-aware lint rejects annotating an `any` (`const x: T = JSON.parse(...)`, `await res.json()`). Take it as `unknown` and narrow it. Lint can't catch two cases, so check them by hand: `.astro` scripts (type-aware rules don't run there), and the Workers generics `res.json<T>()` / `storage.get<T>()`, which are casts in disguise (call them without a type argument and parse the result).
-- **DRY and YAGNI.** Extract a helper once logic repeats, not before. Don't add options, abstractions or config for needs that don't exist yet.
-
-## Research before building
-
-Agents tend to hand-roll what a library or platform feature already does. Before building a new feature or module, adding a dependency, or writing a utility more than a few lines long, look up the current best practice and the maintained options (including what the repo already depends on), then bring the user a short recommendation with alternatives and wait for approval before writing it. The recommendation names what you searched (the repo's dependencies, the framework's and platform's docs, then npm), what you would pick and why the others lost, so the search is visible before any code exists. A reviewer only sees a hand-roll in the diff, after the work is done.
-
-## Git history
-
-History starts at the Astro migration. Run `git blame --ignore-revs-file .git-blame-ignore-revs` so formatting sweeps don't hide the commit that changed a line.
+Before changing an area, read `README.md` and the feature README it links under "Where things are". Before writing or reviewing code or tests, read `CODING_STANDARDS.md`.
 
 ## Ask first
 
-- Anything that costs money or is hard to undo: new paid services or plans, deploys, `wrangler` commands against remote resources (`--remote`, deploy, secrets), D1 migrations, R2 writes.
-- Major decisions: adding or replacing a dependency, changing the architecture, CI, or `apps/api/wrangler.jsonc`.
+Get the user's approval before:
+
+- Anything that costs money or is hard to undo: paid services or plans, deploys, `wrangler` against remote resources (`--remote`, deploy, secrets), D1 migrations, R2 writes.
+- Changing the architecture, CI or `apps/api/wrangler.jsonc`.
+- Building a new feature or module, adding or replacing a dependency, or writing a utility longer than a few lines. Research first and bring a recommendation (`CODING_STANDARDS.md` › Research first) before writing it.
 
 ## Never
 
-- Stop or kill a dev server you didn't start. The user's `bun run dev` (astro dev and the Worker's vp dev) and `bun run preview` are shared. Stop only the ones your own session spun up.
-- Bypass a failing gate: no `--no-verify`, skipped tests, or loosened lint rules to get green. Fix the cause.
+- Stop a dev server you didn't start. The user's `bun run dev` (astro dev and the Worker's vp dev) and `bun run preview` are shared; stop only your own.
+- Bypass a failing gate (`--no-verify`, skipped tests, loosened lint rules). Fix the cause.
 
 ## Definition of done
 
-Never call a task complete until all of the following have happened.
+A task is done when, in order:
 
-1. `.githooks/pre-push` passes (format, lint, typechecks, tests, site build). For UI changes, also check the page in the browser in both light and dark themes, following `.agents/skills/verify-murugappan-dev/SKILL.md`. It rebuilds the site and the Worker, runs its own Worker on a separate port and state directory, and lists how to drive each feature.
-2. Two independent reviewers (separate subagents, each starting fresh with only the diff, these rules and its skill) have reviewed the change:
-   - **Behaviour/QA reviewer.** Follows `.agents/skills/review-behaviour/SKILL.md`. Checks that it does what was asked, that edge cases and regressions are covered, and that it works when run. For every test the diff adds or changes, applies the check in "Test behaviour, not implementation".
-   - **Code-style reviewer.** Follows `.agents/skills/review-code-style/SKILL.md`. Checks the diff against every rule in this file, the lint config, and the framework references that skill picks for the paths the diff touches.
-
-   Fix what they find, or explain why a finding doesn't apply, before reporting the task as done.
-
-3. **Comment Sicko** has hunted the diff's comments. Spawn a third fresh subagent whose prompt is `.agents/skills/comment-sicko/SKILL.md` verbatim followed by the diff, after the reviewers' fixes land. Keep its deletions unless one removes a comment the "Comments" rules above protect, and restore those with the reason. For each `MUST KILL` flag, make the code say it (rename, extract, a type) or explain why it can't.
+1. `.githooks/pre-push` passes, and a UI change has passed the `verify-murugappan-dev` browser check in light and dark themes.
+2. Two fresh subagents, each given only the diff and its skill (`review-behaviour`, `review-code-style`), have reviewed it, and every finding is fixed or answered.
+3. A fresh subagent prompted with `comment-sicko`'s SKILL.md verbatim plus the fixed diff has hunted its comments. Keep its deletions except a comment `CODING_STANDARDS.md` › Comments protects; restore that with the reason. For each `MUST KILL` flag, make the code say it (rename, extract, a type) or explain why it can't.

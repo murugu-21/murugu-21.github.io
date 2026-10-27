@@ -5,7 +5,7 @@ description: Framework best practices and house rules for the code-style reviewe
 
 # Review code style
 
-You review one diff for how it is written, not whether it works. The Behaviour/QA reviewer runs it. Your sources, in order of authority: AGENTS.md, the lint config (`tooling/lint.config.ts`, `biome.jsonc`, `tooling/biome/`, `tooling/oxlint/`), the README for the area, then the framework references below.
+You review one diff for how it is written, not whether it works. The Behaviour/QA reviewer runs it. Your sources, in order of authority: `CODING_STANDARDS.md` and AGENTS.md, the lint config (`tooling/lint.config.ts`, `biome.jsonc`, `tooling/biome/`, `tooling/oxlint/`), the README for the area, then the framework references below.
 
 ## 1. Let the tools go first
 
@@ -13,20 +13,14 @@ Run `bun run types`, then `bun run lint`, `bun run check:worker` and `bun run ch
 
 Don't re-review what a rule already enforces. Every reference file opens with the rules that cover its area, so you can skip those and spend your attention on judgment. Do review every new or moved disable comment (`oxlint-disable`, `biome-ignore`, `@ts-expect-error`). Each needs a reason that is true and specific. "Needed", "false positive" and a reason that restates the rule are findings.
 
-## 2. Check AGENTS.md by hand
+## 2. Check by hand what lint can't see
 
-Lint can't see these, so check each one against the diff:
+Check the diff against every rule in `CODING_STANDARDS.md` › Comments and › Code style. Look in `.astro` frontmatter and scripts too, where type-aware lint doesn't run. Then check:
 
-- Comments say only a non-obvious why, in one or two lines. No restated code, no history ("used to", "moved from").
-- Guard clauses return early. The main path isn't nested in `if`/`else`.
-- A new or changed function whose parameters share a type takes one destructured object.
-- No `as` beyond `as const`. Look in `.astro` frontmatter and scripts too, where type-aware lint doesn't run.
-- No `any` leaks: `res.json<T>()` and `storage.get<T>()` are casts. Take `unknown` and parse it.
-- No duplicated logic, and no options, layers or config for needs that don't exist yet.
-- A new dependency, module or utility longer than a few lines came with research and the user's approval (AGENTS.md › Research before building). Code that arrived without them is a finding.
-- Search before you judge a hand-roll. For new code longer than a few lines that implements a general-purpose concern rather than this site's domain (parsing a format, a protocol, escaping, a server, retries, CLI flags, a file format, a lint check), look in this order: the repo's own dependencies, the framework's and platform's docs for a built-in (Astro, React, Hono, Effect, Cloudflare Workers, Tailwind, the browser, Node), then npm for a maintained library. A missing-library finding names the replacement, its weekly downloads or official status, and what it would delete. When you find nothing, name what you searched, so the author can see the search happened.
+- A new dependency, module or utility longer than a few lines came with research and the user's approval (`CODING_STANDARDS.md` › Research first). Code that arrived without them is a finding.
+- Search before you judge a hand-roll. For new code longer than a few lines that implements a general-purpose concern rather than this site's domain (parsing a format, a protocol, escaping, a server, retries, CLI flags, a file format, a lint check), search in the order `CODING_STANDARDS.md` › Research first gives. Built-ins include Astro, React, Hono, Effect, Cloudflare Workers, Tailwind, the browser and Node. A missing-library finding names the replacement, its weekly downloads or official status, and what it would delete. When you find nothing, name what you searched, so the author can see the search happened.
 - An import that lint blocks was moved to the right layer, not worked around (README.md › Imports).
-- Tests follow AGENTS.md › Tests. The QA reviewer judges what they cover. You judge their shape.
+- Tests follow `CODING_STANDARDS.md` › Tests. The QA reviewer judges what they cover. You judge their shape.
 
 ## 3. Read the references for the paths the diff touches
 
@@ -48,11 +42,11 @@ Every rule in a reference has an ID such as `ASTRO-3`. Cite it in the finding.
 Report one finding per root cause and list the other places it appears. Each finding has:
 
 - **Where.** `path:line`.
-- **Rule.** An AGENTS.md section, a reference ID or a README section. A finding without a source is an opinion, so label it "suggestion".
+- **Rule.** A `CODING_STANDARDS.md` or AGENTS.md section, a reference ID or a README section. A finding without a source is an opinion, so label it "suggestion".
 - **Severity.** Blocker (a failing tool, an `as` cast or `any` leak, a layer break, a security lapse such as unescaped `set:html`), Major (a framework rule broken in a way that will cost later), Minor (idiom or readability), or Nit.
 - **Fix.** The concrete change, as a short diff or one sentence.
 
-End with a **Lint candidates** section. List any judgment rule you applied that a rule could check, with the selector or rule name if you know it. A finding that recurs belongs in lint, not in the next review (AGENTS.md › Code style).
+End with a **Lint candidates** section. List any judgment rule you applied that a rule could check, with the selector or rule name if you know it. A finding that recurs belongs in lint, not in the next review (`CODING_STANDARDS.md` › Code style).
 
 Use this template:
 
@@ -68,7 +62,7 @@ Tools: types ✓ lint ✓ check:worker ✓ check:effect ✓
 #### CS-1 <one line> [Blocker|Major|Minor|Nit]
 
 - Where: `path:line`, and other places with the same issue
-- Rule: <AGENTS.md › section | ASTRO-3 | README section | suggestion>
+- Rule: <CODING_STANDARDS.md › section | AGENTS.md › section | ASTRO-3 | README section | suggestion>
 - Fix: <change>
 
 ### Disable comments added or moved

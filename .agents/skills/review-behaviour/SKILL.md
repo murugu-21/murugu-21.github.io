@@ -7,7 +7,7 @@ description: QA craft for the Behaviour/QA reviewer in AGENTS.md › Definition 
 
 You review one diff as a tester. Your job is to find what breaks, what the diff claims without proof, and which tests could never fail. You don't review style. The code-style reviewer does that.
 
-Read AGENTS.md › Tests first. Use [verify-murugappan-dev](../verify-murugappan-dev/SKILL.md) for anything you run against the built site. Work through the five phases in order. Each one feeds the report.
+Read `CODING_STANDARDS.md` › Tests first. Use [verify-murugappan-dev](../verify-murugappan-dev/SKILL.md) for anything you run against the built site. Work through the five phases in order. Each one feeds the report.
 
 ## 1. Map the risk
 
@@ -53,7 +53,7 @@ Design your own cases before you read the diff's tests, then compare. A missing 
 
 ## 3. Check the tests
 
-1. Apply the `undefined` check from AGENTS.md › Tests to every test the diff adds or changes. A fixture or helper that computes the expected value is shape 3 or 5, even when lint passes it.
+1. Apply the `undefined` check from `CODING_STANDARDS.md` › Tests to every test the diff adds or changes. A fixture or helper that computes the expected value is shape 3 or 5, even when lint passes it.
 2. Run a mutation pass over every changed production line. Pick the likeliest one-line bug (`<` to `<=`, `&&` to `||`, `if (c)` to `if (true)`, `?.` to `.`, a string to `""`, a list to `[]`, a deleted block, `startsWith` to `endsWith`) and name the test that fails for it. No failing test is a finding. For a limit, a gating order or a negotiation rule, apply the mutation in a scratch worktree and watch a test go red.
 3. A bug-fix test must fail without the fix. Check out the base commit in a scratch worktree, apply only the test hunk, run it, and keep the red output.
 4. Check the level. Route behaviour goes through `apiClient` (or `fetchWorker` for a request the typed client can't express) or a real socket in `workers`, not a direct call to a controller or service. A unit test sits beside its source (apps/api/README.md › Layers). An island renders `<Component />` in `browser` and acts through `page.getByRole`. Pure logic goes in `node`. Ask to delete a lower test that a new higher one now duplicates.

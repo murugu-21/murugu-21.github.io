@@ -25,6 +25,7 @@ More detail lives next to the code:
 - [Worker](apps/api/README.md): routes, the 404, Jarvis.
 - [Public API](apps/api/src/modules/api/README.md) and [MCP server](apps/api/src/modules/mcp/README.md)
 - [Contracts](packages/contracts/README.md) and [banners](apps/brand/README.md)
+- The site's public `/AGENTS.md` is the template `packages/content/agent-guide.md`. `packages/content/agent-docs.ts` fills its `{{placeholders}}` from `packages/contracts/mcp.ts` and from `packages/content/generated/`, which `apps/api/test/mcp.test.ts` writes (refresh with `bun run test -u`).
 
 ## Run it locally
 
@@ -95,6 +96,10 @@ The build settings live in the Cloudflare dashboard, not in this repo:
 - The Worker secrets listed in `secrets.required` in `apps/api/wrangler.jsonc`. Set each with `bunx wrangler secret put <NAME>` from `apps/api`.
 
 The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/wrangler.jsonc`. The `EMAIL` binding's `destination_address` must be the same address, so change both together; `apps/api/test/wrangler.test.ts` checks that they match.
+
+## Git history
+
+History starts at the Astro migration. Run `git blame --ignore-revs-file .git-blame-ignore-revs` so formatting sweeps don't hide the commit that changed a line.
 
 ## Credits
 

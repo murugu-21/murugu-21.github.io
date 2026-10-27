@@ -701,15 +701,16 @@ export default {
         "vitest/no-restricted-matchers": [
           "error",
           {
-            toBeDefined: "Passes for any value. Assert the literal value (see AGENTS.md › Tests).",
+            toBeDefined:
+              "Passes for any value. Assert the literal value (see CODING_STANDARDS.md › Tests).",
             toBeTruthy:
-              "Passes for any value. Assert the literal value, e.g. toBe(true) (see AGENTS.md › Tests).",
+              "Passes for any value. Assert the literal value, e.g. toBe(true) (see CODING_STANDARDS.md › Tests).",
             toBeFalsy:
-              "Passes for undefined. Assert the literal value, e.g. toBe(false) (see AGENTS.md › Tests).",
+              "Passes for undefined. Assert the literal value, e.g. toBe(false) (see CODING_STANDARDS.md › Tests).",
             toHaveBeenCalled:
-              "Asserts only that a call happened. Assert the payload with toHaveBeenCalledWith or the state after the call (see AGENTS.md › Tests).",
+              "Asserts only that a call happened. Assert the payload with toHaveBeenCalledWith or the state after the call (see CODING_STANDARDS.md › Tests).",
             toHaveBeenCalledTimes:
-              "Asserts only that calls happened. Assert the payloads via fn.mock.calls (see AGENTS.md › Tests)."
+              "Asserts only that calls happened. Assert the payloads via fn.mock.calls (see CODING_STANDARDS.md › Tests)."
           }
         ]
       }

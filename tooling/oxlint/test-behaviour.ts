@@ -448,16 +448,19 @@ export default {
     "observe-behaviour": {
       meta: {
         type: "problem",
-        docs: { description: "Tests must observe behaviour (see the Tests section of AGENTS.md)." },
+        docs: {
+          description:
+            "Tests must observe behaviour (see the Tests section of CODING_STANDARDS.md)."
+        },
         messages: {
           noSubjectCall:
-            "This test never calls the code under test in its body, so it cannot fail for a defect. Call the subject with a concrete input here (see the Tests section of AGENTS.md).",
+            "This test never calls the code under test in its body, so it cannot fail for a defect. Call the subject with a concrete input here (see the Tests section of CODING_STANDARDS.md).",
           noStrongAssertion:
-            "No assertion here would fail if the code under test returned undefined. Compare the observed output against a literal expected value (see the Tests section of AGENTS.md).",
+            "No assertion here would fail if the code under test returned undefined. Compare the observed output against a literal expected value (see the Tests section of CODING_STANDARDS.md).",
           expectedFromSubject:
-            "The expected value comes from `{{name}}` in the code under test, so it changes with the code and can't catch a defect. Write the literal value (see the Tests section of AGENTS.md).",
+            "The expected value comes from `{{name}}` in the code under test, so it changes with the code and can't catch a defect. Write the literal value (see the Tests section of CODING_STANDARDS.md).",
           stringKeyAccess:
-            '`["{{name}}"]` reads a member by string key, which skips TypeScript\'s `private` check. Drive the code through its public API (see the Tests section of AGENTS.md).'
+            '`["{{name}}"]` reads a member by string key, which skips TypeScript\'s `private` check. Drive the code through its public API (see the Tests section of CODING_STANDARDS.md).'
         }
       },
       create(context) {
