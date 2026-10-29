@@ -1,7 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2023",
-    "module": "ES2022",
+    // esnext for the `with { type: "cf-worker" }` import attribute in cloudflare.config.ts.
+    "module": "esnext",
     "moduleResolution": "bundler",
     "lib": ["ES2023"],
     "strict": true,
@@ -32,7 +33,8 @@
     "../../packages/utils/**/*.ts",
     "../../packages/contracts/**/*.ts",
     "../../packages/content/**/*.ts",
-    "worker-configuration.d.ts"
+    ".cloudflare/types",
+    "cloudflare.config.ts"
   ],
   "exclude": [
     "../../packages/content/vite/**",

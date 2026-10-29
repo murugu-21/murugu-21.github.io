@@ -24,16 +24,16 @@ Check the diff against every rule in `CODING_STANDARDS.md` › Comments and › 
 
 ## 3. Read the references for the paths the diff touches
 
-| The diff touches                                      | Read                                                                   |
-| ----------------------------------------------------- | ---------------------------------------------------------------------- |
-| `*.astro`                                             | [astro.md](references/astro.md), [tailwind.md](references/tailwind.md) |
-| `apps/site/src/**/*.tsx`                              | [react.md](references/react.md), [tailwind.md](references/tailwind.md) |
-| `apps/site/src/styles/**`, any `class` or `className` | [tailwind.md](references/tailwind.md)                                  |
-| `apps/api/src/**` controllers and plumbing            | [hono.md](references/hono.md), [workers.md](references/workers.md)     |
-| `*.service.ts`, `*.repository.ts`, `app.module.ts`    | [effect.md](references/effect.md)                                      |
-| `*.durable-object.ts`, `wrangler.jsonc`, migrations   | [workers.md](references/workers.md)                                    |
-| `modules/mcp/**`, `packages/contracts/mcp.ts`         | [mcp.md](references/mcp.md), [hono.md](references/hono.md)             |
-| `packages/contracts/**`                               | [hono.md](references/hono.md) › zod at boundaries                      |
+| The diff touches                                          | Read                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `*.astro`                                                 | [astro.md](references/astro.md), [tailwind.md](references/tailwind.md) |
+| `apps/site/src/**/*.tsx`                                  | [react.md](references/react.md), [tailwind.md](references/tailwind.md) |
+| `apps/site/src/styles/**`, any `class` or `className`     | [tailwind.md](references/tailwind.md)                                  |
+| `apps/api/src/**` controllers and plumbing                | [hono.md](references/hono.md), [workers.md](references/workers.md)     |
+| `*.service.ts`, `*.repository.ts`, `app.module.ts`        | [effect.md](references/effect.md)                                      |
+| `*.durable-object.ts`, `cloudflare.config.ts`, migrations | [workers.md](references/workers.md)                                    |
+| `modules/mcp/**`, `packages/contracts/mcp.ts`             | [mcp.md](references/mcp.md), [hono.md](references/hono.md)             |
+| `packages/contracts/**`                                   | [hono.md](references/hono.md) › zod at boundaries                      |
 
 Every rule in a reference has an ID such as `ASTRO-3`. Cite it in the finding.
 

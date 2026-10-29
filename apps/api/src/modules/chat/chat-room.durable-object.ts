@@ -223,7 +223,7 @@ export class ChatRoom extends AIChatAgent<Env> {
     try {
       const key = this.deepseekKey();
       if (!key) return noticeResponse(LIMIT_NOTICE);
-      const admission = await globalLimiter(this.env).admitChatTurn({
+      const admission = await globalLimiter().admitChatTurn({
         visitor: this.turnVisitor(),
         apiKey: key
       });
@@ -296,7 +296,7 @@ export class ChatRoom extends AIChatAgent<Env> {
   private async failureNotice(cause: unknown): Promise<Notice> {
     console.error("chat generation failed", cause);
     if (!isInsufficientBalance(cause)) return ERROR_NOTICE;
-    await globalLimiter(this.env).markChatExhausted();
+    await globalLimiter().markChatExhausted();
     return LIMIT_NOTICE;
   }
 
@@ -304,7 +304,7 @@ export class ChatRoom extends AIChatAgent<Env> {
     return deepseek({ apiKey: key });
   }
 
-  // Typed required (secrets.required gates deploy), but local dev may lack it.
+  // Typed required (a bindings.secret() in cloudflare.config.ts), but local dev may lack it.
   private deepseekKey(): string | null {
     return this.env.DEEPSEEK_API_KEY?.trim() || null;
   }

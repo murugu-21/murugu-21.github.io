@@ -1,5 +1,5 @@
 import { runInDurableObject } from "cloudflare:test";
-import { env } from "cloudflare:workers";
+import { exports } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import {
@@ -17,7 +17,7 @@ function inLimiter(
   name: string,
   fn: (instance: RateLimiter, state: DurableObjectState) => Promise<void> | void
 ) {
-  const stub = env.RateLimiter.get(env.RateLimiter.idFromName(name));
+  const stub = exports.RateLimiter.get(exports.RateLimiter.idFromName(name));
   return runInDurableObject(stub, fn);
 }
 

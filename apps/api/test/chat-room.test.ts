@@ -1,5 +1,5 @@
 import { evictDurableObject, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import type { LanguageModelV4StreamPart } from "@ai-sdk/provider";
 import { APICallError } from "ai";
 import { MockLanguageModelV4 } from "ai/test";
@@ -102,7 +102,7 @@ async function fundChat(): Promise<void> {
   });
   try {
     await runInDurableObject(
-      globalLimiter(testEnv()),
+      globalLimiter(),
       async (limiter: RateLimiter, state: DurableObjectState) => {
         // deleteAll would drop the tables the constructor made, so empty them instead.
         state.storage.sql.exec(`DELETE FROM chat_buckets; DELETE FROM chat_daily_turns`);
@@ -118,7 +118,7 @@ async function fundChat(): Promise<void> {
 const answersOk = () => new MockLanguageModelV4({ doStream: async () => textStep("ok")() });
 
 async function spendTurns({ ip, turns }: { ip: string; turns: number }): Promise<void> {
-  await runInDurableObject(globalLimiter(testEnv()), async (limiter: RateLimiter) => {
+  await runInDurableObject(globalLimiter(), async (limiter: RateLimiter) => {
     for (let i = 0; i < turns; i++) {
       await limiter.admitChatTurn({ visitor: visitorKey(ip), apiKey: "sk-test" });
     }
@@ -710,7 +710,7 @@ describe("ChatRoom conversation expiry", () => {
   async function conversation(room: string) {
     // Read first: the request starts the room, which creates its leads table.
     const history = (await storedMessages(room)).map(m => m.role);
-    const stub = env.ChatRoom.get(env.ChatRoom.idFromName(room));
+    const stub = exports.ChatRoom.get(exports.ChatRoom.idFromName(room));
     const stored = await runInDurableObject(stub, instance => ({
       visitor: Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" })),
       leads: instance.ctx.storage.sql.exec("SELECT contact FROM leads").toArray()

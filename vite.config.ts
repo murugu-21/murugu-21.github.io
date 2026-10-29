@@ -14,8 +14,8 @@ import lint from "@murugappan/tooling/lint.config.ts";
 const d1Migrations = await readD1Migrations("./apps/api/migrations");
 
 const TEST_WRANGLER_CONFIG = "./apps/api/test/wrangler.jsonc";
-const wranglerConfigs = readWranglerConfigs({
-  production: "./apps/api/wrangler.jsonc",
+const wranglerConfigs = await readWranglerConfigs({
+  production: "./apps/api/cloudflare.config.ts",
   test: TEST_WRANGLER_CONFIG
 });
 

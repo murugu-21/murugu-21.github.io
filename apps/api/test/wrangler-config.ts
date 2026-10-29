@@ -2,16 +2,17 @@ import { z } from "zod";
 
 export const SharedWithTest = z.object({
   compatibility_date: z.string(),
-  durable_objects: z.object({ bindings: z.array(z.record(z.string(), z.unknown())) }),
+  // Only the binding and class names: cf names the Worker on a binding to its own class, Wrangler doesn't.
+  durable_objects: z.object({
+    bindings: z.array(z.object({ name: z.string(), class_name: z.string() }))
+  }),
   exports: z.record(z.string(), z.unknown())
 });
 
 export const WranglerConfigs = z.object({
   production: SharedWithTest.extend({
     assets: z.object({ run_worker_first: z.array(z.string()) }),
-    triggers: z.object({ crons: z.array(z.string()) }),
-    vars: z.object({ OPPORTUNITY_INBOX: z.email() }),
-    send_email: z.array(z.object({ destination_address: z.string() }))
+    triggers: z.object({ crons: z.array(z.string()) })
   }),
   test: SharedWithTest
 });

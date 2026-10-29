@@ -1,19 +1,13 @@
-import { Effect, Layer } from "effect";
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { WorkerEnv } from "#src/common/di/worker-env.ts";
 import { ContactQuotaRepository } from "#src/modules/rate-limit/contact-quota.repository.ts";
 import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
-import { sharedLimiter, testEnv } from "#test/fixtures.ts";
+import { sharedLimiter } from "#test/fixtures.ts";
 
 const failureOf = <A, E>(call: (quota: ContactQuotaRepository["Service"]) => Effect.Effect<A, E>) =>
   Effect.runPromise(
-    ContactQuotaRepository.use(call).pipe(
-      Effect.flip,
-      Effect.provide(
-        ContactQuotaRepository.layer.pipe(Layer.provide(Layer.succeed(WorkerEnv, testEnv())))
-      )
-    )
+    ContactQuotaRepository.use(call).pipe(Effect.flip, Effect.provide(ContactQuotaRepository.layer))
   );
 
 describe("ContactQuotaRepository", () => {

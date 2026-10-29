@@ -10,9 +10,10 @@ dist/
 .env.test.local
 .env.production.local
 
-worker-configuration.d.ts
+.cloudflare/
 .wrangler/
 .dev.vars
+.dev.vars.verify
 
 # blog read-aloud voice reference
 .voice/
@@ -29,5 +30,3 @@ lint-fixture-*/
 
 __screenshots__/
 .vitest/
-
-dist-worker/

@@ -8,11 +8,11 @@
   },
   "scripts": {
     "dev": "vp dev",
-    "preview": "wrangler dev --local-upstream localhost:8787",
-    "deploy": "bun run db:migrate && wrangler deploy",
-    "db:migrate": "wrangler d1 migrations apply jarvis-chats --remote",
-    "db:migrate:local": "wrangler d1 migrations apply jarvis-chats --local",
-    "types": "wrangler types --strict-vars=false"
+    "preview": "vp preview",
+    "deploy": "bun run db:migrate && cf deploy",
+    "db:migrate": "cf d1 migrations apply a1111792-fb35-470f-85c9-13c3aab0662c",
+    "db:migrate:local": "cf d1 migrations apply a1111792-fb35-470f-85c9-13c3aab0662c --local --persist-to .cloudflare/state",
+    "types": "cf workers types"
   },
   "dependencies": {
     "@ai-sdk/deepseek": "3.0.74",
@@ -32,9 +32,11 @@
   },
   "devDependencies": {
     "@ai-sdk/provider": "4.0.34",
-    "@cloudflare/vite-plugin": "^1.65.0",
+    "@cloudflare/config": "0.29.0",
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.7",
     "@cloudflare/vitest-plugin": "^1.4.7",
     "@modelcontextprotocol/client": "2.3.1",
+    "cf": "1.0.0-beta.25",
     "fast-check": "^4.10.2",
     "linkedom": "^0.18.14",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",

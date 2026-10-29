@@ -1,4 +1,4 @@
-// Relies on `not_found_handling: "none"` (wrangler.jsonc) so misses reach the Worker, which
+// Relies on `notFoundHandling: "none"` (cloudflare.config.ts) so misses reach the Worker, which
 // fetches the 404 page itself.
 
 import type { Context } from "hono";

@@ -2,7 +2,7 @@
 
 `src/server.ts` is the entry point. `src/app.ts` mounts each module's controller. The [public API](src/modules/api/README.md) and the [MCP server](src/modules/mcp/README.md) have their own READMEs.
 
-Cloudflare serves assets straight from the built site. The Worker only runs for the routes in `run_worker_first` in `wrangler.jsonc`, and for requests that match no file. If you add a route to `app.ts`, add it there too; `test/wrangler.test.ts` fails until you do.
+Cloudflare serves assets straight from the built site. The Worker only runs for the routes in `assets.runWorkerFirst` in `cloudflare.config.ts`, and for requests that match no file. If you add a route to `app.ts`, add it there too; `test/wrangler.test.ts` fails until you do.
 
 ## Markdown pages
 

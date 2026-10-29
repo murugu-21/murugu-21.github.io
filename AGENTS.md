@@ -8,8 +8,8 @@ Before changing an area, read `README.md` and the feature README it links under 
 
 Get the user's approval before:
 
-- Anything that costs money or is hard to undo: paid services or plans, deploys, `wrangler` against remote resources (`--remote`, deploy, secrets), D1 migrations, R2 writes.
-- Changing the architecture, CI or `apps/api/wrangler.jsonc`.
+- Anything that costs money or is hard to undo: paid services or plans, deploys, `cf` or `wrangler` against remote resources (`--remote`, deploy, secrets), D1 migrations, R2 writes.
+- Changing the architecture, CI or `apps/api/cloudflare.config.ts`.
 - Building a new feature or module, adding or replacing a dependency, or writing a utility longer than a few lines. Research first and bring a recommendation (`CODING_STANDARDS.md` › Research first) before writing it.
 
 ## Never

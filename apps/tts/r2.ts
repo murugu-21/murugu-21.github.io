@@ -16,9 +16,9 @@ const MAX_OBJECT_BYTES = 1024 * 1024 * 1024;
 
 type R2Location = "remote" | "local" | { persistTo: string };
 
-// wrangler dev in apps/api keeps its state here. A bare --local would use this app's
-// .wrangler/state, which nothing serves.
-const PREVIEW_STATE = join(import.meta.dirname, "..", "api", ".wrangler", "state");
+// `bun run dev` and `bun run preview` keep apps/api's local state here. A bare --local would use
+// this app's .wrangler/state, which nothing serves.
+const PREVIEW_STATE = join(import.meta.dirname, "..", "api", ".cloudflare", "state");
 
 const locationFlags = (location: R2Location) => {
   if (location === "remote") return ["--remote"];

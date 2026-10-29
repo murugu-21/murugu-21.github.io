@@ -196,7 +196,7 @@ const PROCESS_ENV: Property = {
   object: "process",
   property: "env",
   message:
-    "process.env is read in one place: apps/site/build-env.ts for the site build, and the vars and bindings in apps/api/wrangler.jsonc for the Worker. Declare the variable there (README.md › Build settings)."
+    "process.env is read in one place: apps/site/build-env.ts for the site build, and the bindings in apps/api/cloudflare.config.ts for the Worker. Declare the variable there (README.md › Build settings)."
 };
 const STORAGE: Global[] = ["localStorage", "sessionStorage"].map(name => ({
   name,

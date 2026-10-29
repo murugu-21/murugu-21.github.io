@@ -28,11 +28,11 @@ Steps:
 - **`api-posts-search`.** `curl -sS "$B/api/v1/posts?q=rate&limit=2"` returns at most two posts whose title or description contains `rate`. `curl -sS "$B/api/v1/posts?q=system-design"` returns `"count": 0`, because tags aren't searched.
 - **`api-404`.** `curl -sS -i "$B/api/v1/nope"` returns `404` with `Content-Type: application/json` and a `Link` header naming `/openapi.json` as `service-desc`.
 - **`api-contact-dry`.** `curl -sS -i -X POST "$B/api/v1/contact" -H 'Content-Type: application/json' -d '{"name":"Verify Bot","email":"verify@example.com","message":"verify-murugappan-dev dry run probe","dryRun":true}'` returns `200` with `"status": "validated"`, and the `RateLimit` header still reads `"contact-client";r=3`.
-- **`api-contact-send`.** Run the same request without `dryRun`. It returns `202` with `"status": "accepted"`, and `RateLimit` drops to `r=2`. `worker.log` prints `send_email binding called` with the subject `New message via the murugappan.dev API from Verify Bot` and a `Text:` file path. Copy that file into `$E` now, because it's deleted when wrangler exits.
+- **`api-contact-send`.** Run the same request without `dryRun`. It returns `202` with `"status": "accepted"`, and `RateLimit` drops to `r=2`. `worker.log` prints `send_email binding called` with the subject `New message via the murugappan.dev API from Verify Bot` and a `Text:` file path. Copy that file into `$E` now, because it's deleted when the preview exits.
 
 ## Gotchas
 
-- Locally the `EMAIL` binding writes the message to a file under `.wrangler/tmp/email/` and sends nothing.
+- Locally the `EMAIL` binding writes the message to a file under `apps/api/.cloudflare/tmp/email/` and sends nothing.
 - `message` needs at least 20 characters, or the request gets a `422` naming the field.
 - Contact slots live in this run's `--persist-to` state. A fresh run has all three, and a reused one may be at `r=0`.
 - The read limit counts per isolate, so restarting the instance resets it.

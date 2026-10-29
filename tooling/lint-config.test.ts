@@ -94,7 +94,7 @@ const FIXTURES: Fixture[] = [
         line: 2,
         ...restrictedProperty({
           name: "process.env",
-          help: "process.env is read in one place: apps/site/build-env.ts for the site build, and the vars and bindings in apps/api/wrangler.jsonc for the Worker. Declare the variable there (README.md › Build settings)."
+          help: "process.env is read in one place: apps/site/build-env.ts for the site build, and the bindings in apps/api/cloudflare.config.ts for the Worker. Declare the variable there (README.md › Build settings)."
         })
       }
     ]

@@ -1,17 +1,23 @@
 // Not in the root vite.config.ts, whose plugins would load into the workerd test pool.
-import { cloudflare } from "@cloudflare/vite-plugin";
+import { cloudflare, type PluginConfig } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite-plus";
 
 import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
 
-export default defineConfig({
-  plugins: [contentPosts(), cloudflare({ viteEnvironment: { name: "worker" } })],
-  // The plugin builds the client, and keeps the assets binding, only when publicDir has files.
-  publicDir: "../site/public",
+function persistState(mode: string): PluginConfig["persistState"] {
+  if (mode === "e2e") return false;
+  if (mode === "verify") return { path: ".cloudflare/verify-state" };
+  return true;
+}
+
+export default defineConfig(({ command, mode }) => ({
+  plugins: [
+    contentPosts(),
+    cloudflare({ viteEnvironment: { name: "worker" }, persistState: persistState(mode) })
+  ],
+  // The plugin keeps the assets binding only when publicDir has files.
+  publicDir: command === "build" ? "../site/dist" : "../site/public",
   environments: {
-    // The client build only feeds the Worker its assets, so it points at the site's dist/ without
-    // emptying it.
-    client: { build: { outDir: "../site/dist", emptyOutDir: false, copyPublicDir: false } },
     // Vite leaves server environments unminified. Source maps (which the plugin uploads on
     // deploy) stay out of the client build, whose output is public. keepNames because the
     // agents SDK logs and sends `constructor.name`, and MCP errors take their name from it.
@@ -19,7 +25,7 @@ export default defineConfig({
       build: { minify: true, sourcemap: true, rolldownOptions: { output: { keepNames: true } } }
     }
   },
-  build: { outDir: "dist-worker" },
   server: { port: 8787, strictPort: true },
+  preview: { port: 8787, strictPort: true },
   run: { tasks: { build: { command: "vp build", dependsOn: ["@murugappan/site#build"] } } }
-});
+}));

@@ -5,7 +5,7 @@ description: Drive murugappan.dev (Astro site plus Cloudflare Worker) the way a 
 
 # Verify murugappan.dev
 
-The site has two surfaces. Visitors use the web pages (portfolio, blog, Jarvis chat widget) in a browser. Agents and developers use the Worker's HTTP routes (`/api/v1`, `/mcp`, discovery documents, the negotiated 404). Both come from one `wrangler dev` running the built Worker (`apps/api/dist-worker/`) over the built site (`apps/site/dist/`).
+The site has two surfaces. Visitors use the web pages (portfolio, blog, Jarvis chat widget) in a browser. Agents and developers use the Worker's HTTP routes (`/api/v1`, `/mcp`, discovery documents, the negotiated 404). Both come from one `vp preview` running the built Worker and site (`apps/api/.cloudflare/output/`).
 
 Drive the browser with the chrome-devtools MCP and HTTP with `curl`. Without the chrome-devtools MCP, drive the same handles with the repo's `playwright` devDependency; the recipes' handles and end states don't change.
 
@@ -13,35 +13,36 @@ Read [`features/README.md`](features/README.md) before driving, then the feature
 
 ## Launch
 
-Never use `bun run preview`. It binds `:8787` and `apps/api/.wrangler/state`, which belong to the user's own `bun run dev` or preview. This launch gets its own port, inspector port and state directory.
+Never use `bun run preview`. It binds `:8787` and `apps/api/.cloudflare/state`, which belong to the user's own `bun run dev` or preview. This launch previews in the `verify` mode, which gets its own port and its own state in `apps/api/.cloudflare/verify-state` (`persistState` in `apps/api/vite.config.ts`).
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 RUN="${SCRATCHPAD:-${TMPDIR:-/tmp}}/verify-murugappan-dev/$(date +%Y%m%dT%H%M%S)"
 mkdir -p "$RUN/evidence"
 PUBLIC_CHAT_HOST= POST_HOG_TOKEN= PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA bun run build > "$RUN/build.log" 2>&1 || { tail -40 "$RUN/build.log"; exit 1; }
-(cd apps/api && node ../../node_modules/wrangler/bin/wrangler.js d1 migrations apply jarvis-chats \
-  --local --persist-to "$RUN/state" > "$RUN/migrate.log" 2>&1) || { tail -20 "$RUN/migrate.log"; exit 1; }
-(cd apps/api && exec nohup node ../../node_modules/wrangler/bin/wrangler.js dev \
-  --port 8791 --inspector-port 9291 --local-upstream localhost:8791 \
-  --persist-to "$RUN/state" --show-interactive-dev-session=false \
-  --var TURNSTILE_SECRET_KEY:1x0000000000000000000000000000000AA \
+{ cat apps/api/.dev.vars; echo TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA; } > apps/api/.dev.vars.verify
+rm -rf apps/api/.cloudflare/verify-state
+(cd apps/api && bunx cf d1 migrations apply a1111792-fb35-470f-85c9-13c3aab0662c \
+  --local --persist-to .cloudflare/verify-state > "$RUN/migrate.log" 2>&1) || { tail -20 "$RUN/migrate.log"; exit 1; }
+(cd apps/api && exec nohup node node_modules/vite/dist/vite/bin/vite.js preview --mode verify --port 8791 --strictPort \
   > "$RUN/worker.log" 2>&1) &
 echo $! > "$RUN/worker.pid"
-for i in $(seq 60); do grep -q 'Ready on http://localhost:8791' "$RUN/worker.log" && break; sleep 0.5; done
-grep 'Ready on' "$RUN/worker.log"
+for i in $(seq 60); do grep -q 'localhost:8791' "$RUN/worker.log" && break; sleep 0.5; done
+grep 'Local:' "$RUN/worker.log"
 echo "RUN=$RUN"
 ```
 
-Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`. Set `SCRATCHPAD` to your session scratchpad if your harness names one. Run wrangler with `node`, never `bun` or `bunx`, because under Bun it reports ready but never answers.
+Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`. Set `SCRATCHPAD` to your session scratchpad if your harness names one.
 
-The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going. Both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics. The Turnstile site key and the `--var` secret are Cloudflare's always-passing test pair, so the chat socket opens without a real challenge. To drive the interactive check, build with the site key `3x00000000000000000000FF` instead. The checkbox then shows above the composer and the socket opens once it's clicked.
+The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going. Both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics. The Turnstile site key and the secret appended to `.dev.vars.verify` are Cloudflare's always-passing test pair, so the chat socket opens without a real challenge. To drive the interactive check, build with the site key `3x00000000000000000000FF` instead. The checkbox then shows above the composer and the socket opens once it's clicked.
+
+The `verify` mode reads `apps/api/.dev.vars.verify`, the user's `.dev.vars` with the test secret appended, because the Worker reads `.dev.vars.<mode>` before `.dev.vars` and ignores environment variables when either exists. It is gitignored.
 
 The Worker creates no D1 tables, so Launch applies `apps/api/migrations/` to the fresh state first. Without them the chat logs `d1 mirror failed ... no such table: rooms`.
 
-If `:8791` is taken by another run, pick a free port and use it everywhere `8791` appears, `--local-upstream` included.
+Only one verify run fits at a time, because they share the state folder. If `:8791` is taken by something else, pick a free port and use it everywhere `8791` appears.
 
-`wrangler dev` serves the Worker that `bun run build` bundled to `apps/api/dist-worker/`, with the site content inside it, so nothing hot-reloads. After editing `apps/api/src/`, `packages/content/`, pages, posts or `apps/site/public/`, run Cleanup, then Launch again, which rebuilds.
+`vp preview` serves the Worker and site that `bun run build` wrote to `apps/api/.cloudflare/output/`, so nothing hot-reloads. After editing `apps/api/src/`, `packages/content/`, pages, posts or `apps/site/public/`, run Cleanup, then Launch again, which rebuilds.
 
 ## Doctor
 
@@ -61,7 +62,7 @@ Healthy means all of these hold:
 
 - The PID is alive.
 - The API answers `200`.
-- The manifest count is `1`, which proves the instance was launched with `--local-upstream localhost:8791`.
+- The manifest count is `1`, which proves the Worker sees `localhost:8791` as its own origin.
 - The last line prints nothing and exits `0`. That means the build exists and is newer than every source it's built from.
 
 Anything else means stop. A dead PID with `:8791` still answering means someone else's instance, so don't drive it. A file listed by `find` means rebuild.
@@ -76,7 +77,7 @@ The browser recipes use these chrome-devtools MCP calls:
 - `emulate` with `colorScheme: "light"` or `"dark"` sets the OS preference for an open page. Reload after it.
 - `evaluate_script` reads state. Use it only to observe, never to act. A synthetic `.click()` skips the pointer events the chat widget hydrates on.
 
-HTTP recipes are `curl` against `http://localhost:8791`. Wrangler's local trace and log store answers SQL:
+HTTP recipes are `curl` against `http://localhost:8791`. The local trace and log store answers SQL:
 
 ```bash
 curl -sS -X POST http://localhost:8791/cdn-cgi/local/explorer/api/local/observability/query \
@@ -103,8 +104,8 @@ Never verify against production. No `--remote`, no deploys, and no requests to `
 kill "$(cat "$RUN/worker.pid")"
 for i in $(seq 20); do lsof -nP -iTCP:8791 -sTCP:LISTEN >/dev/null || break; sleep 0.5; done
 lsof -nP -iTCP:8791 -sTCP:LISTEN || echo "8791 free"
-rm -rf "$RUN/state"
+rm -rf apps/api/.cloudflare/verify-state apps/api/.dev.vars.verify
 ls "$RUN/evidence"
 ```
 
-`workerd` exits with its wrangler parent, and wrangler's temp files go with it. Copy anything you need from `apps/api/.wrangler/tmp/` before this step. Close every page you opened with `close_page`. Kill only the PID in `$RUN/worker.pid`, never by process name, because the user's `bun run dev` and preview are shared. Don't delete `apps/site/dist/` or `apps/api/.wrangler/`. The evidence and logs stay.
+`workerd` exits with its `vp preview` parent, and its temp files go with it. Copy anything you need from `apps/api/.cloudflare/tmp/` before this step. Close every page you opened with `close_page`. Kill only the PID in `$RUN/worker.pid`, never by process name, because the user's `bun run dev` and preview are shared. Don't delete `apps/site/dist/`, `apps/api/.cloudflare/output/` or `apps/api/.cloudflare/state/`. The evidence and logs stay.

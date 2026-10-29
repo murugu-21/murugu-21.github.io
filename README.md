@@ -42,7 +42,7 @@ Things that will trip you up:
 - `dev` and `preview` both use port 8787. Stop one before starting the other.
 - In `dev`, the Worker can't see the built pages, so the chat's page fetching and the 404 page don't work there. Use `preview` for those.
 - To use the chat from `:4399`, add `PUBLIC_CHAT_HOST=localhost:8787` to `apps/site/.env`.
-- Read-aloud audio in `dev` and `preview` comes from the Worker's local R2, which starts empty, so the Listen button falls back to the browser voice. Copy a post's `.mp3` and `.json` from `blog/breeze/` with `bunx wrangler r2 object get --remote`, then `put --local --persist-to .wrangler/state` from `apps/api`.
+- Read-aloud audio in `dev` and `preview` comes from the Worker's local R2, which starts empty, so the Listen button falls back to the browser voice. Copy a post's `.mp3` and `.json` from `blog/breeze/` with `bunx wrangler r2 object get --remote`, then `put --local --persist-to .cloudflare/state` from `apps/api`.
 - `preview` runs the built Worker, so rebuild after changing `apps/api/src/` or `packages/content/`.
 - Local settings go in `apps/site/.env` (site) and `apps/api/.dev.vars` (Worker).
 
@@ -54,10 +54,10 @@ Bun installs each package's dependencies into its own `node_modules` (`linker = 
 
 ## Tests and checks
 
-`.githooks/pre-push` runs every check CI runs. Both call `bun run check:static` for the format, lint and typecheck gates. It regenerates the Worker types from `wrangler.jsonc` first, because lint and the typechecks read bindings from them. It needs two tools from Homebrew: `brew install typos-cli uv`.
+`.githooks/pre-push` runs every check CI runs. Both call `bun run check:static` for the format, lint and typecheck gates. It regenerates the Worker types from `apps/api/cloudflare.config.ts` first, because lint and the typechecks read bindings from them. It needs two tools from Homebrew: `brew install typos-cli uv`.
 
 - Run tests with `bun run test`. `bun test` starts Bun's own test runner, which is the wrong one.
-- `bun run test:e2e` runs `apps/api/e2e/` against `bun run build`'s output: it boots the built Worker in wrangler's dev runtime on a port wrangler picks and checks the served media types, Link headers, markdown negotiation, the links in the agent documents and the home page's JavaScript budget. Build first.
+- `bun run test:e2e` runs `apps/api/e2e/` against `bun run build`'s output: it serves the build with `vite preview` in the `e2e` mode (`apps/api/.dev.vars.e2e`, no state on disk) on a free port and checks the served media types, Link headers, markdown negotiation, the links in the agent documents and the home page's JavaScript budget. Build first.
 - Before the first run, install Chromium with `bunx playwright install --only-shell chromium` and set up Python with `uv sync --locked --project apps/tts`.
 - `bun run test:live` runs the tests that call the real DeepSeek API. They cost money, so the normal run skips them.
 - Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
@@ -93,11 +93,11 @@ Every push to `main` deploys. Cloudflare Workers Builds does the deploy, and Git
 
 The build settings live in the Cloudflare dashboard, not in this repo:
 
-- Build command `bun run build`. Deploy command `bun run deploy`, which applies D1 migrations before it deploys.
+- Build command `bun run build`. Deploy command `bun run deploy`, which applies D1 migrations, then runs `cf deploy` with `apps/api/cloudflare.config.ts`.
 - Build env vars: the ones above, plus `BUN_VERSION` (match `packageManager` in `package.json`) and `REQUIRE_GITHUB_PROFILE=1` to fail the build if the GitHub card can't load.
-- The Worker secrets listed in `secrets.required` in `apps/api/wrangler.jsonc`. Set each with `bunx wrangler secret put <NAME>` from `apps/api`.
+- The Worker secrets, each a `bindings.secret()` in `apps/api/cloudflare.config.ts`. Set each with `bunx wrangler secret put <NAME> --name murugappan-dev`.
 
-The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/wrangler.jsonc`. The `EMAIL` binding's `destination_address` must be the same address, so change both together; `apps/api/test/wrangler.test.ts` checks that they match.
+The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/cloudflare.config.ts`. The `EMAIL` binding sends to the same address.
 
 ## Git history
 

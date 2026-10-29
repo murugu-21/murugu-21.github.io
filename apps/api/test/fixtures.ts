@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { Effect, Layer } from "effect";
 import type { ClientResponse } from "hono/client";
 import { testClient } from "hono/testing";
@@ -45,7 +45,7 @@ export function fakeAssets(overrides: Record<string, string | null> = {}): Fetch
     const path = assetPath(input);
     const body = files.get(path);
     // A miss is an empty 404, which is what the real binding returns under
-    // assets.not_found_handling: "none" (see wrangler.jsonc).
+    // assets.notFoundHandling: "none" (see cloudflare.config.ts).
     if (body == null) return Promise.resolve(new Response(null, { status: 404 }));
 
     const etag = `"${path}"`;
@@ -100,13 +100,12 @@ export function visitorStorage(instance: ChatRoom) {
 
 export function testEnv(options: TestEnvOptions = {}): Env {
   // Named rather than spread: `env` is typed as the full Env, so a binding added to
-  // ../wrangler.jsonc fails to type-check here until testEnv supplies it.
-  const { AUDIO, CHAT_DB, ChatRoom, RateLimiter } = env;
+  // ../cloudflare.config.ts fails to type-check here until testEnv supplies it.
+  const { AUDIO, CHAT_DB, ChatRoom } = env;
   return {
     AUDIO,
     CHAT_DB,
     ChatRoom,
-    RateLimiter,
     ASSETS: fakeAssets(options.assets),
     OPPORTUNITY_INBOX: options.inbox ?? "inbox@example.com",
     DEEPSEEK_API_KEY: "",
@@ -133,8 +132,8 @@ export function sharedLimiter() {
   onTestFinished(() => {
     vi.restoreAllMocks();
   });
-  const limiter = globalLimiter(env);
-  vi.spyOn(env.RateLimiter, "get").mockReturnValue(limiter);
+  const limiter = globalLimiter();
+  vi.spyOn(exports.RateLimiter, "get").mockReturnValue(limiter);
   return limiter;
 }
 
@@ -241,7 +240,7 @@ export async function openRoom(room: string, request: RoomRequest = {}) {
     frames.push(JSON.parse(String(e.data)));
   });
   socket.accept();
-  return { socket, frames, stub: env.ChatRoom.get(env.ChatRoom.idFromName(room)) };
+  return { socket, frames, stub: exports.ChatRoom.get(exports.ChatRoom.idFromName(room)) };
 }
 
 export async function connectRoom(room: string, request: RoomRequest = {}) {

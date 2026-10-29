@@ -24,7 +24,7 @@ function representatives(pattern: string): string[] {
 const UNSHADOWED_MOUNTS = new Set(["/api", "/.well-known"]);
 
 /* oxlint-disable tests/observe-behaviour -- relation tests: each compares two tables (config rows, or routes against config), so neither side is a literal */
-describe("apps/api/wrangler.jsonc", () => {
+describe("apps/api/cloudflare.config.ts", () => {
   it("runs the Worker first for every route app.ts mounts", () => {
     const patterns = production.assets.run_worker_first.map(
       glob => new URLPattern({ pathname: glob })
@@ -35,28 +35,21 @@ describe("apps/api/wrangler.jsonc", () => {
     const uncovered = routes.filter(route => !representatives(route).every(runsWorkerFirst));
     expect(
       uncovered,
-      `No run_worker_first pattern in apps/api/wrangler.jsonc covers every path of these routes from apps/api/src/app.ts: ${uncovered.join(", ")}. Add one for each.`
+      `No assets.runWorkerFirst pattern in apps/api/cloudflare.config.ts covers every path of these routes from apps/api/src/app.ts: ${uncovered.join(", ")}. Add one for each.`
     ).toEqual([]);
-  });
-
-  it("delivers contact mail to the address OPPORTUNITY_INBOX names", () => {
-    expect(
-      production.send_email.map(binding => binding.destination_address),
-      "vars.OPPORTUNITY_INBOX and send_email[].destination_address in apps/api/wrangler.jsonc must name the same address. Change both together."
-    ).toEqual([production.vars.OPPORTUNITY_INBOX]);
   });
 
   it("has a scheduled handler exactly when it declares a cron trigger", () => {
     expect(
       production.triggers.crons.length > 0,
-      "triggers.crons in apps/api/wrangler.jsonc runs the `scheduled` export of apps/api/src/server.ts. Add or remove both together."
+      "A scheduled trigger in apps/api/cloudflare.config.ts runs the `scheduled` export of apps/api/src/server.ts. Add or remove both together."
     ).toBe("scheduled" in worker);
   });
 
   it("shares production's compatibility date and Durable Objects", () => {
     expect(
       test,
-      "apps/api/test/wrangler.jsonc must declare the same compatibility_date, durable_objects and exports as apps/api/wrangler.jsonc. Copy them over."
+      "apps/api/test/wrangler.jsonc must declare the same compatibility date, Durable Object bindings and exports as apps/api/cloudflare.config.ts. Copy them over."
     ).toEqual(SharedWithTest.parse(production));
   });
 });

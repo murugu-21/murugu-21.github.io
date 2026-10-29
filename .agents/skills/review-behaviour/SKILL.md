@@ -14,15 +14,15 @@ Read `CODING_STANDARDS.md` › Tests first. Use [verify-murugappan-dev](../verif
 1. Write the change's claim in one line. Then list every other claim the diff makes: commit body, README edits, `packages/content/agent-guide.md`, OpenAPI descriptions, test names. Each claim needs evidence by the end.
 2. Tag each changed file with its surface and the check that proves it.
 
-   | Changed                                                           | Proven by                                                                                                                                             |
-   | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | React island, `apps/site/src/**/*.tsx`                            | `browser` test project, plus a verify browser recipe                                                                                                  |
-   | `.astro` page or layout, `global.css`                             | the build, plus a verify browser recipe in both themes. No test renders `.astro`.                                                                     |
-   | Worker route, guard, pipe or middleware, `apps/api/src/**`        | `workers` project through `apiClient` or `fetchWorker`, plus a verify curl recipe                                                                     |
-   | Durable Object (`*.durable-object.ts`)                            | `workers` project with `runInDurableObject`. Treat it as stateful and timed.                                                                          |
-   | `packages/contracts/**`                                           | both apps, `/openapi.json` and the MCP tool schemas                                                                                                   |
-   | `packages/content/**`                                             | pages, `/api/v1/*`, MCP resources, `index.md`, `llms.txt`, chat grounding, and the verify recipes' expected counts                                    |
-   | `_headers`, `astro.config.ts`, `wrangler.jsonc`, `vite.config.ts` | every page or route. `_headers` is generated from `packages/contracts/surface.ts` by `apps/site/src/lib/headers.ts`, and `headers.test.ts` covers it. |
+   | Changed                                                                 | Proven by                                                                                                                                             |
+   | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | React island, `apps/site/src/**/*.tsx`                                  | `browser` test project, plus a verify browser recipe                                                                                                  |
+   | `.astro` page or layout, `global.css`                                   | the build, plus a verify browser recipe in both themes. No test renders `.astro`.                                                                     |
+   | Worker route, guard, pipe or middleware, `apps/api/src/**`              | `workers` project through `apiClient` or `fetchWorker`, plus a verify curl recipe                                                                     |
+   | Durable Object (`*.durable-object.ts`)                                  | `workers` project with `runInDurableObject`. Treat it as stateful and timed.                                                                          |
+   | `packages/contracts/**`                                                 | both apps, `/openapi.json` and the MCP tool schemas                                                                                                   |
+   | `packages/content/**`                                                   | pages, `/api/v1/*`, MCP resources, `index.md`, `llms.txt`, chat grounding, and the verify recipes' expected counts                                    |
+   | `_headers`, `astro.config.ts`, `cloudflare.config.ts`, `vite.config.ts` | every page or route. `_headers` is generated from `packages/contracts/surface.ts` by `apps/site/src/lib/headers.ts`, and `headers.test.ts` covers it. |
 
 3. Find the blast radius with grep, not by guessing. List the consumers of every changed export, constant and CSS token. `Layout.astro`, `global.css`, `browser-support.ts`, the theme bootstrap and the middleware in `app.ts` reach every page or route.
 4. Spend effort on the highest risk first. High impact here means it bills DeepSeek, sends email, writes durable state (D1, Durable Object storage), changes a public contract (`/api/v1`, `/mcp`, `/openapi.json`, `/.well-known/*`, markdown pages), or runs on every page load.
@@ -80,7 +80,7 @@ Design your own cases before you read the diff's tests, then compare. A missing 
 8. For a UI, font, image or island change, record a performance trace on a phone viewport at 4× CPU throttling. Expect LCP at most 2.5 s, CLS at most 0.1 and interactions at most 200 ms. The chat widget hydrates on the first tap, so measure that tap. Compare `du -sh apps/site/dist/_astro` with `main`.
 9. For every new CSS feature, JS API or HTML attribute, check MDN or Baseline against the floor in README › Browser support. Below it, the feature degrades gracefully or `MIN_VERSIONS` and `redirectIfOutdated` change together.
 10. At every new or changed boundary, check that zod validates input in the Worker with a maximum length, that a new route has a method allowlist, a CORS decision, a rate limit and an error body without internals, that `set:html` takes only trusted or escaped content, that model and visitor text render as text, and that socket and MCP handshakes check `Origin`.
-11. On every billed or sending path, validation, dry run and quota run before the paid call. A dry run spends and sends nothing. A failure never retries a billed turn. Never verify against production. Locally, the `EMAIL` binding writes to `.wrangler/tmp/email/` instead of sending.
+11. On every billed or sending path, validation, dry run and quota run before the paid call. A dry run spends and sends nothing. A failure never retries a billed turn. Never verify against production. Locally, the `EMAIL` binding writes to `apps/api/.cloudflare/tmp/email/` instead of sending.
 
 ## 5. Report
 
