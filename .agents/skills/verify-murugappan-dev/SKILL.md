@@ -13,17 +13,17 @@ Read [`features/README.md`](features/README.md) before driving, then the feature
 
 ## Launch
 
-Never use `bun run preview`. It binds `:8787` and `apps/api/.cloudflare/state`, which belong to the user's own `bun run dev` or preview. This launch previews in the `verify` mode, which gets its own port and its own state in `apps/api/.cloudflare/verify-state` (`persistState` in `apps/api/vite.config.ts`).
+Never use `bun run preview`. It binds `:8787` and `apps/api/.cloudflare/state`, which belong to the user's own `bun run dev` or preview. This launch previews in the `verify` mode, which gets its own port, `.dev.vars` and state under `apps/api/.cloudflare/verify/` (`localWorker` in `apps/api/vite.config.ts`).
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
 RUN="${SCRATCHPAD:-${TMPDIR:-/tmp}}/verify-murugappan-dev/$(date +%Y%m%dT%H%M%S)"
 mkdir -p "$RUN/evidence"
 PUBLIC_CHAT_HOST= POST_HOG_TOKEN= PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA bun run build > "$RUN/build.log" 2>&1 || { tail -40 "$RUN/build.log"; exit 1; }
-{ cat apps/api/.dev.vars; echo TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA; } > apps/api/.dev.vars.verify
-rm -rf apps/api/.cloudflare/verify-state
+rm -rf apps/api/.cloudflare/verify && mkdir -p apps/api/.cloudflare/verify
+{ cat apps/api/.dev.vars; echo TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA; } > apps/api/.cloudflare/verify/.dev.vars
 (cd apps/api && bunx cf d1 migrations apply a1111792-fb35-470f-85c9-13c3aab0662c \
-  --local --persist-to .cloudflare/verify-state > "$RUN/migrate.log" 2>&1) || { tail -20 "$RUN/migrate.log"; exit 1; }
+  --local --persist-to .cloudflare/verify/state > "$RUN/migrate.log" 2>&1) || { tail -20 "$RUN/migrate.log"; exit 1; }
 (cd apps/api && exec nohup node node_modules/vite/dist/vite/bin/vite.js preview --mode verify --port 8791 --strictPort \
   > "$RUN/worker.log" 2>&1) &
 echo $! > "$RUN/worker.pid"
@@ -34,9 +34,9 @@ echo "RUN=$RUN"
 
 Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`. Set `SCRATCHPAD` to your session scratchpad if your harness names one.
 
-The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going. Both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics. The Turnstile site key and the secret appended to `.dev.vars.verify` are Cloudflare's always-passing test pair, so the chat socket opens without a real challenge. To drive the interactive check, build with the site key `3x00000000000000000000FF` instead. The checkbox then shows above the composer and the socket opens once it's clicked.
+The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going. Both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics. The Turnstile site key and the secret appended to the verify `.dev.vars` are Cloudflare's always-passing test pair, so the chat socket opens without a real challenge. To drive the interactive check, build with the site key `3x00000000000000000000FF` instead. The checkbox then shows above the composer and the socket opens once it's clicked.
 
-The `verify` mode reads `apps/api/.dev.vars.verify`, the user's `.dev.vars` with the test secret appended, because the Worker reads `.dev.vars.<mode>` before `.dev.vars` and ignores environment variables when either exists. It is gitignored.
+That file is the user's `.dev.vars` with the test secret appended, so the chat keeps its real DeepSeek key. A preview reads `.dev.vars` from `envDir` and ignores environment variables while one exists, so the `verify` mode points `envDir` at `apps/api/.cloudflare/verify/`. `.cloudflare/` is gitignored.
 
 The Worker creates no D1 tables, so Launch applies `apps/api/migrations/` to the fresh state first. Without them the chat logs `d1 mirror failed ... no such table: rooms`.
 
@@ -104,7 +104,7 @@ Never verify against production. No `--remote`, no deploys, and no requests to `
 kill "$(cat "$RUN/worker.pid")"
 for i in $(seq 20); do lsof -nP -iTCP:8791 -sTCP:LISTEN >/dev/null || break; sleep 0.5; done
 lsof -nP -iTCP:8791 -sTCP:LISTEN || echo "8791 free"
-rm -rf apps/api/.cloudflare/verify-state apps/api/.dev.vars.verify
+rm -rf apps/api/.cloudflare/verify
 ls "$RUN/evidence"
 ```
 

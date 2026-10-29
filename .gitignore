@@ -13,7 +13,7 @@ dist/
 .cloudflare/
 .wrangler/
 .dev.vars
-.dev.vars.verify
+!apps/api/e2e/.dev.vars
 
 # blog read-aloud voice reference
 .voice/

@@ -57,7 +57,7 @@ Bun installs each package's dependencies into its own `node_modules` (`linker = 
 `.githooks/pre-push` runs every check CI runs. Both call `bun run check:static` for the format, lint and typecheck gates. It regenerates the Worker types from `apps/api/cloudflare.config.ts` first, because lint and the typechecks read bindings from them. It needs two tools from Homebrew: `brew install typos-cli uv`.
 
 - Run tests with `bun run test`. `bun test` starts Bun's own test runner, which is the wrong one.
-- `bun run test:e2e` runs `apps/api/e2e/` against `bun run build`'s output: it serves the build with `vite preview` in the `e2e` mode (`apps/api/.dev.vars.e2e`, no state on disk) on a free port and checks the served media types, Link headers, markdown negotiation, the links in the agent documents and the home page's JavaScript budget. Build first.
+- `bun run test:e2e` runs `apps/api/e2e/` against `bun run build`'s output: it serves the build with `vite preview` in the `e2e` mode (`apps/api/e2e/.dev.vars`, no state on disk) on a free port and checks the served media types, Link headers, markdown negotiation, the links in the agent documents and the home page's JavaScript budget. Build first.
 - Before the first run, install Chromium with `bunx playwright install --only-shell chromium` and set up Python with `uv sync --locked --project apps/tts`.
 - `bun run test:live` runs the tests that call the real DeepSeek API. They cost money, so the normal run skips them.
 - Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
