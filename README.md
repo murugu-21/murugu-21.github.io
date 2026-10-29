@@ -50,6 +50,8 @@ Things that will trip you up:
 
 Packages import each other by name and full file path, like `@murugappan/content/posts.ts`. Inside an app, use the `#src/*` imports, plus `#test/*` for the Worker's test fixtures. Lint blocks `../` imports and controls which folder may import which (`LAYERS` in `tooling/lint.config.ts`). If lint blocks an import, the code probably belongs somewhere else. Logic both apps need goes in `packages/content/` or `packages/utils/`.
 
+Bun installs each package's dependencies into its own `node_modules` (`linker = "isolated"` in `bunfig.toml`), so a package can import only what its own `package.json` declares, workspace packages included. A missing declaration fails as "Cannot find package" or "failed to resolve import". The exception is the root's own dependencies: every package can still reach them, so declare those too, even though nothing fails without them.
+
 ## Tests and checks
 
 `.githooks/pre-push` runs every check CI runs. Both call `bun run check:static` for the format, lint and typecheck gates. It regenerates the Worker types from `wrangler.jsonc` first, because lint and the typechecks read bindings from them. It needs two tools from Homebrew: `brew install typos-cli uv`.

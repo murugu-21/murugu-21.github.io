@@ -6,6 +6,7 @@
     "./*": "./*"
   },
   "dependencies": {
+    "@murugappan/utils": "workspace:*",
     "ai": "7.0.154",
     "zod": "^4.6.7"
   }

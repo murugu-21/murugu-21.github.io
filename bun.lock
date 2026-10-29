@@ -13,6 +13,9 @@
         "@cloudflare/vitest-plugin": "^1.4.7",
         "@commitlint/cli": "^21.2.4",
         "@effect/tsgo": "0.56.0",
+        "@murugappan/api": "workspace:*",
+        "@murugappan/content": "workspace:*",
+        "@murugappan/tooling": "workspace:*",
         "@types/node": "^26.6.5",
         "@vitest/browser-playwright": "5.0.5",
         "@vitest/coverage-istanbul": "5.0.5",
@@ -132,6 +135,7 @@
         "tailwindcss": "^4.3.3",
         "vfile": "^6.0.3",
         "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+        "vite-plus": "1.4.0",
         "vitest": "5.0.5",
         "vitest-browser-react": "^2.3.0",
         "webmcp-types": "^0.1.10",
@@ -166,6 +170,7 @@
     "packages/contracts": {
       "name": "@murugappan/contracts",
       "dependencies": {
+        "@murugappan/utils": "workspace:*",
         "ai": "7.0.154",
         "zod": "^4.6.7",
       },
@@ -175,6 +180,9 @@
       "dependencies": {
         "ai": "7.0.154",
         "zod": "^4.6.7",
+      },
+      "devDependencies": {
+        "vite-plus": "1.4.0",
       },
     },
     "tooling": {
