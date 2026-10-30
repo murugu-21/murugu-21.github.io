@@ -30,7 +30,7 @@
     "check:src": "astro sync --root apps/site && node node_modules/typescript/bin/tsc -p apps/site --noEmit --runExternalCode && node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit",
     "check:worker": "node node_modules/typescript/bin/tsc -p apps/api",
     "check:effect": "effect-tsgo diagnostics --project apps/api/tsconfig.json --strict",
-    "check:py": "bun run --silent py basedpyright -p apps/tts",
+    "check:py": "bun run --silent py ty check --project apps/tts",
     "prepare": "git config core.hooksPath .githooks",
     "diagrams": "vp run @murugappan/site#diagrams",
     "audio": "vp run @murugappan/tts#audio",

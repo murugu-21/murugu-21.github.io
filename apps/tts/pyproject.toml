@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["basedpyright==1.40.2", "ruff==0.17.2"]
+dev = ["ruff==0.17.2", "ty==0.0.95"]
 
 [tool.ruff]
 line-length = 100
@@ -17,9 +17,6 @@ line-length = 100
 [tool.ruff.lint]
 extend-select = ["B", "BLE", "I", "UP"]
 
-[tool.basedpyright]
-pythonVersion = "3.14"
-# Pyright's default mode. basedpyright's "recommended" adds reportUnknown*/reportAny
-# warnings that the untyped mlx-audio / mlx-whisper APIs cannot satisfy.
-typeCheckingMode = "standard"
-extraPaths = ["fakes"]
+[tool.ty.environment]
+python-version = "3.14"
+extra-paths = ["fakes"]
