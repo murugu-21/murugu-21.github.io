@@ -10,10 +10,7 @@ import { globalLimiter } from "#src/modules/rate-limit/rate-limiter.client.ts";
 import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 import { MAX_MESSAGE_LENGTH } from "@murugappan/contracts/chat.ts";
 import type { ChatRoom } from "#src/modules/chat/chat-room.durable-object.ts";
-import {
-  BALANCE_KEY,
-  type RateLimiter
-} from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
+import { BALANCE_KEY, RateLimiter } from "#src/modules/rate-limit/rate-limiter.durable-object.ts";
 import {
   activitiesIn,
   chatRequest,
@@ -429,16 +426,15 @@ describe("a chat turn", () => {
 
   it("answers with the error notice when the room can't reach its rate limiter", async () => {
     const { socket, frames, stub } = await openRoom(roomName("room-no-limiter"));
-    await runInDurableObject(stub, instance => {
-      Object.assign(instance, {
-        env: { ...testEnv(), DEEPSEEK_API_KEY: "sk-test", RateLimiter: undefined }
-      });
-    });
+    await scriptRoom(stub, answersOk());
+    vi.spyOn(RateLimiter.prototype, "admitChatTurn").mockRejectedValue(new Error("unreachable"));
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     socket.send(chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "hi" })] }));
 
-    expect(noticesIn(await streamedChunks(frames, "r1"))).toEqual([
+    const chunks = await streamedChunks(frames, "r1");
+    expect(replyText(chunks)).toBe("");
+    expect(noticesIn(chunks)).toEqual([
       { kind: "error", text: "Something went wrong on my end. Please try again." }
     ]);
   });
