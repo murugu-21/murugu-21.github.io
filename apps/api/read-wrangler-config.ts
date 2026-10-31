@@ -1,29 +1,38 @@
 import { convertToWranglerConfig, loadAndParseConfig } from "@cloudflare/config";
-import { unstable_readConfig } from "wrangler";
 
-import { WranglerConfigs, type WranglerConfigsRead } from "#test/wrangler-config.ts";
+import {
+  type ConfigIssue,
+  WranglerConfigs,
+  type WranglerConfigsRead
+} from "#test/wrangler-config.ts";
+
+async function readConfig(file: string): Promise<{ config: unknown } | { issues: ConfigIssue[] }> {
+  const { result } = await loadAndParseConfig(file, { isPreview: false, mode: "production" });
+  if (result.success) return { config: convertToWranglerConfig(result.data) };
+  return {
+    issues: result.error.issues.map(({ path, message }) => ({
+      file,
+      path: path.map(String).join("."),
+      message
+    }))
+  };
+}
 
 // The workers pool runs in workerd, which can't load either config, so the root vite.config.ts
 // reads them here in node and hands the result to wrangler.test.ts.
 export async function readWranglerConfigs(
   paths: Record<keyof WranglerConfigs, string>
 ): Promise<WranglerConfigsRead> {
-  const { result: parsed } = await loadAndParseConfig(paths.production, {
-    isPreview: false,
-    mode: "production"
-  });
-  if (!parsed.success) {
-    const issues = parsed.error.issues.map(({ path, message }) => ({
-      file: paths.production,
-      path: path.map(String).join("."),
-      message
-    }));
+  const [production, test] = await Promise.all([
+    readConfig(paths.production),
+    readConfig(paths.test)
+  ]);
+  if ("issues" in production || "issues" in test) {
+    const issues = [production, test].flatMap(read => ("issues" in read ? read.issues : []));
     return { success: false, issues };
   }
 
-  const production: unknown = convertToWranglerConfig(parsed.data);
-  const test: unknown = unstable_readConfig({ config: paths.test });
-  const result = WranglerConfigs.safeParse({ production, test });
+  const result = WranglerConfigs.safeParse({ production: production.config, test: test.config });
   if (result.success) return result;
   return {
     success: false,

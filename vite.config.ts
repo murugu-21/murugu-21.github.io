@@ -13,10 +13,10 @@ import lint from "@murugappan/tooling/lint.config.ts";
 
 const d1Migrations = await readD1Migrations("./apps/api/migrations");
 
-const TEST_WRANGLER_CONFIG = "./apps/api/test/wrangler.jsonc";
+const TEST_CLOUDFLARE_CONFIG = "./apps/api/test/cloudflare.config.ts";
 const wranglerConfigs = await readWranglerConfigs({
   production: "./apps/api/cloudflare.config.ts",
-  test: TEST_WRANGLER_CONFIG
+  test: TEST_CLOUDFLARE_CONFIG
 });
 
 // Tests tagged "live" bill the DeepSeek API, so only `bun run test:live` runs them, and only
@@ -92,7 +92,7 @@ export default defineConfig({
         plugins: [
           contentPosts(),
           cloudflareTest({
-            wrangler: { configPath: TEST_WRANGLER_CONFIG },
+            experimental: { newConfig: { configPath: TEST_CLOUDFLARE_CONFIG } },
             miniflare: { bindings: liveBindings }
           })
         ],

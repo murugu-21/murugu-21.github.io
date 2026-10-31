@@ -42,7 +42,7 @@ Things that will trip you up:
 - `dev` and `preview` both use port 8787. Stop one before starting the other.
 - In `dev`, the Worker can't see the built pages, so the chat's page fetching and the 404 page don't work there. Use `preview` for those.
 - To use the chat from `:4399`, add `PUBLIC_CHAT_HOST=localhost:8787` to `apps/site/.env`.
-- Read-aloud audio in `dev` and `preview` comes from the Worker's local R2, which starts empty, so the Listen button falls back to the browser voice. Copy a post's `.mp3` and `.json` from `blog/breeze/` with `bunx wrangler r2 object get --remote`, then `put --local --persist-to .cloudflare/state` from `apps/api`.
+- Read-aloud audio in `dev` and `preview` comes from the Worker's local R2, which starts empty, so the Listen button falls back to the browser voice. Copy a post's audio from `apps/api` with `bunx cf r2 objects get blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio > <slug>.mp3`, then `bunx cf r2 objects put blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio --file <slug>.mp3 --content-type audio/mpeg --local --persist-to .cloudflare/state`. Repeat for the `.json` with `--content-type application/json`.
 - `preview` runs the built Worker, so rebuild after changing `apps/api/src/` or `packages/content/`.
 - Local settings go in `apps/site/.env` (site) and `apps/api/.dev.vars` (Worker).
 
@@ -60,7 +60,7 @@ Bun installs each package's dependencies into its own `node_modules` (`linker = 
 - `bun run test:e2e` runs `apps/api/e2e/` against `bun run build`'s output: it serves the build with `vite preview` in the `e2e` mode (`apps/api/e2e/.dev.vars`, no state on disk) on a free port and checks the served media types, Link headers, markdown negotiation, the links in the agent documents and the home page's JavaScript budget. Build first.
 - Before the first run, install Chromium with `bunx playwright install --only-shell chromium` and set up Python with `uv sync --locked --project apps/tts`.
 - `bun run test:live` runs the tests that call the real DeepSeek API. They cost money, so the normal run skips them.
-- Bun installs packages, but Node runs Astro, Wrangler, Vitest and `tsc`.
+- Bun installs packages, but Node runs Astro, `cf`, Vitest and `tsc`.
 - The type checker is a TypeScript 7.1 prerelease. Point your editor at the TypeScript 7 language service.
 - `bun run check:effect` runs Effect's diagnostics (`@effect/tsgo`) over `apps/api`. It fails on every Effect error and warning, and the plugin entry in `apps/api/tsconfig.json` raises more rules to errors. Without that entry it checks nothing and passes.
 - Each `@effect/tsgo` release supports only the TypeScript versions its README lists, so `typescript` is pinned to one of them. Renovate doesn't bump `typescript` (`renovate.json`), so Renovate's `@effect/tsgo` PR fails until you set `typescript` to a version the new `@effect/tsgo` lists.
@@ -95,7 +95,7 @@ The build settings live in the Cloudflare dashboard, not in this repo:
 
 - Build command `bun run build`. Deploy command `bun run deploy`, which applies D1 migrations, then runs `cf deploy` with `apps/api/cloudflare.config.ts`.
 - Build env vars: the ones above, plus `BUN_VERSION` (match `packageManager` in `package.json`) and `REQUIRE_GITHUB_PROFILE=1` to fail the build if the GitHub card can't load.
-- The Worker secrets, each a `bindings.secret()` in `apps/api/cloudflare.config.ts`. Set each with `bunx wrangler secret put <NAME> --name murugappan-dev`.
+- The Worker secrets, each a `bindings.secret()` in `apps/api/cloudflare.config.ts`. Set each from `apps/api` with `read -rs VALUE && bunx cf workers secrets update <NAME> --worker murugappan-dev --type secret_text --text "$VALUE"; unset VALUE`, which keeps the value out of shell history.
 
 The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/cloudflare.config.ts`. The `EMAIL` binding sends to the same address.
 

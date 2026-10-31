@@ -39,6 +39,6 @@ Then push as usual. Run the two commands one after the other, never at the same 
 The rendered files stay in the `$TMPDIR/audio-<slug>-*` folder the script prints. Upload them from there instead of rendering again. Upload the MP3 first, because the JSON marks the post as done.
 
 ```bash
-bunx wrangler r2 object put murugappan-dev-audio/blog/breeze/<slug>.mp3 --remote --file <dir>/<slug>.mp3 --content-type audio/mpeg
-bunx wrangler r2 object put murugappan-dev-audio/blog/breeze/<slug>.json --remote --file <dir>/<slug>.json --content-type application/json
+bunx cf r2 objects put blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio --file <dir>/<slug>.mp3 --content-type audio/mpeg
+bunx cf r2 objects put blog/breeze/<slug>.json --bucket-name murugappan-dev-audio --file <dir>/<slug>.json --content-type application/json
 ```

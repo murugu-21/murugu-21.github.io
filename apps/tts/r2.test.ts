@@ -1,12 +1,12 @@
 import { mkdtempDisposableSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 
 import { audioKey, r2Store } from "./r2.ts";
 
 describe("r2Store", () => {
-  // Each wrangler call starts miniflare, about a second apiece.
+  // Each cf call starts miniflare, about a second apiece.
   it(
     "gets back what it put, null for an absent key, and throws on other failures",
     { timeout: 60_000 },
@@ -21,7 +21,18 @@ describe("r2Store", () => {
       r2.put({ key, file, contentType: "application/json" });
       expect(r2.get("blog/breeze/some-slug.json")?.toString()).toBe('{"blocks":[]}');
 
-      expect(() => r2Store({ persistTo: file }).get(key)).toThrow("wrangler r2 object get");
+      expect(() => r2Store({ persistTo: file }).get(key)).toThrow("cf r2 objects get");
     }
   );
+
+  it("refuses a remote run while cf is logged out", { timeout: 30_000 }, () => {
+    using home = mkdtempDisposableSync(join(tmpdir(), "r2-home-"));
+    vi.stubEnv("HOME", home.path);
+    vi.stubEnv("XDG_CONFIG_HOME", home.path);
+    vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    expect(() => r2Store("remote").checkLogin()).toThrow("cf is not logged in");
+  });
 });

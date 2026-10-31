@@ -60,7 +60,6 @@
         "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
         "vite-plus": "1.4.0",
         "vitest": "5.0.5",
-        "wrangler": "^4.156.0",
       },
     },
     "apps/brand": {
@@ -154,6 +153,7 @@
       },
       "devDependencies": {
         "@types/node": "^26.6.6",
+        "cf": "1.0.0-beta.26",
         "fast-check": "^4.10.2",
         "vite-plus": "1.4.0",
       },

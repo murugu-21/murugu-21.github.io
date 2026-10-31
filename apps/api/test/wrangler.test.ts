@@ -49,7 +49,7 @@ describe("apps/api/cloudflare.config.ts", () => {
   it("shares production's compatibility date and Durable Objects", () => {
     expect(
       test,
-      "apps/api/test/wrangler.jsonc must declare the same compatibility date, Durable Object bindings and exports as apps/api/cloudflare.config.ts. Copy them over."
+      "apps/api/test/cloudflare.config.ts must declare the same compatibility date, Durable Object bindings and exports as apps/api/cloudflare.config.ts. Copy them over."
     ).toEqual(SharedWithTest.parse(production));
   });
 });
