@@ -6,7 +6,7 @@
     "render": "bun render-x-cover.ts"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "firacode": "6.2.0",
     "puppeteer": "^25.16.0"
   }

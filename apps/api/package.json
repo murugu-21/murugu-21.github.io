@@ -15,33 +15,33 @@
     "types": "cf workers types"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "3.0.74",
+    "@ai-sdk/deepseek": "3.0.77",
     "@cloudflare/ai-chat": "0.12.2",
-    "@modelcontextprotocol/server": "2.3.1",
+    "@modelcontextprotocol/server": "2.4.0",
     "@murugappan/content": "workspace:*",
     "@murugappan/contracts": "workspace:*",
     "@murugappan/utils": "workspace:*",
-    "@posthog/mcp": "0.23.0",
-    "agents": "0.30.1",
-    "ai": "7.0.154",
-    "effect": "^4.0.6",
+    "@posthog/mcp": "0.25.0",
+    "agents": "0.32.0",
+    "ai": "7.0.159",
+    "effect": "^4.1.1",
     "hono": "5.0.0-rc.1",
     "ipaddr.js": "^2.5.0",
-    "posthog-node": "5.57.2",
+    "posthog-node": "5.61.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "4.0.34",
+    "@ai-sdk/provider": "4.0.35",
     "@cloudflare/config": "0.29.0",
-    "@cloudflare/vite-plugin": "2.0.0-beta.v.7",
-    "@cloudflare/vitest-plugin": "^1.4.7",
-    "@modelcontextprotocol/client": "2.3.1",
-    "cf": "1.0.0-beta.25",
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.8",
+    "@cloudflare/vitest-plugin": "^1.4.11",
+    "@modelcontextprotocol/client": "2.4.0",
+    "cf": "1.0.0-beta.26",
     "fast-check": "^4.10.2",
     "linkedom": "^0.18.14",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
     "vite-plus": "1.4.0",
     "vitest": "5.0.5",
-    "wrangler": "^4.152.0"
+    "wrangler": "^4.156.0"
   }
 }
