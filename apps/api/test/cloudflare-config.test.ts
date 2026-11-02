@@ -2,15 +2,15 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { createApp } from "#src/app.ts";
 import worker from "#src/server.ts";
-import { SharedWithTest, type WranglerConfigsRead } from "#test/wrangler-config.ts";
+import { type CloudflareConfigsRead, SharedWithTest } from "#test/cloudflare-config-schema.ts";
 
-declare const __WRANGLER_CONFIGS__: WranglerConfigsRead;
+declare const __CLOUDFLARE_CONFIGS__: CloudflareConfigsRead;
 
-if (!__WRANGLER_CONFIGS__.success) {
-  const issues = __WRANGLER_CONFIGS__.issues.map(i => `  ${i.file} ${i.path}: ${i.message}`);
-  throw new Error(`wrangler.test.ts can't read these fields:\n${issues.join("\n")}`);
+if (!__CLOUDFLARE_CONFIGS__.success) {
+  const issues = __CLOUDFLARE_CONFIGS__.issues.map(i => `  ${i.file} ${i.path}: ${i.message}`);
+  throw new Error(`cloudflare-config.test.ts can't read these fields:\n${issues.join("\n")}`);
 }
-const { production, test } = __WRANGLER_CONFIGS__.data;
+const { production, test } = __CLOUDFLARE_CONFIGS__.data;
 
 // Hono's `/x/*` also matches `/x`, and below a mount only pages (which end in "/") reach the Worker.
 function representatives(pattern: string): string[] {
@@ -20,13 +20,13 @@ function representatives(pattern: string): string[] {
   return [mount || "/", `${mount}/x/`];
 }
 
-// With not_found_handling "none" a miss already reaches the Worker, and no asset exists here.
+// With notFoundHandling "none" a miss already reaches the Worker, and no asset exists here.
 const UNSHADOWED_MOUNTS = new Set(["/api", "/.well-known"]);
 
 /* oxlint-disable tests/observe-behaviour -- relation tests: each compares two tables (config rows, or routes against config), so neither side is a literal */
 describe("apps/api/cloudflare.config.ts", () => {
   it("runs the Worker first for every route app.ts mounts", () => {
-    const patterns = production.assets.run_worker_first.map(
+    const patterns = production.assets.runWorkerFirst.map(
       glob => new URLPattern({ pathname: glob })
     );
     const runsWorkerFirst = (pathname: string) =>
@@ -41,7 +41,7 @@ describe("apps/api/cloudflare.config.ts", () => {
 
   it("has a scheduled handler exactly when it declares a cron trigger", () => {
     expect(
-      production.triggers.crons.length > 0,
+      production.triggers.some(trigger => trigger.type === "scheduled"),
       "A scheduled trigger in apps/api/cloudflare.config.ts runs the `scheduled` export of apps/api/src/server.ts. Add or remove both together."
     ).toBe("scheduled" in worker);
   });

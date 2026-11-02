@@ -6,7 +6,7 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { playwright } from "vite-plus/test/browser-playwright";
 import { configDefaults, defineConfig } from "vite-plus";
 
-import { readWranglerConfigs } from "@murugappan/api/read-wrangler-config.ts";
+import { readCloudflareConfigs } from "@murugappan/api/read-cloudflare-configs.ts";
 import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
 import fmt from "@murugappan/tooling/fmt.config.ts";
 import lint from "@murugappan/tooling/lint.config.ts";
@@ -14,7 +14,7 @@ import lint from "@murugappan/tooling/lint.config.ts";
 const d1Migrations = await readD1Migrations("./apps/api/migrations");
 
 const TEST_CLOUDFLARE_CONFIG = "./apps/api/test/cloudflare.config.ts";
-const wranglerConfigs = await readWranglerConfigs({
+const cloudflareConfigs = await readCloudflareConfigs({
   production: "./apps/api/cloudflare.config.ts",
   test: TEST_CLOUDFLARE_CONFIG
 });
@@ -87,7 +87,7 @@ export default defineConfig({
       {
         define: {
           __D1_MIGRATIONS__: JSON.stringify(d1Migrations),
-          __WRANGLER_CONFIGS__: JSON.stringify(wranglerConfigs)
+          __CLOUDFLARE_CONFIGS__: JSON.stringify(cloudflareConfigs)
         },
         plugins: [
           contentPosts(),
