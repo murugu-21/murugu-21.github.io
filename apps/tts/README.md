@@ -36,7 +36,7 @@ Then push as usual. Run the two commands one after the other, never at the same 
 
 ## If an upload fails
 
-The rendered files stay in the `$TMPDIR/audio-<slug>-*` folder the script prints. Upload them from there instead of rendering again. Upload the MP3 first, because the JSON marks the post as done.
+The rendered files stay in the `$TMPDIR/audio-<slug>-*` folder the script prints. Upload them from there instead of rendering again. Run these from `apps/tts`, so `bunx` picks the pinned cf rather than a global one. Upload the MP3 first, because the JSON marks the post as done.
 
 ```bash
 bunx cf r2 objects put blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio --file <dir>/<slug>.mp3 --content-type audio/mpeg

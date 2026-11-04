@@ -1,6 +1,7 @@
 import type { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { z } from "zod";
 
@@ -15,6 +16,9 @@ export const audioKey = (slug: string, ext: "mp3" | "json") => `${AUDIO_PREFIX}/
 
 // `get` writes the body to stdout; spawnSync's 1 MB default would truncate a post's audio.
 const MAX_OBJECT_BYTES = 1024 * 1024 * 1024;
+
+// Not `bunx cf`: run from the repo root, it falls back to a global cf instead of the pinned one.
+const PINNED_CF = join(dirname(fileURLToPath(import.meta.resolve("cf/package.json"))), "bin", "cf");
 
 type R2Location = "remote" | "local" | { persistTo: string };
 
@@ -38,17 +42,7 @@ const r2Args = ({
   key: string;
   location: R2Location;
   extra?: string[];
-}) => [
-  "cf",
-  "r2",
-  "objects",
-  verb,
-  key,
-  "--bucket-name",
-  BUCKET,
-  ...extra,
-  ...locationFlags(location)
-];
+}) => ["r2", "objects", verb, key, "--bucket-name", BUCKET, ...extra, ...locationFlags(location)];
 
 const LoggedIn = jsonString(
   z.object({ authenticated: z.literal(true), tokenValid: z.literal(true) })
@@ -58,7 +52,7 @@ const isMissingObject = (output: string) => /does not exist/i.test(output);
 
 export function r2Store(location: R2Location) {
   function get(key: string): Buffer | null {
-    const r = spawnSync("bunx", r2Args({ verb: "get", key, location }), {
+    const r = spawnSync(PINNED_CF, r2Args({ verb: "get", key, location }), {
       maxBuffer: MAX_OBJECT_BYTES
     });
     if (r.status === 0) return r.stdout;
@@ -69,13 +63,13 @@ export function r2Store(location: R2Location) {
 
   function put({ key, file, contentType }: { key: string; file: string; contentType: string }) {
     const extra = ["--file", file, "--content-type", contentType];
-    run("bunx", r2Args({ verb: "put", key, location, extra }));
+    run(PINNED_CF, r2Args({ verb: "put", key, location, extra }));
   }
 
   function checkLogin() {
     if (location !== "remote") return;
     // whoami exits 0 when logged out, and reports a revoked token as authenticated.
-    const r = spawnSync("bunx", ["cf", "auth", "whoami"], { encoding: "utf8" });
+    const r = spawnSync(PINNED_CF, ["auth", "whoami"], { encoding: "utf8" });
     if (!LoggedIn.safeParse(r.stdout).success) {
       throw new Error(
         "cf is not logged in; run `bunx cf auth login` in an interactive terminal, then retry"
