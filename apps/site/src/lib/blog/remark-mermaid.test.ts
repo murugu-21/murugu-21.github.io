@@ -6,7 +6,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { diagramFile, diagramHash } from "./mermaid-diagrams";
 import remarkMermaid from "./remark-mermaid";
 
-const FENCE = "flowchart LR\n  A --> B";
+const FENCE = "flowchart LR\n  accDescr: A hands off to B\n  A --> B";
 
 async function renderedPost({ viewBox }: { viewBox: string }) {
   const postDir = "/tmp/remark-mermaid-post";
@@ -35,7 +35,7 @@ describe("remarkMermaid", () => {
       children: ["light", "dark"].map(theme => ({
         type: "image",
         url: `diagrams/${hash}.${theme}.svg`,
-        alt: "Diagram 1",
+        alt: "A hands off to B",
         data: {
           hProperties: {
             loading: "lazy",
@@ -82,6 +82,14 @@ describe("remarkMermaid", () => {
     const diagram = fromMarkdown(`\`\`\`mermaid\n${FENCE}\n\`\`\`\n`);
     await expect(remarkMermaid()(diagram, new VFile())).rejects.toThrow(
       "remark-mermaid: a mermaid fence was found in markdown with no file path"
+    );
+  });
+
+  it("fails the build for a diagram with no accDescr line", async () => {
+    const tree = fromMarkdown("```mermaid\nflowchart LR\n  A --> B\n```\n");
+
+    await expect(remarkMermaid()(tree, new VFile({ path: "blog/post/index.md" }))).rejects.toThrow(
+      "blog/post/index.md: diagram 1 has no alt text."
     );
   });
 });

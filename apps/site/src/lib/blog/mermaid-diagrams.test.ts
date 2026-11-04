@@ -1,3 +1,4 @@
+import MarkdownIt from "markdown-it";
 import { describe, expect, it } from "vite-plus/test";
 
 import { diagramHash, findMermaidFences, replaceMermaidFences } from "./mermaid-diagrams";
@@ -8,6 +9,7 @@ Intro paragraph.
 
 \`\`\`mermaid
 flowchart LR
+    accDescr: A sends to B
     A --> B
 \`\`\`
 
@@ -19,6 +21,7 @@ Text between.
 
 ~~~mermaid
 sequenceDiagram
+    accDescr: A says hi to B
     A->>B: hi
 ~~~
 
@@ -39,14 +42,16 @@ const postFences = findMermaidFences(post);
 describe("findMermaidFences", () => {
   it("finds only top-level mermaid fences, in order, with the body trimmed", () => {
     expect(postFences.map(f => f.source)).toEqual([
-      "flowchart LR\n    A --> B",
-      "sequenceDiagram\n    A->>B: hi"
+      "flowchart LR\n    accDescr: A sends to B\n    A --> B",
+      "sequenceDiagram\n    accDescr: A says hi to B\n    A->>B: hi"
     ]);
   });
 
   it("reports the exact span of each fence, opening line through closing line", () => {
     const [first] = postFences;
-    expect(post.slice(first.start, first.end)).toBe("```mermaid\nflowchart LR\n    A --> B\n```");
+    expect(post.slice(first.start, first.end)).toBe(
+      "```mermaid\nflowchart LR\n    accDescr: A sends to B\n    A --> B\n```"
+    );
   });
 
   it("treats an unterminated fence as running to the end of the document", () => {
@@ -86,10 +91,10 @@ describe("diagramHash", () => {
 });
 
 describe("replaceMermaidFences", () => {
-  it("swaps each fence for a markdown image of the PNG rendering and leaves the rest untouched", async () => {
-    const out = await replaceMermaidFences(post);
-    expect(out).toContain("![Diagram 1](diagrams/082f83bf03db.png)");
-    expect(out).toContain("![Diagram 2](diagrams/99d2cdad7c76.png)");
+  it("swaps each fence for a markdown image of the PNG rendering, alt text from its accDescr", async () => {
+    const out = await replaceMermaidFences({ markdown: post, postLabel: "post" });
+    expect(out).toContain("![A sends to B](diagrams/cfaed32c3c10.png)");
+    expect(out).toContain("![A says hi to B](diagrams/02ca0f331067.png)");
     expect(out).not.toContain("```mermaid\nflowchart LR");
     expect(out).not.toContain("~~~mermaid");
     expect(out).toContain('const notADiagram = "```mermaid";');
@@ -98,8 +103,30 @@ describe("replaceMermaidFences", () => {
     expect(out.endsWith("End.\n")).toBe(true);
   });
 
+  it("keeps markdown syntax in the alt text literal", async () => {
+    const markdown =
+      '```mermaid\nflowchart LR\n  accDescr: Retries [5s, 30s] *then* `fails` \\ <b>stop</b> & "dead"\n  A --> B\n```\n';
+    const html = new MarkdownIt({ html: true }).render(
+      await replaceMermaidFences({ markdown, postLabel: "post" })
+    );
+    expect(html).toContain(
+      'alt="Retries [5s, 30s] *then* `fails` \\ &lt;b&gt;stop&lt;/b&gt; &amp; &quot;dead&quot;"'
+    );
+  });
+
+  it.each([
+    ["no accDescr line", "flowchart LR\n  A --> B"],
+    ["an empty accDescr", "flowchart LR\n  accDescr:   \n  A --> B"],
+    ["the block form", "flowchart LR\n  accDescr {\n    A hands off to B\n  }\n  A --> B"]
+  ])("refuses a diagram with %s", async (_, source) => {
+    const markdown = `Intro\n\n\`\`\`mermaid\nflowchart LR\n  accDescr: First\n  A --> B\n\`\`\`\n\n\`\`\`mermaid\n${source}\n\`\`\`\n`;
+    await expect(replaceMermaidFences({ markdown, postLabel: "blog/post" })).rejects.toThrow(
+      "blog/post: diagram 2 has no alt text."
+    );
+  });
+
   it("returns a post without diagrams unchanged", async () => {
     const md = "# Hi\n\n```js\nlet x = 1;\n```\n";
-    expect(await replaceMermaidFences(md)).toBe(md);
+    expect(await replaceMermaidFences({ markdown: md, postLabel: "post" })).toBe(md);
   });
 });

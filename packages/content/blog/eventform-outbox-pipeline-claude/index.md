@@ -31,6 +31,7 @@ I wanted a portfolio project that wasn't another todo app, something anyone coul
 
 ```mermaid
 flowchart LR
+    accDescr: A public form POST writes the submission and its outbox row to Postgres in one transaction. Debezium reads the WAL through logical replication and publishes to the Kafka topic eventform.events, then an idempotent worker sends HMAC-signed POSTs to the tenant's webhook endpoint while a retry scheduler claims due rows in Postgres with FOR UPDATE SKIP LOCKED.
     A[Public form<br/>POST /v1/forms/:slug] --> B[(Postgres<br/>submission + outbox<br/>in ONE transaction)]
     B -->|WAL| C[Debezium<br/>logical replication]
     C --> D[Kafka<br/>eventform.events]
@@ -49,6 +50,7 @@ My first instinct years ago would have been to write the submission to Postgres 
 
 ```mermaid
 sequenceDiagram
+    accDescr: Both orderings of a dual write fail. Committing to Postgres and then dying before the Kafka publish loses the event forever, and publishing first and then crashing before the commit leaves a ghost event for data that never existed.
     participant API
     participant PG as Postgres
     participant K as Kafka
@@ -80,6 +82,7 @@ Something still has to move outbox rows into Kafka. The tempting answer is a pol
 
 ```mermaid
 flowchart LR
+    accDescr: An outbox insert commits to the Postgres write-ahead log, and a logical replication slot using pgoutput streams it in commit order to Debezium's outbox EventRouter SMT. Debezium produces each event to the Kafka topic eventform.events keyed by aggregate_id, the delivery id, and the worker consumer group reads from it.
     subgraph pg [Postgres]
         OB[(outbox insert<br/>COMMIT)] --> WAL[write-ahead log]
         WAL --> SLOT[logical replication slot<br/>pgoutput]
@@ -107,6 +110,7 @@ Because the claim and the work commit or roll back together, they can never disa
 
 ```mermaid
 sequenceDiagram
+    accDescr: Workers A and B both begin a transaction and insert a claim for evt-42, and B blocks on A's uncommitted claim row. A sends the HMAC-signed POST, records the attempt and commits, then B's insert hits ON CONFLICT DO NOTHING with 0 rows, so B commits the skip and sends nothing.
     participant A as worker A
     participant B as worker B
     participant PG as Postgres
@@ -130,6 +134,7 @@ The full lifecycle of a delivery:
 
 ```mermaid
 stateDiagram-v2
+    accDescr: A delivery starts pending when its outbox event is consumed and becomes delivered on a 2xx. A non-2xx or timeout moves it to retrying, which retries with 5s and 30s backoff and becomes delivered on a 2xx. The third failed attempt marks it failed and shows it in the UI, and a manual retry sends it back to pending through a new outbox event.
     [*] --> pending: outbox event consumed
     pending --> delivered: 2xx
     pending --> retrying: non-2xx / timeout
@@ -154,6 +159,7 @@ Here is the delivery half of the schema on its own, which is the part a platform
 
 ```mermaid
 erDiagram
+    accDescr: An endpoint has many deliveries, and each delivery has many delivery attempts as its audit trail and one outbox event per send or resend, each claimed at most once in processed_event, the idempotency ledger. The delivery stores the producer's payload, so the schema has no foreign key back into the domain.
     ENDPOINT ||--o{ DELIVERY : "fan-out target"
     DELIVERY ||--o{ DELIVERY_ATTEMPT : "audit trail"
     DELIVERY ||--o{ OUTBOX_EVENT : "one per (re)send"
@@ -203,6 +209,7 @@ This thing lives on the open internet. Scanners and credential-stuffing bots sho
 
 ```mermaid
 sequenceDiagram
+    accDescr: The SPA, a public client, derives an S256 code_challenge from a code_verifier and sends it to Cognito's hosted UI, which federates sign-in to Google and redirects back with a code. The SPA exchanges the code and code_verifier for access and ID tokens with no client secret and sends the access token as a Bearer header, and the API checks the JWKS signature, iss, token_use and client_id, then maps sub to a tenant.
     participant SPA as SPA (public client)
     participant IdP as Cognito hosted UI<br/>auth.murugappan.dev
     participant G as Google

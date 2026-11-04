@@ -48,18 +48,21 @@ export async function GET() {
   const posts = await getPostSources();
 
   const items = await Promise.all(
-    posts.map(async post => ({
-      title: post.data.title,
-      pubDate: post.data.date,
-      link: postUrl(post.slug),
-      description: postDescription(post),
-      content: absolutizeAssets(
-        sanitizeHtml(parser.render(await replaceMermaidFences(post.body)), {
-          allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"])
-        }),
-        post.slug
-      )
-    }))
+    posts.map(async post => {
+      const markdown = await replaceMermaidFences({ markdown: post.body, postLabel: post.slug });
+      return {
+        title: post.data.title,
+        pubDate: post.data.date,
+        link: postUrl(post.slug),
+        description: postDescription(post),
+        content: absolutizeAssets(
+          sanitizeHtml(parser.render(markdown), {
+            allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img"])
+          }),
+          post.slug
+        )
+      };
+    })
   );
 
   return rss({

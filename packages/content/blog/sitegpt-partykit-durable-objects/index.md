@@ -27,6 +27,7 @@ If you ask for "scalable websocket chat" in a system design interview, you'll ge
 
 ```mermaid
 flowchart LR
+    accDescr: Clients connect through a load balancer with sticky sessions to several socket servers. The servers share pub/sub and presence through Redis and write message history to Postgres, so every box has to agree with the others.
     C1[client] & C2[client] & C3[client] --> LB[load balancer<br/>sticky sessions]
     LB --> S1[socket server 1] & S2[socket server 2]
     S1 <--> R[(Redis<br/>pub/sub + presence)]
@@ -82,6 +83,7 @@ A Durable Object combines three guarantees:
 
 ```mermaid
 flowchart LR
+    accDescr: Clients connect through the Cloudflare edge straight to one Durable Object per room, such as abc or xyz. Each room keeps its sockets, state and SQLite database in one process, so there is no shared server, cache or database to keep in sync.
     C1[client] & C2[client] --> E[Cloudflare edge]
     C3[client] --> E
     E --> DO1["room: abc<br/>sockets + state + SQLite<br/>(one process)"]
@@ -157,6 +159,7 @@ One message, end to end:
 
 ```mermaid
 sequenceDiagram
+    accDescr: A visitor's PartySocket sends a chat message to the ChatRoom Durable Object, which checks the rate limit and inserts the message into its local SQLite. The room streams a completion from DeepSeek, forwards each token to the visitor as a delta, inserts the reply, and sends done.
     participant V as Visitor (PartySocket)
     participant DO as ChatRoom (Durable Object)
     participant AI as DeepSeek

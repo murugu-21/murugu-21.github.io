@@ -51,6 +51,7 @@ A big model does this well because it reasons through each fax. Here is how to m
 
 ```mermaid
 flowchart TD
+    accDescr: A big model explains each field of the faxes staff already entered, then writes a playbook that a small model runs on the test set. Misses go back to improve the playbook until accuracy stops rising, and in production a marked field or failed check goes to the big model or a person.
     K[Faxes + entries staff made] --> B[Big model explains each field]
     B --> PB[Big model writes the playbook]
     PB --> S[Small model + playbook on the test set]
@@ -101,6 +102,7 @@ These models skip decode, the slow phase that writes the answer one token at a t
 
 ```mermaid
 flowchart LR
+    accDescr: The input and its schema go through one prefill pass, then an answer head scores every option in parallel and returns a typed answer with a confidence, such as route billing at p 0.94. Nothing is written token by token.
     I[Input + schema] --> PF[One prefill pass]
     PF --> H[Answer head scores every option in parallel]
     H --> O["{ route: 'billing', p: 0.94 }"]
@@ -138,6 +140,7 @@ A System One model can't explain itself in prose, and it can't reason across man
 
 ```mermaid
 flowchart TD
+    accDescr: Clairic extracts fields from an incoming document and Clef decides what to do with it. A high-confidence decision is acted on automatically, and a low-confidence one goes to an LLM to review before acting.
     IN[Incoming document] --> X[Clairic: extract fields]
     X --> C{Clef: decide}
     C -->|confidence high| ACT[Act automatically]

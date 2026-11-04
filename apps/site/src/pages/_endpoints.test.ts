@@ -205,4 +205,36 @@ describe("/blog/rss.xml", () => {
         '<img src="missing.png" alt="gone" /></p>\n<p>In my 3<sup>rd</sup> year.</p>\n'
     );
   });
+
+  it("swaps each mermaid diagram for its PNG, with its accDescr as the alt text", async () => {
+    setPosts([
+      blogPost({
+        id: "handoff",
+        title: "Handoff",
+        date: "2024-05-06",
+        description: "A to B",
+        body: "Intro.\n\n```mermaid\nflowchart LR\n  accDescr: A hands off to B\n  A --> B\n```\n"
+      })
+    ]);
+
+    const xml = await (await rss()).text();
+
+    expect(itemHtml(xml)).toMatch(
+      /^<p>Intro\.<\/p>\n<p><img src="diagrams\/[0-9a-f]{12}\.png" alt="A hands off to B" \/><\/p>\n$/
+    );
+  });
+
+  it("fails for a post with a mermaid diagram that has no accDescr", async () => {
+    setPosts([
+      blogPost({
+        id: "no-alt",
+        title: "No alt",
+        date: "2024-05-06",
+        description: "Missing alt",
+        body: "```mermaid\nflowchart LR\n  A --> B\n```\n"
+      })
+    ]);
+
+    await expect(rss()).rejects.toThrow(/^no-alt: diagram 1 has no alt text\./);
+  });
 });

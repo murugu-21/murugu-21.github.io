@@ -26,6 +26,8 @@ A few rules:
 
 Write diagrams as ` ```mermaid ` code blocks. The build turns each one into images, so readers never load mermaid. The images aren't committed. Only the code block is.
 
+Give each diagram a one-line `accDescr: ...` right after its first line, saying what it shows and why. It becomes the images' alt text, and the build fails without it.
+
 If you change how diagrams look (theme, font), bump `RENDERER_VERSION` in `apps/site/src/lib/blog/mermaid-diagrams.ts` so they all re-render. `bun run diagrams --force` re-renders everything by hand.
 
 The build fails if a post is missing a diagram. Without that check, a broken post would ship blank, because Astro only logs the error and caches the empty page.

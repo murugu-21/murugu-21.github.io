@@ -33,6 +33,7 @@ There were smaller reasons too. Astro loads markdown posts as content collection
 
 ```mermaid
 flowchart LR
+    accDescr: In Gatsby, markdown posts go through a GraphQL data layer into gatsby build, which also takes in the plugin ecosystem, and every page hydrates the full React bundle. In Astro, markdown posts become content collections, astro build emits static HTML with zero JS by default, and React, Vue or Svelte islands hydrate only where needed.
     subgraph GATSBY["Gatsby"]
         MD["Markdown posts"] --> GQL["GraphQL data layer"]
         PLUG["Plugin ecosystem"] --> BUILD["gatsby build"]
@@ -93,6 +94,7 @@ I got this wrong at first. The migration dropped the offline cache, not installa
 
 ```mermaid
 flowchart TD
+    accDescr: Posts in content/blog/slug/index.md become content collections, astro build writes dist/, and a Cloudflare Worker with static assets serves it. The Worker also handles 301s, cache and security headers, content-negotiated 404s, and /api, /mcp and /parties on Durable Objects.
     POSTS["content/blog/slug/index.md"] --> CC["Content collections"]
     CC --> BUILD["astro build"]
     BUILD --> DIST["dist/"]
@@ -107,6 +109,7 @@ The port itself took about a day. The next few weeks went into making it not emb
 
 ```mermaid
 flowchart LR
+    accDescr: The agent writes the Astro version of a feature and keeps the build and tests passing, then I open the page and look at it. If something looks off I describe it in plain English and the agent tries again, and once it looks right I commit.
     P["Prompt: port this feature, keep the checks green"] --> A["Agent writes the Astro version"]
     A --> B["Build + tests pass"]
     B --> V["I open the page and stare at it"]

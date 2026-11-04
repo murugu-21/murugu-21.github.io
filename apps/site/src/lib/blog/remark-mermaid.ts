@@ -44,15 +44,17 @@ export default function remarkMermaid() {
       throw new Error("remark-mermaid: a mermaid fence was found in markdown with no file path");
     }
     const postDir = dirname(file.path);
+    const postLabel = relative(process.cwd(), file.path);
 
     for (const [i, { node, parent, index }] of fences.entries()) {
+      const alt = diagramAlt({ source: node.value, postLabel, index: i });
       const hash = await diagramHash(node.value);
       const pathOf = (theme: DiagramTheme) => join(postDir, diagramFile(hash, theme));
       if (!DIAGRAM_THEMES.every(theme => existsSync(pathOf(theme)))) renderMissing();
       for (const theme of DIAGRAM_THEMES) {
         if (!existsSync(pathOf(theme))) {
           throw new Error(
-            `remark-mermaid: ${relative(process.cwd(), pathOf(theme))} was not rendered for ${diagramAlt(i).toLowerCase()} of ${relative(process.cwd(), file.path)}`
+            `remark-mermaid: ${relative(process.cwd(), pathOf(theme))} was not rendered for diagram ${i + 1} of ${postLabel}`
           );
         }
       }
@@ -61,7 +63,7 @@ export default function remarkMermaid() {
       const images: Image[] = DIAGRAM_THEMES.map(theme => ({
         type: "image",
         url: diagramFile(hash, theme),
-        alt: diagramAlt(i),
+        alt,
         data: {
           hProperties: {
             // Astro's image pipeline copies these attributes verbatim.

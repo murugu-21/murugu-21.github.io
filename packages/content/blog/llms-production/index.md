@@ -42,6 +42,7 @@ Every request runs in two phases.
 
 ```mermaid
 flowchart LR
+    accDescr: Prefill reads the whole prompt, system plus tools plus history, in one parallel pass and fills the KV cache. Decode then reads that cache to write the answer one token per step, which is the slow, sequential phase.
     P[Prompt: system + tools + history] --> PF[Prefill: all tokens in one parallel pass]
     PF --> KV[(KV cache)]
     KV --> D1[Decode step 1]

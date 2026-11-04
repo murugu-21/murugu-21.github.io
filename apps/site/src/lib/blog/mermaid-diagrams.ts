@@ -53,17 +53,45 @@ export const diagramFile = (hash: string, theme: DiagramTheme) =>
 // mermaid's foreignObject labels or embedded font, so SVGs come out blank.
 export const diagramRaster = (hash: string) => `${DIAGRAMS_DIR}/${hash}.png`;
 
-export const diagramAlt = (index: number) => `Diagram ${index + 1}`;
+const ACC_DESCR_LINE = /^\s*accDescr\s*:(.*)$/m;
 
-export async function replaceMermaidFences(markdown: string): Promise<string> {
+export function diagramAlt({
+  source,
+  postLabel,
+  index
+}: {
+  source: string;
+  postLabel: string;
+  index: number;
+}): string {
+  const description = source.match(ACC_DESCR_LINE)?.[1].trim();
+  if (!description) {
+    throw new Error(
+      `${postLabel}: diagram ${index + 1} has no alt text. Add a one-line "accDescr: <what the diagram shows>" after its first line. The block form accDescr { ... } is not supported.`
+    );
+  }
+  return description;
+}
+
+const ASCII_PUNCTUATION = /[!-/:-@[-`{-~]/g;
+const escapeMarkdown = (text: string) => text.replaceAll(ASCII_PUNCTUATION, "\\$&");
+
+export async function replaceMermaidFences({
+  markdown,
+  postLabel
+}: {
+  markdown: string;
+  postLabel: string;
+}): Promise<string> {
   const fences = findMermaidFences(markdown);
   if (fences.length === 0) return markdown;
   let out = "";
   let cursor = 0;
   for (const [i, fence] of fences.entries()) {
+    const alt = diagramAlt({ source: fence.source, postLabel, index: i });
     const hash = await diagramHash(fence.source);
     out += markdown.slice(cursor, fence.start);
-    out += `![${diagramAlt(i)}](${diagramRaster(hash)})`;
+    out += `![${escapeMarkdown(alt)}](${diagramRaster(hash)})`;
     cursor = fence.end;
   }
   return out + markdown.slice(cursor);

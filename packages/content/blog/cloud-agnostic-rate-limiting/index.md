@@ -35,6 +35,7 @@ There are two tiers, and the next section explains why the split is needed.
 
 ```mermaid
 flowchart TD
+    accDescr: Clients send requests carrying a JWT from the OIDC provider to an edge tier, Cloudflare or a cloud WAF, which blocks callers over the per-IP limit with a 429. Requests under the limit reach an Envoy or Kong gateway in your portable Kubernetes cluster, which validates the JWT, checks a per-user limit keyed on sub against Redis or Valkey, and either returns a 429 or forwards to the app pods.
     C[Clients] -->|JWT from OIDC provider| E[Edge tier: Cloudflare or a cloud WAF]
     E -->|over per-IP limit| EB[429 blocked at edge]
     E -->|under limit| G[Gateway: Envoy or Kong]
@@ -59,6 +60,7 @@ This shaped the whole design. Your first instinct, and it was mine, is to authen
 
 ```mermaid
 flowchart LR
+    accDescr: A request passes the edge WAF's per-IP check, which sees only the IP and raw headers, before auth validates the JWT and the identity in sub becomes known. Only then can a per-user limit keyed on sub run, because the edge cannot see sub yet.
     REQ[Incoming request] --> EDGE[Edge / WAF]
     EDGE --> IPCHK{Per-IP limit}
     IPCHK -->|sees IP + raw headers| OK1[OK, forward]
