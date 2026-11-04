@@ -7,7 +7,8 @@ date: "2026-11-02T09:00:00.000Z"
 
 tags: ["ai", "system-design"]
 
-keywords: ["llm-cost", "prompt-caching", "prefill", "decode", "kv-cache", "agents"]
+keywords:
+  ["llm-cost", "prompt-caching", "prefill", "decode", "kv-cache", "disaggregated-serving", "agents"]
 
 description: How prefill and decode set the price of every LLM call, and why cached input costs 90 to 98% less.
 
@@ -56,11 +57,33 @@ flowchart LR
     style DN fill:#ffe0e0,stroke:#c0392b
 ```
 
-The two phases differ so much that some serving systems run them on separate GPUs ([DistServe, OSDI 2024](https://arxiv.org/abs/2401.09670)).
+### Why some providers run prefill and decode on separate GPUs
 
-The KV cache depends only on the tokens the model read. If two requests start with the same 100,000 tokens, prefill computes the same tensors for both.
+Prefill and decode hit different limits. Prefill pushes thousands of tokens through each weight it loads, so the GPU's math units set the pace. Decode adds one token per request per step. Unless many requests share that step, the GPU loads every weight to do the math for one token, and memory bandwidth sets the pace. Running the two phases on separate GPUs is called disaggregated serving.
+
+The wait on memory holds only at small batch sizes. The math a GPU does per byte it reads, called arithmetic intensity, grows with the number of requests in each decode step. Batch enough of them and the math units set the pace again for the weights. Attention still reads each request's own KV cache, so that part stays memory bound however big the batch gets.
+
+Big batches are hard in a mixture-of-experts model. DeepSeek V4.1 Flash splits each layer into 384 smaller networks, called experts, and sends each token to 6 of them plus one shared expert ([vLLM recipe](https://recipes.vllm.ai/deepseek-ai/DeepSeek-V4.1-Flash)). Spread a batch over 384 experts and each expert sees a handful of tokens.
+
+On a shared GPU, a long prompt's prefill holds the GPU, and every decode step queued behind it waits. Other users see their answers pause mid-sentence. Chunked prefill splits a long prompt into pieces, which shortens those pauses but doesn't remove them. The DistServe paper calls the problem interference and names a second cost. With one shared pool, both phases must split the model across GPUs the same way. DistServe runs the phases on separate GPUs and served up to 7.4 times as many requests as existing systems, with over 90% of them inside latency targets ([DistServe, OSDI 2024](https://arxiv.org/abs/2401.09670)).
+
+DeepSeek's notes for serving V4.1 Flash show what each pool does once the phases run apart ([DeepInfer deployment Q&A](https://github.com/deepseek-ai/DeepInfer/blob/main/doc/inference_deployment_qa.md)).
+
+|                     | Prefill pool                             | Decode pool                              |
+| ------------------- | ---------------------------------------- | ---------------------------------------- |
+| Hardware            | 8-GPU servers                            | Clusters of 64 to 128 GPUs               |
+| Experts spread over | 2 to 8 GPUs, as few as GPU memory allows | 64 to 128 GPUs, as many as are available |
+| Tuned for           | Time to first token                      | Time between tokens                      |
+
+Each prefill request brings thousands of tokens, so every expert gets plenty even on 2 to 8 GPUs. Decode spreads the 384 experts over as many GPUs as it can. On 64 GPUs, each GPU holds 6 experts plus a spare copy of a busy one, and collects their tokens from all 64 GPUs. Each expert then sees a batch about 64 times larger than one GPU's requests could give it. The notes put the smallest efficient deployment at 64 prefill GPUs plus 64 decode GPUs, and the ratio in practice at about 1:1.
+
+The split adds a step. Prefill writes the first token, and then its KV cache has to cross the network to a decode GPU before the second token.
+
+None of this shows in the API, but it explains the two prices. DeepSeek's earlier V3 deployment reported about 73,700 input tokens per second per 8-GPU node in prefill, counting cache hits, and 14,800 output tokens per second in decode ([inference system overview](https://github.com/deepseek-ai/open-infra-index/blob/main/202502OpenSourceWeek/day_6_one_more_thing_deepseekV3R1_inference_system_overview.md)). That is a gap of about five times, the same as the gap between Opus 5.5's input and output prices.
 
 ## Prompt caching means skipping prefill
+
+The KV cache depends only on the tokens the model read. If two requests start with the same 100,000 tokens, prefill computes the same tensors for both.
 
 Prompt caching keeps the KV cache from one request and reuses it for the next request that starts with the same tokens. OpenAI's [caching guide](https://developers.openai.com/api/docs/guides/prompt-caching) says the cache "stores key-value (KV) tensors, not the tokens themselves." On a cache hit the provider loads tensors it already has instead of running prefill again.
 
@@ -86,7 +109,7 @@ Lifetime decides whether a user who pauses for ten minutes comes back to a warm 
 
 - Anthropic keeps a cache for 5 minutes and resets the timer free on each hit. A 1-hour cache costs twice the input price to write ([docs](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)).
 - OpenAI's GPT-5.6 and later default to 30 minutes, with a 12-hour option at a higher write price ([guide](https://developers.openai.com/api/docs/guides/prompt-caching)).
-- DeepSeek has no setting. Its API docs say unused cache is cleared "usually within a few hours to a few days" ([guide](https://api-docs.deepseek.com/guides/kv_cache)). DeepSeek's infrastructure notes list "retain KV cache for more than 72 hours" as a design goal. They keep agent traffic for 3 days and chatbot traffic for 7, on "roughly 100 PiB of SSD storage for the KV cache" ([DeepInfer deployment Q&A](https://github.com/deepseek-ai/DeepInfer/blob/main/doc/inference_deployment_qa.md)). That is an internal target, not something the API promises.
+- DeepSeek has no setting. Its API docs say unused cache is cleared "usually within a few hours to a few days" ([guide](https://api-docs.deepseek.com/guides/kv_cache)). The same DeepInfer notes list "retain KV cache for more than 72 hours" as a design goal. They keep agent traffic for 3 days and chatbot traffic for 7, on "roughly 100 PiB of SSD storage for the KV cache" ([DeepInfer deployment Q&A](https://github.com/deepseek-ai/DeepInfer/blob/main/doc/inference_deployment_qa.md)). That is an internal target, not something the API promises.
 
 DeepSeek can charge 98% less for a cache hit and keep it for days because storing keys and values on SSD costs less than running prefill again.
 
