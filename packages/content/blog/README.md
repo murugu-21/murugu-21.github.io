@@ -28,7 +28,7 @@ Write diagrams as ` ```mermaid ` code blocks. The build turns each one into imag
 
 Give each diagram a one-line `accDescr: ...` right after its first line, saying what it shows and why. It becomes the images' alt text, and the build fails without it.
 
-If you change how diagrams look (theme, font), bump `RENDERER_VERSION` in `apps/site/src/lib/blog/mermaid-diagrams.ts` so they all re-render. `bun run diagrams --force` re-renders everything by hand.
+If you change how diagrams look (theme, font), bump `RENDERER_VERSION` in `apps/site/src/lib/blog/mermaid-diagrams.ts` so they all re-render. Then run `bunx astro sync --root apps/site --force` once before a local build or `bun run dev`, because Astro's content cache keeps posts rendered with the old diagram names. `bun run diagrams --force` re-renders everything by hand.
 
 The build fails if a post is missing a diagram. Without that check, a broken post would ship blank, because Astro only logs the error and caches the empty page.
 

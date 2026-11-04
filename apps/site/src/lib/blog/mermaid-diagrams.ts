@@ -7,7 +7,7 @@ export const DIAGRAMS_DIR = "diagrams";
 export type DiagramTheme = "light" | "dark";
 export const DIAGRAM_THEMES: readonly DiagramTheme[] = ["light", "dark"];
 
-const RENDERER_VERSION = "4";
+const RENDERER_VERSION = "5";
 
 interface MermaidFence {
   source: string;

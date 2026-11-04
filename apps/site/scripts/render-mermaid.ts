@@ -33,6 +33,7 @@ import {
 import {
   THEMES,
   cssUrl,
+  darkenStyledFills,
   finishSvg,
   fontFace,
   renderOptions,
@@ -90,7 +91,8 @@ async function renderSvg({
   job: Job;
   theme: DiagramTheme;
 }): Promise<string> {
-  const { data } = await renderMermaid(browser, job.source, "svg", {
+  const source = theme === "dark" ? darkenStyledFills(job.source) : job.source;
+  const { data } = await renderMermaid(browser, source, "svg", {
     ...renderOptions({ hash: job.hash, theme, pageFont: PAGE_FONT }),
     // mermaid-cli's own embedding would inline every Unicode range whole
     fontEmbed: false

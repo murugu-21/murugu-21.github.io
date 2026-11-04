@@ -82,19 +82,19 @@ describe("diagramHash", () => {
     ["surrounding whitespace", "\n  flowchart LR\n  A --> B  \n\n"],
     ["CRLF line endings", "flowchart LR\r\n  A --> B\r\n"]
   ])("hashes %s to the same 12-hex name", async (_, source) => {
-    expect(await diagramHash(source)).toBe("7cbc16dbcd5f");
+    expect(await diagramHash(source)).toBe("2d21528ec29a");
   });
 
   it("gives a changed diagram a new name", async () => {
-    expect(await diagramHash("flowchart LR\n  A --> C")).toBe("e22fba402df1");
+    expect(await diagramHash("flowchart LR\n  A --> C")).toBe("a44b5ecc7ab1");
   });
 });
 
 describe("replaceMermaidFences", () => {
   it("swaps each fence for a markdown image of the PNG rendering, alt text from its accDescr", async () => {
     const out = await replaceMermaidFences({ markdown: post, postLabel: "post" });
-    expect(out).toContain("![A sends to B](diagrams/cfaed32c3c10.png)");
-    expect(out).toContain("![A says hi to B](diagrams/02ca0f331067.png)");
+    expect(out).toContain("![A sends to B](diagrams/33d47f295b5f.png)");
+    expect(out).toContain("![A says hi to B](diagrams/58d9f6f35f78.png)");
     expect(out).not.toContain("```mermaid\nflowchart LR");
     expect(out).not.toContain("~~~mermaid");
     expect(out).toContain('const notADiagram = "```mermaid";');
