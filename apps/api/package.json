@@ -33,7 +33,7 @@
   "devDependencies": {
     "@ai-sdk/provider": "4.0.35",
     "@cloudflare/config": "0.29.0",
-    "@cloudflare/vite-plugin": "2.0.0-beta.v.8",
+    "@cloudflare/vite-plugin": "2.0.0-beta.v.12",
     "@cloudflare/vitest-plugin": "^1.4.11",
     "@modelcontextprotocol/client": "2.4.0",
     "cf": "1.0.0-beta.26",
