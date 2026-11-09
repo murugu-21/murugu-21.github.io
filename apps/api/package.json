@@ -36,7 +36,7 @@
     "@cloudflare/vite-plugin": "2.0.0-beta.v.8",
     "@cloudflare/vitest-plugin": "^1.4.11",
     "@modelcontextprotocol/client": "2.4.0",
-    "cf": "1.0.0-beta.26",
+    "cf": "1.0.0-beta.28",
     "fast-check": "^4.10.2",
     "linkedom": "^0.18.14",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
