@@ -18,7 +18,7 @@ The web community has realised this and come out with two main solutions
 
 Out of these, if your content doesn’t change for every user and different timings, then SSG is the way to go. something like newsfeed has to use SSR. I preferred gatsby because it uses graphQl with React, one of my favourite stacks to work on for front-end projects. Also, gatsby has a lot of plugins which make it easy to add third party features and leverage out of the box solutions for common components like dark mode, google analytics, image processing etc. gatsby also had a wonderful blog template that i noticed in a lot of blogs across the internet.
 
-https://www.gatsbyjs.com/starters/gatsbyjs/gatsby-starter-blog
+https://www.gatsbyjs.com/starters/gatsbyjs/gatsby-starter-blog/
 
 The blog consistently achieves 90+ performance in lighthouse for mobile devices.
 

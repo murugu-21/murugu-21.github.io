@@ -14,7 +14,7 @@ Recently, I was working on syncing contracts in a user's gmail inbox to our clm 
 
 ![api usage!!!](quota.png)
 
-On further digging, we found [this](https://developers.google.com/gmail/api/reference/quota) per user per second limit of 250 units per second with each request given a unit like get - 5, send - 100 and so on. The justification behind this painful limit is that Google does not want the user's servers to get overloaded and crash. This also avoids DoS attacks, I suppose, from malicious third parties. I would have put something similar in place if I had designed the system too.
+On further digging, we found [this](https://developers.google.com/workspace/gmail/api/reference/quota) per user per second limit of 250 units per second with each request given a unit like get - 5, send - 100 and so on. The justification behind this painful limit is that Google does not want the user's servers to get overloaded and crash. This also avoids DoS attacks, I suppose, from malicious third parties. I would have put something similar in place if I had designed the system too.
 
 Ok. This is a fairly standard design decision by Google, and the solution must be available across the internet, right? **No**, The solution is fairly simple in a multi-threaded language.
 

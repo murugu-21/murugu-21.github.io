@@ -2,10 +2,17 @@ extensions = ["md"]
 
 exclude_loopback = true
 
+root_dir = "packages/content"
+
 # Bot protection on these hosts answers 403 to non-browser clients or CI runner IPs.
 exclude = [
   '^https://stackoverflow\.com/',
   '^https://medium\.com/',
   '^https://www\.npmjs\.com/',
   '^https://x\.com/',
+]
+
+# Drafts link to each other at their published URL. Publishing a draft breaks its entry here, so drop it then.
+remap = [
+  '^file://(.+)/packages/content/blog/(code-mode-agents|small-models-production)(#.*)?$ file://$1/packages/content/blog/draft/$2$3',
 ]

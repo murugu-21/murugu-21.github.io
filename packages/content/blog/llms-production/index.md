@@ -87,19 +87,19 @@ The KV cache depends only on the tokens the model read. If two requests start wi
 
 Prompt caching keeps the KV cache from one request and reuses it for the next request that starts with the same tokens. OpenAI's [caching guide](https://developers.openai.com/api/docs/guides/prompt-caching) says the cache "stores key-value (KV) tensors, not the tokens themselves." On a cache hit the provider loads tensors it already has instead of running prefill again.
 
-The provider skips the pass over your prompt. Reading is cheap per token, but with 100,000 tokens of history that pass is most of the work in the request, so the provider charges you a fraction of the input price. A cache hit also starts answering sooner. When Anthropic launched caching, a 100,000-token prompt went from 11.5 seconds to first token down to 2.4 seconds ([announcement](https://claude.com/blog/prompt-caching)).
+The provider skips the pass over your prompt. Reading is cheap per token, but with 100,000 tokens of history that pass is most of the work in the request, so the provider charges you a fraction of the input price. A cache hit also starts answering sooner. When Anthropic launched caching, a 100,000-token prompt went from 11.5 seconds to first token down to 2.4 seconds ([announcement](https://claude.com/resources/articles/prompt-caching)).
 
 In the agent above, everything except each turn's new 3,000 tokens matches the previous request. That is 1.8 million of the 1.9 million input tokens. They don't need prefill again.
 
 ### What cached input costs
 
-Three providers shipped caching within ten weeks of each other in 2024. DeepSeek offered "up to 90%" off in August ([news](https://api-docs.deepseek.com/news/news0802)), and Anthropic charged 10% of the input price the same month ([announcement](https://claude.com/blog/prompt-caching)). OpenAI started in October at 50% off ([announcement](https://community.openai.com/t/prompt-caching-automatic/963981)). Two years later all three charge less.
+Three providers shipped caching within ten weeks of each other in 2024. DeepSeek offered "up to 90%" off in August ([news](https://api-docs.deepseek.com/news/news0802/)), and Anthropic charged 10% of the input price the same month ([announcement](https://claude.com/resources/articles/prompt-caching)). OpenAI started in October at 50% off ([announcement](https://community.openai.com/t/prompt-caching-automatic/963981)). Two years later all three charge less.
 
 | Model                                                                                                     | Input $/MTok | Cached input $/MTok | Discount |
 | --------------------------------------------------------------------------------------------------------- | ------------ | ------------------- | -------- |
 | Claude Opus 5.5 ([pricing](https://platform.claude.com/docs/en/build-with-claude/prompt-caching#pricing)) | $4.00        | $0.20               | 95%      |
 | OpenAI gpt-6.1-sol ([pricing](https://developers.openai.com/api/docs/pricing))                            | $2.00        | $0.10               | 95%      |
-| DeepSeek deepseek-flash, off-peak ([pricing](https://api-docs.deepseek.com/quick_start/pricing))          | $0.15        | $0.003              | 98%      |
+| DeepSeek deepseek-flash, off-peak ([pricing](https://api-docs.deepseek.com/quick_start/pricing/))         | $0.15        | $0.003              | 98%      |
 
 Anthropic's standard rule is still 10% of the input price. Opus 5.5 and Sonnet 5.5 are the exception at 5%. OpenAI's guide now says cached input is "discounted up to 95%", depending on the model.
 
@@ -109,7 +109,7 @@ Lifetime decides whether a user who pauses for ten minutes comes back to a warm 
 
 - Anthropic keeps a cache for 5 minutes and resets the timer free on each hit. A 1-hour cache costs twice the input price to write ([docs](https://platform.claude.com/docs/en/build-with-claude/prompt-caching)).
 - OpenAI's GPT-5.6 and later default to 30 minutes, with a 12-hour option at a higher write price ([guide](https://developers.openai.com/api/docs/guides/prompt-caching)).
-- DeepSeek has no setting. Its API docs say unused cache is cleared "usually within a few hours to a few days" ([guide](https://api-docs.deepseek.com/guides/kv_cache)). The same DeepInfer notes list "retain KV cache for more than 72 hours" as a design goal. They keep agent traffic for 3 days and chatbot traffic for 7, on "roughly 100 PiB of SSD storage for the KV cache" ([DeepInfer deployment Q&A](https://github.com/deepseek-ai/DeepInfer/blob/main/doc/inference_deployment_qa.md)). That is an internal target, not something the API promises.
+- DeepSeek has no setting. Its API docs say unused cache is cleared "usually within a few hours to a few days" ([guide](https://api-docs.deepseek.com/guides/kv_cache/)). The same DeepInfer notes list "retain KV cache for more than 72 hours" as a design goal. They keep agent traffic for 3 days and chatbot traffic for 7, on "roughly 100 PiB of SSD storage for the KV cache" ([DeepInfer deployment Q&A](https://github.com/deepseek-ai/DeepInfer/blob/main/doc/inference_deployment_qa.md)). That is an internal target, not something the API promises.
 
 DeepSeek can charge 98% less for a cache hit and keep it for days because storing keys and values on SSD costs less than running prefill again.
 

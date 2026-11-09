@@ -52,7 +52,7 @@ flowchart LR
 
 The hosting story goes back further than the framework story. I had already moved off GitHub Pages a while earlier. Back in college I did not have the money to buy a domain, and by the time I did I bought `murugappan.dev` on Cloudflare because they sell domains at cost with no renewal markup. When I tried to point it at GitHub Pages, I found out the apex-domain setup wants [hardcoded IPv4 addresses](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site) in your DNS. After four years in B2B SaaS and an unreasonable amount of DR testing and reports, hardcoded IPs are a personal red flag, so the blog went to Cloudflare as well.
 
-Then the ecosystem made the decision for me. Cloudflare [acquired Astro](https://astro.build/blog/joining-cloudflare) in January 2026, then [VoidZero](https://blog.cloudflare.com/voidzero-joins-cloudflare), the company behind Vite, Rolldown, Oxc and Vitest, that June. PartyKit, which runs the chat on this site, [joined](https://blog.cloudflare.com/cloudflare-acquires-partykit) back in 2024. The VoidZero announcement landed five days before I started the migration. The framework, its build tooling and the platform it runs on now belonged to one company. At that point I was 100% onboard. My CSP was backing the project, and that was definitely going to develop deployment synergies.
+Then the ecosystem made the decision for me. Cloudflare [acquired Astro](https://astro.build/blog/joining-cloudflare/) in January 2026, then [VoidZero](https://blog.cloudflare.com/voidzero-joins-cloudflare), the company behind Vite, Rolldown, Oxc and Vitest, that June. PartyKit, which runs the chat on this site, [joined](https://blog.cloudflare.com/cloudflare-acquires-partykit) back in 2024. The VoidZero announcement landed five days before I started the migration. The framework, its build tooling and the platform it runs on now belonged to one company. At that point I was 100% onboard. My CSP was backing the project, and that was definitely going to develop deployment synergies.
 
 Two weeks later I upgraded to Astro 7, and Vite 8 and Rolldown came with it. Synergies indeed.
 
@@ -173,7 +173,7 @@ I did hit a lot of visual bugs and had to verify and re-prompt a lot, but overal
 - [Netlify acquires Gatsby Inc.](https://www.netlify.com/press/netlify-acquires-gatsby-inc-to-accelerate-adoption-of-composable-web-architectures/), February 2023
 - [Netlify on the Gatsby Cloud evolution](https://www.netlify.com/blog/gatsby-cloud-evolution/), August 2023
 - ["Is GatsbyJS officially dead?"](https://github.com/gatsbyjs/gatsby/discussions/39062), the long-running community thread
-- [The Astro Technology Company joins Cloudflare](https://astro.build/blog/joining-cloudflare), January 2026
+- [The Astro Technology Company joins Cloudflare](https://astro.build/blog/joining-cloudflare/), January 2026
 - [VoidZero is joining Cloudflare](https://blog.cloudflare.com/voidzero-joins-cloudflare), June 2026
 - [Cloudflare acquires PartyKit](https://blog.cloudflare.com/cloudflare-acquires-partykit), April 2024
 - [Rewriting Bun in Rust](https://bun.com/blog/bun-in-rust), the scale of what agents can port

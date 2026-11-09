@@ -70,7 +70,7 @@ Just know the basics of all and learn mongoDB and sql in depth.
 
 My suggestion here is learn basics of html/css/js and one declarative composable framework like react/vue/angular (I prefer React with functional components(Hooks)). These modern frameworks have moved away from the traditional imperative model and popularised ui as function of state (again for reducing bugs in large scale projects).
 
-The mobile world has also warmed up to the idea with jetpack compose(Android) and swift ui(ios). So it would be great if you learned these trends. checkout my guide on [React Hooks](https://murugu-21.github.io/react/).
+The mobile world has also warmed up to the idea with jetpack compose(Android) and swift ui(ios). So it would be great if you learned these trends. checkout my guide on [React Hooks](https://murugappan.dev/blog/react/).
 
 This will also make you learn about rest-api's and a bit of microservices as you write to implement the backend of your app and try to make it communicate with your frontend app.
 
