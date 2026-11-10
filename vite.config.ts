@@ -92,13 +92,14 @@ export default defineConfig({
         plugins: [
           contentPosts(),
           cloudflareTest({
-            experimental: { newConfig: { configPath: TEST_CLOUDFLARE_CONFIG } },
+            config: TEST_CLOUDFLARE_CONFIG,
             miniflare: { bindings: liveBindings }
           })
         ],
         test: {
           name: "workers",
-          // workerd can't read Vitest's module cache until cloudflare/workers-sdk#16163 lands.
+          // With the cache on, the pool sends each later test file every cached module in one
+          // WebSocket message, which workerd rejects as too large (1009).
           fsModuleCache: false,
           tags: [
             {

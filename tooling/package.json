@@ -6,10 +6,10 @@
     "./*": "./*"
   },
   "devDependencies": {
-    "@astrojs/compiler-rs": "^0.5.2",
+    "@astrojs/compiler-rs": "^0.5.3",
     "@commitlint/config-conventional": "^21.2.4",
     "@commitlint/types": "^21.2.3",
-    "vite-plus": "1.4.0",
+    "vite-plus": "1.5.1",
     "zod": "^4.6.7"
   }
 }

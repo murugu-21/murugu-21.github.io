@@ -24,7 +24,7 @@ Since adding new features to js is a painful process as it has to be accepted as
 Javascript is imperative in changing state of components. Below is a simple example of incrementing counter value on button click.
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <body>
     <div id="number"></div>

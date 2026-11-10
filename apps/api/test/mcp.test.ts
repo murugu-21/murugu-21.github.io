@@ -987,10 +987,10 @@ function recordPostHog() {
   onTestFinished(() => {
     vi.unstubAllGlobals();
   });
-  const toolCall = (tool: string) =>
-    events.find(e => e.event === "$mcp_tool_call" && e.properties.$mcp_tool_name === tool)
-      ?.properties;
-  return { urls, events, toolCall };
+  const toolEvent = (event: string, tool: string) =>
+    events.find(e => e.event === event && e.properties.$mcp_tool_name === tool)?.properties;
+  const toolCall = (tool: string) => toolEvent("$mcp_tool_call", tool);
+  return { urls, events, toolCall, toolEvent };
 }
 
 async function sendAndWait(request: { body: JsonValue; headers: Record<string, string> }) {
@@ -1024,7 +1024,7 @@ describe("PostHog analytics", () => {
   });
 
   it("keeps only a read tool's arguments: not send_message's, nor an unknown tool's", async () => {
-    const { toolCall } = recordPostHog();
+    const { toolCall, toolEvent } = recordPostHog();
     const message = {
       name: "Ada Lovelace",
       email: "ada@example.com",
@@ -1043,10 +1043,14 @@ describe("PostHog analytics", () => {
     expect(toolCall("search_blog_posts")).toMatchObject({
       $mcp_parameters: { request: { params: { arguments: { query: "dp" } } } }
     });
-    for (const tool of ["send_message", "not_a_tool"]) {
-      expect(toolCall(tool), tool).toMatchObject({ $mcp_tool_name: tool });
-      expect(Object.keys(toolCall(tool) ?? {}), tool).not.toContain("$mcp_parameters");
-      expect(JSON.stringify(toolCall(tool)), tool).not.toContain("ada@example.com");
+    for (const [event, tool] of [
+      ["$mcp_tool_call", "send_message"],
+      ["$mcp_unknown_tool", "not_a_tool"]
+    ] as const) {
+      const properties = toolEvent(event, tool);
+      expect(properties, tool).toMatchObject({ $mcp_tool_name: tool });
+      expect(Object.keys(properties ?? {}), tool).not.toContain("$mcp_parameters");
+      expect(JSON.stringify(properties), tool).not.toContain("ada@example.com");
     }
   });
 
