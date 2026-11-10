@@ -1,0 +1,21 @@
+#!/bin/sh
+# Claude Code passes the command as one argument, OpenCode as `-c <command>`.
+root="$(cd "$(dirname "$0")/../.." && pwd)"
+export TMPDIR="$root/scrap/tmp"
+# zsh writes heredocs under TMPPREFIX, which defaults to /tmp/zsh and ignores TMPDIR.
+export TMPPREFIX="$TMPDIR/zsh"
+mkdir -p "$TMPDIR"
+
+# Claude Code's shell records its cwd in /tmp/claude-<hex>-cwd after every command.
+policy="(version 1)(allow default)
+(deny file-write* (subpath \"/private/tmp\"))
+(allow file-write* (regex #\"^/private/tmp/claude-[0-9a-f]+-cwd\$\"))
+(deny file-write* (subpath \"$root/tooling/agents\") (literal \"$root/.claude/settings.json\")
+  (literal \"$root/.claude/settings.local.json\") (literal \"$root/opencode.json\")
+  (subpath \"$root/.opencode\"))"
+
+case $1 in
+  -c | -lc) exec sandbox-exec -p "$policy" /bin/zsh "$@" ;;
+esac
+[ $# -eq 1 ] || { echo "agent-shell: expected one command argument or -c <command>" >&2; exit 2; }
+exec sandbox-exec -p "$policy" /bin/zsh -c "$1"

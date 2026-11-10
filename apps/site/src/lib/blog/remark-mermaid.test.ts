@@ -1,7 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { VFile } from "vfile";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, onTestFinished } from "vite-plus/test";
 
 import { diagramFile, diagramHash } from "./mermaid-diagrams";
 import remarkMermaid from "./remark-mermaid";
@@ -9,16 +11,17 @@ import remarkMermaid from "./remark-mermaid";
 const FENCE = "flowchart LR\n  accDescr: A hands off to B\n  A --> B";
 
 async function renderedPost({ viewBox }: { viewBox: string }) {
-  const postDir = "/tmp/remark-mermaid-post";
+  const postDir = mkdtempSync(join(tmpdir(), "remark-mermaid-post-"));
+  onTestFinished(() => rmSync(postDir, { recursive: true, force: true }));
   const hash = await diagramHash(FENCE);
-  mkdirSync(`${postDir}/diagrams`, { recursive: true });
+  mkdirSync(join(postDir, "diagrams"), { recursive: true });
   for (const theme of ["light", "dark"] as const) {
     writeFileSync(
-      `${postDir}/${diagramFile(hash, theme)}`,
+      join(postDir, diagramFile(hash, theme)),
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}"></svg>`
     );
   }
-  return { file: new VFile({ path: `${postDir}/index.md` }), hash };
+  return { file: new VFile({ path: join(postDir, "index.md") }), hash };
 }
 
 describe("remarkMermaid", () => {

@@ -2,7 +2,8 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   // Biome lints .astro templates and lints and formats stylesheets, which oxc can't parse.
   // oxlint still lints .astro frontmatter and scripts, so Biome's JavaScript rules stay off.
-  "files": { "includes": ["apps/site/src/**/*.astro", "apps/site/src/**/*.css"] },
+  // Clones under scrap/ carry their own biome.jsonc, which Biome rejects as a second root.
+  "files": { "includes": ["apps/site/src/**/*.astro", "apps/site/src/**/*.css", "!!scrap"] },
   "formatter": { "indentStyle": "space", "lineWidth": 100 },
   "css": { "parser": { "tailwindDirectives": true } },
   // Biome's formatter breaks lines where Astro then drops spaces, so oxfmt formats .astro instead.

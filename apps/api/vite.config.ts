@@ -33,6 +33,15 @@ export default defineConfig(({ command, mode }) => {
     },
     server: { port: 8787, strictPort: true },
     preview: { port: 8787, strictPort: true },
-    run: { tasks: { build: { command: "vp build", dependsOn: ["@murugappan/site#build"] } } }
+    run: {
+      tasks: {
+        build: {
+          command: "vp build",
+          dependsOn: ["@murugappan/site#build"],
+          // Miniflare falls back to /tmp without it, which agent-shell refuses.
+          cache: { untrackedEnv: ["TMPDIR"] }
+        }
+      }
+    }
   };
 });

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(//tmp/**)",
+      "Edit(//private/tmp/**)",
+      "Edit(/tooling/agents/**)",
+      "Edit(/.claude/settings.json)",
+      "Edit(/.claude/settings.local.json)",
+      "Edit(/opencode.json)",
+      "Edit(/.opencode/**)"
+    ]
+  }
+}

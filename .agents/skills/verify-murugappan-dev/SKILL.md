@@ -17,7 +17,7 @@ Never use `bun run preview`. It binds `:8787` and `apps/api/.cloudflare/state`, 
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
-RUN="${SCRATCHPAD:-${TMPDIR:-/tmp}}/verify-murugappan-dev/$(date +%Y%m%dT%H%M%S)"
+RUN="$PWD/scrap/verify-murugappan-dev/$(date +%Y%m%dT%H%M%S)"
 mkdir -p "$RUN/evidence"
 PUBLIC_CHAT_HOST= POST_HOG_TOKEN= PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA bun run build > "$RUN/build.log" 2>&1 || { tail -40 "$RUN/build.log"; exit 1; }
 rm -rf apps/api/.cloudflare/verify && mkdir -p apps/api/.cloudflare/verify
@@ -32,7 +32,7 @@ grep 'Local:' "$RUN/worker.log"
 echo "RUN=$RUN"
 ```
 
-Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`. Set `SCRATCHPAD` to your session scratchpad if your harness names one.
+Shell state doesn't carry between commands, and `$RUN` can't be recomputed. Start every later command with `RUN=<the printed path>`.
 
 The build takes about 15 s and rewrites the shared `apps/site/dist/`, which the user's preview also serves. Don't start it while another build or a pre-push run is going. Both regenerate `.astro/`, and the resume step holds port 4398. The two blanked variables keep the build's chat widget on the page's own origin rather than the `apps/site/.env` value, and leave out production analytics. The Turnstile site key and the secret appended to the verify `.dev.vars` are Cloudflare's always-passing test pair, so the chat socket opens without a real challenge. To drive the interactive check, build with the site key `3x00000000000000000000FF` instead. The checkbox then shows above the composer and the socket opens once it's clicked.
 

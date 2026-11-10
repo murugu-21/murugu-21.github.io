@@ -24,7 +24,9 @@ export default defineConfig({
           output: ["dist/**"],
           // The task sees only these and vp's passthrough. The GitHub card is fetched, so a hit
           // keeps the card it was cached with.
-          env: BUILD_ENV_NAMES
+          env: BUILD_ENV_NAMES,
+          // Puppeteer falls back to /tmp without it, which agent-shell refuses.
+          untrackedEnv: ["TMPDIR"]
         }
       }
     }

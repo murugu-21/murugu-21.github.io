@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    { "action": "external_directory", "resource": "/tmp/*", "effect": "deny" },
+    { "action": "external_directory", "resource": "/private/tmp/*", "effect": "deny" },
+    { "action": "edit", "resource": "*tooling/agents/*", "effect": "deny" },
+    { "action": "edit", "resource": "*.opencode/*", "effect": "deny" },
+    { "action": "edit", "resource": "*opencode.json", "effect": "deny" },
+    { "action": "edit", "resource": "*.claude/settings*.json", "effect": "deny" }
+  ]
+}

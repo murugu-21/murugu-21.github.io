@@ -31,7 +31,7 @@
     "check:worker": "node node_modules/typescript/bin/tsc -p apps/api",
     "check:effect": "effect-tsgo diagnostics --project apps/api/tsconfig.json --strict",
     "check:py": "bun run --silent py ty check --project apps/tts",
-    "prepare": "git config core.hooksPath .githooks",
+    "prepare": "git config core.hooksPath .githooks && bun tooling/agents/configure.ts",
     "diagrams": "vp run @murugappan/site#diagrams",
     "audio": "vp run @murugappan/tts#audio",
     "banners": "vp run @murugappan/brand#render",

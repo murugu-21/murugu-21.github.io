@@ -14,7 +14,7 @@ apps/brand/          the X profile banners
 packages/content/    the site's content, including blog posts
 packages/contracts/  types and schemas the site and the Worker share
 packages/utils/      small shared helpers
-tooling/             lint and format config
+tooling/             lint and format config, and the agent shell (tooling/agents/)
 ```
 
 More detail lives next to the code:
@@ -45,6 +45,11 @@ Things that will trip you up:
 - Read-aloud audio in `dev` and `preview` comes from the Worker's local R2, which starts empty, so the Listen button falls back to the browser voice. Copy a post's audio from `apps/api` with `bunx cf r2 objects get blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio > <slug>.mp3`, then `bunx cf r2 objects put blog/breeze/<slug>.mp3 --bucket-name murugappan-dev-audio --file <slug>.mp3 --content-type audio/mpeg --local --persist-to .cloudflare/state`. Repeat for the `.json` with `--content-type application/json`.
 - `preview` runs the built Worker, so rebuild after changing `apps/api/src/` or `packages/content/`.
 - Local settings go in `apps/site/.env` (site) and `apps/api/.dev.vars` (Worker).
+- On macOS, Claude Code and OpenCode run their shell commands (and Claude Code its hooks and MCP servers) through `tooling/agents/agent-shell`. There the kernel refuses writes to `/tmp` and to the guard's own files, and `TMPDIR` is `scrap/tmp/`. Agent scratch work goes in `scrap/`.
+  - `bun install` points both harnesses at it through their untracked local config, so the guard is off until you run it, and stale after moving the checkout. Rerun it, then restart the agent.
+  - Code that hardcodes `/tmp`, or a `vp` task that drops `TMPDIR` (pass it with `untrackedEnv`), fails with `EPERM` there.
+  - It can't nest in another macOS sandbox, so Claude Code's `/sandbox` mode, or an agent launching another `claude`, fails.
+  - The only `/tmp` write it allows is Claude Code's `/tmp/claude-<id>-cwd` file. Claude Code's scratchpad stays in `/tmp` unless `CLAUDE_CODE_TMPDIR` is set in your shell or user settings.
 
 ## Imports
 

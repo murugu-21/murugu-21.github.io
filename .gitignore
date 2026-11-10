@@ -30,3 +30,6 @@ lint-fixture-*/
 
 __screenshots__/
 .vitest/
+
+scrap/
+.opencode/opencode.json
