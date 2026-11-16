@@ -9,13 +9,13 @@ import {
 } from "@murugappan/content/portfolio.ts";
 import { displayUrl, resumeContact } from "@murugappan/content/resume.ts";
 import { groupByCompany } from "@murugappan/content/experience.ts";
-import { fetchResumeProjects } from "#src/lib/github.ts";
+import { githubFromEnv } from "#src/lib/github.ts";
 // A webfont, so the CF build image's Chromium prints the same glyphs as local Chrome.
 import { Font } from "astro:assets";
 import "#src/styles/resume.css";
 import ResumeSection from "#src/components/resume/ResumeSection.astro";
 
-const repos = await fetchResumeProjects();
+const repos = await githubFromEnv().resumeProjects();
 const stints = groupByCompany(workExperiences);
 ---
 

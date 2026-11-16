@@ -78,7 +78,7 @@ Bun installs each package's dependencies into its own `node_modules` (`linker = 
 
 These env vars change the build. All are optional locally.
 
-- `GITHUB_TOKEN`: any token with public read access. It shows the GitHub card on the homepage.
+- `GITHUB_TOKEN`: any token with public read access. It shows the GitHub card on the homepage, and the build fails if GitHub rejects it. Without it, the build fails if gh is missing, not logged in, or its login is rejected. Leave it unset locally: the build then runs `gh api graphql`, which signs in from gh's keyring login, so run `gh auth login` once instead.
 - `POST_HOG_TOKEN` and `POST_HOG_URL`: turn on analytics.
 - `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID`: upload source maps for error tracking.
 - `RESUME_PHONE`: adds a phone number to the resume.
@@ -99,7 +99,7 @@ Every push to `main` deploys. Cloudflare Workers Builds does the deploy, and Git
 The build settings live in the Cloudflare dashboard, not in this repo:
 
 - Build command `bun run build`. Deploy command `bun run deploy`, which applies D1 migrations, then runs `cf deploy` with `apps/api/cloudflare.config.ts`.
-- Build env vars: the ones above, plus `BUN_VERSION` (match `packageManager` in `package.json`) and `REQUIRE_GITHUB_PROFILE=1` to fail the build if the GitHub card can't load.
+- Build env vars: the ones above, plus `BUN_VERSION` (match `packageManager` in `package.json`).
 - The Worker secrets, each a `bindings.secret()` in `apps/api/cloudflare.config.ts`. Set each from `apps/api` with `read -rs VALUE && bunx cf workers secrets update <NAME> --worker murugappan-dev --type secret_text --text "$VALUE"; unset VALUE`, which keeps the value out of shell history.
 
 The contact inbox is `OPPORTUNITY_INBOX` in `apps/api/cloudflare.config.ts`. The `EMAIL` binding sends to the same address.

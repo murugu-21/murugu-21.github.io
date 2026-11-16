@@ -1,0 +1,32 @@
+{
+  user(login: "murugu-21") {
+    pinnedItems(first: 6, types: REPOSITORY) {
+      edges {
+        node {
+          ... on Repository {
+            name
+            description
+            url
+            homepageUrl
+            forkCount
+            diskUsage
+            primaryLanguage {
+              name
+              color
+            }
+            stargazers {
+              totalCount
+            }
+            repositoryTopics(first: 12) {
+              nodes {
+                topic {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
