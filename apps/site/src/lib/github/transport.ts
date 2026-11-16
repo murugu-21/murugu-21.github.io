@@ -19,6 +19,10 @@ export class GithubFailure extends Error {
   }
 }
 
+export class GithubAuthFailure extends GithubFailure {
+  override readonly name = "GithubAuthFailure";
+}
+
 export interface GithubTransport {
   query(query: string): Promise<GraphqlReply>;
 }
@@ -45,6 +49,7 @@ export class HttpsTransport implements GithubTransport {
     } catch (e) {
       throw new GithubFailure("fetch failed", [e]);
     }
+    if (res.status === 401) throw new GithubAuthFailure("GitHub rejected GITHUB_TOKEN (HTTP 401)");
     if (!res.ok) throw new GithubFailure(`GraphQL HTTP ${res.status}`);
     return parseReply(await res.text());
   }
@@ -59,6 +64,8 @@ const ExecError = z.object({
   message: z.string()
 });
 
+const GH_EXIT_AUTH = 4;
+
 export class GhCliTransport implements GithubTransport {
   constructor(private readonly timeoutMs = 30_000) {}
 
@@ -70,7 +77,19 @@ export class GhCliTransport implements GithubTransport {
       }));
     } catch (e) {
       const { code, signal, stderr, message } = ExecError.parse(e);
+      if (code === "ENOENT") {
+        throw new GithubAuthFailure("gh is not installed; install it and run gh auth login");
+      }
       const detail = stderr?.trim() || message;
+      if (code === GH_EXIT_AUTH) {
+        throw new GithubAuthFailure("gh is not logged in; run gh auth login", [detail]);
+      }
+      if (detail.includes("(HTTP 401)")) {
+        throw new GithubAuthFailure(
+          "GitHub rejected gh's login (HTTP 401); run gh auth login, or unset an expired GH_TOKEN",
+          [detail]
+        );
+      }
       throw new GithubFailure(`gh failed (${code ?? signal})`, [detail]);
     }
     return parseReply(stdout);

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import PINNED_REPOS_QUERY from "./pinned-repos.graphql?raw";
 import PROFILE_QUERY from "./profile.graphql?raw";
-import { GithubFailure, type GithubTransport } from "./transport";
+import { GithubAuthFailure, GithubFailure, type GithubTransport } from "./transport";
 
 const GithubProfile = z.object({ bio: z.string().nullable() });
 type GithubProfile = z.infer<typeof GithubProfile>;
@@ -39,6 +39,10 @@ export type GithubRepo = Omit<z.infer<typeof PinnedRepoNode>, "repositoryTopics"
 
 type DescribedRepo = GithubRepo & { description: string };
 
+function isRecoverable(e: unknown): e is GithubFailure {
+  return e instanceof GithubFailure && !(e instanceof GithubAuthFailure);
+}
+
 function warnFallback(failure: GithubFailure, fallback: string): void {
   console.warn(`[github] ${failure.message}; ${fallback}`, ...failure.detail);
 }
@@ -51,7 +55,7 @@ export class GithubClient {
       const { user } = await this.ask(PROFILE_QUERY, ProfileData);
       return user;
     } catch (e) {
-      if (!(e instanceof GithubFailure)) throw e;
+      if (!isRecoverable(e)) throw e;
       warnFallback(e, "rendering contact fallback");
       return null;
     }
@@ -65,7 +69,7 @@ export class GithubClient {
         topics: (repositoryTopics?.nodes ?? []).map(t => t.topic.name)
       }));
     } catch (e) {
-      if (!(e instanceof GithubFailure)) throw e;
+      if (!isRecoverable(e)) throw e;
       warnFallback(e, "skipping pinned repos");
       return [];
     }

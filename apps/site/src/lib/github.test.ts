@@ -22,3 +22,18 @@ it("asks over HTTPS when GITHUB_TOKEN is set, and through gh's login when it isn
   setEnv({ GITHUB_TOKEN: undefined });
   expect(await githubFromEnv().profile()).toEqual({ bio: "from gh" });
 });
+
+it.each([
+  {
+    name: "GitHub rejects GITHUB_TOKEN",
+    token: "expired",
+    error: "GitHub rejected GITHUB_TOKEN (HTTP 401)"
+  },
+  { name: "gh is not logged in", token: undefined, error: "gh is not logged in; run gh auth login" }
+])("fails the build when $name", async ({ token, error }) => {
+  await fakeGh({ status: 4, stderr: "To get started with GitHub CLI, please run:  gh auth login" });
+  vi.stubGlobal("fetch", async () => new Response("{}", { status: 401 }));
+  setEnv({ GITHUB_TOKEN: token });
+
+  await expect(githubFromEnv().profile()).rejects.toThrow(error);
+});

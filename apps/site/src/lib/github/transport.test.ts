@@ -66,16 +66,27 @@ describe("GhCliTransport", () => {
     expect(await fake.args()).toEqual(["api", "graphql", "-f", `query=${QUERY}`]);
   });
 
-  it("fails with gh's exit code and stderr when gh is not logged in", async () => {
+  it("fails as unauthenticated when gh is not logged in", async () => {
     await fakeGh({
       status: 4,
       stderr: "To get started with GitHub CLI, please run:  gh auth login\n"
     });
 
     await expect(gh.query(QUERY)).rejects.toMatchObject({
-      name: "GithubFailure",
-      message: "gh failed (4)",
+      name: "GithubAuthFailure",
+      message: "gh is not logged in; run gh auth login",
       detail: ["To get started with GitHub CLI, please run:  gh auth login"]
+    });
+  });
+
+  it("fails as unauthenticated when GitHub rejects gh's login", async () => {
+    await fakeGh({ status: 1, stderr: "gh: Bad credentials (HTTP 401)\n" });
+
+    await expect(gh.query(QUERY)).rejects.toMatchObject({
+      name: "GithubAuthFailure",
+      message:
+        "GitHub rejected gh's login (HTTP 401); run gh auth login, or unset an expired GH_TOKEN",
+      detail: ["gh: Bad credentials (HTTP 401)"]
     });
   });
 
@@ -98,13 +109,13 @@ describe("GhCliTransport", () => {
     });
   });
 
-  it("fails with ENOENT when gh is not installed", async () => {
+  it("fails as unauthenticated when gh is not installed", async () => {
     await emptyPath();
 
     await expect(gh.query(QUERY)).rejects.toMatchObject({
-      name: "GithubFailure",
-      message: "gh failed (ENOENT)",
-      detail: ["spawn gh ENOENT"]
+      name: "GithubAuthFailure",
+      message: "gh is not installed; install it and run gh auth login",
+      detail: []
     });
   });
 

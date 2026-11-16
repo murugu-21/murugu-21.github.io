@@ -1,7 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { GithubClient } from "./client";
-import { GithubFailure, type GithubTransport, type GraphqlReply } from "./transport";
+import {
+  GithubAuthFailure,
+  GithubFailure,
+  type GithubTransport,
+  type GraphqlReply
+} from "./transport";
 
 function answering(reply: GraphqlReply) {
   const queries: string[] = [];
@@ -113,7 +118,8 @@ describe("pinnedRepos", () => {
 
 it.each([
   { method: "profile", error: new TypeError("bug") },
-  { method: "pinnedRepos", error: new TypeError("bug") }
+  { method: "pinnedRepos", error: new TypeError("bug") },
+  { method: "pinnedRepos", error: new GithubAuthFailure("gh is not logged in; run gh auth login") }
 ] as const)(
   "$method fails the build on $error.name instead of falling back",
   async ({ method, error }) => {
