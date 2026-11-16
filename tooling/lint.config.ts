@@ -25,7 +25,6 @@ const LAYER_NAMES = [
   "tooling",
   "brand",
   "content",
-  // After content: a file gets the last matching override, and this folder sits inside it.
   "contentVite",
   "contracts",
   "utils"
@@ -58,7 +57,6 @@ const LAYERS: Record<LayerName, Layer> = {
   siteScripts: {
     dir: "apps/site/scripts/",
     pkg: "@murugappan/site",
-    imports: "#scripts/",
     uses: ["site", "contracts", "utils"]
   },
   tts: { dir: "apps/tts/", pkg: "@murugappan/tts", uses: ["content", "contracts", "utils"] },
@@ -152,6 +150,14 @@ const onObjects = (globals: Global[], objects: string[]): Property[] =>
   objects.flatMap(object =>
     globals.map(({ name, message }) => ({ object, property: name, message }))
   );
+
+function excludeNestedLayers(name: LayerName): string[] {
+  const dir = LAYERS[name].dir;
+  return LAYER_NAMES.flatMap(other => {
+    const otherDir = LAYERS[other].dir;
+    return otherDir !== dir && otherDir.startsWith(dir) ? [`${otherDir}**`] : [];
+  });
+}
 
 const SITE = layerPatterns("site");
 const NO_SITE_TEST_FAKES: Pattern = {
@@ -576,7 +582,7 @@ export default {
     ...LAYER_NAMES.values()
       .filter(name => name !== "api" && name !== "site")
       .map(name =>
-        restrict({ files: [`${LAYERS[name].dir}**`] }, [
+        restrict({ files: [`${LAYERS[name].dir}**`], excludeFiles: excludeNestedLayers(name) }, [
           ...layerPatterns(name),
           ...(LAYERS[name].also ?? [])
         ])
