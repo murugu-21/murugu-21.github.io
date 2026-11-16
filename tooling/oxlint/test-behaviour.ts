@@ -9,7 +9,7 @@ type Identifier = Extract<Node, { type: "Identifier" }>;
 const TEST_FNS = new Set(["it", "test"]);
 const TEST_MODIFIERS = new Set(["only", "concurrent", "sequential", "fails"]);
 const TABLE_MODIFIERS = new Set(["each", "for"]);
-const HELPER_SOURCE = /(^|\/)(fixtures|helpers?|test-utils?|apply-migrations)(\.ts)?$/;
+const HELPER_SOURCE = /(^|\/)(fixtures|helpers?|test-utils?)(\.ts)?$/;
 const COMPARISONS = new Set([
   "toBeGreaterThan",
   "toBeGreaterThanOrEqual",

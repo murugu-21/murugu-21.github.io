@@ -3,10 +3,10 @@ import { z } from "zod";
 
 import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
 import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
-import { resetReadWindows } from "#src/modules/rate-limit/read-quota.store.ts";
+import { resetStore } from "#src/modules/rate-limit/read-quota.store.ts";
 import { apiClient, fetchWorker, readJson } from "./fixtures";
 
-beforeEach(() => resetReadWindows());
+beforeEach(resetStore);
 
 const validMessage = {
   email: "ada@example.com",

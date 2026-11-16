@@ -61,7 +61,7 @@ Design your own cases before you read the diff's tests, then compare. A missing 
 6. Hunt flakiness:
    - **Time.** `Date.now()`, `new Date()` or a `setTimeout` wait without `vi.useFakeTimers` or `vi.setSystemTime`, or fake timers left on.
    - **Randomness.** `Math.random` or `crypto.randomUUID` in a value an assertion reads.
-   - **Shared state.** The Workers pool isolates storage per test file, not per test. Two tests in one file that use the same Durable Object name, D1 rows or module state are coupled. Each needs a unique name.
+   - **Shared state.** The Workers project starts each test file with empty storage and stores (`apps/api/test/start-fresh.ts`), not each test. Two tests in one file that use the same Durable Object name, D1 rows or module state are coupled. Each needs a unique name.
    - **Async.** A fixed sleep instead of `expect.element(…)`, `vi.waitFor` or awaiting the frame. A stream or socket not drained.
    - **Network.** A real `fetch` outside a `live`-tagged test.
    - **Content.** An assertion on today's post or tag count where a fixture or a relation would do.

@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it } from "vite-plus/test";
 
 import { READ_QUOTA } from "@murugappan/contracts/api/quotas.ts";
-import { resetReadWindows, takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
+import { resetStore, takeReadSlot } from "#src/modules/rate-limit/read-quota.store.ts";
 import { visitorKey } from "#src/modules/rate-limit/visitor-key.ts";
 
-beforeEach(() => resetReadWindows());
+beforeEach(resetStore);
 
 describe("takeReadSlot", () => {
   const now = 1_000_000;

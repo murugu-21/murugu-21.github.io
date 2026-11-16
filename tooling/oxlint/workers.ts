@@ -21,6 +21,14 @@ function typedReadonly({ id }: Declarator): boolean {
   );
 }
 
+const RESET = "resetStore";
+
+type Declaration = { parent: { type: string; parent?: { type: string } | null } | null };
+
+const isTopLevel = ({ parent }: Declaration) =>
+  parent?.type === "Program" ||
+  (parent?.type === "ExportNamedDeclaration" && parent.parent?.type === "Program");
+
 export default {
   meta: { name: "workers" },
   rules: {
@@ -59,6 +67,48 @@ export default {
               if (!kind || typedReadonly(declarator)) continue;
               context.report({ node: declarator, messageId: "collection", data: { kind } });
             }
+          }
+        };
+      }
+    },
+    "store-exports-reset": {
+      meta: {
+        type: "problem",
+        docs: { description: "A store exports resetStore, which empties its module state." },
+        messages: {
+          missing:
+            "The workers tests run with isolate: false, so a store's module state outlives the test file that filled it. Export a resetStore that takes no arguments and empties it; apps/api/test/start-fresh.ts calls every store's resetStore before each file."
+        }
+      },
+      create(context) {
+        const topLevelNoArgFunctions = new Set<string>();
+        const localNameByExport = new Map<string, string>();
+        return {
+          FunctionDeclaration(node) {
+            if (node.id && node.params.length === 0 && isTopLevel(node))
+              topLevelNoArgFunctions.add(node.id.name);
+          },
+          VariableDeclarator(node) {
+            const { id, init } = node;
+            const isFunction =
+              init?.type === "ArrowFunctionExpression" || init?.type === "FunctionExpression";
+            if (id.type === "Identifier" && isFunction && init.params.length === 0)
+              if (isTopLevel(node.parent)) topLevelNoArgFunctions.add(id.name);
+          },
+          ExportNamedDeclaration({ declaration, specifiers }) {
+            if (declaration?.type === "FunctionDeclaration" && declaration.id)
+              localNameByExport.set(declaration.id.name, declaration.id.name);
+            if (declaration?.type === "VariableDeclaration")
+              for (const { id } of declaration.declarations)
+                if (id.type === "Identifier") localNameByExport.set(id.name, id.name);
+            for (const { exported: name, local } of specifiers)
+              if (name.type === "Identifier" && local.type === "Identifier")
+                localNameByExport.set(name.name, local.name);
+          },
+          "Program:exit"(node) {
+            const local = localNameByExport.get(RESET);
+            if (local === undefined || !topLevelNoArgFunctions.has(local))
+              context.report({ node, messageId: "missing" });
           }
         };
       }
