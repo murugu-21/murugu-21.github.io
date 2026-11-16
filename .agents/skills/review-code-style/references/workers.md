@@ -1,10 +1,10 @@
 # Cloudflare Workers, Durable Objects, the agents SDK, D1 and R2
 
-**Lint covers.** Floating promises, including `void promise` in `apps/api` (`typescript/no-floating-promises` with `ignoreVoid: false`), a destructured `ctx.waitUntil` (`typescript/unbound-method`), `Math.random` and `passThroughOnException` in `apps/api`, timers in `*.durable-object.ts`, explicit `public` on every Durable Object member, top-level `let`, `var` and mutable `Map` or `Set` outside `*.store.ts` (`workers/no-module-state`, which skips array and object literals), interpolated SQL (`workers/sql-bindings`), untyped JSON and storage reads (`no-unsafe-*`), and the `promise/*` hygiene rules. `bun run types` generates `Env` from `apps/api/cloudflare.config.ts`, and pre-push runs it first.
+**Lint covers.** Floating promises, including `void promise` in `apps/api` (`typescript/no-floating-promises` with `ignoreVoid: false`), a destructured `ctx.waitUntil` (`typescript/unbound-method`), `Math.random` and `passThroughOnException` in `apps/api`, timers in `*.durable-object.ts`, explicit `public` on every Durable Object member, top-level `let`, `var` and mutable `Map` or `Set` outside `*.store.ts` (`workers/no-module-state`, which skips array and object literals), a `*.store.ts` without an exported `resetStore` (`workers/store-exports-reset`), interpolated SQL (`workers/sql-bindings`), untyped JSON and storage reads (`no-unsafe-*`), and the `promise/*` hygiene rules. `bun run types` generates `Env` from `apps/api/cloudflare.config.ts`, and pre-push runs it first.
 
 Workers:
 
-- **CF-1.** Keep no request, `env`, binding, stub or per-request value at module scope. A per-isolate cache goes only in a `*.store.ts`, with a size bound and a comment saying it is per edge.
+- **CF-1.** Keep no request, `env`, binding, stub or per-request value at module scope. A per-isolate cache goes only in a `*.store.ts`, with a size bound, a comment saying it is per edge, and an exported `resetStore` that empties it.
 - **CF-2.** Send fire-and-forget work through `ctx.waitUntil` (`this.ctx.waitUntil` in a Durable Object) with its own `.catch`.
 - **CF-3.** Stream R2 and asset bodies through to the `Response`. Cap any request body the Worker reads whole with `bodyLimitMiddleware`.
 - **CF-4.** Log one object per call with an `event` field, for example `console.error({ event: "contact email failed", err })`. Workers Logs indexes object fields, not text inside a message. Never log secrets, API keys, visitor IPs or a lead's contact details.

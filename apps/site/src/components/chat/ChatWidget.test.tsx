@@ -687,6 +687,13 @@ function stubSolvingTurnstile(solveMs: number) {
 
 const tokens = () => connections.map(url => url.searchParams.get("cf-turnstile-response"));
 
+const advancing =
+  <T,>(read: () => T) =>
+  async () => {
+    await vi.advanceTimersByTimeAsync(500);
+    return read();
+  };
+
 function stubManualTurnstile() {
   const pendingSolves: (() => void)[] = [];
   vi.stubGlobal("turnstile", {
@@ -786,13 +793,16 @@ it("keeps retrying a refused socket after each successful open", async () => {
 });
 
 it("retries each refusal with a fresh token while Turnstile is slow to solve", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   stubSolvingTurnstile(4000);
   refusals = 2;
   await render(<ChatWidget turnstileSiteKey="site-key" />);
   await page.getByRole("button", { name: LAUNCHER }).click();
 
-  await expect.element(sendButton(), { timeout: 20_000 }).toBeEnabled();
-  await expect.poll(tokens).toEqual(["token-1", "token-2", "token-3"]);
+  await expect
+    .poll(advancing(tokens), { timeout: 5000 })
+    .toEqual(["token-1", "token-2", "token-3"]);
+  await expect.element(sendButton()).toBeEnabled();
 });
 
 it("gives up on a socket the Worker keeps refusing, says chat is unavailable and reports it once", async () => {
@@ -810,16 +820,22 @@ it("gives up on a socket the Worker keeps refusing, says chat is unavailable and
     captureException: (err: Error) => reported.push(err.message),
     register: () => {}
   };
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   await render(<ChatWidget turnstileSiteKey="site-key" />);
   await page.getByRole("button", { name: LAUNCHER }).click();
 
   await expect
+    .poll(
+      advancing(() => connections.length),
+      { timeout: 5000 }
+    )
+    .toBe(5);
+  await expect
     .element(page.getByText("Something went wrong on my end. Please try again."))
     .toBeVisible();
   await expect.element(sendButton()).toBeDisabled();
-  expect(connections).toHaveLength(5);
   // Outlasts the 3 s first retry PartySocket would schedule if the connection hadn't stopped.
-  await new Promise(resolve => setTimeout(resolve, 4000));
+  await vi.advanceTimersByTimeAsync(4000);
   expect(connections).toHaveLength(5);
   expect(reported).toEqual(["Turnstile failed with 110200"]);
 });

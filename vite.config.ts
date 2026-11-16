@@ -62,6 +62,9 @@ export default defineConfig({
     taskTitleValueFormatTruncate: Number.MAX_SAFE_INTEGER,
     // Each run prints its seed. Pass --sequence.seed=<seed> to replay that order.
     sequence: { shuffle: true },
+    // 67% of logical CPUs: 8 on a 12-core Mac ran fastest, as more workers fight over its 8
+    // performance cores. It gives Vitest's default of 3 on a 4-vCPU runner.
+    maxWorkers: "67%",
     // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
     // tests in apps/site/src/styles would read "".
     css: { include: [/global\.css\?raw$/] },
@@ -101,6 +104,7 @@ export default defineConfig({
           // With the cache on, the pool sends each later test file every cached module in one
           // WebSocket message, which workerd rejects as too large (1009).
           fsModuleCache: false,
+          isolate: false,
           tags: [
             {
               name: "live",
@@ -109,7 +113,7 @@ export default defineConfig({
               timeout: 180_000
             }
           ],
-          setupFiles: ["./apps/api/test/apply-migrations.ts"],
+          setupFiles: ["./apps/api/test/start-fresh.ts"],
           // TODO: rename API tests to NestJS's convention (*.spec.ts, *.e2e-spec.ts) and update this
           // glob, the coverage excludes and the test globs in tooling/lint.config.ts.
           include: ["apps/api/{src,test}/**/*.test.ts"]
@@ -131,6 +135,8 @@ export default defineConfig({
         test: {
           name: "node",
           environment: "node",
+          isolate: false,
+          setupFiles: ["./apps/site/src/test/start-fresh.ts"],
           include: [
             "tooling/**/*.test.ts",
             "apps/site/*.test.ts",

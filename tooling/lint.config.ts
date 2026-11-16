@@ -636,7 +636,10 @@ export default {
       files: ["apps/api/src/**"],
       rules: { "workers/no-module-state": "error", "workers/sql-bindings": "error" }
     },
-    { files: ["apps/api/src/**/*.store.ts"], rules: { "workers/no-module-state": "off" } },
+    {
+      files: ["apps/api/src/**/*.store.ts"],
+      rules: { "workers/no-module-state": "off", "workers/store-exports-reset": "error" }
+    },
     {
       files: ["apps/api/src/**/*.durable-object.ts"],
       rules: {

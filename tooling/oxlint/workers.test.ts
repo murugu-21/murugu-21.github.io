@@ -43,6 +43,82 @@ const ids: ReadonlyMapLike<string> = new Map();`,
   ]
 });
 
+tester.run("store-exports-reset", plugin.rules["store-exports-reset"], {
+  valid: [
+    {
+      name: "an exported resetStore function",
+      code: `const windows = new Map<string, number>();
+export function resetStore(): void {
+  windows.clear();
+}`
+    },
+    {
+      name: "an exported resetStore arrow",
+      code: `let hits = 0;
+export const resetStore = () => {
+  hits = 0;
+};`
+    },
+    {
+      name: "resetStore exported by a specifier, renamed or not",
+      code: `const windows = new Map<string, number>();
+function clear(): void {
+  windows.clear();
+}
+function resetStore(): void {
+  windows.clear();
+}
+export { clear as resetStore };
+export { resetStore as resetAgain };`
+    },
+    {
+      name: "resetStore followed by other exports",
+      code: `const windows = new Map<string, number>();
+export function resetStore(): void {
+  windows.clear();
+}
+export function take(): number {
+  return windows.size;
+}
+export const LIMIT = 8;`
+    }
+  ],
+  invalid: [
+    {
+      name: "a reset under another name, or not exported",
+      code: `const windows = new Map<string, number>();
+function resetStore(): void {
+  windows.clear();
+}
+export function resetWindows(): void {
+  windows.clear();
+}`,
+      errors: [{ messageId: "missing", line: 1 }]
+    },
+    {
+      name: "a declared resetStore that takes an argument",
+      code: `const windows = new Map<string, number>();
+export function resetStore(keep: string): void {
+  for (const key of windows.keys()) if (key !== keep) windows.delete(key);
+}`,
+      errors: [{ messageId: "missing", line: 1 }]
+    },
+    {
+      name: "a resetStore that isn't a function",
+      code: `let hits = 0;
+export const resetStore = 5;`,
+      errors: [{ messageId: "missing", line: 1 }]
+    },
+    {
+      name: "a resetStore exported by a specifier that takes an argument",
+      code: `const windows = new Map<string, number>();
+const clear = (keep: string) => windows.delete(keep);
+export { clear as resetStore };`,
+      errors: [{ messageId: "missing", line: 1 }]
+    }
+  ]
+});
+
 tester.run("sql-bindings", plugin.rules["sql-bindings"], {
   valid: [
     {

@@ -48,6 +48,6 @@ export function takeReadSlot(visitor: VisitorKey, now = Date.now()): ReadSlot {
   };
 }
 
-export function resetReadWindows(): void {
+export function resetStore(): void {
   windows.clear();
 }
