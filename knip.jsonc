@@ -25,14 +25,7 @@
       "ignoreDependencies": ["firacode"]
     },
     "packages/*": {},
-    "tooling": {
-      // Oxlint loads the vendored plugins by path from lint.config.ts.
-      "entry": ["oxlint/anti-slop/index.ts", "oxlint/anti-slop/effect.ts"]
-    }
+    "tooling": {}
   },
-  "ignoreDependencies": [
-    // The workerd `cloudflare:workers` and `cloudflare:test` modules, not the npm package.
-    "cloudflare"
-  ],
   "ignoreBinaries": ["ffmpeg", "uv"]
 }

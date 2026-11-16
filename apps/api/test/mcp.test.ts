@@ -571,6 +571,33 @@ describe("legacy (initialize-based) clients", () => {
     );
   });
 
+  it("initialize with PostHog analytics on answers without a session id, like without analytics", async () => {
+    const { urls } = recordPostHog();
+    const ctx = createExecutionContext();
+    const reply = await send(
+      {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-06-18",
+          capabilities: {},
+          clientInfo: { name: "LegacyClient", version: "0.1.0" }
+        }
+      },
+      { env: { posthogToken: "phc_test" }, ctx }
+    );
+    await waitOnExecutionContext(ctx);
+    expect(reply.res.status).toBe(200);
+    expect(reply.res.headers.get("Mcp-Session-Id")).toBeNull();
+    expect(resultOf(reply, z.object({ protocolVersion: z.string() })).protocolVersion).toBe(
+      "2025-06-18"
+    );
+    expect(new Set(urls.map(url => new URL(url).origin))).toEqual(
+      new Set(["https://us.i.posthog.com"])
+    );
+  });
+
   it("answers ping", async () => {
     const { json } = await legacy("ping");
     expect(json).toEqual({ jsonrpc: "2.0", id: 1, result: {} });
