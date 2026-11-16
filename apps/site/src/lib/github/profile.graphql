@@ -1,0 +1,5 @@
+{
+  user(login: "murugu-21") {
+    bio
+  }
+}

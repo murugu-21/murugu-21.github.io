@@ -1,153 +1,24 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { z } from "zod";
+import { afterEach, expect, it, vi } from "vite-plus/test";
 
 import { resetEnv, setEnv } from "#src/test/astro-env-server.ts";
-import { fetchGithubProfile, fetchPinnedRepos } from "./github";
+import { fakeGh } from "#src/test/fake-gh.ts";
+import { githubFromEnv } from "./github";
 
-const RequestBody = z.object({ query: z.string() });
-
-type Reply = { status?: number; body: unknown } | Error;
-
-let requests: { url: string; init: RequestInit | undefined }[] = [];
-
-function stubGithub(reply: Reply) {
-  requests = [];
-  vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
-    requests.push({ url, init });
-    if (reply instanceof Error) throw reply;
-    return new Response(JSON.stringify(reply.body), { status: reply.status ?? 200 });
-  });
-}
-
-const sentQuery = () =>
-  RequestBody.parse(JSON.parse(z.string().parse(requests[0]?.init?.body))).query;
-
-let warnings: unknown[][] = [];
-
-beforeEach(() => {
-  setEnv({ GITHUB_TOKEN: "tok" });
-  warnings = [];
-  vi.spyOn(console, "warn").mockImplementation((...args) => void warnings.push(args));
-});
+const answer = (bio: string) => JSON.stringify({ data: { user: { bio } } });
 
 afterEach(() => {
   resetEnv();
   vi.unstubAllGlobals();
-  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
-describe("fetchGithubProfile", () => {
-  it("posts the profile query with the token and returns the bio", async () => {
-    stubGithub({ body: { data: { user: { bio: "Full stack engineer" } } } });
+it("asks over HTTPS when GITHUB_TOKEN is set, and through gh's login when it isn't", async () => {
+  await fakeGh({ stdout: answer("from gh") });
+  vi.stubGlobal("fetch", async () => new Response(answer("over HTTPS")));
 
-    expect(await fetchGithubProfile()).toEqual({ bio: "Full stack engineer" });
-    expect(requests[0]?.url).toBe("https://api.github.com/graphql");
-    expect(requests[0]?.init?.method).toBe("POST");
-    expect(requests[0]?.init?.headers).toEqual({
-      Authorization: "Bearer tok",
-      "User-Agent": "astro-build"
-    });
-    expect(sentQuery()).toBe(`{ user(login: "murugu-21") { bio } }`);
-  });
+  setEnv({ GITHUB_TOKEN: "tok" });
+  expect(await githubFromEnv().profile()).toEqual({ bio: "over HTTPS" });
 
-  it("skips the request without a token and says why", async () => {
-    stubGithub({ body: { data: { user: { bio: "never read" } } } });
-    setEnv({ GITHUB_TOKEN: undefined });
-
-    expect(await fetchGithubProfile()).toBeNull();
-    expect(requests).toEqual([]);
-    expect(warnings).toEqual([["[github] no GITHUB_TOKEN; rendering contact fallback"]]);
-  });
-
-  const offline = new Error("offline");
-
-  it.each<{ name: string; reply: Reply; warning: string; detail: unknown[] }>([
-    {
-      name: "an HTTP error",
-      reply: { status: 502, body: {} },
-      warning: "[github] GraphQL HTTP 502; rendering contact fallback",
-      detail: []
-    },
-    {
-      name: "GraphQL errors",
-      reply: { body: { data: null, errors: [{ message: "Bad credentials" }] } },
-      warning: "[github] GraphQL errors; rendering contact fallback",
-      detail: [["Bad credentials"]]
-    },
-    {
-      name: "data of the wrong shape",
-      reply: { body: { data: { user: { bio: 5 } } } },
-      warning: "[github] unexpected GraphQL data; rendering contact fallback",
-      detail: [[expect.objectContaining({ path: ["user", "bio"] })]]
-    },
-    {
-      name: "a network failure",
-      reply: offline,
-      warning: "[github] fetch failed; rendering contact fallback",
-      detail: [offline]
-    }
-  ])(
-    "falls back to null on $name and logs why, instead of breaking the build",
-    async ({ reply, warning, detail }) => {
-      stubGithub(reply);
-
-      expect(await fetchGithubProfile()).toBeNull();
-      expect(warnings).toEqual([[warning, ...detail]]);
-    }
-  );
-
-  it("returns null when the user does not exist, unless the profile is required", async () => {
-    stubGithub({ body: { data: { user: null } } });
-    expect(await fetchGithubProfile()).toBeNull();
-
-    setEnv({ REQUIRE_GITHUB_PROFILE: "1" });
-    await expect(fetchGithubProfile()).rejects.toThrow(
-      "[github] profile fetch failed but REQUIRE_GITHUB_PROFILE=1"
-    );
-  });
-});
-
-describe("fetchPinnedRepos", () => {
-  const node = {
-    name: "portfolio",
-    description: null,
-    url: "https://github.com/murugu-21/portfolio",
-    homepageUrl: "https://murugappan.dev",
-    forkCount: 2,
-    diskUsage: 2048,
-    primaryLanguage: { name: "TypeScript", color: "#3178c6" },
-    stargazers: { totalCount: 7 }
-  };
-
-  it("flattens each repository's topics into a name list", async () => {
-    stubGithub({
-      body: {
-        data: {
-          user: {
-            pinnedItems: {
-              edges: [
-                { node: { ...node, repositoryTopics: { nodes: [{ topic: { name: "astro" } }] } } },
-                { node: { ...node, name: "no-topics" } }
-              ]
-            }
-          }
-        }
-      }
-    });
-
-    const repos = await fetchPinnedRepos();
-
-    expect(repos).toEqual([
-      { ...node, topics: ["astro"] },
-      { ...node, name: "no-topics", topics: [] }
-    ]);
-    expect(sentQuery()).toContain("pinnedItems(first: 6, types: REPOSITORY)");
-  });
-
-  it("is an empty list when the query fails", async () => {
-    stubGithub({ status: 500, body: {} });
-
-    expect(await fetchPinnedRepos()).toEqual([]);
-    expect(warnings[0]?.[0]).toBe("[github] GraphQL HTTP 500; skipping pinned repos");
-  });
+  setEnv({ GITHUB_TOKEN: undefined });
+  expect(await githubFromEnv().profile()).toEqual({ bio: "from gh" });
 });

@@ -1,12 +1,12 @@
 ---
 import Button from "./Button.astro";
 import { projectsSection, socialMediaLinks } from "@murugappan/content/portfolio.ts";
-import { fetchPinnedRepos, type GithubRepo } from "#src/lib/github.ts";
+import { githubFromEnv, type GithubRepo } from "#src/lib/github.ts";
 import { formatRepoSize } from "#src/lib/utils.ts";
 import Section from "./Section.astro";
 import SectionTitle from "./SectionTitle.astro";
 
-let repos = await fetchPinnedRepos();
+let repos = await githubFromEnv().pinnedRepos();
 
 const SAMPLE_REPO: GithubRepo = {
   name: "eventform",

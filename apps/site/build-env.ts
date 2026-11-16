@@ -21,12 +21,6 @@ export const ENV_SCHEMA = {
     url: true
   }),
   GITHUB_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
-  REQUIRE_GITHUB_PROFILE: envField.enum({
-    context: "server",
-    access: "public",
-    values: ["0", "1"],
-    default: "0"
-  }),
   RESUME_PHONE: envField.string({ context: "server", access: "secret", optional: true })
 };
 
