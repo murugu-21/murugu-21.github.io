@@ -1,4 +1,4 @@
-import { globSync, readFileSync } from "node:fs";
+import { glob, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { describe, expect, it } from "vite-plus/test";
@@ -31,7 +31,7 @@ const n = 3;
   whitespace</pre>`;
 
 describe("spacingMistakes", () => {
-  it("finds line breaks that join words and spaces that pad an inline element, and nothing in the site's templates", () => {
+  it("finds line breaks that join words and spaces that pad an inline element, and nothing in the site's templates", async () => {
     expect(spacingMistakes(template)).toEqual([
       { line: 5, text: "It is metered at", kind: "joins words" },
       { line: 7, text: "documents the endpoints, and", kind: "joins words" },
@@ -44,12 +44,11 @@ describe("spacingMistakes", () => {
       { line: 18, text: "before <{…}>", kind: "joins words" }
     ]);
 
-    const files = globSync("apps/site/src/**/*.astro", { cwd: ROOT });
+    const files = await Array.fromAsync(glob("apps/site/src/**/*.astro", { cwd: ROOT }));
     expect(files.length, "the glob found the site's templates").toBeGreaterThan(40);
-    const site = files.flatMap(file =>
-      spacingMistakes(readFileSync(join(ROOT, file), "utf8")).map(
-        m => `${file}:${m.line} ${m.kind}: ${m.text}`
-      )
+    const sources = await Promise.all(files.map(file => readFile(join(ROOT, file), "utf8")));
+    const site = files.flatMap((file, i) =>
+      spacingMistakes(sources[i]).map(m => `${file}:${m.line} ${m.kind}: ${m.text}`)
     );
     expect(site, 'write the space as {" "} or keep the words on one line').toEqual([]);
   });

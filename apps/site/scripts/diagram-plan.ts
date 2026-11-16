@@ -54,36 +54,34 @@ export async function diagramJobs(
 
 export function orphans({
   expected,
-  listDir
+  listings
 }: {
   expected: Map<string, Set<string>>;
-  listDir: (dir: string) => string[];
+  listings: ReadonlyMap<string, readonly string[]>;
 }): string[] {
   return [...expected].flatMap(([postDir, files]) => {
     const dir = join(postDir, DIAGRAMS_DIR);
-    return listDir(dir)
-      .map(name => join(dir, name))
-      .filter(path => !files.has(path));
+    return (listings.get(dir) ?? []).map(name => join(dir, name)).filter(path => !files.has(path));
   });
 }
 
 export function pendingRenders({
   jobs,
   force,
-  isCurrent,
-  exists
+  current,
+  onDisk
 }: {
   jobs: Job[];
   force: boolean;
-  isCurrent: (path: string) => boolean;
-  exists: (path: string) => boolean;
+  current: ReadonlySet<string>;
+  onDisk: ReadonlySet<string>;
 }): Render[] {
   return jobs.flatMap(job => {
-    const lightStale = force || !isCurrent(variantPath(job, LIGHT_SVG));
+    const lightStale = force || !current.has(variantPath(job, LIGHT_SVG));
     return VARIANTS.flatMap(variant => {
       const path = variantPath(job, variant);
       const pending =
-        force || (variant.kind === "png" ? lightStale || !exists(path) : !isCurrent(path));
+        force || (variant.kind === "png" ? lightStale || !onDisk.has(path) : !current.has(path));
       return pending ? [{ job, variant, path }] : [];
     });
   });

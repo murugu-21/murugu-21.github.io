@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { onTestFinished, vi } from "vite-plus/test";
 import { z } from "zod";
@@ -13,22 +13,22 @@ function memoryR2() {
   const objects = new Map<string, Buffer>();
   return {
     objects,
-    get: (key: string) => objects.get(key) ?? null,
+    get: (key: string) => Promise.resolve(objects.get(key) ?? null),
     json: (key: string) => {
       const body = objects.get(key);
       return body ? jsonString(JsonRecord).parse(body.toString()) : null;
     },
-    put: ({ key, file }: { key: string; file: string }) => {
-      objects.set(key, readFileSync(file));
+    put: async ({ key, file }: { key: string; file: string }) => {
+      objects.set(key, await readFile(file));
     }
   };
 }
 
-const copyingFfmpeg: Ffmpeg = args => {
+const copyingFfmpeg: Ffmpeg = async args => {
   const input = args[args.lastIndexOf("-i") + 1];
   const output = args.at(-1);
   if (!input || !output) throw new Error(`no input or output in ffmpeg ${args.join(" ")}`);
-  copyFileSync(input, output);
+  await copyFile(input, output);
 };
 
 const Job = jsonString(
@@ -51,13 +51,14 @@ export function fakeDeps(root: string) {
 
 export const fakeSynth = (): Synth => ({
   worker: {
-    runJob: jobPath => {
-      const { outDir, chunks } = Job.parse(readFileSync(jobPath, "utf8"));
-      mkdirSync(outDir, { recursive: true });
-      for (const { id, text } of chunks) {
-        writeFileSync(join(outDir, `${id}.wav`), Buffer.alloc(text.length * 100 * 2));
-      }
-      return Promise.resolve();
+    runJob: async jobPath => {
+      const { outDir, chunks } = Job.parse(await readFile(jobPath, "utf8"));
+      await mkdir(outDir, { recursive: true });
+      await Promise.all(
+        chunks.map(({ id, text }) =>
+          writeFile(join(outDir, `${id}.wav`), Buffer.alloc(text.length * 100 * 2))
+        )
+      );
     }
   },
   reference: { audio: "reference.wav", text: "Reference." },
@@ -80,7 +81,7 @@ export const fakeWhisper = (secondsPerWord: number) => ({
     })
 });
 
-export function writePost({
+export async function writePost({
   blogDist,
   slug,
   title,
@@ -91,17 +92,17 @@ export function writePost({
   title: string;
   paragraphs: string[];
 }) {
-  mkdirSync(join(blogDist, slug), { recursive: true });
+  await mkdir(join(blogDist, slug), { recursive: true });
   const body = paragraphs.map(p => `<p>${p}</p>`).join("\n");
-  writeFileSync(
+  await writeFile(
     join(blogDist, slug, "index.html"),
     `<html><body><article><h1 data-post-title>${title}</h1>
 <section data-post-body>${body}<pre><code>skipped()</code></pre></section></article></body></html>`
   );
 }
 
-export function startOnFakes(script: "synth.py" | "whisper.py"): JsonLines {
-  requirePython("numpy");
+export async function startOnFakes(script: "synth.py" | "whisper.py"): Promise<JsonLines> {
+  await requirePython("numpy");
   vi.stubEnv("PYTHONPATH", join(import.meta.dirname, "fakes"));
   onTestFinished(() => {
     vi.unstubAllEnvs();

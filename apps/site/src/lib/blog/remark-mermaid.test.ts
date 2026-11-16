@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fromMarkdown } from "mdast-util-from-markdown";
@@ -10,21 +10,66 @@ import remarkMermaid from "./remark-mermaid";
 
 const FENCE = "flowchart LR\n  accDescr: A hands off to B\n  A --> B";
 
-async function renderedPost({ viewBox }: { viewBox: string }) {
-  const postDir = mkdtempSync(join(tmpdir(), "remark-mermaid-post-"));
-  onTestFinished(() => rmSync(postDir, { recursive: true, force: true }));
+async function emptyPost() {
+  const postDir = await mkdtemp(join(tmpdir(), "remark-mermaid-post-"));
+  onTestFinished(() => rm(postDir, { recursive: true, force: true }));
+  return postDir;
+}
+
+async function writeDiagrams({ postDir, viewBox }: { postDir: string; viewBox: string }) {
   const hash = await diagramHash(FENCE);
-  mkdirSync(join(postDir, "diagrams"), { recursive: true });
-  for (const theme of ["light", "dark"] as const) {
-    writeFileSync(
-      join(postDir, diagramFile(hash, theme)),
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}"></svg>`
-    );
-  }
+  await mkdir(join(postDir, "diagrams"), { recursive: true });
+  await Promise.all(
+    (["light", "dark"] as const).map(theme =>
+      writeFile(
+        join(postDir, diagramFile(hash, theme)),
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}"></svg>`
+      )
+    )
+  );
+  return hash;
+}
+
+async function renderedPost({ viewBox }: { viewBox: string }) {
+  const postDir = await emptyPost();
+  const hash = await writeDiagrams({ postDir, viewBox });
   return { file: new VFile({ path: join(postDir, "index.md") }), hash };
 }
 
 describe("remarkMermaid", () => {
+  it("renders the missing diagrams once when several posts transform at the same time", async () => {
+    const posts = await Promise.all([1, 2, 3].map(() => emptyPost()));
+    let renders = 0;
+    const render = async () => {
+      renders++;
+      await Promise.all(posts.map(postDir => writeDiagrams({ postDir, viewBox: "0 0 40 20" })));
+    };
+    const trees = posts.map(() => fromMarkdown(`\`\`\`mermaid\n${FENCE}\n\`\`\`\n`));
+
+    await Promise.all(
+      posts.map((postDir, i) =>
+        remarkMermaid({ render })(trees[i], new VFile({ path: join(postDir, "index.md") }))
+      )
+    );
+
+    expect(renders).toBe(1);
+    expect(trees.map(tree => tree.children[0].data)).toEqual(
+      posts.map(() => ({ hName: "figure", hProperties: { dataMermaid: "" } }))
+    );
+  });
+
+  it("fails the build when the render leaves a diagram missing", async () => {
+    const postDir = await emptyPost();
+    const tree = fromMarkdown(`\`\`\`mermaid\n${FENCE}\n\`\`\`\n`);
+
+    await expect(
+      remarkMermaid({ render: () => Promise.resolve() })(
+        tree,
+        new VFile({ path: join(postDir, "index.md") })
+      )
+    ).rejects.toThrow("was not rendered for diagram 1 of");
+  });
+
   it("swaps each fence for a figure holding its light and dark rendering, sized from the viewBox", async () => {
     const { file, hash } = await renderedPost({ viewBox: "0 0 400.4 199.6" });
     const tree = fromMarkdown(`Intro\n\n\`\`\`mermaid\n${FENCE}\n\`\`\`\n\nOutro\n`);

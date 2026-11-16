@@ -51,6 +51,7 @@
     "@murugappan/api": "workspace:*",
     "@murugappan/content": "workspace:*",
     "@murugappan/tooling": "workspace:*",
+    "@murugappan/utils": "workspace:*",
     "@types/node": "^26.6.6",
     "@vitest/browser-playwright": "5.1.0",
     "@vitest/coverage-istanbul": "5.1.0",

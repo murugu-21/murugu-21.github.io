@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import subsetFont from "subset-font";
@@ -32,10 +32,10 @@ export const unicodeRangeText = (ranges: string) =>
 
 export async function writeFiraCodeSubset(): Promise<void> {
   const text = unicodeRangeText(UNICODE_RANGE);
-  const woff2 = await subsetFont(readFileSync(FIRA_CODE_VF), text, {
+  const woff2 = await subsetFont(await readFile(FIRA_CODE_VF), text, {
     targetFormat: "woff2",
     keepFeatures: FIRA_CODE_FEATURES
   });
-  mkdirSync(dirname(FIRA_CODE_SUBSET), { recursive: true });
-  writeFileSync(FIRA_CODE_SUBSET, woff2);
+  await mkdir(dirname(FIRA_CODE_SUBSET), { recursive: true });
+  await writeFile(FIRA_CODE_SUBSET, woff2);
 }

@@ -38,6 +38,7 @@
   ],
   "exclude": [
     "../../packages/content/vite/**",
+    "../../packages/utils/node/**",
     "**/lint-fixture-*/**",
     "../../packages/**/lint-fixture-*/**"
   ]

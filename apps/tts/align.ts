@@ -1,4 +1,4 @@
-import { mkdtempDisposableSync, writeFileSync } from "node:fs";
+import { mkdtempDisposable, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { z } from "zod";
@@ -51,7 +51,7 @@ export async function alignPost(
     force
   }: { slug: string; whisper: Pick<WhisperClient, "transcribe">; force: boolean }
 ) {
-  const stored = r2.get(audioKey(slug, "json"));
+  const stored = await r2.get(audioKey(slug, "json"));
   if (!stored) {
     console.log(`${slug}: no audio in R2, skipping`);
     return;
@@ -61,19 +61,19 @@ export async function alignPost(
     console.log(`${slug}: already aligned, skipping`);
     return;
   }
-  const mp3Body = r2.get(audioKey(slug, "mp3"));
+  const mp3Body = await r2.get(audioKey(slug, "mp3"));
   if (!mp3Body) throw new Error("mp3 missing in R2");
 
-  using tmp = mkdtempDisposableSync(join(tmpdir(), `align-${slug}-`));
+  await using tmp = await mkdtempDisposable(join(tmpdir(), `align-${slug}-`));
   const mp3 = join(tmp.path, "post.mp3");
   const wav = join(tmp.path, "post.wav");
-  writeFileSync(mp3, mp3Body);
-  ffmpeg(["-i", mp3, "-ac", "1", "-ar", "16000", wav]);
+  await writeFile(mp3, mp3Body);
+  await ffmpeg(["-i", mp3, "-ac", "1", "-ar", "16000", wav]);
 
   const blocks: StoredBlock[] = [];
   for (const [i, block] of timings.blocks.entries()) {
     const slice = join(tmp.path, `b${i}.wav`);
-    ffmpeg(["-ss", String(block.start), "-to", String(block.end), "-i", wav, slice]);
+    await ffmpeg(["-ss", String(block.start), "-to", String(block.end), "-i", wav, slice]);
     const reply = await whisper.transcribe({ id: `b${i}`, wav: slice, text: block.text });
     const result = alignBlock(block, reply);
     if (result.problem) console.log(`  b${i}: ${result.problem}`);
@@ -81,8 +81,8 @@ export async function alignPost(
   }
 
   const jsonPath = join(tmp.path, "timings.json");
-  writeFileSync(jsonPath, JSON.stringify({ ...timings, version: 2, blocks }));
-  r2.put({ key: audioKey(slug, "json"), file: jsonPath, contentType: "application/json" });
+  await writeFile(jsonPath, JSON.stringify({ ...timings, version: 2, blocks }));
+  await r2.put({ key: audioKey(slug, "json"), file: jsonPath, contentType: "application/json" });
   const aligned = blocks.filter(block => block.words).length;
   console.log(`${slug}: aligned ${aligned}/${blocks.length} blocks`);
 }

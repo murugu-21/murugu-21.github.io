@@ -1,4 +1,4 @@
-import { mkdtempDisposableSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdtempDisposable, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -46,8 +46,8 @@ describe("chunkBlock", () => {
   });
 });
 
-function wavInfo(path: string) {
-  const wav = readFileSync(path);
+async function wavInfo(path: string) {
+  const wav = await readFile(path);
   return {
     sampleRate: wav.readUInt32LE(24),
     frames: wav.readUInt32LE(40) / 2,
@@ -58,18 +58,18 @@ function wavInfo(path: string) {
 describe("synth.py through synthClient", () => {
   it("writes each chunk as a WAV, names every failed chunk, and keeps serving the next job", async () => {
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    using dir = mkdtempDisposableSync(join(tmpdir(), "synth-"));
-    const job = (slug: string, chunks: Chunk[]) => {
+    await using dir = await mkdtempDisposable(join(tmpdir(), "synth-"));
+    const job = async (slug: string, chunks: Chunk[]) => {
       const path = join(dir.path, `${slug}.json`);
       const reference = { audio: "reference.wav", text: "Reference." };
-      writeFileSync(path, JSON.stringify({ outDir: join(dir.path, slug), reference, chunks }));
+      await writeFile(path, JSON.stringify({ outDir: join(dir.path, slug), reference, chunks }));
       return path;
     };
-    await using synth = synthClient(startOnFakes("synth.py"));
+    await using synth = synthClient(await startOnFakes("synth.py"));
     expect((await synth.ready).sampleRate).toBe(24000);
 
     const failing = synth.runJob(
-      job("react", [
+      await job("react", [
         { id: "b000-c00", text: "Hello there." },
         { id: "b000-c01", text: "[raise]" },
         { id: "b001-c00", text: "[rate] Hi." },
@@ -82,15 +82,15 @@ describe("synth.py through synthClient", () => {
         "b001-c00: RuntimeError: unexpected sample rate 22050\n" +
         "b001-c01: RuntimeError: model produced no audio"
     );
-    expect(readdirSync(join(dir.path, "react"))).toEqual(["b000-c00.wav"]);
-    expect(wavInfo(join(dir.path, "react", "b000-c00.wav"))).toEqual({
+    expect(await readdir(join(dir.path, "react"))).toEqual(["b000-c00.wav"]);
+    expect(await wavInfo(join(dir.path, "react", "b000-c00.wav"))).toEqual({
       sampleRate: 24000,
       frames: 2880,
       first: 16383
     });
 
-    await synth.runJob(job("toolbox", [{ id: "b000-c00", text: "Bye." }]));
-    expect(wavInfo(join(dir.path, "toolbox", "b000-c00.wav")).frames).toBe(960);
+    await synth.runJob(await job("toolbox", [{ id: "b000-c00", text: "Bye." }]));
+    expect((await wavInfo(join(dir.path, "toolbox", "b000-c00.wav"))).frames).toBe(960);
     expect(log.mock.calls.map(([line]) => String(line).replace(/in [\d.]+s$/, "in Ns"))).toEqual([
       "  b000-c00 0.1s audio in Ns",
       "  b000-c00 0.0s audio in Ns"

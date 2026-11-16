@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempDisposableSync, writeFileSync } from "node:fs";
+import { mkdir, mkdtempDisposable, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -29,16 +29,21 @@ describe("arguments", () => {
 });
 
 describe("publishedSlugs", () => {
-  it("lists only the built dirs whose page has a post body", () => {
-    using dir = mkdtempDisposableSync(join(tmpdir(), "blog-dist-"));
-    mkdirSync(join(dir.path, "first-post"));
-    writeFileSync(join(dir.path, "first-post", "index.html"), "<section data-post-body><p>Hi</p>");
-    mkdirSync(join(dir.path, "404"));
-    writeFileSync(join(dir.path, "404", "index.html"), "<main>Not found</main>");
-    mkdirSync(join(dir.path, "drafts"));
-    writeFileSync(join(dir.path, "rss.xml"), "<rss />");
-    expect(publishedSlugs(dir.path)).toEqual(["first-post"]);
-    expect(() => publishedSlugs(join(dir.path, "missing"))).toThrow("run `bun run build` first");
+  it("lists only the built dirs whose page has a post body", async () => {
+    await using dir = await mkdtempDisposable(join(tmpdir(), "blog-dist-"));
+    await mkdir(join(dir.path, "first-post"));
+    await writeFile(
+      join(dir.path, "first-post", "index.html"),
+      "<section data-post-body><p>Hi</p>"
+    );
+    await mkdir(join(dir.path, "404"));
+    await writeFile(join(dir.path, "404", "index.html"), "<main>Not found</main>");
+    await mkdir(join(dir.path, "drafts"));
+    await writeFile(join(dir.path, "rss.xml"), "<rss />");
+    expect(await publishedSlugs(dir.path)).toEqual(["first-post"]);
+    await expect(publishedSlugs(join(dir.path, "missing"))).rejects.toThrow(
+      "run `bun run build` first"
+    );
   });
 });
 
@@ -58,10 +63,10 @@ describe("runEach", () => {
 });
 
 describe("run", () => {
-  it("returns a command's stdout, and throws its stderr when it fails", () => {
-    expect(run(process.execPath, ["-e", "process.stdout.write('ok')"])).toBe("ok");
-    expect(() =>
+  it("returns a command's stdout, and throws its stderr when it fails", async () => {
+    expect(await run(process.execPath, ["-e", "process.stdout.write('ok')"])).toBe("ok");
+    await expect(
       run(process.execPath, ["-e", "process.stderr.write('no such file'); process.exit(2)"])
-    ).toThrow("no such file");
+    ).rejects.toThrow("no such file");
   });
 });

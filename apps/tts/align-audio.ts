@@ -21,10 +21,10 @@ const WORKER = join(import.meta.dirname, "whisper.py");
 const options = alignArgs();
 const r2 = r2Store(options.local ? "local" : "remote");
 
-requirePython("mlx_whisper");
-requireFfmpeg();
-r2.checkLogin();
-const targets = options.slugs.length ? options.slugs : publishedSlugs(BLOG_DIST);
+await requirePython("mlx_whisper");
+await requireFfmpeg();
+await r2.checkLogin();
+const targets = options.slugs.length ? options.slugs : await publishedSlugs(BLOG_DIST);
 await using whisper = whisperClient(startJsonLines(PYTHON, [WORKER]));
 const failures = await runEach(targets, slug =>
   alignPost({ r2, ffmpeg }, { slug, whisper, force: options.force })

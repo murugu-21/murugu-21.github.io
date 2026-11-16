@@ -1,5 +1,4 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Image, Paragraph, Root } from "mdast";
@@ -13,6 +12,8 @@ import {
   diagramHash,
   type DiagramTheme
 } from "./mermaid-diagrams";
+import { exists } from "@murugappan/utils/node/fs.ts";
+import { spawnInherit } from "@murugappan/utils/node/process.ts";
 
 function svgSize(svg: string): { width: number; height: number } | undefined {
   const viewBox = svg.match(/\bviewBox="([^"]+)"/);
@@ -30,13 +31,29 @@ const themeClass = {
 
 const RENDER_SCRIPT = fileURLToPath(new URL("../../../scripts/render-mermaid.ts", import.meta.url));
 
-function renderMissing(): void {
-  const result = spawnSync("bun", [RENDER_SCRIPT], { stdio: "inherit" });
-  if (result.status !== 0)
+async function runRenderScript(): Promise<void> {
+  if ((await spawnInherit("bun", [RENDER_SCRIPT])) !== 0) {
     throw new Error("remark-mermaid: apps/site/scripts/render-mermaid.ts failed");
+  }
 }
 
-export default function remarkMermaid() {
+let inFlightRender: Promise<void> | undefined;
+function joinInFlightRender(render: () => Promise<void>): Promise<void> {
+  inFlightRender ??= render().finally(() => {
+    inFlightRender = undefined;
+  });
+  return inFlightRender;
+}
+const waitForInFlightRender = () => inFlightRender;
+
+const missingThemes = (pathOf: (theme: DiagramTheme) => string) =>
+  Promise.all(
+    DIAGRAM_THEMES.map(async theme => ((await exists(pathOf(theme))) ? [] : [theme]))
+  ).then(missing => missing.flat());
+
+export default function remarkMermaid({
+  render = runRenderScript
+}: { render?: () => Promise<void> } = {}) {
   return async function transform(tree: Root, file: VFile): Promise<void> {
     const fences = collectMermaidNodes(tree);
     if (fences.length === 0) return;
@@ -50,15 +67,15 @@ export default function remarkMermaid() {
       const alt = diagramAlt({ source: node.value, postLabel, index: i });
       const hash = await diagramHash(node.value);
       const pathOf = (theme: DiagramTheme) => join(postDir, diagramFile(hash, theme));
-      if (!DIAGRAM_THEMES.every(theme => existsSync(pathOf(theme)))) renderMissing();
-      for (const theme of DIAGRAM_THEMES) {
-        if (!existsSync(pathOf(theme))) {
-          throw new Error(
-            `remark-mermaid: ${relative(process.cwd(), pathOf(theme))} was not rendered for diagram ${i + 1} of ${postLabel}`
-          );
-        }
+      await waitForInFlightRender();
+      if ((await missingThemes(pathOf)).length > 0) await joinInFlightRender(render);
+      const [unrendered] = await missingThemes(pathOf);
+      if (unrendered) {
+        throw new Error(
+          `remark-mermaid: ${relative(process.cwd(), pathOf(unrendered))} was not rendered for diagram ${i + 1} of ${postLabel}`
+        );
       }
-      const size = svgSize(readFileSync(pathOf("light"), "utf8"));
+      const size = svgSize(await readFile(pathOf("light"), "utf8"));
 
       const images: Image[] = DIAGRAM_THEMES.map(theme => ({
         type: "image",

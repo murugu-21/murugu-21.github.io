@@ -1,5 +1,4 @@
 import type { Buffer } from "node:buffer";
-import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,15 +6,13 @@ import { z } from "zod";
 
 import { AUDIO_PREFIX } from "@murugappan/contracts/audio.ts";
 import { jsonString } from "@murugappan/utils/json.ts";
+import { spawnCollect } from "@murugappan/utils/node/process.ts";
 import { run } from "./cli.ts";
 
 const BUCKET = "murugappan-dev-audio";
 export const VOICE_PREFIX = "voice/breeze";
 
 export const audioKey = (slug: string, ext: "mp3" | "json") => `${AUDIO_PREFIX}/${slug}.${ext}`;
-
-// `get` writes the body to stdout; spawnSync's 1 MB default would truncate a post's audio.
-const MAX_OBJECT_BYTES = 1024 * 1024 * 1024;
 
 // Not `bunx cf`: run from the repo root, it falls back to a global cf instead of the pinned one.
 const PINNED_CF = join(dirname(fileURLToPath(import.meta.resolve("cf/package.json"))), "bin", "cf");
@@ -51,26 +48,32 @@ const LoggedIn = jsonString(
 const isMissingObject = (output: string) => /does not exist/i.test(output);
 
 export function r2Store(location: R2Location) {
-  function get(key: string): Buffer | null {
-    const r = spawnSync(PINNED_CF, r2Args({ verb: "get", key, location }), {
-      maxBuffer: MAX_OBJECT_BYTES
-    });
+  async function get(key: string): Promise<Buffer | null> {
+    const r = await spawnCollect(PINNED_CF, r2Args({ verb: "get", key, location }));
     if (r.status === 0) return r.stdout;
-    const err = `${r.stderr.toString()}\n${r.stdout.toString()}`;
+    const err = `${r.stderr}\n${r.stdout.toString()}`;
     if (isMissingObject(err)) return null;
     throw new Error(`cf r2 objects get ${key} failed:\n${err.trim()}`);
   }
 
-  function put({ key, file, contentType }: { key: string; file: string; contentType: string }) {
+  async function put({
+    key,
+    file,
+    contentType
+  }: {
+    key: string;
+    file: string;
+    contentType: string;
+  }) {
     const extra = ["--file", file, "--content-type", contentType];
-    run(PINNED_CF, r2Args({ verb: "put", key, location, extra }));
+    await run(PINNED_CF, r2Args({ verb: "put", key, location, extra }));
   }
 
-  function checkLogin() {
+  async function checkLogin() {
     if (location !== "remote") return;
     // whoami exits 0 when logged out, and reports a revoked token as authenticated.
-    const r = spawnSync(PINNED_CF, ["auth", "whoami"], { encoding: "utf8" });
-    if (!LoggedIn.safeParse(r.stdout).success) {
+    const { stdout } = await spawnCollect(PINNED_CF, ["auth", "whoami"]);
+    if (!LoggedIn.safeParse(stdout.toString()).success) {
       throw new Error(
         "cf is not logged in; run `bunx cf auth login` in an interactive terminal, then retry"
       );

@@ -50,7 +50,7 @@ describe("orphans", () => {
           ["/blog/a", new Set(["/blog/a/diagrams/aaa.light.svg"])],
           ["/blog/b", new Set<string>()]
         ]),
-        listDir: dir => listing.get(dir) ?? []
+        listings: listing
       })
     ).toEqual(["/blog/a/diagrams/old.light.svg", "/blog/a/diagrams/old.png"]);
   });
@@ -79,8 +79,8 @@ describe("pendingRenders", () => {
     pendingRenders({
       jobs,
       force,
-      isCurrent: path => upToDate.has(path),
-      exists: path => onDisk.has(path)
+      current: upToDate,
+      onDisk
     }).map(({ variant, path }) => `${variantLabel(variant)} ${path}`);
 
   it("renders stale or missing SVGs, and the PNG whenever its light SVG is stale or it is missing", () => {

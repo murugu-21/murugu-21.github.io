@@ -1,6 +1,8 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+
+import { exists } from "@murugappan/utils/node/fs.ts";
 
 import {
   BLOG_DIST,
@@ -36,41 +38,47 @@ const deps: RenderDeps = {
   settings: { tempo: TEMPO, postfx: POSTFX }
 };
 
-function checkPreconditions(): Reference {
-  if (!existsSync(BLOG_DIST)) throw new Error(`${BLOG_DIST} missing; run \`bun run build\` first`);
-  requireFfmpeg();
-  if (!options["dry-run"]) requirePython("mlx_audio");
-  if (!existsSync(VOICE_WAV) || !existsSync(VOICE_TXT)) {
+const hasVoice = async () => (await exists(VOICE_WAV)) && (await exists(VOICE_TXT));
+
+async function checkPreconditions(): Promise<Reference> {
+  if (!(await exists(BLOG_DIST))) {
+    throw new Error(`${BLOG_DIST} missing; run \`bun run build\` first`);
+  }
+  await requireFfmpeg();
+  if (!options["dry-run"]) await requirePython("mlx_audio");
+  if (!(await hasVoice())) {
     console.log("no .voice/ reference locally, fetching from R2 …");
-    const wav = r2.get(`${VOICE_PREFIX}/reference.wav`);
-    const txt = wav && r2.get(`${VOICE_PREFIX}/reference.txt`);
+    const wav = await r2.get(`${VOICE_PREFIX}/reference.wav`);
+    const txt = wav && (await r2.get(`${VOICE_PREFIX}/reference.txt`));
     if (!wav || !txt) {
       throw new Error(
         "voice reference missing locally and in R2; restore .voice/reference.{wav,txt}"
       );
     }
-    mkdirSync(VOICE_DIR, { recursive: true });
-    writeFileSync(VOICE_WAV, wav);
-    writeFileSync(VOICE_TXT, txt);
+    await mkdir(VOICE_DIR, { recursive: true });
+    await writeFile(VOICE_WAV, wav);
+    await writeFile(VOICE_TXT, txt);
   }
-  return { audio: VOICE_WAV, text: readFileSync(VOICE_TXT, "utf8").trim() };
+  return { audio: VOICE_WAV, text: (await readFile(VOICE_TXT, "utf8")).trim() };
 }
 
-function uploadVoice() {
-  if (!existsSync(VOICE_WAV) || !existsSync(VOICE_TXT)) {
-    throw new Error("put reference.wav and reference.txt in .voice/ first");
-  }
-  r2.put({ key: `${VOICE_PREFIX}/reference.wav`, file: VOICE_WAV, contentType: "audio/wav" });
-  r2.put({ key: `${VOICE_PREFIX}/reference.txt`, file: VOICE_TXT, contentType: "text/plain" });
+async function uploadVoice() {
+  if (!(await hasVoice())) throw new Error("put reference.wav and reference.txt in .voice/ first");
+  await r2.put({ key: `${VOICE_PREFIX}/reference.wav`, file: VOICE_WAV, contentType: "audio/wav" });
+  await r2.put({
+    key: `${VOICE_PREFIX}/reference.txt`,
+    file: VOICE_TXT,
+    contentType: "text/plain"
+  });
   console.log("voice reference uploaded");
 }
 
 async function renderAll() {
-  r2.checkLogin();
-  const reference = checkPreconditions();
-  const targets = options.slugs.length ? options.slugs : publishedSlugs(BLOG_DIST);
+  await r2.checkLogin();
+  const reference = await checkPreconditions();
+  const targets = options.slugs.length ? options.slugs : await publishedSlugs(BLOG_DIST);
   for (const s of targets) {
-    if (!existsSync(join(BLOG_DIST, s, "index.html"))) {
+    if (!(await exists(join(BLOG_DIST, s, "index.html")))) {
       throw new Error(`no built post for slug "${s}"`);
     }
   }
@@ -90,5 +98,5 @@ async function renderAll() {
   if (failures.length) process.exitCode = 1;
 }
 
-if (options["upload-voice"]) uploadVoice();
+if (options["upload-voice"]) await uploadVoice();
 else await renderAll();

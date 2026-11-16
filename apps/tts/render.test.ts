@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { mkdtempDisposableSync } from "node:fs";
+import { mkdtempDisposable } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -21,9 +21,9 @@ const LONG = `${"Ab ".repeat(60).trim()}. ${"Cd ".repeat(60).trim()}.`;
 
 describe("renderPost", () => {
   it("renders a new post to an MP3 and its version 1 timings in R2", async () => {
-    using root = mkdtempDisposableSync(join(tmpdir(), "render-"));
+    await using root = await mkdtempDisposable(join(tmpdir(), "render-"));
     const { r2, deps } = fakeDeps(root.path);
-    writePost({
+    await writePost({
       blogDist: root.path,
       slug: "fakes",
       title: "Fakes",
@@ -44,13 +44,13 @@ describe("renderPost", () => {
         { text: LONG, start: 3.2, end: 39.35 }
       ]
     });
-    expect(r2.get(MP3_KEY)?.length).toBe(78_700);
+    expect(r2.objects.get(MP3_KEY)?.length).toBe(78_700);
   });
 
   it("skips a post whose spoken text matches the stored hash, unless forced or the text changed", async () => {
-    using root = mkdtempDisposableSync(join(tmpdir(), "render-"));
+    await using root = await mkdtempDisposable(join(tmpdir(), "render-"));
     const { r2, deps } = fakeDeps(root.path);
-    writePost({
+    await writePost({
       blogDist: root.path,
       slug: "fakes",
       title: "Fakes",
@@ -60,11 +60,11 @@ describe("renderPost", () => {
     r2.objects.set(JSON_KEY, Buffer.from(current));
 
     await renderPost(deps, { slug: "fakes", synth: refusingSynth(), force: false });
-    expect(String(r2.get(JSON_KEY))).toBe(current);
-    expect(r2.get(MP3_KEY)).toBeNull();
+    expect(String(r2.objects.get(JSON_KEY))).toBe(current);
+    expect(r2.objects.get(MP3_KEY)).toBeUndefined();
 
     await renderPost(deps, { slug: "fakes", synth: fakeSynth(), force: true });
-    expect(r2.get(MP3_KEY)?.length).toBe(78_700);
+    expect(r2.objects.get(MP3_KEY)?.length).toBe(78_700);
 
     r2.objects.set(JSON_KEY, Buffer.from('{"hash":"stale"}'));
     r2.objects.delete(MP3_KEY);
@@ -73,13 +73,13 @@ describe("renderPost", () => {
       hash: HASH,
       duration: 39.35
     });
-    expect(r2.get(MP3_KEY)?.length).toBe(78_700);
+    expect(r2.objects.get(MP3_KEY)?.length).toBe(78_700);
   });
 
   it("only extracts on a dry run, then renders once given a synth", async () => {
-    using root = mkdtempDisposableSync(join(tmpdir(), "render-"));
+    await using root = await mkdtempDisposable(join(tmpdir(), "render-"));
     const { r2, deps } = fakeDeps(root.path);
-    writePost({ blogDist: root.path, slug: "fakes", title: "Fakes", paragraphs: [LONG] });
+    await writePost({ blogDist: root.path, slug: "fakes", title: "Fakes", paragraphs: [LONG] });
 
     await renderPost(deps, { slug: "fakes", synth: null, force: false });
     expect([...r2.objects.keys()]).toEqual([]);
@@ -122,11 +122,11 @@ describe("patchPost", () => {
   });
 
   it("splices a re-synthesized paragraph into the stored MP3 and shifts the blocks after it", async () => {
-    using root = mkdtempDisposableSync(join(tmpdir(), "patch-"));
+    await using root = await mkdtempDisposable(join(tmpdir(), "patch-"));
     const { r2, deps } = fakeDeps(root.path);
     r2.objects.set(JSON_KEY, Buffer.from(stored));
     r2.objects.set(MP3_KEY, Buffer.alloc(4.4 * 1000 * 2));
-    const page = (middle: string) =>
+    const page = async (middle: string) =>
       writePost({
         blogDist: root.path,
         slug: "fakes",
@@ -134,12 +134,12 @@ describe("patchPost", () => {
         paragraphs: [middle, "Goodbye now."]
       });
 
-    page("Hello there world.");
+    await page("Hello there world.");
     await patchPost(deps, { slug: "fakes", synth: refusingSynth() });
-    expect(String(r2.get(JSON_KEY))).toBe(stored);
-    expect(r2.get(MP3_KEY)?.length).toBe(8800);
+    expect(String(r2.objects.get(JSON_KEY))).toBe(stored);
+    expect(r2.objects.get(MP3_KEY)?.length).toBe(8800);
 
-    page("Hello world.");
+    await page("Hello world.");
     await patchPost(deps, { slug: "fakes", synth: fakeSynth() });
     expect(r2.json(JSON_KEY)).toEqual({
       version: 2,
@@ -162,15 +162,15 @@ describe("patchPost", () => {
         }
       ]
     });
-    expect(r2.get(MP3_KEY)?.length).toBe(7600);
+    expect(r2.objects.get(MP3_KEY)?.length).toBe(7600);
   });
 
   it("refuses to patch an MP3 whose length disagrees with its timings", async () => {
-    using root = mkdtempDisposableSync(join(tmpdir(), "patch-"));
+    await using root = await mkdtempDisposable(join(tmpdir(), "patch-"));
     const { r2, deps } = fakeDeps(root.path);
     r2.objects.set(JSON_KEY, Buffer.from(stored));
     r2.objects.set(MP3_KEY, Buffer.alloc(4 * 1000 * 2));
-    writePost({
+    await writePost({
       blogDist: root.path,
       slug: "fakes",
       title: "Fakes",
@@ -180,6 +180,6 @@ describe("patchPost", () => {
     await expect(patchPost(deps, { slug: "fakes", synth: fakeSynth() })).rejects.toThrow(
       "decodes to 4.000 s, timings say 4.4 s"
     );
-    expect(String(r2.get(JSON_KEY))).toBe(stored);
+    expect(String(r2.objects.get(JSON_KEY))).toBe(stored);
   });
 });

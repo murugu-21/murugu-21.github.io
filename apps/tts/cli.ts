@@ -1,7 +1,9 @@
-import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
+
+import { exists, ifPresent } from "@murugappan/utils/node/fs.ts";
+import { spawnCollect } from "@murugappan/utils/node/process.ts";
 
 export const PYTHON = join(import.meta.dirname, ".venv", "bin", "python");
 export const BLOG_DIST = join(import.meta.dirname, "..", "site", "dist", "blog");
@@ -34,47 +36,46 @@ export function alignArgs(args?: string[]) {
   return { ...values, slugs: positionals };
 }
 
-export function requirePython(module: string): void {
-  if (!existsSync(PYTHON)) throw new Error("no venv; run uv sync --locked --project apps/tts");
+export async function requirePython(module: string): Promise<void> {
+  if (!(await exists(PYTHON))) throw new Error("no venv; run uv sync --locked --project apps/tts");
   // -P keeps the cwd off sys.path, where the coverage/ report dir would
   // shadow the `coverage` module numba imports.
-  if (spawnSync(PYTHON, ["-P", "-c", `import ${module}`]).status !== 0) {
+  if ((await spawnCollect(PYTHON, ["-P", "-c", `import ${module}`])).status !== 0) {
     throw new Error(`the venv cannot import ${module}; run uv sync --locked --project apps/tts`);
   }
 }
 
-export function requireFfmpeg(): void {
-  if (spawnSync("ffmpeg", ["-version"]).status !== 0) {
-    throw new Error("ffmpeg not on PATH (brew install ffmpeg)");
-  }
+export async function requireFfmpeg(): Promise<void> {
+  const r = await spawnCollect("ffmpeg", ["-version"]).catch(() => null);
+  if (r?.status !== 0) throw new Error("ffmpeg not on PATH (brew install ffmpeg)");
 }
 
-export function run(cmd: string, cmdArgs: string[]): string {
-  const r = spawnSync(cmd, cmdArgs, { encoding: "utf8" });
+export async function run(cmd: string, cmdArgs: string[]): Promise<string> {
+  const r = await spawnCollect(cmd, cmdArgs);
   if (r.status !== 0) {
-    throw new Error(`${cmd} ${cmdArgs.join(" ")}\n${r.stderr || r.stdout}`);
+    throw new Error(`${cmd} ${cmdArgs.join(" ")}\n${r.stderr || r.stdout.toString()}`);
   }
-  return r.stdout;
+  return r.stdout.toString();
 }
 
-export function ffmpeg(args: string[]): void {
-  run("ffmpeg", ["-y", "-loglevel", "error", ...args]);
+export async function ffmpeg(args: string[]): Promise<void> {
+  await run("ffmpeg", ["-y", "-loglevel", "error", ...args]);
 }
 
 export type Ffmpeg = typeof ffmpeg;
 
-export function publishedSlugs(blogDist: string): string[] {
-  if (!existsSync(blogDist)) throw new Error(`${blogDist} missing; run \`bun run build\` first`);
-  return readdirSync(blogDist, { withFileTypes: true })
-    .filter(d => {
-      const page = join(blogDist, d.name, "index.html");
-      return (
-        d.isDirectory() &&
-        existsSync(page) &&
-        readFileSync(page, "utf8").includes("<section data-post-body>")
-      );
-    })
-    .map(d => d.name);
+const hasPostBody = async (page: string) =>
+  (await ifPresent(readFile(page, "utf8")))?.includes("<section data-post-body>") ?? false;
+
+export async function publishedSlugs(blogDist: string): Promise<string[]> {
+  if (!(await exists(blogDist))) {
+    throw new Error(`${blogDist} missing; run \`bun run build\` first`);
+  }
+  const dirs = (await readdir(blogDist, { withFileTypes: true })).filter(d => d.isDirectory());
+  const slugs = await Promise.all(
+    dirs.map(async d => ((await hasPostBody(join(blogDist, d.name, "index.html"))) ? [d.name] : []))
+  );
+  return slugs.flat();
 }
 
 export async function runEach(

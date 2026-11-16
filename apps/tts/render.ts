@@ -1,6 +1,8 @@
 import type { Buffer } from "node:buffer";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+
+import { exists } from "@murugappan/utils/node/fs.ts";
 
 import { spokenHash } from "./audio-prep.ts";
 import type { Ffmpeg } from "./cli.ts";
@@ -38,29 +40,38 @@ export interface Synth {
   sampleRate: number;
 }
 
-function upload(
+async function upload(
   r2: RenderDeps["r2"],
   { slug, mp3, json }: { slug: string; mp3: string; json: string }
 ) {
-  r2.put({ key: audioKey(slug, "mp3"), file: mp3, contentType: "audio/mpeg" });
-  r2.put({ key: audioKey(slug, "json"), file: json, contentType: "application/json" });
+  await r2.put({ key: audioKey(slug, "mp3"), file: mp3, contentType: "audio/mpeg" });
+  await r2.put({ key: audioKey(slug, "json"), file: json, contentType: "application/json" });
 }
 
-const extractBlocks = ({ blogDist }: RenderDeps, slug: string) =>
-  postBlocks({ slug, html: readFileSync(join(blogDist, slug, "index.html"), "utf8") });
+const extractBlocks = async ({ blogDist }: RenderDeps, slug: string) =>
+  postBlocks({ slug, html: await readFile(join(blogDist, slug, "index.html"), "utf8") });
 
-function tempoChunk(
+async function tempoChunk(
   { ffmpeg, settings }: RenderDeps,
   { outDir, id, sampleRate }: { outDir: string; id: string; sampleRate: number }
 ) {
   const src = join(outDir, `${id}.wav`);
   const dst = join(outDir, `${id}.tempo.pcm`);
-  if (!existsSync(src)) throw new Error(`missing chunk ${id}`);
+  if (!(await exists(src))) throw new Error(`missing chunk ${id}`);
   const tempo = settings.tempo === 1 ? [] : ["-af", `atempo=${settings.tempo}`];
-  ffmpeg(["-i", src, ...tempo, ...pcmFormat(sampleRate), dst]);
-  const pcm = readFileSync(dst);
+  await ffmpeg(["-i", src, ...tempo, ...pcmFormat(sampleRate), dst]);
+  const pcm = await readFile(dst);
   if (pcm.length === 0) throw new Error(`empty chunk ${id}`);
   return pcm;
+}
+
+async function tempoChunksInSequence(
+  deps: RenderDeps,
+  { outDir, block, sampleRate }: { outDir: string; block: Chunk[]; sampleRate: number }
+) {
+  const pcms: Buffer[] = [];
+  for (const { id } of block) pcms.push(await tempoChunk(deps, { outDir, id, sampleRate }));
+  return pcms;
 }
 
 async function synthesize(
@@ -73,11 +84,13 @@ async function synthesize(
 ) {
   const outDir = join(tmp, "chunks");
   const jobPath = join(tmp, "job.json");
-  writeFileSync(jobPath, JSON.stringify({ reference, outDir, chunks: blockChunks.flat() }));
+  await writeFile(jobPath, JSON.stringify({ reference, outDir, chunks: blockChunks.flat() }));
   await worker.runJob(jobPath);
-  return blockChunks.map(block =>
-    block.map(({ id }) => tempoChunk(deps, { outDir, id, sampleRate }))
-  );
+  const rendered: Buffer[][] = [];
+  for (const block of blockChunks) {
+    rendered.push(await tempoChunksInSequence(deps, { outDir, block, sampleRate }));
+  }
+  return rendered;
 }
 
 export async function renderPost(
@@ -85,9 +98,9 @@ export async function renderPost(
   { slug, synth, force }: { slug: string; synth: Synth | null; force: boolean }
 ) {
   const { r2, ffmpeg, tmpRoot, settings } = deps;
-  const blocks = extractBlocks(deps, slug);
+  const blocks = await extractBlocks(deps, slug);
   const hash = spokenHash(blocks);
-  const storedJson = force ? null : r2.get(audioKey(slug, "json"));
+  const storedJson = force ? null : await r2.get(audioKey(slug, "json"));
   if (storedJson && storedHash(storedJson.toString()) === hash) {
     console.log(`${slug}: unchanged, skipping`);
     return;
@@ -98,7 +111,7 @@ export async function renderPost(
   );
   if (!synth) return;
 
-  const tmp = mkdtempSync(join(tmpRoot, `audio-${slug}-`));
+  const tmp = await mkdtemp(join(tmpRoot, `audio-${slug}-`));
   console.log(`${slug}: rendering in ${tmp}`);
   const { sampleRate } = synth;
   const rendered = await synthesize(deps, { tmp, blockChunks, synth });
@@ -116,24 +129,24 @@ export async function renderPost(
 
   const full = join(tmp, `${slug}.pcm`);
   const mp3 = join(tmp, `${slug}.mp3`);
-  writeFileSync(full, pcm);
+  await writeFile(full, pcm);
   const loudness = settings.postfx ? ["-af", settings.postfx] : [];
-  ffmpeg([...pcmFormat(sampleRate), "-i", full, ...loudness, "-b:a", "64k", mp3]);
+  await ffmpeg([...pcmFormat(sampleRate), "-i", full, ...loudness, "-b:a", "64k", mp3]);
   const json = join(tmp, `${slug}.json`);
-  writeFileSync(json, JSON.stringify(doc));
-  upload(r2, { slug, mp3, json });
+  await writeFile(json, JSON.stringify(doc));
+  await upload(r2, { slug, mp3, json });
   console.log(`${slug}: uploaded ${(duration / 60).toFixed(1)} min`);
 }
 
 // ffmpeg drops the encoder delay, so the length must match the timings; a mismatch
 // would shift every splice point.
-function decodeMp3(
+async function decodeMp3(
   ffmpeg: Ffmpeg,
   { mp3, sampleRate, duration }: { mp3: string; sampleRate: number; duration: number }
 ) {
   const raw = `${mp3}.pcm`;
-  ffmpeg(["-i", mp3, ...pcmFormat(sampleRate), raw]);
-  const pcm = readFileSync(raw);
+  await ffmpeg(["-i", mp3, ...pcmFormat(sampleRate), raw]);
+  const pcm = await readFile(raw);
   const decoded = pcmSeconds(pcm, sampleRate);
   if (Math.abs(decoded - duration) > 0.01) {
     throw new Error(`${mp3} decodes to ${decoded.toFixed(3)} s, timings say ${duration} s`);
@@ -142,17 +155,17 @@ function decodeMp3(
   return pcm;
 }
 
-function levelBlock(
+async function levelBlock(
   { ffmpeg, settings: { postfx } }: RenderDeps,
   { tmp, id, pcm, sampleRate }: { tmp: string; id: string; pcm: Buffer; sampleRate: number }
 ) {
   if (!postfx) return pcm;
   const src = join(tmp, `${id}.pcm`);
   const dst = join(tmp, `${id}.level.pcm`);
-  writeFileSync(src, pcm);
+  await writeFile(src, pcm);
   // loudnorm resamples to 192 kHz internally; the output's -ar brings it back.
-  ffmpeg([...pcmFormat(sampleRate), "-i", src, "-af", postfx, ...pcmFormat(sampleRate), dst]);
-  return readFileSync(dst);
+  await ffmpeg([...pcmFormat(sampleRate), "-i", src, "-af", postfx, ...pcmFormat(sampleRate), dst]);
+  return readFile(dst);
 }
 
 export async function patchPost(
@@ -160,8 +173,8 @@ export async function patchPost(
   { slug, synth }: { slug: string; synth: Synth | null }
 ) {
   const { r2, ffmpeg, tmpRoot } = deps;
-  const blocks = extractBlocks(deps, slug);
-  const storedJson = r2.get(audioKey(slug, "json"));
+  const blocks = await extractBlocks(deps, slug);
+  const storedJson = await r2.get(audioKey(slug, "json"));
   if (!storedJson) {
     console.log(`${slug}: no audio in R2 to patch, skipping; run \`bun run audio ${slug}\``);
     return;
@@ -182,36 +195,38 @@ export async function patchPost(
   if (synth.sampleRate !== sampleRate) {
     throw new Error(`synth.py writes ${synth.sampleRate} Hz, stored audio is ${sampleRate} Hz`);
   }
-  const storedMp3 = r2.get(audioKey(slug, "mp3"));
+  const storedMp3 = await r2.get(audioKey(slug, "mp3"));
   if (!storedMp3) throw new Error("timings in R2 but no MP3");
-  const tmp = mkdtempSync(join(tmpRoot, `audio-${slug}-patch-`));
+  const tmp = await mkdtemp(join(tmpRoot, `audio-${slug}-patch-`));
   const backup = join(tmp, "backup");
-  mkdirSync(backup);
+  await mkdir(backup);
   const oldMp3 = join(backup, `${slug}.mp3`);
-  writeFileSync(oldMp3, storedMp3);
-  writeFileSync(join(backup, `${slug}.json`), storedJson);
+  await writeFile(oldMp3, storedMp3);
+  await writeFile(join(backup, `${slug}.json`), storedJson);
   console.log(`${slug}: R2 objects backed up in ${backup}, patching in ${tmp}`);
 
-  const oldPcm = decodeMp3(ffmpeg, { mp3: oldMp3, sampleRate, duration: timings.duration });
+  const oldPcm = await decodeMp3(ffmpeg, { mp3: oldMp3, sampleRate, duration: timings.duration });
   const rendered = await synthesize(deps, {
     tmp,
     blockChunks: changed.map(i => chunkBlock(blocks[i], i)),
     synth
   });
   const replace = new Map(
-    changed.map((b, k) => {
-      const { pcm } = assemble([rendered[k]], sampleRate, GAPS);
-      return [b, levelBlock(deps, { tmp, id: `b${b}`, pcm, sampleRate })];
-    })
+    await Promise.all(
+      changed.map(async (b, k) => {
+        const { pcm } = assemble([rendered[k]], sampleRate, GAPS);
+        return [b, await levelBlock(deps, { tmp, id: `b${b}`, pcm, sampleRate })] as const;
+      })
+    )
   );
   const spliced = splice({ pcm: oldPcm, sampleRate, blocks: timings.blocks, replace });
 
   const full = join(tmp, `${slug}.pcm`);
   const mp3 = join(tmp, `${slug}.mp3`);
-  writeFileSync(full, spliced.pcm);
-  ffmpeg([...pcmFormat(sampleRate), "-i", full, "-b:a", "64k", mp3]);
+  await writeFile(full, spliced.pcm);
+  await ffmpeg([...pcmFormat(sampleRate), "-i", full, "-b:a", "64k", mp3]);
   const duration = round3(pcmSeconds(spliced.pcm, sampleRate));
-  decodeMp3(ffmpeg, { mp3, sampleRate, duration });
+  await decodeMp3(ffmpeg, { mp3, sampleRate, duration });
 
   const json = join(tmp, `${slug}.json`);
   const doc = patchedTimings({
@@ -222,8 +237,8 @@ export async function patchPost(
     spans: spliced.timings,
     patched: new Set(changed)
   });
-  writeFileSync(json, JSON.stringify(doc));
-  upload(r2, { slug, mp3, json });
+  await writeFile(json, JSON.stringify(doc));
+  await upload(r2, { slug, mp3, json });
   const delta = duration - timings.duration;
   console.log(
     `${slug}: uploaded, ${timings.duration} s → ${duration} s (${delta >= 0 ? "+" : ""}${delta.toFixed(3)} s)`

@@ -10,11 +10,9 @@ const MODULES = new Map([
   ["/static/leaf.js", "export const leaf = 1;"]
 ]);
 
-const read = (href: string) => MODULES.get(href);
-
 describe("modulePreloader", () => {
   it("hints every static import the page's module scripts reach, before the first one", () => {
-    const addHints = modulePreloader(read);
+    const addHints = modulePreloader(MODULES);
     expect(
       addHints(
         '<head><title>x</title><script type="module" src="/static/page.js"></script></head>' +
@@ -31,7 +29,7 @@ describe("modulePreloader", () => {
   });
 
   it("returns undefined when there is nothing to hint, and hints an import another page loads as its entry", () => {
-    const addHints = modulePreloader(read);
+    const addHints = modulePreloader(MODULES);
     expect(addHints('<script type="module" src="/static/leaf.js"></script>')).toBeUndefined();
     expect(addHints("<p>no scripts</p>")).toBeUndefined();
     expect(addHints('<script type="module" src="/static/other.js"></script>')).toBe(

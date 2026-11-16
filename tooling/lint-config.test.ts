@@ -1,6 +1,7 @@
-import { spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { text } from "node:stream/consumers";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vite-plus/test";
 import { z } from "zod";
@@ -13,7 +14,7 @@ const Report = z.object({
   diagnostics: z.array(
     z.object({
       message: z.string(),
-      help: z.string().optional(),
+      help: z.string().nullish(),
       filename: z.string(),
       labels: z.tuple([z.object({ span: z.object({ line: z.number() }) })], z.unknown())
     })
@@ -70,9 +71,28 @@ const SHARED_IMPORTS = [
   "#src/components/home/Blogs.astro"
 ];
 
+const SYNC_MESSAGE =
+  "blocks the event loop. Await node:fs/promises for files, run processes with spawnCollect or spawnInherit from @murugappan/utils/node/process.ts, and check a path with exists or read one that may be missing with ifPresent from @murugappan/utils/node/fs.ts.";
+
 const NODE_TYPES = '/// <reference types="node" />\n';
 
 const FIXTURES: Fixture[] = [
+  {
+    file: `tooling/${DIR}/sync.ts`,
+    code: `${NODE_TYPES}import fs, { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+const env = { useSync: (read: () => number) => read() };
+export const text = readFileSync("a", "utf8");
+export const ls = spawnSync("ls");
+export const found = fs.existsSync("a");
+export const kept = env.useSync(() => 1);
+`,
+    diagnostics: [
+      { line: 5, message: `readFileSync ${SYNC_MESSAGE}` },
+      { line: 6, message: `spawnSync ${SYNC_MESSAGE}` },
+      { line: 7, message: `existsSync ${SYNC_MESSAGE}` }
+    ]
+  },
   {
     file: `tooling/${DIR}/argv.ts`,
     code: `${NODE_TYPES}export const target = process.argv[2];\n`,
@@ -202,13 +222,13 @@ function isAlive(pid: number): boolean {
   }
 }
 
-function removeStaleFixtures() {
+async function removeStaleFixtures() {
   const parents = new Set(FIXTURE_DIRS.map(dir => dirname(dir)));
   for (const parent of parents) {
-    for (const entry of readdirSync(join(ROOT, parent))) {
+    for (const entry of await readdir(join(ROOT, parent))) {
       if (!entry.startsWith(FIXTURE_PREFIX) || entry === DIR) continue;
       if (isAlive(Number(entry.slice(FIXTURE_PREFIX.length)))) continue;
-      rmSync(join(ROOT, parent, entry), { recursive: true, force: true });
+      await rm(join(ROOT, parent, entry), { recursive: true, force: true });
     }
   }
 }
@@ -216,29 +236,35 @@ function removeStaleFixtures() {
 /* oxlint-disable tests/observe-behaviour -- the subject is the config as oxlint applies it, so the test drives the CLI */
 describe("each banned primitive, linted for real", () => {
   let report: Report = { diagnostics: [] };
-  beforeAll(() => {
-    removeStaleFixtures();
+  beforeAll(async () => {
+    await removeStaleFixtures();
     try {
       for (const { file, code } of FIXTURES) {
-        mkdirSync(join(ROOT, dirname(file)), { recursive: true });
-        writeFileSync(join(ROOT, file), code);
+        await mkdir(join(ROOT, dirname(file)), { recursive: true });
+        await writeFile(join(ROOT, file), code);
       }
       const files = FIXTURES.map(({ file }) => file);
-      const run = spawnSync(join(ROOT, "node_modules/.bin/vp"), ["lint", "-f", "json", ...files], {
+      const vp = spawn(join(ROOT, "node_modules/.bin/vp"), ["lint", "-f", "json", ...files], {
         cwd: ROOT,
-        encoding: "utf8"
+        stdio: ["ignore", "pipe", "inherit"]
       });
-      const json: unknown = JSON.parse(run.stdout);
+      const json: unknown = JSON.parse(await text(vp.stdout));
       report = Report.parse(json);
     } finally {
-      for (const dir of FIXTURE_DIRS) rmSync(join(ROOT, dir), { recursive: true, force: true });
+      await Promise.all(
+        FIXTURE_DIRS.map(dir => rm(join(ROOT, dir), { recursive: true, force: true }))
+      );
     }
   }, 120_000);
 
   it.each(FIXTURES)("$file", ({ file, diagnostics }) => {
     const found = report.diagnostics
       .filter(diagnostic => diagnostic.filename === file)
-      .map(({ message, help, labels }) => ({ line: labels[0].span.line, message, help }))
+      .map(({ message, help, labels }) => ({
+        line: labels[0].span.line,
+        message,
+        help: help ?? undefined
+      }))
       .sort((a, b) => a.line - b.line);
     expect(found).toEqual(diagnostics);
   });

@@ -1,5 +1,4 @@
-import { spawnSync } from "node:child_process";
-import fs from "node:fs";
+import { readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
@@ -25,8 +24,10 @@ import { headersFile } from "./src/lib/headers";
 import { modulePreloader } from "./scripts/module-preload";
 import { ENV_SCHEMA, requireDeployEnv, sourceMapUpload } from "./build-env";
 import { contentPosts, readPosts } from "@murugappan/content/vite/posts-plugin.ts";
+import { exists, ifPresent } from "@murugappan/utils/node/fs.ts";
+import { spawnInherit } from "@murugappan/utils/node/process.ts";
 
-const POSTS = readPosts();
+const POSTS = await readPosts();
 
 const POST_DATES: Record<string, string> = Object.fromEntries(
   POSTS.map(post => [post.slug, post.data.date.toISOString()])
@@ -39,16 +40,16 @@ function singleFileSitemap(): AstroIntegration {
   return {
     name: "single-file-sitemap",
     hooks: {
-      "astro:build:done": ({ dir, logger }) => {
+      "astro:build:done": async ({ dir, logger }) => {
         const chunk = new URL("sitemap-0.xml", dir);
-        if (fs.existsSync(new URL("sitemap-1.xml", dir))) {
+        if (await exists(new URL("sitemap-1.xml", dir))) {
           throw new Error("single-file-sitemap: more than one sitemap chunk was written");
         }
-        if (!fs.existsSync(chunk)) {
+        if (!(await exists(chunk))) {
           throw new Error("single-file-sitemap: sitemap-0.xml is missing from the build");
         }
-        fs.renameSync(chunk, new URL("sitemap.xml", dir));
-        fs.rmSync(new URL("sitemap-index.xml", dir), { force: true });
+        await rename(chunk, new URL("sitemap.xml", dir));
+        await rm(new URL("sitemap-index.xml", dir), { force: true });
         logger.info(`\`sitemap.xml\` created at \`${fileURLToPath(dir)}\``);
       }
     }
@@ -59,8 +60,8 @@ function headersFileIntegration(): AstroIntegration {
   return {
     name: "headers-file",
     hooks: {
-      "astro:build:done": ({ dir, logger }) => {
-        fs.writeFileSync(new URL("_headers", dir), headersFile());
+      "astro:build:done": async ({ dir, logger }) => {
+        await writeFile(new URL("_headers", dir), headersFile());
         logger.info(`\`_headers\` created at \`${fileURLToPath(dir)}\``);
       }
     }
@@ -151,16 +152,17 @@ function blogPostChecks(): AstroIntegration {
   return {
     name: "blog-post-checks",
     hooks: {
-      "astro:build:done": ({ dir, logger }) => {
+      "astro:build:done": async ({ dir, logger }) => {
         if (POSTS.length === 0) throw new Error("blog-post-checks: no blog posts checked");
-        for (const { slug, markdown } of POSTS) {
-          const page = new URL(`blog/${slug}/index.html`, dir);
-          if (!fs.existsSync(page)) {
-            throw new Error(`blog-post-checks: blog/${slug}/index.html was not built`);
-          }
-          const { document } = parseHTML(fs.readFileSync(page, "utf8"));
-          checkPost({ slug, document, source: markdown });
-        }
+        await Promise.all(
+          POSTS.map(async ({ slug, markdown }) => {
+            const html = await ifPresent(readFile(new URL(`blog/${slug}/index.html`, dir), "utf8"));
+            if (html === undefined) {
+              throw new Error(`blog-post-checks: blog/${slug}/index.html was not built`);
+            }
+            checkPost({ slug, document: parseHTML(html).document, source: markdown });
+          })
+        );
         logger.info(`${POSTS.length} posts checked`);
       }
     }
@@ -168,9 +170,8 @@ function blogPostChecks(): AstroIntegration {
 }
 
 function buildArtifacts(): AstroIntegration {
-  const run = (command: string, args: string[]) => {
-    const result = spawnSync(command, args, { stdio: "inherit" });
-    if (result.status !== 0) {
+  const run = async (command: string, args: string[]) => {
+    if ((await spawnInherit(command, args)) !== 0) {
       throw new Error(`build-artifacts: ${command} ${args.join(" ")} failed`);
     }
   };
@@ -216,24 +217,33 @@ function modulePreloadHints(): AstroIntegration {
   return {
     name: "module-preload-hints",
     hooks: {
-      "astro:build:done": ({ dir, logger }) => {
+      "astro:build:done": async ({ dir, logger }) => {
         const root = new URL(dir).pathname;
-        const addHints = modulePreloader(href => {
-          const file = path.join(root, href);
-          return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : undefined;
-        });
-        const pages = fs
-          .readdirSync(root, { recursive: true, withFileTypes: true })
-          .filter(entry => entry.isFile() && entry.name.endsWith(".html"))
+        const files = (await readdir(root, { recursive: true, withFileTypes: true }))
+          .filter(entry => entry.isFile())
           .map(entry => path.join(entry.parentPath, entry.name));
-        let hinted = 0;
-        for (const page of pages) {
-          const html = addHints(fs.readFileSync(page, "utf8"));
-          if (html === undefined) continue;
-          fs.writeFileSync(page, html);
-          hinted++;
-        }
-        logger.info(`modulepreload hints added to ${hinted} page(s)`);
+        const modules = new Map<string, string>(
+          await Promise.all(
+            files
+              .filter(file => file.endsWith(".js"))
+              .map(
+                async file =>
+                  [`/${path.relative(root, file)}`, await readFile(file, "utf8")] as const
+              )
+          )
+        );
+        const addHints = modulePreloader(modules);
+        const hinted = await Promise.all(
+          files
+            .filter(file => file.endsWith(".html"))
+            .map(async page => {
+              const html = addHints(await readFile(page, "utf8"));
+              if (html === undefined) return false;
+              await writeFile(page, html);
+              return true;
+            })
+        );
+        logger.info(`modulepreload hints added to ${hinted.filter(Boolean).length} page(s)`);
       }
     }
   };

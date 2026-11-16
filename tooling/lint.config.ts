@@ -507,6 +507,7 @@ export default {
     "./tooling/oxlint/astro.ts",
     "./tooling/oxlint/workers.ts",
     "./tooling/oxlint/primitives.ts",
+    "./tooling/oxlint/node-io.ts",
     "./tooling/oxlint/anti-slop/index.ts",
     "./tooling/oxlint/anti-slop/effect.ts"
   ],
@@ -520,6 +521,7 @@ export default {
     "no-irregular-whitespace": ["error", { skipComments: true }],
     "no-restricted-properties": ["error", PROCESS_ARGV],
     "primitives/json-schema-literal": "error",
+    "node-io/no-sync": "error",
     "react/no-deriving-state-in-effects": "error",
     "react/no-unstable-nested-components": "error",
     "react/exhaustive-effect-dependencies": "error",

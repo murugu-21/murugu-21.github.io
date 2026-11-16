@@ -1,12 +1,4 @@
-import {
-  existsSync,
-  globSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync
-} from "node:fs";
+import { glob, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -18,6 +10,7 @@ import subsetFont from "subset-font";
 import { z } from "zod";
 
 import { jsonString } from "@murugappan/utils/json.ts";
+import { ifPresent } from "@murugappan/utils/node/fs.ts";
 import { FIRA_CODE_FEATURES, FIRA_CODE_VF } from "./fira-code-subset.ts";
 import { launchBrowser } from "./launch-browser.ts";
 import { DIAGRAMS_DIR, type DiagramTheme } from "#src/lib/blog/mermaid-diagrams.ts";
@@ -54,19 +47,17 @@ const MERMAID_ENTRY = createRequire(
   fileURLToPath(import.meta.resolve("@mermaid-js/mermaid-cli"))
 ).resolve("mermaid");
 const MERMAID_VERSION = jsonString(z.object({ version: z.string() })).parse(
-  readFileSync(
+  await readFile(
     join(MERMAID_ENTRY.slice(0, MERMAID_ENTRY.lastIndexOf("/dist/")), "package.json"),
     "utf8"
   )
 ).version;
-const FONT = readFileSync(FIRA_CODE_VF);
+const FONT = await readFile(FIRA_CODE_VF);
 const PAGE_FONT = cssUrl(fontFace(FONT));
 
 const STAMP = `mermaid@${MERMAID_VERSION}`;
-const isCurrent = (path: string) =>
-  existsSync(path) && stampOf(readFileSync(path, "utf8")) === STAMP;
 
-const RENDER_WORKERS = 4;
+const RENDER_WORKERS = 10;
 // On CI, Chrome sometimes stops answering (a screenshot that never returns) and stalls the
 // renders behind it, which take 1-3 s each, so time out early and retry in a fresh browser.
 const PROTOCOL_TIMEOUT_MS = 30_000;
@@ -140,8 +131,8 @@ async function renderAll({
         variant.kind === "svg"
           ? await renderSvg({ browser, job, theme: variant.theme })
           : await renderPng({ browser, job });
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, file);
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, file);
       written.add(path);
       console.log(
         `rendered ${rel(path)}  (${rel(job.post)} diagram ${job.index + 1}, ${variantLabel(variant)})`
@@ -152,23 +143,47 @@ async function renderAll({
 }
 
 async function main(): Promise<void> {
-  const posts = globSync("**/index.md", { cwd: CONTENT_DIR })
-    .sort()
-    .map(file => {
+  const files = (await Array.fromAsync(glob("**/index.md", { cwd: CONTENT_DIR }))).sort();
+  const posts = await Promise.all(
+    files.map(async file => {
       const path = join(CONTENT_DIR, file);
-      return { path, markdown: readFileSync(path, "utf8") };
-    });
+      return { path, markdown: await readFile(path, "utf8") };
+    })
+  );
   const { jobs, expected } = await diagramJobs(posts);
-  const stale = orphans({ expected, listDir: dir => (existsSync(dir) ? readdirSync(dir) : []) });
-  const missing = pendingRenders({ jobs, force, isCurrent, exists: existsSync });
+
+  const dirs = [...expected.keys()].map(postDir => join(postDir, DIAGRAMS_DIR));
+  const listings = new Map(
+    await Promise.all(dirs.map(async dir => [dir, (await ifPresent(readdir(dir))) ?? []] as const))
+  );
+  const onDisk = new Set(
+    [...listings].flatMap(([dir, names]) => names.map(name => join(dir, name)))
+  );
+  const current = new Set(
+    (
+      await Promise.all(
+        [...onDisk].map(async path =>
+          path.endsWith(".svg") && stampOf(await readFile(path, "utf8")) === STAMP ? [path] : []
+        )
+      )
+    ).flat()
+  );
+
+  const stale = orphans({ expected, listings });
+  const missing = pendingRenders({
+    jobs,
+    force,
+    current,
+    onDisk
+  });
 
   for (const path of stale) {
-    rmSync(path);
+    await rm(path);
     console.log(`removed  ${rel(path)}`);
   }
-  for (const [postDir] of expected) {
-    const dir = join(postDir, DIAGRAMS_DIR);
-    if (existsSync(dir) && readdirSync(dir).length === 0) rmSync(dir, { recursive: true });
+  for (const dir of dirs) {
+    const left = await ifPresent(readdir(dir));
+    if (left?.length === 0) await rm(dir, { recursive: true });
   }
 
   if (missing.length === 0) {

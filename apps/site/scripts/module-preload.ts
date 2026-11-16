@@ -20,12 +20,12 @@ function transitiveImports(entries: string[], importsOf: (href: string) => strin
   return deps;
 }
 
-export function modulePreloader(readModule: (href: string) => string | undefined) {
+export function modulePreloader(modules: ReadonlyMap<string, string>) {
   const imports = new Map<string, string[]>();
   const importsOf = (href: string) => {
     const cached = imports.get(href);
     if (cached) return cached;
-    const found = Array.from(readModule(href)?.matchAll(STATIC_IMPORT) ?? [], m =>
+    const found = Array.from(modules.get(href)?.matchAll(STATIC_IMPORT) ?? [], m =>
       path.posix.join(path.posix.dirname(href), m[1])
     );
     imports.set(href, found);

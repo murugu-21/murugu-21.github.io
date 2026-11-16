@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { mkdtempDisposableSync, writeFileSync } from "node:fs";
+import { mkdtempDisposable, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
@@ -52,10 +52,10 @@ describe("alignBlock", () => {
 
 describe("whisper.py through whisperClient", () => {
   it("times the words it hears, retries unprompted when the prompt swallowed them, and reports a failed job", async () => {
-    using dir = mkdtempDisposableSync(join(tmpdir(), "whisper-"));
-    const slice = ({ name, heard }: { name: string; heard: string }) => {
+    await using dir = await mkdtempDisposable(join(tmpdir(), "whisper-"));
+    const slice = async ({ name, heard }: { name: string; heard: string }) => {
       const wav = join(dir.path, name);
-      writeFileSync(`${wav}.txt`, heard);
+      await writeFile(`${wav}.txt`, heard);
       return wav;
     };
     const text = "Hello brave new world.";
@@ -65,11 +65,11 @@ describe("whisper.py through whisperClient", () => {
       { word: "new", start: 1, end: 1.5 },
       { word: "world.", start: 1.5, end: 2 }
     ];
-    await using whisper = whisperClient(startOnFakes("whisper.py"));
+    await using whisper = whisperClient(await startOnFakes("whisper.py"));
 
-    const clean = slice({ name: "b0.wav", heard: text });
+    const clean = await slice({ name: "b0.wav", heard: text });
     expect(await whisper.transcribe({ id: "b0", wav: clean, text })).toEqual({ words });
-    const echoed = slice({ name: "b1-echo.wav", heard: text });
+    const echoed = await slice({ name: "b1-echo.wav", heard: text });
     expect(await whisper.transcribe({ id: "b1", wav: echoed, text })).toEqual({ words });
     const missing = join(dir.path, "b2.wav");
     const failed = await whisper.transcribe({ id: "b2", wav: missing, text });
@@ -105,7 +105,7 @@ describe("alignPost", () => {
   };
 
   it("adds whisper's word timings to a version 1 post, and passes over a slug with no audio", async () => {
-    using root = mkdtempDisposableSync(join(tmpdir(), "align-post-"));
+    await using root = await mkdtempDisposable(join(tmpdir(), "align-post-"));
     const { r2, deps } = setup(root.path);
 
     await alignPost(deps, { slug: "fakes", whisper: fakeWhisper(0.1), force: false });
@@ -145,7 +145,7 @@ describe("alignPost", () => {
   });
 
   it("re-aligns a version 2 post only when forced", async () => {
-    using root = mkdtempDisposableSync(join(tmpdir(), "align-post-"));
+    await using root = await mkdtempDisposable(join(tmpdir(), "align-post-"));
     const { r2, deps } = setup(root.path);
     await alignPost(deps, { slug: "fakes", whisper: fakeWhisper(0.1), force: false });
 

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { parseArgs, parseEnv } from "node:util";
 
@@ -10,6 +10,7 @@ import { readCloudflareConfigs } from "@murugappan/api/read-cloudflare-configs.t
 import { contentPosts } from "@murugappan/content/vite/posts-plugin.ts";
 import fmt from "@murugappan/tooling/fmt.config.ts";
 import lint from "@murugappan/tooling/lint.config.ts";
+import { ifPresent } from "@murugappan/utils/node/fs.ts";
 
 const d1Migrations = await readD1Migrations("./apps/api/migrations");
 
@@ -28,14 +29,13 @@ const { values: testArgs } = parseArgs({
 const live = testArgs["tags-filter"] === "live";
 
 const DEV_VARS = "apps/api/.dev.vars";
-function readLiveBindings() {
-  const key = existsSync(DEV_VARS)
-    ? parseEnv(readFileSync(DEV_VARS, "utf8")).DEEPSEEK_API_KEY
-    : undefined;
+async function readLiveBindings() {
+  const vars = await ifPresent(readFile(DEV_VARS, "utf8"));
+  const key = vars && parseEnv(vars).DEEPSEEK_API_KEY;
   if (!key) throw new Error(`bun run test:live needs DEEPSEEK_API_KEY in ${DEV_VARS}`);
   return { LIVE_DEEPSEEK_API_KEY: key };
 }
-const liveBindings = live ? readLiveBindings() : {};
+const liveBindings = live ? await readLiveBindings() : {};
 
 export default defineConfig({
   lint,

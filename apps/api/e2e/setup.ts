@@ -1,8 +1,9 @@
-import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { preview } from "vite-plus";
 import type { TestProject } from "vite-plus/test/node";
+
+import { exists } from "@murugappan/utils/node/fs.ts";
 
 declare module "vitest" {
   export interface ProvidedContext {
@@ -18,11 +19,13 @@ const BUILD_OUTPUT = [
 ];
 
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
-  const missing = BUILD_OUTPUT.filter(file => !existsSync(file));
+  const missing = (
+    await Promise.all(BUILD_OUTPUT.map(async file => ((await exists(file)) ? [] : [file])))
+  ).flat();
   if (missing.length > 0) {
     throw new Error(`No build output at ${missing.join(", ")}. Run bun run build first.`);
   }
-  if (!existsSync(E2E_VARS)) throw new Error(`${E2E_VARS} is missing.`);
+  if (!(await exists(E2E_VARS))) throw new Error(`${E2E_VARS} is missing.`);
 
   const server = await preview({
     root: API_DIR,
