@@ -91,11 +91,6 @@ export type GithubRepo = Omit<z.infer<typeof PinnedRepoNode>, "repositoryTopics"
   topics: string[];
 };
 
-export function formatRepoSize(kb: number): string {
-  if (kb < 1024) return `${kb} KB`;
-  return `${parseFloat((kb / 1024).toFixed(1))} MB`;
-}
-
 export async function fetchPinnedRepos(): Promise<GithubRepo[]> {
   const data = await queryGithub({
     query: `{ user(login: "murugu-21") { pinnedItems(first: 6, types: REPOSITORY) { edges { node { ... on Repository {

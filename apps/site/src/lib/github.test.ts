@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test"
 import { z } from "zod";
 
 import { resetEnv, setEnv } from "#src/test/astro-env-server.ts";
-import { fetchGithubProfile, fetchPinnedRepos, formatRepoSize } from "./github";
+import { fetchGithubProfile, fetchPinnedRepos } from "./github";
 
 const RequestBody = z.object({ query: z.string() });
 
@@ -149,15 +149,5 @@ describe("fetchPinnedRepos", () => {
 
     expect(await fetchPinnedRepos()).toEqual([]);
     expect(warnings[0]?.[0]).toBe("[github] GraphQL HTTP 500; skipping pinned repos");
-  });
-});
-
-describe("formatRepoSize", () => {
-  it.each([
-    [512, "512 KB"],
-    [1024, "1 MB"],
-    [2560, "2.5 MB"]
-  ])("formats %i KB as %s", (kb, expected) => {
-    expect(formatRepoSize(kb)).toBe(expected);
   });
 });

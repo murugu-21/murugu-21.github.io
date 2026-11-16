@@ -1,7 +1,8 @@
 ---
 import Button from "./Button.astro";
 import { projectsSection, socialMediaLinks } from "@murugappan/content/portfolio.ts";
-import { fetchPinnedRepos, formatRepoSize, type GithubRepo } from "#src/lib/github.ts";
+import { fetchPinnedRepos, type GithubRepo } from "#src/lib/github.ts";
+import { formatRepoSize } from "#src/lib/utils.ts";
 import Section from "./Section.astro";
 import SectionTitle from "./SectionTitle.astro";
 
