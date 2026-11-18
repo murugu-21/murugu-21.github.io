@@ -1,7 +1,7 @@
 import type { TimedWord } from "@murugappan/contracts/audio-timings.ts";
 import { tokenize } from "@murugappan/content/speech.ts";
 
-export interface WhisperWord {
+export interface AlignerWord {
   word: string;
   start: number;
   end: number;
@@ -37,16 +37,18 @@ function lcsPairs(a: string[], b: string[]): Array<[number, number]> {
 
 const MIN_MATCH_RATIO = 0.6;
 
+// The aligner tokenizes the text its own way (it drops symbol-only tokens like a lone "+"),
+// so its words are matched back to tokenize()'s by LCS.
 export function alignWords(
   text: string,
-  whisper: WhisperWord[],
+  alignerWords: AlignerWord[],
   block: { start: number; end: number }
 ): TimedWord[] | null {
   const tokens = tokenize(text);
   if (tokens.length === 0) return null;
   const pairs = lcsPairs(
     tokens.map(key),
-    whisper.map(w => key(w.word))
+    alignerWords.map(w => key(w.word))
   );
   if (pairs.length / tokens.length < MIN_MATCH_RATIO) return null;
 
@@ -54,7 +56,7 @@ export function alignWords(
   const clamp = (t: number) => Math.min(length, Math.max(0, t));
   const anchors = new Map<number, { s: number; e: number }>();
   for (const [ti, wi] of pairs) {
-    anchors.set(ti, { s: clamp(whisper[wi].start), e: clamp(whisper[wi].end) });
+    anchors.set(ti, { s: clamp(alignerWords[wi].start), e: clamp(alignerWords[wi].end) });
   }
 
   const out: TimedWord[] = Array.from({ length: tokens.length });

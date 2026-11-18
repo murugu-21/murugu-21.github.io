@@ -6,13 +6,13 @@ import { alignWords } from "./align-words.ts";
 describe("alignWords", () => {
   const block = { start: 10, end: 14 };
 
-  it("takes whisper times for words that match", () => {
+  it("takes the aligner's times for words that match", () => {
     const words = alignWords(
       "Hello world again.",
       [
-        { word: " Hello", start: 0.1, end: 0.5 },
-        { word: " world", start: 0.6, end: 1.0 },
-        { word: " again.", start: 1.2, end: 1.8 }
+        { word: "Hello", start: 0.1, end: 0.5 },
+        { word: "world", start: 0.6, end: 1.0 },
+        { word: "again.", start: 1.2, end: 1.8 }
       ],
       block
     );
@@ -27,10 +27,10 @@ describe("alignWords", () => {
     const words = alignWords(
       "Don't worry, it's fine.",
       [
-        { word: " don't", start: 0, end: 0.3 },
-        { word: " worry", start: 0.3, end: 0.6 },
-        { word: " its", start: 0.7, end: 0.9 },
-        { word: " fine", start: 0.9, end: 1.3 }
+        { word: "don't", start: 0, end: 0.3 },
+        { word: "worry", start: 0.3, end: 0.6 },
+        { word: "its", start: 0.7, end: 0.9 },
+        { word: "fine", start: 0.9, end: 1.3 }
       ],
       block
     );
@@ -38,13 +38,13 @@ describe("alignWords", () => {
     expect(words?.[2]).toEqual({ w: "it's", s: 10.7, e: 10.9 });
   });
 
-  it("interpolates words whisper dropped or misheard between neighbours", () => {
+  it('interpolates words the aligner dropped, like a lone "+", between neighbours', () => {
     const words = alignWords(
       "one two three four five",
       [
-        { word: " one", start: 0, end: 1 },
-        { word: " four", start: 3, end: 4 },
-        { word: " five", start: 4, end: 5 }
+        { word: "one", start: 0, end: 1 },
+        { word: "four", start: 3, end: 4 },
+        { word: "five", start: 4, end: 5 }
       ],
       block
     );
@@ -53,14 +53,14 @@ describe("alignWords", () => {
     expect(words?.[2]).toEqual({ w: "three", s: 12, e: 13 });
   });
 
-  it("skips a word whisper heard that the text lacks", () => {
+  it("skips an aligner word the text lacks", () => {
     const words = alignWords(
       "one two three",
       [
-        { word: " one", start: 0, end: 1 },
-        { word: " uh", start: 1, end: 1.5 },
-        { word: " two", start: 1.5, end: 2 },
-        { word: " three", start: 2, end: 3 }
+        { word: "one", start: 0, end: 1 },
+        { word: "uh", start: 1, end: 1.5 },
+        { word: "two", start: 1.5, end: 2 },
+        { word: "three", start: 2, end: 3 }
       ],
       block
     );
@@ -75,9 +75,9 @@ describe("alignWords", () => {
     const words = alignWords(
       "So one two three far",
       [
-        { word: " one", start: 1, end: 2 },
-        { word: " two", start: 2, end: 3 },
-        { word: " three", start: 3, end: 3.5 }
+        { word: "one", start: 1, end: 2 },
+        { word: "two", start: 2, end: 3 },
+        { word: "three", start: 3, end: 3.5 }
       ],
       block
     );
@@ -85,7 +85,7 @@ describe("alignWords", () => {
     expect(words?.[4]).toEqual({ w: "far", s: 13.5, e: 14 });
   });
 
-  it("times every word of the text inside the block, in order, whatever whisper heard", () => {
+  it("times every word of the text inside the block, in order, whatever the aligner returned", () => {
     const word = fc.stringMatching(/^[a-z]{1,8}$/);
     const time = fc.double({ min: -2, max: 6, noNaN: true });
     const heardAt = fc
@@ -104,11 +104,11 @@ describe("alignWords", () => {
     fc.assert(
       fc.property(rows, all => {
         const tokens = all.map(r => r.word);
-        const whisper = all.flatMap(r => [
-          ...(r.kept ? [{ word: ` ${r.word}`, ...r.at }] : []),
-          ...(r.extra ? [{ word: ` ${r.extra}`, ...r.extraAt }] : [])
+        const alignerWords = all.flatMap(r => [
+          ...(r.kept ? [{ word: r.word, ...r.at }] : []),
+          ...(r.extra ? [{ word: r.extra, ...r.extraAt }] : [])
         ]);
-        const words = alignWords(tokens.join(" "), whisper, block) ?? [];
+        const words = alignWords(tokens.join(" "), alignerWords, block) ?? [];
         expect(words.map(w => w.w)).toEqual(tokens);
         expect(
           words.filter(
@@ -123,8 +123,8 @@ describe("alignWords", () => {
     const words = alignWords(
       "alpha beta",
       [
-        { word: " alpha", start: -0.2, end: 0.5 },
-        { word: " beta", start: 0.4, end: 9 }
+        { word: "alpha", start: -0.2, end: 0.5 },
+        { word: "beta", start: 0.4, end: 9 }
       ],
       block
     );
@@ -135,9 +135,9 @@ describe("alignWords", () => {
   });
 
   it("gives up when fewer than three in five words match", () => {
-    const one = { word: " one", start: 0, end: 1 };
-    const four = { word: " four", start: 3, end: 4 };
-    const five = { word: " five", start: 4, end: 5 };
+    const one = { word: "one", start: 0, end: 1 };
+    const four = { word: "four", start: 3, end: 4 };
+    const five = { word: "five", start: 4, end: 5 };
     expect(alignWords("one two three four five", [one, four], block)).toBeNull();
     expect(alignWords("one two three four five", [one, four, five], block)?.length).toBe(5);
   });

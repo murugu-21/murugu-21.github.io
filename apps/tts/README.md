@@ -2,7 +2,9 @@
 
 Every blog post has a Listen button. If the post has recorded audio, it plays that and highlights each word as it's read. If not, it falls back to the browser's built-in voice.
 
-The audio is made on a Mac with an AI voice model (Breeze TTS 2) and uploaded to R2. It never runs in CI. You need an Apple Silicon Mac.
+The audio is made on a Mac with an AI voice model (Breeze TTS 2) and uploaded to R2. None of this runs in CI. You need an Apple Silicon Mac.
+
+The word timings come from a forced aligner ([Qwen3-ForcedAligner-Ultra](https://huggingface.co/17slever17/Qwen3-ForcedAligner-Ultra)), which finds where each word of the text is spoken. It trusts the text: if the audio skipped or garbled words, their timings come out wrong instead of failing, so listen to a post before you align it.
 
 ## Set up once
 

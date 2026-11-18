@@ -38,9 +38,7 @@ export function alignArgs(args?: string[]) {
 
 export async function requirePython(module: string): Promise<void> {
   if (!(await exists(PYTHON))) throw new Error("no venv; run uv sync --locked --project apps/tts");
-  // -P keeps the cwd off sys.path, where the coverage/ report dir would
-  // shadow the `coverage` module numba imports.
-  if ((await spawnCollect(PYTHON, ["-P", "-c", `import ${module}`])).status !== 0) {
+  if ((await spawnCollect(PYTHON, ["-c", `import ${module}`])).status !== 0) {
     throw new Error(`the venv cannot import ${module}; run uv sync --locked --project apps/tts`);
   }
 }

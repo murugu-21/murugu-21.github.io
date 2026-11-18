@@ -6,6 +6,7 @@ from pathlib import Path
 import mlx.core as mx
 import numpy as np
 
+from protocol import emit, reserve_stdout_for_protocol
 from wavfile import write_wav
 
 # 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
@@ -15,15 +16,6 @@ MAX_TOKENS = 1500  # 120 s at 12.5 frames/s; chunks are at most 300 chars (~30 s
 # MLX's Metal buffer cache grows every chunk until the OS swaps; cap it and
 # clear it after each chunk.
 CACHE_LIMIT = 1 << 30
-
-# The JSON protocol owns real stdout; library output goes to stderr.
-PROTOCOL = sys.stdout
-sys.stdout = sys.stderr
-
-
-def emit(obj: dict[str, object]) -> None:
-    PROTOCOL.write(json.dumps(obj) + "\n")
-    PROTOCOL.flush()
 
 
 # A plain clone, no instruction: the reference is already designed (design-voice.py), and an
@@ -68,6 +60,7 @@ def run_job(model, job_path: str) -> None:
 
 
 def main() -> int:
+    reserve_stdout_for_protocol()
     from mlx_audio.tts import load
 
     t0 = time.time()

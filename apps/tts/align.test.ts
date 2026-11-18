@@ -4,8 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { alignBlock, alignPost, whisperClient } from "./align.ts";
-import { fakeDeps, fakeWhisper, startOnFakes } from "./fixtures.ts";
+import { alignBlock, alignPost, alignerClient } from "./align.ts";
+import { fakeAligner, fakeDeps, startOnFakes } from "./fixtures.ts";
 
 describe("alignBlock", () => {
   const block = {
@@ -15,12 +15,12 @@ describe("alignBlock", () => {
     words: [{ w: "stale", s: 10, e: 11 }]
   };
 
-  it("times each word from whisper, absolute within the block", () => {
+  it("times each word from the aligner, absolute within the block", () => {
     const aligned = alignBlock(block, {
       words: [
-        { word: " Hello", start: 0.1, end: 0.4 },
-        { word: " there", start: 0.5, end: 0.8 },
-        { word: " world.", start: 0.9, end: 1.5 }
+        { word: "Hello", start: 0.1, end: 0.4 },
+        { word: "there", start: 0.5, end: 0.8 },
+        { word: "world", start: 0.9, end: 1.5 }
       ]
     });
     expect(aligned).toEqual({
@@ -37,43 +37,36 @@ describe("alignBlock", () => {
     });
   });
 
-  it("keeps only the paragraph timing when whisper fails or hears other words", () => {
+  it("keeps only the paragraph timing when the aligner fails or returns other words", () => {
     const paragraph = { text: "Hello there world.", start: 10, end: 12 };
     expect(alignBlock(block, { error: "model crashed" })).toEqual({
       block: paragraph,
-      problem: "whisper failed: model crashed"
+      problem: "aligner failed: model crashed"
     });
     expect(alignBlock(block, { words: [{ word: "Goodbye", start: 0, end: 0.5 }] })).toEqual({
       block: paragraph,
-      problem: "poor match (1 whisper words), paragraph only"
+      problem: "poor match (1 aligned words), paragraph only"
     });
   });
 });
 
-describe("whisper.py through whisperClient", () => {
-  it("times the words it hears, retries unprompted when the prompt swallowed them, and reports a failed job", async () => {
-    await using dir = await mkdtempDisposable(join(tmpdir(), "whisper-"));
-    const slice = async ({ name, heard }: { name: string; heard: string }) => {
-      const wav = join(dir.path, name);
-      await writeFile(`${wav}.txt`, heard);
-      return wav;
-    };
-    const text = "Hello brave new world.";
-    const words = [
-      { word: "Hello", start: 0, end: 0.5 },
-      { word: "brave", start: 0.5, end: 1 },
-      { word: "new", start: 1, end: 1.5 },
-      { word: "world.", start: 1.5, end: 2 }
-    ];
-    await using whisper = whisperClient(await startOnFakes("whisper.py"));
+describe("align.py through alignerClient", () => {
+  it("times each word of the text, and reports a failed job and keeps serving", async () => {
+    await using dir = await mkdtempDisposable(join(tmpdir(), "align-"));
+    const wav = join(dir.path, "b0.wav");
+    await writeFile(wav, "");
+    await using aligner = alignerClient(await startOnFakes("align.py"));
 
-    const clean = await slice({ name: "b0.wav", heard: text });
-    expect(await whisper.transcribe({ id: "b0", wav: clean, text })).toEqual({ words });
-    const echoed = await slice({ name: "b1-echo.wav", heard: text });
-    expect(await whisper.transcribe({ id: "b1", wav: echoed, text })).toEqual({ words });
-    const missing = join(dir.path, "b2.wav");
-    const failed = await whisper.transcribe({ id: "b2", wav: missing, text });
+    const failed = await aligner.align({ id: "b1", wav: join(dir.path, "b1.wav"), text: "Gone." });
     expect(failed.error).toMatch(/^FileNotFoundError: /);
+    expect(await aligner.align({ id: "b0", wav, text: "Hello brave new world." })).toEqual({
+      words: [
+        { word: "Hello", start: 0, end: 0.5 },
+        { word: "brave", start: 0.5, end: 1 },
+        { word: "new", start: 1, end: 1.5 },
+        { word: "world", start: 1.5, end: 2 }
+      ]
+    });
   });
 });
 
@@ -104,12 +97,12 @@ describe("alignPost", () => {
     return { r2, deps };
   };
 
-  it("adds whisper's word timings to a version 1 post, and passes over a slug with no audio", async () => {
+  it("adds the aligner's word timings to a version 1 post, and passes over a slug with no audio", async () => {
     await using root = await mkdtempDisposable(join(tmpdir(), "align-post-"));
     const { r2, deps } = setup(root.path);
 
-    await alignPost(deps, { slug: "fakes", whisper: fakeWhisper(0.1), force: false });
-    await alignPost(deps, { slug: "missing", whisper: fakeWhisper(0.1), force: false });
+    await alignPost(deps, { slug: "fakes", aligner: fakeAligner(0.1), force: false });
+    await alignPost(deps, { slug: "missing", aligner: fakeAligner(0.1), force: false });
 
     expect(r2.json(JSON_KEY)).toEqual({
       version: 2,
@@ -147,9 +140,9 @@ describe("alignPost", () => {
   it("re-aligns a version 2 post only when forced", async () => {
     await using root = await mkdtempDisposable(join(tmpdir(), "align-post-"));
     const { r2, deps } = setup(root.path);
-    await alignPost(deps, { slug: "fakes", whisper: fakeWhisper(0.1), force: false });
+    await alignPost(deps, { slug: "fakes", aligner: fakeAligner(0.1), force: false });
 
-    await alignPost(deps, { slug: "fakes", whisper: fakeWhisper(0.2), force: false });
+    await alignPost(deps, { slug: "fakes", aligner: fakeAligner(0.2), force: false });
     expect(r2.json(JSON_KEY)).toMatchObject({
       blocks: [
         {},
@@ -163,7 +156,7 @@ describe("alignPost", () => {
       ]
     });
 
-    await alignPost(deps, { slug: "fakes", whisper: fakeWhisper(0.2), force: true });
+    await alignPost(deps, { slug: "fakes", aligner: fakeAligner(0.2), force: true });
     expect(r2.json(JSON_KEY)).toMatchObject({
       blocks: [
         {},

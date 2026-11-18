@@ -70,11 +70,11 @@ export const refusingSynth = (): Synth => ({
   worker: { runJob: () => Promise.reject(new Error("must not synthesize")) }
 });
 
-export const fakeWhisper = (secondsPerWord: number) => ({
-  transcribe: ({ text }: { text: string }) =>
+export const fakeAligner = (secondsPerWord: number) => ({
+  align: ({ text }: { text: string }) =>
     Promise.resolve({
       words: text.split(" ").map((word, i) => ({
-        word: ` ${word}`,
+        word,
         start: i * secondsPerWord,
         end: (i + 1) * secondsPerWord
       }))
@@ -101,7 +101,7 @@ export async function writePost({
   );
 }
 
-export async function startOnFakes(script: "synth.py" | "whisper.py"): Promise<JsonLines> {
+export async function startOnFakes(script: "synth.py" | "align.py"): Promise<JsonLines> {
   await requirePython("numpy");
   vi.stubEnv("PYTHONPATH", join(import.meta.dirname, "fakes"));
   onTestFinished(() => {

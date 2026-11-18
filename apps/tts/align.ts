@@ -9,35 +9,35 @@ import type { JsonLines } from "./json-lines.ts";
 import { type R2Store, audioKey } from "./r2.ts";
 import { StoredTimings, type StoredBlock } from "./timings.ts";
 
-const WhisperReply = z.object({
+const AlignerReply = z.object({
   error: z.string().optional(),
   words: z.array(z.object({ word: z.string(), start: z.number(), end: z.number() })).optional()
 });
-type WhisperReply = z.infer<typeof WhisperReply>;
+type AlignerReply = z.infer<typeof AlignerReply>;
 
-export function whisperClient({ next, send, close }: JsonLines) {
+export function alignerClient({ next, send, close }: JsonLines) {
   return {
-    async transcribe(job: { id: string; wav: string; text: string }): Promise<WhisperReply> {
+    async align(job: { id: string; wav: string; text: string }): Promise<AlignerReply> {
       send(JSON.stringify(job));
-      return next(WhisperReply);
+      return next(AlignerReply);
     },
     [Symbol.asyncDispose]: close
   };
 }
 
-export type WhisperClient = ReturnType<typeof whisperClient>;
+export type AlignerClient = ReturnType<typeof alignerClient>;
 
 type Alignment = { block: StoredBlock; problem?: string };
 
-export function alignBlock(block: StoredBlock, reply: WhisperReply): Alignment {
+export function alignBlock(block: StoredBlock, reply: AlignerReply): Alignment {
   const { words: _drop, ...rest } = block;
-  if (reply.error) return { block: rest, problem: `whisper failed: ${reply.error}` };
-  const whisperWords = reply.words ?? [];
-  const words = alignWords(block.text, whisperWords, block);
+  if (reply.error) return { block: rest, problem: `aligner failed: ${reply.error}` };
+  const alignerWords = reply.words ?? [];
+  const words = alignWords(block.text, alignerWords, block);
   if (!words) {
     return {
       block: rest,
-      problem: `poor match (${whisperWords.length} whisper words), paragraph only`
+      problem: `poor match (${alignerWords.length} aligned words), paragraph only`
     };
   }
   return { block: { ...rest, words } };
@@ -45,11 +45,7 @@ export function alignBlock(block: StoredBlock, reply: WhisperReply): Alignment {
 
 export async function alignPost(
   { r2, ffmpeg }: { r2: Pick<R2Store, "get" | "put">; ffmpeg: Ffmpeg },
-  {
-    slug,
-    whisper,
-    force
-  }: { slug: string; whisper: Pick<WhisperClient, "transcribe">; force: boolean }
+  { slug, aligner, force }: { slug: string; aligner: Pick<AlignerClient, "align">; force: boolean }
 ) {
   const stored = await r2.get(audioKey(slug, "json"));
   if (!stored) {
@@ -74,7 +70,7 @@ export async function alignPost(
   for (const [i, block] of timings.blocks.entries()) {
     const slice = join(tmp.path, `b${i}.wav`);
     await ffmpeg(["-ss", String(block.start), "-to", String(block.end), "-i", wav, slice]);
-    const reply = await whisper.transcribe({ id: `b${i}`, wav: slice, text: block.text });
+    const reply = await aligner.align({ id: `b${i}`, wav: slice, text: block.text });
     const result = alignBlock(block, reply);
     if (result.problem) console.log(`  b${i}: ${result.problem}`);
     blocks.push(result.block);
