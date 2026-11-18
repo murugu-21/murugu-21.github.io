@@ -501,6 +501,7 @@ export default {
   plugins: ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "import", "promise"],
   options: { typeAware: true, reportUnusedDisableDirectives: "error" },
   jsPlugins: [
+    "@shadcn/lint",
     "./tooling/oxlint/test-behaviour.ts",
     "./tooling/oxlint/contracts.ts",
     "./tooling/oxlint/effect.ts",
