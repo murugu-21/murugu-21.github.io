@@ -1,3 +1,11 @@
+import {
+  transform,
+  type CssColor,
+  type Declaration,
+  type Rule,
+  type SystemColor,
+  type TokenOrValue
+} from "lightningcss";
 import { describe, expect, it } from "vite-plus/test";
 
 import tag from "#src/components/blog/Tag.astro?raw";
@@ -34,10 +42,91 @@ const contrast = (a: string, b: string): number => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
-const token = (name: string): string => {
-  const m = new RegExp(`--${name}:\\s*([^;]+);`).exec(css);
-  if (!m) throw new Error(`no --${name} in global.css`);
-  return m[1].trim();
+type Mode = "light" | "dark";
+
+const declarations = new Map<string, Declaration[]>();
+const recordTopLevelDeclarations = ({ block, rules }: { block: string; rules: Rule[] }) => {
+  const topLevel = rules.flatMap(rule =>
+    rule.type === "nested-declarations" ? (rule.value.declarations.declarations ?? []) : []
+  );
+  declarations.set(block, [...(declarations.get(block) ?? []), ...topLevel]);
+};
+transform({
+  filename: "global.css",
+  code: new TextEncoder().encode(css),
+  customAtRules: {
+    theme: { prelude: "*", body: "style-block" },
+    utility: { prelude: "<custom-ident>", body: "style-block" }
+  },
+  visitor: {
+    Rule: {
+      custom: {
+        theme(rule) {
+          recordTopLevelDeclarations({ block: "@theme", rules: rule.body.value });
+        },
+        utility(rule) {
+          recordTopLevelDeclarations({
+            block: `@utility ${rule.prelude.value}`,
+            rules: rule.body.value
+          });
+        }
+      }
+    }
+  }
+});
+
+const nameOf = (declaration: Declaration): string => {
+  if (declaration.property === "custom") return declaration.value.name;
+  if (declaration.property === "unparsed") return declaration.value.propertyId.property;
+  return declaration.property;
+};
+
+const declared = ({ block, name }: { block: string; name: string }): Declaration => {
+  const found = declarations.get(block)?.findLast(declaration => nameOf(declaration) === name);
+  if (!found) throw new Error(`no ${name} in ${block} in global.css`);
+  return found;
+};
+
+const tokensOf = ({ block, name }: { block: string; name: string }): TokenOrValue[] => {
+  const found = declared({ block, name });
+  if (found.property !== "custom") throw new Error(`${name} in ${block} is not a custom property`);
+  return found.value.value;
+};
+
+const side = (mode: Mode | undefined): Mode => {
+  if (!mode) throw new Error("a light-dark() colour needs a mode");
+  return mode;
+};
+
+const isSystemColour = (value: CssColor): value is SystemColor => typeof value === "string";
+
+const colour = (value: CssColor, mode?: Mode): string => {
+  if (isSystemColour(value)) throw new Error(`not an sRGB colour: ${value}`);
+  if (value.type === "light-dark") return colour(value[side(mode)], mode);
+  if (value.type !== "rgb") throw new Error(`not an sRGB colour: ${value.type}`);
+  const { r, g, b, alpha } = value;
+  if (alpha !== 1) return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  return `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("")}`;
+};
+
+const resolved = (tokens: TokenOrValue[], mode?: Mode): string => {
+  const [only, ...rest] = tokens;
+  if (!only || rest.length > 0) throw new Error(`not a single colour: ${JSON.stringify(tokens)}`);
+  if (only.type === "color") return colour(only.value, mode);
+  if (only.type === "var")
+    return resolved(tokensOf({ block: "@theme", name: only.value.name.ident }), mode);
+  if (only.type === "unresolved-color" && only.value.type === "light-dark")
+    return resolved(only.value[side(mode)], mode);
+  throw new Error(`not a colour: ${JSON.stringify(only)}`);
+};
+
+const token = (name: string, mode?: Mode): string =>
+  resolved(tokensOf({ block: "@theme", name: `--${name}` }), mode);
+
+const gradientStops = (name: string): string[] => {
+  const [gradient] = tokensOf({ block: "@theme", name: `--${name}` });
+  if (gradient?.type !== "function") throw new Error(`--${name} is not a gradient`);
+  return gradient.value.arguments.flatMap(arg => (arg.type === "color" ? [colour(arg.value)] : []));
 };
 
 const over = (rgba: string, backdrop: string): string => {
@@ -54,20 +143,8 @@ const over = (rgba: string, backdrop: string): string => {
   );
 };
 
-const SIDE = String.raw`\s*((?:[^(),]|\([^)]*\))+?)\s*`;
-const LIGHT_DARK = new RegExp(String.raw`^light-dark\(${SIDE},${SIDE}\)$`);
-type LightDark = { light: string; dark: string };
-
-const lightDark = (value: string): LightDark => {
-  const m = LIGHT_DARK.exec(value);
-  if (!m) throw new Error(`not a light-dark() pair: ${value}`);
-  return { light: m[1], dark: m[2] };
-};
-
 const sky = (() => {
-  const m = /--background-image-page:\s*linear-gradient\(([^\n]+)\)/.exec(css);
-  if (!m) throw new Error("no --background-image-page gradient in global.css");
-  const stops = [...m[1].matchAll(/#[0-9a-f]{6}/gi)].map(s => s[0]);
+  const stops = gradientStops("background-image-page");
   if (stops.length < 3) throw new Error("expected at least three sky stops");
   const byLight = [...stops].sort((a, b) => luminance(a) - luminance(b));
   return { deep: byLight[0], mid: byLight[1], warm: byLight[byLight.length - 1] };
@@ -75,12 +152,13 @@ const sky = (() => {
 const stops = [sky.deep, sky.mid, sky.warm];
 
 const card = (() => {
-  const m = /@utility glow-card \{[\s\S]*?background-color:\s*([^;]+);/.exec(css);
-  if (!m) throw new Error("no glow-card background-color in global.css");
-  return over(lightDark(m[1]).light, sky.deep);
+  const fill = declared({ block: "@utility glow-card", name: "background-color" });
+  if (fill.property !== "background-color")
+    throw new Error("glow-card's background isn't a colour");
+  return over(colour(fill.value, "light"), sky.deep);
 })();
 
-const ink = (name: string) => token(`color-${name}`);
+const ink = (name: string, mode?: Mode) => token(`color-${name}`, mode);
 
 const utilityAlpha = ({ source, utility }: { source: string; utility: string }): number => {
   const alpha = source
@@ -168,9 +246,7 @@ describe("blue-hour light palette", () => {
 });
 
 const night = (() => {
-  const m = /--background-image-page-dark:\s*linear-gradient\(([^\n]+)\)/.exec(css);
-  if (!m) throw new Error("no --background-image-page-dark gradient in global.css");
-  const found = [...m[1].matchAll(/rgb\(\d+,\s*\d+,\s*\d+\)/g)].map(s => s[0]);
+  const found = gradientStops("background-image-page-dark");
   if (found.length < 2) throw new Error("expected two night stops");
   return found;
 })();
@@ -193,9 +269,8 @@ describe("night palette", () => {
   });
 
   it("keeps --color-subtitle-muted readable by day and at night (>= 4.5:1)", () => {
-    const { light, dark } = lightDark(ink("subtitle-muted"));
-    const day = /^var\(--([\w-]+)\)$/.exec(light)?.[1];
-    expect(contrast(day ? token(day) : light, sky.deep)).toBeGreaterThanOrEqual(4.5);
+    const [light, dark] = [ink("subtitle-muted", "light"), ink("subtitle-muted", "dark")];
+    expect(contrast(light, sky.deep)).toBeGreaterThanOrEqual(4.5);
     for (const stop of night) expect(contrast(over(dark, stop), stop)).toBeGreaterThanOrEqual(4.5);
   });
 
@@ -267,21 +342,9 @@ describe("night palette", () => {
 });
 
 describe("prose colours", () => {
-  const body = (() => {
-    const selector = "@utility prose-site {";
-    const at = css.indexOf(selector);
-    if (at === -1) throw new Error(`no ${selector} block in global.css`);
-    return css.slice(at + selector.length, css.indexOf("}", at));
-  })();
   const pair = (name: string) => {
-    const m = new RegExp(`--tw-prose-${name}:\\s*([^;]+);`).exec(body);
-    if (!m) throw new Error(`no --tw-prose-${name} in prose-site`);
-    const resolve = (side: string) => {
-      const ref = /^var\(--([\w-]+)\)$/.exec(side)?.[1];
-      return ref ? token(ref) : side;
-    };
-    const { light, dark } = lightDark(m[1].trim());
-    return { light: resolve(light), dark: resolve(dark) };
+    const value = tokensOf({ block: "@utility prose-site", name: `--tw-prose-${name}` });
+    return { light: resolved(value, "light"), dark: resolved(value, "dark") };
   };
 
   it.each(["body", "headings", "bold", "quotes", "code", "links"])(
@@ -303,35 +366,65 @@ describe("prose colours", () => {
   });
 });
 
-describe.each(["light", "dark"] as const)("%s island tokens", mode => {
-  const t = (() => {
-    const selector = "@utility ui-island {";
-    const at = css.indexOf(selector);
-    if (at === -1) throw new Error(`no ${selector} block in global.css`);
-    const body = css.slice(at + selector.length, css.indexOf("}", at));
-    return Object.fromEntries(
-      [...body.matchAll(/(--[\w-]+)\s*:\s*(light-dark\([^;]+);/g)].map(m => [
-        m[1],
-        lightDark(m[2])[mode]
-      ])
-    );
-  })();
+const WCAG_NON_TEXT_UI = 3;
+const WCAG_NORMAL_TEXT = 4.5;
 
-  // 3:1 is WCAG 1.4.11 for non-text UI; 4.5:1 is 1.4.3 AA for normal text
-  // (the panel header title is 16px semibold).
+describe.each(["light", "dark"] as const)("%s island tokens", mode => {
+  const t = (name: string) => resolved(tokensOf({ block: "@utility ui-island", name }), mode);
+
   it.each([
-    { label: "activity-row indicators", fg: "--primary", bg: "--muted", min: 3 },
-    { label: "primary button against the panel", fg: "--primary", bg: "--card", min: 3 },
-    { label: "primary button label", fg: "--primary-foreground", bg: "--primary", min: 4.5 },
+    { label: "activity-row indicators", fg: "--primary", bg: "--muted", min: WCAG_NON_TEXT_UI },
+    {
+      label: "primary button against the panel",
+      fg: "--primary",
+      bg: "--card",
+      min: WCAG_NON_TEXT_UI
+    },
+    {
+      label: "primary button label and panel title",
+      fg: "--primary-foreground",
+      bg: "--primary",
+      min: WCAG_NORMAL_TEXT
+    },
     {
       label: "primary button label on hover",
       fg: "--primary-foreground",
       bg: "--primary-hover",
-      min: 4.5
+      min: WCAG_NORMAL_TEXT
     },
-    { label: "focus ring against the panel", fg: "--ring", bg: "--card", min: 3 },
-    { label: "body text on the panel", fg: "--foreground", bg: "--card", min: 4.5 }
+    { label: "focus ring against the panel", fg: "--ring", bg: "--card", min: WCAG_NON_TEXT_UI },
+    { label: "body text on the panel", fg: "--foreground", bg: "--card", min: WCAG_NORMAL_TEXT },
+    {
+      label: "muted text on the panel",
+      fg: "--muted-foreground",
+      bg: "--card",
+      min: WCAG_NORMAL_TEXT
+    },
+    {
+      label: "muted text on a muted fill",
+      fg: "--muted-foreground",
+      bg: "--muted",
+      min: WCAG_NORMAL_TEXT
+    },
+    {
+      label: "text on the secondary fill",
+      fg: "--secondary-foreground",
+      bg: "--secondary",
+      min: WCAG_NORMAL_TEXT
+    },
+    {
+      label: "text on the accent fill",
+      fg: "--accent-foreground",
+      bg: "--accent",
+      min: WCAG_NORMAL_TEXT
+    },
+    {
+      label: "placeholder on the composer fill",
+      fg: "--muted-foreground",
+      bg: "--secondary",
+      min: WCAG_NORMAL_TEXT
+    }
   ] as const)("keeps the $label at contrast ($fg on $bg >= $min:1)", ({ fg, bg, min }) => {
-    expect(contrast(t[fg], t[bg])).toBeGreaterThanOrEqual(min);
+    expect(contrast(t(fg), t(bg))).toBeGreaterThanOrEqual(min);
   });
 });

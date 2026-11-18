@@ -1,15 +1,14 @@
 ---
 import { openSourceSection, openSourceContributions } from "@murugappan/content/portfolio.ts";
 import Section from "./Section.astro";
+import SectionSubtitle from "./SectionSubtitle.astro";
 import SectionTitle from "./SectionTitle.astro";
 ---
 
 <Section id="achievements" class="mt-16">
   <div>
     <SectionTitle title={openSourceSection.title} class="m-0" />
-    <p class="m-0 mb-12 text-subtitle uppercase max-md:text-center max-md:text-base dark:text-white">
-      {openSourceSection.subtitle}
-    </p>
+    <SectionSubtitle class="m-0 mb-12">{openSourceSection.subtitle}</SectionSubtitle>
   </div>
   {/* biome-ignore lint/nursery/noTailwindArbitraryValue: Tailwind has no auto-fit track default */}
   <div class="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4">

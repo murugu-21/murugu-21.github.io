@@ -98,7 +98,6 @@ const { class: className } = Astro.props;
         return sprite;
       };
 
-      let raf = 0;
       const draw = (t: number) => {
         ctx.clearRect(0, 0, width, height);
         const dark = document.documentElement.classList.contains("dark-mode");
@@ -125,17 +124,9 @@ const { class: className } = Astro.props;
           ctx.fillStyle = `rgba(${colour}, ${alpha})`;
           ctx.fill();
         }
-        raf = requestAnimationFrame(draw);
+        requestAnimationFrame(draw);
       };
-      raf = requestAnimationFrame(draw);
-
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          cancelAnimationFrame(raf);
-        } else {
-          raf = requestAnimationFrame(draw);
-        }
-      });
+      requestAnimationFrame(draw);
     };
 
     if ("requestIdleCallback" in window) {

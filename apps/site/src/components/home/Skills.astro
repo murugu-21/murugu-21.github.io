@@ -4,6 +4,7 @@ import LottiePlayer from "./LottiePlayer.astro";
 import Icon from "#src/components/Icon.astro";
 import Tilt from "./Tilt.astro";
 import Section from "./Section.astro";
+import SectionSubtitle from "./SectionSubtitle.astro";
 import SectionTitle from "./SectionTitle.astro";
 ---
 
@@ -18,9 +19,7 @@ import SectionTitle from "./SectionTitle.astro";
   </div>
   <div class="mb-8 ml-12 flex-1 max-md:m-5">
     <SectionTitle title={skillsSection.title} />
-    <p class="my-5 text-subtitle max-md:text-center max-md:text-base dark:text-white">
-      {skillsSection.subTitle}
-    </p>
+    <SectionSubtitle class="my-5">{skillsSection.subTitle}</SectionSubtitle>
     <div>
       <ul class="mb-2.5 flex flex-wrap gap-3">
         {skillsSection.softwareSkills.map(skill => (

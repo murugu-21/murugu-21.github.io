@@ -3,6 +3,7 @@ import { blogSection } from "@murugappan/content/portfolio.ts";
 import { postDescription, postPath } from "@murugappan/content/posts.ts";
 import { getPostSources } from "#src/lib/blog/posts.ts";
 import Section from "./Section.astro";
+import SectionSubtitle from "./SectionSubtitle.astro";
 import SectionTitle from "./SectionTitle.astro";
 
 const featured = (await getPostSources()).filter(post => post.data.featured);
@@ -19,9 +20,7 @@ const cards = [
 <Section id="blogs" class="mt-16">
   <div>
     <SectionTitle title={blogSection.title} />
-    <p class="my-5 text-subtitle uppercase max-md:text-center max-md:text-base dark:text-white">
-      {blogSection.subtitle}
-    </p>
+    <SectionSubtitle class="my-5">{blogSection.subtitle}</SectionSubtitle>
   </div>
   <div class="flex">
     {/* biome-ignore lint/nursery/noTailwindArbitraryValue: Tailwind has no auto-fill track default */}

@@ -4,6 +4,7 @@ import { projectsSection, socialMediaLinks } from "@murugappan/content/portfolio
 import { githubFromEnv, type GithubRepo } from "#src/lib/github.ts";
 import { formatRepoSize } from "#src/lib/utils.ts";
 import Section from "./Section.astro";
+import SectionSubtitle from "./SectionSubtitle.astro";
 import SectionTitle from "./SectionTitle.astro";
 
 let repos = await githubFromEnv().pinnedRepos();
@@ -27,9 +28,7 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
   <Section id="projects" class="mt-16">
     <div>
       <SectionTitle title={projectsSection.title} class="m-0" />
-      <p class="m-0 mb-12 text-subtitle uppercase max-md:text-center max-md:text-base dark:text-white">
-        {projectsSection.subtitle}
-      </p>
+      <SectionSubtitle class="m-0 mb-12">{projectsSection.subtitle}</SectionSubtitle>
     </div>
     {/* biome-ignore lint/nursery/noTailwindArbitraryValue: Tailwind has no auto-fit track default */}
     <div class="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-4 md:grid-cols-[repeat(auto-fit,minmax(min(400px,100%),1fr))]">
@@ -82,7 +81,7 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
                     />
                     /* biome-ignore-end lint/style/noInlineStyles: see above */
                   )}
-                  <p class="m-0">{repo.primaryLanguage.name}</p>
+                  {repo.primaryLanguage.name}
                 </span>
               )}
               <span class="mr-3 flex items-center">
@@ -99,7 +98,7 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
                     d="M8 1a1.993 1.993 0 0 0-1 3.72V6L5 8 3 6V4.72A1.993 1.993 0 0 0 2 1a1.993 1.993 0 0 0-1 3.72V6.5l3 3v1.78A1.993 1.993 0 0 0 5 15a1.993 1.993 0 0 0 1-3.72V9.5l3-3V4.72A1.993 1.993 0 0 0 8 1zM2 4.2C1.34 4.2.8 3.65.8 3c0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3 10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2zm3-10c-.66 0-1.2-.55-1.2-1.2 0-.65.55-1.2 1.2-1.2.65 0 1.2.55 1.2 1.2 0 .65-.55 1.2-1.2 1.2z"
                   />
                 </svg>
-                <p class="m-0">{repo.forkCount}</p>
+                {repo.forkCount}
               </span>
               <span class="mr-3 flex items-center">
                 <svg
@@ -115,12 +114,10 @@ if (repos.length === 0 && import.meta.env.DEV) repos = [SAMPLE_REPO];
                     d="M14 6l-4.9-.64L7 1 4.9 5.36 0 6l3.6 3.26L2.67 14 7 11.67 11.33 14l-.93-4.74L14 6z"
                   />
                 </svg>
-                <p class="m-0">{repo.stargazers.totalCount}</p>
+                {repo.stargazers.totalCount}
               </span>
             </div>
-            <div>
-              <p class="m-0">{formatRepoSize(repo.diskUsage)}</p>
-            </div>
+            <div>{formatRepoSize(repo.diskUsage)}</div>
           </div>
         </a>
       ))}

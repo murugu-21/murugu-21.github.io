@@ -5,6 +5,7 @@ import { contactInfo } from "@murugappan/content/portfolio.ts";
 import { githubFromEnv } from "#src/lib/github.ts";
 import { resumeContact } from "@murugappan/content/resume.ts";
 import Section from "./Section.astro";
+import SectionSubtitle from "./SectionSubtitle.astro";
 import SectionTitle from "./SectionTitle.astro";
 
 const prof = await githubFromEnv().profile();
@@ -23,9 +24,7 @@ const contactLinks = [
     <SectionTitle title="Reach Out to me!" class="m-0 pb-4 md:pb-0 xl:text-4xl" />
     <div class="max-md:text-center">
       <div>
-        <p class="my-5 text-subtitle uppercase max-md:text-center max-md:text-base dark:text-white">
-          {contactInfo.subtitle}
-        </p>
+        <SectionSubtitle class="my-5">{contactInfo.subtitle}</SectionSubtitle>
       </div>
       {prof.bio && <h2 class="my-5 text-base font-bold md:text-xl">"{prof.bio}"</h2>}
       <div>
@@ -55,9 +54,9 @@ const contactLinks = [
     <div class="flex *:flex-1">
       <div>
         <SectionTitle title={contactInfo.title} class="md:text-center xl:text-start" />
-        <p class="my-5 text-center text-base text-subtitle uppercase xl:text-start xl:text-lg dark:text-white">
+        <SectionSubtitle class="my-5 text-center text-base xl:text-start xl:text-lg">
           {contactInfo.subtitle}
-        </p>
+        </SectionSubtitle>
         <div class="mt-6 text-center xl:text-start dark:text-white">
           {contactLinks.map(link => (
             <>

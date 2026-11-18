@@ -1,0 +1,12 @@
+---
+import { cn } from "#src/lib/utils.ts";
+
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<p class={cn("text-subtitle max-md:text-center max-md:text-base dark:text-white", className)}>
+  <slot />
+</p>

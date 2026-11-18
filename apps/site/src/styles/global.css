@@ -203,6 +203,28 @@
     font-family: inherit;
     font-feature-settings: "calt" 1;
   }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  dd,
+  blockquote,
+  figcaption {
+    /* Outside <main>, the nav, footer and chat keep their own spacing. Prose text inherits
+       .prose's line-height, which an element rule would beat. */
+    &:where(main *):not(.prose *) {
+      line-height: 1.5;
+    }
+    @supports (text-wrap: pretty) {
+      text-wrap: pretty;
+    }
+  }
   body {
     font: 19px / 23px var(--font-mono);
     font-feature-settings: "calt" 0;
@@ -299,25 +321,23 @@
   }
 }
 
-/* shadcn tokens for the React islands. palette.test.ts reads both sides of every
-   light-dark() pair out of this block, so keep the tokens first. */
 @utility ui-island {
-  --background: light-dark(#faf9ff, #282c35);
+  --background: light-dark(var(--color-surface), var(--color-dark-bg));
   --foreground: light-dark(#2f2a4d, #ffffff);
-  --card: light-dark(#faf9ff, #282c35);
+  --card: light-dark(var(--color-surface), var(--color-dark-bg));
   --card-foreground: light-dark(#2f2a4d, #ffffff);
-  --primary: light-dark(#06038d, #7da2ff);
-  --primary-foreground: light-dark(#ffffff, #06038d);
+  --primary: light-dark(var(--color-navy), var(--color-blue-light));
+  --primary-foreground: light-dark(#ffffff, var(--color-navy));
   --primary-hover: light-dark(#3b6fe0, #a8c2ff);
-  --secondary: light-dark(#f1eff8, #171c28);
+  --secondary: light-dark(var(--color-surface-alt), #171c28);
   --secondary-foreground: light-dark(#2f2a4d, #ffffff);
-  --muted: light-dark(#f1eff8, #171c28);
-  --muted-foreground: light-dark(#56506e, #a7a7a7);
-  --accent: light-dark(#f1eff8, #171c28);
+  --muted: light-dark(var(--color-surface-alt), #171c28);
+  --muted-foreground: light-dark(var(--color-card-subtitle), #a7a7a7);
+  --accent: light-dark(var(--color-surface-alt), #171c28);
   --accent-foreground: light-dark(#2f2a4d, #ffffff);
   --border: light-dark(rgba(34, 27, 61, 0.14), rgba(255, 255, 255, 0.16));
   --input: light-dark(rgba(34, 27, 61, 0.14), rgba(255, 255, 255, 0.16));
-  --ring: light-dark(#06038d, #7da2ff);
+  --ring: light-dark(var(--color-navy), var(--color-blue-light));
   --radius: 0.75rem;
   /* Scoped here, not in @theme inline, so rounded-* keeps Tailwind's defaults
      outside islands (inlining would make them 0 wherever --radius is undefined). */

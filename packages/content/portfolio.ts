@@ -52,7 +52,7 @@ export const sameAs = [
 
 export const skillsSection = {
   title: "What I do",
-  subTitle: "FULL-STACK ENGINEER BUILDING CLOUD-NATIVE, EVENT-DRIVEN SYSTEMS END-TO-END",
+  subTitle: "Full-stack engineer building cloud-native, event-driven systems end-to-end",
   skills: [
     "⚡ Build TypeScript end-to-end: event-driven Node.js / Nest.js services and React frontends",
     "⚡ Design distributed, event-driven systems on AWS with Kafka, SQS and CDC",

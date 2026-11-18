@@ -62,6 +62,7 @@
     "eslint": "^10.15.0",
     "fast-check": "^4.10.2",
     "firacode": "6.2.0",
+    "lightningcss": "^1.33.0",
     "linkedom": "^0.18.15",
     "pdf-parse": "^2.4.5",
     "playwright": "^1.65.1",

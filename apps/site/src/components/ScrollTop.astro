@@ -5,7 +5,7 @@ import Icon from "./Icon.astro";
 <button
   type="button"
   id="topButton"
-  class="fixed right-8 bottom-24 z-10 hidden cursor-pointer rounded-2xl border-none bg-navy p-4 text-white outline-none hover:bg-dusk-violet hover:transition-all hover:duration-200 hover:ease-in-out not-print:data-visible:block dark:bg-blue-light dark:text-navy dark:hover:bg-blue"
+  class="fixed right-8 bottom-24 z-10 hidden cursor-pointer rounded-2xl border-none bg-navy p-4 text-white transition-colors duration-200 ease-in-out hover:bg-dusk-violet focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-ink not-print:data-visible:block motion-reduce:transition-none dark:bg-blue-light dark:text-navy dark:hover:bg-blue dark:focus-visible:outline-blue-light"
   aria-label="Back to top"
   title="Go to top"
 >
@@ -15,9 +15,17 @@ import Icon from "./Icon.astro";
 <script>
   const btn = document.getElementById("topButton");
   if (!btn) throw new Error("ScrollTop: #topButton is missing");
-  const onScroll = () => btn.toggleAttribute("data-visible", window.scrollY >= 20);
+  const homeLink = document.querySelector("#site-header [data-home-link]");
+  if (!(homeLink instanceof HTMLAnchorElement))
+    throw new Error("ScrollTop: #site-header has no home link");
+  const syncVisibility = () => {
+    const visible = window.scrollY >= 20;
+    btn.toggleAttribute("data-visible", visible);
+    // Hiding the focused button would drop focus to <body>, so hand it to the logo link.
+    if (!visible && document.activeElement === btn) homeLink.focus({ preventScroll: true });
+  };
   // Firefox and Safari restore a reload's scroll position without a scroll event.
-  onScroll();
-  window.addEventListener("scroll", onScroll, { passive: true });
-  btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  syncVisibility();
+  window.addEventListener("scroll", syncVisibility, { passive: true });
+  btn.addEventListener("click", () => window.scrollTo({ top: 0 }));
 </script>
