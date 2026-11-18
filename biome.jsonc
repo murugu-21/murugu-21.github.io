@@ -24,12 +24,14 @@
           "suspicious": {
             "noDuplicateSelectors": "error",
             // Baseline 2024 is nearest the browser floor (README.md › Browser support). The allowed
-            // newer features degrade gracefully to the default scrollbar and selection colours.
+            // newer features degrade gracefully: to the default scrollbar and selection colours, and
+            // to plain page loads without view transitions.
             "useBaseline": {
               "level": "error",
               "options": {
                 "available": 2024,
-                "allowProperties": ["scrollbar-color"],
+                "allowAtRules": ["view-transition"],
+                "allowProperties": ["scrollbar-color", "view-transition-name"],
                 "allowSelectors": ["selection"]
               }
             }

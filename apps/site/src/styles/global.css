@@ -243,6 +243,56 @@
     }
   }
 
+  @view-transition {
+    navigation: auto;
+  }
+  :root {
+    --new-page-fade-over-old: 120ms;
+    --title-swap: 60ms;
+  }
+  ::view-transition-group(root) {
+    animation-duration: var(--new-page-fade-over-old);
+  }
+  ::view-transition-old(root) {
+    animation: none;
+  }
+  ::view-transition-new(root) {
+    animation: new-page-fade-over-old var(--new-page-fade-over-old) ease-out both;
+  }
+  @keyframes new-page-fade-over-old {
+    from {
+      opacity: 0;
+    }
+  }
+  ::view-transition-group(post-title),
+  ::view-transition-group(blog-title) {
+    animation-duration: 350ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  ::view-transition-old(post-title),
+  ::view-transition-new(post-title),
+  ::view-transition-old(blog-title),
+  ::view-transition-new(blog-title) {
+    animation-duration: var(--title-swap);
+  }
+  html[data-theme-reveal] {
+    &::view-transition-old(root),
+    &::view-transition-new(root) {
+      animation: none;
+      mix-blend-mode: normal;
+    }
+    /* The new snapshot is live, so colour transitions would replay inside the circle, and a
+       named element would crossfade above it instead of being revealed. */
+    & *,
+    & *::before,
+    & *::after {
+      /* biome-ignore lint/complexity/noImportantStyles: tailwind-only-css.grit allows plain rules only in @layer base, which every utility layer outranks */
+      transition: none !important;
+      /* biome-ignore lint/complexity/noImportantStyles: the name utilities outrank @layer base too */
+      view-transition-name: none !important;
+    }
+  }
+
   html {
     color-scheme: light;
   }
@@ -262,6 +312,14 @@
       translate: 0 -0.6em;
     }
   }
+}
+
+@utility post-title-transition {
+  view-transition-name: post-title;
+}
+
+@utility blog-title-transition {
+  view-transition-name: blog-title;
 }
 
 @utility accent {

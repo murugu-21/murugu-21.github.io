@@ -35,13 +35,20 @@ const isRootPath = Astro.url.pathname === rootPath;
   >
     <header class="mb-12 flex flex-row items-center justify-between">
       {isRootPath ? (
-        <h1 class="m-0 text-4xl font-bold tracking-tight text-title dark:text-white">
+        <h1
+          class="m-0 text-4xl font-bold tracking-tight text-title motion-safe:not-data-offscreen:blog-title-transition dark:text-white"
+          data-shared
+        >
           <a class="text-inherit no-underline" href={rootPath}>
             {BLOG_TITLE}
           </a>
         </h1>
       ) : (
-        <a class="text-xl font-bold text-navy no-underline dark:text-blue-light" href={rootPath}>
+        <a
+          class="text-xl font-bold text-navy no-underline motion-safe:not-data-offscreen:blog-title-transition dark:text-blue-light"
+          href={rootPath}
+          data-shared
+        >
           {BLOG_TITLE}
         </a>
       )}

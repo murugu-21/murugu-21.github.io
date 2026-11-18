@@ -8,6 +8,7 @@ import { linkedDocuments } from "@murugappan/content/surface.ts";
 import { PERSON_ID, SITE_DESCRIPTION } from "#src/lib/site.ts";
 import { outdatedRedirectScript } from "#src/lib/browser-support.ts";
 import { themeBootstrapScript } from "#src/lib/theme.ts";
+import { sharedElementScript } from "#src/lib/view-transitions.ts";
 import "#src/styles/global.css";
 import ChatWidget from "#src/components/chat/ChatWidget.astro";
 import Favicons from "#src/components/Favicons.astro";
@@ -139,6 +140,10 @@ const siteWideLinks = linkedDocuments("/");
 
     {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/theme.ts, inlined unbundled so the theme applies before paint */}
     <script is:inline set:html={themeBootstrapScript} />
+    {kind === "blog" && (
+      /* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/view-transitions.ts, inlined unbundled so pagereveal has a listener before the first render */
+      <script is:inline set:html={sharedElementScript} />
+    )}
     {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: JSON-LD that jsonLdHtml serialises with every "<" escaped, so no value can close the script */}
     <script type="application/ld+json" set:html={jsonLdScript} />
     <SiteScripts />

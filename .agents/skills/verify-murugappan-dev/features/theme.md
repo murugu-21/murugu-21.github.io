@@ -30,5 +30,6 @@ Steps:
 ## Gotchas
 
 - The button names the theme you'd switch to, not the current one.
+- With motion allowed, the new theme spreads from the button in a circle for half a second. Screenshot once it settles, or the shot shows both themes.
 - Changing the emulated OS scheme on an open page deletes `isDark`, and the page follows the new scheme. Don't `emulate` between `theme-toggle` and `theme-persist`. Test the default in a fresh isolated context.
 - The homepage subtitle types itself out, so a screenshot can catch it half-written (`Tec`). That's the animation, not a defect.

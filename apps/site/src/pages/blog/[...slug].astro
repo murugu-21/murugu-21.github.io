@@ -49,7 +49,13 @@ const description = postDescription(source);
     class="**:data-speaking:scroll-mt-20 **:data-speaking:rounded-sm **:data-speaking:bg-amber/14 **:data-speaking:ring-6 **:data-speaking:ring-amber/14 **:data-speaking:transition motion-reduce:**:data-speaking:transition-none dark:**:data-speaking:bg-box-dark/14 dark:**:data-speaking:ring-box-dark/14 prose-img:cursor-zoom-in"
   >
     <header>
-      <h1 data-post-title>{post.data.title}</h1>
+      <h1
+        class="w-fit motion-safe:not-data-offscreen:post-title-transition"
+        data-post-title
+        data-shared
+      >
+        {post.data.title}
+      </h1>
       <p>
         {formatDate(post.data.date)}
         {` • ${formatReadingTime(timeToRead(source.body))}`}
