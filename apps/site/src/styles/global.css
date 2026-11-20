@@ -110,6 +110,13 @@
     }
   }
 
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  @keyframes ring-settle {
+    from {
+      rotate: -24deg;
+    }
+  }
+
   --animate-wave: wave 1.8s infinite;
   @keyframes wave {
     0% {
@@ -267,7 +274,7 @@
   ::view-transition-group(post-title),
   ::view-transition-group(blog-title) {
     animation-duration: 350ms;
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-timing-function: var(--ease-out-expo);
   }
   ::view-transition-old(post-title),
   ::view-transition-new(post-title),
@@ -418,6 +425,7 @@
 }
 
 @theme inline {
+  --animate-ring-settle: ring-settle 1.4s var(--ease-out-expo) both;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

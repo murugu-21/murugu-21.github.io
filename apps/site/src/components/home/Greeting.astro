@@ -6,6 +6,9 @@ import Typewriter from "./Typewriter.astro";
 import { Image } from "astro:assets";
 import portrait from "#src/assets/images/portrait.webp";
 import Section from "./Section.astro";
+
+const TICKS = Array.from({ length: 72 }, (_, i) => ({ angle: i * 5, major: i % 6 === 0 }));
+const CARDINALS = [0, 90, 180, 270];
 ---
 
 <Section id="greeting" class="mt-8">
@@ -42,15 +45,37 @@ import Section from "./Section.astro";
       </div>
     </div>
     <div class="mb-8 flex flex-1 items-center justify-center">
-      <Image
-        class="alt-fallback box-content aspect-square w-full max-w-md rounded-full border-6 border-navy object-cover shadow-glow max-md:max-w-60 dark:border-blue dark:shadow-glow-dark"
-        src={portrait}
-        widths={[240, 480, 880]}
-        sizes="(max-width: 767px) 240px, 448px"
-        alt="Murugappan M smiling on a hilltop with arms outstretched"
-        loading="eager"
-        fetchpriority="high"
-      />
+      <div class="relative aspect-square w-full max-w-xl max-md:max-w-79">
+        {/* The portrait fills the middle 80%, so 100 viewBox units are its outer radius and the ticks fit inside this box. */}
+        <svg
+          class="pointer-events-none absolute inset-0 size-full text-navy motion-safe:animate-ring-settle dark:text-blue-light print:hidden"
+          viewBox="-125 -125 250 250"
+          stroke="currentColor"
+          aria-hidden="true"
+        >
+          {TICKS.map(({ angle, major }) => (
+            <line
+              y1="-106"
+              y2={major ? -114 : -109}
+              transform={`rotate(${angle})`}
+              stroke-width={major ? 1 : 0.5}
+              stroke-opacity={major ? 0.8 : 0.45}
+            />
+          ))}
+          {CARDINALS.map(angle => (
+            <line y1="-117" y2="-124" transform={`rotate(${angle})`} stroke-width="1.5" />
+          ))}
+        </svg>
+        <Image
+          class="alt-fallback absolute inset-1/10 box-border size-4/5 rounded-full border-6 border-navy object-cover shadow-glow dark:border-blue dark:shadow-glow-dark"
+          src={portrait}
+          widths={[240, 480, 880]}
+          sizes="(max-width: 767px) 240px, 448px"
+          alt="Murugappan M smiling on a hilltop with arms outstretched"
+          loading="eager"
+          fetchpriority="high"
+        />
+      </div>
     </div>
   </div>
 </Section>

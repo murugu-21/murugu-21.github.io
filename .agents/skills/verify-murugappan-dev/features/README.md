@@ -33,6 +33,7 @@ Keep implementation detail out. Name only user paths, stable handles, required s
 
 ## Features
 
+- [Home page](./home.md) covers the portrait's ring: fit at every width, reduced motion and print.
 - [Theme](./theme.md) covers the light/dark toggle, the OS default and persistence across both halves.
 - [Blog index](./blog-index.md) covers search, tag chips and their URL mirroring.
 - [Jarvis chat](./jarvis-chat.md) covers the launcher, the panel and its menu, and the billed send path.
