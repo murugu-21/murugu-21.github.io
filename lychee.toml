@@ -11,8 +11,3 @@ exclude = [
   '^https://www\.npmjs\.com/',
   '^https://x\.com/',
 ]
-
-# Drafts link to each other at their published URL. Publishing a draft breaks its entry here, so drop it then.
-remap = [
-  '^file://(.+)/packages/content/blog/(code-mode-agents|small-models-production)(#.*)?$ file://$1/packages/content/blog/draft/$2$3',
-]
