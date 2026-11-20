@@ -3,7 +3,7 @@ title: You don't need the big model for every step
 
 shortTitle: Smaller models for agent steps
 
-date: "2026-11-03T09:00:00.000Z"
+date: "2026-11-20T09:00:00.000Z"
 
 tags: ["ai", "system-design"]
 

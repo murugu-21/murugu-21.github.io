@@ -19,7 +19,7 @@ LLMs are the fastest way I know to get from an idea to a demo a customer will pa
 
 Then usage grows, and the CFO calls. The bill went from a rounding error to one of the largest lines in the cloud budget, and nobody can say which part of the agent is spending it.
 
-What you pay per token comes down to how the model reads your prompt and writes its answer. Once you see that, the biggest fix follows, and it doesn't change the model. Prompt caching cuts the example agent below by 85%. This is the first of three posts. The next one moves simple, fixed steps to cheaper models, and the one after uses Code Mode to cut the tokens a complex agent sends.
+What you pay per token comes down to how the model reads your prompt and writes its answer. Once you see that, the biggest fix follows, and it doesn't change the model. Prompt caching cuts the example agent below by 85%. This is the first of three posts. [The next one](/blog/small-models-production/) moves simple, fixed steps to cheaper models, and [the one after](/blog/code-mode-agents/) uses Code Mode to cut the tokens a complex agent sends.
 
 ## Where the money goes in an agent
 
@@ -143,3 +143,5 @@ Don't guess whether caching works. Every provider reports it on each response. A
 3. Pick a cache lifetime that matches how long users pause between turns.
 
 The first two need no new vendor and don't change what the agent does. Start there.
+
+[Part two](/blog/small-models-production/) moves fixed steps to cheaper models, and [part three](/blog/code-mode-agents/) cuts the tokens a complex agent sends with Code Mode.

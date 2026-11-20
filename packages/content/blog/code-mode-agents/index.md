@@ -3,7 +3,7 @@ title: Let the agent write code instead of calling tools
 
 shortTitle: Code Mode for agents
 
-date: "2026-11-04T09:00:00.000Z"
+date: "2026-11-20T10:00:00.000Z"
 
 tags: ["ai", "system-design"]
 
