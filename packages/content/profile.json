@@ -7,9 +7,12 @@
       "companyLogo": "medme",
       "location": "Toronto (remote)",
       "date": "December 2025 – Present",
-      "desc": "Leading design of the fax-to-entry platform that automates pharmacy admin work at MedMe Health (YC W21).",
+      "desc": "Founding engineer for Admin Clerk, a computer use agent that monitors your inbound queue of prescription faxes and does the data entry at MedMe Health (YC W21).",
       "descBullets": [
-        "Led development of an LLM-based extractor that turns unstructured patient questionnaire answers into structured medication data. Working through its long tail of edge cases lifted fax-to-entry accuracy from ~60-65% to 95%+.",
+        "Built the PoC in a single week with limited access to the target PMS (Kroll).",
+        "Spiked and implemented a Windows UI Automation-based approach to eliminate table OCR extraction errors.",
+        "Reduced LLM cost by 42% by introducing explicit prompt caching.",
+        "Created high-fidelity replicas of the PMS apps from Figma mockups, using an army of coding agents, for end-to-end testing.",
         "Drove HIPAA compliance: access-logged S3 buckets, PHI/PII scrubbing from logs, and server-side encryption of data at rest.",
         "Made every service debuggable from one Grafana view, with vendor-agnostic OpenTelemetry traces and metrics across the platform."
       ]
@@ -20,11 +23,12 @@
       "companyLogo": "hyperverge",
       "location": "Bangalore (onsite)",
       "date": "April 2025 – December 2025",
-      "desc": "Owned core platform architecture for HyperStart, the company's contract lifecycle management (CLM) product.",
+      "desc": "Owned core platform architecture for HyperStart CLM.",
       "descBullets": [
-        "Cut infrastructure spend to a 10% MRR-to-server-cost ratio by profiling usage and reallocating resources over 3 months.",
         "Built the event-driven job system on AWS SQS and EventBridge that runs all of the platform's async and scheduled work.",
+        "Built configurable no-code workflows to automate the contract lifecycle from creation to signature using JSON rule engine.",
         "Led the architecture for CRM integrations (Salesforce, HubSpot) that prefill deal data to speed up the client deal-closure pipeline.",
+        "Cut infrastructure spend to a 10% MRR-to-server-cost ratio by profiling usage and reallocating resources over 3 months.",
         "Mentored junior engineers and introduced a standard code-review process to raise code quality."
       ]
     },
@@ -40,7 +44,7 @@
         "Cut contract-listing latency to under 5 seconds across 15,000+ records by restructuring responses and tuning queries.",
         "Led VAPT and static code analysis for SOC 2 compliance, hardening API Gateways and Auto Scaling Groups.",
         "Built an end-to-end testing pipeline in GitLab CI with Playwright and Docker that gates deployments.",
-        "Benchmarked an open-source PDF converter, then designed and deployed it as a production microservice.",
+        "Benchmarked Gotenberg, an open-source PDF converter, then designed and deployed it as a production microservice.",
         "Built a config-driven UI for stamp-paper procurement, so adding a new Article code is a single JSON change."
       ]
     },
