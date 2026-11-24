@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff==0.17.5", "ty==0.0.104"]
+dev = ["ruff==0.17.5", "ty==0.0.109"]
 
 [tool.ruff]
 line-length = 100
