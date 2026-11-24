@@ -14,7 +14,7 @@ declare module "vitest" {
 const API_DIR = fileURLToPath(new URL("..", import.meta.url));
 const E2E_VARS = join(API_DIR, "e2e/.dev.vars");
 const BUILD_OUTPUT = [
-  join(API_DIR, ".cloudflare/output/v0/workers/default/worker.config.json"),
+  join(API_DIR, ".cloudflare/output/v1/workers/default/worker.config.json"),
   join(API_DIR, "../site/dist/index.html")
 ];
 

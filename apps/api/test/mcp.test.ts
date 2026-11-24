@@ -593,9 +593,7 @@ describe("legacy (initialize-based) clients", () => {
     expect(resultOf(reply, z.object({ protocolVersion: z.string() })).protocolVersion).toBe(
       "2025-06-18"
     );
-    expect(new Set(urls.map(url => new URL(url).origin))).toEqual(
-      new Set(["https://us.i.posthog.com"])
-    );
+    expect(new Set(urls)).toEqual(new Set(["https://us.i.posthog.com/i/v1/analytics/events"]));
   });
 
   it("answers ping", async () => {
@@ -1009,7 +1007,7 @@ function recordPostHog() {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
     urls.push(new Request(input).url);
     events.push(...PostHogBatch.parse(JSON.parse(await requestText(init))).batch);
-    return Response.json({ status: 1 });
+    return Response.json({ results: {} });
   });
   onTestFinished(() => {
     vi.unstubAllGlobals();
@@ -1045,9 +1043,7 @@ describe("PostHog analytics", () => {
     await sendAndWait(request);
 
     expect(toolCall("list_skills")).toMatchObject({ $mcp_server_name: "murugappan.dev" });
-    expect(new Set(urls.map(url => new URL(url).origin))).toEqual(
-      new Set(["https://us.i.posthog.com"])
-    );
+    expect(new Set(urls)).toEqual(new Set(["https://us.i.posthog.com/i/v1/analytics/events"]));
   });
 
   it("keeps only a read tool's arguments: not send_message's, nor an unknown tool's", async () => {

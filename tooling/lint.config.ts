@@ -496,6 +496,11 @@ const apiRole = ({
   }
 });
 
+// tsrs-lint takes --runExternalCode (apps/site's Astro content mapper needs it) only from this
+// variable under vp lint. Set here, not in the lint script, so vp staged and the editor get it too
+// (voidzero-dev/vite-plus#3476).
+process.env.TSRS_LINT_RUN_EXTERNAL_CODE = "1";
+
 export default {
   ignorePatterns: ["apps/site/public/**"],
   plugins: ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "import", "promise"],

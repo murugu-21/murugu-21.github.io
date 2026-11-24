@@ -15,32 +15,32 @@
     "types": "cf workers types"
   },
   "dependencies": {
-    "@ai-sdk/deepseek": "3.0.87",
-    "@cloudflare/ai-chat": "0.12.2",
+    "@ai-sdk/deepseek": "3.0.89",
+    "@cloudflare/ai-chat": "0.12.3",
     "@modelcontextprotocol/server": "2.4.0",
     "@murugappan/content": "workspace:*",
     "@murugappan/contracts": "workspace:*",
     "@murugappan/utils": "workspace:*",
-    "@posthog/mcp": "1.2.2",
-    "agents": "0.33.0",
-    "ai": "7.0.173",
-    "effect": "^4.1.4",
+    "@posthog/mcp": "1.7.0",
+    "agents": "0.34.0",
+    "ai": "7.0.181",
+    "effect": "^4.1.5",
     "hono": "5.0.0-rc.1",
     "ipaddr.js": "^2.5.0",
-    "posthog-node": "5.74.0",
+    "posthog-node": "6.0.6",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@ai-sdk/provider": "4.0.38",
-    "@cloudflare/config": "0.32.1",
-    "@cloudflare/vite-plugin": "2.0.0-beta.v.17",
-    "@cloudflare/vitest-plugin": "^1.8.2",
+    "@ai-sdk/provider": "4.0.39",
+    "@cloudflare/config": "1.0.0-rc.3",
+    "@cloudflare/vite-plugin": "2.0.0-rc.4",
+    "@cloudflare/vitest-plugin": "^1.9.1",
     "@modelcontextprotocol/client": "2.4.0",
-    "cf": "1.0.0-beta.32",
-    "fast-check": "^4.10.2",
+    "cf": "1.0.0-rc.4",
+    "fast-check": "^4.11.0",
     "linkedom": "^0.18.15",
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0",
-    "vite-plus": "1.6.0",
-    "vitest": "5.1.0"
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
+    "vite-plus": "1.8.0",
+    "vitest": "5.1.1"
   }
 }

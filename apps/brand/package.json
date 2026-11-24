@@ -8,6 +8,6 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "firacode": "6.2.0",
-    "puppeteer": "^25.17.0"
+    "puppeteer": "^25.18.1"
   }
 }

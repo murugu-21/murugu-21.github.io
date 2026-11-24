@@ -9,7 +9,7 @@
     "@astrojs/compiler-rs": "^0.5.3",
     "@commitlint/config-conventional": "^21.2.4",
     "@commitlint/types": "^21.2.3",
-    "vite-plus": "1.6.0",
+    "vite-plus": "1.8.0",
     "zod": "^4.6.7"
   }
 }

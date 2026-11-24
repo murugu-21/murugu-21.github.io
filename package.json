@@ -4,7 +4,7 @@
   "license": "MIT",
   "type": "module",
   "version": "2.0.0",
-  "packageManager": "bun@1.4.4",
+  "packageManager": "bun@1.4.5",
   "workspaces": [
     "apps/*",
     "packages/*",
@@ -40,34 +40,34 @@
     "py": "uv run --locked --project apps/tts"
   },
   "dependencies": {
-    "astro": "^7.4.12"
+    "astro": "^7.4.13"
   },
   "devDependencies": {
     "@astrojs/compiler-rs": "^0.5.3",
     "@biomejs/biome": "2.6.8",
-    "@cloudflare/vitest-plugin": "^1.8.2",
+    "@cloudflare/vitest-plugin": "^1.9.1",
     "@commitlint/cli": "^21.2.4",
-    "@effect/tsgo": "0.69.0",
+    "@effect/tsgo": "0.73.4",
     "@murugappan/api": "workspace:*",
     "@murugappan/content": "workspace:*",
     "@murugappan/tooling": "workspace:*",
     "@murugappan/utils": "workspace:*",
     "@shadcn/lint": "^0.2.5",
     "@types/node": "^26.6.6",
-    "@vitest/browser-playwright": "5.1.0",
-    "@vitest/coverage-istanbul": "5.1.0",
+    "@vitest/browser-playwright": "5.1.1",
+    "@vitest/coverage-istanbul": "5.1.1",
     "jiti": "^2.7.0",
-    "knip": "^6.45.1",
+    "knip": "^6.48.0",
     "oxlint-tailwindcss": "^1.17.2",
     "playwright": "^1.65.1",
     "typescript": "7.1.0-beta",
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0",
-    "vite-plus": "1.6.0",
-    "vitest": "5.1.0",
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
+    "vite-plus": "1.8.0",
+    "vitest": "5.1.1",
     "yaml": "^2.9.1"
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0",
-    "vitest": "5.1.0"
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8001",
+    "vitest": "5.1.1"
   }
 }
