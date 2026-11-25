@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@astrojs/compiler-rs": "^0.5.3",
-    "@biomejs/biome": "2.6.8",
+    "@biomejs/biome": "2.6.9",
     "@cloudflare/vitest-plugin": "^1.9.1",
     "@commitlint/cli": "^21.2.4",
     "@effect/tsgo": "0.73.4",

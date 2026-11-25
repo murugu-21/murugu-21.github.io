@@ -56,7 +56,8 @@
             "useAstroClientOnlyDirectiveValue": "error",
             "noTailwindArbitraryValue": "error",
             "noTailwindRawColors": "error",
-            "useTailwindShorthandClasses": "error"
+            "useTailwindShorthandClasses": "error",
+            "noTailwindConflictingClasses": "error"
           }
         }
       }
