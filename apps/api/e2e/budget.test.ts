@@ -24,3 +24,18 @@ it("loads at most 13.4 KB of JavaScript by URL with the home page: its script[sr
   const sizes = await Promise.all(scripts.map(byteSize));
   expect(sizes.reduce((total, size) => total + size, 0)).toBeLessThanOrEqual(13_445);
 });
+
+it("blocks first paint on the home page with at most 116 KB of CSS: its inline styles and stylesheet links, not styles that lazily loaded code adds", async () => {
+  const { document } = parseHTML(await text("/"));
+  const inline = [...document.querySelectorAll("style")].map(
+    style => new TextEncoder().encode(style.textContent ?? "").byteLength
+  );
+  const linked = await Promise.all(
+    [...document.querySelectorAll('link[rel="stylesheet"][href]')].map(link =>
+      byteSize(link.getAttribute("href") ?? "")
+    )
+  );
+  expect([...inline, ...linked].reduce((total, size) => total + size, 0)).toBeLessThanOrEqual(
+    116_000
+  );
+});

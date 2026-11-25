@@ -1,5 +1,6 @@
 import * as CookieConsent from "vanilla-cookieconsent";
-import "vanilla-cookieconsent/dist/cookieconsent.css";
+// ?inline keeps the stylesheet in this lazy chunk; a plain import lands in every page's CSS.
+import vendorStyles from "vanilla-cookieconsent/dist/cookieconsent.css?inline";
 
 import type { ConsentChoice } from "./analytics";
 import {
@@ -94,6 +95,10 @@ export async function runConsent(
 ): Promise<ConsentControls> {
   const uiIsland = document.createElement("div");
   uiIsland.className = "ui-island";
+  const styles = document.createElement("style");
+  styles.textContent = vendorStyles;
+  document.head.append(styles);
+
   const toastHost = document.createElement("div");
   uiIsland.append(toastHost);
   document.body.append(uiIsland);
