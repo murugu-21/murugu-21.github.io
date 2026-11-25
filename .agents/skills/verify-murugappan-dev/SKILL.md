@@ -76,6 +76,7 @@ The browser recipes use these chrome-devtools MCP calls:
 - `take_snapshot`, then `click` or `fill` by the `uid` of an accessible name. Names are listed per feature. uids change after navigation and whenever a menu or dialog opens or closes, so re-snapshot before reusing one.
 - `emulate` with `colorScheme: "light"` or `"dark"` sets the OS preference for an open page. Reload after it.
 - `evaluate_script` reads state. Use it only to observe, never to act. A synthetic `.click()` skips the pointer events the chat widget hydrates on.
+- The cookie banner hides itself from automated browsers. The verify build blanks `POST_HOG_TOKEN`, so it doesn't load at all. To drive it, build with a token and a local capture host, then override the user agent and client hints and set `navigator.webdriver` to false before the page loads.
 
 HTTP recipes are `curl` against `http://localhost:8791`. The local trace and log store answers SQL:
 

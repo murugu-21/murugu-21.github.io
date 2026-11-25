@@ -1,0 +1,23 @@
+---
+import { analyticsConfigured } from "#src/lib/analytics-env.ts";
+import { PRIVACY_PATH } from "#src/lib/privacy.ts";
+
+const linkClasses =
+  "inline-block cursor-pointer py-1 text-navy no-underline hover:underline dark:text-blue-light";
+---
+
+<footer class="mx-auto flex max-w-6xl flex-wrap justify-center gap-x-2 px-5 pt-4 pb-40 text-xs md:pb-8">
+  <a href={PRIVACY_PATH} class={linkClasses}>
+    Privacy and cookies
+  </a>
+  {analyticsConfigured && (
+    <>
+      <span class="py-1 text-subtitle-muted" aria-hidden="true">
+        ·
+      </span>
+      <button type="button" data-consent-settings class={linkClasses}>
+        Cookie settings
+      </button>
+    </>
+  )}
+</footer>

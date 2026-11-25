@@ -42,6 +42,8 @@
     "rehype-autolink-headings": "^7.1.0",
     "rehype-external-links": "^3.0.0",
     "sanitize-html": "^2.18.2",
+    "sonner": "^2.0.8",
+    "vanilla-cookieconsent": "^3.3.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

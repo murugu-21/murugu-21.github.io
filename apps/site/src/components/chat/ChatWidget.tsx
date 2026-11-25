@@ -37,6 +37,7 @@ import {
 import { ScrollArea } from "#src/components/ui/scroll-area.tsx";
 import { cn } from "#src/lib/utils.ts";
 import { track, reportError } from "#src/lib/analytics.ts";
+import { REPLAY_MASK_ATTRIBUTE } from "#src/lib/replay-mask.ts";
 import { readStored, writeStored } from "#src/lib/storage.ts";
 
 const ROOM_KEY = "chatRoomId";
@@ -243,9 +244,11 @@ function ChatPanel({
           )}
 
           <ScrollArea className="min-h-0 flex-1" viewportRef={viewportRef}>
-            {/* PII: replay masks inputs but not bubbles, so mask the transcript
-                (data-ph-mask is the maskTextSelector in lib/analytics.ts). */}
-            <div className="flex flex-col gap-2 p-3" aria-live="polite" data-ph-mask="true">
+            <div
+              className="flex flex-col gap-2 p-3"
+              aria-live="polite"
+              {...{ [REPLAY_MASK_ATTRIBUTE]: "true" }}
+            >
               <BubbleView kind="assistant" text={GREETING} />
               {bubbles.map(b => (
                 <BubbleView key={b.id} kind={b.kind} text={b.text} />
@@ -578,6 +581,7 @@ export function ChatWidget({
           className="fixed right-8 bottom-5 z-40 size-14 rounded-full shadow-lg [&_svg:not([class*='size-'])]:size-6"
           aria-label="Chat with Jarvis, Murugappan's AI assistant"
           ref={launcherRef}
+          data-yields-to-consent-ui
         >
           {open ? <X /> : <MessageCircle />}
         </Button>
@@ -589,6 +593,7 @@ export function ChatWidget({
             "fixed right-24 bottom-8 z-40 rounded-lg border bg-background px-3 py-2 text-sm text-foreground shadow-lg transition-opacity duration-500",
             tooltip === "fading" && "opacity-0"
           )}
+          data-yields-to-consent-ui
         >
           Ask Jarvis anything about Murugappan
         </div>
