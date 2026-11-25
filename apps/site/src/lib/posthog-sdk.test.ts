@@ -5,7 +5,6 @@ import { extensions } from "./posthog-sdk";
 it("loads autocapture, heatmaps, error tracking, replay and the toolbar into the slim SDK", () => {
   expect(Object.keys(extensions).sort()).toEqual([
     "autocapture",
-    "deadClicksAutocapture",
     "exceptionObserver",
     "exceptions",
     "heatmaps",

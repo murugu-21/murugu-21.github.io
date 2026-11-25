@@ -148,8 +148,6 @@ export async function initAnalytics(
         // PII: sent chat messages render as text, which input masking misses
         maskTextSelector: "[data-ph-mask]"
       },
-      // the analytics bundle ships dead-click capture, which the site doesn't use
-      capture_dead_clicks: false,
       capture_exceptions: true,
       mask_personal_data_properties: true,
       custom_personal_data_properties: MASKED_PARAMS,
@@ -188,8 +186,6 @@ export async function initAnalytics(
 // interact.
 const SDK_LOAD_FALLBACK_MS = 10_000;
 
-// Loads on first input or after `fallbackMs`, not on idle: idle loading put the SDK
-// inside Lighthouse's measured window.
 export function scheduleSdkLoad(
   load: () => void,
   target: EventTarget,

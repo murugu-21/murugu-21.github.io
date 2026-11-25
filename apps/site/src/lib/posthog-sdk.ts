@@ -8,7 +8,10 @@ import {
 export { default as posthog } from "posthog-js/dist/module.slim";
 
 export const extensions = {
-  ...AnalyticsExtensions,
+  autocapture: AnalyticsExtensions.autocapture,
+  historyAutocapture: AnalyticsExtensions.historyAutocapture,
+  heatmaps: AnalyticsExtensions.heatmaps,
+  webVitalsAutocapture: AnalyticsExtensions.webVitalsAutocapture,
   ...ErrorTrackingExtensions,
   ...SessionReplayExtensions,
   ...ToolbarExtensions
