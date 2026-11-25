@@ -1,16 +1,33 @@
 // PII: never pass anything a visitor typed (chat messages, search queries).
 
-import type { CaptureResult, PostHogConfig } from "posthog-js/dist/module.slim";
+import type { PostHogConfig } from "posthog-js/dist/module.slim";
 
+import type { ConsentControls } from "./consent";
 import { onFirstInteraction } from "./first-interaction";
 
-interface PostHog {
+export interface PostHog {
   capture(event: string, properties?: Record<string, string>): void;
   captureException(cause: unknown, properties?: Record<string, string>): void;
   register(properties: Record<string, string>): void;
   init(token: string, config: Partial<PostHogConfig>): void;
   startSessionRecording(): void;
+  stopSessionRecording(): void;
+  opt_in_capturing(options: { captureProperties: Record<string, string> }): void;
+  opt_out_capturing(): void;
+  get_explicit_consent_status(): "granted" | "denied" | "pending";
 }
+
+export interface ConsentChoice {
+  analytics: boolean;
+  replay: boolean;
+  consentId: string;
+  revision: number;
+  justChosen: boolean;
+}
+
+type ConsentRunner = (onChoice: (choice: ConsentChoice) => void) => Promise<ConsentControls>;
+
+const runConsent: ConsentRunner = onChoice => import("./consent").then(m => m.runConsent(onChoice));
 
 declare global {
   var posthog: unknown;
@@ -24,14 +41,23 @@ const isPostHog = (p: unknown): p is PostHog =>
   "register" in p &&
   typeof p.register === "function";
 
-type SdkLoader = () => Promise<{
+interface SdkModule {
   posthog: PostHog;
-  extensions: PostHogConfig["__extensionClasses"];
-}>;
+  postHogConfig(host: string): Partial<PostHogConfig>;
+  applyConsent(ph: PostHog, choice: ConsentChoice): void;
+}
+
+type SdkLoader = () => Promise<SdkModule>;
 
 const loadSdk: SdkLoader = () => import("./posthog-sdk");
 
 let sdk: PostHog | null = null;
+
+let loading: Promise<SdkModule> | null = null;
+
+let consent: Promise<ConsentControls | null> | null = null;
+
+let startConsent: (() => void) | null = null;
 
 let pending: Array<(ph: PostHog) => void> | null = null;
 
@@ -40,6 +66,11 @@ let stopEarlyErrors: (() => void) | null = null;
 const stopEarlyErrorCapture = () => {
   stopEarlyErrors?.();
   stopEarlyErrors = null;
+};
+
+const discardUnconsented = () => {
+  stopEarlyErrorCapture();
+  pending = null;
 };
 
 const client = (): PostHog | null => {
@@ -106,79 +137,42 @@ export function initClickTracking(root?: Document): void {
   );
 }
 
-// PII: the blog's search text and tag filter. PostHog masks them in page URLs but not in
-// referrers, which carry them after a same-site click from a filtered /blog/ list.
-const MASKED_PARAMS = ["q", "tag"];
-const REFERRERS = ["$referrer", "$session_entry_referrer", "$initial_referrer"];
-const MASKED_IN_QUERY = new RegExp(`([?&](?:${MASKED_PARAMS.join("|")})=)[^&#]*`, "g");
-
-// A hand-written guard rather than zod, which would add itself to every page's analytics bundle.
-const isString = (value: unknown): value is string => typeof value === "string";
-
-export function maskReferrers(event: CaptureResult | null): CaptureResult | null {
-  for (const props of [event?.properties, event?.$set_once]) {
-    if (!props) continue;
-    for (const key of REFERRERS) {
-      const value: unknown = props[key];
-      if (isString(value)) props[key] = value.replaceAll(MASKED_IN_QUERY, "$1<masked>");
-    }
-  }
-  return event;
-}
-
-export async function initAnalytics(
-  token: string | undefined,
-  host: string | undefined,
-  load: SdkLoader = loadSdk
-): Promise<void> {
-  if (!token?.trim() || !host?.trim() || sdk) return;
+export async function initAnalytics({
+  token,
+  host,
+  choice,
+  load = loadSdk
+}: {
+  token: string | undefined;
+  host: string | undefined;
+  choice: ConsentChoice;
+  load?: SdkLoader;
+}): Promise<void> {
+  if (!token?.trim() || !host?.trim()) return;
   pending ??= [];
+  loading ??= load().then(sdkModule => {
+    sdkModule.posthog.init(token.trim(), sdkModule.postHogConfig(host.trim()));
+    return sdkModule;
+  });
+  let loaded: SdkModule;
   try {
-    const { posthog: ph, extensions } = await load();
-    ph.init(token.trim(), {
-      __extensionClasses: extensions,
-      api_host: host.trim().replace(/\/$/, ""),
-      // the toolbar needs PostHog's real domain, not the proxy
-      ui_host: "https://us.posthog.com",
-      // Replay starts on first interaction (below) to keep the heavy recorder out of
-      // Lighthouse's blocking time.
-      disable_session_recording: true,
-      session_recording: {
-        maskAllInputs: true,
-        // PII: sent chat messages render as text, which input masking misses
-        maskTextSelector: "[data-ph-mask]"
-      },
-      capture_exceptions: true,
-      mask_personal_data_properties: true,
-      custom_personal_data_properties: MASKED_PARAMS,
-      before_send: maskReferrers
-    });
-    sdk = ph;
-    stopEarlyErrorCapture();
-    const win: EventTarget | undefined = globalThis.window;
-    if (win) {
-      onFirstInteraction(() => {
-        try {
-          ph.startSessionRecording();
-        } catch {
-          // recorder blocked or offline; events still flow
-        }
-      }, win);
-    }
-    // the PostHog toolbar looks for the global
-    globalThis.posthog = ph;
-    const queued = pending;
-    pending = null;
-    for (const fn of queued) {
-      try {
-        fn(ph);
-      } catch {
-        // one bad replay must not drop the rest
-      }
-    }
+    loaded = await loading;
   } catch {
-    stopEarlyErrorCapture();
-    pending = null;
+    loading = null;
+    discardUnconsented();
+    return;
+  }
+  const ph = loaded.posthog;
+  loaded.applyConsent(ph, choice);
+  if (sdk) return;
+  sdk = ph;
+  stopEarlyErrorCapture();
+  const queued = pending;
+  pending = null;
+  for (const fn of queued) {
+    try {
+      fn(ph);
+    } catch {}
   }
 }
 
@@ -203,10 +197,39 @@ export function scheduleSdkLoad(
   const timer = setTimeout(once, fallbackMs);
 }
 
+async function askForConsent({
+  token,
+  host,
+  load,
+  ask
+}: {
+  token: string;
+  host: string;
+  load: SdkLoader;
+  ask: ConsentRunner;
+}): Promise<void> {
+  let firstChoice: Promise<void> | undefined;
+  consent ??= ask(choice => {
+    const applied = initAnalytics({ token, host, choice, load });
+    firstChoice ??= applied;
+  }).catch(() => {
+    discardUnconsented();
+    return null;
+  });
+  await consent;
+  await firstChoice;
+}
+
+export function openConsentSettings(): void {
+  startConsent?.();
+  void consent?.then(controls => controls?.showSettings());
+}
+
 export function bootAnalytics({
   root,
-  load = loadSdk
-}: { root?: Document; load?: SdkLoader } = {}): Promise<void> {
+  load = loadSdk,
+  ask = runConsent
+}: { root?: Document; load?: SdkLoader; ask?: ConsentRunner } = {}): Promise<void> {
   const doc: Document | undefined = root ?? globalThis.document;
   if (!doc) return Promise.resolve();
   const meta = (name: string) =>
@@ -227,7 +250,8 @@ export function bootAnalytics({
       win.removeEventListener("unhandledrejection", onRejection);
     };
   }
-  return new Promise(resolve =>
-    scheduleSdkLoad(() => resolve(initAnalytics(token, host, load)), win ?? window)
-  );
+  return new Promise(resolve => {
+    startConsent = () => resolve(askForConsent({ token, host, load, ask }));
+    scheduleSdkLoad(() => startConsent?.(), win ?? window);
+  });
 }

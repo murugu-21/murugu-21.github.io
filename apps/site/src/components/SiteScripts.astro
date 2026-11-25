@@ -2,11 +2,10 @@
 // PostHog: passed via meta tags, since document.currentScript is null in a
 // bundled module script.
 import { POST_HOG_TOKEN, POST_HOG_URL } from "astro:env/server";
-
-const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
+import { analyticsConfigured } from "#src/lib/analytics-env.ts";
 ---
 
-{analyticsEnabled && (
+{analyticsConfigured && (
   <>
     <meta name="ph-token" content={POST_HOG_TOKEN} />
     <meta name="ph-host" content={POST_HOG_URL} />
@@ -15,13 +14,23 @@ const analyticsEnabled = !!POST_HOG_TOKEN && !!POST_HOG_URL;
 
 <script>
   import "#src/lib/webmcp.ts";
-  import { bootAnalytics, initClickTracking, tag } from "#src/lib/analytics.ts";
+  import {
+    bootAnalytics,
+    initClickTracking,
+    openConsentSettings,
+    tag
+  } from "#src/lib/analytics.ts";
   import { currentTheme } from "#src/lib/theme.ts";
 
   // Must run first: tags/events sent before it are dropped, not buffered.
   bootAnalytics();
 
   initClickTracking();
+  document.addEventListener("click", event => {
+    if (event.target instanceof Element && event.target.closest("[data-consent-settings]")) {
+      openConsentSettings();
+    }
+  });
   tag("theme", currentTheme());
   window.addEventListener("themechange", () => tag("theme", currentTheme()));
 </script>

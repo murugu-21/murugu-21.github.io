@@ -26,7 +26,11 @@ Use the helpers in `lib/analytics.ts`: `track()` for events, `tag()` for a prope
 
 Things to know:
 
-- PostHog loads on the visitor's first input, or after 10 seconds, so it doesn't slow down Lighthouse scores.
+- On the visitor's first input, or after 10 seconds, `lib/consent.ts` loads the cookie banner ([vanilla-cookieconsent](https://cookieconsent.orestbida.com)). PostHog loads once they choose, so neither slows down Lighthouse scores. Nothing is sent before a choice.
+- Accepting opts PostHog in and sends `$opt_in` with the banner's `consent_id` and `consent_revision`, which is the record of consent. Rejecting opts it out, and PostHog's `cookieless_mode: "on_reject"` still counts the visit and reports errors without storing an ID. Session replay runs only if its toggle is on. A Global Privacy Control signal hides the banner and sends nothing at all, not even anonymous counts.
+- `lib/privacy.ts` lists everything the site stores on a visitor's device and renders `/privacy/`. `storage.ts` only takes keys from that list, so add a new key there first. If PostHog starts storing a new key, add it too. Set `NOTICE_UPDATED` whenever `/privacy/` changes.
+- A new tracking provider, a new purpose, or more data for an existing one (unmasking replay, say) needs fresh consent: update the banner text in `consent.ts` and set `CONSENT_UPDATED` in `privacy.ts` to today's date. Every visitor is asked again.
+- The banner hides itself from headless browsers (`hideFromBots`). To drive it in Playwright, override the user agent and client hints and set `navigator.webdriver` to false.
 - Events go to `e.murugappan.dev`, PostHog's own proxy. Keep that DNS record unproxied (grey cloud) in Cloudflare, or PostHog can't renew its certificate.
 - Never send anything a visitor typed. Replay masks inputs and the chat transcript, and URLs have their search and tag params masked.
 - Session replay and error tracking also have to be switched on in the PostHog project.

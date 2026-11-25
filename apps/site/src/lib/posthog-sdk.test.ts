@@ -1,9 +1,10 @@
 import { expect, it } from "vite-plus/test";
 
-import { extensions } from "./posthog-sdk";
+import { postHogConfig } from "./posthog-sdk";
 
 it("loads autocapture, heatmaps, error tracking, replay and the toolbar into the slim SDK", () => {
-  expect(Object.keys(extensions).sort()).toEqual([
+  const { __extensionClasses } = postHogConfig("https://e.example.dev");
+  expect(Object.keys(__extensionClasses ?? {}).sort()).toEqual([
     "autocapture",
     "exceptionObserver",
     "exceptions",

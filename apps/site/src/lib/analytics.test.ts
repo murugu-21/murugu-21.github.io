@@ -5,14 +5,15 @@ import type { PostHogConfig } from "posthog-js/dist/module.slim";
 import { z } from "zod";
 
 import {
+  type ConsentChoice,
   initClickTracking,
-  maskReferrers,
   reportError,
   scheduleSdkLoad,
   tag,
   track
 } from "./analytics";
 import { onFirstInteraction } from "./first-interaction";
+import { applyConsent, maskReferrers, postHogConfig } from "./posthog-sdk";
 
 const fakeSdk = () => {
   const sdk = {
@@ -20,11 +21,34 @@ const fakeSdk = () => {
     register: vi.fn<(properties: Record<string, string>) => void>(),
     captureException: vi.fn<(cause: unknown, properties?: Record<string, string>) => void>(),
     init: vi.fn<(token: string, config: Partial<PostHogConfig>) => void>(),
-    startSessionRecording: vi.fn<() => void>()
+    startSessionRecording: vi.fn<() => void>(),
+    stopSessionRecording: vi.fn<() => void>(),
+    opt_in_capturing: vi.fn<(options: { captureProperties: Record<string, string> }) => void>(),
+    opt_out_capturing: vi.fn<() => void>(),
+    get_explicit_consent_status: vi.fn<() => "granted" | "denied" | "pending">(() => "pending")
   };
-  const load = async () => ({ posthog: sdk, extensions: {} });
+  const load = async () => ({ posthog: sdk, postHogConfig, applyConsent });
   return { sdk, load, ...sdk };
 };
+
+const chosen = (choice: Partial<ConsentChoice> = {}): ConsentChoice => ({
+  analytics: true,
+  replay: true,
+  consentId: "consent-1",
+  revision: 20261125,
+  justChosen: false,
+  ...choice
+});
+
+type Analytics = typeof import("./analytics");
+
+const boot = (
+  analytics: Analytics,
+  {
+    choice = chosen(),
+    load
+  }: { choice?: ConsentChoice; load: Parameters<Analytics["initAnalytics"]>[0]["load"] }
+) => analytics.initAnalytics({ token: "phc_test", host: "https://e.example.dev", choice, load });
 
 const withPostHog = () => {
   const fake = fakeSdk();
@@ -192,6 +216,7 @@ describe("initAnalytics", () => {
   describe("SDK config", () => {
     const InitConfig = z.object({
       api_host: z.string(),
+      cookieless_mode: z.string(),
       session_recording: z.object({ maskAllInputs: z.boolean(), maskTextSelector: z.string() })
     });
     let tokens: string[];
@@ -201,7 +226,7 @@ describe("initAnalytics", () => {
     beforeAll(async () => {
       const { init, load } = fakeSdk();
       const ph = await fresh();
-      await ph.initAnalytics("phc_test", "https://e.example.dev", load);
+      await boot(ph, { load });
       tokens = init.mock.calls.map(([token]) => token);
       config = InitConfig.parse(init.mock.calls[0][1]);
     });
@@ -211,46 +236,149 @@ describe("initAnalytics", () => {
       expect(config.api_host).toBe("https://e.example.dev");
     });
 
+    it("falls back to cookieless counting for a visitor who rejects", () => {
+      expect(config.cookieless_mode).toBe("on_reject");
+    });
+
     it("masks the chat transcript in recordings, not just inputs", () => {
       expect(config.session_recording.maskAllInputs).toBe(true);
       expect(config.session_recording.maskTextSelector).toBe("[data-ph-mask]");
     });
   });
 
-  it("hands the loader's extensions to init, so the slim SDK gets them", async () => {
-    const { sdk, init } = fakeSdk();
-    const extensions = {};
-    const ph = await fresh();
-    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => ({
-      posthog: sdk,
-      extensions
-    }));
-    expect(init.mock.calls[0][1].__extensionClasses).toBe(extensions);
-  });
-
-  it("starts session replay on the first interaction, not at boot", async () => {
-    const { init, startSessionRecording, load } = fakeSdk();
+  it("starts an allowed replay on the next interaction, or at once when the visitor just allowed it", async () => {
+    const restored = fakeSdk();
+    const justAllowed = fakeSdk();
     const win = new EventTarget();
     vi.stubGlobal("window", win);
     try {
-      const ph = await fresh();
-      await ph.initAnalytics("phc_test", "https://e.example.dev", load);
-      expect(init.mock.calls[0][1].disable_session_recording).toBe(true);
-      expect(startSessionRecording.mock.calls).toEqual([]);
+      await (
+        await fresh()
+      ).initAnalytics({
+        token: "phc_test",
+        host: "https://e.example.dev",
+        choice: chosen(),
+        load: restored.load
+      });
+      expect(restored.init.mock.calls[0][1].disable_session_recording).toBe(true);
+      expect(restored.startSessionRecording.mock.calls).toEqual([]);
       win.dispatchEvent(new Event("pointermove"));
-      expect(startSessionRecording.mock.calls).toEqual([[]]);
+      expect(restored.startSessionRecording.mock.calls).toEqual([[]]);
+
+      await (
+        await fresh()
+      ).initAnalytics({
+        token: "phc_test",
+        host: "https://e.example.dev",
+        choice: chosen({ justChosen: true }),
+        load: justAllowed.load
+      });
+      expect(justAllowed.startSessionRecording.mock.calls).toEqual([[]]);
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("records only sessions the visitor allowed", async () => {
+    const denied = fakeSdk();
+    const allowed = fakeSdk();
+    const win = new EventTarget();
+    vi.stubGlobal("window", win);
+    try {
+      await (
+        await fresh()
+      ).initAnalytics({
+        token: "phc_test",
+        host: "https://e.example.dev",
+        choice: chosen({ replay: false }),
+        load: denied.load
+      });
+      await (
+        await fresh()
+      ).initAnalytics({
+        token: "phc_test",
+        host: "https://e.example.dev",
+        choice: chosen(),
+        load: allowed.load
+      });
+      win.dispatchEvent(new Event("pointermove"));
+      expect(denied.startSessionRecording.mock.calls).toEqual([]);
+      expect(allowed.startSessionRecording.mock.calls).toEqual([[]]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("records an acceptance with its consent id and revision", async () => {
+    const { opt_in_capturing, load } = fakeSdk();
+    await (
+      await fresh()
+    ).initAnalytics({
+      token: "phc_test",
+      host: "https://e.example.dev",
+      choice: chosen({ justChosen: true }),
+      load
+    });
+    expect(opt_in_capturing.mock.calls).toEqual([
+      [{ captureProperties: { consent_id: "consent-1", consent_revision: "20261125" } }]
+    ]);
+  });
+
+  it("restores an earlier acceptance without recording it again, unless PostHog lost it", async () => {
+    const remembered = fakeSdk();
+    remembered.get_explicit_consent_status.mockReturnValue("granted");
+    await (
+      await fresh()
+    ).initAnalytics({
+      token: "phc_test",
+      host: "https://e.example.dev",
+      choice: chosen(),
+      load: remembered.load
+    });
+    const forgotten = fakeSdk();
+    await (
+      await fresh()
+    ).initAnalytics({
+      token: "phc_test",
+      host: "https://e.example.dev",
+      choice: chosen(),
+      load: forgotten.load
+    });
+    expect(remembered.opt_in_capturing.mock.calls).toEqual([]);
+    expect(forgotten.opt_in_capturing.mock.calls).toEqual([
+      [{ captureProperties: { consent_id: "consent-1", consent_revision: "20261125" } }]
+    ]);
+  });
+
+  it("opts a visitor who rejects out, and still hands their events to PostHog to count anonymously", async () => {
+    const { opt_out_capturing, opt_in_capturing, capture, load } = fakeSdk();
+    const ph = await fresh();
+    await boot(ph, { choice: chosen({ analytics: false, replay: false, justChosen: true }), load });
+    ph.track("resume_download");
+    expect(opt_out_capturing.mock.calls).toEqual([[]]);
+    expect(opt_in_capturing.mock.calls).toEqual([]);
+    expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
+  });
+
+  it("applies a change of mind to the SDK it already loaded", async () => {
+    const { opt_out_capturing, stopSessionRecording, init, load } = fakeSdk();
+    const ph = await fresh();
+    await boot(ph, { load });
+    await boot(ph, { choice: chosen({ analytics: false, replay: false, justChosen: true }), load });
+    expect(init.mock.calls).toHaveLength(1);
+    expect(opt_out_capturing.mock.calls).toEqual([[]]);
+    expect(stopSessionRecording.mock.calls).toEqual([[]]);
   });
 
   it("replays events captured before the SDK finished loading", async () => {
     const { capture, register, load } = fakeSdk();
     const { promise: gate, resolve: release } = Promise.withResolvers<void>();
     const ph = await fresh();
-    const booting = ph.initAnalytics("phc_test", "https://e.example.dev", async () => {
-      await gate;
-      return load();
+    const booting = boot(ph, {
+      load: async () => {
+        await gate;
+        return load();
+      }
     });
     ph.track("resume_download");
     ph.tag("theme", "dark");
@@ -273,11 +401,7 @@ describe("initAnalytics", () => {
           delete globalThis.posthog;
           const { capture, load } = fakeSdk();
           const ph = await fresh();
-          const booting = ph.initAnalytics(
-            "phc_test",
-            "https://e.example.dev",
-            s.scheduleFunction(load)
-          );
+          const booting = boot(ph, { load: s.scheduleFunction(load) });
           s.scheduleSequence(
             events.map(name => ({ label: name, builder: async () => ph.track(name) }))
           );
@@ -293,21 +417,28 @@ describe("initAnalytics", () => {
   it("does nothing until it has both a token and a host", async () => {
     const { init, load } = fakeSdk();
     const ph = await fresh();
-    await ph.initAnalytics("", "https://e.example.dev", load);
-    await ph.initAnalytics("phc_test", "", load);
-    await ph.initAnalytics("phc_test", "https://e.example.dev", load);
+    await ph.initAnalytics({
+      token: "",
+      host: "https://e.example.dev",
+      choice: chosen(),
+      load
+    });
+    await ph.initAnalytics({ token: "phc_test", host: "", choice: chosen(), load });
+    await boot(ph, { load });
     expect(init.mock.calls.map(([token]) => token)).toEqual(["phc_test"]);
   });
 
   it("drops what it buffered when the SDK fails to load, and can boot later", async () => {
     const { capture, load } = fakeSdk();
     const ph = await fresh();
-    const failing = ph.initAnalytics("phc_test", "https://e.example.dev", async () => {
-      throw new Error("chunk load failed");
+    const failing = boot(ph, {
+      load: async () => {
+        throw new Error("chunk load failed");
+      }
     });
     ph.track("resume_download");
     await failing;
-    await ph.initAnalytics("phc_test", "https://e.example.dev", load);
+    await boot(ph, { load });
     ph.track("social_click");
     expect(capture.mock.calls).toEqual([["social_click", undefined]]);
   });
@@ -323,6 +454,24 @@ describe("bootAnalytics", () => {
     assert(win, "fixture page has no window");
     return { d, win };
   };
+  const consentPrompt = () => {
+    const showSettings = vi.fn<() => void>();
+    let answer: ((choice: ConsentChoice) => void) | undefined;
+    const ask = async (onChoice: (choice: ConsentChoice) => void) => {
+      answer = onChoice;
+      return { showSettings };
+    };
+    const choose = (choice: ConsentChoice) => {
+      assert(answer, "the consent prompt was never shown");
+      answer(choice);
+    };
+    return { ask, choose, showSettings };
+  };
+  const answeredWith =
+    (choice: ConsentChoice) => async (onChoice: (choice: ConsentChoice) => void) => {
+      onChoice(choice);
+      return { showSettings: () => {} };
+    };
 
   it("keeps the SDK out of the page until the visitor's first input, then sends events", async () => {
     const { init, capture, load: loadFake } = fakeSdk();
@@ -331,12 +480,13 @@ describe("bootAnalytics", () => {
       loads++;
       return loadFake();
     };
+    const ask = answeredWith(chosen());
     const ph = await fresh();
-    await ph.bootAnalytics({ root: page(""), load });
+    await ph.bootAnalytics({ root: page(""), load, ask });
     const { d, win } = configured();
     vi.stubGlobal("document", d);
     try {
-      const booting = ph.bootAnalytics({ load });
+      const booting = ph.bootAnalytics({ load, ask });
       expect(loads).toBe(0);
       win.dispatchEvent(new win.Event("pointerdown"));
       await booting;
@@ -352,6 +502,56 @@ describe("bootAnalytics", () => {
     expect(capture.mock.calls).toEqual([["cta_click", { where: "hero" }]]);
   });
 
+  it("sends nothing until the visitor chooses, then opts in before sending what it held", async () => {
+    const sent: string[] = [];
+    const { opt_in_capturing, capture, load } = fakeSdk();
+    opt_in_capturing.mockImplementation(() => sent.push("$opt_in"));
+    capture.mockImplementation(event => sent.push(event));
+    const { ask, choose } = consentPrompt();
+    const { d, win } = configured();
+    const ph = await fresh();
+    const booting = ph.bootAnalytics({ root: d, load, ask });
+    win.dispatchEvent(new win.Event("pointerdown"));
+    await booting;
+    ph.track("resume_download");
+    expect(sent).toEqual([]);
+
+    choose(chosen({ justChosen: true }));
+    await vi.waitFor(() => expect(sent).toEqual(["$opt_in", "resume_download"]));
+  });
+
+  it("opens the cookie settings even before the banner has loaded", async () => {
+    const { load } = fakeSdk();
+    const { ask, showSettings } = consentPrompt();
+    const { d } = configured();
+    const ph = await fresh();
+    void ph.bootAnalytics({ root: d, load, ask });
+    ph.openConsentSettings();
+    await vi.waitFor(() => expect(showSettings.mock.calls).toEqual([[]]));
+  });
+
+  it("drops what it held, errors included, when the banner fails to load", async () => {
+    const { capture, captureException, load } = fakeSdk();
+    const { d, win } = configured();
+    const ph = await fresh();
+    const booting = ph.bootAnalytics({
+      root: d,
+      load,
+      ask: async () => {
+        throw new Error("consent chunk failed");
+      }
+    });
+    ph.track("resume_download");
+    win.dispatchEvent(new win.Event("pointerdown"));
+    await booting;
+    win.dispatchEvent(Object.assign(new win.Event("error"), { error: new Error("later") }));
+    await boot(ph, { load });
+    expect(capture.mock.calls).toEqual([]);
+    expect(captureException.mock.calls).toEqual([]);
+    ph.track("social_click");
+    expect(capture.mock.calls).toEqual([["social_click", undefined]]);
+  });
+
   it("buffers errors and rejections thrown before the SDK boots and replays them", async () => {
     const { captureException, load } = fakeSdk();
     const { promise: gate, resolve: release } = Promise.withResolvers<void>();
@@ -359,6 +559,7 @@ describe("bootAnalytics", () => {
     const ph = await fresh();
     const booting = ph.bootAnalytics({
       root: d,
+      ask: answeredWith(chosen({ analytics: false, replay: false })),
       load: async () => {
         await gate;
         return load();

@@ -1,3 +1,5 @@
+import type { SiteStorageKey } from "./privacy";
+
 export type Theme = "light" | "dark";
 
 interface ThemeHost extends Pick<Window, "addEventListener" | "dispatchEvent"> {
@@ -10,7 +12,7 @@ interface ThemeHost extends Pick<Window, "addEventListener" | "dispatchEvent"> {
 // Layout.astro inlines this via toString() as themeBootstrapScript, so it must not reference
 // anything outside itself.
 export function bootstrapTheme(win: ThemeHost): void {
-  const key = "isDark";
+  const key: SiteStorageKey = "isDark";
   const root = win.document.documentElement;
   const os = win.matchMedia("(prefers-color-scheme: dark)");
   const osTheme = (): Theme => (os.matches ? "dark" : "light");

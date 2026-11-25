@@ -1,0 +1,117 @@
+---
+import Layout from "#src/layouts/Layout.astro";
+import Header from "#src/components/Header.astro";
+import Prose from "#src/components/Prose.astro";
+import { buttonVariants } from "#src/components/ui/button.tsx";
+import { analyticsConfigured } from "#src/lib/analytics-env.ts";
+import {
+  analyticsProvider,
+  CONSENT_COOKIE,
+  formatDate,
+  NOTICE_UPDATED,
+  REPLAY_RETENTION_DAYS,
+  storedData
+} from "#src/lib/privacy.ts";
+import { cn } from "#src/lib/utils.ts";
+import { socialMediaLinks } from "@murugappan/content/portfolio.ts";
+
+const email = socialMediaLinks.gmail;
+---
+
+<Layout
+  title="Privacy and cookies | Murugappan M"
+  description="What murugappan.dev collects, why, who processes it, and how to change your cookie choice."
+>
+  <Header />
+  <Prose as="main">
+    <h1>Privacy and cookies</h1>
+    <p class="text-subtitle-muted">Last updated {formatDate(NOTICE_UPDATED)}</p>
+    <p>
+      This is my personal site, and I decide what it collects. To ask a question, or to see or
+      delete data about you, email me at <a href={`mailto:${email}`}>{email}</a>.
+    </p>
+
+    <h2>Change your mind</h2>
+    {analyticsConfigured && (
+      <>
+        <p data-consent-status>You haven't chosen yet.</p>
+        <button type="button" data-consent-settings class={cn(buttonVariants(), "ui-island")}>
+          Cookie settings
+        </button>
+      </>
+    )}
+    <p>
+      Your choice lasts {CONSENT_COOKIE.days} days, then I ask again. I also ask again whenever what
+      I collect changes. Cookie settings is also at the bottom of every page.
+    </p>
+
+    <h2>What I collect</h2>
+    <h3>Before you choose</h3>
+    <p>Nothing. Analytics doesn't load until you answer the cookie banner.</p>
+    <h3>If you accept</h3>
+    <ul>
+      <li>
+        The pages you visit, what you click, how far you scroll and heatmaps, linked by an anonymous
+        ID stored on your device.
+      </li>
+      <li>Your browser, device type and rough location from your IP address.</li>
+      <li>
+        Recordings, if you leave them on: how you moved through the page. Typed text and chat
+        messages are masked. Recordings are kept {REPLAY_RETENTION_DAYS} days.
+      </li>
+    </ul>
+    <h3>If you reject</h3>
+    <p>
+      Visits are still counted anonymously, with your browser, device type and rough location, but
+      nothing about you is stored on your device and nothing is recorded. {analyticsProvider.name}{" "}
+      tells visits apart with a hash it computes on its servers instead of an ID on your device.
+    </p>
+    <h3>Either way, once you've chosen</h3>
+    <p>
+      Errors in the page (the message, stack trace, page address and browser) are sent so I can fix
+      them. I rely on my legitimate interest in keeping the site working. Email me if you object.
+    </p>
+    <h3>If your browser sends Global Privacy Control</h3>
+    <p>
+      I treat it as a rejection, collect nothing and don't show the banner. You can still opt in
+      under Change your mind, above.
+    </p>
+
+    <h2>Who processes it</h2>
+    <p>
+      {analyticsProvider.company} runs the analytics for me. Its servers are in the{" "}
+      {analyticsProvider.location}, so your data leaves the EU and UK. See{" "}
+      <a href={analyticsProvider.privacyPolicy}>{analyticsProvider.name}'s privacy policy</a>.
+    </p>
+
+    <h2>What's stored on your device</h2>
+    <dl>
+      {storedData.map(item => (
+        <>
+          <dt>
+            <code class="break-all before:content-none after:content-none">{item.key}</code>
+          </dt>
+          <dd>
+            {item.purpose}
+            {item.needsConsent && " Only if you accept."}
+            <br />
+            <span class="text-subtitle-muted">
+              {item.where} · {item.lifetime} · set by {item.setBy}
+            </span>
+          </dd>
+        </>
+      ))}
+    </dl>
+  </Prose>
+</Layout>
+
+<script>
+  import { consentStatus } from "#src/lib/privacy.ts";
+
+  const status = document.querySelector("[data-consent-status]");
+  const show = () => {
+    if (status) status.textContent = consentStatus(document.cookie);
+  };
+  show();
+  for (const event of ["cc:onConsent", "cc:onChange"]) window.addEventListener(event, show);
+</script>
