@@ -1,6 +1,6 @@
 // PII: never pass anything a visitor typed (chat messages, search queries).
 
-import type { CaptureResult, PostHogConfig } from "posthog-js";
+import type { CaptureResult, PostHogConfig } from "posthog-js/dist/module.slim";
 
 import { onFirstInteraction } from "./first-interaction";
 
@@ -24,9 +24,12 @@ const isPostHog = (p: unknown): p is PostHog =>
   "register" in p &&
   typeof p.register === "function";
 
-type SdkLoader = () => Promise<PostHog>;
+type SdkLoader = () => Promise<{
+  posthog: PostHog;
+  extensions: PostHogConfig["__extensionClasses"];
+}>;
 
-const loadSdk: SdkLoader = () => import("posthog-js").then(m => m.default);
+const loadSdk: SdkLoader = () => import("./posthog-sdk");
 
 let sdk: PostHog | null = null;
 
@@ -131,8 +134,9 @@ export async function initAnalytics(
   if (!token?.trim() || !host?.trim() || sdk) return;
   pending ??= [];
   try {
-    const ph = await load();
+    const { posthog: ph, extensions } = await load();
     ph.init(token.trim(), {
+      __extensionClasses: extensions,
       api_host: host.trim().replace(/\/$/, ""),
       // the toolbar needs PostHog's real domain, not the proxy
       ui_host: "https://us.posthog.com",
@@ -144,8 +148,7 @@ export async function initAnalytics(
         // PII: sent chat messages render as text, which input masking misses
         maskTextSelector: "[data-ph-mask]"
       },
-      // unused extensions the SDK would otherwise fetch after boot
-      disable_surveys: true,
+      // the analytics bundle ships dead-click capture, which the site doesn't use
       capture_dead_clicks: false,
       capture_exceptions: true,
       mask_personal_data_properties: true,
@@ -185,7 +188,7 @@ export async function initAnalytics(
 // interact.
 const SDK_LOAD_FALLBACK_MS = 10_000;
 
-// Loads on first input or after `fallbackMs`, not on idle: idle loading put the ~90 KB SDK
+// Loads on first input or after `fallbackMs`, not on idle: idle loading put the SDK
 // inside Lighthouse's measured window.
 export function scheduleSdkLoad(
   load: () => void,

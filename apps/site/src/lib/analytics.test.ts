@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { afterEach, assert, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { parseHTML } from "linkedom";
-import type { PostHogConfig } from "posthog-js";
+import type { PostHogConfig } from "posthog-js/dist/module.slim";
 import { z } from "zod";
 
 import {
@@ -22,7 +22,8 @@ const fakeSdk = () => {
     init: vi.fn<(token: string, config: Partial<PostHogConfig>) => void>(),
     startSessionRecording: vi.fn<() => void>()
   };
-  return { sdk, ...sdk };
+  const load = async () => ({ posthog: sdk, extensions: {} });
+  return { sdk, load, ...sdk };
 };
 
 const withPostHog = () => {
@@ -198,9 +199,9 @@ describe("initAnalytics", () => {
 
     // Vitest clears mock calls before each test, so read them here.
     beforeAll(async () => {
-      const { sdk, init } = fakeSdk();
+      const { init, load } = fakeSdk();
       const ph = await fresh();
-      await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+      await ph.initAnalytics("phc_test", "https://e.example.dev", load);
       tokens = init.mock.calls.map(([token]) => token);
       config = InitConfig.parse(init.mock.calls[0][1]);
     });
@@ -216,13 +217,24 @@ describe("initAnalytics", () => {
     });
   });
 
+  it("hands the loader's extensions to init, so the slim SDK gets them", async () => {
+    const { sdk, init } = fakeSdk();
+    const extensions = {};
+    const ph = await fresh();
+    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => ({
+      posthog: sdk,
+      extensions
+    }));
+    expect(init.mock.calls[0][1].__extensionClasses).toBe(extensions);
+  });
+
   it("starts session replay on the first interaction, not at boot", async () => {
-    const { sdk, init, startSessionRecording } = fakeSdk();
+    const { init, startSessionRecording, load } = fakeSdk();
     const win = new EventTarget();
     vi.stubGlobal("window", win);
     try {
       const ph = await fresh();
-      await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+      await ph.initAnalytics("phc_test", "https://e.example.dev", load);
       expect(init.mock.calls[0][1].disable_session_recording).toBe(true);
       expect(startSessionRecording.mock.calls).toEqual([]);
       win.dispatchEvent(new Event("pointermove"));
@@ -233,12 +245,12 @@ describe("initAnalytics", () => {
   });
 
   it("replays events captured before the SDK finished loading", async () => {
-    const { sdk, capture, register } = fakeSdk();
+    const { capture, register, load } = fakeSdk();
     const { promise: gate, resolve: release } = Promise.withResolvers<void>();
     const ph = await fresh();
     const booting = ph.initAnalytics("phc_test", "https://e.example.dev", async () => {
       await gate;
-      return sdk;
+      return load();
     });
     ph.track("resume_download");
     ph.tag("theme", "dark");
@@ -259,12 +271,12 @@ describe("initAnalytics", () => {
         async (s, events) => {
           // afterEach runs once per test, not once per run.
           delete globalThis.posthog;
-          const { sdk, capture } = fakeSdk();
+          const { capture, load } = fakeSdk();
           const ph = await fresh();
           const booting = ph.initAnalytics(
             "phc_test",
             "https://e.example.dev",
-            s.scheduleFunction(async () => sdk)
+            s.scheduleFunction(load)
           );
           s.scheduleSequence(
             events.map(name => ({ label: name, builder: async () => ph.track(name) }))
@@ -279,23 +291,23 @@ describe("initAnalytics", () => {
   });
 
   it("does nothing until it has both a token and a host", async () => {
-    const { sdk, init } = fakeSdk();
+    const { init, load } = fakeSdk();
     const ph = await fresh();
-    await ph.initAnalytics("", "https://e.example.dev", async () => sdk);
-    await ph.initAnalytics("phc_test", "", async () => sdk);
-    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+    await ph.initAnalytics("", "https://e.example.dev", load);
+    await ph.initAnalytics("phc_test", "", load);
+    await ph.initAnalytics("phc_test", "https://e.example.dev", load);
     expect(init.mock.calls.map(([token]) => token)).toEqual(["phc_test"]);
   });
 
   it("drops what it buffered when the SDK fails to load, and can boot later", async () => {
-    const { sdk, capture } = fakeSdk();
+    const { capture, load } = fakeSdk();
     const ph = await fresh();
     const failing = ph.initAnalytics("phc_test", "https://e.example.dev", async () => {
       throw new Error("chunk load failed");
     });
     ph.track("resume_download");
     await failing;
-    await ph.initAnalytics("phc_test", "https://e.example.dev", async () => sdk);
+    await ph.initAnalytics("phc_test", "https://e.example.dev", load);
     ph.track("social_click");
     expect(capture.mock.calls).toEqual([["social_click", undefined]]);
   });
@@ -313,11 +325,11 @@ describe("bootAnalytics", () => {
   };
 
   it("keeps the SDK out of the page until the visitor's first input, then sends events", async () => {
-    const { sdk, init, capture } = fakeSdk();
+    const { init, capture, load: loadFake } = fakeSdk();
     let loads = 0;
     const load = async () => {
       loads++;
-      return sdk;
+      return loadFake();
     };
     const ph = await fresh();
     await ph.bootAnalytics({ root: page(""), load });
@@ -341,7 +353,7 @@ describe("bootAnalytics", () => {
   });
 
   it("buffers errors and rejections thrown before the SDK boots and replays them", async () => {
-    const { sdk, captureException } = fakeSdk();
+    const { captureException, load } = fakeSdk();
     const { promise: gate, resolve: release } = Promise.withResolvers<void>();
     const { d, win } = configured();
     const ph = await fresh();
@@ -349,7 +361,7 @@ describe("bootAnalytics", () => {
       root: d,
       load: async () => {
         await gate;
-        return sdk;
+        return load();
       }
     });
     const err = new Error("hydration failed");

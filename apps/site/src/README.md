@@ -30,6 +30,7 @@ Things to know:
 - Events go to `e.murugappan.dev`, PostHog's own proxy. Keep that DNS record unproxied (grey cloud) in Cloudflare, or PostHog can't renew its certificate.
 - Never send anything a visitor typed. Replay masks inputs and the chat transcript, and URLs have their search and tag params masked.
 - Session replay and error tracking also have to be switched on in the PostHog project.
+- The site loads posthog-js's slim build with only the analytics, replay, error-tracking and toolbar extensions (`extensions` in `lib/posthog-sdk.ts`). To use another PostHog product, such as surveys or feature flags, add its bundle there. Replay linked to a feature flag also needs the feature-flags bundle, or it never starts.
 
 ## Resume
 
