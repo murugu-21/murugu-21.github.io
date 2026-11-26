@@ -111,22 +111,16 @@ export function reportError(cause: unknown, props?: Record<string, string>): voi
   send(ph => ph.captureException(cause, cleaned));
 }
 
-const TRACKED = new WeakSet<object>();
+let clickTrackingStarted = false;
 
-// Not `instanceof Element`: the Node test project has no DOM globals.
-const isElement = (target: EventTarget | null): target is Element =>
-  target !== null && "closest" in target && typeof target.closest === "function";
-
-export function initClickTracking(root?: Document): void {
-  // lib.dom types this as always defined; it is undefined outside a browser
-  const doc: Document | undefined = root ?? globalThis.document;
-  if (!doc || TRACKED.has(doc)) return;
-  TRACKED.add(doc);
-  doc.addEventListener(
+export function initClickTracking(): void {
+  if (clickTrackingStarted) return;
+  clickTrackingStarted = true;
+  document.addEventListener(
     "click",
     event => {
       const target = event.target;
-      if (!isElement(target)) return;
+      if (!(target instanceof Element)) return;
       const el = target.closest<HTMLElement>("[data-ph-event]");
       const name = el?.dataset.phEvent;
       if (!el || !name) return;

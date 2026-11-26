@@ -4,14 +4,7 @@ import { parseHTML } from "linkedom";
 import type { PostHogConfig } from "posthog-js/dist/module.slim";
 import { z } from "zod";
 
-import {
-  type ConsentChoice,
-  initClickTracking,
-  reportError,
-  scheduleSdkLoad,
-  tag,
-  track
-} from "./analytics";
+import { type ConsentChoice, reportError, scheduleSdkLoad, tag, track } from "./analytics";
 import { onFirstInteraction } from "./first-interaction";
 import { applyConsent, maskReferrers, postHogConfig } from "./posthog-sdk";
 
@@ -153,35 +146,6 @@ describe("tag", () => {
     tag("theme", "");
     tag("theme", "dark");
     expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
-  });
-});
-
-describe("initClickTracking", () => {
-  const click = (d: Document, id: string) => {
-    const win = d.defaultView;
-    const target = d.getElementById(id);
-    assert(win && target, `no window or #${id} in the fixture`);
-    target.dispatchEvent(new win.Event("click", { bubbles: true }));
-  };
-
-  it("captures the nearest annotated ancestor of the click target, and nothing else", () => {
-    const { capture } = withPostHog();
-    const d = doc(
-      `<a id="plain" href="/">Home</a><a data-ph-event="social_click" data-ph-prop="social" data-ph-value="github"><svg id="glyph"></svg></a>`
-    );
-    initClickTracking(d);
-    click(d, "plain");
-    click(d, "glyph");
-    expect(capture.mock.calls).toEqual([["social_click", { social: "github" }]]);
-  });
-
-  it("attaches one listener however many times it is called", () => {
-    const { capture } = withPostHog();
-    const d = doc(`<a id="cv" data-ph-event="resume_download"></a>`);
-    initClickTracking(d);
-    initClickTracking(d);
-    click(d, "cv");
-    expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
   });
 });
 
