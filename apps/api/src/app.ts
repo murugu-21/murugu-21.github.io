@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import { appLayer, forRequest } from "#src/app.module.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
+import { routedPath } from "#src/common/http/api-alias.ts";
 import { apiController } from "#src/modules/api/api.controller.ts";
 import { audioController } from "#src/modules/audio/audio.controller.ts";
 import { chatController } from "#src/modules/chat/chat.controller.ts";
@@ -14,22 +15,17 @@ import {
 } from "#src/modules/well-known/well-known.controller.ts";
 
 export function createApp(layer = appLayer()) {
-  return (
-    new Hono<AppEnv>()
-      .use("*", async (c, next) => {
-        c.set("services", forRequest({ layer, env: c.env }));
-        await next();
-      })
-      .route("/agents/chat-room", chatController)
-      // /api/v1 must mount before /api, the permanent unversioned alias for v1.
-      .route("/api/v1", apiController)
-      .route("/api", apiController)
-      .route("/openapi.json", openapiRootController)
-      // Manifest routes register before /mcp so /mcp.json isn't taken as JSON-RPC.
-      .route("/mcp.json", mcpManifestController)
-      .route("/.well-known", wellKnownController)
-      .route("/mcp", mcpController)
-      .route("/blog/audio", audioController)
-      .route("/", pagesController)
-  );
+  return new Hono<AppEnv>({ getPath: routedPath })
+    .use("*", async (c, next) => {
+      c.set("services", forRequest({ layer, env: c.env }));
+      await next();
+    })
+    .route("/agents/chat-room", chatController)
+    .route("/api/v1", apiController)
+    .route("/openapi.json", openapiRootController)
+    .route("/mcp.json", mcpManifestController)
+    .route("/.well-known", wellKnownController)
+    .route("/mcp", mcpController)
+    .route("/blog/audio", audioController)
+    .route("/", pagesController);
 }

@@ -52,6 +52,15 @@ describe("read limiting through the worker", () => {
     expect(await read("2001:db8:8:1::1")).toBe(200);
   });
 
+  it("spends a read slot on a GET of the contact route and reports the read policy", async () => {
+    const getContact = () => fetchWorker("/api/v1/contact", { ip: "198.51.100.5" });
+    const first = await getContact();
+    expect(first.status).toBe(405);
+    expect(first.headers.get("RateLimit-Policy")).toContain('"reads"');
+    expect(first.headers.get("X-RateLimit-Remaining")).toBe("599");
+    expect((await getContact()).headers.get("X-RateLimit-Remaining")).toBe("598");
+  });
+
   it("keeps the spec reachable for a client that has been throttled", async () => {
     const client = apiClient({ ip: "198.51.100.4" });
     for (let i = 0; i < READ_QUOTA.quota + 5; i++) await client.api.v1.profile.$get();
@@ -62,9 +71,11 @@ describe("read limiting through the worker", () => {
 });
 
 describe("contact limiting through the worker", () => {
-  it("advertises the contact policies, not the read one, on the write endpoint", async () => {
-    const res = await fetchWorker("/api/v1/contact");
-    expect(res.status).toBe(405);
+  it("advertises the contact policies, not the read one, on a rejected message", async () => {
+    const res = await apiClient({ ip: "198.51.100.31" }).api.v1.contact.$post({
+      json: { email: "nope", message: "hi" }
+    });
+    expect(res.status).toBe(422);
     const policy = res.headers.get("RateLimit-Policy") ?? "";
     expect(policy).toContain('"contact-client"');
     expect(policy).toContain('"contact-site"');

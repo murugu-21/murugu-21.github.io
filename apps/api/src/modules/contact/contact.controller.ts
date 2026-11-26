@@ -1,6 +1,8 @@
 import { Hono } from "hono";
+import { defineMiddleware } from "hono/factory";
 
 import { CONTACT_DAILY_PER_CLIENT, ContactRequest } from "@murugappan/contracts/api/contact.ts";
+import { CONTACT_POLICY } from "@murugappan/contracts/api/quotas.ts";
 import { API_PATHS } from "@murugappan/contracts/api/routes.ts";
 import { runInRequest } from "#src/app.module.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
@@ -112,8 +114,14 @@ const deliveryResponses: Render<ContactUsage, ContactError, Response> = {
   }
 };
 
+const contactPolicyHeader = defineMiddleware<AppEnv>(async (c, next) => {
+  await next();
+  c.res.headers.set("RateLimit-Policy", CONTACT_POLICY);
+});
+
 export const contactController = new Hono<AppEnv>().post(
   "/contact",
+  contactPolicyHeader,
   bodyLimitMiddleware({ maxBytes: MAX_CONTACT_BODY_BYTES, schemaName: "ContactRequest" }),
   jsonBodyPipe({ schema: ContactRequest, schemaName: "ContactRequest" }),
   c => {

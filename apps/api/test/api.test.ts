@@ -1,5 +1,4 @@
 import { Effect, Layer } from "effect";
-import type { ClientResponse } from "hono/client";
 import { describe, expect, it } from "vite-plus/test";
 import { z } from "zod";
 
@@ -28,7 +27,6 @@ import {
 
 const client = apiClient();
 const v1 = client.api.v1;
-type Prefix = typeof v1 | typeof client.api;
 
 const PostList = z.object({ posts: z.array(z.object({ slug: z.string() })), count: z.number() });
 
@@ -50,7 +48,7 @@ async function errorBody(res: JsonBody) {
 
 describe("GET /api/profile", () => {
   it("returns the person and links as cacheable, cross-origin JSON", async () => {
-    const res = await client.api.profile.$get();
+    const res = await v1.profile.$get();
     expect(res.status).toBe(200);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     const body = await readJson(
@@ -67,32 +65,23 @@ describe("GET /api/profile", () => {
 });
 
 describe("path versioning", () => {
-  it.each<[string, (prefix: Prefix) => Promise<ClientResponse<unknown>>]>([
-    ["/profile", prefix => prefix.profile.$get()],
-    ["/experience", prefix => prefix.experience.$get()],
-    ["/skills", prefix => prefix.skills.$get()],
-    ["/education", prefix => prefix.education.$get()],
-    ["/open-source", prefix => prefix["open-source"].$get()],
-    ["/posts", prefix => prefix.posts.$get({ query: {} })],
-    [
-      "/posts/coin-change-problem",
-      prefix => prefix.posts[":slug"].$get({ param: { slug: "coin-change-problem" } })
-    ]
-  ])(
-    "serves %s under the versioned prefix and the same body under the alias",
-    async (_, request) => {
-      const versioned = await request(v1);
-      expect(versioned.status).toBe(200);
-      const text = await versioned.text();
-      expect(await (await request(client.api)).text()).toBe(text);
-    }
-  );
+  it.each([
+    "/profile",
+    "/experience",
+    "/skills",
+    "/education",
+    "/open-source",
+    "/posts",
+    "/posts/coin-change-problem"
+  ])("serves %s under the versioned prefix and the same body under the alias", async path => {
+    const versioned = await fetchWorker(`/api/v1${path}`);
+    expect(versioned.status).toBe(200);
+    const text = await versioned.text();
+    expect(await (await fetchWorker(`/api${path}`)).text()).toBe(text);
+  });
 
-  it.each<[string, Prefix]>([
-    ["/api/v1", v1],
-    ["/api", client.api]
-  ])("serves the version catalogue at %s/versions", async (_, prefix) => {
-    const res = await prefix.versions.$get();
+  it.each(["/api/v1", "/api"])("serves the version catalogue at %s/versions", async prefix => {
+    const res = await fetchWorker(`http://localhost${prefix}/versions`);
     expect(res.status).toBe(200);
     const body = await readJson(res, ApiVersions);
     expect(body.current).toBe("v1");
@@ -107,7 +96,7 @@ describe("path versioning", () => {
   it("stamps the version and discovery headers on every response", async () => {
     const responses = [
       ["/api/v1/profile", await v1.profile.$get()],
-      ["/api/profile", await client.api.profile.$get()],
+      ["/api/profile", await fetchWorker("/api/profile")],
       ["/api/v1/versions", await v1.versions.$get()],
       ["/api/nope", await fetchWorker("/api/nope")],
       ["/openapi.json", await client["openapi.json"].$get()]
@@ -205,7 +194,7 @@ describe("HEAD on the read endpoints", () => {
 
 describe("GET /api/posts", () => {
   it("lists every published post newest first, with a count", async () => {
-    const res = await client.api.posts.$get({ query: {} });
+    const res = await v1.posts.$get({ query: {} });
     expect(res.status).toBe(200);
     const body = await readJson(res, PostList);
     const slugs = body.posts.map(p => p.slug);
@@ -218,20 +207,20 @@ describe("GET /api/posts", () => {
   });
 
   it("filters case-insensitively on title and summary", async () => {
-    const res = await client.api.posts.$get({ query: { q: "RATE LIMITING" } });
+    const res = await v1.posts.$get({ query: { q: "RATE LIMITING" } });
     const body = await readJson(res, PostList);
     expect(body.count).toBe(1);
     expect(body.posts[0].slug).toBe("cloud-agnostic-rate-limiting");
   });
 
   it("caps the list with limit", async () => {
-    const res = await client.api.posts.$get({ query: { limit: "1" } });
+    const res = await v1.posts.$get({ query: { limit: "1" } });
     const body = await readJson(res, PostList);
     expect(body.count).toBe(1);
   });
 
   it("rejects a non-numeric limit with a field-level error", async () => {
-    const res = await client.api.posts.$get({ query: { limit: "lots" } });
+    const res = await v1.posts.$get({ query: { limit: "lots" } });
     expect(res.status).toBe(400);
     const error = await errorBody(res);
     expect(error.code).toBe("invalid_request");
@@ -241,13 +230,13 @@ describe("GET /api/posts", () => {
   });
 
   it("rejects an out-of-range limit", async () => {
-    expect((await client.api.posts.$get({ query: { limit: "0" } })).status).toBe(400);
-    expect((await client.api.posts.$get({ query: { limit: "101" } })).status).toBe(400);
+    expect((await v1.posts.$get({ query: { limit: "0" } })).status).toBe(400);
+    expect((await v1.posts.$get({ query: { limit: "101" } })).status).toBe(400);
   });
 
   it("rejects a q longer than the 200 characters the spec allows", async () => {
-    expect((await client.api.posts.$get({ query: { q: "a".repeat(200) } })).status).toBe(200);
-    const res = await client.api.posts.$get({ query: { q: "a".repeat(201) } });
+    expect((await v1.posts.$get({ query: { q: "a".repeat(200) } })).status).toBe(200);
+    const res = await v1.posts.$get({ query: { q: "a".repeat(201) } });
     expect(res.status).toBe(400);
     const error = await errorBody(res);
     expect(error.details).toEqual([{ field: "q", issue: "must be at most 200 characters" }]);
@@ -256,7 +245,7 @@ describe("GET /api/posts", () => {
 
 describe("GET /api/posts/{slug}", () => {
   it("returns the post with its markdown source", async () => {
-    const res = await client.api.posts[":slug"].$get({ param: { slug: "coin-change-problem" } });
+    const res = await v1.posts[":slug"].$get({ param: { slug: "coin-change-problem" } });
     expect(res.status).toBe(200);
     const body = await readJson(
       res,
@@ -280,7 +269,7 @@ describe("GET /api/posts/{slug}", () => {
   });
 
   it("404s a slug that is not published, pointing at the list endpoint", async () => {
-    const res = await client.api.posts[":slug"].$get({ param: { slug: "no-such-post" } });
+    const res = await v1.posts[":slug"].$get({ param: { slug: "no-such-post" } });
     expect(res.status).toBe(404);
     const error = await errorBody(res);
     expect(error.code).toBe("not_found");
@@ -290,7 +279,7 @@ describe("GET /api/posts/{slug}", () => {
   // Encoded slugs go through fetchWorker, since a typed client means to encode its params itself.
   it("404s a draft by either of its names", async () => {
     const responses = [
-      ["js-closure", await client.api.posts[":slug"].$get({ param: { slug: "js-closure" } })],
+      ["js-closure", await v1.posts[":slug"].$get({ param: { slug: "js-closure" } })],
       ["draft%2Fjs-closure", await fetchWorker("/api/posts/draft%2Fjs-closure")]
     ] as const;
     for (const [slug, res] of responses) {
@@ -309,7 +298,7 @@ describe("GET /api/posts/{slug}", () => {
 describe("the OpenAPI spec", () => {
   it.each([
     ["/openapi.json", () => client["openapi.json"].$get()],
-    ["/api/openapi.json", () => client.api["openapi.json"].$get()],
+    ["/api/openapi.json", () => fetchWorker("/api/openapi.json")],
     ["/api/v1/openapi.json", () => v1["openapi.json"].$get()]
   ])("is served at %s", async (_, request) => {
     const res = await request();
@@ -393,7 +382,7 @@ describe("error handling under /api", () => {
       })
     );
     capturedErrors();
-    const res = await apiClient({ layer }).api.posts.$get({ query: {} });
+    const res = await apiClient({ layer }).api.v1.posts.$get({ query: {} });
     expect(res.status).toBe(500);
     expect(res.headers.get("API-Version")).toBe("1.0.0");
     expect(await errorBody(res)).toMatchObject({ code: "internal_error" });
@@ -418,7 +407,7 @@ describe("POST /api/contact", () => {
 
   it("accepts a valid message and emails it to the inbox", async () => {
     const { email, sent } = recordingEmail();
-    const res = await apiClient({ ip: "203.0.113.10", env: { email } }).api.contact.$post({
+    const res = await apiClient({ ip: "203.0.113.10", env: { email } }).api.v1.contact.$post({
       json: {
         name: "Ada Lovelace",
         email: "ada@example.com",
@@ -460,7 +449,7 @@ describe("POST /api/contact", () => {
   });
 
   it("rejects invalid fields with 422 and names each one", async () => {
-    const res = await apiClient({ ip: "203.0.113.13" }).api.contact.$post({
+    const res = await apiClient({ ip: "203.0.113.13" }).api.v1.contact.$post({
       json: { email: "nope", message: "hi" }
     });
     expect(res.status).toBe(422);
@@ -473,7 +462,7 @@ describe("POST /api/contact", () => {
   });
 
   it("rejects an oversized body with 413", async () => {
-    const res = await apiClient({ ip: "203.0.113.14" }).api.contact.$post({
+    const res = await apiClient({ ip: "203.0.113.14" }).api.v1.contact.$post({
       json: { email: "ada@example.com", message: "x".repeat(40_000) }
     });
     expect(res.status).toBe(413);
@@ -517,13 +506,13 @@ describe("POST /api/contact", () => {
   });
 
   it("answers 503 when no inbox is configured, without spending the client's slot", async () => {
-    const res = await apiClient({ ip: "203.0.113.15", env: { inbox: "" } }).api.contact.$post({
+    const res = await apiClient({ ip: "203.0.113.15", env: { inbox: "" } }).api.v1.contact.$post({
       json: valid
     });
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
 
-    const sent = await apiClient({ ip: "203.0.113.15" }).api.contact.$post({ json: valid });
+    const sent = await apiClient({ ip: "203.0.113.15" }).api.v1.contact.$post({ json: valid });
     expect(sent.status).toBe(202);
     expect(sent.headers.get("X-RateLimit-Remaining")).toBe("2");
   });
@@ -532,7 +521,7 @@ describe("POST /api/contact", () => {
     const res = await apiClient({
       ip: "203.0.113.16",
       env: { email: { send: () => Promise.reject(new Error("relay down")) } }
-    }).api.contact.$post({ json: valid });
+    }).api.v1.contact.$post({ json: valid });
     expect(res.status).toBe(503);
     expect((await errorBody(res)).code).toBe("service_unavailable");
   });
@@ -548,9 +537,11 @@ describe("POST /api/contact", () => {
         )
     });
     const { email, sent } = recordingEmail();
-    const res = await apiClient({ ip: "203.0.113.19", env: { email }, layer }).api.contact.$post({
-      json: valid
-    });
+    const res = await apiClient({ ip: "203.0.113.19", env: { email }, layer }).api.v1.contact.$post(
+      {
+        json: valid
+      }
+    );
     expect(res.status).toBe(429);
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");
     expect(await errorBody(res)).toMatchObject({
@@ -568,7 +559,11 @@ describe("POST /api/contact", () => {
       const layer = fakeContactQuota(dryRun ? { usage: unavailable } : { take: unavailable });
       const logged = capturedErrors();
       const { email, sent } = recordingEmail();
-      const res = await apiClient({ ip: "203.0.113.18", env: { email }, layer }).api.contact.$post({
+      const res = await apiClient({
+        ip: "203.0.113.18",
+        env: { email },
+        layer
+      }).api.v1.contact.$post({
         json: { ...valid, dryRun }
       });
       expect(res.status).toBe(503);
@@ -591,7 +586,7 @@ describe("POST /api/contact with dryRun", () => {
 
   it("validates without sending an email", async () => {
     const { email, sent } = recordingEmail();
-    const res = await apiClient({ ip: "198.51.100.20", env: { email } }).api.contact.$post({
+    const res = await apiClient({ ip: "198.51.100.20", env: { email } }).api.v1.contact.$post({
       json: body
     });
     expect(res.status).toBe(200);
@@ -603,14 +598,14 @@ describe("POST /api/contact with dryRun", () => {
   });
 
   it("still reports invalid fields", async () => {
-    const res = await apiClient({ ip: "198.51.100.22" }).api.contact.$post({
+    const res = await apiClient({ ip: "198.51.100.22" }).api.v1.contact.$post({
       json: { email: "nope", message: "hi", dryRun: true }
     });
     expect(res.status).toBe(422);
   });
 
   it("validates even when no inbox is configured", async () => {
-    const res = await apiClient({ ip: "198.51.100.23", env: { inbox: "" } }).api.contact.$post({
+    const res = await apiClient({ ip: "198.51.100.23", env: { inbox: "" } }).api.v1.contact.$post({
       json: body
     });
     expect(res.status).toBe(200);

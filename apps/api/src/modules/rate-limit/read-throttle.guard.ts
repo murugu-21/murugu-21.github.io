@@ -1,5 +1,4 @@
 import { defineMiddleware } from "hono/factory";
-import { basePath } from "hono/route";
 
 import { READ_CACHE_MINUTES } from "@murugappan/contracts/api/quotas.ts";
 
@@ -31,16 +30,14 @@ function throttled(slot: ReadSlot): Response {
 
 export const readThrottleGuard = ({ enforce }: { enforce: boolean }) =>
   defineMiddleware<ApiEnv>(async (c, next) => {
-    const isContact = c.req.path.slice(basePath(c).length) === "/contact";
     const isRead = c.req.method === "GET" || c.req.method === "HEAD";
     // Without a client address every caller would share one window, so nothing is counted.
     // Cloudflare always sets this header in production.
     const visitor = parseVisitor(c.req.header("CF-Connecting-IP"));
 
-    const slot = isRead && !isContact && visitor ? takeReadSlot(visitor) : null;
+    const slot = isRead && visitor ? takeReadSlot(visitor) : null;
     if (slot && enforce && !slot.allowed) return throttled(slot);
 
     c.set("readSlot", slot);
-    c.set("isContact", isContact);
     await next();
   });

@@ -9,9 +9,5 @@ export type AppEnv = { Bindings: Env; Variables: AppVariables };
 
 export type ApiEnv = {
   Bindings: Env;
-  Variables: AppVariables & {
-    readSlot: ReadSlot | null;
-    /** Decided before `next()`, since `basePath(c)` moves as the router dispatches. */
-    isContact: boolean;
-  };
+  Variables: AppVariables & { readSlot: ReadSlot | null };
 };
