@@ -156,9 +156,7 @@ const description = postDescription(source);
       });
       img.addEventListener(
         "click",
-        async event => {
-          // Linked images point at unemitted source files, so following them 404s.
-          if (img.closest("a")) event.preventDefault();
+        async () => {
           const zoom = await loadZoom();
           // After a hover preload the library's own click handler may have opened it.
           if (!document.querySelector(".medium-zoom-image--opened")) {

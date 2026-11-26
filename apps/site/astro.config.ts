@@ -15,6 +15,7 @@ import { z } from "zod";
 import { autolinkConfig } from "./src/lib/blog/rehype-autolink-config";
 import remarkMermaid from "./src/lib/blog/remark-mermaid";
 import { findMermaidFences } from "./src/lib/blog/mermaid-diagrams";
+import { findSelfLinkedImages } from "./src/lib/blog/self-linked-images";
 import { NIGHT_OWL } from "./src/lib/blog/code-themes";
 import { copyButton } from "./src/lib/blog/shiki-copy-button";
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
@@ -109,6 +110,15 @@ function authorProblem({ slug, document }: Post) {
   return `${slug}'s BlogPosting author doesn't resolve to the Person "Murugappan M" in its @graph`;
 }
 
+function selfLinkedImageProblem({ slug, source }: Post) {
+  const images = findSelfLinkedImages(source);
+  if (images.length === 0) return;
+  return (
+    `${slug} wraps ${images.join(", ")} in a link to the image's own file. ` +
+    "The build hashes the image but not the link, so a click 404s. Drop the link: the image zooms on click."
+  );
+}
+
 // A markdown render error doesn't fail the build: the glob loader caches the empty result and ships
 // a blank article. These checks catch that, and the fence counts also catch a stale cached render.
 const POST_CHECKS = [
@@ -117,7 +127,8 @@ const POST_CHECKS = [
   mermaidProblem,
   copyButtonProblem,
   canonicalProblem,
-  authorProblem
+  authorProblem,
+  selfLinkedImageProblem
 ];
 
 function checkPost(post: Post) {
