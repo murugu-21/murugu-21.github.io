@@ -395,7 +395,7 @@ describe("server/discover", () => {
     expect(result.cacheScope).toBe("public");
     expect(result).toHaveProperty(["_meta", SERVER_INFO], {
       name: "murugappan.dev",
-      version: "1.0.0"
+      version: "1.0.1"
     });
     expect(result.instructions).toMatch(/\S/);
   });
@@ -422,6 +422,13 @@ describe("tools over HTTP", () => {
       properties: {},
       additionalProperties: false
     });
+    expect(Object.keys(byName.get("send_message")?.inputSchema ?? {}).sort()).toEqual([
+      "$schema",
+      "additionalProperties",
+      "properties",
+      "required",
+      "type"
+    ]);
     expect(byName.get("get_blog_post")?.outputSchema).toMatchObject({
       type: "object",
       required: ["slug", "title", "url", "description", "markdown"],

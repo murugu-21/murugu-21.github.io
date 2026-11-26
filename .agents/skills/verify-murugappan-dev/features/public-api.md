@@ -24,7 +24,7 @@ Preconditions:
 
 Steps:
 
-- **`api-read`.** `curl -sS -D "$E/api-read.headers" -o "$E/api-read.body" -w '%{http_code}\n' "$B/api/v1/profile"` prints `200`. The headers include `API-Version: 1.0.0` and `RateLimit-Policy: "reads";q=600;w=60`, and the body's `person.name` is `Murugappan M`.
+- **`api-read`.** `curl -sS -D "$E/api-read.headers" -o "$E/api-read.body" -w '%{http_code}\n' "$B/api/v1/profile"` prints `200`. The headers include `API-Version: 1.0.1` and `RateLimit-Policy: "reads";q=600;w=60`, and the body's `person.name` is `Murugappan M`.
 - **`api-posts-search`.** `curl -sS "$B/api/v1/posts?q=rate&limit=2"` returns at most two posts whose title or description contains `rate`. `curl -sS "$B/api/v1/posts?q=system-design"` returns `"count": 0`, because tags aren't searched.
 - **`api-404`.** `curl -sS -i "$B/api/v1/nope"` returns `404` with `Content-Type: application/json` and a `Link` header naming `/openapi.json` as `service-desc`.
 - **`api-contact-dry`.** `curl -sS -i -X POST "$B/api/v1/contact" -H 'Content-Type: application/json' -d '{"name":"Verify Bot","email":"verify@example.com","message":"verify-murugappan-dev dry run probe","dryRun":true}'` returns `200` with `"status": "validated"`, and the `RateLimit` header still reads `"contact-client";r=3`.

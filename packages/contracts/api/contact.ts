@@ -38,40 +38,38 @@ const INVALID_EMAIL = { error: "must be a valid email address" };
 const MESSAGE = CONTACT_LIMITS.message;
 const MESSAGE_LENGTH = { error: `must be between ${MESSAGE.min} and ${MESSAGE.max} characters` };
 
-export const ContactRequest = z
-  .object(
-    {
-      name: optionalText({ max: CONTACT_LIMITS.name, description: "Who the message is from." }),
-      email: requiredText
-        .max(CONTACT_LIMITS.email, { ...INVALID_EMAIL, abort: true })
-        .regex(EMAIL, INVALID_EMAIL)
-        .meta({
-          description:
-            "Reply-to address. Murugappan answers here, so it must be an address the sender reads.",
-          format: "email"
-        }),
-      company: optionalText({
-        max: CONTACT_LIMITS.company,
-        description: "The company or team you are writing for."
-      }),
-      // default() publishes the default in the schema; the transform also maps null to it.
-      dryRun: z
-        .boolean({ error: "must be a boolean" })
-        .nullish()
-        .default(false)
-        .transform(value => value ?? false)
-        .meta({
-          description:
-            "Set true to validate the request without sending anything and without spending the allowance. The reply's status is then `validated` instead of `accepted`."
-        }),
-      message: requiredText.min(MESSAGE.min, MESSAGE_LENGTH).max(MESSAGE.max, MESSAGE_LENGTH).meta({
+export const ContactRequest = z.strictObject(
+  {
+    name: optionalText({ max: CONTACT_LIMITS.name, description: "Who the message is from." }),
+    email: requiredText
+      .max(CONTACT_LIMITS.email, { ...INVALID_EMAIL, abort: true })
+      .regex(EMAIL, INVALID_EMAIL)
+      .meta({
         description:
-          "What you are writing about. Be specific: the role or project, the stack, and anything that needs a decision."
-      })
-    },
-    { error: "must be a JSON object" }
-  )
-  .meta({ title: "ContactRequest", description: "Request body of sendContactMessage." });
+          "Reply-to address. Murugappan answers here, so it must be an address the sender reads.",
+        format: "email"
+      }),
+    company: optionalText({
+      max: CONTACT_LIMITS.company,
+      description: "The company or team you are writing for."
+    }),
+    // default() publishes the default in the schema; the transform also maps null to it.
+    dryRun: z
+      .boolean({ error: "must be a boolean" })
+      .nullish()
+      .default(false)
+      .transform(value => value ?? false)
+      .meta({
+        description:
+          "Set true to validate the request without sending anything and without spending the allowance. The reply's status is then `validated` instead of `accepted`."
+      }),
+    message: requiredText.min(MESSAGE.min, MESSAGE_LENGTH).max(MESSAGE.max, MESSAGE_LENGTH).meta({
+      description:
+        "What you are writing about. Be specific: the role or project, the stack, and anything that needs a decision."
+    })
+  },
+  { error: issue => (issue.code === "invalid_type" ? "must be a JSON object" : undefined) }
+);
 
 export const ContactAccepted = z
   .object({

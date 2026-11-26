@@ -102,7 +102,7 @@ describe("path versioning", () => {
       ["/openapi.json", await client["openapi.json"].$get()]
     ] as const;
     for (const [path, res] of responses) {
-      expect(res.headers.get("API-Version"), path).toBe("1.0.0");
+      expect(res.headers.get("API-Version"), path).toBe("1.0.1");
       expect(res.headers.get("API-Supported-Versions"), path).toBe("v1");
       expect(res.headers.get("Link"), path).toContain('rel="version-history"');
     }
@@ -361,7 +361,7 @@ describe("error handling under /api", () => {
       param: { slug: "coin-change-problem" }
     });
     expect(res.status).toBe(500);
-    expect(res.headers.get("API-Version")).toBe("1.0.0");
+    expect(res.headers.get("API-Version")).toBe("1.0.1");
     expect(await errorBody(res)).toMatchObject({
       code: "internal_error",
       message: "The server failed while answering this request."
@@ -384,7 +384,7 @@ describe("error handling under /api", () => {
     capturedErrors();
     const res = await apiClient({ layer }).api.v1.posts.$get({ query: {} });
     expect(res.status).toBe(500);
-    expect(res.headers.get("API-Version")).toBe("1.0.0");
+    expect(res.headers.get("API-Version")).toBe("1.0.1");
     expect(await errorBody(res)).toMatchObject({ code: "internal_error" });
   });
 
@@ -459,6 +459,22 @@ describe("POST /api/contact", () => {
       { field: "email", issue: "must be a valid email address" },
       { field: "message", issue: "must be between 20 and 4000 characters" }
     ]);
+  });
+
+  it("rejects a field the endpoint does not take, and sends nothing", async () => {
+    const { email, sent } = recordingEmail();
+    const res = await fetchWorker("/api/contact", {
+      method: "POST",
+      ip: "203.0.113.20",
+      env: { email },
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...valid, dryrun: true })
+    });
+    expect(res.status).toBe(422);
+    expect((await errorBody(res)).details).toEqual([
+      { field: "body", issue: 'Unrecognized key: "dryrun"' }
+    ]);
+    expect(sent).toEqual([]);
   });
 
   it("rejects an oversized body with 413", async () => {

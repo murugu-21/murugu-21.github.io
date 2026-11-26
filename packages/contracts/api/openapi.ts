@@ -96,7 +96,7 @@ const DESCRIPTION = `Read-only JSON access to everything murugappan.dev publishe
 
 **Authentication.** None. Every endpoint is public and unauthenticated; no key, token or signup is required. Read endpoints are cached for ${READ_CACHE_MINUTES} minutes.
 
-**Versioning.** The version is a path segment, \`${VERSIONED_API_BASE}/…\`. The unversioned \`${API_BASE}/…\` prefix is a permanent alias for \`${CURRENT_API_VERSION}\` and is never repointed at a later major version, so either form is safe to hard-code. Additive changes ship inside a version without notice, so ignore response fields you do not recognise. Breaking changes only ever ship as a new path version. Every response carries \`API-Version\` and \`API-Supported-Versions\`; \`GET ${API_PATHS.versions}\` is the machine-readable policy.
+**Versioning.** The version is a path segment, \`${VERSIONED_API_BASE}/…\`. The unversioned \`${API_BASE}/…\` prefix is a permanent alias for \`${CURRENT_API_VERSION}\` and is never repointed at a later major version, so either form is safe to hard-code. Additive changes ship inside a version without notice, so ignore response fields you do not recognise. Request bodies reject fields they do not take with 422. Breaking changes only ever ship as a new path version. Every response carries \`API-Version\` and \`API-Supported-Versions\`; \`GET ${API_PATHS.versions}\` is the machine-readable policy.
 
 **Deprecation.** A deprecated version answers every request with \`Deprecation\` (RFC 9745) and \`Sunset\` (RFC 8594) headers plus \`Link\` relations \`deprecation\` and \`successor-version\`, and at least ${DEPRECATION_NOTICE_DAYS} days pass between the first \`Deprecation\` header and the sunset date. After sunset the version answers \`410\`. Nothing is currently deprecated: ${VERSIONS.map(v => `\`${v.version}\` is ${v.status}`).join(", ")}.
 
@@ -184,7 +184,15 @@ function queryParameters(query: z.ZodObject) {
 
 const COMPONENT_SCHEMAS = {
   ...components(OUTPUT_SCHEMAS, "output"),
-  ...components({ ContactRequest }, "input")
+  ...components(
+    {
+      ContactRequest: ContactRequest.meta({
+        title: "ContactRequest",
+        description: "Request body of sendContactMessage."
+      })
+    },
+    "input"
+  )
 };
 
 export const OPENAPI_DOCUMENT: Omit<OpenApiDocument, "servers"> = {
@@ -369,7 +377,9 @@ export const OPENAPI_DOCUMENT: Omit<OpenApiDocument, "servers"> = {
           "400": errorResponse("The request body was not valid JSON."),
           "413": errorResponse("The request body exceeded the size limit."),
           "415": errorResponse("The Content-Type was not application/json."),
-          "422": errorResponse("One or more fields were invalid; `details` names each one."),
+          "422": errorResponse(
+            "One or more fields were invalid or unknown; `details` names each one."
+          ),
           "429": errorResponse(
             "The per-client or site-wide daily allowance is spent. Retry after 00:00 UTC."
           ),

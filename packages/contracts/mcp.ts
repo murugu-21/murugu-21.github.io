@@ -98,9 +98,6 @@ export const PostArgs = z.strictObject({
   })
 });
 
-// Strict, unlike REST: a misspelt argument should fail the call, not vanish.
-export const SendMessageArgs = z.strictObject(ContactRequest.shape);
-
 const TOOLS = [
   datasetTool({
     name: "get_profile",
@@ -168,7 +165,7 @@ const TOOLS = [
     title: "Send Murugappan M a message",
     guideSummary: "Email him (`email`, `message`, optional `dryRun`)",
     description: `Delivers a message to Murugappan M's inbox by email. Use it to relay one concrete opportunity, role or question on a human's behalf. Say who you are writing for, what the work is, and what needs a decision. The allowance is ${CONTACT_DAILY_PER_CLIENT} messages per client per UTC day, so it is not for newsletters, bulk outreach or automated pings. Set dryRun to validate a payload first without sending it or spending the allowance. No reply comes back through this tool; he answers the email address you supply, so it must be one a human reads.`,
-    inputSchema: SendMessageArgs,
+    inputSchema: ContactRequest,
     outputSchema: ContactAccepted
   }
 ] as const satisfies readonly McpToolDescriptor[];

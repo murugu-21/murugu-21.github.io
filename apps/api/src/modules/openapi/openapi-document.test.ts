@@ -111,7 +111,7 @@ describe("buildOpenApiDocument", () => {
     }
   });
 
-  it("requires a JSON request body on the write operation, with the dry-run sandbox", () => {
+  it("requires a closed JSON request body on the write operation, with the dry-run sandbox", () => {
     const contact = doc.paths[API_PATHS.contact].post;
     assert(contact, "the contact path has no POST operation");
     expect(contact.requestBody).toMatchObject({
@@ -123,9 +123,9 @@ describe("buildOpenApiDocument", () => {
       }
     });
     expect(Object.keys(contact.responses)).toContain("200");
-    expect(doc.components.schemas.ContactRequest.properties?.dryRun).toMatchObject({
-      type: ["boolean", "null"],
-      default: false
+    expect(doc.components.schemas.ContactRequest).toMatchObject({
+      additionalProperties: false,
+      properties: { dryRun: { type: ["boolean", "null"], default: false } }
     });
   });
 

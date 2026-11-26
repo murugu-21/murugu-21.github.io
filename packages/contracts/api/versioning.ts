@@ -5,7 +5,7 @@ import { nullableText, text } from "./fields";
 import { API_PATHS, API_BASE, CURRENT_API_VERSION, VERSIONED_API_BASE } from "./routes";
 
 /** Also the value of the `API-Version` header. */
-export const API_VERSION = "1.0.0";
+export const API_VERSION = "1.0.1";
 
 export const DEPRECATION_NOTICE_DAYS = 180;
 
@@ -107,6 +107,8 @@ export const POLICY_RULES: readonly string[] = [
   `The version is a path segment. Every endpoint lives under ${VERSIONED_API_BASE}. There is no version header and no version query parameter. The URL is the version.`,
   `The unversioned ${API_BASE}/... prefix is a permanent alias for ${CURRENT_API_VERSION} and will never be repointed at a later major version. Code against either; both keep answering ${CURRENT_API_VERSION} for as long as ${CURRENT_API_VERSION} exists.`,
   "Additive changes ship inside a version without notice: new endpoints, new optional request fields, new response fields. Ignore fields you do not know rather than rejecting them.",
+  "Request bodies take only their documented fields. An unknown field answers 422, and `details` names it.",
+  "Bug fixes ship inside a version as patch releases. A fix can turn a request that was silently mishandled into an error: since 1.0.1, POST /contact rejects a field it does not take instead of dropping it, so a misspelt dryRun no longer sends a real message.",
   "Breaking changes never ship inside a version. Removing or renaming a field or endpoint, changing a field's type, narrowing an enum, or changing what a status code means all require a new path version.",
   `A deprecated version answers every request with a Deprecation header (RFC 9745), a Sunset header (RFC 8594), and Link relations of deprecation and successor-version. At least ${DEPRECATION_NOTICE_DAYS} days pass between the first Deprecation header and the Sunset date.`,
   `Every response carries API-Version (the release being served) and API-Supported-Versions. ${API_PATHS.versions} is the machine-readable form of this policy and is also reachable at ${API_BASE}/versions.`,

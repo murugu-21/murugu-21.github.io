@@ -1,11 +1,10 @@
 import type { McpServer, ToolCallback } from "@modelcontextprotocol/server";
 
-import { CONTACT_DAILY_PER_CLIENT } from "@murugappan/contracts/api/contact.ts";
+import { CONTACT_DAILY_PER_CLIENT, ContactRequest } from "@murugappan/contracts/api/contact.ts";
 import {
   MCP_TOOLS,
   PostArgs,
   SearchArgs,
-  SendMessageArgs,
   TOOL_ANNOTATIONS,
   type McpToolDescriptor,
   type McpToolName
@@ -138,7 +137,7 @@ const RUN: Record<McpToolName, Run> = {
     });
   },
   async send_message(args, ctx) {
-    const { dryRun, ...message } = SendMessageArgs.parse(args);
+    const { dryRun, ...message } = ContactRequest.parse(args);
     if (dryRun) {
       return ok({
         status: "validated",

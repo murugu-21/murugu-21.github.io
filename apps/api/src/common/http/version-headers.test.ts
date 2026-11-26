@@ -17,7 +17,7 @@ describe("version headers", () => {
 
   it("names only the release and the supported versions while nothing is deprecated", () => {
     expect(versionHeaders()).toEqual({
-      "API-Version": "1.0.0",
+      "API-Version": "1.0.1",
       "API-Supported-Versions": "v1"
     });
   });
