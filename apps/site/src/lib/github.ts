@@ -1,11 +1,9 @@
-import { GITHUB_TOKEN } from "astro:env/server";
+import type { GithubRepo } from "./github/client";
 
-import { GithubClient } from "./github/client";
-import { GhCliTransport, HttpsTransport } from "./github/transport";
+export type { GithubRepo };
 
-export type { GithubRepo } from "./github/client";
+type DescribedRepo = GithubRepo & { description: string };
 
-export function githubFromEnv(): GithubClient {
-  if (GITHUB_TOKEN) return new GithubClient(new HttpsTransport(GITHUB_TOKEN));
-  return new GithubClient(new GhCliTransport());
+export function resumeProjects(repos: GithubRepo[]): DescribedRepo[] {
+  return repos.filter((repo): repo is DescribedRepo => (repo.description ?? "") !== "");
 }

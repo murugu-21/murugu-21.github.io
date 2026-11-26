@@ -2,6 +2,7 @@ node_modules/
 
 dist/
 .astro/
+apps/site/github-snapshot.json
 
 .DS_Store
 .env

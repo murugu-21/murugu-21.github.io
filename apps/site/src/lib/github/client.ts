@@ -1,10 +1,47 @@
 import { z } from "zod";
 
-import PINNED_REPOS_QUERY from "./pinned-repos.graphql?raw";
-import PROFILE_QUERY from "./profile.graphql?raw";
 import { GithubAuthFailure, GithubFailure, type GithubTransport } from "./transport";
 
-const GithubProfile = z.object({ bio: z.string().nullable() });
+const PROFILE_QUERY = `{
+  user(login: "murugu-21") {
+    bio
+  }
+}`;
+
+const PINNED_REPOS_QUERY = `{
+  user(login: "murugu-21") {
+    pinnedItems(first: 6, types: REPOSITORY) {
+      edges {
+        node {
+          ... on Repository {
+            name
+            description
+            url
+            homepageUrl
+            forkCount
+            diskUsage
+            primaryLanguage {
+              name
+              color
+            }
+            stargazers {
+              totalCount
+            }
+            repositoryTopics(first: 12) {
+              nodes {
+                topic {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}`;
+
+export const GithubProfile = z.object({ bio: z.string().nullable() });
 type GithubProfile = z.infer<typeof GithubProfile>;
 
 const ProfileData = z.object({ user: GithubProfile.nullable() });
@@ -33,11 +70,10 @@ const PinnedReposData = z.object({
     .nullable()
 });
 
-export type GithubRepo = Omit<z.infer<typeof PinnedRepoNode>, "repositoryTopics"> & {
-  topics: string[];
-};
-
-type DescribedRepo = GithubRepo & { description: string };
+export const GithubRepo = PinnedRepoNode.omit({ repositoryTopics: true }).extend({
+  topics: z.array(z.string())
+});
+export type GithubRepo = z.infer<typeof GithubRepo>;
 
 function isRecoverable(e: unknown): e is GithubFailure {
   return e instanceof GithubFailure && !(e instanceof GithubAuthFailure);
@@ -73,12 +109,6 @@ export class GithubClient {
       warnFallback(e, "skipping pinned repos");
       return [];
     }
-  }
-
-  async resumeProjects(): Promise<DescribedRepo[]> {
-    return (await this.pinnedRepos()).filter(
-      (repo): repo is DescribedRepo => (repo.description ?? "") !== ""
-    );
   }
 
   private async ask<T extends z.ZodType>(query: string, schema: T): Promise<z.infer<T>> {

@@ -596,7 +596,10 @@ export default {
         ])
       ),
     ...SITE_OVERRIDES,
-    restrictProperties({ files: ["apps/site/src/**", "packages/**"] }, [PROCESS_ARGV, PROCESS_ENV]),
+    restrictProperties({ files: ["apps/site/src/**", "apps/site/scripts/**", "packages/**"] }, [
+      PROCESS_ARGV,
+      PROCESS_ENV
+    ]),
     restrictProperties(STORAGE_CALLERS, [
       PROCESS_ARGV,
       PROCESS_ENV,

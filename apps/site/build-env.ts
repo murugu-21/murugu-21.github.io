@@ -20,7 +20,6 @@ export const ENV_SCHEMA = {
     optional: true,
     url: true
   }),
-  GITHUB_TOKEN: envField.string({ context: "server", access: "secret", optional: true }),
   RESUME_PHONE: envField.string({ context: "server", access: "secret", optional: true })
 };
 
@@ -28,6 +27,8 @@ const SOURCE_MAP_ENV = {
   personalApiKey: "POSTHOG_API_KEY",
   projectId: "POSTHOG_PROJECT_ID"
 } as const;
+
+export const githubToken = process.env.GITHUB_TOKEN?.trim() || undefined;
 
 export const sourceMapUpload = {
   personalApiKey: process.env[SOURCE_MAP_ENV.personalApiKey]?.trim(),

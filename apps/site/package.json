@@ -3,10 +3,11 @@
   "private": true,
   "type": "module",
   "imports": {
+    "#build-env": "./build-env.ts",
     "#src/*": "./src/*"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "bun scripts/fetch-github.ts && astro dev",
     "diagrams": "bun scripts/render-mermaid.ts"
   },
   "dependencies": {

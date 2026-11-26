@@ -104,16 +104,6 @@ describe("pinnedRepos", () => {
     expect(await failing(new GithubFailure("GraphQL HTTP 500")).pinnedRepos()).toEqual([]);
     expect(warnings).toEqual([["[github] GraphQL HTTP 500; skipping pinned repos"]]);
   });
-
-  it("keeps only described repositories as resume projects", async () => {
-    const { client } = pinned(
-      { ...node, name: "described", description: "This site." },
-      { ...node, name: "blank", description: "" },
-      node
-    );
-
-    expect((await client.resumeProjects()).map(repo => repo.name)).toEqual(["described"]);
-  });
 });
 
 it.each([

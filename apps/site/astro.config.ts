@@ -21,6 +21,7 @@ import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { BROWSER_TARGETS } from "./src/lib/browser-support";
 import { FIRA_CODE_SUBSET, writeFiraCodeSubset } from "./scripts/fira-code-subset";
 import { headersFile } from "./src/lib/headers";
+import { githubSnapshot } from "./src/lib/github/snapshot";
 import { modulePreloader } from "./scripts/module-preload";
 import { ENV_SCHEMA, requireDeployEnv, sourceMapUpload } from "./build-env";
 import { contentPosts, readPosts } from "@murugappan/content/vite/posts-plugin.ts";
@@ -321,6 +322,7 @@ export default defineConfig({
     },
     plugins: [
       contentPosts(),
+      githubSnapshot(),
       tailwindcss(),
       ...(personalApiKey && projectId
         ? [

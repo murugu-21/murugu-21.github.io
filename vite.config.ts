@@ -126,6 +126,9 @@ export default defineConfig({
             ),
             "astro:env/server": fileURLToPath(
               new URL("apps/site/src/test/astro-env-server.ts", import.meta.url)
+            ),
+            "virtual:github-snapshot": fileURLToPath(
+              new URL("apps/site/src/test/github-snapshot.ts", import.meta.url)
             )
           }
         },

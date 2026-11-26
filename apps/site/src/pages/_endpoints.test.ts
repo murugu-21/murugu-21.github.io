@@ -1,8 +1,9 @@
-import { afterEach, assert, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, assert, describe, expect, it } from "vite-plus/test";
 
 import { blogPost } from "#src/lib/blog/fixtures.ts";
 import { setPosts } from "#src/test/astro-content.ts";
 import { resetEnv, setEnv } from "#src/test/astro-env-server.ts";
+import { resetGithubSnapshot, setGithubSnapshot } from "#src/test/github-snapshot.ts";
 import { GET as aboutMarkdown } from "./about/index.md.ts";
 import { GET as blogLlmsFull } from "./blog/llms-full.txt.ts";
 import { GET as blogLlms } from "./blog/llms.txt.ts";
@@ -16,11 +17,9 @@ import { GET as homeMarkdown } from "./index.md.ts";
 import { GET as siteLlms } from "./llms.txt.ts";
 import { GET as resumeMarkdown } from "./resume/index.md.ts";
 
-beforeEach(() => setEnv({ GITHUB_TOKEN: "tok" }));
-
 afterEach(() => {
-  vi.unstubAllGlobals();
   resetEnv();
+  resetGithubSnapshot();
 });
 
 const COIN_CHANGE_LINE =
@@ -61,10 +60,9 @@ describe("markdown renditions of the site", () => {
   });
 
   it("render the resume at /resume/index.md, with the phone only when it is set", async () => {
-    vi.stubGlobal("fetch", async () => Response.json({ data: { user: null } }));
-    const contactLine = async () => (await (await resumeMarkdown()).text()).split("\n")[4];
+    const contactLine = async () => (await resumeMarkdown().text()).split("\n")[4];
 
-    const res = await resumeMarkdown();
+    const res = resumeMarkdown();
     const text = await res.text();
     expect(res.headers.get("Content-Type")).toBe("text/markdown; charset=utf-8");
     expect(text).toMatch(/^# Murugappan M\n\nFull Stack Engineer\n\nBangalore, India \| /);
@@ -92,31 +90,24 @@ describe("markdown renditions of the site", () => {
       forkCount: 0,
       diskUsage: 1,
       primaryLanguage: null,
-      stargazers: { totalCount: 0 }
+      stargazers: { totalCount: 0 },
+      topics: []
     };
-    vi.stubGlobal("fetch", async () =>
-      Response.json({
-        data: {
-          user: {
-            pinnedItems: {
-              edges: [
-                {
-                  node: {
-                    ...repo,
-                    name: "portfolio",
-                    description: "This site.",
-                    homepageUrl: "https://murugappan.dev/"
-                  }
-                },
-                { node: { ...repo, name: "undescribed", description: null, homepageUrl: null } }
-              ]
-            }
-          }
-        }
-      })
-    );
+    setGithubSnapshot({
+      profile: null,
+      pinnedRepos: [
+        {
+          ...repo,
+          name: "portfolio",
+          description: "This site.",
+          homepageUrl: "https://murugappan.dev/"
+        },
+        { ...repo, name: "blank", description: "", homepageUrl: null },
+        { ...repo, name: "undescribed", description: null, homepageUrl: null }
+      ]
+    });
 
-    expect(await (await resumeMarkdown()).text()).toContain(
+    expect(await resumeMarkdown().text()).toContain(
       "\n## Projects\n\n### portfolio\n\n[murugappan.dev](https://murugappan.dev/)\n\nThis site.\n\n## Open Source\n"
     );
   });

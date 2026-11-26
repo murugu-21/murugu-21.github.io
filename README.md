@@ -78,13 +78,13 @@ Bun installs each package's dependencies into its own `node_modules` (`linker = 
 
 These env vars change the build. All are optional locally.
 
-- `GITHUB_TOKEN`: any token with public read access. It shows the GitHub card on the homepage, and the build fails if GitHub rejects it. Without it, the build fails if gh is missing, not logged in, or its login is rejected. Leave it unset locally: the build then runs `gh api graphql`, which signs in from gh's keyring login, so run `gh auth login` once instead.
+- `GITHUB_TOKEN`: any token with public read access. The uncached `github` step (`apps/site/scripts/fetch-github.ts`) reads it before each site build and `bun run dev`, and writes the GitHub card and pinned repos to `apps/site/github-snapshot.json` for the build to read. The step fails if GitHub rejects the token. Without it, the step fails if gh is missing, not logged in, or its login is rejected. Leave it unset locally: the step then runs `gh api graphql`, which signs in from gh's keyring login, so run `gh auth login` once instead.
 - `POST_HOG_TOKEN` and `POST_HOG_URL`: turn on analytics.
 - `POSTHOG_API_KEY` and `POSTHOG_PROJECT_ID`: upload source maps for error tracking.
 - `RESUME_PHONE`: adds a phone number to the resume.
 - `PUBLIC_TURNSTILE_SITE_KEY`: the Turnstile site key the chat widget passes before it connects. A build in Workers Builds fails without it, because the deployed chat would refuse every visitor. See [the Worker's README](apps/api/README.md#jarvis).
 
-`bun run build` is cached, and the site build sees only the variables in `apps/site/build-env.ts`, so declare a new one there. A cached build keeps the GitHub card it fetched. Run `bunx vp cache clean` to fetch it again.
+`bun run build` is cached, and the site build sees only the variables in `apps/site/build-env.ts`, so declare a new one there. The GitHub snapshot is one of its inputs, so a changed card misses the cache.
 
 ## Browser support
 

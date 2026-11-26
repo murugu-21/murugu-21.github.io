@@ -4,6 +4,7 @@ import { vi } from "vite-plus/test";
 
 import { setPosts } from "./astro-content.ts";
 import { resetEnv } from "./astro-env-server.ts";
+import { resetGithubSnapshot } from "./github-snapshot.ts";
 
 vi.restoreAllMocks();
 vi.unstubAllGlobals();
@@ -11,3 +12,4 @@ vi.unstubAllEnvs();
 vi.useRealTimers();
 setPosts([]);
 resetEnv();
+resetGithubSnapshot();
