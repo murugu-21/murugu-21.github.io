@@ -63,9 +63,9 @@ export default defineConfig({
     // Each run prints its seed. Pass --sequence.seed=<seed> to replay that order.
     sequence: { shuffle: true },
     maxWorkers: "67%",
-    // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
-    // tests in apps/site/src/styles would read "".
-    css: { include: [/global\.css\?raw$/] },
+    // Vitest empties every CSS import it doesn't include, `?raw` and `?inline` too, so the
+    // stylesheet tests would read "" and the cookie banner would have no styles.
+    css: { include: [/global\.css\?raw$/, /cookieconsent\.css\?inline$/] },
     // The globs name extensions so READMEs and .astro files, which Istanbul can't parse,
     // stay out.
     coverage: {

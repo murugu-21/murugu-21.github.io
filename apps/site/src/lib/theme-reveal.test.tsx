@@ -4,6 +4,7 @@ import { cdp } from "vite-plus/test/browser";
 
 import { globalCssWithoutImports } from "#src/styles/global-css-without-imports.ts";
 
+import { runConsent } from "./consent";
 import { revealTheme } from "./theme-reveal";
 
 const root = document.documentElement;
@@ -92,4 +93,21 @@ it("crossfades without the circle when the visitor prefers reduced motion", asyn
   expect(rootAnimations("opacity").length).toBeGreaterThan(0);
   expect(rootAnimations("clipPath")).toEqual([]);
   await transition?.finished;
+});
+
+it("holds the cookie banner's button transitions while the circle reveals the new theme", async () => {
+  const toggle = mountToggle();
+  await runConsent(() => {});
+  const banner = document.createElement("div");
+  banner.id = "cc-main";
+  banner.innerHTML = `<div class="cm-wrapper cc--anim"><div class="cm"><button class="cm__btn">Accept</button></div></div>`;
+  document.body.append(banner);
+  const button = banner.querySelector("button");
+  if (!button) throw new Error("no banner button");
+
+  const transition = revealTheme(toggle, flip);
+
+  expect(getComputedStyle(button).transitionDuration).toBe("0s");
+  await transition?.finished;
+  expect(getComputedStyle(button).transitionDuration).not.toBe("0s");
 });

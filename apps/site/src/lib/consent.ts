@@ -96,7 +96,7 @@ export async function runConsent(
   const uiIsland = document.createElement("div");
   uiIsland.className = "ui-island";
   const styles = document.createElement("style");
-  styles.textContent = vendorStyles;
+  styles.textContent = `@layer cookie-consent.vendor {${vendorStyles}}`;
   document.head.append(styles);
 
   const toastHost = document.createElement("div");

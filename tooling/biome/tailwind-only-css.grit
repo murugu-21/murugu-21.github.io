@@ -20,7 +20,7 @@ or {
       $filename <: r".*\.astro",
       not $inner <: or { CssImportAtRule(), TwPluginAtRule(), TwSourceAtRule(), TwThemeAtRule(), TwUtilityAtRule(), TwCustomVariantAtRule(), CssFontFaceAtRule(), CssPageAtRule() }
     },
-    not and { in_global_css(), $rule <: r"@layer base\b[\s\S]*" },
+    not and { in_global_css(), $rule <: r"@layer (?:base|cookie-consent|theme-reveal)\s*\{[\s\S]*" },
     use_tailwind(span=$rule)
   },
   TwApplyAtRule() as $rule where {

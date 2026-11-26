@@ -44,28 +44,36 @@ describe.concurrent("tailwind-only-css", () => {
       ".card { color: red; }",
       "@media print { .card { color: red; } }",
       "@layer base { h1 { color: red; } }",
-      "@utility glow { color: red; }"
+      "@utility glow { color: red; }",
+      "@layer theme-reveal { h1 { transition: none; } }",
+      "@layer cookie-consent { #cc-main { color: red; } }"
     ].join("\n");
 
     expect(await lint({ "apps/site/src/styles/blog/post.css": css })).toEqual([
       "apps/site/src/styles/blog/post.css:10 Style with Tailwind",
       "apps/site/src/styles/blog/post.css:11 Every @utility lives in apps/site/src/styles/global.css, the one stylesheet to review.",
+      "apps/site/src/styles/blog/post.css:12 Style with Tailwind",
+      "apps/site/src/styles/blog/post.css:13 Style with Tailwind",
       "apps/site/src/styles/blog/post.css:8 Style with Tailwind",
       "apps/site/src/styles/blog/post.css:9 Style with Tailwind"
     ]);
   });
 
-  it("lets global.css hold @utility and @layer base, but never @apply", async () => {
+  it("lets global.css hold @utility, @layer base, cookie-consent and theme-reveal, but never @apply", async () => {
     const css = [
       "@layer base { h1 { color: red; } }",
       "@utility glow { color: red; @media print { color: black; } }",
       "@utility ring { @apply p-2; }",
-      "@layer components { .x { color: red; } }"
+      "@layer components { .x { color: red; } }",
+      "@layer theme-reveal { html[data-theme-reveal] * { transition: none; } }",
+      "@layer theme-reveal-extra { .x { color: red; } }",
+      "@layer cookie-consent { #cc-main { color: red; } }"
     ].join("\n");
 
     expect(await lint({ "apps/site/src/styles/global.css": css })).toEqual([
       "apps/site/src/styles/global.css:3 No @apply",
-      "apps/site/src/styles/global.css:4 Style with Tailwind"
+      "apps/site/src/styles/global.css:4 Style with Tailwind",
+      "apps/site/src/styles/global.css:6 Style with Tailwind"
     ]);
   });
 

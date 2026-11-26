@@ -36,11 +36,10 @@ const cards = [
             data-ph-value={card.title}
           >
             {/* biome-ignore-end lint/nursery/noTailwindArbitraryValue: see above */}
-            {/* `!` so dark mode beats group-hover:text-white */}
-            <h3 class="mx-5 mt-8 mb-3.5 line-clamp-2 text-lg font-bold text-blog-title group-hover:text-white group-hover:transition-all group-hover:duration-300 group-hover:ease-out sm:text-xl dark:text-white! dark:group-hover:text-navy!">
+            <h3 class="mx-5 mt-8 mb-3.5 line-clamp-2 text-lg font-bold text-blog-title group-hover:text-blog-title-hover group-hover:transition-all group-hover:duration-300 group-hover:ease-out sm:text-xl">
               {card.title}
             </h3>
-            <p class="line-clamp-4 px-5 text-base font-normal text-card-subtitle group-hover:text-blog-hover-small group-hover:transition-all group-hover:duration-300 group-hover:ease-out dark:text-white! dark:group-hover:text-navy!">
+            <p class="line-clamp-4 px-5 text-base font-normal text-card-subtitle group-hover:text-blog-hover-small group-hover:transition-all group-hover:duration-300 group-hover:ease-out">
               {card.description}
             </p>
             <div

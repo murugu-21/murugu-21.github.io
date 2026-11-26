@@ -223,7 +223,7 @@ describe("blue-hour light palette", () => {
 
   it("keeps text readable on the dusk-white card surface (>= 4.5:1)", () => {
     for (const name of ["text", "title", "card-subtitle", "blog-container", "amber-ink"]) {
-      expect(contrast(ink(name), card)).toBeGreaterThanOrEqual(4.5);
+      expect(contrast(ink(name, "light"), card)).toBeGreaterThanOrEqual(4.5);
     }
   });
 
