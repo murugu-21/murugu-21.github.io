@@ -24,4 +24,4 @@ A task is done when, in order:
 
 1. `.githooks/pre-push` passes, and a UI change has passed the `verify-murugappan-dev` browser check in light and dark themes.
 2. Two fresh subagents, each given only the diff and its skill (`review-behaviour`, `review-code-style`), have reviewed it, and every finding is fixed or answered.
-3. A fresh subagent prompted with `comment-sicko`'s SKILL.md verbatim plus the fixed diff has hunted its comments. Keep its deletions except a comment `CODING_STANDARDS.md` › Comments protects; restore that with the reason. For each `MUST KILL` flag, make the code say it (rename, extract, a type) or explain why it can't.
+3. A fresh subagent prompted with `comment-sicko`'s SKILL.md verbatim plus the fixed diff has hunted its comments. Keep its deletions except a comment `CODING_STANDARDS.md` › Comments still allows; restore that with the reason. For each `MUST KILL` flag, change the design so the code says it (rename, extract, a type, a restructure). Never restore the comment instead. If the change doesn't fit this task, report the flag open.

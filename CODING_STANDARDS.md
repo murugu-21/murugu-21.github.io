@@ -6,7 +6,8 @@ Agents hand-roll what a library or platform feature already does, and a reviewer
 
 ## Comments
 
-- Comment only the _why_ the code can't show: a workaround, a constraint, a surprising choice. One or two lines.
+- Don't keep a workaround in our own code and write a comment to defend it. Treat the comment as a sign that the design is wrong, and change the design so the workaround isn't needed: rename, extract, add a type or restructure.
+- Comment only behaviour forced on us by something we can't change, such as a dependency, a platform, a vendor or a protocol. Link its issue or docs when there is one. One or two lines.
 - Leave history ("used to be X", "changed in PR #12", "moved from Y") to git once it no longer explains the current code.
 
 ## Tests
