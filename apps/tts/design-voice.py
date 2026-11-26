@@ -2,7 +2,6 @@ import contextlib
 import sys
 import time
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
@@ -33,8 +32,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
     (out / "reference.txt").write_text(SENTENCE + "\n")
     with contextlib.redirect_stdout(sys.stderr):
-        # Neither the real nn.Module type nor the fake's Model declares voice design's generate().
-        model: Any = load(MODEL)
+        model = load(MODEL)
     for k in range(count):
         t0 = time.time()
         parts = [

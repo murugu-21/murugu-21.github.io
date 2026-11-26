@@ -14,7 +14,14 @@ class Result:
 
 class Model:
     def generate(
-        self, *, text: str, ref_audio: str, ref_text: str, max_tokens: int
+        self,
+        *,
+        text: str,
+        instruct: str | None = None,
+        ref_audio: str | None = None,
+        ref_text: str | None = None,
+        cfg_scale: float | None = None,
+        max_tokens: int = 750,
     ) -> Iterator[Result]:
         print(f"generating {len(text)} characters")
         if "[raise]" in text:
