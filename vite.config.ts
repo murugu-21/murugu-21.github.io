@@ -62,8 +62,6 @@ export default defineConfig({
     taskTitleValueFormatTruncate: Number.MAX_SAFE_INTEGER,
     // Each run prints its seed. Pass --sequence.seed=<seed> to replay that order.
     sequence: { shuffle: true },
-    // 67% of logical CPUs: 8 on a 12-core Mac ran fastest, as more workers fight over its 8
-    // performance cores. It gives Vitest's default of 3 on a 4-vCPU runner.
     maxWorkers: "67%",
     // Vitest empties every CSS import it doesn't include, `?raw` too, so the stylesheet
     // tests in apps/site/src/styles would read "".
@@ -121,7 +119,6 @@ export default defineConfig({
       },
       {
         plugins: [contentPosts()],
-        // Astro's virtual modules exist only inside its Vite plugin.
         resolve: {
           alias: {
             "astro:content": fileURLToPath(

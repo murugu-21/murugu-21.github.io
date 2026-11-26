@@ -2,7 +2,7 @@
 import { afterEach, expect, it } from "vite-plus/test";
 import { cdp } from "vite-plus/test/browser";
 
-import { plainGlobalCss } from "./plain-global-css.ts";
+import { globalCssWithoutImports } from "./global-css-without-imports.ts";
 
 const mounted: Element[] = [];
 afterEach(async () => {
@@ -13,7 +13,7 @@ afterEach(async () => {
 
 const mountSheet = () => {
   const style = document.createElement("style");
-  style.textContent = plainGlobalCss;
+  style.textContent = globalCssWithoutImports;
   document.head.append(style);
   mounted.push(style);
 };

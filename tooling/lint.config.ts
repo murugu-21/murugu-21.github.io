@@ -626,8 +626,8 @@ export default {
         "anti-slop-effect/prefer-effect-match": "error"
       }
     },
-    // Effect's Service.use and Hono's useApiStack aren't hooks, so React's naming rule stays on
-    // the site. oxlint files it under pedantic, which the correctness category leaves off.
+    // Effect's Service.use isn't a hook, so React's naming rule stays on the site. oxlint files
+    // it under pedantic, which the correctness category leaves off.
     { files: ["apps/site/src/**"], rules: { "react/rules-of-hooks": "error" } },
     { files: ["apps/site/src/**/*.astro"], rules: { "astro/typed-props": "error" } },
     {

@@ -2,7 +2,7 @@
 import { afterEach, expect, it } from "vite-plus/test";
 import { cdp } from "vite-plus/test/browser";
 
-import { plainGlobalCss } from "#src/styles/plain-global-css.ts";
+import { globalCssWithoutImports } from "#src/styles/global-css-without-imports.ts";
 
 import { revealTheme } from "./theme-reveal";
 
@@ -18,7 +18,7 @@ afterEach(async () => {
 const mountToggle = () => {
   const style = document.createElement("style");
   style.dataset.test = "";
-  style.textContent = plainGlobalCss;
+  style.textContent = globalCssWithoutImports;
   document.head.append(style);
   const toggle = document.createElement("button");
   toggle.textContent = "Use dark mode";

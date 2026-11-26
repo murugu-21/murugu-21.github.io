@@ -4,7 +4,7 @@ import { cdp } from "vite-plus/test/browser";
 
 import { bootstrapTheme } from "#src/lib/theme.ts";
 
-import { plainGlobalCss } from "./plain-global-css.ts";
+import { globalCssWithoutImports } from "./global-css-without-imports.ts";
 
 const mounted: Element[] = [];
 afterEach(async () => {
@@ -17,7 +17,7 @@ afterEach(async () => {
 
 const mountProbe = () => {
   const style = document.createElement("style");
-  style.textContent = plainGlobalCss;
+  style.textContent = globalCssWithoutImports;
   const probe = document.createElement("div");
   probe.style.color = "light-dark(rgb(1, 2, 3), rgb(4, 5, 6))";
   document.head.append(style);

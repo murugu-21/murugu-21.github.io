@@ -1,7 +1,7 @@
 /// <reference types="vite-plus/test/browser-playwright" />
 import { afterEach, expect, it } from "vite-plus/test";
 
-import { plainGlobalCss } from "./plain-global-css.ts";
+import { globalCssWithoutImports } from "./global-css-without-imports.ts";
 
 const mounted: Element[] = [];
 afterEach(() => {
@@ -11,7 +11,7 @@ afterEach(() => {
 
 const mountPage = (html: string) => {
   const style = document.createElement("style");
-  style.textContent = plainGlobalCss;
+  style.textContent = globalCssWithoutImports;
   const page = document.createElement("div");
   page.innerHTML = html;
   document.head.append(style);
