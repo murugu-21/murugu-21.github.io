@@ -90,9 +90,7 @@ const READOUT: Record<Progress["unit"], (p: Progress) => [string, string]> = {
 };
 
 export function ListenControls({ slug }: { slug: string }) {
-  // The island root, held in state (not a ref) because it is read during render as the
-  // dropdown's portal container.
-  const [root, setRoot] = useState<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const blocksRef = useRef<Block[]>([]);
   const [supported, setSupported] = useState(false);
   const [{ status, progress }, dispatch] = useReducer(reduce, INITIAL);
@@ -109,9 +107,9 @@ export function ListenControls({ slug }: { slug: string }) {
   }, []);
 
   useEffect(() => {
-    const island = root?.closest("[data-listen-island]");
+    const island = rootRef.current?.closest("[data-listen-island]");
     island?.toggleAttribute("data-listening", status !== "idle");
-  }, [root, status]);
+  }, [status]);
 
   const onToggle = async () => {
     const player = playerRef.current;
@@ -160,7 +158,7 @@ export function ListenControls({ slug }: { slug: string }) {
 
   return (
     <div
-      ref={setRoot}
+      ref={rootRef}
       className="flex items-center gap-3 rounded-lg border border-border bg-card p-2 shadow-sm dark:border-white/40"
     >
       <Button
@@ -212,7 +210,7 @@ export function ListenControls({ slug }: { slug: string }) {
             {rate}×
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent container={root} align="end">
+        <DropdownMenuContent align="end">
           <DropdownMenuRadioGroup value={String(rate)} onValueChange={v => onRate(parseRate(v))}>
             {SPEECH_RATES.map(r => (
               <DropdownMenuRadioItem key={r} value={String(r)}>

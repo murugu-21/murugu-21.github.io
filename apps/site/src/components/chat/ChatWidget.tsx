@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogOverlay,
+  DialogPortal,
   DialogTitle,
   DialogTrigger
 } from "#src/components/ui/dialog.tsx";
@@ -178,7 +179,7 @@ function ChatPanel({
   const showStarters = startersShown(bubbles, phase);
 
   return (
-    <>
+    <DialogPortal>
       {/* Radix locks page scroll from the overlay, which renders only while modal (phones). */}
       <DialogOverlay />
       <DialogContent
@@ -310,7 +311,7 @@ function ChatPanel({
           </CardFooter>
         </Card>
       </DialogContent>
-    </>
+    </DialogPortal>
   );
 }
 

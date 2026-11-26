@@ -15,6 +15,7 @@ import Favicons from "#src/components/Favicons.astro";
 import Particles from "#src/components/Particles.astro";
 import SiteFooter from "#src/components/SiteFooter.astro";
 import SiteScripts from "#src/components/SiteScripts.astro";
+import { PORTAL_HOST_ID } from "#src/components/ui/portal-host.ts";
 import { currentEmployer, socialMediaLinks } from "@murugappan/content/portfolio.ts";
 
 export interface Props {
@@ -154,5 +155,6 @@ const siteWideLinks = linkedDocuments("/");
     <slot />
     <SiteFooter />
     <ChatWidget />
+    <div id={PORTAL_HOST_ID} class="ui-island print:hidden"></div>
   </body>
 </html>

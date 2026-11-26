@@ -5,6 +5,9 @@ import { render } from "vitest-browser-react";
 import { z } from "zod";
 
 import { ChatWidget } from "./ChatWidget.tsx";
+import { PORTAL_HOST_ID } from "#src/components/ui/portal-host.ts";
+
+document.body.append(Object.assign(document.createElement("div"), { id: PORTAL_HOST_ID }));
 
 const Frame = z.object({
   type: z.string(),

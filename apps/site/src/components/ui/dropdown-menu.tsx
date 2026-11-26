@@ -1,11 +1,11 @@
-// Vendored shadcn/ui; the radio item marks its selection with a full-size check, not upstream's dot.
-// Portals into the island root (`container`, else the chat widget root), not document.body, so
-// the ui-island tokens scoped there still apply.
+// Vendored shadcn/ui; the radio item marks its selection with a full-size check, not upstream's dot,
+// and the content portals into #ui-portal-host (usePortalHost), not document.body.
 
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check } from "lucide-react";
 
+import { usePortalHost } from "#src/components/ui/portal-host.ts";
 import { cn } from "#src/lib/utils.ts";
 
 function DropdownMenu(props: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
@@ -19,19 +19,10 @@ function DropdownMenuTrigger(props: React.ComponentProps<typeof DropdownMenuPrim
 function DropdownMenuContent({
   className,
   sideOffset = 4,
-  container,
   ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Content> & {
-  container?: HTMLElement | null;
-}) {
+}: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
-    <DropdownMenuPrimitive.Portal
-      container={
-        typeof document === "undefined"
-          ? undefined
-          : (container ?? document.getElementById("chat-widget-root") ?? undefined)
-      }
-    >
+    <DropdownMenuPrimitive.Portal container={usePortalHost()}>
       <DropdownMenuPrimitive.Content
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
