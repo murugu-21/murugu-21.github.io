@@ -1,7 +1,7 @@
 import { Context, Effect, Layer } from "effect";
 
 import { defaultContentType, type AudioExtension } from "#src/modules/audio/audio-file.ts";
-import { AudioRepository, type AudioNotFound } from "#src/modules/audio/audio.repository.ts";
+import { AudioRepository, type AudioError } from "#src/modules/audio/audio.repository.ts";
 import { etagMatches, parseRange, type ByteRange } from "#src/modules/audio/byte-range.ts";
 
 export type AudioMeta = { etag: string; contentType: string; size: number };
@@ -19,7 +19,7 @@ export class AudioService extends Context.Service<
       extension: AudioExtension;
       ifNoneMatch: string | undefined;
       range: string | null;
-    }): Effect.Effect<AudioReply, AudioNotFound>;
+    }): Effect.Effect<AudioReply, AudioError>;
   }
 >()("@murugappan/api/AudioService") {
   static readonly layer = Layer.effect(

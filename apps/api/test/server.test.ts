@@ -8,6 +8,7 @@ import { VISITOR_COUNTRY_HEADER, VISITOR_IP_HEADER } from "#src/modules/chat/vis
 import worker from "#src/server.ts";
 import {
   BLOG_NOT_FOUND_HTML,
+  capturedErrors,
   connectRoom,
   fakeFetcher,
   fakeSiteverify,
@@ -376,6 +377,38 @@ describe("GET /blog/audio/:file", () => {
     expect(await status(`"other", ${etag}`)).toBe(304);
     expect(await status("*")).toBe(304);
     expect(await status('"other"')).toBe(200);
+  });
+
+  function failingBucket(working: Partial<R2Bucket> = {}): R2Bucket {
+    const unreachable = () => Promise.reject(new Error("R2 unreachable"));
+    return {
+      head: unreachable,
+      get: unreachable,
+      put: unreachable,
+      createMultipartUpload: unreachable,
+      resumeMultipartUpload: () => {
+        throw new Error("R2 unreachable");
+      },
+      delete: unreachable,
+      list: unreachable,
+      ...working
+    };
+  }
+
+  it.each([
+    { failing: "on every call", bucket: () => failingBucket() },
+    {
+      failing: "on the read after a found head",
+      bucket: () => failingBucket({ head: key => env.AUDIO.head(key) })
+    }
+  ])("answers 503 when the audio store fails $failing", async ({ bucket }) => {
+    capturedErrors();
+    const res = await worker.fetch(new Request(`${SITE_ORIGIN}/blog/audio/first-post.mp3`), {
+      ...testEnv(),
+      AUDIO: bucket()
+    });
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 
   it.each(["/blog/audio/nope.mp3", "/blog/audio/..%2Fsecret.mp3", "/blog/audio/first-post.wav"])(

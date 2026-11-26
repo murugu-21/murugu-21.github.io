@@ -4,7 +4,7 @@ import { runInRequest } from "#src/app.module.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
 import type { Render } from "#src/common/di/render.ts";
 import { audioExtension } from "#src/modules/audio/audio-file.ts";
-import type { AudioNotFound } from "#src/modules/audio/audio.repository.ts";
+import type { AudioError } from "#src/modules/audio/audio.repository.ts";
 import { AudioService, type AudioMeta, type AudioReply } from "#src/modules/audio/audio.service.ts";
 import { serveAsset } from "#src/modules/pages/assets.client.ts";
 
@@ -55,9 +55,21 @@ audioController.get("/:file", async c => {
   const extension = audioExtension(file);
   if (!extension) return serveAsset(c);
 
-  const render: Render<AudioReply, AudioNotFound, Response | Promise<Response>> = {
+  const render: Render<AudioReply, AudioError, Response | Promise<Response>> = {
     success: audioResponse,
-    failures: { AudioNotFound: () => serveAsset(c) }
+    failures: {
+      AudioNotFound: () => serveAsset(c),
+      AudioUnavailable: ({ cause }) => {
+        console.error({ event: "audio storage failed", err: cause });
+        return new Response(
+          "The audio could not be loaded right now. Try again in a few minutes.",
+          {
+            status: 503,
+            headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" }
+          }
+        );
+      }
+    }
   };
   return runInRequest({
     services: c.var.services,
