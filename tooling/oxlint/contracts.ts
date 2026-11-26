@@ -11,6 +11,33 @@ const BEHAVIOUR = new Set([
   "ClassExpression"
 ]);
 
+const RUNS_SCHEMA = /^(?:safe)?(?:parse|decode|encode)(?:Async)?$/i;
+const RETURNS_VALUE = new Set([
+  "spa",
+  "isOptional",
+  "isNullable",
+  "toJSONSchema",
+  "prettifyError",
+  "treeifyError",
+  "flattenError",
+  "formatError"
+]);
+
+const returnsValue = (method: string) => RUNS_SCHEMA.test(method) || RETURNS_VALUE.has(method);
+
+function buildsSchema(fn: Node, zod: ReadonlySet<string>): boolean {
+  if (fn.type !== "ArrowFunctionExpression" || fn.body.type !== "CallExpression") return false;
+  let current: Node = fn.body;
+  while (current.type === "CallExpression") {
+    const callee: Node = current.callee;
+    if (callee.type !== "MemberExpression" || callee.computed) return false;
+    if (callee.property.type !== "Identifier" || returnsValue(callee.property.name)) return false;
+    current = callee.object;
+  }
+  while (current.type === "MemberExpression") current = current.object;
+  return current.type === "Identifier" && zod.has(current.name);
+}
+
 function declaredExports(node: NodeOf<"ExportNamedDeclaration">): Export[] {
   const { declaration } = node;
   if (declaration?.type === "VariableDeclaration") {
@@ -44,7 +71,8 @@ export default {
       meta: {
         type: "problem",
         docs: {
-          description: "packages/contracts/ exports schemas, types and constants, not functions."
+          description:
+            "packages/contracts/ exports schemas, types and constants, not functions. An arrow function whose body is a zod schema counts as a schema."
         },
         messages: {
           exportedBehaviour:
@@ -52,19 +80,24 @@ export default {
         }
       },
       create(context) {
-        const behaviour = new Set<string>();
+        const behaviour = new Map<string, Node>();
+        const zod = new Set<string>();
         const exported: Export[] = [];
 
         return {
+          ImportDeclaration(node) {
+            if (node.source.value !== "zod") return;
+            for (const { local } of node.specifiers) zod.add(local.name);
+          },
           FunctionDeclaration(node) {
-            if (node.id) behaviour.add(node.id.name);
+            if (node.id) behaviour.set(node.id.name, node);
           },
           ClassDeclaration(node) {
-            if (node.id) behaviour.add(node.id.name);
+            if (node.id) behaviour.set(node.id.name, node);
           },
           VariableDeclarator(node) {
             if (node.id.type === "Identifier" && node.init && BEHAVIOUR.has(node.init.type)) {
-              behaviour.add(node.id.name);
+              behaviour.set(node.id.name, node.init);
             }
           },
           ExportNamedDeclaration(node) {
@@ -75,7 +108,8 @@ export default {
           },
           "Program:exit"() {
             for (const { node, value, name } of exported) {
-              if (!(value && BEHAVIOUR.has(value.type)) && !behaviour.has(name)) continue;
+              const fn = value && BEHAVIOUR.has(value.type) ? value : behaviour.get(name);
+              if (!fn || buildsSchema(fn, zod)) continue;
               context.report({ node, messageId: "exportedBehaviour", data: { name } });
             }
           }

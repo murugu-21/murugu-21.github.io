@@ -17,6 +17,13 @@ export { ROUTES, ROUTES as PATHS };
 export default LIMITS;`
     },
     {
+      name: "a function whose body builds a zod schema",
+      code: `import { z } from "zod";
+export const text = (description: string) => z.string().meta({ description });
+const nullableText = (description: string) => z.string().nullable().meta({ description });
+export { nullableText };`
+    },
+    {
       name: "a function kept private, and a re-export of a name also declared locally",
       code: `const helper = () => 1;
 export const ONE = helper();
@@ -47,6 +54,28 @@ export { local, named as renamed, Box };`,
         { ...exported("named"), line: 9 },
         { ...exported("Box"), line: 9 }
       ]
+    },
+    {
+      name: "a function whose body runs a zod schema instead of building one",
+      code: `import { z } from "zod";
+export const parseLimit = (s: string) => z.coerce.number().parse(s);
+export const check = (v: unknown) => z.string().safeParseAsync(v);
+export const rounded = (s: string) => z.coerce.number().decode(s).toFixed();
+export const hint = (e: z.ZodError) => z.prettifyError(e);
+export const about = () => z.string().meta({ description: "a" }).description;`,
+      errors: [
+        { ...exported("parseLimit"), line: 2 },
+        { ...exported("check"), line: 3 },
+        { ...exported("rounded"), line: 4 },
+        { ...exported("hint"), line: 5 },
+        { ...exported("about"), line: 6 }
+      ]
+    },
+    {
+      name: "a function whose body builds on a z that is not zod's",
+      code: `import { z } from "./z";
+export const text = (description: string) => z.string().meta({ description });`,
+      errors: [{ ...exported("text"), line: 2 }]
     },
     {
       name: "a default export of a function",
