@@ -772,7 +772,6 @@ describe("ChatRoom conversation expiry", () => {
       mirrored: [{ role: "user", content: "hi" }]
     });
 
-    // An evicted room, as a month-old one is, wakes for the alarm.
     await evictDurableObject(stub);
     await expiringAlarmAt(stub, T0 + 30 * DAY);
     expect(await conversation(room)).toEqual(EXPIRED);

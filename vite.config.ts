@@ -55,7 +55,6 @@ export default defineConfig({
   },
   test: {
     exclude: [...configDefaults.exclude, "**/lint-fixture-*/**"],
-    // 0 stops truncating values in failure messages.
     chaiConfig: { truncateThreshold: 0 },
     // Keeps `$field` values in it.each titles whole. 0 doesn't switch the limit off: it still
     // clips the last character of a string.
