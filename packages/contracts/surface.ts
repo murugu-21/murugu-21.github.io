@@ -73,7 +73,7 @@ export const DOCUMENTS = {
     rel: "service-desc"
   },
   sitemap: {
-    path: "/sitemap.xml",
+    path: "/sitemap-index.xml",
     type: "application/xml",
     title: "Every indexable URL on this site",
     rel: "index"

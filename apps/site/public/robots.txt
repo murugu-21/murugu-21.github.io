@@ -3,4 +3,4 @@ User-agent: *
 Content-Signal: search=yes, ai-input=yes, ai-train=yes
 Disallow:
 
-Sitemap: https://murugappan.dev/sitemap.xml
+Sitemap: https://murugappan.dev/sitemap-index.xml

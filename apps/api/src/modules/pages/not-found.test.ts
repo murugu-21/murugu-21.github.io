@@ -13,7 +13,7 @@ describe("markdownNotFound", () => {
     const link = res.headers.get("Link") ?? "";
     expect(link).toContain('rel="service-desc"');
     expect(link).toContain('rel="api-catalog"');
-    expect(link).toContain("/sitemap.xml");
+    expect(link).toContain("/sitemap-index.xml");
     const body = await res.text();
     expect(body.startsWith("# 404 Not Found")).toBe(true);
     expect(body).toContain("`/nope`");

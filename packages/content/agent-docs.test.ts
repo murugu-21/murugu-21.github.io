@@ -42,7 +42,7 @@ describe("agentGuide", () => {
     const guide = agentGuide();
 
     expect(guide).toContain(
-      "- [Every indexable URL on this site](https://murugappan.dev/sitemap.xml)\n- [Site summary for LLMs](https://murugappan.dev/llms.txt)\n"
+      "- [Every indexable URL on this site](https://murugappan.dev/sitemap-index.xml)\n- [Site summary for LLMs](https://murugappan.dev/llms.txt)\n"
     );
     expect(guide).toContain(
       "calling tools: `/llms.txt`, `/AGENTS.md`, `/openapi.json`, `/blog/llms-full.txt`, and every post's markdown"
@@ -68,7 +68,7 @@ describe("agentGuide", () => {
 describe("llmsPreamble", () => {
   it("lists the entry points under the discovery heading", () => {
     expect(llmsPreamble()).toContain(
-      "## Discovery documents\n- [Every indexable URL on this site](https://murugappan.dev/sitemap.xml)\n"
+      "## Discovery documents\n- [Every indexable URL on this site](https://murugappan.dev/sitemap-index.xml)\n"
     );
   });
 

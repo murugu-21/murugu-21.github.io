@@ -25,3 +25,5 @@
 /api-reference/ /developers/ 301
 /mcp-server /developers/ 301
 /mcp-server/ /developers/ 301
+
+/sitemap.xml /sitemap-index.xml 301

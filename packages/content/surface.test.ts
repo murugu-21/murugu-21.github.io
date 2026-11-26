@@ -19,7 +19,7 @@ describe("linkHeader", () => {
 describe("entryPoints", () => {
   it("lists each entry point as an absolute markdown link, in the registry's order", () => {
     expect(entryPoints()).toMatch(
-      /^- \[Every indexable URL on this site\]\(https:\/\/murugappan\.dev\/sitemap\.xml\)\n- \[Site summary for LLMs\]\(https:\/\/murugappan\.dev\/llms\.txt\)\n/
+      /^- \[Every indexable URL on this site\]\(https:\/\/murugappan\.dev\/sitemap-index\.xml\)\n- \[Site summary for LLMs\]\(https:\/\/murugappan\.dev\/llms\.txt\)\n/
     );
     const lastEntry =
       "\n- [Full text of every blog post](https://murugappan.dev/blog/llms-full.txt)";

@@ -1,4 +1,4 @@
-import { readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AstroIntegration } from "astro";
@@ -25,7 +25,7 @@ import { githubSnapshot } from "./src/lib/github/snapshot";
 import { modulePreloader } from "./scripts/module-preload";
 import { ENV_SCHEMA, requireDeployEnv, sourceMapUpload } from "./build-env";
 import { contentPosts, readPosts } from "@murugappan/content/vite/posts-plugin.ts";
-import { exists, ifPresent } from "@murugappan/utils/node/fs.ts";
+import { ifPresent } from "@murugappan/utils/node/fs.ts";
 import { spawnInherit } from "@murugappan/utils/node/process.ts";
 
 const POSTS = await readPosts();
@@ -34,28 +34,6 @@ const POST_DATES: Record<string, string> = Object.fromEntries(
   POSTS.map(post => [post.slug, post.data.date.toISOString()])
 );
 const NEWEST_POST = Object.values(POST_DATES).sort().pop();
-
-// @astrojs/sitemap writes an index plus numbered chunks, but robots.txt, not-found.ts and the
-// api-catalog all name /sitemap.xml. Collapse the single chunk onto it.
-function singleFileSitemap(): AstroIntegration {
-  return {
-    name: "single-file-sitemap",
-    hooks: {
-      "astro:build:done": async ({ dir, logger }) => {
-        const chunk = new URL("sitemap-0.xml", dir);
-        if (await exists(new URL("sitemap-1.xml", dir))) {
-          throw new Error("single-file-sitemap: more than one sitemap chunk was written");
-        }
-        if (!(await exists(chunk))) {
-          throw new Error("single-file-sitemap: sitemap-0.xml is missing from the build");
-        }
-        await rename(chunk, new URL("sitemap.xml", dir));
-        await rm(new URL("sitemap-index.xml", dir), { force: true });
-        logger.info(`\`sitemap.xml\` created at \`${fileURLToPath(dir)}\``);
-      }
-    }
-  };
-}
 
 function headersFileIntegration(): AstroIntegration {
   return {
@@ -303,10 +281,8 @@ export default defineConfig({
         return item;
       }
     }),
-    singleFileSitemap(),
     headersFileIntegration(),
     blogPostChecks(),
-    // Last, so the site the resume prints from is final.
     buildArtifacts()
   ],
   vite: {
