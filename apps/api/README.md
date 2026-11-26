@@ -32,7 +32,7 @@ Where things go:
 
 - `src/app.module.ts` wires services to repositories and exports `runInRequest`. `src/common/di/` holds the Effect plumbing it uses: the `WorkerEnv` tag and the `Render` type.
 - `src/modules/<name>/` holds one feature. A new endpoint goes in its module's controller. An API controller is mounted in `modules/api/api.controller.ts`, which gives it the API's shared stack.
-- `src/common/` holds code that isn't one feature's, grouped by role: `interceptors/`, `pipes/`, `middleware/`, `filters/`, `http/` (responses and headers), `di/`, `content.ts` (the bundled site content) and `app-env.ts` (the Hono env types).
+- `src/common/` holds code that isn't one feature's, grouped by role: `interceptors/`, `pipes/`, `middleware/`, `filters/`, `http/` (responses and headers), `di/`, `content.ts` (the bundled site content), `app-env.ts` (the Hono env types) and `env.client.ts` (a secret or text binding read as `string | null`, since a deployment may leave one unset).
 - `modules/rate-limit/` owns all rate limiting, as Nest's throttler module does. The read throttle guard counts per edge in `read-quota.store.ts`, synchronously, keyed on the same visitor as chat and contact (`visitor-key.ts`), so a whole IPv6 /64 shares one read window. The contact allowance is global, in the RateLimiter Durable Object behind `contact-quota.repository.ts`.
 - `modules/chat/` holds the `ChatRoom` Durable Object and the helpers it calls directly (prompt, frames, page fetching, visitor headers). They don't go through services, and its controller hands `c.env` to the agents SDK's router.
 - Repositories wrap the records the API looks up. Documents served whole, such as llms.txt and AGENTS.md, are read straight from `common/content.ts`.

@@ -680,8 +680,8 @@ describe("ChatRoom conversation expiry", () => {
   // records the abort instead and the test then aborts it from inside runInDurableObject.
   async function recordAborts(stub: DurableObjectStub<ChatRoom>): Promise<(string | undefined)[]> {
     const reasons: (string | undefined)[] = [];
-    await runInDurableObject(stub, instance => {
-      Object.assign(instance.ctx, { abort: (reason?: string) => reasons.push(reason) });
+    await runInDurableObject(stub, (_room, state) => {
+      Object.assign(state, { abort: (reason?: string) => reasons.push(reason) });
     });
     return reasons;
   }
@@ -696,20 +696,19 @@ describe("ChatRoom conversation expiry", () => {
 
   async function abortRoom(stub: DurableObjectStub<ChatRoom>): Promise<void> {
     await expect(
-      runInDurableObject(stub, instance => {
-        Reflect.deleteProperty(instance.ctx, "abort");
-        instance.ctx.abort("destroyed");
+      runInDurableObject(stub, (_room, state) => {
+        Reflect.deleteProperty(state, "abort");
+        state.abort("destroyed");
       })
     ).rejects.toThrow("destroyed");
   }
 
   async function conversation(room: string) {
-    // Read first: the request starts the room, which creates its leads table.
     const history = (await storedMessages(room)).map(m => m.role);
     const stub = exports.ChatRoom.get(exports.ChatRoom.idFromName(room));
-    const stored = await runInDurableObject(stub, instance => ({
-      visitor: Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" })),
-      leads: instance.ctx.storage.sql.exec("SELECT contact FROM leads").toArray()
+    const stored = await runInDurableObject(stub, (_room, state) => ({
+      visitor: Object.fromEntries(state.storage.kv.list({ prefix: "visitor_" })),
+      leads: state.storage.sql.exec("SELECT contact FROM leads").toArray()
     }));
     const { results: mirrored } = await env.CHAT_DB.prepare(
       "SELECT role, content FROM messages WHERE room_id = ?"
@@ -730,11 +729,11 @@ describe("ChatRoom conversation expiry", () => {
     const { stub } = await connectRoom(room, {
       headers: { "CF-IPCountry": "IN", "CF-Connecting-IP": "203.0.113.9" }
     });
-    await runInDurableObject(stub, async instance => {
+    await runInDurableObject(stub, async (instance, state) => {
       await instance.persistMessages([
         { id: "u1", role: "user" as const, parts: [{ type: "text" as const, text: "hi" }] }
       ]);
-      instance.ctx.storage.sql.exec(
+      state.storage.sql.exec(
         "INSERT INTO leads (contact, summary, created_at) VALUES ('ada@example.com', 'hiring', ?)",
         T0
       );
@@ -800,81 +799,156 @@ describe("ChatRoom conversation expiry", () => {
     expect(await conversation(room)).toEqual(EXPIRED);
   });
 
-  it("keeps the conversation of a reconnect that lands while the expiry writes to D1", async () => {
-    const room = roomName("room-expire-race");
-    const stub = await startConversation(room);
+  it.each([
+    { order: "before", holdReconnectWrite: false },
+    { order: "after", holdReconnectWrite: true }
+  ])(
+    "keeps the conversation of a reconnect whose own D1 write lands $order the expiry's delete",
+    async ({ order, holdReconnectWrite }) => {
+      const room = roomName(`room-race-${order}`);
+      const stub = await startConversation(room);
 
-    // The held write polls the room's own state: a promise resolved from the test's context
-    // would resume the expiry there, where workerd refuses the room's binding.
+      // The held writes poll the room's own state: a promise resolved from the test's context
+      // would resume the expiry there, where workerd refuses the room's binding.
+      let expiryReachedD1 = false;
+      await runInDurableObject(stub, (instance, state) => {
+        const db = env.CHAT_DB;
+        const kv = state.storage.kv;
+        const pause = () => new Promise(resolve => setTimeout(resolve, 5));
+        let deleteLanded = false;
+        const batch = async (statements: D1PreparedStatement[]) => {
+          expiryReachedD1 = true;
+          while (kv.get("visitor_last_seen") === T0) await pause();
+          const results = await db.batch(statements);
+          deleteLanded = true;
+          return results;
+        };
+        const prepare = (query: string) => {
+          const statement = db.prepare(query);
+          if (!holdReconnectWrite || deleteLanded || !query.includes("INSERT INTO rooms")) {
+            return statement;
+          }
+          return {
+            bind: (...values: unknown[]) => ({
+              run: async () => {
+                while (!deleteLanded) await pause();
+                return statement.bind(...values).run();
+              }
+            })
+          };
+        };
+        Object.assign(instance, { env: { ...env, CHAT_DB: { prepare, batch } } });
+      });
+
+      vi.setSystemTime(T0 + 30 * DAY);
+      const alarm = runDurableObjectAlarm(stub);
+      await vi.waitFor(() => assert(expiryReachedD1, "the expiry hasn't reached D1"), {
+        timeout: 2000
+      });
+      // vi.waitFor moves the fake clock, so set it again before the reconnect.
+      vi.setSystemTime(T0 + 31 * DAY);
+      await connectRoom(room, { headers: { "CF-Connecting-IP": "198.51.100.7" } });
+      await alarm;
+
+      await mirroredRoom(room, { country: "IN", ip: "198.51.100.7", last_seen: T0 + 31 * DAY });
+      await vi.waitFor(
+        async () =>
+          expect(await conversation(room)).toMatchObject({
+            history: ["user"],
+            visitor: { visitor_ip: "198.51.100.7", visitor_last_seen: T0 + 31 * DAY },
+            leads: [{ contact: "ada@example.com" }],
+            mirrored: [{ role: "user", content: "hi" }]
+          }),
+        { timeout: 2000, interval: 5 }
+      );
+      expect(await pendingJobs(stub)).toEqual([
+        { callback: "expireConversation", time: (T0 + 61 * DAY) / 1000 }
+      ]);
+    }
+  );
+
+  it("restores each mirrored message once, at its own time, when a message is sent mid-expiry", async () => {
+    const room = roomName("room-race-message");
+    const stub = await startConversation(room);
+    vi.setSystemTime(T0 + 31 * DAY);
+    await fundChat();
+
     let expiryReachedD1 = false;
     await runInDurableObject(stub, instance => {
-      const db = instance.env.CHAT_DB;
-      const kv = instance.ctx.storage.kv;
+      const db = env.CHAT_DB;
+      const pause = () => new Promise(resolve => setTimeout(resolve, 5));
+      let messageMirrored = false;
+      let deleteLanded = false;
+      const restored = async () =>
+        (await db
+          .prepare("SELECT 1 FROM messages WHERE room_id = ? AND content = 'hi'")
+          .bind(room)
+          .first()) !== null;
       const batch = async (statements: D1PreparedStatement[]) => {
         expiryReachedD1 = true;
-        while (kv.get("visitor_last_seen") === T0) {
-          await new Promise(resolve => setTimeout(resolve, 5));
-        }
-        return db.batch(statements);
+        while (!messageMirrored) await pause();
+        const results = await db.batch(statements);
+        deleteLanded = true;
+        return results;
       };
+      const held = (query: string, until: () => Promise<boolean>) => ({
+        bind: (...values: unknown[]) => ({
+          run: async () => {
+            if (query.includes("INSERT INTO messages")) messageMirrored = true;
+            while (!(await until())) await pause();
+            return db
+              .prepare(query)
+              .bind(...values)
+              .run();
+          }
+        })
+      });
+      const prepare = (query: string) => {
+        if (deleteLanded) return db.prepare(query);
+        if (query.includes("INSERT INTO rooms")) return held(query, async () => deleteLanded);
+        if (query.includes("INSERT INTO messages")) {
+          return held(query, async () => deleteLanded && (await restored()));
+        }
+        return db.prepare(query);
+      };
+      const noProse = () =>
+        modelStream([
+          { type: "finish", usage: USAGE, finishReason: { unified: "stop", raw: "stop" } }
+        ]);
       Object.assign(instance, {
-        env: { ...instance.env, CHAT_DB: { prepare: (query: string) => db.prepare(query), batch } }
+        env: { ...testEnv(), DEEPSEEK_API_KEY: "sk-test", CHAT_DB: { prepare, batch } },
+        languageModel: () => scriptedModel(noProse)
       });
     });
 
-    vi.setSystemTime(T0 + 30 * DAY);
     const alarm = runDurableObjectAlarm(stub);
     await vi.waitFor(() => assert(expiryReachedD1, "the expiry hasn't reached D1"), {
       timeout: 2000
     });
-    // vi.waitFor moves the fake clock, so set it again before the reconnect.
     vi.setSystemTime(T0 + 31 * DAY);
-    await connectRoom(room, { headers: { "CF-Connecting-IP": "198.51.100.7" } });
+    const { socket, frames } = await openRoom(room, {
+      headers: { "CF-Connecting-IP": "198.51.100.9" }
+    });
+    socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u2", text: "still there?" })] })
+    );
     await alarm;
+    await streamedChunks(frames, "r1");
 
-    expect(await conversation(room)).toMatchObject({
-      history: ["user"],
-      visitor: { visitor_ip: "198.51.100.7", visitor_last_seen: T0 + 31 * DAY },
-      leads: [{ contact: "ada@example.com" }],
-      mirrored: [{ role: "user", content: "hi" }]
-    });
-    await mirroredRoom(room, { ip: "198.51.100.7", last_seen: T0 + 31 * DAY });
-    expect(await pendingJobs(stub)).toEqual([
-      { callback: "expireConversation", time: (T0 + 61 * DAY) / 1000 }
-    ]);
-  });
-
-  async function scheduleOldJob(stub: DurableObjectStub<ChatRoom>): Promise<void> {
-    await runInDurableObject(stub, async instance => {
-      for (const { id } of await instance.listSchedules()) await instance.cancelSchedule(id);
-      await instance.schedule(new Date(T0 + 30 * DAY), "eraseVisitorIp");
-    });
-  }
-
-  it("runs a job the room scheduled under its old name", async () => {
-    const room = roomName("room-expire-old-job");
-    const stub = await startConversation(room);
-    await scheduleOldJob(stub);
-
-    await alarmAt(stub, T0 + 30 * DAY);
-    expect(await pendingJobs(stub)).toEqual([
-      { callback: "expireConversation", time: (T0 + 30 * DAY) / 1000 }
-    ]);
-    await expiringAlarmAt(stub, T0 + 30 * DAY);
-    expect(await conversation(room)).toEqual(EXPIRED);
-  });
-
-  it("keeps one pending job when a visitor returns to a room holding a job under the old name", async () => {
-    const room = roomName("room-old-job-later");
-    const stub = await startConversation(room);
-    await scheduleOldJob(stub);
-    vi.setSystemTime(T0 + 20 * DAY);
-    await connectRoom(room, { headers: { "CF-Connecting-IP": "203.0.113.9" } });
-
-    await alarmAt(stub, T0 + 30 * DAY);
-    expect(await pendingJobs(stub)).toEqual([
-      { callback: "expireConversation", time: (T0 + 50 * DAY) / 1000 }
-    ]);
+    await vi.waitFor(
+      async () => {
+        const { results } = await env.CHAT_DB.prepare(
+          "SELECT role, content, created_at FROM messages WHERE room_id = ? ORDER BY created_at, id"
+        )
+          .bind(room)
+          .all();
+        expect(results).toEqual([
+          { role: "user", content: "hi", created_at: T0 },
+          { role: "user", content: "still there?", created_at: T0 + 31 * DAY }
+        ]);
+      },
+      { timeout: 2000, interval: 5 }
+    );
   });
 
   it("schedules its expiry when a history read wakes a room that holds no job", async () => {
@@ -991,8 +1065,8 @@ describe("ChatRoom leads", () => {
     );
     expect(replyText(await streamedChunks(room.frames, "r2"))).toBe("Second.");
     expect(sent.map(m => m.to)).toEqual(["inbox@example.com"]);
-    const leads = await runInDurableObject(room.stub, instance =>
-      instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
+    const leads = await runInDurableObject(room.stub, (_room, state) =>
+      state.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
     expect(leads).toEqual([{ contact: "a@b.c" }, { contact: "a@b.c" }]);
   });
@@ -1031,8 +1105,8 @@ describe("ChatRoom leads", () => {
     expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("Noted.");
     expect(sent).toEqual([]);
     expect(errors.map(e => e[0])).toEqual(["opportunity email skipped: no EMAIL binding or inbox"]);
-    const leads = await runInDurableObject(room.stub, instance =>
-      instance.ctx.storage.sql.exec(`SELECT contact FROM leads`).toArray()
+    const leads = await runInDurableObject(room.stub, (_room, state) =>
+      state.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
     expect(leads).toEqual([{ contact: "a@b.c" }]);
   });

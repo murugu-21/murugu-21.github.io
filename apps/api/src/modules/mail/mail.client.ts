@@ -1,5 +1,6 @@
 import type { ContactMessage } from "@murugappan/contracts/api/contact.ts";
 import type { ChatHistoryEntry } from "@murugappan/contracts/chat.ts";
+import { configured } from "#src/common/env.client.ts";
 import type { Lead } from "#src/modules/chat/prompt.ts";
 
 const SENDER_ADDRESS = "chatbot@murugappan.dev";
@@ -11,7 +12,7 @@ export type EmailLike = {
 };
 
 export function contactMailer(env: Env): { email: EmailLike; inbox: string } | null {
-  const inbox = env.OPPORTUNITY_INBOX?.trim();
+  const inbox = configured(env, "OPPORTUNITY_INBOX");
   return env.EMAIL && inbox ? { email: env.EMAIL, inbox } : null;
 }
 

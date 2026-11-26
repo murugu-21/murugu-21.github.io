@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { MCP_TOOLS } from "@murugappan/contracts/mcp.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
+import { configured } from "#src/common/env.client.ts";
 
 const POSTHOG_SERVER_INGEST_HOST = "https://us.i.posthog.com";
 
@@ -26,7 +27,7 @@ type McpAnalytics = {
 const ignoreClientHangup = () => {};
 
 export function mcpAnalytics(c: Context<AppEnv>): McpAnalytics | null {
-  const token = c.env.POSTHOG_PROJECT_TOKEN.trim();
+  const token = configured(c.env, "POSTHOG_PROJECT_TOKEN");
   if (!token) return null;
   const posthog = new PostHog(token, { host: POSTHOG_SERVER_INGEST_HOST });
   const shutdown = () =>

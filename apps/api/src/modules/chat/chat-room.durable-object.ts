@@ -3,7 +3,6 @@ import {
   type ChatResponseResult,
   type OnChatMessageOptions
 } from "@cloudflare/ai-chat";
-import type { DurableObject } from "cloudflare:workers";
 import { getCurrentAgent, type Connection, type ConnectionContext } from "agents";
 import {
   createUIMessageStream,
@@ -28,6 +27,7 @@ import {
 import { lenient } from "@murugappan/utils/json.ts";
 import { messageText } from "@murugappan/utils/ui-message.ts";
 import { LLMS_TXT } from "#src/common/content.ts";
+import { configured } from "#src/common/env.client.ts";
 import { admitFrame } from "#src/modules/chat/chat-frames.ts";
 import { deepseek, isInsufficientBalance, jarvisCall } from "#src/modules/chat/deepseek.client.ts";
 import { fetchSitePage } from "#src/modules/chat/fetch-page.client.ts";
@@ -51,6 +51,15 @@ function expiryTime(lastSeen: number): number {
 const RequestBody = z.object({ page: lenient(z.string()) });
 const Timestamp = z.number();
 const ConnectionVisitor = z.object({ visitor: VisitorKey });
+const StoredVisitor = z.object({
+  visitor_country: z.string().nullable().default(null),
+  visitor_ip: z.string().nullable().default(null),
+  visitor_key: z.string().nullable().default(null),
+  visitor_first_seen: Timestamp,
+  visitor_last_seen: Timestamp
+});
+
+const mirrorFailed = (cause: unknown) => console.error("d1 mirror failed", cause);
 
 function logUsage(usage: LanguageModelUsage): void {
   console.log(
@@ -93,11 +102,6 @@ function streamChunk(
 export class ChatRoom extends AIChatAgent<Env> {
   public maxPersistedMessages = 200;
   public messageConcurrency = "drop" as const;
-
-  // Public so tests can drive `ctx.storage.sql` and wrap the room's own bindings via
-  // `runInDurableObject`.
-  declare public ctx: DurableObject<Env>["ctx"];
-  declare public env: Env;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -170,31 +174,39 @@ export class ChatRoom extends AIChatAgent<Env> {
     await this.deleteConversation(lastSeen);
   }
 
-  // Jobs that earlier deploys stored call this name. Each is due within 30 days of this deploy.
-  public async eraseVisitorIp(): Promise<void> {
-    await this.scheduleExpiry({ idempotent: true });
-  }
-
   private async deleteConversation(lastSeen: number): Promise<void> {
     const db = this.env.CHAT_DB;
-    await db?.batch([
+    const deleted = await db?.batch([
       db
         .prepare(
           `DELETE FROM messages WHERE room_id = ?1
-           AND NOT EXISTS (SELECT 1 FROM rooms WHERE room_id = ?1 AND last_seen > ?2)`
+           AND NOT EXISTS (SELECT 1 FROM rooms WHERE room_id = ?1 AND last_seen > ?2)
+           RETURNING role, content, created_at`
         )
         .bind(this.name, lastSeen),
       db
         .prepare(`DELETE FROM rooms WHERE room_id = ?1 AND last_seen <= ?2`)
         .bind(this.name, lastSeen)
     ]);
-    // A reconnect during the await keeps the conversation going, though D1 loses its copy if the
-    // batch reached D1 before the reconnect's own write.
     if (this.lastSeen() !== lastSeen) {
+      if (deleted?.some(result => result.meta.changes > 0)) this.restoreMirror(deleted[0].results);
       await this.scheduleExpiry({ idempotent: false });
       return;
     }
     await this.destroy();
+  }
+
+  private restoreMirror(deletedMessages: unknown[]): void {
+    this.mirrorToD1(db => this.roomRow(db));
+    this.mirrorToD1(db =>
+      db
+        .prepare(
+          `INSERT INTO messages (room_id, role, content, created_at)
+           SELECT ?1, value ->> 'role', value ->> 'content', value ->> 'created_at'
+           FROM json_each(?2)`
+        )
+        .bind(this.name, JSON.stringify(deletedMessages))
+    );
   }
 
   // Idempotent except from inside expireConversation: its own job still counts as pending until
@@ -221,7 +233,7 @@ export class ChatRoom extends AIChatAgent<Env> {
     options?: OnChatMessageOptions
   ): Promise<Response> {
     try {
-      const key = this.deepseekKey();
+      const key = configured(this.env, "DEEPSEEK_API_KEY");
       if (!key) return noticeResponse(LIMIT_NOTICE);
       const admission = await globalLimiter().admitChatTurn({
         visitor: this.turnVisitor(),
@@ -304,11 +316,6 @@ export class ChatRoom extends AIChatAgent<Env> {
     return deepseek({ apiKey: key });
   }
 
-  // Typed required (a bindings.secret() in cloudflare.config.ts), but local dev may lack it.
-  private deepseekKey(): string | null {
-    return this.env.DEEPSEEK_API_KEY?.trim() || null;
-  }
-
   private async captureLead(lead: Lead): Promise<void> {
     this.storeLead(lead);
     await this.emailLeadOnce(lead);
@@ -351,17 +358,28 @@ export class ChatRoom extends AIChatAgent<Env> {
   }): void {
     const kv = this.ctx.storage.kv;
     const now = Date.now();
-    const knownFirstSeen = Timestamp.safeParse(kv.get("visitor_first_seen")).data;
-    const firstSeen = knownFirstSeen ?? now;
-
     if (visitor.country !== null) kv.put("visitor_country", visitor.country);
     if (visitor.ip !== null) kv.put("visitor_ip", visitor.ip);
     if (key !== null) kv.put("visitor_key", key);
     kv.put("visitor_last_seen", now);
-    if (knownFirstSeen === undefined) kv.put("visitor_first_seen", now);
+    if (!Timestamp.safeParse(kv.get("visitor_first_seen")).success) {
+      kv.put("visitor_first_seen", now);
+    }
 
-    this.mirrorToD1(
-      this.env.CHAT_DB?.prepare(
+    this.mirrorToD1(db => this.roomRow(db));
+  }
+
+  private roomRow(db: D1Database): D1PreparedStatement | null {
+    const stored = StoredVisitor.safeParse(
+      Object.fromEntries(this.ctx.storage.kv.list({ prefix: "visitor_" }))
+    );
+    if (!stored.success) {
+      mirrorFailed(stored.error);
+      return null;
+    }
+    const visitor = stored.data;
+    return db
+      .prepare(
         `INSERT INTO rooms (room_id, country, ip, visitor_key, first_seen, last_seen)
          VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (room_id) DO UPDATE SET
@@ -369,8 +387,15 @@ export class ChatRoom extends AIChatAgent<Env> {
            ip = COALESCE(excluded.ip, rooms.ip),
            visitor_key = COALESCE(excluded.visitor_key, rooms.visitor_key),
            last_seen = excluded.last_seen`
-      ).bind(this.name, visitor.country, visitor.ip, key, firstSeen, now)
-    );
+      )
+      .bind(
+        this.name,
+        visitor.visitor_country,
+        visitor.visitor_ip,
+        visitor.visitor_key,
+        visitor.visitor_first_seen,
+        visitor.visitor_last_seen
+      );
   }
 
   private storeLead(lead: Lead): void {
@@ -398,20 +423,18 @@ export class ChatRoom extends AIChatAgent<Env> {
   }
 
   private mirrorMessage(role: "user" | "assistant", content: string): void {
-    this.mirrorToD1(
-      this.env.CHAT_DB?.prepare(
-        `INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)`
-      ).bind(this.name, role, content, Date.now())
+    this.mirrorToD1(db =>
+      db
+        .prepare(`INSERT INTO messages (room_id, role, content, created_at) VALUES (?, ?, ?, ?)`)
+        .bind(this.name, role, content, Date.now())
     );
   }
 
-  // D1 is the only global view (rooms aren't enumerable) but the DO's SQLite is the
-  // source of truth, so the write is fire-and-forget; waitUntil holds off eviction.
-  private mirrorToD1(statement: D1PreparedStatement | undefined): void {
+  private mirrorToD1(toStatement: (db: D1Database) => D1PreparedStatement | null): void {
+    const db = this.env.CHAT_DB;
+    const statement = db && toStatement(db);
     if (!statement) return;
-    this.ctx.waitUntil(
-      statement.run().catch((cause: unknown) => console.error("d1 mirror failed", cause))
-    );
+    this.ctx.waitUntil(statement.run().catch(mirrorFailed));
   }
 }
 

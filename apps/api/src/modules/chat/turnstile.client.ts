@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { TURNSTILE_TOKEN_PARAM } from "@murugappan/contracts/chat.ts";
 import type { AppEnv } from "#src/common/app-env.ts";
+import { configured } from "#src/common/env.client.ts";
 
 export const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
@@ -16,7 +17,7 @@ const Token = z.string().min(1).max(2048);
  * or secret, or a siteverify error, counts as a failed challenge.
  */
 export async function passesTurnstile(c: Context<AppEnv>): Promise<boolean> {
-  const secret = c.env.TURNSTILE_SECRET_KEY?.trim();
+  const secret = configured(c.env, "TURNSTILE_SECRET_KEY");
   const token = Token.safeParse(c.req.query(TURNSTILE_TOKEN_PARAM)).data;
   if (!secret || !token) return false;
 

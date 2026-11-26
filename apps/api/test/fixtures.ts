@@ -92,17 +92,13 @@ const VisitorStorage = z.object({
   visitor_last_seen: z.number()
 });
 
-export function visitorStorage(instance: ChatRoom) {
-  return VisitorStorage.parse(
-    Object.fromEntries(instance.ctx.storage.kv.list({ prefix: "visitor_" }))
-  );
+export function visitorStorage(_room: ChatRoom, state: DurableObjectState) {
+  return VisitorStorage.parse(Object.fromEntries(state.storage.kv.list({ prefix: "visitor_" })));
 }
 
 export function testEnv(options: TestEnvOptions = {}): Env {
-  // Named rather than spread: `env` is typed as the full Env, so a binding added to
-  // ../cloudflare.config.ts fails to type-check here until testEnv supplies it.
   const { AUDIO, CHAT_DB, ChatRoom } = env;
-  return {
+  const bindings: Env = {
     AUDIO,
     CHAT_DB,
     ChatRoom,
@@ -113,6 +109,8 @@ export function testEnv(options: TestEnvOptions = {}): Env {
     POSTHOG_PROJECT_TOKEN: options.posthogToken ?? "",
     TURNSTILE_SECRET_KEY: options.turnstileSecret ?? TURNSTILE_PASSING_SECRET
   };
+  if (options.posthogToken === undefined) Reflect.deleteProperty(bindings, "POSTHOG_PROJECT_TOKEN");
+  return bindings;
 }
 
 export function capturedErrors() {

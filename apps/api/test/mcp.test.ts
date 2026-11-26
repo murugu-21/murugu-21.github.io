@@ -1094,7 +1094,7 @@ describe("PostHog analytics", () => {
     });
   });
 
-  it("sends nothing without a project token", async () => {
+  it("serves the call and sends nothing when the Worker has no project token", async () => {
     const { events } = recordPostHog();
 
     const reply = await call("list_skills");
