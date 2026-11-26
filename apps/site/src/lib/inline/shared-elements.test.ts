@@ -1,7 +1,7 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, it } from "vite-plus/test";
 
-import { pairSharedElements } from "./view-transitions";
+import { pairSharedElements } from "./shared-elements";
 
 const LIST = `<html><body>
   <h1 data-shared>Blog</h1>

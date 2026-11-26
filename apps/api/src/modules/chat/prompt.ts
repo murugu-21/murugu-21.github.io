@@ -3,11 +3,12 @@ import { z } from "zod";
 
 import type { ToolName } from "@murugappan/contracts/chat.ts";
 import { lenient } from "@murugappan/utils/json.ts";
+import { nonEmpty } from "@murugappan/utils/text.ts";
 
 const MAX_HISTORY_MESSAGES = 20;
 
 const LeadInput = z.object({
-  name: lenient(z.string()).describe("The visitor's name, if they shared it."),
+  name: lenient(z.string().transform(nonEmpty)).describe("The visitor's name, if they shared it."),
   contact: z.string().describe("How to reach the visitor: email, LinkedIn URL, or phone."),
   summary: z
     .string()

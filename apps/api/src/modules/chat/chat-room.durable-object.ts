@@ -48,6 +48,8 @@ function expiryTime(lastSeen: number): number {
   return Math.ceil((lastSeen + CONVERSATION_RETENTION_MS) / 1000) * 1000;
 }
 
+const EXPIRY_CALLBACK = "expireConversation" satisfies keyof ChatRoom;
+
 const RequestBody = z.object({ page: lenient(z.string()) });
 const Timestamp = z.number();
 const ConnectionVisitor = z.object({ visitor: VisitorKey });
@@ -76,6 +78,10 @@ function noticeResponse(notice: Notice): Response {
   });
 }
 
+type LeadEmail =
+  | { status: "sent" | "already sent" | "not configured" }
+  | { status: "failed"; cause: unknown };
+
 type TurnCall = {
   writer: UIMessageStreamWriter<JarvisMessage>;
   key: string;
@@ -83,9 +89,14 @@ type TurnCall = {
   abortSignal?: AbortSignal;
 };
 
-function streamChunk(
+type ClientSafeChunk = Extract<
+  InferUIMessageChunk<JarvisMessage>,
+  { type: "text-start" | "text-delta" | "text-end" | "data-activity" }
+>;
+
+function clientSafeChunk(
   part: TextStreamPart<ReturnType<typeof jarvisTools>>
-): InferUIMessageChunk<JarvisMessage> | null {
+): ClientSafeChunk | null {
   if (part.type === "text-start") return { type: "text-start", id: part.id };
   if (part.type === "text-delta") return { type: "text-delta", id: part.id, delta: part.text };
   if (part.type === "text-end") return { type: "text-end", id: part.id };
@@ -144,9 +155,7 @@ export class ChatRoom extends AIChatAgent<Env> {
       await this.scheduleExpiry({ idempotent: true });
       return;
     }
-    // Every job the room holds is an expiry, so a pending one is due and the alarm that woke the
-    // room runs it next.
-    if ((await this.listSchedules()).length > 0) return;
+    if (await this.hasPendingExpiry()) return;
     await this.deleteConversation(lastSeen);
     // destroy() aborts the room only on the next tick, so the request that woke it mustn't go on
     // to read the wiped storage.
@@ -162,8 +171,6 @@ export class ChatRoom extends AIChatAgent<Env> {
     await this.scheduleExpiry({ idempotent: true });
   }
 
-  // Public because schedule() only takes public method names. A sighting while an expiry is
-  // pending moves only last-seen, so the expiry checks it and sets a fresh one when not yet due.
   public async expireConversation(): Promise<void> {
     const lastSeen = this.lastSeen();
     if (lastSeen === undefined) return;
@@ -214,9 +221,14 @@ export class ChatRoom extends AIChatAgent<Env> {
   private async scheduleExpiry({ idempotent }: { idempotent: boolean }): Promise<void> {
     const lastSeen = this.lastSeen();
     if (lastSeen === undefined) return;
-    await this.schedule(new Date(expiryTime(lastSeen)), "expireConversation", undefined, {
+    await this.schedule(new Date(expiryTime(lastSeen)), EXPIRY_CALLBACK, undefined, {
       idempotent
     });
+  }
+
+  private async hasPendingExpiry(): Promise<boolean> {
+    const jobs = await this.listSchedules();
+    return jobs.some(job => job.callback === EXPIRY_CALLBACK);
   }
 
   private lastSeen(): number | undefined {
@@ -277,11 +289,7 @@ export class ChatRoom extends AIChatAgent<Env> {
     writer.write({ type: "finish" });
   }
 
-  // Only prose and the running tool's name reach the client: tool inputs hold contact details,
-  // and outputs hold whole pages.
   private async relayModel({ writer, key, page, abortSignal }: TurnCall): Promise<boolean> {
-    // Root llms.txt (~900 tokens) lists every post with its summary and link; blog/llms-full.txt
-    // costs ~20x the tokens and grows per post.
     const result = streamText({
       ...jarvisCall({
         model: this.languageModel(key),
@@ -297,7 +305,7 @@ export class ChatRoom extends AIChatAgent<Env> {
     for await (const part of result.stream) {
       if (part.type === "error") throw part.error;
       if (part.type === "finish-step") logUsage(part.usage);
-      const chunk = streamChunk(part);
+      const chunk = clientSafeChunk(part);
       if (!chunk) continue;
       wroteText ||= chunk.type === "text-delta" && chunk.delta.trim() !== "";
       writer.write(chunk);
@@ -318,17 +326,20 @@ export class ChatRoom extends AIChatAgent<Env> {
 
   private async captureLead(lead: Lead): Promise<void> {
     this.storeLead(lead);
-    await this.emailLeadOnce(lead);
+    const email = await this.emailLeadOnce(lead);
+    if (email.status === "not configured") {
+      console.error({ event: "opportunity email skipped", reason: "no EMAIL binding or inbox" });
+    }
+    if (email.status === "failed") {
+      console.error({ event: "opportunity email failed", err: email.cause });
+    }
   }
 
-  private async emailLeadOnce(lead: Lead): Promise<void> {
+  private async emailLeadOnce(lead: Lead): Promise<LeadEmail> {
     const kv = this.ctx.storage.kv;
-    if (kv.get("lead_captured") !== undefined) return;
+    if (kv.get("lead_captured") !== undefined) return { status: "already sent" };
     const mailer = contactMailer(this.env);
-    if (!mailer) {
-      console.error("opportunity email skipped: no EMAIL binding or inbox");
-      return;
-    }
+    if (!mailer) return { status: "not configured" };
     // Claimed before the send: two captures in one step run in parallel.
     kv.put("lead_captured", new Date().toISOString());
     try {
@@ -337,10 +348,10 @@ export class ChatRoom extends AIChatAgent<Env> {
         lead,
         transcript: this.history()
       });
+      return { status: "sent" };
     } catch (cause) {
-      // Lead is already in SQLite; losing the email must not kill the chat.
-      console.error("opportunity email failed", cause);
       kv.delete("lead_captured");
+      return { status: "failed", cause };
     }
   }
 

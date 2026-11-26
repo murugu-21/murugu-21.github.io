@@ -14,6 +14,7 @@ import {
   requirePython,
   runEach
 } from "./cli.ts";
+import { alignPost, whisperClient } from "./align.ts";
 import { startJsonLines } from "./json-lines.ts";
 import { VOICE_PREFIX, r2Store } from "./r2.ts";
 import { type Reference, type RenderDeps, type Synth, patchPost, renderPost } from "./render.ts";
@@ -24,7 +25,8 @@ const VOICE_DIR = process.env.AUDIO_VOICE_DIR
   : join(import.meta.dirname, ".voice");
 const VOICE_WAV = join(VOICE_DIR, "reference.wav");
 const VOICE_TXT = join(VOICE_DIR, "reference.txt");
-const WORKER = join(import.meta.dirname, "synth.py");
+const SYNTH_WORKER = join(import.meta.dirname, "synth.py");
+const WHISPER_WORKER = join(import.meta.dirname, "whisper.py");
 const TEMPO = Number(process.env.AUDIO_TEMPO ?? 1.08);
 const POSTFX = process.env.AUDIO_LOUDNORM === "0" ? null : "loudnorm=I=-16:TP=-1.5:LRA=9";
 
@@ -45,7 +47,10 @@ async function checkPreconditions(): Promise<Reference> {
     throw new Error(`${BLOG_DIST} missing; run \`bun run build\` first`);
   }
   await requireFfmpeg();
-  if (!options["dry-run"]) await requirePython("mlx_audio");
+  if (!options["dry-run"]) {
+    await requirePython("mlx_audio");
+    await requirePython("mlx_whisper");
+  }
   if (!(await hasVoice())) {
     console.log("no .voice/ reference locally, fetching from R2 …");
     const wav = await r2.get(`${VOICE_PREFIX}/reference.wav`);
@@ -73,6 +78,32 @@ async function uploadVoice() {
   console.log("voice reference uploaded");
 }
 
+async function synthesizeAll({ reference, targets }: { reference: Reference; targets: string[] }) {
+  await using worker = options["dry-run"]
+    ? null
+    : synthClient(startJsonLines(PYTHON, [SYNTH_WORKER]));
+  let synth: Synth | null = null;
+  if (worker) {
+    const ready = await worker.ready;
+    console.log(`model loaded in ${ready.loadSeconds}s`);
+    synth = { worker, reference, sampleRate: ready.sampleRate };
+  }
+  return await runEach(targets, slug =>
+    options.patch
+      ? patchPost(deps, { slug, synth })
+      : renderPost(deps, { slug, synth, force: options.force })
+  );
+}
+
+async function alignAll(targets: string[]) {
+  await using whisper = options["dry-run"]
+    ? null
+    : whisperClient(startJsonLines(PYTHON, [WHISPER_WORKER]));
+  return await runEach(targets, slug =>
+    alignPost({ r2, ffmpeg }, { slug, whisper, force: options.force || options.patch })
+  );
+}
+
 async function renderAll() {
   await r2.checkLogin();
   const reference = await checkPreconditions();
@@ -83,19 +114,9 @@ async function renderAll() {
     }
   }
 
-  await using worker = options["dry-run"] ? null : synthClient(startJsonLines(PYTHON, [WORKER]));
-  let synth: Synth | null = null;
-  if (worker) {
-    const ready = await worker.ready;
-    console.log(`model loaded in ${ready.loadSeconds}s`);
-    synth = { worker, reference, sampleRate: ready.sampleRate };
-  }
-  const failures = await runEach(targets, slug =>
-    options.patch
-      ? patchPost(deps, { slug, synth })
-      : renderPost(deps, { slug, synth, force: options.force })
-  );
-  if (failures.length) process.exitCode = 1;
+  const renderFailures = await synthesizeAll({ reference, targets });
+  const alignFailures = await alignAll(targets);
+  if (renderFailures.length || alignFailures.length) process.exitCode = 1;
 }
 
 if (options["upload-voice"]) await uploadVoice();

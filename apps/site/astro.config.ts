@@ -269,8 +269,6 @@ export default defineConfig({
   server: { port: 4399 },
   build: {
     assets: "static",
-    // An external sheet cost a render-blocking round trip (~150 ms mobile FCP); inlining adds
-    // ~14 KB gzipped per page, which is cheaper.
     inlineStylesheets: "always"
   },
   integrations: [

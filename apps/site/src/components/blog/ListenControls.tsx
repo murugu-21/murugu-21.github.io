@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger
 } from "#src/components/ui/dropdown-menu.tsx";
 import { Slider } from "#src/components/ui/slider.tsx";
+import type { PostSlug } from "@murugappan/contracts/api/slug.ts";
 import { track } from "#src/lib/analytics.ts";
 import { readStored, writeStored } from "#src/lib/storage.ts";
 import { cn } from "#src/lib/utils.ts";
@@ -89,7 +90,7 @@ const READOUT: Record<Progress["unit"], (p: Progress) => [string, string]> = {
   blocks: p => [`${p.position}/${p.length}`, "¶"]
 };
 
-export function ListenControls({ slug }: { slug: string }) {
+export function ListenControls({ slug, post }: { slug: string; post?: PostSlug }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const blocksRef = useRef<Block[]>([]);
   const [supported, setSupported] = useState(false);
@@ -123,7 +124,7 @@ export function ListenControls({ slug }: { slug: string }) {
       player.play();
       return;
     }
-    track("listen_play", { post: slug });
+    track("listen_play", { post });
     dispatch({ status: "loading" });
     const loaded = await loadPlayer({
       slug,
@@ -203,8 +204,6 @@ export function ListenControls({ slug }: { slug: string }) {
             disabled={!supported}
             // Starts with the visible rate (e.g. "1×") so voice control can target it (WCAG 2.5.3).
             aria-label={`${rate}× playback speed`}
-            // w-14 (not auto): a stored 1.25x would otherwise widen the pill after hydration and nudge
-            // the row.
             className="h-7 w-14 shrink-0 rounded-full px-2.5 text-xs font-semibold tabular-nums"
           >
             {rate}×

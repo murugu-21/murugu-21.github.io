@@ -21,7 +21,7 @@ const subjectName = (who: string): string => who.replaceAll(/\s+/g, " ").slice(0
 export function formatOpportunityEmail(lead: Lead, transcript: ChatHistoryEntry[]): EmailContent {
   const lines = transcript.map(m => `${m.role === "user" ? "visitor" : "assistant"}: ${m.content}`);
   return {
-    subject: `New opportunity via murugappan.dev chat from ${subjectName(lead.name || lead.contact)}`,
+    subject: `New opportunity via murugappan.dev chat from ${subjectName(lead.name ?? lead.contact)}`,
     text: [
       `Name:    ${lead.name ?? "(not given)"}`,
       `Contact: ${lead.contact}`,
@@ -50,7 +50,7 @@ export async function sendOpportunityEmail({
 
 export function formatContactEmail(msg: ContactMessage): EmailContent {
   return {
-    subject: `New message via the murugappan.dev API from ${subjectName(msg.name || msg.email)}`,
+    subject: `New message via the murugappan.dev API from ${subjectName(msg.name ?? msg.email)}`,
     text: [
       `Name:    ${msg.name ?? "(not given)"}`,
       `Email:   ${msg.email}`,

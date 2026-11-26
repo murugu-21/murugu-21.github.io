@@ -28,8 +28,6 @@
   }
 }
 
-/* No @source: auto-detection covers apps/site. Add one only for a directory outside it. */
-
 /* For platforms without Courier New. These fonts share its 1229/2048 em advance,
    so Astro's generated overrides apply as-is; copy them again if the font changes. */
 @font-face {
@@ -65,9 +63,7 @@
   --color-dark-base: rgb(20, 22, 34);
   --color-nav-scrolled: rgba(248, 247, 255, 0.72);
   --color-nav-scrolled-dark: rgba(17, 19, 30, 0.72);
-  /* 60% is the least that clears 3:1 on every sky stop. */
   --color-chip-outline: rgba(6, 3, 141, 0.6);
-  /* blue-light, because blue at 60% stays under 3:1 on the night canvas. */
   --color-chip-outline-dark: rgba(125, 162, 255, 0.6);
   --color-border-soft: rgba(112, 104, 150, 0.32);
   --color-border-soft-dark: rgba(255, 255, 255, 0.25);
@@ -222,8 +218,6 @@
   dd,
   blockquote,
   figcaption {
-    /* Outside <main>, the nav, footer and chat keep their own spacing. Prose text inherits
-       .prose's line-height, which an element rule would beat. */
     &:where(main *):not(.prose *) {
       line-height: 1.5;
     }

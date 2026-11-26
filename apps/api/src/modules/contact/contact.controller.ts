@@ -136,7 +136,6 @@ export const contactController = new Hono<AppEnv>().post(
       });
     }
 
-    // Spend a slot only after validation, so retrying a bad body cannot lock a caller out.
     return runInRequest({
       services: c.var.services,
       program: ContactService.use(contact => contact.deliver({ client, message })),

@@ -43,9 +43,12 @@ export function groupByCompany<T extends RoleLike>(roles: T[]): Stint<T>[] {
   return stints;
 }
 
+const CALENDAR_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] as const;
+type CalendarMonth = (typeof CALENDAR_MONTHS)[number];
+
 interface YearMonth {
   year: number;
-  month: number; // 1-12
+  month: CalendarMonth;
 }
 
 const MONTHS = [
@@ -68,9 +71,9 @@ const OPEN_ENDED = /^(present|now|current)$/i;
 function parseMonth(label: string): YearMonth | null {
   const m = /^([A-Za-z]+)\s+(\d{4})$/.exec(label.trim());
   if (!m) return null;
-  const month = MONTHS.indexOf(m[1].toLowerCase()) + 1;
-  if (!month) return null;
-  return { year: Number(m[2]), month };
+  const index = MONTHS.indexOf(m[1].toLowerCase());
+  if (index === -1) return null;
+  return { year: Number(m[2]), month: CALENDAR_MONTHS[index] };
 }
 
 function splitPeriod(
@@ -91,8 +94,15 @@ export function periodBounds(period: string): { start: YearMonth; end: YearMonth
   return split.end ? { start: split.start, end: split.end } : null;
 }
 
-const isoMonth = ({ year, month }: YearMonth) =>
+export const isoMonth = ({ year, month }: YearMonth) =>
   `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}`;
+
+export function parseIsoMonth(value: string): YearMonth | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(value);
+  if (!m) return null;
+  const month = CALENDAR_MONTHS.find(calendarMonth => calendarMonth === Number(m[2]));
+  return month ? { year: Number(m[1]), month } : null;
+}
 
 type PeriodDates = { startDate: string | null; endDate: string | null; current: boolean };
 
@@ -107,7 +117,7 @@ export function parsePeriod(period: string): PeriodDates {
 }
 
 export function currentMonth(now = new Date()): YearMonth {
-  return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  return { year: now.getFullYear(), month: CALENDAR_MONTHS[now.getMonth()] };
 }
 
 const toIndex = (ym: YearMonth) => ym.year * 12 + (ym.month - 1);

@@ -25,8 +25,9 @@ import {
   SkillsResponse
 } from "./dataset";
 import { ErrorBody, FieldIssue } from "./errors";
-import { Post, PostList, PostsQuery, PostSummary, SLUG_PATTERN } from "./posts";
+import { Post, PostList, PostsQuery, PostSummary } from "./posts";
 import { CONTACT_POLICY, READ_CACHE_MINUTES, READ_POLICY, READ_QUOTA } from "./quotas";
+import { SLUG_PATTERN } from "./slug";
 import {
   API_VERSION,
   ApiVersionPolicy,

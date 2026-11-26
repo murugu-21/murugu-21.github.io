@@ -9,10 +9,8 @@ import { lenient } from "@murugappan/utils/json.ts";
 const DEEPSEEK_MODEL = "deepseek-flash";
 const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
-// Room for two page fetches and a capture; the step after the last tool step must answer in text.
-const MAX_TOOL_STEPS = 3;
+const TOOL_STEPS = 3;
 
-// 402 Insufficient Balance is authoritative; the cached balance can be stale.
 export function isInsufficientBalance(cause: unknown): boolean {
   return APICallError.isInstance(cause) && cause.statusCode === 402;
 }
@@ -37,12 +35,11 @@ export function jarvisCall<Tools extends ToolSet>({
     tools,
     // A retry bills the turn again.
     maxRetries: 0,
-    // Reasoning improves tool-call choice. No maxOutputTokens: reasoning can
-    // exhaust a cap and return an empty reply.
+    // No maxOutputTokens: reasoning can exhaust a cap and return an empty reply.
     providerOptions: { deepseek: { thinking: { type: "enabled" } } },
-    stopWhen: stepCountIs(MAX_TOOL_STEPS + 1),
+    stopWhen: stepCountIs(TOOL_STEPS + 1),
     prepareStep: ({ stepNumber }: { stepNumber: number }) =>
-      stepNumber === MAX_TOOL_STEPS ? { toolChoice: "none" as const } : {}
+      stepNumber === TOOL_STEPS ? { toolChoice: "none" as const } : {}
   };
 }
 

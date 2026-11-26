@@ -9,20 +9,20 @@ import {
   currentMonth,
   formatDuration,
   groupByCompany,
+  isoMonth,
   monthsBetween,
   periodBounds,
   totalExperienceMonths
 } from "@murugappan/content/experience.ts";
 
 const now = currentMonth();
-const ym = (v: { year: number; month: number }) => `${v.year}-${String(v.month).padStart(2, "0")}`;
 const duration = (period: string) => {
   const b = periodBounds(period);
   if (!b) return null;
   return {
     label: formatDuration(monthsBetween({ start: b.start, end: b.end ?? now })),
-    start: ym(b.start),
-    end: b.end ? ym(b.end) : "present"
+    start: isoMonth(b.start),
+    end: b.end ? isoMonth(b.end) : "present"
   };
 };
 
@@ -137,24 +137,22 @@ const companyCount = countCompanies(stints.filter(s => !s.partTime));
 </Section>
 
 <script>
-  // The build stamped "Present" durations for its own month; recompute for today.
   import {
     currentMonth,
     formatDuration,
     monthsBetween,
+    parseIsoMonth,
     totalExperienceMonths
   } from "@murugappan/content/experience.ts";
   import { parseStringArray } from "#src/lib/data-attributes.ts";
 
   const now = currentMonth();
-  const parse = (v: string) => {
-    const [y, m] = v.split("-").map(Number);
-    return { year: y, month: m };
-  };
   document.querySelectorAll<HTMLElement>('[data-duration][data-end="present"]').forEach(el => {
-    const start = el.dataset.start;
+    const raw = el.dataset.start;
+    if (!raw) return;
+    const start = parseIsoMonth(raw);
     if (!start) return;
-    el.textContent = ` · ${formatDuration(monthsBetween({ start: parse(start), end: now }))}`;
+    el.textContent = ` · ${formatDuration(monthsBetween({ start, end: now }))}`;
   });
   const total = document.querySelector<HTMLElement>("[data-experience-total]");
   const periods = total?.dataset.periods;

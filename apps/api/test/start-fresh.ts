@@ -7,7 +7,6 @@ import { vi } from "vite-plus/test";
 // The root vite.config.ts inlines the migrations because the pool has no filesystem.
 declare const __D1_MIGRATIONS__: Parameters<typeof applyD1Migrations>[1];
 
-// The workers/store-exports-reset lint rule makes every store export resetStore.
 const storeResets = import.meta.glob<() => void>("../src/**/*.store.ts", {
   eager: true,
   import: "resetStore"

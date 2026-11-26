@@ -36,7 +36,7 @@ const haystack = [post.title, post.description ?? post.excerpt, ...post.tags, ..
       </div>
     </header>
     <section>
-      <p class="leading-relaxed">{post.description || post.excerpt}</p>
+      <p class="leading-relaxed">{post.description ?? post.excerpt}</p>
     </section>
   </article>
 </li>

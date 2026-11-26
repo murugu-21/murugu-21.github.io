@@ -13,7 +13,6 @@ bun run --silent check:static
 echo "pre-push 3/5: unit tests"
 bun run --silent test
 
-# After the cheap gates, so a failing one leaves the dist/ that `bun run preview` serves untouched.
 echo "pre-push 4/5: site and Worker build"
 bun run --silent build
 

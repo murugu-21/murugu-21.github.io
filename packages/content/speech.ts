@@ -2,12 +2,15 @@ interface BlockLike<C> {
   tagName: string;
   textContent: string | null;
   children: ArrayLike<C>;
+  hasAttribute(name: string): boolean;
 }
 
 interface SpeechBlock<T> {
   el: T;
   text: string;
 }
+
+export const SPEECH_SKIP_ATTRIBUTE = "data-speech-skip";
 
 const SKIPPED_TAGS = new Set(["PRE", "FIGURE", "TABLE", "HR", "SCRIPT", "STYLE"]);
 const SPLIT_TAGS = new Set(["UL", "OL"]);
@@ -18,7 +21,7 @@ export function speechBlocks<T extends BlockLike<T>>(root: BlockLike<T>): Speech
   const out: SpeechBlock<T>[] = [];
   const visit = (el: T) => {
     const tag = el.tagName.toUpperCase();
-    if (SKIPPED_TAGS.has(tag)) return;
+    if (SKIPPED_TAGS.has(tag) || el.hasAttribute(SPEECH_SKIP_ATTRIBUTE)) return;
     if (SPLIT_TAGS.has(tag)) {
       Array.from(el.children).forEach(visit);
       return;

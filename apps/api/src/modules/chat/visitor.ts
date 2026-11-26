@@ -3,6 +3,8 @@ export const VISITOR_IP_HEADER = "x-visitor-ip";
 
 export const CONVERSATION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
+const MAX_STORED_HEADER_CHARS = 64;
+
 export type VisitorContext = { country: string | null; ip: string | null };
 
 export function parseVisitorContext(headers: Headers): VisitorContext | null {
@@ -12,8 +14,7 @@ export function parseVisitorContext(headers: Headers): VisitorContext | null {
   return { country, ip };
 }
 
-// The cap only has to stop a forged value from bloating a row.
 function cleanHeader(value: string | null): string | null {
   const trimmed = value?.trim();
-  return trimmed ? trimmed.slice(0, 64) : null;
+  return trimmed ? trimmed.slice(0, MAX_STORED_HEADER_CHARS) : null;
 }

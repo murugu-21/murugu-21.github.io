@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useEffectEvent, useRef, useState, type ComponentProps } from "react";
+import { Suspense, useEffect, useRef, useState, type ComponentProps } from "react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
 import { useAgent } from "agents/react";
 import { safeValidateUIMessages } from "ai";
@@ -13,6 +13,7 @@ import {
   type Activity,
   type JarvisMessage
 } from "@murugappan/contracts/chat.ts";
+import { nonEmpty } from "@murugappan/utils/text.ts";
 import { ActivityRow } from "./ActivityRow";
 import { BubbleView, toBubbles, type Bubble } from "./Bubble";
 import { Composer } from "./Composer";
@@ -485,7 +486,6 @@ function ChatSession({ room, host, turnstileSiteKey, open, onRestart }: SessionP
 
   const onSend = (text: string) => {
     setAwaitingReply(true);
-    // PII: never send message text to PostHog.
     track("chat_message_sent");
     void chat?.sendMessage({ text });
   };
@@ -554,14 +554,6 @@ export function ChatWidget({
     setRoom(next);
   };
 
-  const openOnHydrate = useEffectEvent(() => {
-    const island = launcherRef.current?.closest("astro-island");
-    if (!(island instanceof HTMLElement) || !island.dataset.openOnHydrate) return;
-    delete island.dataset.openOnHydrate;
-    openPanel();
-  });
-  useEffect(() => openOnHydrate(), []);
-
   useEffect(() => {
     if (readStored(TOOLTIP_KEY)) return;
     writeStored({ key: TOOLTIP_KEY, value: "1" });
@@ -604,8 +596,8 @@ export function ChatWidget({
         <ChatSession
           key={room}
           room={room}
-          host={host || window.location.host}
-          turnstileSiteKey={turnstileSiteKey}
+          host={nonEmpty(host) ?? window.location.host}
+          turnstileSiteKey={nonEmpty(turnstileSiteKey)}
           open={open}
           onRestart={restart}
         />

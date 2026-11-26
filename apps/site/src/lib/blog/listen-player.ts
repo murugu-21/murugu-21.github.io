@@ -291,13 +291,13 @@ export async function loadPlayer({
   if (timings) {
     try {
       const player = audioPlayer({ ...options, slug, timings });
-      tag("listen_backend", "audio");
+      tag({ listen_backend: "audio" });
       return player;
     } catch (err) {
       console.warn("Read-aloud audio unavailable, using speech synthesis", err);
     }
   }
   if (!canSpeak()) return null;
-  tag("listen_backend", "speech");
+  tag({ listen_backend: "speech" });
   return speechPlayer(options);
 }

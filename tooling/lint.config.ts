@@ -455,22 +455,21 @@ const API_ROLES: ApiRole[] = [
     paths: [HONO_CONTEXT],
     properties: [...RUN_EFFECT, BINDINGS],
     globals: [FETCH]
-  },
-  // Last, so a test beside its source drops that role's bans: tests build fakes as Effect layers,
-  // run them, and import #test/ fixtures.
-  {
-    files: [
-      "apps/api/src/**/*.test.ts",
-      "apps/api/src/**/*.test-d.ts",
-      "apps/api/test/**",
-      "apps/api/e2e/**"
-    ],
-    patterns: [],
-    paths: [ROUTE_AGENT],
-    properties: [],
-    globals: []
   }
 ];
+
+const TEST_ROLE: ApiRole = {
+  files: [
+    "apps/api/src/**/*.test.ts",
+    "apps/api/src/**/*.test-d.ts",
+    "apps/api/test/**",
+    "apps/api/e2e/**"
+  ],
+  patterns: [],
+  paths: [ROUTE_AGENT],
+  properties: [],
+  globals: []
+};
 
 const apiRole = ({
   files,
@@ -567,8 +566,7 @@ export default {
     "promise/no-multiple-resolved": "error",
     "promise/no-promise-in-callback": "error",
     "typescript/return-await": "error",
-    // `||` on strings is deliberate: a blank value counts as missing.
-    "typescript/prefer-nullish-coalescing": ["error", { ignorePrimitives: { string: true } }],
+    "typescript/prefer-nullish-coalescing": "error",
     "import/no-relative-parent-imports": "error",
     "import/no-cycle": "error",
     "oxc/no-accumulating-spread": "error",
@@ -621,6 +619,7 @@ export default {
       rules: { "primitives/json-schema-literal": "off" }
     },
     ...API_ROLES.map(apiRole),
+    apiRole(TEST_ROLE),
     { files: DOMAIN, rules: { "no-console": "error", "effect/use-fn": "error" } },
     {
       files: [...DOMAIN, "apps/api/src/common/di/**", "apps/api/src/app.module.ts"],

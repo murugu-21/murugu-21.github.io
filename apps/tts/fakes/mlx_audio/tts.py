@@ -3,7 +3,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-SAMPLES_PER_CHAR = 240  # 10 ms at 24 kHz
+SAMPLE_RATE = 24000
+MS_PER_CHAR = 10
+SAMPLES_PER_CHAR = SAMPLE_RATE * MS_PER_CHAR // 1000
 
 
 @dataclass
@@ -28,7 +30,7 @@ class Model:
             raise RuntimeError("fake model failure")
         if "[silent]" in text:
             return
-        rate = 22050 if "[rate]" in text else 24000
+        rate = 22050 if "[rate]" in text else SAMPLE_RATE
         total = len(text) * SAMPLES_PER_CHAR
         for size in (total // 2, total - total // 2):
             yield Result(np.full(size, 0.5, dtype=np.float32), rate)

@@ -1,6 +1,3 @@
-// Relies on `notFoundHandling: "none"` (cloudflare.config.ts) so misses reach the Worker, which
-// fetches the 404 page itself.
-
 import type { Context } from "hono";
 
 import type { AppEnv } from "#src/common/app-env.ts";

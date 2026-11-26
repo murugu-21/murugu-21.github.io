@@ -10,6 +10,5 @@ runs:
       with:
         node-version-file: .nvmrc
     - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
-    # No dependency cache: restoring it took longer than a cold install.
     - run: bun install --frozen-lockfile
       shell: bash

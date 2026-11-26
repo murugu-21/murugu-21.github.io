@@ -11,32 +11,30 @@ type Window = { resetAt: number; used: number };
 
 export const READ_LIMIT_MESSAGE = `More than ${READ_QUOTA.quota} read requests in ${READ_QUOTA.windowSeconds} seconds from this client.`;
 
-// Fixed windows in the isolate, not a DO, because a cross-region round trip per read costs more
-// than the limit is worth. So the ceiling is per edge location, as /developers/ documents.
-const windows = new Map<VisitorKey, Window>();
+const perIsolateWindows = new Map<VisitorKey, Window>();
 
 const MAX_TRACKED_CLIENTS = 20_000;
 
 function prune(now: number): void {
-  for (const [key, window] of windows) {
-    if (window.resetAt <= now) windows.delete(key);
+  for (const [key, window] of perIsolateWindows) {
+    if (window.resetAt <= now) perIsolateWindows.delete(key);
   }
-  if (windows.size <= MAX_TRACKED_CLIENTS) return;
-  const excess = windows.size - MAX_TRACKED_CLIENTS;
+  if (perIsolateWindows.size <= MAX_TRACKED_CLIENTS) return;
+  const excess = perIsolateWindows.size - MAX_TRACKED_CLIENTS;
   let dropped = 0;
-  for (const key of windows.keys()) {
-    windows.delete(key);
+  for (const key of perIsolateWindows.keys()) {
+    perIsolateWindows.delete(key);
     if (++dropped >= excess) break;
   }
 }
 
 export function takeReadSlot(visitor: VisitorKey, now = Date.now()): ReadSlot {
   const windowMs = READ_QUOTA.windowSeconds * 1000;
-  let window = windows.get(visitor);
+  let window = perIsolateWindows.get(visitor);
   if (!window || window.resetAt <= now) {
     prune(now);
     window = { resetAt: now + windowMs, used: 0 };
-    windows.set(visitor, window);
+    perIsolateWindows.set(visitor, window);
   }
   const resetSeconds = Math.ceil((window.resetAt - now) / 1000);
   if (window.used >= READ_QUOTA.quota) return { allowed: false, remaining: 0, resetSeconds };
@@ -49,5 +47,5 @@ export function takeReadSlot(visitor: VisitorKey, now = Date.now()): ReadSlot {
 }
 
 export function resetStore(): void {
-  windows.clear();
+  perIsolateWindows.clear();
 }

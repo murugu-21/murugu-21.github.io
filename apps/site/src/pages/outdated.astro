@@ -1,7 +1,6 @@
 ---
-// Where redirectIfOutdated sends old browsers. Plain HTML without Layout, so it renders in them
-// and the check can't redirect to itself.
-import { MIN_VERSIONS, continueLinkScript } from "#src/lib/browser-support.ts";
+import { MIN_VERSIONS } from "#src/lib/browser-support.ts";
+import { continueLinkScript } from "#src/lib/inline/outdated-browser.ts";
 ---
 
 <!doctype html>
@@ -78,7 +77,7 @@ import { MIN_VERSIONS, continueLinkScript } from "#src/lib/browser-support.ts";
         Continue to the site anyway
       </a>
     </main>
-    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/browser-support.ts, inlined unbundled since this page must work in browsers the bundle doesn't support */}
-    <script is:inline set:html={continueLinkScript} />
+    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/inline/outdated-browser.ts, inlined unbundled since this page must work in browsers the bundle doesn't support */}
+    <script is:inline set:html={continueLinkScript.source} />
   </body>
 </html>

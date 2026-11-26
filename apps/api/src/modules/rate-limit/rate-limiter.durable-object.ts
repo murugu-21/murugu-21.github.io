@@ -21,7 +21,6 @@ import {
   CONTACT_DAILY_PER_CLIENT
 } from "@murugappan/contracts/api/contact.ts";
 
-// The reserve keeps the last exchange from running out mid-reply.
 export const BALANCE_RESERVE_USD = 0.05;
 
 // DeepSeek's balance lags real usage, so a shorter TTL buys little; the 402
@@ -37,11 +36,17 @@ const CachedBalance = z.object({
 }) satisfies z.ZodType<DeepseekBalance>;
 type CachedBalance = z.infer<typeof CachedBalance>;
 
-const hasFunds = ({ available, totalUsd }: DeepseekBalance): boolean =>
-  available && totalUsd > BALANCE_RESERVE_USD;
+type ChatFunding = "funded" | "empty" | "unknown";
 
-// One fixed-name instance ("global") shared by every ChatRoom, so the balance is checked once
-// and one room's 402 gates the whole site.
+const funding = ({ available, totalUsd }: DeepseekBalance): ChatFunding =>
+  available && totalUsd > BALANCE_RESERVE_USD ? "funded" : "empty";
+
+const ADMITS_TURN = {
+  funded: true,
+  empty: false,
+  unknown: true
+} as const satisfies Record<ChatFunding, boolean>;
+
 export class RateLimiter extends DurableObject<Env> {
   private sql: SqlStorage;
 
@@ -78,7 +83,8 @@ export class RateLimiter extends DurableObject<Env> {
     visitor: VisitorKey;
     apiKey: string;
   }): Promise<ChatAdmission> {
-    if (!(await this.chatFunded(apiKey))) return { allowed: false, reason: "balance" };
+    const state = await this.chatFunding(apiKey);
+    if (!ADMITS_TURN[state]) return { allowed: false, reason: "balance" };
     return this.takeChatTurn(visitor);
   }
 
@@ -132,24 +138,23 @@ export class RateLimiter extends DurableObject<Env> {
     return row?.turns ?? 0;
   }
 
-  // Fails OPEN on a lookup error, since the next 402 catches an empty account.
-  private async chatFunded(apiKey: string): Promise<boolean> {
+  private async chatFunding(apiKey: string): Promise<ChatFunding> {
     const cached = await this.cachedBalance();
-    if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) return hasFunds(cached);
+    if (cached && Date.now() - cached.checkedAt < BALANCE_TTL_MS) return funding(cached);
     try {
       const balance = await fetchDeepseekBalance(apiKey);
       // The object takes other calls during the fetch, so anything written meanwhile
       // (a 402, another check) is newer than this reading.
       const latest = await this.cachedBalance();
-      if (latest && latest.checkedAt !== cached?.checkedAt) return hasFunds(latest);
+      if (latest && latest.checkedAt !== cached?.checkedAt) return funding(latest);
       await this.ctx.storage.put(BALANCE_KEY, {
         ...balance,
         checkedAt: Date.now()
       } satisfies CachedBalance);
-      return hasFunds(balance);
+      return funding(balance);
     } catch (err) {
       console.error("deepseek balance check failed", err);
-      return true;
+      return "unknown";
     }
   }
 

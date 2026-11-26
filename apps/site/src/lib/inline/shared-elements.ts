@@ -1,3 +1,5 @@
+import { inlineScript } from "./inline-script";
+
 interface SharedElementHost extends Pick<Window, "addEventListener" | "innerHeight"> {
   document: Pick<Document, "querySelectorAll">;
   navigation?: { activation: { from: { url: string | null } | null } | null };
@@ -6,7 +8,6 @@ interface SharedElementHost extends Pick<Window, "addEventListener" | "innerHeig
 // An element off screen would fly in from wherever it is, such as a post's h1 after reading to the
 // bottom, so it drops its name. A name repeated on a page cancels the transition, so of the list's
 // titles only the one linking to the post being opened or left takes post-title.
-/* istanbul ignore next: Layout.astro inlines its source, where coverage counters would be undefined */
 export function pairSharedElements(win: SharedElementHost): void {
   const onScreen = (element: Element) => {
     const { top, bottom } = element.getBoundingClientRect();
@@ -32,4 +33,8 @@ export function pairSharedElements(win: SharedElementHost): void {
   );
 }
 
-export const sharedElementScript = `(${pairSharedElements.toString()})(window);`;
+export const sharedElementScript = inlineScript({
+  run: pairSharedElements,
+  args: [],
+  syntax: "latest"
+});

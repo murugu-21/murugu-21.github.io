@@ -177,4 +177,16 @@ describe("alignPost", () => {
       ]
     });
   });
+
+  it("only reports a post that needs aligning on a dry run, then aligns it once given whisper", async () => {
+    await using root = await mkdtempDisposable(join(tmpdir(), "align-post-"));
+    const { r2, deps } = setup(root.path);
+
+    await alignPost(deps, { slug: "fakes", whisper: null, force: false });
+    expect(String(r2.objects.get(JSON_KEY))).toBe(rendered);
+    expect(console.log).toHaveBeenLastCalledWith("fakes: needs aligning");
+
+    await alignPost(deps, { slug: "fakes", whisper: fakeWhisper(0.1), force: false });
+    expect(r2.json(JSON_KEY)).toMatchObject({ version: 2 });
+  });
 });

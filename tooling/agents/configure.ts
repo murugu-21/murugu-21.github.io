@@ -27,7 +27,6 @@ async function readJsonObject(path: string) {
   }
 }
 
-// agent-shell refuses writes to these files, so an agent's `bun install` must not rewrite them.
 async function writeJsonIfChanged({ path, value }: { path: string; value: unknown }) {
   const text = `${JSON.stringify(value, null, 2)}\n`;
   if ((await readIfPresent(path)) === text) return;

@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 import { text } from "./fields";
-
-export const SLUG_PATTERN = "^[a-z0-9]+(?:-[a-z0-9]+)*$";
-export const SLUG = new RegExp(SLUG_PATTERN);
+import { SLUG } from "./slug";
 
 export const POSTS_LIMIT_MAX = 100;
 const SEARCH_TEXT_MAX = 200;

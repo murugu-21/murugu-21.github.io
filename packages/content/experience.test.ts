@@ -6,6 +6,7 @@ import {
   formatDuration,
   groupByCompany,
   monthsBetween,
+  parseIsoMonth,
   parsePeriod,
   periodBounds,
   totalExperienceMonths
@@ -94,7 +95,7 @@ describe("formatDuration", () => {
 });
 
 describe("totalExperienceMonths", () => {
-  const now = { year: 2026, month: 9 };
+  const now = { year: 2026, month: 9 } as const;
 
   it("unions overlapping and adjacent roles instead of summing them", () => {
     expect(
@@ -169,6 +170,14 @@ describe("currentMonth", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 9, 7));
     expect(currentMonth()).toEqual({ year: 2026, month: 10 });
+  });
+});
+
+describe("parseIsoMonth", () => {
+  it("reads a YYYY-MM month and rejects one outside the calendar", () => {
+    expect(parseIsoMonth("2024-03")).toEqual({ year: 2024, month: 3 });
+    expect(parseIsoMonth("2024-13")).toBeNull();
+    expect(parseIsoMonth("2024-00")).toBeNull();
   });
 });
 

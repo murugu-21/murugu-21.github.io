@@ -1,8 +1,8 @@
 import { z } from "zod";
 
+import { nonEmpty } from "@murugappan/utils/text.ts";
 import { text } from "./fields";
 
-// Small on purpose, so this is not a mailer.
 export const CONTACT_DAILY_GLOBAL = 20;
 export const CONTACT_DAILY_PER_CLIENT = 3;
 
@@ -29,7 +29,7 @@ const optionalText = ({ max, description }: { max: number; description: string }
     .trim()
     .max(max, { error: `must be at most ${max} characters` })
     .nullish()
-    .transform(value => value || undefined)
+    .transform(nonEmpty)
     .meta({ description });
 
 const requiredText = z.string({ error: "is required and must be a string" }).trim();

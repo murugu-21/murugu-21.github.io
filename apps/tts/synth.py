@@ -11,7 +11,9 @@ from wavfile import write_wav
 # 8-bit because bf16's 7 GB weights swap on a 24 GB machine.
 MODEL = "mlx-community/Breeze-TTS-2-mlx-8bit"
 SAMPLE_RATE = 24000
-MAX_TOKENS = 1500  # 120 s at 12.5 frames/s; chunks are at most 300 chars (~30 s)
+MODEL_FRAMES_PER_SECOND = 12.5
+MAX_CHUNK_SECONDS = 120
+MAX_TOKENS = int(MAX_CHUNK_SECONDS * MODEL_FRAMES_PER_SECOND)
 # MLX's Metal buffer cache grows every chunk until the OS swaps; cap it and
 # clear it after each chunk.
 CACHE_LIMIT = 1 << 30

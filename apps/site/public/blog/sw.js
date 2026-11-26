@@ -1,4 +1,3 @@
-// Unregisters itself and reloads open tabs from the network.
 self.addEventListener("install", () => self.skipWaiting())
 self.addEventListener("activate", () => {
   self.registration

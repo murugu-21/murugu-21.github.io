@@ -1,10 +1,12 @@
 import type { Element } from "hast";
 import type { ShikiTransformer } from "shiki";
 
+import { SPEECH_SKIP_ATTRIBUTE } from "@murugappan/content/speech.ts";
+
 export const COPY_LABEL = "Copy code";
 
 // The fence's margins beat prose's 2em figure ones (none after a heading or rule) because
-// variants sort after `.prose`. The pre's right padding keeps code clear of the button.
+// variants sort after `.prose`.
 const figureClasses = "group relative in-[.prose]:my-6 [:is(hr,h2,h3,h4)+&]:mt-0 [&>pre]:pr-12";
 
 const buttonClasses =
@@ -72,7 +74,6 @@ const copyButtonNode = () =>
     ]
   });
 
-// A figure because read-aloud (packages/content/speech.ts) skips figures but reads divs.
 export const copyButton: ShikiTransformer = {
   name: "copy-button",
   root(root) {
@@ -81,7 +82,7 @@ export const copyButton: ShikiTransformer = {
     root.children = [
       element({
         tagName: "figure",
-        properties: { dataCodeBlock: "", className: [figureClasses] },
+        properties: { dataCodeBlock: "", [SPEECH_SKIP_ATTRIBUTE]: "", className: [figureClasses] },
         children: [pre, copyButtonNode()]
       })
     ];

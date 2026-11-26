@@ -8,30 +8,17 @@ import { spawnCollect } from "@murugappan/utils/node/process.ts";
 export const PYTHON = join(import.meta.dirname, ".venv", "bin", "python");
 export const BLOG_DIST = join(import.meta.dirname, "..", "site", "dist", "blog");
 
-const COMMON_OPTIONS = {
-  force: { type: "boolean", default: false },
-  local: { type: "boolean", default: false }
-} as const;
-
 export function audioArgs(args?: string[]) {
   const { values, positionals } = parseArgs({
     args,
     allowPositionals: true,
     options: {
-      ...COMMON_OPTIONS,
+      force: { type: "boolean", default: false },
+      local: { type: "boolean", default: false },
       "dry-run": { type: "boolean", default: false },
       patch: { type: "boolean", default: false },
       "upload-voice": { type: "boolean", default: false }
     }
-  });
-  return { ...values, slugs: positionals };
-}
-
-export function alignArgs(args?: string[]) {
-  const { values, positionals } = parseArgs({
-    args,
-    allowPositionals: true,
-    options: COMMON_OPTIONS
   });
   return { ...values, slugs: positionals };
 }

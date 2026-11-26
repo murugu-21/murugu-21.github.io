@@ -33,7 +33,6 @@ const { src, label } = Astro.props;
         animationData: data
       });
     } catch {
-      // Failed to load: stop announcing an image that isn't there.
       el.removeAttribute("role");
       el.removeAttribute("aria-label");
       el.setAttribute("aria-hidden", "true");
@@ -50,8 +49,6 @@ const { src, label } = Astro.props;
     },
     { rootMargin: "120px" }
   );
-  // Wait for first input: the player and 430 KB JSON cost a ~450 ms main-thread task that
-  // would otherwise land in Lighthouse's blocking time on desktop.
   onFirstInteraction(() => {
     holders.forEach(h => io.observe(h));
   });

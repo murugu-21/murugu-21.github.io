@@ -1,5 +1,7 @@
 import { envField } from "astro/config";
 
+import { nonEmpty } from "@murugappan/utils/text.ts";
+
 export const ENV_SCHEMA = {
   PUBLIC_CHAT_HOST: envField.string({ context: "client", access: "public", optional: true }),
   PUBLIC_TURNSTILE_SITE_KEY: envField.string({
@@ -28,7 +30,7 @@ const SOURCE_MAP_ENV = {
   projectId: "POSTHOG_PROJECT_ID"
 } as const;
 
-export const githubToken = process.env.GITHUB_TOKEN?.trim() || undefined;
+export const githubToken = nonEmpty(process.env.GITHUB_TOKEN?.trim());
 
 export const sourceMapUpload = {
   personalApiKey: process.env[SOURCE_MAP_ENV.personalApiKey]?.trim(),

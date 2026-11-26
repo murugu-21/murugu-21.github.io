@@ -2,7 +2,7 @@
 import { afterEach, expect, it } from "vite-plus/test";
 import { cdp } from "vite-plus/test/browser";
 
-import { bootstrapTheme } from "#src/lib/theme.ts";
+import { bootstrapTheme } from "#src/lib/inline/theme-bootstrap.ts";
 
 import { globalCssWithoutImports } from "./global-css-without-imports.ts";
 

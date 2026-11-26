@@ -24,15 +24,14 @@ bun run audio --upload-voice                   # saves it to R2
 ## Add audio to a post
 
 ```bash
-bun run build && bun run audio <slug>   # about 3 s of work per second of audio
-bun run audio:align <slug>              # adds word timings, about 5 s
+bun run build && bun run audio <slug>   # about 3 s of work per second of audio, then 5 s to add word timings
 ```
 
-Then push as usual. Run the two commands one after the other, never at the same time.
+Then push as usual. `bun run audio` renders every post first, then closes the voice model and adds word timings to any post that lacks them.
 
 - With no slug, `bun run audio` does every post whose text changed.
 - `--force` redoes a post, `--dry-run` only checks what would change, and `--local` writes to your local `preview` instead of R2.
-- For a small text fix, `bun run audio --patch <slug>` redoes only the changed paragraphs. Then run `bun run audio:align <slug> --force`. If a paragraph was added or removed, use `--force` instead of `--patch`.
+- For a small text fix, `bun run audio --patch <slug>` redoes only the changed paragraphs and re-times the post's words. If a paragraph was added or removed, use `--force` instead of `--patch`.
 
 ## If an upload fails
 

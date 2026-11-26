@@ -36,3 +36,14 @@ it("attaches one listener however many times it is called", async () => {
 
   expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
 });
+
+it("drops a click property whose value is blank", async () => {
+  const capture = renderTracked(
+    `<button data-ph-event="resume_download" data-ph-prop="x" data-ph-value=" ">Resume</button>`
+  );
+  initClickTracking();
+
+  await userEvent.click(page.getByRole("button", { name: "Resume" }));
+
+  expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
+});

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { BlogFrontmatter } from "@murugappan/contracts/blog.ts";
+
 import { postSource } from "./fixtures.ts";
 import { excerpt, postDescription, postPath, postUrl } from "./posts.ts";
 
@@ -34,5 +36,15 @@ describe("postDescription", () => {
       postDescription(postSource({ slug: "a", description: "Written", body: "Body text" }))
     ).toBe("Written");
     expect(postDescription(postSource({ slug: "b", body: "Body **text**" }))).toBe("Body text");
+  });
+
+  it("falls back to the body excerpt when the frontmatter description is blank", () => {
+    const data = BlogFrontmatter.parse({
+      title: "A",
+      date: "2024-01-01",
+      description: "",
+      tags: ["backend"]
+    });
+    expect(postDescription({ slug: "a", data, body: "Body **text**" })).toBe("Body text");
   });
 });

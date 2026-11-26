@@ -4,7 +4,7 @@
 
 Workers:
 
-- **CF-1.** Keep no request, `env`, binding, stub or per-request value at module scope. A per-isolate cache goes only in a `*.store.ts`, with a size bound, a comment saying it is per edge, and an exported `resetStore` that empties it.
+- **CF-1.** Keep no request, `env`, binding, stub or per-request value at module scope. A per-isolate cache goes only in a `*.store.ts`, with a size bound, a name or comment saying it is per edge, and an exported `resetStore` that empties it.
 - **CF-2.** Send fire-and-forget work through `ctx.waitUntil` (`this.ctx.waitUntil` in a Durable Object) with its own `.catch`.
 - **CF-3.** Stream R2 and asset bodies through to the `Response`. Cap any request body the Worker reads whole with `bodyLimitMiddleware`.
 - **CF-4.** Log one object per call with an `event` field, for example `console.error({ event: "contact email failed", err })`. Workers Logs indexes object fields, not text inside a message. Never log secrets, API keys, visitor IPs or a lead's contact details.

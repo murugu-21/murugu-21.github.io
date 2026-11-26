@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { parseArgs, parseEnv } from "node:util";
 
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
+import tailwindcss from "@tailwindcss/vite";
 import { playwright } from "vite-plus/test/browser-playwright";
 import { configDefaults, defineConfig } from "vite-plus";
 
@@ -59,12 +60,11 @@ export default defineConfig({
     // Keeps `$field` values in it.each titles whole. 0 doesn't switch the limit off: it still
     // clips the last character of a string.
     taskTitleValueFormatTruncate: Number.MAX_SAFE_INTEGER,
-    // Each run prints its seed. Pass --sequence.seed=<seed> to replay that order.
     sequence: { shuffle: true },
     maxWorkers: "67%",
     // Vitest empties every CSS import it doesn't include, `?raw` and `?inline` too, so the
-    // stylesheet tests would read "" and the cookie banner would have no styles.
-    css: { include: [/global\.css\?raw$/, /cookieconsent\.css\?inline$/] },
+    // stylesheet tests would read "" and the cookie banner and components would have no styles.
+    css: { include: [/global\.css(\?raw)?$/, /cookieconsent\.css\?inline$/] },
     // The globs name extensions so READMEs and .astro files, which Istanbul can't parse,
     // stay out.
     coverage: {
@@ -79,7 +79,8 @@ export default defineConfig({
         "**/*.d.ts",
         "**/fixtures.ts",
         "apps/api/test/**",
-        "apps/site/src/test/**"
+        "apps/site/src/test/**",
+        "apps/site/src/lib/inline/**"
       ],
       reporter: ["text-summary", "lcov"]
     },
@@ -111,8 +112,6 @@ export default defineConfig({
             }
           ],
           setupFiles: ["./apps/api/test/start-fresh.ts"],
-          // TODO: rename API tests to NestJS's convention (*.spec.ts, *.e2e-spec.ts) and update this
-          // glob, the coverage excludes and the test globs in tooling/lint.config.ts.
           include: ["apps/api/{src,test}/**/*.test.ts"]
         }
       },
@@ -146,6 +145,9 @@ export default defineConfig({
         }
       },
       {
+        // Discovered mid-run, it would make Vite reload the test with a second copy of React.
+        optimizeDeps: { include: ["react-dom/server"] },
+        plugins: [tailwindcss()],
         test: {
           name: "browser",
           include: ["apps/site/src/**/*.test.tsx"],

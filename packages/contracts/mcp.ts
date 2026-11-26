@@ -9,7 +9,8 @@ import {
   Profile,
   SkillsResponse
 } from "./api/dataset";
-import { Post, PostList, POSTS_LIMIT_MAX, PostsLimit, PostsSearchText, SLUG } from "./api/posts";
+import { Post, PostList, POSTS_LIMIT_MAX, PostsLimit, PostsSearchText } from "./api/posts";
+import { SLUG } from "./api/slug";
 import type { DocumentKey } from "./surface";
 
 export const LATEST_PROTOCOL_VERSION = "2026-07-28";

@@ -1,7 +1,8 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 import getReadingTime from "reading-time";
 
-import { newestFirst, type PostSource } from "@murugappan/content/posts.ts";
+import { isPostSlug, newestFirst, type PostSource } from "@murugappan/content/posts.ts";
+import type { PostSlug } from "@murugappan/contracts/api/slug.ts";
 
 export type Post = CollectionEntry<"blog">;
 
@@ -29,6 +30,8 @@ export const toPostSource = ({ id, data, body }: Post): PostSource => ({
   data,
   body: body ?? ""
 });
+
+export const postSlug = (id: string): PostSlug | undefined => (isPostSlug(id) ? id : undefined);
 
 export const getPostSources = async () => (await getPublishedPosts()).map(toPostSource);
 

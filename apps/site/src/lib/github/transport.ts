@@ -2,6 +2,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { z } from "zod";
 
+import { nonEmpty } from "@murugappan/utils/text.ts";
+
 const GraphqlReply = z.object({
   data: z.unknown(),
   errors: z.array(z.object({ message: z.string() })).optional()
@@ -60,7 +62,10 @@ const runFile = promisify(execFile);
 const ExecError = z.object({
   code: z.union([z.number(), z.string()]).nullish(),
   signal: z.string().nullish(),
-  stderr: z.string().optional(),
+  stderr: z
+    .string()
+    .optional()
+    .transform(stderr => nonEmpty(stderr?.trim())),
   message: z.string()
 });
 
@@ -80,7 +85,7 @@ export class GhCliTransport implements GithubTransport {
       if (code === "ENOENT") {
         throw new GithubAuthFailure("gh is not installed; install it and run gh auth login");
       }
-      const detail = stderr?.trim() || message;
+      const detail = stderr ?? message;
       if (code === GH_EXIT_AUTH) {
         throw new GithubAuthFailure("gh is not logged in; run gh auth login", [detail]);
       }

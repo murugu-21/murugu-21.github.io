@@ -26,14 +26,13 @@ const { roles } = Astro.props;
 
   document.querySelectorAll<HTMLElement>("[data-typewriter]").forEach(el => {
     if (reduced) return;
-    const roles = parseStringArray(el.dataset.roles || "[]");
+    const roles = parseStringArray(el.dataset.roles ?? "[]");
     const text = el.querySelector<HTMLElement>("[data-typewriter-text]");
     if (!text || roles.length < 2) return;
 
     let index = 0;
     let pos = roles[0].length;
-    let deleting = true; // the SSR'd role is fully typed; pause, then delete
-    // A printout freezes whatever frame is showing, so print the whole role.
+    let deleting = true;
     let printing = false;
     window.addEventListener("beforeprint", () => {
       printing = true;

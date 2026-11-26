@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { nonEmpty } from "@murugappan/utils/text.ts";
+
 export const BLOG_TITLE = "SDE Journey";
 
 const BLOG_TAGS = [
@@ -17,7 +19,7 @@ const BLOG_TAGS = [
 export const BlogFrontmatter = z.object({
   title: z.string(),
   date: z.coerce.date(),
-  description: z.string().optional(),
+  description: z.string().optional().transform(nonEmpty),
   tags: z.array(z.enum(BLOG_TAGS)).min(1).max(3),
   keywords: z.array(z.string()).default([]),
   featured: z.boolean().default(false),

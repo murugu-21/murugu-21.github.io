@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { normalizeSpeechText, speechBlocks } from "./speech.ts";
+import { normalizeSpeechText, SPEECH_SKIP_ATTRIBUTE, speechBlocks } from "./speech.ts";
 
 describe("normalizeSpeechText", () => {
   it.each([
@@ -25,17 +25,24 @@ describe("normalizeSpeechText", () => {
   });
 });
 
-type FakeNode = { tagName: string; textContent: string | null; children: FakeNode[] };
+type FakeNode = {
+  tagName: string;
+  textContent: string | null;
+  children: FakeNode[];
+  hasAttribute: (name: string) => boolean;
+};
 const el = (tagName: string, textContent: string, children: FakeNode[] = []): FakeNode => ({
   tagName,
   textContent,
-  children
+  children,
+  hasAttribute: () => false
 });
-const root = (...children: FakeNode[]): FakeNode => ({
-  tagName: "SECTION",
-  textContent: children.map(c => c.textContent).join(""),
-  children
+const markedToSkip = (node: FakeNode): FakeNode => ({
+  ...node,
+  hasAttribute: name => name === SPEECH_SKIP_ATTRIBUTE
 });
+const root = (...children: FakeNode[]): FakeNode =>
+  el("SECTION", children.map(c => c.textContent).join(""), children);
 
 describe("speechBlocks", () => {
   it("returns one block per paragraph and heading, keeping the element", () => {
@@ -60,6 +67,11 @@ describe("speechBlocks", () => {
       )
     );
     expect(blocks.map(b => b.text)).toEqual(["Prose."]);
+  });
+
+  it("skips an element of any tag marked to be skipped", () => {
+    const blocks = speechBlocks(root(markedToSkip(el("DIV", "Copy code")), el("DIV", "Read me.")));
+    expect(blocks.map(b => b.text)).toEqual(["Read me."]);
   });
 
   it("splits lists into one block per item", () => {

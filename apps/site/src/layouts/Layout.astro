@@ -6,9 +6,9 @@ import { jsonLdHtml } from "#src/lib/schema.ts";
 import { SITE_ORIGIN } from "@murugappan/content/site.ts";
 import { linkedDocuments } from "@murugappan/content/surface.ts";
 import { PERSON_ID, SITE_DESCRIPTION } from "#src/lib/site.ts";
-import { outdatedRedirectScript } from "#src/lib/browser-support.ts";
-import { themeBootstrapScript } from "#src/lib/theme.ts";
-import { sharedElementScript } from "#src/lib/view-transitions.ts";
+import { outdatedRedirectScript } from "#src/lib/inline/outdated-browser.ts";
+import { sharedElementScript } from "#src/lib/inline/shared-elements.ts";
+import { themeBootstrapScript } from "#src/lib/inline/theme-bootstrap.ts";
 import "#src/styles/global.css";
 import ChatWidget from "#src/components/chat/ChatWidget.astro";
 import Favicons from "#src/components/Favicons.astro";
@@ -98,8 +98,8 @@ const siteWideLinks = linkedDocuments("/");
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/browser-support.ts, inlined unbundled so it runs before paint */}
-    <script is:inline set:html={outdatedRedirectScript} />
+    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/inline/outdated-browser.ts, inlined unbundled so it runs before paint */}
+    <script is:inline set:html={outdatedRedirectScript.source} />
     <title>{title}</title>
     <meta name="description" content={pageMetaDescription} />
     {noindex && <meta name="robots" content="noindex" />}
@@ -140,11 +140,11 @@ const siteWideLinks = linkedDocuments("/");
 
     <Font cssVariable="--font-fira-code" preload />
 
-    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/theme.ts, inlined unbundled so the theme applies before paint */}
-    <script is:inline set:html={themeBootstrapScript} />
+    {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/inline/theme-bootstrap.ts, inlined unbundled so the theme applies before paint */}
+    <script is:inline set:html={themeBootstrapScript.source} />
     {kind === "blog" && (
-      /* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/view-transitions.ts, inlined unbundled so pagereveal has a listener before the first render */
-      <script is:inline set:html={sharedElementScript} />
+      /* biome-ignore lint/nursery/noAstroSetHtmlDirective: our own function's source from lib/inline/shared-elements.ts, inlined unbundled so pagereveal has a listener before the first render */
+      <script is:inline set:html={sharedElementScript.source} />
     )}
     {/* biome-ignore lint/nursery/noAstroSetHtmlDirective: JSON-LD that jsonLdHtml serialises with every "<" escaped, so no value can close the script */}
     <script type="application/ld+json" set:html={jsonLdScript} />

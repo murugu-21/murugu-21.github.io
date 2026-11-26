@@ -12,6 +12,7 @@ import {
   formatDate,
   timeToRead,
   formatReadingTime,
+  postSlug,
   toPostSource
 } from "#src/lib/blog/posts.ts";
 import { ListenControls } from "#src/components/blog/ListenControls.tsx";
@@ -81,9 +82,7 @@ const description = postDescription(source);
       class="not-prose mb-4 ui-island pt-3 data-listening:sticky data-listening:top-0 data-listening:z-30 data-listening:data-pinned:bg-nav-scrolled data-listening:data-pinned:backdrop-blur-lg dark:data-listening:data-pinned:bg-nav-scrolled-dark print:hidden"
       data-listen-island
     >
-      {/* client:interaction, not client:idle: idle can fire before first paint and charge ~100 KB
-          to FCP/LCP. Trade-off: a first-touch tap on Play lands on the disabled button. */}
-      <ListenControls client:interaction slug={post.id} />
+      <ListenControls client:interaction slug={post.id} post={postSlug(post.id)} />
     </div>
     <section data-post-body>
       <Content />

@@ -6,6 +6,7 @@ import {
   formatReadingTime,
   getPublishedPosts,
   postKeywords,
+  postSlug,
   tagPath,
   timeToRead
 } from "./posts";
@@ -31,6 +32,13 @@ describe("getPublishedPosts", () => {
 
     vi.stubEnv("PROD", true);
     expect((await getPublishedPosts()).map(p => p.id)).toEqual(["older"]);
+  });
+});
+
+describe("postSlug", () => {
+  it("gives a draft's Listen control no post slug instead of throwing", () => {
+    expect(postSlug("draft/wip")).toBeUndefined();
+    expect(postSlug("gatsby-to-astro")).toBe("gatsby-to-astro");
   });
 });
 

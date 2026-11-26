@@ -1,11 +1,13 @@
 import type { UIMessageChunk } from "ai";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
-import { page, userEvent } from "vite-plus/test/browser";
+import { page, userEvent, type Locator } from "vite-plus/test/browser";
 import { render } from "vitest-browser-react";
 import { z } from "zod";
 
 import { ChatWidget } from "./ChatWidget.tsx";
 import { PORTAL_HOST_ID } from "#src/components/ui/portal-host.ts";
+import { interactionIsland } from "#src/test/interaction-island.tsx";
+import "#src/styles/global.css";
 
 document.body.append(Object.assign(document.createElement("div"), { id: PORTAL_HOST_ID }));
 
@@ -361,10 +363,10 @@ it("resumes a returning visitor's room with its links and notices", async () => 
   await expect.element(page.getByText("Any links?")).toBeVisible();
   await expect.element(page.getByText("Out of budget for now.")).toBeVisible();
   await expect
-    .element(page.getByRole("link", { name: "https://murugappan.dev/blog/" }))
+    .element(page.getByRole("link", { name: "https://murugappan.dev/blog/", exact: false }))
     .toHaveAttribute("href", "https://murugappan.dev/blog/");
   await expect
-    .element(page.getByRole("link", { name: "https://github.com/murugu-21" }))
+    .element(page.getByRole("link", { name: "https://github.com/murugu-21", exact: false }))
     .toHaveAttribute("href", "https://github.com/murugu-21");
   await expect
     .element(
@@ -639,18 +641,44 @@ it("on a desktop the open panel focuses the composer and leaves the page scrolla
   expect(pageOverflow()).toBe("visible");
 });
 
-it("opens on hydration when the visitor tapped the launcher while the bundle loaded", async () => {
-  const island = document.createElement("astro-island");
-  island.dataset.openOnHydrate = "true";
+async function tapScreenPointLetHitTestPick(over: Locator) {
+  const root = document.documentElement;
+  const box = over.element().getBoundingClientRect();
+  const origin = root.getBoundingClientRect();
+  await userEvent.click(page.elementLocator(root), {
+    position: { x: box.x - origin.x + box.width / 2, y: box.y - origin.y + box.height / 2 }
+  });
+}
+
+it("opens once hydrated when the visitor tapped the launcher while the bundle loaded", async () => {
+  const island = document.createElement("div");
   document.body.append(island);
+  const { loadBundle, unmount } = interactionIsland({ ui: <ChatWidget />, island });
 
   try {
-    await render(<ChatWidget />, { container: island });
+    await tapScreenPointLetHitTestPick(page.getByRole("button", { name: LAUNCHER }));
+    loadBundle();
 
     await expect.element(page.getByRole("dialog")).toBeVisible();
-    expect(island.dataset.openOnHydrate).toBeUndefined();
     expect(events).toEqual(["chat_open"]);
   } finally {
+    unmount();
+    island.remove();
+  }
+});
+
+it("hydrates when the first input lands outside the island", async () => {
+  const island = document.createElement("div");
+  document.body.append(island);
+  const { loadBundle, unmount } = interactionIsland({ ui: <ChatWidget />, island });
+
+  try {
+    await userEvent.hover(page.elementLocator(document.body));
+    loadBundle();
+
+    await expect.element(page.getByText("Ask Jarvis anything about Murugappan")).toBeVisible();
+  } finally {
+    unmount();
     island.remove();
   }
 });

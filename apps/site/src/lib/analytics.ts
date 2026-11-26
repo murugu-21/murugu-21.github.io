@@ -1,9 +1,40 @@
-// PII: never pass anything a visitor typed (chat messages, search queries).
-
 import type { PostHogConfig } from "posthog-js/dist/module.slim";
 
+import type { PostSlug } from "@murugappan/contracts/api/slug.ts";
 import type { ConsentControls } from "./consent";
 import { onFirstInteraction } from "./first-interaction";
+import type { Theme } from "./theme";
+
+export type ScriptEvents = {
+  chat_error: null;
+  chat_limit: null;
+  chat_message_sent: null;
+  chat_open: null;
+  chat_restart: null;
+  chat_starter_click: null;
+  chat_transcript_download: null;
+  listen_audio_fallback: null;
+  listen_complete: null;
+  listen_pause: null;
+  listen_play: { post?: PostSlug };
+  listen_rate: { listen_rate: `${number}x` };
+  listen_resume: null;
+  listen_seek: null;
+  listen_unavailable: null;
+};
+
+type TrackArgs = {
+  [E in keyof ScriptEvents]: ScriptEvents[E] extends null
+    ? [event: E]
+    : [event: E, props: ScriptEvents[E]];
+}[keyof ScriptEvents];
+
+export type SuperProperties = {
+  theme: Theme;
+  listen_backend: "audio" | "speech";
+};
+
+export type ErrorContext = { surface: "chat" };
 
 export interface PostHog {
   capture(event: string, properties?: Record<string, string>): void;
@@ -59,7 +90,7 @@ let consent: Promise<ConsentControls | null> | null = null;
 
 let startConsent: (() => void) | null = null;
 
-let pending: Array<(ph: PostHog) => void> | null = null;
+let pending: Array<(ph: PostHog) => void> | null = [];
 
 let stopEarlyErrors: (() => void) | null = null;
 
@@ -91,23 +122,30 @@ const send = (fn: (ph: PostHog) => void): void => {
   }
 };
 
-const clean = (props?: Record<string, string>): Record<string, string> | undefined => {
-  const kept = Object.entries(props ?? {}).filter(([, v]) => v.trim());
+const clean = (props?: Partial<Record<string, string>>): Record<string, string> | undefined => {
+  const kept = Object.entries(props ?? {}).flatMap(([key, value]) =>
+    value?.trim() ? [[key, value] as const] : []
+  );
   return kept.length ? Object.fromEntries(kept) : undefined;
 };
 
-export function tag(key: string, value: string): void {
-  if (!value.trim()) return;
-  send(ph => ph.register({ [key]: value }));
+export function tag(props: Partial<SuperProperties>): void {
+  const cleaned = clean(props);
+  if (!cleaned) return;
+  send(ph => ph.register(cleaned));
 }
 
-export function track(event: string, props?: Record<string, string>): void {
+const capture = (event: string, props?: Partial<Record<string, string>>): void => {
   const cleaned = clean(props);
   send(ph => ph.capture(event, cleaned));
+};
+
+export function track(...[event, props]: TrackArgs): void {
+  capture(event, props);
 }
 
-export function reportError(cause: unknown, props?: Record<string, string>): void {
-  const cleaned = clean(props);
+export function reportError(cause: unknown, context?: ErrorContext): void {
+  const cleaned = clean(context);
   send(ph => ph.captureException(cause, cleaned));
 }
 
@@ -125,7 +163,7 @@ export function initClickTracking(): void {
       const name = el?.dataset.phEvent;
       if (!el || !name) return;
       const { phProp, phValue } = el.dataset;
-      track(name, phProp && phValue ? { [phProp]: phValue } : undefined);
+      capture(name, phProp && phValue ? { [phProp]: phValue } : undefined);
     },
     { passive: true }
   );
@@ -231,7 +269,10 @@ export function bootAnalytics({
     undefined;
   const token = meta("ph-token");
   const host = meta("ph-host");
-  if (!token || !host) return Promise.resolve();
+  if (!token || !host) {
+    discardUnconsented();
+    return Promise.resolve();
+  }
   const win = doc.defaultView;
   if (win && !stopEarlyErrors) {
     pending ??= [];

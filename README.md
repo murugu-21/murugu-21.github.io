@@ -90,7 +90,7 @@ These env vars change the build. All are optional locally.
 
 Chrome and Edge 123+, Firefox 128+ and Safari 17.5+, including iOS. Older browsers get sent to a notice page. Open `/outdated/?from=/about/` to see it.
 
-The floor comes from `light-dark()` colours, Tailwind 4 and the Popover API in the phone menu. If you use a newer feature, either make it fail gracefully or raise the floor. Raising it means changing `MIN_VERSIONS` and `redirectIfOutdated` in `apps/site/src/lib/browser-support.ts` together.
+The floor comes from `light-dark()` colours, Tailwind 4 and the Popover API in the phone menu. If you use a newer feature, either make it fail gracefully or raise the floor. Raising it means changing `MIN_VERSIONS` in `apps/site/src/lib/browser-support.ts` and `redirectIfOutdated` in `apps/site/src/lib/inline/outdated-browser.ts` together.
 
 ## Deploying
 

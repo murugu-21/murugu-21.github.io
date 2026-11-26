@@ -49,7 +49,7 @@ export async function alignPost(
     slug,
     whisper,
     force
-  }: { slug: string; whisper: Pick<WhisperClient, "transcribe">; force: boolean }
+  }: { slug: string; whisper: Pick<WhisperClient, "transcribe"> | null; force: boolean }
 ) {
   const stored = await r2.get(audioKey(slug, "json"));
   if (!stored) {
@@ -59,6 +59,10 @@ export async function alignPost(
   const timings = StoredTimings.parse(stored.toString());
   if (timings.version >= 2 && !force) {
     console.log(`${slug}: already aligned, skipping`);
+    return;
+  }
+  if (!whisper) {
+    console.log(`${slug}: needs aligning`);
     return;
   }
   const mp3Body = await r2.get(audioKey(slug, "mp3"));

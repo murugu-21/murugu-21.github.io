@@ -1,4 +1,4 @@
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Result } from "effect";
 
 import type { ContactMessage } from "@murugappan/contracts/api/contact.ts";
 import {
@@ -20,13 +20,12 @@ export type ContactError =
   | DeliveryFailed
   | QuotaUnavailable;
 
+type Delivery = { client: VisitorKey; message: ContactMessage };
+
 export class ContactService extends Context.Service<
   ContactService,
   {
-    deliver(input: {
-      client: VisitorKey;
-      message: ContactMessage;
-    }): Effect.Effect<ContactUsage, ContactError>;
+    deliver(input: Delivery): Effect.Effect<ContactUsage, ContactError>;
     usage(client: VisitorKey): Effect.Effect<ContactUsage, QuotaUnavailable>;
   }
 >()("@murugappan/api/ContactService") {
@@ -35,13 +34,19 @@ export class ContactService extends Context.Service<
     Effect.gen(function* () {
       const mail = yield* MailService;
       const quota = yield* ContactQuotaRepository;
+      const sender = yield* Effect.result(mail.sender);
       return {
-        deliver: Effect.fn("ContactService.deliver")(function* ({ client, message }) {
-          // The sender comes first so an unconfigured deployment never spends a slot.
-          const send = yield* mail.sender;
-          const usage = yield* quota.take(client);
-          yield* send(message);
-          return usage;
+        deliver: Result.match(sender, {
+          onFailure: notConfigured =>
+            Effect.fn("ContactService.deliver")(function* () {
+              return yield* notConfigured;
+            }),
+          onSuccess: send =>
+            Effect.fn("ContactService.deliver")(function* ({ client, message }: Delivery) {
+              const usage = yield* quota.take(client);
+              yield* send(message);
+              return usage;
+            })
         }),
         usage: Effect.fn("ContactService.usage")(function* (client) {
           return yield* quota.usage(client);

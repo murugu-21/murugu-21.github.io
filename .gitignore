@@ -16,7 +16,6 @@ apps/site/github-snapshot.json
 .dev.vars
 !apps/api/e2e/.dev.vars
 
-# blog read-aloud voice reference
 .voice/
 # uv's venv. Its own .gitignore isn't enough for knip, which skips nested ignore files in a workspace.
 .venv/

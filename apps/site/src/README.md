@@ -12,6 +12,7 @@ components/   shared by every page
   resume/     resume only
   ui/         shadcn components
 lib/          shared logic, with blog/ for blog-only logic
+  inline/     functions inlined via toString(); self-contained, no coverage
 styles/       global.css (Tailwind), resume.css, and blog/
 data/         logo images for packages/content/profile.json
 ```

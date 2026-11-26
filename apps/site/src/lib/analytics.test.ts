@@ -99,21 +99,14 @@ describe("onFirstInteraction", () => {
 describe("track", () => {
   it("captures the event with its properties", () => {
     const { capture } = withPostHog();
-    track("social_click", { social: "github" });
-    expect(capture.mock.calls).toEqual([["social_click", { social: "github" }]]);
+    track("listen_rate", { listen_rate: "1.25x" });
+    expect(capture.mock.calls).toEqual([["listen_rate", { listen_rate: "1.25x" }]]);
   });
 
-  it("drops properties with a blank value", () => {
+  it("drops properties with no value", () => {
     const { capture } = withPostHog();
-    track("blog_card_click", { post: "", tag: "  " });
-    expect(capture.mock.calls).toEqual([["blog_card_click", undefined]]);
-  });
-
-  it("drops events while no SDK is loaded instead of queueing them", () => {
-    track("resume_download");
-    const { capture } = withPostHog();
-    track("social_click");
-    expect(capture.mock.calls).toEqual([["social_click", undefined]]);
+    track("listen_play", { post: undefined });
+    expect(capture.mock.calls).toEqual([["listen_play", undefined]]);
   });
 
   it("swallows a failure inside posthog and keeps sending later events", () => {
@@ -121,30 +114,30 @@ describe("track", () => {
     globalThis.posthog = {
       capture: (event: string) => {
         sent.push(event);
-        if (event === "resume_download") throw new Error("blocked");
+        if (event === "chat_open") throw new Error("blocked");
       },
       register: () => {}
     };
-    track("resume_download");
-    track("social_click");
-    expect(sent).toEqual(["resume_download", "social_click"]);
+    track("chat_open");
+    track("listen_pause");
+    expect(sent).toEqual(["chat_open", "listen_pause"]);
   });
 });
 
 describe("reportError", () => {
-  it("reports the error with its non-blank properties", () => {
+  it("reports the error with its context", () => {
     const { captureException } = withPostHog();
     const err = new Error("boom");
-    reportError(err, { surface: "chat", tag: " " });
+    reportError(err, { surface: "chat" });
     expect(captureException.mock.calls).toEqual([[err, { surface: "chat" }]]);
   });
 });
 
 describe("tag", () => {
-  it("registers a super property, ignoring a blank value", () => {
+  it("registers a super property, ignoring an empty one", () => {
     const { register } = withPostHog();
-    tag("theme", "");
-    tag("theme", "dark");
+    tag({});
+    tag({ theme: "dark" });
     expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
   });
 });
@@ -318,10 +311,10 @@ describe("initAnalytics", () => {
     const { opt_out_capturing, opt_in_capturing, capture, load } = fakeSdk();
     const ph = await fresh();
     await boot(ph, { choice: chosen({ analytics: false, replay: false, justChosen: true }), load });
-    ph.track("resume_download");
+    ph.track("chat_open");
     expect(opt_out_capturing.mock.calls).toEqual([[]]);
     expect(opt_in_capturing.mock.calls).toEqual([]);
-    expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
+    expect(capture.mock.calls).toEqual([["chat_open", undefined]]);
   });
 
   it("applies a change of mind to the SDK it already loaded", async () => {
@@ -344,12 +337,12 @@ describe("initAnalytics", () => {
         return load();
       }
     });
-    ph.track("resume_download");
-    ph.tag("theme", "dark");
+    ph.track("chat_open");
+    ph.tag({ theme: "dark" });
     expect(capture).not.toHaveBeenCalled();
     release();
     await booting;
-    expect(capture.mock.calls).toEqual([["resume_download", undefined]]);
+    expect(capture.mock.calls).toEqual([["chat_open", undefined]]);
     expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
   });
 
@@ -357,7 +350,7 @@ describe("initAnalytics", () => {
     await fc.assert(
       fc.asyncProperty(
         fc.scheduler(),
-        fc.array(fc.constantFrom("resume_download", "social_click", "chat_open"), {
+        fc.array(fc.constantFrom("chat_open", "listen_pause", "chat_restart"), {
           maxLength: 6
         }),
         async (s, events) => {
@@ -400,11 +393,11 @@ describe("initAnalytics", () => {
         throw new Error("chunk load failed");
       }
     });
-    ph.track("resume_download");
+    ph.track("chat_open");
     await failing;
     await boot(ph, { load });
-    ph.track("social_click");
-    expect(capture.mock.calls).toEqual([["social_click", undefined]]);
+    ph.track("listen_pause");
+    expect(capture.mock.calls).toEqual([["listen_pause", undefined]]);
   });
 });
 
@@ -462,8 +455,8 @@ describe("bootAnalytics", () => {
     expect(init.mock.calls.map(([token, config]) => [token, config.api_host])).toEqual([
       ["phc_test", "https://e.example.dev"]
     ]);
-    ph.track("cta_click", { where: "hero" });
-    expect(capture.mock.calls).toEqual([["cta_click", { where: "hero" }]]);
+    ph.track("listen_rate", { listen_rate: "2x" });
+    expect(capture.mock.calls).toEqual([["listen_rate", { listen_rate: "2x" }]]);
   });
 
   it("sends nothing until the visitor chooses, then opts in before sending what it held", async () => {
@@ -477,11 +470,34 @@ describe("bootAnalytics", () => {
     const booting = ph.bootAnalytics({ root: d, load, ask });
     win.dispatchEvent(new win.Event("pointerdown"));
     await booting;
-    ph.track("resume_download");
+    ph.track("chat_open");
     expect(sent).toEqual([]);
 
     choose(chosen({ justChosen: true }));
-    await vi.waitFor(() => expect(sent).toEqual(["$opt_in", "resume_download"]));
+    await vi.waitFor(() => expect(sent).toEqual(["$opt_in", "chat_open"]));
+  });
+
+  it("holds what was sent before it booted and delivers it once the visitor chooses", async () => {
+    const { capture, register, load } = fakeSdk();
+    const { d, win } = configured();
+    const ph = await fresh();
+    ph.track("chat_open");
+    ph.tag({ theme: "dark" });
+    const booting = ph.bootAnalytics({ root: d, load, ask: answeredWith(chosen()) });
+    win.dispatchEvent(new win.Event("pointerdown"));
+    await booting;
+    expect(capture.mock.calls).toEqual([["chat_open", undefined]]);
+    expect(register.mock.calls).toEqual([[{ theme: "dark" }]]);
+  });
+
+  it("drops what was sent before it booted on a page without analytics", async () => {
+    const { capture, load } = fakeSdk();
+    const ph = await fresh();
+    ph.track("chat_open");
+    await ph.bootAnalytics({ root: page(""), load, ask: answeredWith(chosen()) });
+    await boot(ph, { load });
+    ph.track("listen_pause");
+    expect(capture.mock.calls).toEqual([["listen_pause", undefined]]);
   });
 
   it("opens the cookie settings even before the banner has loaded", async () => {
@@ -505,15 +521,15 @@ describe("bootAnalytics", () => {
         throw new Error("consent chunk failed");
       }
     });
-    ph.track("resume_download");
+    ph.track("chat_open");
     win.dispatchEvent(new win.Event("pointerdown"));
     await booting;
     win.dispatchEvent(Object.assign(new win.Event("error"), { error: new Error("later") }));
     await boot(ph, { load });
     expect(capture.mock.calls).toEqual([]);
     expect(captureException.mock.calls).toEqual([]);
-    ph.track("social_click");
-    expect(capture.mock.calls).toEqual([["social_click", undefined]]);
+    ph.track("listen_pause");
+    expect(capture.mock.calls).toEqual([["listen_pause", undefined]]);
   });
 
   it("buffers errors and rejections thrown before the SDK boots and replays them", async () => {

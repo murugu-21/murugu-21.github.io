@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { alignArgs, audioArgs, publishedSlugs, run, runEach } from "./cli.ts";
+import { audioArgs, publishedSlugs, run, runEach } from "./cli.ts";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -20,11 +20,6 @@ describe("arguments", () => {
       slugs: ["react"]
     });
     expect(() => audioArgs(["--frce"])).toThrow("Unknown option '--frce'");
-  });
-
-  it("parses `bun run audio:align`, which takes only --force and --local", () => {
-    expect(alignArgs(["--force"])).toEqual({ force: true, local: false, slugs: [] });
-    expect(() => alignArgs(["--patch"])).toThrow("Unknown option '--patch'");
   });
 });
 

@@ -965,11 +965,15 @@ describe("ChatRoom conversation expiry", () => {
     ]);
   });
 
-  it("expires on its next wake a conversation whose job never ran", async () => {
-    const room = roomName("room-expire-dormant");
+  it.each([
+    { holding: "no job", name: "room-dormant", otherJob: false },
+    { holding: "only a job that isn't its expiry", name: "room-dormant-job", otherJob: true }
+  ])("expires on its next wake a conversation holding $holding", async ({ otherJob, name }) => {
+    const room = roomName(name);
     const stub = await startConversation(room);
     await runInDurableObject(stub, async instance => {
       for (const { id } of await instance.listSchedules()) await instance.cancelSchedule(id);
+      if (otherJob) await instance.schedule(new Date(T0 + 365 * DAY), "onChatRecovery");
     });
     await evictDurableObject(stub);
     const aborts = await recordAborts(stub);
@@ -1018,6 +1022,40 @@ describe("ChatRoom leads", () => {
     expect(sent.map(m => m.to)).toEqual(["inbox@example.com"]);
   });
 
+  it("names a lead the model captured with a blank name by their contact", async () => {
+    await fundChat();
+    const room = await openRoom(roomName("room-lead-blank-name"));
+    const sent = await scriptRoom(
+      room.stub,
+      scriptedModel(
+        () =>
+          modelStream([
+            {
+              type: "tool-call",
+              toolCallId: "call-1",
+              toolName: "capture_opportunity",
+              input: JSON.stringify({ name: "", contact: "a@b.c", summary: "Staff role" })
+            },
+            {
+              type: "finish",
+              usage: USAGE,
+              finishReason: { unified: "tool-calls", raw: "tool_calls" }
+            }
+          ]),
+        textStep("Noted.")
+      )
+    );
+
+    room.socket.send(
+      chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "Hire me: a@b.c" })] })
+    );
+
+    expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("Noted.");
+    expect(sent.map(m => m.subject)).toEqual([
+      "New opportunity via murugappan.dev chat from a@b.c"
+    ]);
+  });
+
   it("keeps the lead and the chat going when the email can't be sent, and retries on the next capture", async () => {
     await fundChat();
     const room = await openRoom(roomName("room-lead-retry"));
@@ -1056,7 +1094,9 @@ describe("ChatRoom leads", () => {
       chatRequest({ id: "r1", messages: [userMessage({ id: "u1", text: "Hire me: a@b.c" })] })
     );
     expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("First.");
-    expect(errors.map(e => e[0])).toEqual(["opportunity email failed"]);
+    expect(errors.map(e => e[0])).toEqual([
+      { event: "opportunity email failed", err: new Error("relay down") }
+    ]);
 
     const sent = await scriptRoom(room.stub, model);
     room.socket.send(
@@ -1103,7 +1143,9 @@ describe("ChatRoom leads", () => {
 
     expect(replyText(await streamedChunks(room.frames, "r1"))).toBe("Noted.");
     expect(sent).toEqual([]);
-    expect(errors.map(e => e[0])).toEqual(["opportunity email skipped: no EMAIL binding or inbox"]);
+    expect(errors.map(e => e[0])).toEqual([
+      { event: "opportunity email skipped", reason: "no EMAIL binding or inbox" }
+    ]);
     const leads = await runInDurableObject(room.stub, (_room, state) =>
       state.storage.sql.exec(`SELECT contact FROM leads`).toArray()
     );
