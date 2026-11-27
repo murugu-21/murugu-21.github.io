@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
-    "cf": "1.0.0-rc.4",
+    "cf": "1.0.0-rc.6",
     "fast-check": "^4.11.0",
     "vite-plus": "1.8.0"
   }
